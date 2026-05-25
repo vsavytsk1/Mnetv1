@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>Sacred Math Tree v4.3</title>
+<title>Sacred Math Tree v4.2</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
 <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js">
 
@@ -238,59 +238,7 @@ function toggleLog(){
 // On mobile, hide console by default
 // log hidden by default everywhere
 
-
-// ═══ MOBILE TUNE PANEL ═══
-let tuneOpen = false;
-function toggleTune(){
-  tuneOpen = !tuneOpen;
-  let p = document.getElementById('tune-panel');
-  if(tuneOpen){
-    // Move sliders into tune panel
-    p.innerHTML = '';
-    ['sl-wave','sl-spread','sl-depth','sl-zlock','sl-shame'].forEach(id => {
-      let orig = document.getElementById(id);
-      if(!orig) return;
-      let row = orig.closest('.sb-row');
-      if(!row) return;
-      let clone = row.cloneNode(true);
-      // Wire up cloned input
-      let inp = clone.querySelector('input');
-      inp.id = id + '-mob';
-      inp.value = orig.value;
-      inp.addEventListener('input', e => {
-        orig.value = e.target.value;
-        orig.dispatchEvent(new Event('input'));
-        // Sync display
-        let sv = clone.querySelector('.sb-val');
-        let svOrig = row.querySelector('.sb-val');
-        if(sv && svOrig) sv.textContent = svOrig.textContent;
-      });
-      p.appendChild(clone);
-    });
-    p.classList.add('show');
-  } else {
-    p.classList.remove('show');
-  }
-}
-
-// Sync mobile tree selector
-function syncMobSel(){
-  let orig = document.getElementById('tree-sel');
-  let mob = document.getElementById('tree-sel-mob');
-  if(!orig || !mob) return;
-  mob.innerHTML = orig.innerHTML;
-  mob.value = orig.value;
-  orig.addEventListener('change', () => { mob.value = orig.value; });
-}
-setTimeout(syncMobSel, 100);
-
-// Better mobile initial zoom
-if(window.innerWidth < 768){
-  zm = 0.45;
-  center();
-  clog('mobile detected: zoom=' + zm.toFixed(2), 'log-state');
-}
-clog('v4.3: mobile + tune panel + console ready','log-state');
+clog('v4.2: mobile touch + console toggle ready','log-state');
 
 </script>
 <style>
@@ -414,64 +362,33 @@ svg.lk path.alive-line{stroke-dashoffset:0;stroke-dasharray:none}
 #logp .log-err{color:#ff4444}
 
 
-/* ═══ MOBILE ═══ */
+/* MOBILE RESPONSIVE */
 @media(max-width:768px){
-  /* HIDE verbose HUD, show compact top bar instead */
-  #hud{display:none}
-  #ghud{top:auto;bottom:44px;right:8px;z-index:12;font-size:9px;gap:6px;
-    background:rgba(5,5,16,0.85);padding:3px 8px;border-radius:4px;border:1px solid #1a1f2e}
-  
-  /* SLIDERS: hidden by default, toggle with TUNE */
-  #tune-panel{display:none;position:fixed;bottom:44px;left:0;right:0;z-index:15;
-    background:rgba(5,5,16,0.96);border-top:1px solid #1a1f2e;padding:12px 16px;
-    max-height:60vh;overflow-y:auto}
-  #tune-panel.show{display:block}
-  #tune-panel .sb-row{display:flex;align-items:center;gap:8px;padding:6px 0;
-    border-bottom:1px solid rgba(255,255,255,0.03)}
-  #tune-panel .sb-label{color:#555;font-size:11px;min-width:55px}
-  #tune-panel input[type=range]{flex:1;accent-color:#ff69b4}
-  #tune-panel .sb-val{color:#80d0ff;font-weight:bold;font-size:11px;min-width:30px;text-align:right}
-  
-  /* BOTTOM BAR: clean, SpookyPrimes style */
-  #bar{padding:0;gap:0;flex-wrap:nowrap;justify-content:stretch;height:42px}
-  #bar .sb-row{display:none !important}
-  #bar .mob-bar{display:flex !important;width:100%;align-items:center;justify-content:center;gap:6px;padding:0 8px}
-  .mob-btn{background:rgba(20,20,30,0.9);border:1px solid #2a2a3a;border-radius:4px;
-    padding:6px 10px;font-family:inherit;font-size:10px;cursor:pointer;color:#80d0ff;
-    transition:all 0.15s;white-space:nowrap}
-  .mob-btn:hover,.mob-btn:active{background:#1a1a2a;border-color:#4a4a6a}
-  .mob-btn.gold{color:#ffd700;border-color:#332a00}
-  .mob-btn.green{color:#7fff7f;border-color:#003300}
-  .mob-sel{background:#111;color:#80d0ff;border:1px solid #2a2a3a;border-radius:4px;
-    padding:5px 6px;font-family:inherit;font-size:10px;cursor:pointer;flex:1;max-width:140px}
-  
-  /* LOG: bottom sheet style */
-  #logp{top:auto;bottom:44px;left:0;right:0;max-width:none;max-height:40vh;
-    border-radius:0;font-size:9px;border:none;border-top:1px solid #1a1f2e;opacity:0.95}
-  #logp.hidden{display:none}
-  
-  /* BOXES: slightly smaller */
-  .eq{padding:10px 14px;min-width:110px;max-width:300px}
-  .eq .tag{font-size:8px;letter-spacing:0.1em;margin-bottom:4px}
-  .eq .sub{font-size:9px;margin-top:5px}
-  .eq .ltx .katex{font-size:1em}
-  .eq .tok-badge{top:-8px;right:-8px;font-size:9px;padding:2px 6px}
-  
-  /* ZOOM GATE */
-  #zoom-gate .zg-msg{font-size:28px;padding:0 20px}
-  #zoom-gate .zg-sub{font-size:13px}
-  
-  /* COMBO */
-  #combo{font-size:18px;top:8px;left:50%;transform:translateX(-50%)}
-  
-  /* INSTRUCTION HINT */
-  #mob-hint{display:block !important}
+  #hud{font-size:9px;top:6px;left:6px}
+  #hud .row{line-height:1.5}
+  #ghud{top:6px;right:6px;font-size:8px;gap:8px}
+  #bar{padding:6px 8px;gap:6px;flex-wrap:wrap;justify-content:center}
+  #bar .sb-row{gap:3px}
+  #bar .sb-label{font-size:8px}
+  #bar input[type=range]{width:45px}
+  #bar .sb-val{font-size:8px;min-width:20px}
+  #bar select{font-size:8px !important;max-width:100px}
+  .b{padding:3px 8px;font-size:9px}
+  #logp{top:auto;bottom:46px;left:6px;right:6px;max-width:none;max-height:150px;font-size:8px}
+  .eq{padding:10px 14px;min-width:100px;max-width:280px}
+  .eq .tag{font-size:8px}
+  .eq .sub{font-size:9px}
+  .eq .ltx .katex{font-size:0.95em}
+  #zoom-gate .zg-msg{font-size:28px}
+  #zoom-gate .zg-sub{font-size:14px}
+  #combo{font-size:16px;top:35px}
 }
-
-/* Desktop: hide mobile-only elements */
-#tune-panel{display:none}
-.mob-bar{display:none !important}
-#mob-hint{display:none}
+@media(max-width:480px){
+  #bar{gap:4px;padding:4px 6px}
+  #bar .sb-row{display:none}
+  #bar .sb-row:nth-child(6),#bar .sb-row:nth-child(7){display:flex}
+  .eq{max-width:240px;padding:8px 12px}
+}
 
 /* CONSOLE TOGGLE */
 #logp.hidden{display:none}
@@ -498,12 +415,8 @@ svg.lk{z-index:1}
 <div class="row"><span class="lbl">lock  </span><span class="val" id="h-lk">off</span></div>
 <div class="row"><span class="lbl">shame </span><span class="val" id="h-sh">2.0s</span></div>
 </div>
-<div id="ver">v4.3</div>
+<div id="ver">v4.2</div>
 <div id="zoom-gate"><div class="zg-msg">zoom in, wanderer</div><div class="zg-sub">read the equation before you touch it</div><div class="zg-zoom">you: <span id="zg-cur">35%</span> &middot; need: <span id="zg-need">50%</span></div></div>
-<div id="mob-hint" style="display:none;position:fixed;bottom:44px;left:0;right:0;text-align:center;
-  font-size:9px;color:rgba(128,208,255,0.3);letter-spacing:0.15em;text-transform:uppercase;padding:4px;z-index:5;
-  pointer-events:none">tap autopilot &middot; pinch to zoom &middot; drag to pan</div>
-<div id="tune-panel"></div>
 <div id="bar">
 <span class="sl">tree</span>
 <div class="sb-row"><span class="sb-label">wave</span><input type="range" id="sl-wave" min="0" max="100" value="50"><span class="sb-val" id="sv-wave">50</span></div>
@@ -515,13 +428,6 @@ svg.lk{z-index:1}
 <div class="sb-row" style="margin-left:12px;border-left:1px solid #1a1f2e;padding-left:12px"><button id="btn-auto" class="b" style="color:#ffd700;border-color:#332a00">&#9654; autopilot</button><span class="sb-val" id="sv-auto" style="color:#ffd700">ready</span>
 <button id="btn-fullauto" class="b" style="color:#7fff7f;border-color:#003300">&#9654;&#9654; all trees</button><span class="sb-val" id="sv-fullauto" style="color:#7fff7f">10</span>
 <button id="btn-log" class="b" style="color:#333;border-color:#1a2a3a" onclick="toggleLog()">&#9776; log</button></div>
-<div class="mob-bar">
-<button class="mob-btn" onclick="toggleTune()">TUNE</button>
-<select class="mob-sel" id="tree-sel-mob" onchange="document.getElementById('tree-sel').value=this.value;document.getElementById('tree-sel').dispatchEvent(new Event('change'))"></select>
-<button class="mob-btn gold" onclick="document.getElementById('btn-auto').click()">&#9654; AUTO</button>
-<button class="mob-btn green" onclick="document.getElementById('btn-fullauto').click()">&#9654;&#9654; ALL</button>
-<button class="mob-btn" onclick="toggleLog()" id="btn-log-mob">LOG</button>
-</div>
 </div>
 <div id="logp" class="hidden"></div>
 <div id="plane"><canvas id="grid-cv"></canvas><svg class="lk" id="lksvg"></svg></div>
@@ -548,7 +454,7 @@ document.getElementById('logp').addEventListener('mouseenter',()=>{
   sel.removeAllRanges();
   sel.addRange(range);
 });
-clog('Sacred Math Tree v4.3 init','log-state');
+clog('Sacred Math Tree v4.2 init','log-state');
 clog('KaTeX: '+(typeof katex!=='undefined'?'loaded':'MISSING'),'log-state');
 
 let T={id:"eq0",tag:"START",type:"root",latex:"\\lim_{x \\to 0} \\frac{\\sin x}{x}",sub:"click to explore",cost:0,xp:0,ch:[
@@ -1247,59 +1153,7 @@ function toggleLog(){
 // On mobile, hide console by default
 // log hidden by default everywhere
 
-
-// ═══ MOBILE TUNE PANEL ═══
-let tuneOpen = false;
-function toggleTune(){
-  tuneOpen = !tuneOpen;
-  let p = document.getElementById('tune-panel');
-  if(tuneOpen){
-    // Move sliders into tune panel
-    p.innerHTML = '';
-    ['sl-wave','sl-spread','sl-depth','sl-zlock','sl-shame'].forEach(id => {
-      let orig = document.getElementById(id);
-      if(!orig) return;
-      let row = orig.closest('.sb-row');
-      if(!row) return;
-      let clone = row.cloneNode(true);
-      // Wire up cloned input
-      let inp = clone.querySelector('input');
-      inp.id = id + '-mob';
-      inp.value = orig.value;
-      inp.addEventListener('input', e => {
-        orig.value = e.target.value;
-        orig.dispatchEvent(new Event('input'));
-        // Sync display
-        let sv = clone.querySelector('.sb-val');
-        let svOrig = row.querySelector('.sb-val');
-        if(sv && svOrig) sv.textContent = svOrig.textContent;
-      });
-      p.appendChild(clone);
-    });
-    p.classList.add('show');
-  } else {
-    p.classList.remove('show');
-  }
-}
-
-// Sync mobile tree selector
-function syncMobSel(){
-  let orig = document.getElementById('tree-sel');
-  let mob = document.getElementById('tree-sel-mob');
-  if(!orig || !mob) return;
-  mob.innerHTML = orig.innerHTML;
-  mob.value = orig.value;
-  orig.addEventListener('change', () => { mob.value = orig.value; });
-}
-setTimeout(syncMobSel, 100);
-
-// Better mobile initial zoom
-if(window.innerWidth < 768){
-  zm = 0.45;
-  center();
-  clog('mobile detected: zoom=' + zm.toFixed(2), 'log-state');
-}
-clog('v4.3: mobile + tune panel + console ready','log-state');
+clog('v4.2: mobile touch + console toggle ready','log-state');
 
 </script>
 </body>
