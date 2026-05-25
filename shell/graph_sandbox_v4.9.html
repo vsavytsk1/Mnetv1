@@ -1,0 +1,2882 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>MachineNet · Graph Sandbox v4.9</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#050510;color:#e0e0e0;font-family:ui-monospace,"SF Mono",monospace;font-size:11px;overflow:hidden;height:100vh}
+canvas{display:block}
+
+/* HUD */
+#hud{position:fixed;top:12px;left:12px;z-index:10;pointer-events:none}
+#hud .title{font-size:13px;color:#00d4ff;margin-bottom:4px;letter-spacing:0.08em}
+#hud .info{color:rgba(220,228,240,0.6);line-height:1.6}
+#hud .info b{color:#ffd700}
+#hud .info .cyan{color:#00d4ff}
+#hud .info .gold{color:#ffd700}
+#hud .info .pink{color:#ff69b4}
+
+/* Controls bar */
+#bar{position:fixed;bottom:0;left:0;right:0;z-index:10;
+  background:rgba(5,5,16,0.92);border-top:1px solid #1a1f2e;
+  padding:8px 16px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.btn{background:#111;color:#555;border:1px solid #2a2a2a;border-radius:3px;
+  padding:4px 12px;font-family:inherit;font-size:11px;cursor:pointer;transition:all 0.15s}
+.btn:hover{background:#1a1a1a;border-color:#555}
+.btn.active{background:#555;color:#050510;border-color:#555}
+/* Graph selector buttons keep their identity */
+.btn.g-a{color:#00d4ff;border-color:#1a3a4a}
+.btn.g-a:hover{border-color:#00d4ff}
+.btn.g-a.active{background:#00d4ff;color:#050510;border-color:#00d4ff}
+.btn.g-b{color:#ffd700;border-color:#4a3a1a}
+.btn.g-b:hover{border-color:#ffd700}
+.btn.g-b.active{background:#ffd700;color:#050510;border-color:#ffd700}
+/* Themed by active graph */
+.btn.themed{color:#555;border-color:#2a2a2a}
+body.graph-A .btn.themed{color:#00d4ff;border-color:#1a3a4a}
+body.graph-A .btn.themed:hover{background:#0a1a2a;border-color:#00d4ff}
+body.graph-A .btn.themed.active{background:#00d4ff;color:#050510}
+body.graph-B .btn.themed{color:#ffd700;border-color:#4a3a1a}
+body.graph-B .btn.themed:hover{background:#2a1a0a;border-color:#ffd700}
+body.graph-B .btn.themed.active{background:#ffd700;color:#050510}
+/* Ops always pink */
+.btn.op{color:#ff69b4;border-color:#4a1a3a}
+.btn.op:hover{border-color:#ff69b4}
+.sep{width:1px;height:20px;background:#1a1f2e;margin:0 4px}
+.lbl{color:rgba(220,228,240,0.5);font-size:10px;text-transform:uppercase;letter-spacing:0.1em}
+
+/* Log — LEFT side, red accent like fractal geom */
+#log{position:fixed;top:80px;left:12px;z-index:10;
+  background:rgba(5,5,16,0.85);border:1px solid #1a1f2e;border-radius:4px;
+  padding:8px 12px;max-width:320px;max-height:300px;overflow-y:auto;
+  font-size:10px;line-height:1.5;color:rgba(255,180,180,0.75)}
+#log:empty{display:none}
+#log:hover{cursor:text;border-color:#4a1a1a;background:rgba(10,5,5,0.95)}
+#log{-webkit-user-select:text;user-select:text}
+#log .entry{border-bottom:1px solid #1a0a0a;padding:2px 0}
+#log .op{color:#ff69b4;font-weight:bold}
+#log .g{color:#00d4ff}
+#log .ok{color:#7fff7f}
+#log .warn{color:#ffd700}
+
+/* Mode indicator */
+#mode{position:fixed;top:50%;right:16px;transform:translateY(-50%);z-index:10;
+  font-size:12px;color:#ffd700;text-align:right;pointer-events:none}
+
+/* Snap tags */
+#snap-bar{position:fixed;bottom:42px;left:16px;z-index:10;display:flex;gap:4px;flex-wrap:wrap}
+.snap-tag{background:#1a1a2a;color:#7f7fff;border:1px solid #2a2a4a;border-radius:3px;
+  padding:2px 8px;font-size:10px;cursor:pointer;font-family:inherit;transition:all 0.15s}
+.snap-tag:hover{background:#2a2a4a;border-color:#7f7fff;color:#fff}
+
+/* §12 AUTOPILOT PANEL — upper right */
+#autopilot{position:fixed;top:12px;right:12px;z-index:20;
+  display:flex;flex-direction:column;gap:4px;align-items:flex-end}
+#ap-toggle{background:#111;color:#ff69b4;border:1px solid #4a1a3a;border-radius:3px;
+  padding:5px 14px;font-family:inherit;font-size:11px;cursor:pointer;
+  letter-spacing:0.08em;transition:all 0.2s}
+#ap-toggle:hover{background:#2a0a1a;border-color:#ff69b4}
+#ap-toggle.running{background:#ff69b4;color:#050510;border-color:#ff69b4;animation:ap-pulse 1s infinite}
+@keyframes ap-pulse{0%,100%{opacity:1}50%{opacity:0.7}}
+#ap-menu{display:none;background:rgba(5,5,16,0.94);border:1px solid #2a1a3a;border-radius:4px;
+  padding:6px;width:220px}
+#ap-menu.open{display:flex;flex-direction:column;gap:3px}
+.ap-btn{background:#0a0a1a;color:#c0c0d0;border:1px solid #2a2a3a;border-radius:3px;
+  padding:6px 10px;font-family:inherit;font-size:10px;cursor:pointer;text-align:left;
+  transition:all 0.15s}
+.ap-btn:hover{background:#1a1a2a;border-color:#ff69b4;color:#ff69b4}
+.ap-btn .ap-name{font-weight:bold;font-size:11px}
+.ap-btn .ap-desc{color:#666;font-size:9px;margin-top:2px}
+#ap-status{color:#ff69b4;font-size:10px;text-align:right;padding:2px 4px;
+  max-width:220px;white-space:nowrap;overflow:hidden}
+#ap-stop{display:none;background:#1a0a0a;color:#ff4444;border:1px solid #4a1a1a;border-radius:3px;
+  padding:4px 12px;font-family:inherit;font-size:10px;cursor:pointer}
+#ap-stop:hover{background:#2a0a0a;border-color:#ff4444}
+#ap-stop.visible{display:block}
+
+/* §13 CMD INPUT — locked to bottom bar */
+#cmd-bar{display:flex;gap:4px;align-items:center;margin-left:auto}
+#cmd-input{background:rgba(5,5,16,0.92);color:#e0e0e0;border:1px solid #2a2a3a;border-radius:3px;
+  padding:5px 10px;font-family:inherit;font-size:11px;width:240px;
+  outline:none;transition:border-color 0.15s}
+#cmd-input:focus{border-color:#ff69b4}
+#cmd-input::placeholder{color:#444}
+#cmd-go{background:#111;color:#ff69b4;border:1px solid #4a1a3a;border-radius:3px;
+  padding:5px 10px;font-family:inherit;font-size:11px;cursor:pointer}
+#cmd-go:hover{background:#2a0a1a;border-color:#ff69b4}
+
+/* §15 EXPORT/IMPORT OVERLAY */
+#io-overlay{display:none;position:fixed;inset:0;z-index:100;
+  background:rgba(1,1,8,0.92);align-items:center;justify-content:center}
+#io-overlay.open{display:flex}
+#io-box{background:#0a0a14;border:1px solid #2a2a3a;border-radius:6px;
+  padding:16px;width:600px;max-height:80vh;display:flex;flex-direction:column;gap:8px}
+#io-title{font-size:13px;color:#ff69b4;letter-spacing:0.08em}
+#io-text{background:#050510;color:#e0e0e0;border:1px solid #1a1f2e;border-radius:3px;
+  padding:10px;font-family:inherit;font-size:11px;resize:vertical;
+  min-height:300px;max-height:60vh;outline:none;line-height:1.5;
+  -webkit-user-select:text;user-select:text}
+#io-text:focus{border-color:#ff69b4}
+#io-buttons{display:flex;gap:8px;justify-content:flex-end}
+#io-buttons button{background:#111;color:#e0e0e0;border:1px solid #2a2a3a;border-radius:3px;
+  padding:5px 16px;font-family:inherit;font-size:11px;cursor:pointer}
+#io-buttons button:hover{border-color:#ff69b4;color:#ff69b4}
+#io-buttons button.primary{background:#ff69b4;color:#050510;border-color:#ff69b4}
+#io-buttons button.primary:hover{background:#ff89c4}
+
+/* BANNER */
+#banner{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+  z-index:200;background:rgba(5,5,16,0.96);border:2px solid #ff4444;
+  border-radius:6px;padding:20px 32px;text-align:center;max-width:500px}
+#banner.ok{border-color:#7fff7f}
+#banner.open{display:block;animation:bannerIn 0.3s ease}
+@keyframes bannerIn{from{opacity:0;transform:translate(-50%,-50%) scale(0.9)}to{opacity:1;transform:translate(-50%,-50%) scale(1)}}
+#banner .b-title{font-size:14px;font-weight:bold;margin-bottom:8px}
+#banner .b-body{font-size:11px;color:#aaa;line-height:1.5}
+#banner .b-close{margin-top:12px;background:#222;color:#aaa;border:1px solid #333;
+  border-radius:3px;padding:4px 16px;font-family:inherit;font-size:11px;cursor:pointer}
+#banner .b-close:hover{border-color:#ff69b4;color:#ff69b4}
+</style>
+</head>
+<body class="graph-A">
+
+<div id="hud">
+  <div class="title">MachineNet · Graph Sandbox</div>
+  <div class="info">
+    <b>Graph A</b>: <span class="cyan" id="h-a">0 nodes, 0 edges</span><br>
+    <b>Graph B</b>: <span class="gold" id="h-b">0 nodes, 0 edges</span><br>
+    <span class="pink" id="h-result"></span>
+  </div>
+</div>
+
+<div id="mode"></div>
+<div id="log"></div>
+
+<div id="bar">
+  <span class="lbl">LATICE B</span>
+  <button class="btn themed active" id="b-lcube" onclick="setLatticeBoundary('CUBE')">CUBE</button>
+  <button class="btn themed" id="b-lpent" onclick="setLatticeBoundary('PENT')">PENT</button>
+  <button class="btn themed" id="b-lhex" onclick="setLatticeBoundary('HEX')">HEX</button>
+  <div class="sep"></div>
+  <span class="lbl">graph</span>
+  <button class="btn g-a active" id="b-ga" onclick="setGraph('A')">A (cyan)</button>
+  <button class="btn g-b" id="b-gb" onclick="setGraph('B')">B (gold)</button>
+  <div class="sep"></div>
+
+  <span class="lbl">tool</span>
+  <button class="btn themed active" id="b-node" onclick="setTool('node')">+ node</button>
+  <button class="btn themed" id="b-edge" onclick="setTool('edge')">-- edge</button>
+  <button class="btn themed" id="b-move" onclick="setTool('move')">+ move</button>
+  <button class="btn themed" id="b-grab" onclick="setTool('grab')">grab</button>
+  <button class="btn themed" id="b-delete" onclick="setTool('delete')">X delete</button>
+  <div class="sep"></div>
+
+  <span class="lbl">ops (A . B)</span>
+  <button class="btn op" onclick="graphOp('union')">A U B</button>
+  <button class="btn op" onclick="graphOp('intersect')">A n B</button>
+  <button class="btn op" onclick="graphOp('product')">A x B</button>
+  <button class="btn op" onclick="graphOp('diff')">A - B</button>
+  <div class="sep"></div>
+
+  <span class="lbl">util</span>
+  <button class="btn themed" onclick="randomGraph()">random</button>
+  <button class="btn themed" onclick="iterateOp()">iterate x2</button>
+  <button class="btn themed" onclick="clearGraph()">clear</button>
+  <button class="btn themed" onclick="togglePlane()">plane lock</button>
+  <button class="btn themed" onclick="snapSave()">SNAP</button>
+  <div class="sep"></div>
+  <span class="lbl">shape</span>
+  <button class="btn themed" onclick="genPoly(5)">PENT</button>
+  <button class="btn themed" onclick="genPoly(6)">HEX</button>
+  <button class="btn themed" onclick="genC60()">C60</button>
+  <div class="sep"></div>
+  <span class="lbl">MATH</span>
+  <button class="btn op" onclick="algebraGraph()" style="font-weight:bold">ALGEBRA</button>
+  <button class="btn op" onclick="fractalizeGraph()" style="font-weight:bold">MANDELBROT</button>
+  <button class="btn themed" onclick="subdivideGraph()" style="font-weight:bold">FRACTALIZE</button>
+  <button class="btn" onclick="mobiusifyGraph()" style="font-weight:bold;color:#ff4444;border-color:#4a1a1a">MOBIUSIFY</button>
+  <div class="sep"></div>
+  <span class="lbl">I/O</span>
+  <button class="btn themed" onclick="ioExport()" style="font-weight:bold">EXPORT</button>
+  <button class="btn themed" onclick="ioImportOpen()" style="font-weight:bold">IMPORT</button>
+  <div id="cmd-bar">
+    <input id="cmd-input" type="text" placeholder="type command + enter" spellcheck="false">
+    <button id="cmd-go" onclick="cmdBarRun()">RUN</button>
+  </div>
+</div>
+<div id="snap-bar" style="position:fixed;bottom:42px;left:16px;z-index:10;display:flex;gap:4px;flex-wrap:wrap"></div>
+
+<!-- AUTOPILOT PANEL -->
+<div id="autopilot">
+  <button id="ap-toggle" onclick="apToggleMenu()">AUTOPILOT</button>
+  <div id="ap-menu">
+    <button class="ap-btn" onclick="apRun('genesis')">
+      <div class="ap-name">1 · GENESIS</div>
+      <div class="ap-desc">Hex → fractalize ×4 → surface film</div>
+    </button>
+    <button class="ap-btn" onclick="apRun('duality')">
+      <div class="ap-name">2 · DUALITY</div>
+      <div class="ap-desc">Pent A + Hex B → union → fractalize</div>
+    </button>
+    <button class="ap-btn" onclick="apRun('growth')">
+      <div class="ap-name">3 · GROWTH</div>
+      <div class="ap-desc">Random A × Random B → iterate ×3</div>
+    </button>
+    <button class="ap-btn" onclick="apRun('algebra')">
+      <div class="ap-name">4 · ALGEBRA</div>
+      <div class="ap-desc">27 ops → composition graph → fractalize</div>
+    </button>
+    <button class="ap-btn" onclick="apRun('cosmos')">
+      <div class="ap-name">5 · COSMOS</div>
+      <div class="ap-desc">C60 → fractalize ×3 → mobiusify</div>
+    </button>
+    <button class="ap-btn" onclick="swarmStart()" style="border-color:#ff69b4">
+      <div class="ap-name">6 · SWARM</div>
+      <div class="ap-desc">Grid compress → 12 planes → 3D atom cube → hunt</div>
+    </button>
+  </div>
+  <div id="ap-status"></div>
+  <button id="ap-stop" onclick="apStop()">STOP</button>
+</div>
+
+
+
+<!-- EXPORT/IMPORT OVERLAY -->
+<div id="io-overlay">
+  <div id="io-box">
+    <div id="io-title">EXPORT</div>
+    <textarea id="io-text" spellcheck="false"></textarea>
+    <div id="io-buttons">
+      <button onclick="ioClose()">CLOSE</button>
+      <button class="primary" id="io-action" onclick="ioAction()">COPY</button>
+    </div>
+  </div>
+</div>
+
+<!-- BANNER -->
+<div id="banner">
+  <div class="b-title" id="b-title"></div>
+  <div class="b-body" id="b-body"></div>
+  <button class="b-close" onclick="bannerClose()">OK</button>
+</div>
+
+<!-- Three.js + OrbitControls (inline fallback) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+<script>
+// ═══════════════════════════════════════════════════════
+// §0  BOOT DIAGNOSTICS
+// ═══════════════════════════════════════════════════════
+function bootLog(msg) {
+  var el = document.getElementById('log');
+  var d = document.createElement('div');
+  d.className = 'entry';
+  d.innerHTML = msg;
+  el.appendChild(d);
+  console.log('[BOOT]', msg);
+}
+bootLog('Three.js: ' + (typeof THREE !== 'undefined' ? 'r' + THREE.REVISION : '<span style="color:red">MISSING</span>'));
+bootLog('OrbitControls: ' + (typeof THREE !== 'undefined' && THREE.OrbitControls ? 'OK' : '<span style="color:red">MISSING</span>'));
+bootLog('WebGL: ' + (function(){ try { var c = document.createElement('canvas'); return !!c.getContext('webgl2') || !!c.getContext('webgl'); } catch(e) { return false; } })());
+bootLog('Window: ' + innerWidth + 'x' + innerHeight);
+// ═══════════════════════════════════════════════════════
+// §1  STATE
+// ═══════════════════════════════════════════════════════
+var graphs = {
+  A: { nodes: [], edges: [], color: 0x00d4ff, name: 'A' },
+  B: { nodes: [], edges: [], color: 0xffd700, name: 'B' },
+  R: { nodes: [], edges: [], color: 0xff69b4, name: 'Result' }
+};
+var activeGraph = 'A';
+var activeTool = 'node';
+var latticeBoundary = 'CUBE';  // 'CUBE' | 'PENT' | 'HEX'
+var latticeRadius = 10;        // boundary radius
+var edgeStart = null;       // first node of edge being drawn
+var planeLocked = false;
+var lastOp = null;
+var nodeIdCounter = 0;
+
+// ── SNAPSHOT TRACE ──
+var snapshots = [];   // [{label, graphs, nodeIdCounter}]
+var snapVersion = 0;
+
+function snapSave(label) {
+  snapVersion++;
+  var tag = label || 'v' + snapVersion;
+  snapshots.push({
+    label: tag,
+    nodeIdCounter: nodeIdCounter,
+    graphs: {
+      A: { nodes: JSON.parse(JSON.stringify(graphs.A.nodes)), edges: graphs.A.edges.map(function(e){return e.slice();}), color: graphs.A.color, name: graphs.A.name },
+      B: { nodes: JSON.parse(JSON.stringify(graphs.B.nodes)), edges: graphs.B.edges.map(function(e){return e.slice();}), color: graphs.B.color, name: graphs.B.name },
+      R: { nodes: JSON.parse(JSON.stringify(graphs.R.nodes)), edges: graphs.R.edges.map(function(e){return e.slice();}), color: graphs.R.color, name: graphs.R.name }
+    }
+  });
+  log('SNAP saved: ' + tag + ' (' + snapshots.length + ' total)');
+  updateSnapHUD();
+}
+
+function snapRestore(index) {
+  if (index < 0 || index >= snapshots.length) { log('No snapshot at index ' + index); return; }
+  var s = snapshots[index];
+  nodeIdCounter = s.nodeIdCounter;
+  ['A','B','R'].forEach(function(k) {
+    graphs[k] = { nodes: JSON.parse(JSON.stringify(s.graphs[k].nodes)), edges: s.graphs[k].edges.map(function(e){return e.slice();}), color: s.graphs[k].color, name: s.graphs[k].name };
+  });
+  log('SNAP restored: ' + s.label);
+  rebuildScene();
+}
+
+function updateSnapHUD() {
+  var el = document.getElementById('snap-bar');
+  if (!el) return;
+  if (!snapshots.length) { el.innerHTML = ''; return; }
+  el.innerHTML = snapshots.map(function(s, i) {
+    return '<span class="snap-tag" onclick="snapRestore('+i+')">' + s.label + '</span>';
+  }).join('');
+}
+
+// ── GRAB STATE ──
+var grabActive = false;
+var grabAnchor = null;   // world pos where grab started
+var grabLiftY = 1.5;     // how high to lift
+
+// ═══════════════════════════════════════════════════════
+// §2  THREE.JS SETUP
+// ═══════════════════════════════════════════════════════
+var scene, camera, renderer, controls;
+try {
+  scene = new THREE.Scene();
+  camera = new THREE.PerspectiveCamera(60, innerWidth/innerHeight, 0.1, 1000);
+  camera.position.set(0, 10, 14);
+  camera.lookAt(0, 0, 0);
+  
+  renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setSize(innerWidth, innerHeight);
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  renderer.setClearColor(0x050510);
+  document.body.appendChild(renderer.domElement);
+  bootLog('Renderer: ' + renderer.domElement.width + 'x' + renderer.domElement.height);
+  
+  if (THREE.OrbitControls) {
+    controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.08;
+    controls.target.set(0, 0, 0);
+    bootLog('Controls: OrbitControls OK');
+  } else {
+    bootLog('<span style="color:#ffd700">Controls: OrbitControls not found, orbit disabled</span>');
+    controls = { update: function(){}, enabled: true, enableRotate: true };
+  }
+} catch(err) {
+  bootLog('<span style="color:red">INIT ERROR: ' + err.message + '</span>');
+}
+
+// ── LATTICE BOUNDARY — defines the playfield shape ──
+var gridGroup = new THREE.Group();
+scene.add(gridGroup);
+var gridHelper = null; // ref for swarm fade
+var axesHelper = null;
+
+// Point-in-polygon test for boundary clipping
+function polyBoundaryVerts(sides, R) {
+  var v = [];
+  for (var i = 0; i < sides; i++) {
+    var a = (i / sides) * Math.PI * 2 - Math.PI / 2;
+    v.push([Math.cos(a) * R, Math.sin(a) * R]);
+  }
+  return v;
+}
+
+function pointInPoly(px, pz, poly) {
+  var inside = false;
+  for (var i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    var xi = poly[i][0], zi = poly[i][1];
+    var xj = poly[j][0], zj = poly[j][1];
+    if ((zi > pz) !== (zj > pz) && px < (xj - xi) * (pz - zi) / (zj - zi) + xi) {
+      inside = !inside;
+    }
+  }
+  return inside;
+}
+
+function inLatticeBounds(x, z) {
+  if (latticeBoundary === 'CUBE') return Math.abs(x) <= latticeRadius && Math.abs(z) <= latticeRadius;
+  var sides = latticeBoundary === 'PENT' ? 5 : 6;
+  return pointInPoly(x, z, polyBoundaryVerts(sides, latticeRadius));
+}
+
+function rebuildLattice() {
+  // Clear old
+  for (var i = gridGroup.children.length - 1; i >= 0; i--) {
+    var c = gridGroup.children[i];
+    if (c.geometry) c.geometry.dispose();
+    if (c.material && c.material.dispose) c.material.dispose();
+    gridGroup.remove(c);
+  }
+
+  var R = latticeRadius;
+
+  if (latticeBoundary === 'CUBE') {
+    // Standard square grid
+    gridHelper = new THREE.GridHelper(R * 2, R * 2, 0x1a2a3a, 0x0d1520);
+    gridGroup.add(gridHelper);
+  } else {
+    // Polygon boundary: draw edge lines + internal grid clipped to polygon
+    var sides = latticeBoundary === 'PENT' ? 5 : 6;
+    var poly = polyBoundaryVerts(sides, R);
+
+    // Boundary edge
+    var edgeVerts = [];
+    for (var i = 0; i < sides; i++) {
+      var a = poly[i], b = poly[(i + 1) % sides];
+      edgeVerts.push(a[0], 0, a[1], b[0], 0, b[1]);
+    }
+    var edgeGeo = new THREE.BufferGeometry();
+    edgeGeo.setAttribute('position', new THREE.Float32BufferAttribute(edgeVerts, 3));
+    var edgeMat = new THREE.LineBasicMaterial({ color: 0x1a2a3a, transparent: true, opacity: 0.6 });
+    gridHelper = new THREE.LineSegments(edgeGeo, edgeMat); // ref for swarm
+    gridGroup.add(gridHelper);
+
+    // Internal grid lines clipped to boundary
+    var gridVerts = [];
+    for (var x = -R; x <= R; x += 1) {
+      for (var z = -R; z <= R; z += 1) {
+        // Horizontal segment
+        if (inLatticeBounds(x, z) && inLatticeBounds(x + 1, z)) {
+          gridVerts.push(x, 0, z, x + 1, 0, z);
+        }
+        // Vertical segment
+        if (inLatticeBounds(x, z) && inLatticeBounds(x, z + 1)) {
+          gridVerts.push(x, 0, z, x, 0, z + 1);
+        }
+      }
+    }
+    if (gridVerts.length) {
+      var gGeo = new THREE.BufferGeometry();
+      gGeo.setAttribute('position', new THREE.Float32BufferAttribute(gridVerts, 3));
+      gridGroup.add(new THREE.LineSegments(gGeo, new THREE.LineBasicMaterial({ color: 0x0d1520 })));
+    }
+  }
+
+  // Lattice dots clipped to boundary
+  var dotVerts = [];
+  for (var gx = -R; gx <= R; gx++) {
+    for (var gz = -R; gz <= R; gz++) {
+      if (inLatticeBounds(gx, gz)) dotVerts.push(gx, 0.01, gz);
+    }
+  }
+  var dotGeo = new THREE.BufferGeometry();
+  dotGeo.setAttribute('position', new THREE.Float32BufferAttribute(dotVerts, 3));
+  gridGroup.add(new THREE.Points(dotGeo, new THREE.PointsMaterial({ color: 0x2a3a4a, size: 2, sizeAttenuation: false })));
+
+  // Axes
+  axesHelper = new THREE.AxesHelper(1.5);
+  gridGroup.add(axesHelper);
+
+  log('Lattice: ' + latticeBoundary + ' R=' + R + ' (' + dotVerts.length/3 + ' dots)');
+}
+
+function setLatticeBoundary(shape) {
+  latticeBoundary = shape;
+  ['CUBE','PENT','HEX'].forEach(function(s) {
+    var el = document.getElementById('b-l' + s.toLowerCase());
+    if (el) el.className = s === shape ? 'btn themed active' : 'btn themed';
+  });
+  rebuildLattice();
+}
+
+rebuildLattice();
+bootLog('Lattice: ' + latticeBoundary + ' boundary');
+
+bootLog('Axes: R=x G=y B=z');
+
+// Lights
+scene.add(new THREE.AmbientLight(0x606080, 0.8));
+var dirLight = new THREE.DirectionalLight(0xffffff, 1.0);
+dirLight.position.set(5, 10, 7);
+scene.add(dirLight);
+bootLog('Lights: ambient + directional');
+
+// Groups for each graph
+var groupA = new THREE.Group(); scene.add(groupA);
+var groupB = new THREE.Group(); scene.add(groupB);
+var groupR = new THREE.Group(); scene.add(groupR);
+var groupMap = { A: groupA, B: groupB, R: groupR };
+
+// Raycaster
+var raycaster = new THREE.Raycaster();
+var mouse = new THREE.Vector2();
+var plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+var planeIntersect = new THREE.Vector3();
+
+// ═══════════════════════════════════════════════════════
+// §3  GRAPH DATA OPERATIONS
+// ═══════════════════════════════════════════════════════
+function addNode(graphKey, pos) {
+  var g = graphs[graphKey];
+  var id = nodeIdCounter++;
+  var node = { id: id, pos: [pos.x, pos.y || 0, pos.z], label: graphKey + id };
+  g.nodes.push(node);
+  log('+ node ' + node.label + ' at (' + pos.x.toFixed(2) + ', ' + (pos.y||0).toFixed(2) + ', ' + pos.z.toFixed(2) + ')');
+  log('  Graph ' + graphKey + ': ' + g.nodes.length + ' nodes, ' + g.edges.length + ' edges');
+  rebuildScene();
+  return node;
+}
+
+function addEdge(graphKey, id1, id2) {
+  var g = graphs[graphKey];
+  // Check no duplicate
+  for (var i = 0; i < g.edges.length; i++) {
+    var e = g.edges[i];
+    if ((e[0]===id1 && e[1]===id2) || (e[0]===id2 && e[1]===id1)) return;
+  }
+  g.edges.push([id1, id2]);
+  log('+ edge ' + graphKey + id1 + ' ⟷ ' + graphKey + id2);
+  rebuildScene();
+}
+
+function removeNode(graphKey, id) {
+  var g = graphs[graphKey];
+  g.nodes = g.nodes.filter(function(n){ return n.id !== id; });
+  g.edges = g.edges.filter(function(e){ return e[0] !== id && e[1] !== id; });
+  log('- node ' + graphKey + id);
+  rebuildScene();
+}
+
+function findNodeAt(graphKey, screenX, screenY) {
+  mouse.x = (screenX / innerWidth) * 2 - 1;
+  mouse.y = -(screenY / innerHeight) * 2 + 1;
+  raycaster.setFromCamera(mouse, camera);
+  var group = groupMap[graphKey];
+  var hits = raycaster.intersectObjects(group.children, true);
+  for (var i = 0; i < hits.length; i++) {
+    var obj = hits[i].object;
+    if (obj.userData && obj.userData.nodeId !== undefined) {
+      return obj.userData.nodeId;
+    }
+  }
+  return null;
+}
+
+// Snap to nearest grid point (grid = 1 unit spacing)
+function snapToGrid(v) {
+  return new THREE.Vector3(Math.round(v.x), 0, Math.round(v.z));
+}
+
+function getWorldClick(screenX, screenY) {
+  mouse.x = (screenX / innerWidth) * 2 - 1;
+  mouse.y = -(screenY / innerHeight) * 2 + 1;
+  raycaster.setFromCamera(mouse, camera);
+  var hit = raycaster.ray.intersectPlane(plane, planeIntersect);
+  if (hit) {
+    var snapped = snapToGrid(planeIntersect);
+    log('  ray->grid (' + snapped.x.toFixed(0) + ', 0, ' + snapped.z.toFixed(0) + ')');
+    return snapped;
+  }
+  log('  ray missed plane!');
+  return null;
+}
+
+// Raw world click (no snap, no log) for grab
+function getWorldClickRaw(screenX, screenY) {
+  mouse.x = (screenX / innerWidth) * 2 - 1;
+  mouse.y = -(screenY / innerHeight) * 2 + 1;
+  raycaster.setFromCamera(mouse, camera);
+  var hit = raycaster.ray.intersectPlane(plane, planeIntersect);
+  return hit ? planeIntersect.clone() : null;
+}
+
+// ── GRAB: lift entire graph, move, snap down ──
+function grabStart(sx, sy) {
+  var g = graphs[activeGraph];
+  if (!g.nodes.length) { log('Nothing to grab.'); return; }
+  grabAnchor = getWorldClickRaw(sx, sy);
+  if (!grabAnchor) return;
+  grabActive = true;
+  controls.enableRotate = false;
+  controls.enablePan = false;
+  // Store original positions + lift
+  for (var i = 0; i < g.nodes.length; i++) {
+    g.nodes[i]._grabOrig = g.nodes[i].pos.slice();
+    g.nodes[i].pos[1] = grabLiftY;
+  }
+  log('GRAB: lifted ' + g.nodes.length + ' nodes');
+  rebuildScene();
+  updateMode();
+}
+
+function grabEnd(commit) {
+  var g = graphs[activeGraph];
+  grabActive = false;
+  if (!planeLocked) {
+    controls.enableRotate = true;
+    controls.enablePan = true;
+  }
+  if (commit) {
+    // Snap all nodes to grid + drop to Y=0
+    for (var i = 0; i < g.nodes.length; i++) {
+      g.nodes[i].pos[0] = Math.round(g.nodes[i].pos[0]);
+      g.nodes[i].pos[1] = 0;
+      g.nodes[i].pos[2] = Math.round(g.nodes[i].pos[2]);
+      delete g.nodes[i]._grabOrig;
+    }
+    log('GRAB: dropped + snapped to grid');
+  } else {
+    // Cancel: restore originals
+    for (var i = 0; i < g.nodes.length; i++) {
+      if (g.nodes[i]._grabOrig) {
+        g.nodes[i].pos = g.nodes[i]._grabOrig.slice();
+        delete g.nodes[i]._grabOrig;
+      }
+    }
+    log('GRAB: cancelled');
+  }
+  rebuildScene();
+  updateMode();
+}
+
+// ═══════════════════════════════════════════════════════
+// §4  GRAPH ALGEBRA — The Math
+// ═══════════════════════════════════════════════════════
+
+// UNION: A ∪ B = combine all nodes and edges
+function graphUnion(gA, gB) {
+  var R = { nodes: [], edges: [], color: 0xff69b4, name: 'A∪B' };
+  var idMap = {};
+  // Copy A
+  gA.nodes.forEach(function(n) {
+    var newId = nodeIdCounter++;
+    idMap['A'+n.id] = newId;
+    R.nodes.push({ id: newId, pos: n.pos.slice(), label: 'R'+newId });
+  });
+  // Copy B (offset to avoid overlap)
+  gB.nodes.forEach(function(n) {
+    var newId = nodeIdCounter++;
+    idMap['B'+n.id] = newId;
+    R.nodes.push({ id: newId, pos: n.pos.slice(), label: 'R'+newId });
+  });
+  // Edges
+  gA.edges.forEach(function(e) { R.edges.push([idMap['A'+e[0]], idMap['A'+e[1]]]); });
+  gB.edges.forEach(function(e) { R.edges.push([idMap['B'+e[0]], idMap['B'+e[1]]]); });
+  return R;
+}
+
+// INTERSECTION: A ∩ B = nodes close enough to match, shared edges
+function graphIntersect(gA, gB) {
+  var R = { nodes: [], edges: [], color: 0xff69b4, name: 'A∩B' };
+  var THRESH = 1.5;
+  var matchA = {}, matchB = {};
+  // Find matching nodes (within distance threshold)
+  gA.nodes.forEach(function(a) {
+    gB.nodes.forEach(function(b) {
+      var dx = a.pos[0]-b.pos[0], dz = a.pos[2]-b.pos[2];
+      var dist = Math.sqrt(dx*dx + dz*dz);
+      if (dist < THRESH && !matchA[a.id] && !matchB[b.id]) {
+        var newId = nodeIdCounter++;
+        var mid = [(a.pos[0]+b.pos[0])/2, 0, (a.pos[2]+b.pos[2])/2];
+        R.nodes.push({ id: newId, pos: mid, label: 'R'+newId });
+        matchA[a.id] = newId;
+        matchB[b.id] = newId;
+      }
+    });
+  });
+  // Edges: only if both endpoints matched
+  gA.edges.forEach(function(e) {
+    if (matchA[e[0]] && matchA[e[1]]) {
+      R.edges.push([matchA[e[0]], matchA[e[1]]]);
+    }
+  });
+  return R;
+}
+
+// CARTESIAN PRODUCT: A × B = |V_A|×|V_B| nodes
+function graphProduct(gA, gB) {
+  var R = { nodes: [], edges: [], color: 0xff69b4, name: 'A×B' };
+  var grid = {};
+  // Create product nodes
+  gA.nodes.forEach(function(a) {
+    gB.nodes.forEach(function(b) {
+      var newId = nodeIdCounter++;
+      var pos = [a.pos[0] + b.pos[0]*0.3, 0, a.pos[2] + b.pos[2]*0.3];
+      R.nodes.push({ id: newId, pos: pos, label: 'R'+newId });
+      grid[a.id + ',' + b.id] = newId;
+    });
+  });
+  // Edges: (a1,b)-(a2,b) if a1~a2, or (a,b1)-(a,b2) if b1~b2
+  gA.edges.forEach(function(ea) {
+    gB.nodes.forEach(function(b) {
+      var id1 = grid[ea[0]+','+b.id], id2 = grid[ea[1]+','+b.id];
+      if (id1 !== undefined && id2 !== undefined) R.edges.push([id1, id2]);
+    });
+  });
+  gB.edges.forEach(function(eb) {
+    gA.nodes.forEach(function(a) {
+      var id1 = grid[a.id+','+eb[0]], id2 = grid[a.id+','+eb[1]];
+      if (id1 !== undefined && id2 !== undefined) R.edges.push([id1, id2]);
+    });
+  });
+  return R;
+}
+
+// DIFFERENCE: A - B = A with matched nodes/edges removed
+function graphDiff(gA, gB) {
+  var R = { nodes: [], edges: [], color: 0xff69b4, name: 'A−B' };
+  var THRESH = 1.5;
+  var removeSet = {};
+  // Find A nodes that are too close to any B node
+  gA.nodes.forEach(function(a) {
+    gB.nodes.forEach(function(b) {
+      var dx = a.pos[0]-b.pos[0], dz = a.pos[2]-b.pos[2];
+      if (Math.sqrt(dx*dx + dz*dz) < THRESH) removeSet[a.id] = true;
+    });
+  });
+  var idMap = {};
+  gA.nodes.forEach(function(n) {
+    if (!removeSet[n.id]) {
+      var newId = nodeIdCounter++;
+      idMap[n.id] = newId;
+      R.nodes.push({ id: newId, pos: n.pos.slice(), label: 'R'+newId });
+    }
+  });
+  gA.edges.forEach(function(e) {
+    if (idMap[e[0]] !== undefined && idMap[e[1]] !== undefined) {
+      R.edges.push([idMap[e[0]], idMap[e[1]]]);
+    }
+  });
+  return R;
+}
+
+// ═══════════════════════════════════════════════════════
+// §5  SCENE REBUILD
+// ═══════════════════════════════════════════════════════
+var nodeSphereGeo = new THREE.SphereGeometry(0.12, 10, 6);
+
+// Pre-allocate materials (never recreated)
+var matCache = {
+  A: new THREE.MeshPhongMaterial({ color:0x00d4ff, emissive:0x00d4ff, emissiveIntensity:0.15, specular:0xffffff, shininess:120 }),
+  B: new THREE.MeshPhongMaterial({ color:0xffd700, emissive:0xffd700, emissiveIntensity:0.15, specular:0xffffff, shininess:120 }),
+  R: new THREE.MeshPhongMaterial({ color:0xff69b4, emissive:0xff69b4, emissiveIntensity:0.15, specular:0xffffff, shininess:120 })
+};
+// Hover material — white hot glow
+var matHover = new THREE.MeshPhongMaterial({ color:0xffffff, emissive:0xffffff, emissiveIntensity:0.6, specular:0xffffff, shininess:200 });
+// Selected/chain-start material — green glow  
+var matSelected = new THREE.MeshPhongMaterial({ color:0x7fff7f, emissive:0x7fff7f, emissiveIntensity:0.5, specular:0xffffff, shininess:200 });
+// Grab-ready material — bright white-tinted pulse to say "you can grab me"
+var matGrabReady = {
+  A: new THREE.MeshPhongMaterial({ color:0x80efff, emissive:0x00d4ff, emissiveIntensity:0.45, specular:0xffffff, shininess:200 }),
+  B: new THREE.MeshPhongMaterial({ color:0xffef80, emissive:0xffd700, emissiveIntensity:0.45, specular:0xffffff, shininess:200 }),
+  R: new THREE.MeshPhongMaterial({ color:0xff9fd4, emissive:0xff69b4, emissiveIntensity:0.45, specular:0xffffff, shininess:200 })
+};
+var grabReadyLineMatCache = {
+  A: new THREE.LineBasicMaterial({ color:0x80efff }),
+  B: new THREE.LineBasicMaterial({ color:0xffef80 }),
+  R: new THREE.LineBasicMaterial({ color:0xff9fd4 })
+};
+var lineMatCache = {
+  A: new THREE.LineBasicMaterial({ color:0x00d4ff }),
+  B: new THREE.LineBasicMaterial({ color:0xffd700 }),
+  R: new THREE.LineBasicMaterial({ color:0xff69b4 })
+};
+
+// ── FILM (soap membrane) materials ──
+var filmMatCache = {
+  A: new THREE.MeshPhongMaterial({ color:0x00d4ff, emissive:0x00d4ff, emissiveIntensity:0.08, transparent:true, opacity:0, side:THREE.DoubleSide, depthWrite:false }),
+  B: new THREE.MeshPhongMaterial({ color:0xffd700, emissive:0xffd700, emissiveIntensity:0.08, transparent:true, opacity:0, side:THREE.DoubleSide, depthWrite:false }),
+  R: new THREE.MeshPhongMaterial({ color:0xff69b4, emissive:0xff69b4, emissiveIntensity:0.08, transparent:true, opacity:0, side:THREE.DoubleSide, depthWrite:false })
+};
+var filmMeshes = { A:null, B:null, R:null };
+var filmTargetOpacity = { A:0, B:0, R:0 };
+var filmCurrentOpacity = { A:0, B:0, R:0 };
+var FILM_MAX_OPACITY = 0.28;
+var FILM_FADE_SPEED = 0.06;
+var FILM_RADIUS = 8;  // distance at which film starts appearing
+
+// Node lookup cache for fast edge resolution
+var nodeLookup = {};
+function buildNodeLookup(g) {
+  var m = {};
+  for (var i = 0; i < g.nodes.length; i++) m[g.nodes[i].id] = g.nodes[i];
+  return m;
+}
+
+// ────────────────────────────────────────────────────────────
+// FACE WALKER: planar face discovery via angular half-edge walk
+// One algorithm for ALL graph topologies. O(E log degree).
+// ────────────────────────────────────────────────────────────
+function findFaces(g) {
+  if (g.nodes.length < 3 || g.edges.length < 3) return [];
+  if (g.nodes.length > 500) return []; // perf guard
+  var lookup = buildNodeLookup(g);
+
+  // 1. Build adjacency sorted by angle from each node
+  var adj = {};  // nodeId -> [ {id, angle}, ... ] sorted CW
+  g.nodes.forEach(function(n) { adj[n.id] = []; });
+  g.edges.forEach(function(e) {
+    var a = lookup[e[0]], b = lookup[e[1]];
+    if (!a || !b) return;
+    adj[e[0]].push({ id: e[1], angle: Math.atan2(b.pos[2]-a.pos[2], b.pos[0]-a.pos[0]) });
+    adj[e[1]].push({ id: e[0], angle: Math.atan2(a.pos[2]-b.pos[2], a.pos[0]-b.pos[0]) });
+  });
+  var keys = Object.keys(adj);
+  for (var ki = 0; ki < keys.length; ki++) {
+    adj[keys[ki]].sort(function(a,b){ return a.angle - b.angle; });
+  }
+
+  // 2. For directed half-edge u→v, find next: at v, look up u in v’s sorted
+  //    neighbors, take the PREVIOUS neighbor (CW turn = left face).
+  function nextHE(u, v) {
+    var nb = adj[v];
+    if (!nb || !nb.length) return -1;
+    for (var i = 0; i < nb.length; i++) {
+      if (nb[i].id === u) {
+        return nb[(i - 1 + nb.length) % nb.length].id;
+      }
+    }
+    return -1;
+  }
+
+  // 3. Walk every half-edge once → discover faces
+  var used = {};   // 'u>v' -> true
+  var faces = [];
+  g.edges.forEach(function(e) {
+    for (var dir = 0; dir < 2; dir++) {
+      var startU = e[dir], startV = e[1 - dir];
+      var heKey = startU + '>' + startV;
+      if (used[heKey]) continue;
+
+      var face = [];
+      var cu = startU, cv = startV;
+      var safe = g.nodes.length + 2;
+      while (safe-- > 0) {
+        used[cu + '>' + cv] = true;
+        face.push(cu);
+        var w = nextHE(cu, cv);
+        if (w === -1) break;
+        cu = cv;
+        cv = w;
+        if (cu === startU && cv === startV) break;
+      }
+      if (face.length >= 3) faces.push(face);
+    }
+  });
+
+  // 4. Remove outer face (largest signed area)
+  if (faces.length > 1) {
+    var maxA = -1, maxI = 0;
+    for (var fi = 0; fi < faces.length; fi++) {
+      var area = 0;
+      var f = faces[fi];
+      for (var j = 0; j < f.length; j++) {
+        var p = lookup[f[j]], q = lookup[f[(j+1) % f.length]];
+        if (p && q) area += p.pos[0]*q.pos[2] - q.pos[0]*p.pos[2];
+      }
+      area = Math.abs(area);
+      if (area > maxA) { maxA = area; maxI = fi; }
+    }
+    faces.splice(maxI, 1);
+  }
+  return faces;
+}
+
+// ── Build film mesh from walked faces ──
+function buildFilmMesh(key) {
+  // Remove old
+  if (filmMeshes[key]) {
+    if (filmMeshes[key].geometry) filmMeshes[key].geometry.dispose();
+    scene.remove(filmMeshes[key]);
+    filmMeshes[key] = null;
+  }
+  var g = graphs[key];
+  if (!g.nodes.length || !g.edges.length) return;
+  var lookup = buildNodeLookup(g);
+  var faces = findFaces(g);
+  if (!faces.length) return;
+
+  // Fan-triangulate each face from its first vertex
+  var triCount = 0;
+  for (var fi = 0; fi < faces.length; fi++) triCount += faces[fi].length - 2;
+  var verts = new Float32Array(triCount * 9);
+  var vi = 0;
+  var yOff = 0.02;
+
+  for (var fi = 0; fi < faces.length; fi++) {
+    var face = faces[fi];
+    var n0 = lookup[face[0]];
+    if (!n0) continue;
+    for (var ti = 1; ti < face.length - 1; ti++) {
+      var n1 = lookup[face[ti]], n2 = lookup[face[ti + 1]];
+      if (!n1 || !n2) continue;
+      verts[vi++]=n0.pos[0]; verts[vi++]=(n0.pos[1]||0.12)+yOff; verts[vi++]=n0.pos[2];
+      verts[vi++]=n1.pos[0]; verts[vi++]=(n1.pos[1]||0.12)+yOff; verts[vi++]=n1.pos[2];
+      verts[vi++]=n2.pos[0]; verts[vi++]=(n2.pos[1]||0.12)+yOff; verts[vi++]=n2.pos[2];
+    }
+  }
+  if (vi === 0) return;
+  var geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(verts.subarray(0, vi), 3));
+  geo.computeVertexNormals();
+  var mesh = new THREE.Mesh(geo, filmMatCache[key]);
+  mesh.renderOrder = 1;
+  scene.add(mesh);
+  filmMeshes[key] = mesh;
+}
+
+function rebuildScene() {
+  var t0 = performance.now();
+  ['A','B','R'].forEach(function(key) {
+    var group = groupMap[key];
+    // Fast clear
+    for (var i = group.children.length - 1; i >= 0; i--) {
+      var c = group.children[i];
+      if (c.geometry) c.geometry.dispose();
+      group.remove(c);
+    }
+    var g = graphs[key];
+    if (!g.nodes.length) return;
+    var lookup = buildNodeLookup(g);
+    var mat = matCache[key];
+    // Nodes
+    for (var ni = 0; ni < g.nodes.length; ni++) {
+      var n = g.nodes[ni];
+      var mesh = new THREE.Mesh(nodeSphereGeo, mat);
+      mesh.position.set(n.pos[0], n.pos[1] || 0.12, n.pos[2]);
+      mesh.userData = { nodeId: n.id, graphKey: key };
+      group.add(mesh);
+    }
+    // Edges — batch into single BufferGeometry
+    if (g.edges.length) {
+      var ev = new Float32Array(g.edges.length * 6);
+      var ei = 0;
+      for (var j = 0; j < g.edges.length; j++) {
+        var n1 = lookup[g.edges[j][0]];
+        var n2 = lookup[g.edges[j][1]];
+        if (n1 && n2) {
+          ev[ei++]=n1.pos[0]; ev[ei++]=n1.pos[1]||0.12; ev[ei++]=n1.pos[2];
+          ev[ei++]=n2.pos[0]; ev[ei++]=n2.pos[1]||0.12; ev[ei++]=n2.pos[2];
+        }
+      }
+      var eg = new THREE.BufferGeometry();
+      eg.setAttribute('position', new THREE.BufferAttribute(ev.subarray(0, ei), 3));
+      group.add(new THREE.LineSegments(eg, lineMatCache[key]));
+    }
+    // Rebuild film geometry (triangles stay ready, opacity controlled in animate)
+    buildFilmMesh(key);
+
+    // Auto-apply grab-ready glow if grab tool is active on this graph
+    if (activeTool === 'grab' && key === activeGraph) {
+      for (var gi = 0; gi < group.children.length; gi++) {
+        var gc = group.children[gi];
+        if (gc.userData && gc.userData.nodeId !== undefined) {
+          gc.material = matGrabReady[key];
+          gc.scale.setScalar(1.3);
+        }
+        if (gc.isLineSegments) {
+          gc.material = grabReadyLineMatCache[key];
+        }
+      }
+    }
+  });
+  var dt = performance.now() - t0;
+  if (dt > 5) log('rebuild: ' + dt.toFixed(1) + 'ms');
+  updateHUD();
+}
+
+// Highlight system — hover + edge-chain selection
+var lastHoverId = null;
+var lastHoverMesh = null;
+var lastHoverOrigMat = null;
+var chainMesh = null;
+var chainOrigMat = null;
+
+function highlightNode(hoverId) {
+  // Un-highlight previous hover (but not if it's the chain-start)
+  if (lastHoverMesh && lastHoverId !== edgeStart) {
+    lastHoverMesh.material = lastHoverOrigMat;
+  }
+  lastHoverId = hoverId;
+  lastHoverMesh = null;
+  lastHoverOrigMat = null;
+  
+  if (hoverId === null) return;
+  
+  // Find the mesh
+  var group = groupMap[activeGraph];
+  for (var i = 0; i < group.children.length; i++) {
+    var c = group.children[i];
+    if (c.userData && c.userData.nodeId === hoverId) {
+      lastHoverMesh = c;
+      lastHoverOrigMat = matCache[activeGraph];
+      c.material = matHover;
+      // Scale up slightly
+      c.scale.setScalar(1.5);
+      break;
+    }
+  }
+  
+  // Keep chain-start highlighted green
+  updateChainHighlight();
+}
+
+function updateChainHighlight() {
+  // Clear old chain highlight
+  if (chainMesh && chainMesh !== lastHoverMesh) {
+    chainMesh.material = chainOrigMat || matCache[activeGraph];
+    chainMesh.scale.setScalar(1.0);
+  }
+  chainMesh = null;
+  chainOrigMat = null;
+  
+  if (edgeStart === null) return;
+  
+  var group = groupMap[activeGraph];
+  for (var i = 0; i < group.children.length; i++) {
+    var c = group.children[i];
+    if (c.userData && c.userData.nodeId === edgeStart) {
+      chainMesh = c;
+      chainOrigMat = matCache[activeGraph];
+      c.material = matSelected;
+      c.scale.setScalar(1.8);
+      break;
+    }
+  }
+}
+
+// Reset scales on rebuild
+var _origRebuild = rebuildScene;
+rebuildScene = function() {
+  lastHoverMesh = null;
+  chainMesh = null;
+  _origRebuild();
+  updateChainHighlight();
+};
+
+// ═══════════════════════════════════════════════════════
+// §6  UI
+// ═══════════════════════════════════════════════════════
+function setGraph(key) {
+  // If currently grabbing a different graph, drop it first
+  if (grabActive && activeGraph !== key) {
+    grabEnd(true); // commit drop before switching
+    log('Auto-dropped ' + activeGraph + ' before switching to ' + key);
+  }
+  activeGraph = key;
+  document.getElementById('b-ga').className = key==='A' ? 'btn g-a active' : 'btn g-a';
+  document.getElementById('b-gb').className = key==='B' ? 'btn g-b active' : 'btn g-b';
+  // Theme the body for CSS cascade
+  document.body.className = 'graph-' + key;
+  // Rebuild to transfer grab glow to new active graph
+  if (activeTool === 'grab') rebuildScene();
+  updateMode();
+}
+
+function setTool(tool) {
+  var prevTool = activeTool;
+  activeTool = tool;
+  edgeStart = null;
+  // End any active grab
+  if (tool !== 'grab' && grabActive) grabEnd(false);
+  ['node','edge','move','grab','delete'].forEach(function(t) {
+    document.getElementById('b-'+t).className = t===tool ? 'btn themed active' : 'btn themed';
+  });
+  // Only rebuild when entering/leaving grab (to apply/clear glow)
+  if (tool === 'grab' || prevTool === 'grab') rebuildScene();
+  updateMode();
+}
+
+
+function updateMode() {
+  var m = document.getElementById('mode');
+  var labels = { node: 'CLICK TO PLACE', edge: 'CLICK TWO NODES', move: 'DRAG NODE', grab: grabActive ? 'CLICK TO DROP' : 'CLICK TO GRAB GRAPH', delete: 'CLICK TO DELETE' };
+  m.innerHTML = '<b style="color:'+(activeGraph==='A'?'#00d4ff':'#ffd700')+'">Graph '+activeGraph+'</b><br>'+labels[activeTool];
+}
+
+function updateHUD() {
+  document.getElementById('h-a').textContent = graphs.A.nodes.length+' nodes, '+graphs.A.edges.length+' edges';
+  document.getElementById('h-b').textContent = graphs.B.nodes.length+' nodes, '+graphs.B.edges.length+' edges';
+  var r = graphs.R;
+  document.getElementById('h-result').textContent = r.nodes.length ? r.name+': '+r.nodes.length+' nodes, '+r.edges.length+' edges' : '';
+}
+
+function log(msg) {
+  var el = document.getElementById('log');
+  // Pure text only — strip any HTML
+  var clean = msg.replace(/<[^>]*>/g, '');
+  var d = document.createElement('div');
+  d.className = 'entry';
+  d.textContent = clean;
+  el.appendChild(d);
+  el.scrollTop = el.scrollHeight;
+  if (el.children.length > 80) el.removeChild(el.firstChild);
+}
+
+// ═══════════════════════════════════════════════════════
+// §7  OPERATIONS
+// ═══════════════════════════════════════════════════════
+function graphOp(op) {
+  var gA = graphs.A, gB = graphs.B;
+  if (!gA.nodes.length || !gB.nodes.length) { log('Need nodes in both A and B'); return; }
+  var result;
+  if (op === 'union')     result = graphUnion(gA, gB);
+  if (op === 'intersect') result = graphIntersect(gA, gB);
+  if (op === 'product')   result = graphProduct(gA, gB);
+  if (op === 'diff')      result = graphDiff(gA, gB);
+  graphs.R = result;
+  lastOp = op;
+  log('<span class="op">OP: ' + result.name + ' → ' + result.nodes.length + ' nodes, ' + result.edges.length + ' edges</span>');
+  rebuildScene();
+}
+
+function iterateOp() {
+  if (!lastOp) { log('No operation to iterate. Run an op first.'); return; }
+  if (!graphs.R.nodes.length) { log('No result to iterate on.'); return; }
+  // Move result → A, keep B, re-run
+  graphs.A = { nodes: graphs.R.nodes.slice(), edges: graphs.R.edges.slice(), color: 0x00d4ff, name: 'A' };
+  graphs.A.nodes.forEach(function(n) { n.label = 'A' + n.id; });
+  log('Iterate: Result → A, re-running ' + lastOp);
+  graphOp(lastOp);
+}
+
+function randomGraph() {
+  var g = graphs[activeGraph];
+  g.nodes = []; g.edges = [];
+  var N = 5 + Math.floor(Math.random() * 8);
+  var ox = activeGraph === 'B' ? 5 : -5;
+  
+  // Place nodes on grid in a ring — rejection sample to boundary
+  var placed = 0, tries = 0;
+  while (placed < N && tries < N * 20) {
+    tries++;
+    var angle = (placed / N) * Math.PI * 2;
+    var rr = 2 + Math.random() * (latticeRadius * 0.4);
+    var x = Math.round(Math.cos(angle) * rr + ox);
+    var z = Math.round(Math.sin(angle) * rr);
+    if (!inLatticeBounds(x, z)) continue;
+    var id = nodeIdCounter++;
+    g.nodes.push({ id: id, pos: [x, 0, z], label: activeGraph + id });
+    placed++;
+  }
+  
+  // CLOSED graph: connect each node to next (Hamiltonian cycle)
+  for (var i = 0; i < N; i++) {
+    g.edges.push([g.nodes[i].id, g.nodes[(i+1) % N].id]);
+  }
+  // Extra random edges for richness
+  var extra = Math.floor(N * 0.5);
+  for (var j = 0; j < extra; j++) {
+    var a = Math.floor(Math.random() * N), b = Math.floor(Math.random() * N);
+    if (a !== b) {
+      var dup = false;
+      for (var k = 0; k < g.edges.length; k++) {
+        if ((g.edges[k][0]===g.nodes[a].id && g.edges[k][1]===g.nodes[b].id) ||
+            (g.edges[k][0]===g.nodes[b].id && g.edges[k][1]===g.nodes[a].id)) { dup=true; break; }
+      }
+      if (!dup) g.edges.push([g.nodes[a].id, g.nodes[b].id]);
+    }
+  }
+  log('Random ' + activeGraph + ': ' + N + ' nodes, ' + g.edges.length + ' edges (closed)');
+  rebuildScene();
+}
+
+function clearGraph() {
+  graphs[activeGraph] = { nodes: [], edges: [], color: graphs[activeGraph].color, name: activeGraph };
+  graphs.R = { nodes: [], edges: [], color: 0xff69b4, name: 'Result' };
+  log('Cleared ' + activeGraph);
+  rebuildScene();
+}
+
+// ═══════════════════════════════════════════════════════
+// §MATH  THE ALGEBRA GRAPH — one iteration
+// ═══════════════════════════════════════════════════════
+function algebraGraph() {
+  // Clear A
+  graphs.A = { nodes:[], edges:[], color:0x00d4ff, name:'A' };
+  graphs.R = { nodes:[], edges:[], color:0xff69b4, name:'Result' };
+  
+  // Define operations by TYPE — scale positions to fit boundary
+  var sc = Math.min(1, latticeRadius / 10);
+  var ops = [
+    { name:'+',   type:'num', takes:'num',  x:-6*sc, z:-4*sc },
+    { name:'−',   type:'num', takes:'num',  x:-4*sc, z:-4*sc },
+    { name:'×',   type:'num', takes:'num',  x:-2*sc, z:-4*sc },
+    { name:'÷',   type:'num', takes:'num',  x: 0,    z:-4*sc },
+    { name:'neg', type:'num', takes:'num',  x: 2*sc, z:-4*sc },
+    { name:'inv', type:'num', takes:'num',  x: 4*sc, z:-4*sc },
+    { name:'pow', type:'num', takes:'num',  x:-5*sc, z:-1*sc },
+    { name:'exp', type:'num', takes:'num',  x:-3*sc, z:-1*sc },
+    { name:'log', type:'num', takes:'num',  x:-1*sc, z:-1*sc },
+    { name:'√',   type:'num', takes:'num',  x: 1*sc, z:-1*sc },
+    { name:'det',  type:'num', takes:'mat', x: 3*sc, z:-1*sc },
+    { name:'tr',   type:'num', takes:'mat', x: 5*sc, z:-1*sc },
+    { name:'dot',  type:'num', takes:'vec', x: 7*sc, z:-1*sc },
+    { name:'Mᵀ',    type:'mat', takes:'mat', x:-5*sc, z: 2*sc },
+    { name:'M†',    type:'mat', takes:'mat', x:-3*sc, z: 2*sc },
+    { name:'M×M',   type:'mat', takes:'mat', x:-1*sc, z: 2*sc },
+    { name:'cross',type:'vec', takes:'vec', x: 1*sc, z: 2*sc },
+    { name:'eig',  type:'set', takes:'mat', x: 3*sc, z: 2*sc },
+    { name:'d/dx', type:'fn', takes:'fn',   x:-4*sc, z: 5*sc },
+    { name:'∫dx',  type:'fn', takes:'fn',   x:-2*sc, z: 5*sc },
+    { name:'lim',  type:'fn', takes:'fn',   x: 0,    z: 5*sc },
+    { name:'Σ',    type:'num', takes:'fn',  x: 2*sc, z: 5*sc },
+    { name:'Π',    type:'num', takes:'fn',  x: 4*sc, z: 5*sc },
+    { name:'∪',    type:'set', takes:'set', x:-3*sc, z: 8*sc },
+    { name:'∩',    type:'set', takes:'set', x:-1*sc, z: 8*sc },
+    { name:'Aᶜ',   type:'set', takes:'set', x: 1*sc, z: 8*sc },
+    { name:'|A|',  type:'num', takes:'set', x: 3*sc, z: 8*sc },
+  ];
+  // Filter ops that fall outside boundary
+  ops = ops.filter(function(o){ return inLatticeBounds(o.x, o.z); });
+  
+  // Create nodes
+  var g = graphs.A;
+  var nodeMap = {};
+  for (var i = 0; i < ops.length; i++) {
+    var op = ops[i];
+    var id = nodeIdCounter++;
+    g.nodes.push({ id: id, pos: [op.x, 0, op.z], label: op.name });
+    nodeMap[i] = { id: id, type: op.type, takes: op.takes, name: op.name };
+  }
+  
+  // Create edges: output type of A is compatible input of B
+  var edgeCount = 0;
+  for (var a = 0; a < ops.length; a++) {
+    for (var b = 0; b < ops.length; b++) {
+      if (a === b) continue;
+      // Edge exists if A's output type matches B's input type
+      if (nodeMap[a].type === nodeMap[b].takes) {
+        g.edges.push([nodeMap[a].id, nodeMap[b].id]);
+        edgeCount++;
+      }
+    }
+  }
+  
+  // Count by type
+  var types = {};
+  ops.forEach(function(o) { types[o.type] = (types[o.type]||0) + 1; });
+  
+  log('=== ALGEBRA GRAPH ===');
+  log(ops.length + ' operations, ' + edgeCount + ' composition edges');
+  log('Types: num=' + (types.num||0) + ' mat=' + (types.mat||0) + ' vec=' + (types.vec||0) + ' fn=' + (types.fn||0) + ' set=' + (types.set||0));
+  log('Density: ' + (edgeCount / (ops.length * (ops.length-1)) * 100).toFixed(1) + '%');
+  
+  // Count self-loops per type (how many ops feed back into same type)
+  var selfLoops = {};
+  ops.forEach(function(o) {
+    if (o.type === o.takes) selfLoops[o.type] = (selfLoops[o.type]||0) + 1;
+  });
+  log('Self-composable: num=' + (selfLoops.num||0) + ' mat=' + (selfLoops.mat||0) + ' fn=' + (selfLoops.fn||0) + ' set=' + (selfLoops.set||0));
+  
+  setGraph('A');
+  rebuildScene();
+  log('Click iterate with Graph B to see product explosion.');
+}
+
+// ═══════════════════════════════════════════════════════
+// FRACTALIZE: Mandelbrot on the lattice
+// z → z² + c, where c = grid position in complex plane
+// ═══════════════════════════════════════════════════════
+function fractalizeGraph() {
+  log('=== FRACTALIZE: z → z² + c ===');
+  log('Computing Mandelbrot on lattice...');
+  
+  // Clear A and R
+  graphs.A = { nodes:[], edges:[], color:0x00d4ff, name:'A (bounded)' };
+  graphs.B = { nodes:[], edges:[], color:0xffd700, name:'B (escaped)' };
+  graphs.R = { nodes:[], edges:[], color:0xff69b4, name:'Result' };
+  
+  var gA = graphs.A; // bounded set
+  var gB = graphs.B; // escaped set
+  var MAX_ITER = 50;
+  var BAIL = 4; // |z|² > 4 = escaped
+  
+  // Grid: real axis x ∈ [-2, 1], imag axis z ∈ [-1.5, 1.5]
+  // Map to lattice: step 0.1 = fine resolution
+  var STEP = 0.15;
+  var xMin = -2, xMax = 1;
+  var zMin = -1.5, zMax = 1.5;
+  
+  var boundedNodes = [];
+  var escapedNodes = [];
+  var gridMap = {}; // 'x,z' -> nodeId for edge building
+  var totalNodes = 0;
+  
+  for (var cx = xMin; cx <= xMax; cx += STEP) {
+    for (var cz = zMin; cz <= zMax; cz += STEP) {
+      // Scale up for 3D: multiply by 5 to fill the grid
+      var px = cx * 5;
+      var pz = cz * 5;
+      // Clip to lattice boundary
+      if (!inLatticeBounds(px, pz)) continue;
+      // Mandelbrot iteration: z = z² + c
+      var zr = 0, zi = 0;
+      var iter = 0;
+      while (iter < MAX_ITER && zr*zr + zi*zi <= BAIL) {
+        var tmp = zr*zr - zi*zi + cx;
+        zi = 2*zr*zi + cz;
+        zr = tmp;
+        iter++;
+      }
+      
+      var id = nodeIdCounter++;
+      var key = Math.round(cx/STEP) + ',' + Math.round(cz/STEP);
+      
+      if (iter === MAX_ITER) {
+        // BOUNDED: stays in set
+        gA.nodes.push({ id:id, pos:[px, 0, pz], label:'M'+id, iter:iter });
+        gridMap[key] = { id:id, graph:'A' };
+        boundedNodes.push(id);
+      } else {
+        // ESCAPED: flies away
+        // Height = escape speed (faster escape = higher)
+        var h = (1 - iter/MAX_ITER) * 2;
+        gB.nodes.push({ id:id, pos:[px, h, pz], label:'E'+id, iter:iter });
+        gridMap[key] = { id:id, graph:'B' };
+        escapedNodes.push(id);
+      }
+      totalNodes++;
+    }
+  }
+  
+  // Build edges: connect adjacent bounded nodes (4-connectivity)
+  var dx = [1, 0, -1, 0];
+  var dz = [0, 1, 0, -1];
+  var edgesA = 0, edgesB = 0;
+  
+  for (var cx = xMin; cx <= xMax; cx += STEP) {
+    for (var cz = zMin; cz <= zMax; cz += STEP) {
+      var ki = Math.round(cx/STEP);
+      var kj = Math.round(cz/STEP);
+      var key1 = ki + ',' + kj;
+      var n1 = gridMap[key1];
+      if (!n1) continue;
+      
+      for (var d = 0; d < 4; d++) {
+        var key2 = (ki+dx[d]) + ',' + (kj+dz[d]);
+        var n2 = gridMap[key2];
+        if (!n2) continue;
+        // Only connect same-type (bounded-bounded, escaped-escaped)
+        if (n1.graph === n2.graph && n1.id < n2.id) {
+          if (n1.graph === 'A') { gA.edges.push([n1.id, n2.id]); edgesA++; }
+          else { gB.edges.push([n1.id, n2.id]); edgesB++; }
+        }
+      }
+    }
+  }
+  
+  log('Lattice: ' + totalNodes + ' points (' + Math.round((xMax-xMin)/STEP) + 'x' + Math.round((zMax-zMin)/STEP) + ')');
+  log('Bounded (cyan): ' + boundedNodes.length + ' nodes, ' + edgesA + ' edges');
+  log('Escaped (gold): ' + escapedNodes.length + ' nodes, ' + edgesB + ' edges');
+  log('Bounded ratio: ' + (boundedNodes.length/totalNodes*100).toFixed(1) + '%');
+  log('z → z² + c, max ' + MAX_ITER + ' iterations, bail |z|² > ' + BAIL);
+  log('The boundary IS the fractal.');
+  
+  rebuildScene();
+  
+  // Auto plane lock for top-down view
+  if (!planeLocked) togglePlane();
+}
+
+// ═══════════════════════════════════════════════════════
+// FRACTALIZE: subdivide the active graph
+// Each edge gets a midpoint node. Midpoints sharing
+// a vertex get connected. Graph refines fractally.
+// ═══════════════════════════════════════════════════════
+var fractalIter = 0;
+
+// ═══════════════════════════════════════════════════════
+// SHAPE PRIMITIVES: Pentagon, Hexagon, C60
+// ═══════════════════════════════════════════════════════
+function genPoly(sides) {
+  var g = graphs[activeGraph];
+  g.nodes = []; g.edges = [];
+  var r = Math.min(3, latticeRadius * 0.3);
+  var ox = activeGraph === 'B' ? Math.min(5, latticeRadius * 0.4) : Math.max(-5, -latticeRadius * 0.4);
+  for (var i = 0; i < sides; i++) {
+    var angle = (i / sides) * Math.PI * 2 - Math.PI/2;
+    var id = nodeIdCounter++;
+    g.nodes.push({ id:id, pos:[Math.round(Math.cos(angle)*r + ox), 0, Math.round(Math.sin(angle)*r)], label:activeGraph+id });
+  }
+  for (var i = 0; i < sides; i++) {
+    g.edges.push([g.nodes[i].id, g.nodes[(i+1)%sides].id]);
+  }
+  log((sides===5?'PENTAGON':sides===6?'HEXAGON':sides+'-gon') + ' in ' + activeGraph + ': ' + sides + ' nodes, ' + sides + ' edges');
+  log('  V-E+F = ' + sides + '-' + sides + '+1 = 1 (disk, chi=1)');
+  rebuildScene();
+}
+
+function genC60() {
+  var g = graphs[activeGraph];
+  g.nodes = []; g.edges = [];
+  var ox = activeGraph === 'B' ? Math.min(5, latticeRadius * 0.35) : Math.max(-5, -latticeRadius * 0.35);
+  // C60 truncated icosahedron: 60 vertices, 90 edges, 32 faces (12 pent + 20 hex)
+  // Golden ratio
+  var phi = (1 + Math.sqrt(5)) / 2;
+  // Generate vertices from even permutations of (0, ±1, ±3φ)
+  // Simplified: use icosahedron vertices then truncate
+  var verts = [];
+  // 12 icosahedron vertices
+  var ico = [];
+  for (var i = 0; i < 12; i++) {
+    var lat, lon;
+    if (i === 0) { lat = Math.PI/2; lon = 0; }
+    else if (i === 11) { lat = -Math.PI/2; lon = 0; }
+    else if (i < 6) { lat = Math.atan(0.5); lon = (i-1) * Math.PI*2/5; }
+    else { lat = -Math.atan(0.5); lon = (i-6) * Math.PI*2/5 + Math.PI/5; }
+    ico.push([Math.cos(lat)*Math.cos(lon)*4, Math.cos(lat)*Math.sin(lon)*4, Math.sin(lat)*4]);
+  }
+  // Place 5 nodes around each icosahedron vertex (truncation)
+  var allNodes = [];
+  ico.forEach(function(v, vi) {
+    for (var j = 0; j < 5; j++) {
+      var angle = j * Math.PI * 2 / 5;
+      var r = 0.8;
+      // Perturb around icosahedron vertex
+      var px = v[0] + Math.cos(angle)*r + ox;
+      var pz = v[2] + Math.sin(angle)*r;
+      var id = nodeIdCounter++;
+      g.nodes.push({ id:id, pos:[Math.round(px), 0, Math.round(pz)], label:activeGraph+id });
+      allNodes.push({ id:id, icoIdx:vi, localIdx:j });
+    }
+  });
+  // Connect within each pentagon (5-cycle)
+  for (var vi = 0; vi < 12; vi++) {
+    for (var j = 0; j < 5; j++) {
+      var a = allNodes[vi*5 + j].id;
+      var b = allNodes[vi*5 + (j+1)%5].id;
+      g.edges.push([a, b]);
+    }
+  }
+  // Connect between pentagons (nearest neighbors across icosahedron edges)
+  // Use distance-based heuristic
+  for (var i = 0; i < g.nodes.length; i++) {
+    for (var j = i+1; j < g.nodes.length; j++) {
+      var ni = allNodes[i], nj = allNodes[j];
+      if (ni.icoIdx === nj.icoIdx) continue; // same pentagon, already connected
+      var dx = g.nodes[i].pos[0]-g.nodes[j].pos[0];
+      var dz = g.nodes[i].pos[2]-g.nodes[j].pos[2];
+      var dist = Math.sqrt(dx*dx + dz*dz);
+      if (dist < 2.0) { // threshold for inter-pentagon edges
+        g.edges.push([g.nodes[i].id, g.nodes[j].id]);
+      }
+    }
+  }
+  log('C60 in ' + activeGraph + ': ' + g.nodes.length + ' nodes, ' + g.edges.length + ' edges');
+  log('  12 pentagons + 20 hexagons = 32 faces');
+  log('  V-E+F = 60-90+32 = 2 (sphere, chi=2)');
+  rebuildScene();
+}
+
+// ═══════════════════════════════════════════════════════
+// MOBIUSIFY: remove 2 antipodal nodes (chi: 2 → 0)
+// ═══════════════════════════════════════════════════════
+function mobiusifyGraph() {
+  var g = graphs[activeGraph];
+  if (g.nodes.length < 4) { log('Need at least 4 nodes to MOBIUSIFY.'); return; }
+  
+  // Find the two most distant nodes (antipodal pair)
+  var maxDist = 0, antipodal = [0, 1];
+  for (var i = 0; i < g.nodes.length; i++) {
+    for (var j = i+1; j < g.nodes.length; j++) {
+      var dx = g.nodes[i].pos[0] - g.nodes[j].pos[0];
+      var dz = g.nodes[i].pos[2] - g.nodes[j].pos[2];
+      var d = dx*dx + dz*dz;
+      if (d > maxDist) { maxDist = d; antipodal = [g.nodes[i].id, g.nodes[j].id]; }
+    }
+  }
+  
+  var beforeN = g.nodes.length, beforeE = g.edges.length;
+  
+  // Count faces before (Euler: F = E - V + 2 for connected planar)
+  var chiB = beforeE - beforeN + 2;
+  
+  // Remove antipodal nodes and their edges
+  var removeSet = {};
+  removeSet[antipodal[0]] = true;
+  removeSet[antipodal[1]] = true;
+  g.nodes = g.nodes.filter(function(n) { return !removeSet[n.id]; });
+  g.edges = g.edges.filter(function(e) { return !removeSet[e[0]] && !removeSet[e[1]]; });
+  
+  var afterN = g.nodes.length, afterE = g.edges.length;
+  var chiA = afterE - afterN + 2;
+  
+  log('=== MOBIUSIFY ===');
+  log('Removed 2 antipodal nodes (max distance: ' + Math.sqrt(maxDist).toFixed(1) + ')');
+  log('Before: ' + beforeN + ' nodes, ' + beforeE + ' edges');
+  log('After:  ' + afterN + ' nodes, ' + afterE + ' edges');
+  log('Euler estimate: chi ' + chiB + ' -> ' + chiA);
+  log('Two faces die. Topology changes.');
+  
+  rebuildScene();
+}
+
+function subdivideGraph() {
+  var gk = activeGraph;
+  var g = graphs[gk];
+  if (g.nodes.length < 2 || g.edges.length < 1) {
+    log('Need a graph with edges to fractalize.'); return;
+  }
+  
+  var t0 = performance.now();
+  fractalIter++;
+  
+  var oldNodes = g.nodes.length;
+  var oldEdges = g.edges.length;
+  
+  // Build lookup
+  var lookup = {};
+  g.nodes.forEach(function(n) { lookup[n.id] = n; });
+  
+  // Build adjacency: which edges touch each node
+  var adj = {};  // nodeId -> [edgeIndex, ...]
+  g.edges.forEach(function(e, i) {
+    if (!adj[e[0]]) adj[e[0]] = [];
+    if (!adj[e[1]]) adj[e[1]] = [];
+    adj[e[0]].push(i);
+    adj[e[1]].push(i);
+  });
+  
+  // Step 1: Create midpoint node for each edge
+  var midpoints = [];  // index = edge index, value = new node
+  var newNodes = g.nodes.slice(); // keep originals
+  var newEdges = [];
+  
+  g.edges.forEach(function(e, i) {
+    var n1 = lookup[e[0]], n2 = lookup[e[1]];
+    if (!n1 || !n2) return;
+    var mid = {
+      id: nodeIdCounter++,
+      pos: [(n1.pos[0]+n2.pos[0])/2, 0, (n1.pos[2]+n2.pos[2])/2],
+      label: gk + 'm' + i
+    };
+    midpoints[i] = mid;
+    newNodes.push(mid);
+    
+    // Connect midpoint to both endpoints
+    newEdges.push([e[0], mid.id]);
+    newEdges.push([mid.id, e[1]]);
+  });
+  
+  // Step 2: Connect midpoints that share a vertex
+  // For each original node, find all its edge midpoints and connect them in a ring
+  Object.keys(adj).forEach(function(nid) {
+    var edgeIndices = adj[nid];
+    if (edgeIndices.length < 2) return;
+    // Connect consecutive midpoints around this node
+    for (var i = 0; i < edgeIndices.length; i++) {
+      for (var j = i+1; j < edgeIndices.length; j++) {
+        var m1 = midpoints[edgeIndices[i]];
+        var m2 = midpoints[edgeIndices[j]];
+        if (m1 && m2) {
+          newEdges.push([m1.id, m2.id]);
+        }
+      }
+    }
+  });
+  
+  // Step 3: Optionally keep original edges too (full refinement)
+  // g.edges.forEach(function(e) { newEdges.push([e[0], e[1]]); });
+  
+  // Apply
+  g.nodes = newNodes;
+  g.edges = newEdges;
+  
+  var dt = performance.now() - t0;
+  
+  log('=== FRACTALIZE iter ' + fractalIter + ' ===');
+  log('Before: ' + oldNodes + ' nodes, ' + oldEdges + ' edges');
+  log('After:  ' + g.nodes.length + ' nodes, ' + g.edges.length + ' edges');
+  log('Growth: nodes ×' + (g.nodes.length/oldNodes).toFixed(2) + ', edges ×' + (g.edges.length/oldEdges).toFixed(2));
+  log('Density: ' + (2*g.edges.length / (g.nodes.length * (g.nodes.length-1)) * 100).toFixed(3) + '%');
+  log('Compute: ' + dt.toFixed(1) + 'ms');
+  
+  rebuildScene();
+}
+
+function togglePlane() {
+  planeLocked = !planeLocked;
+  controls.enableRotate = !planeLocked;
+  log('Plane lock: ' + (planeLocked ? 'ON (top-down)' : 'OFF (orbit)'));
+  if (planeLocked) {
+    camera.position.set(0, 15, 0.01);
+    camera.lookAt(0, 0, 0);
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// §8  MOUSE INTERACTION
+// ═══════════════════════════════════════════════════════
+var isDragging = false;
+var dragNodeId = null;
+
+// Use pointerup instead of mousedown to avoid OrbitControls eating clicks
+var pointerDownTime = 0;
+var pointerDownPos = {x:0, y:0};
+
+renderer.domElement.addEventListener('pointerdown', function(e) {
+  if (e.button !== 0) return;
+  pointerDownTime = performance.now();
+  pointerDownPos = { x: e.clientX, y: e.clientY };
+});
+
+renderer.domElement.addEventListener('pointerup', function(e) {
+  if (e.button !== 0) return;
+  var dt = performance.now() - pointerDownTime;
+  var dx = Math.abs(e.clientX - pointerDownPos.x);
+  var dy = Math.abs(e.clientY - pointerDownPos.y);
+  // Only count as click if short + no drag (otherwise it's an orbit)
+  if (dt > 300 || dx > 5 || dy > 5) return;
+  
+  log('click (' + e.clientX + ',' + e.clientY + ') tool=' + activeTool + ' graph=' + activeGraph);
+
+  // Check both graphs for node hits
+  var nodeId = findNodeAt(activeGraph, e.clientX, e.clientY);
+  log('  hit: ' + (nodeId !== null ? 'node ' + activeGraph + nodeId : 'empty'));
+
+  if (activeTool === 'node' && nodeId === null) {
+    var pos = getWorldClick(e.clientX, e.clientY);
+    if (pos && inLatticeBounds(pos.x, pos.z)) addNode(activeGraph, pos);
+    else if (pos) log('  out of ' + latticeBoundary + ' boundary');
+
+  } else if (activeTool === 'edge') {
+    if (nodeId !== null) {
+      if (edgeStart === null) {
+        edgeStart = nodeId;
+        log('Edge start: ' + activeGraph + nodeId);
+      } else {
+        addEdge(activeGraph, edgeStart, nodeId);
+        // CHAIN MODE: last node becomes new start
+        edgeStart = nodeId;
+        log('Chain: next from ' + activeGraph + nodeId + ' (ESC to stop)');
+      }
+    }
+
+  } else if (activeTool === 'delete' && nodeId !== null) {
+    removeNode(activeGraph, nodeId);
+
+  } else if (activeTool === 'move' && nodeId !== null) {
+    isDragging = true;
+    dragNodeId = nodeId;
+    controls.enabled = false;
+
+  } else if (activeTool === 'grab') {
+    if (!grabActive) {
+      grabStart(e.clientX, e.clientY);
+    } else {
+      grabEnd(true);
+    }
+  }
+});
+
+// Track if mouse is over a node - pause orbit when hovering
+var hoveringNode = false;
+
+renderer.domElement.addEventListener('mousemove', function(e) {
+  // Update mouse world pos for film proximity
+  updateMouseWorld(e);
+  // Grab: move entire graph
+  if (grabActive) {
+    var pos = getWorldClickRaw(e.clientX, e.clientY);
+    if (pos && grabAnchor) {
+      var dx = pos.x - grabAnchor.x;
+      var dz = pos.z - grabAnchor.z;
+      var g = graphs[activeGraph];
+      for (var i = 0; i < g.nodes.length; i++) {
+        g.nodes[i].pos[0] = g.nodes[i]._grabOrig[0] + dx;
+        g.nodes[i].pos[2] = g.nodes[i]._grabOrig[2] + dz;
+      }
+      rebuildScene();
+    }
+    return;
+  }
+  if (isDragging && dragNodeId !== null) {
+    // Use raw (no log spam) + snap for smooth drag
+    var rawPos = getWorldClickRaw(e.clientX, e.clientY);
+    if (rawPos) {
+      var snapped = snapToGrid(rawPos);
+      var g = graphs[activeGraph];
+      var node = g.nodes.find(function(n){ return n.id === dragNodeId; });
+      if (node) {
+        node.pos[0] = snapped.x;
+        node.pos[2] = snapped.z;
+        rebuildScene();
+      }
+    }
+    return;
+  }
+  // Check hover over node - freeze orbit + highlight
+  var hoverId = findNodeAt(activeGraph, e.clientX, e.clientY);
+  highlightNode(hoverId);
+  if (hoverId !== null && !hoveringNode) {
+    hoveringNode = true;
+    controls.enableRotate = false;
+    controls.enablePan = false;
+    renderer.domElement.style.cursor = 'pointer';
+  } else if (hoverId === null && hoveringNode) {
+    hoveringNode = false;
+    if (!planeLocked) {
+      controls.enableRotate = true;
+      controls.enablePan = true;
+    }
+    renderer.domElement.style.cursor = 'crosshair';
+  }
+});
+
+renderer.domElement.addEventListener('mouseup', function() {
+  if (isDragging) {
+    isDragging = false;
+    dragNodeId = null;
+    controls.enabled = true;
+  }
+});
+
+// ═══════════════════════════════════════════════════════
+// §9  RESIZE + ANIMATE
+// ═══════════════════════════════════════════════════════
+window.addEventListener('resize', function() {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+
+// ── Mouse world position for film proximity ──
+var mouseWorld = new THREE.Vector3();
+var _filmPlane = new THREE.Plane(new THREE.Vector3(0,1,0), 0);
+
+function updateMouseWorld(e) {
+  if (!e) return;
+  var mx = (e.clientX / innerWidth) * 2 - 1;
+  var my = -(e.clientY / innerHeight) * 2 + 1;
+  raycaster.setFromCamera(new THREE.Vector2(mx, my), camera);
+  raycaster.ray.intersectPlane(_filmPlane, mouseWorld);
+}
+
+// Compute centroid of a graph
+function graphCentroid(g) {
+  if (!g.nodes.length) return null;
+  var cx=0, cz=0;
+  for (var i=0; i<g.nodes.length; i++) { cx+=g.nodes[i].pos[0]; cz+=g.nodes[i].pos[2]; }
+  return { x: cx/g.nodes.length, z: cz/g.nodes.length };
+}
+
+function animate() {
+  requestAnimationFrame(animate);
+  controls.update();
+  // Film fade: compute proximity per graph
+  ['A','B','R'].forEach(function(key) {
+    if (!filmMeshes[key]) { filmCurrentOpacity[key]=0; return; }
+    var c = graphCentroid(graphs[key]);
+    if (!c) { filmTargetOpacity[key]=0; }
+    else {
+      var dx = mouseWorld.x - c.x;
+      var dz = mouseWorld.z - c.z;
+      var dist = Math.sqrt(dx*dx + dz*dz);
+      // Fade: 0 at FILM_RADIUS, max at 0
+      // Film only shows on active graph when grab tool is selected
+      if (activeTool === 'grab' && key === activeGraph) {
+        filmTargetOpacity[key] = dist < FILM_RADIUS ? FILM_MAX_OPACITY * (1 - dist/FILM_RADIUS) : 0;
+      } else {
+        filmTargetOpacity[key] = 0;
+      }
+    }
+    // Smooth lerp
+    filmCurrentOpacity[key] += (filmTargetOpacity[key] - filmCurrentOpacity[key]) * FILM_FADE_SPEED;
+    if (filmCurrentOpacity[key] < 0.001) filmCurrentOpacity[key] = 0;
+    filmMatCache[key].opacity = filmCurrentOpacity[key];
+    filmMeshes[key].visible = filmCurrentOpacity[key] > 0.001;
+  });
+  renderer.render(scene, camera);
+}
+
+// ═══════════════════════════════════════════════════════
+// §10  INIT
+// ═══════════════════════════════════════════════════════
+// ESC = cancel edge chain, R = hard reset
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    if (edgeStart !== null) {
+      log('Edge chain cancelled.');
+      edgeStart = null;
+    }
+  }
+  if ((e.key === 'r' || e.key === 'R') && !e.ctrlKey && !e.metaKey) {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+    e.preventDefault();
+    graphs.A = { nodes:[], edges:[], color:0x00d4ff, name:'A' };
+    graphs.B = { nodes:[], edges:[], color:0xffd700, name:'B' };
+    graphs.R = { nodes:[], edges:[], color:0xff69b4, name:'Result' };
+    edgeStart = null;
+    lastOp = null;
+    nodeIdCounter = 0;
+    log('=== HARD RESET (R) ===');
+    rebuildScene();
+  }
+});
+
+// Auto-select all log text on hover
+var logEl = document.getElementById('log');
+logEl.addEventListener('mouseenter', function() {
+  var range = document.createRange();
+  range.selectNodeContents(logEl);
+  var sel = window.getSelection();
+  sel.removeAllRanges();
+  sel.addRange(range);
+});
+
+renderer.domElement.style.cursor = 'crosshair';
+
+updateMode();
+bootLog('Scene children: ' + scene.children.length);
+bootLog('Camera pos: (' + camera.position.x.toFixed(1) + ',' + camera.position.y.toFixed(1) + ',' + camera.position.z.toFixed(1) + ')');
+bootLog('---');
+log('Graph Sandbox v4.9 ready  [export/import]');
+log('Film: planar face walker (angular half-edge).');
+log('Surface film appears as mouse nears graph.');
+log('Click canvas to place nodes.');
+log('Build A (cyan) + B (gold), then operate.');
+log('SNAP = save state, click tags to restore.');
+log('GRAB = lift + move entire graph.');
+
+// Test: render one frame immediately and log
+try {
+  renderer.render(scene, camera);
+  bootLog('First render: OK (' + renderer.info.render.calls + ' draw calls)');
+} catch(err) {
+  bootLog('<span style="color:red">Render error: ' + err.message + '</span>');
+}
+
+// ═══════════════════════════════════════════════════════
+// §11  COMMAND INTERFACE — drive from console / Python / scripts
+//     cmd('HEX')  cmd('FRACTALIZE')  cmd('GRAB')
+//     batch(['HEX','FRACTALIZE','FRACTALIZE','GRAB'])
+//     state()  → full snapshot
+// ═══════════════════════════════════════════════════════
+var _cmdMap = {
+  // Graph select
+  'A':         function(){ setGraph('A'); },
+  'B':         function(){ setGraph('B'); },
+  // Tools
+  'NODE':      function(){ setTool('node'); },
+  'EDGE':      function(){ setTool('edge'); },
+  'MOVE':      function(){ setTool('move'); },
+  'GRAB':      function(){ setTool('grab'); },
+  'DELETE':    function(){ setTool('delete'); },
+  // Generators
+  'PENT':      function(){ genPoly(5); },
+  'HEX':       function(){ genPoly(6); },
+  'C60':       function(){ genC60(); },
+  'RANDOM':    function(){ randomGraph(); },
+  'ALGEBRA':   function(){ algebraGraph(); },
+  'MANDELBROT':function(){ fractalizeGraph(); },
+  // Operations
+  'FRACTALIZE':function(){ subdivideGraph(); },
+  'MOBIUSIFY': function(){ mobiusifyGraph(); },
+  'UNION':     function(){ graphOp('union'); },
+  'INTERSECT': function(){ graphOp('intersect'); },
+  'PRODUCT':   function(){ graphOp('product'); },
+  'DIFF':      function(){ graphOp('diff'); },
+  'ITERATE':   function(){ iterateOp(); },
+  // Util
+  'CLEAR':     function(){ clearGraph(); },
+  'RESET':     function(){ document.dispatchEvent(new KeyboardEvent('keydown',{key:'r'})); },
+  'PLANE':     function(){ togglePlane(); },
+  'SNAP':      function(){ snapSave(); },
+  // Lattice boundary
+  'LCUBE':     function(){ setLatticeBoundary('CUBE'); },
+  'LPENT':     function(){ setLatticeBoundary('PENT'); },
+  'LHEX':      function(){ setLatticeBoundary('HEX'); },
+  // I/O
+  'EXPORT':    function(){ ioExport(); },
+  'IMPORT':    function(){ ioImportOpen(); },
+};
+
+window.cmd = function(c) {
+  var t0 = performance.now();
+  var upper = (c || '').toUpperCase().trim();
+
+  // Handle POLY(n) pattern: cmd('POLY 7'), cmd('POLY12')
+  var polyMatch = upper.match(/^POLY\s*(\d+)$/);
+  if (polyMatch) {
+    genPoly(parseInt(polyMatch[1]));
+  } else if (_cmdMap[upper]) {
+    _cmdMap[upper]();
+  } else {
+    log('CMD unknown: ' + c);
+    console.warn('[CMD] unknown:', c);
+    return { ok:false, cmd:c, msg:'unknown command' };
+  }
+
+  var dt = performance.now() - t0;
+  var g = graphs[activeGraph];
+  var result = {
+    ok: true,
+    cmd: upper,
+    time_ms: parseFloat(dt.toFixed(3)),
+    graph: activeGraph,
+    nodes: g.nodes.length,
+    edges: g.edges.length,
+    tool: activeTool,
+    faces: filmMeshes[activeGraph] ? 'built' : 'none'
+  };
+  console.log('[CMD]', JSON.stringify(result));
+  return result;
+};
+
+window.batch = function(cmds) {
+  if (!Array.isArray(cmds)) { console.warn('batch() needs array'); return []; }
+  var results = [];
+  var t0 = performance.now();
+  for (var i = 0; i < cmds.length; i++) {
+    results.push(window.cmd(cmds[i]));
+  }
+  var total = performance.now() - t0;
+  var summary = {
+    commands: cmds.length,
+    total_ms: parseFloat(total.toFixed(3)),
+    results: results
+  };
+  console.log('[BATCH]', JSON.stringify(summary));
+  return summary;
+};
+
+window.state = function() {
+  var s = {
+    version: '3.2',
+    activeGraph: activeGraph,
+    activeTool: activeTool,
+    grabActive: grabActive,
+    A: { nodes: graphs.A.nodes.length, edges: graphs.A.edges.length },
+    B: { nodes: graphs.B.nodes.length, edges: graphs.B.edges.length },
+    R: { nodes: graphs.R.nodes.length, edges: graphs.R.edges.length },
+    nodeIdCounter: nodeIdCounter,
+    snapshots: snapshots.length,
+    camera: {
+      x: parseFloat(camera.position.x.toFixed(2)),
+      y: parseFloat(camera.position.y.toFixed(2)),
+      z: parseFloat(camera.position.z.toFixed(2))
+    }
+  };
+  console.log('[STATE]', JSON.stringify(s));
+  return s;
+};
+
+// Expose findFaces for direct benchmarking
+window.findFaces = findFaces;
+window.graphs = graphs;
+window.rebuildScene = rebuildScene;
+
+log('Console API: cmd("HEX"), batch([...]), state()');
+log('SWARM: lattice atom rain + flash connections');
+
+// ═══════════════════════════════════════════════════════
+// §14  SWARM v2 — grid compress → 12 planes → 3D atom cube → hunt
+//     Phase 1: dense grid fades in over existing
+//     Phase 2: 12 perpendicular planes build a cube cage
+//     Phase 3: atoms rain on ALL planes (volumetric)
+//     Phase 4: flash 3D connections between same-type
+// ═══════════════════════════════════════════════════════
+var _swarm = {
+  running: false,
+  group: null,
+  atoms: [],        // {x, y, z, type:'A'|'B'}
+  flashGroup: null, // separate group for multi-flash
+  flashTimer: null,
+  waveTimer: null,
+  breathTimer: null,
+  holdTimer: null,
+  wave: 0,
+  phase: 0,
+  pointsMat: null,  // ref for breathing opacity
+  origBg: 0x050510,
+  dramaBg: 0x010108,
+  // Tuning — DRAMA MODE
+  CUBE_HALF: 8,
+  GRID_STEP: 0.3,
+  WAVES: 16,
+  ATOMS_PER_WAVE: 500,
+  FLASH_INTERVAL: 60,   // faster
+  FLASH_SOURCES: 4,     // simultaneous flash origins
+  FLASH_RANGE: 2.8,     // wider reach
+  FLASH_HOLD: 120,      // ms lines stay visible
+  FLASH_OPACITY: 0.12,  // ghostly ephemeral rays
+  POINT_SIZE: 1.6,
+  HOLD_DURATION: 80000,  // 80s hold after waves = ~2min total
+  PLANE_OFFSETS: [-6, -2, 2, 6]
+};
+
+function swarmStart() {
+  if (_swarm.running) swarmStop();
+  _swarm.running = true;
+  _swarm.atoms = [];
+  _swarm.wave = 0;
+  _swarm.phase = 0;
+
+  _swarm.group = new THREE.Group();
+  _swarm.flashGroup = new THREE.Group();
+  scene.add(_swarm.group);
+  scene.add(_swarm.flashGroup);
+
+  document.getElementById('ap-toggle').classList.add('running');
+  document.getElementById('ap-stop').classList.add('visible');
+  document.getElementById('ap-menu').classList.remove('open');
+
+  var totalAtoms = _swarm.WAVES * _swarm.ATOMS_PER_WAVE;
+  log('=== SWARM DRAMA: ' + totalAtoms + ' atoms, ~2min hold ===');
+  apSetStatus('SWARM: fading in...');
+
+  // Phase 0: 3-second background darken + UI fade
+  swarmPhase0();
+}
+
+// ── UI fade helper: hide/show all chrome ──
+function swarmFadeUI(fadeOut) {
+  var els = ['hud','log','bar','snap-bar','mode','cmd-bar'];
+  els.forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) {
+      el.style.transition = 'opacity 2.5s ease';
+      el.style.opacity = fadeOut ? '0' : '1';
+      el.style.pointerEvents = fadeOut ? 'none' : 'auto';
+    }
+  });
+  // Keep only autopilot status + stop visible
+  var apSt = document.getElementById('ap-status');
+  var apStop = document.getElementById('ap-stop');
+  if (apSt) { apSt.style.transition = 'opacity 2.5s ease'; apSt.style.opacity = fadeOut ? '0.4' : '1'; }
+  if (apStop) { apStop.style.transition = 'opacity 2.5s ease'; apStop.style.opacity = fadeOut ? '0.5' : '1'; }
+}
+
+// ── Phase 0: 3s background fade to drama darkness ──
+function swarmPhase0() {
+  _swarm.phase = 0;
+  var step = 0;
+  var totalSteps = 100; // 3s at 30ms intervals
+  var startR = 5, startG = 5, startB = 16;
+  var endR = 1, endG = 1, endB = 8;
+  // Fade out all UI chrome
+  swarmFadeUI(true);
+  // Also fade the existing grid + dots + axes
+  gridHelper.material.opacity = 1;
+  gridHelper.material.transparent = true;
+
+  var fade = setInterval(function() {
+    if (!_swarm.running) { clearInterval(fade); return; }
+    step++;
+    var t = step / totalSteps;
+    var r = Math.round(startR + (endR - startR) * t);
+    var g = Math.round(startG + (endG - startG) * t);
+    var b = Math.round(startB + (endB - startB) * t);
+    renderer.setClearColor((r << 16) | (g << 8) | b);
+    // Fade existing scene elements
+    gridHelper.material.opacity = 1 - t * 0.85;
+    axesHelper.visible = t < 0.5;
+    if (step >= totalSteps) {
+      clearInterval(fade);
+      log('SWARM: darkness set');
+      swarmPhase1();
+    }
+  }, 30);
+}
+
+// ── Phase 1: Dense grid appears ──
+function swarmPhase1() {
+  _swarm.phase = 1;
+  var H = _swarm.CUBE_HALF;
+  var S = _swarm.GRID_STEP;
+  var verts = [];
+
+  // Dense floor grid
+  for (var x = -H; x <= H; x += S) {
+    verts.push(x, 0, -H, x, 0, H);
+  }
+  for (var z = -H; z <= H; z += S) {
+    verts.push(-H, 0, z, H, 0, z);
+  }
+
+  var geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
+  var mat = new THREE.LineBasicMaterial({ color: 0x0a1520, transparent: true, opacity: 0 });
+  var grid = new THREE.LineSegments(geo, mat);
+  grid.userData.swarmType = 'denseGrid';
+  _swarm.group.add(grid);
+
+  // Fade in
+  var targetOp = 0.35;
+  var step = 0;
+  var fadeIn = setInterval(function() {
+    if (!_swarm.running) { clearInterval(fadeIn); return; }
+    step++;
+    mat.opacity = Math.min(targetOp, step * 0.02);
+    if (mat.opacity >= targetOp) {
+      clearInterval(fadeIn);
+      log('SWARM: dense grid ready (' + Math.round((H*2/S)*(H*2/S)) + ' cells)');
+      setTimeout(swarmPhase2, 400);
+    }
+  }, 30);
+}
+
+// ── Phase 2: 12 perpendicular planes build cage ──
+function swarmPhase2() {
+  if (!_swarm.running) return;
+  _swarm.phase = 2;
+  apSetStatus('SWARM: building cage...');
+
+  var H = _swarm.CUBE_HALF;
+  var offsets = _swarm.PLANE_OFFSETS;
+  var planeColor = 0x0d1a2a;
+  var planeQueue = [];
+
+  // 4 planes ⊥ X axis (vertical, face camera side)
+  offsets.forEach(function(px) {
+    planeQueue.push({ axis:'X', pos:px, verts: [
+      px,-0.1,-H, px,-0.1,H, px,H*1.5,-H, px,H*1.5,H,
+      px,-0.1,-H, px,H*1.5,-H, px,-0.1,H, px,H*1.5,H
+    ]});
+  });
+  // 4 planes ⊥ Z axis
+  offsets.forEach(function(pz) {
+    planeQueue.push({ axis:'Z', pos:pz, verts: [
+      -H,-0.1,pz, H,-0.1,pz, -H,H*1.5,pz, H,H*1.5,pz,
+      -H,-0.1,pz, -H,H*1.5,pz, H,-0.1,pz, H,H*1.5,pz
+    ]});
+  });
+  // 4 planes ⊥ Y axis (horizontal shelves)
+  offsets.forEach(function(py) {
+    var y = (py + H) * 0.7;  // remap to 0..~9
+    planeQueue.push({ axis:'Y', pos:y, verts: [
+      -H,y,-H, H,y,-H, -H,y,H, H,y,H,
+      -H,y,-H, -H,y,H, H,y,-H, H,y,H
+    ]});
+  });
+
+  var idx = 0;
+  function addNextPlane() {
+    if (!_swarm.running || idx >= planeQueue.length) {
+      log('SWARM: 12 planes erected');
+      setTimeout(swarmPhase3, 300);
+      return;
+    }
+    var p = planeQueue[idx];
+    var geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(p.verts, 3));
+    var mat = new THREE.LineBasicMaterial({ color: planeColor, transparent: true, opacity: 0.25 });
+    var mesh = new THREE.LineSegments(geo, mat);
+    mesh.userData.swarmType = 'plane';
+    _swarm.group.add(mesh);
+    apSetStatus('SWARM: plane ' + (idx+1) + '/12 [' + p.axis + '=' + p.pos.toFixed(1) + ']');
+    idx++;
+    setTimeout(addNextPlane, 150);
+  }
+  addNextPlane();
+}
+
+// ── Phase 3: Atom waves + breathing + heavy flash ──
+function swarmPhase3() {
+  if (!_swarm.running) return;
+  _swarm.phase = 3;
+  apSetStatus('SWARM: atom rain...');
+
+  _swarm.waveTimer = setInterval(swarmWave, 500);
+  _swarm.flashTimer = setInterval(swarmFlash, _swarm.FLASH_INTERVAL);
+  // Breathing: oscillate point opacity so atoms seem to appear/disappear
+  _swarm.breathTimer = setInterval(function() {
+    if (!_swarm.running || !_swarm.pointsMat) return;
+    var t = performance.now() * 0.001;
+    // Slow sine breath: 0.55 to 0.95 over ~4s cycle
+    _swarm.pointsMat.opacity = 0.75 + 0.2 * Math.sin(t * 1.5);
+  }, 50);
+}
+
+function swarmWave() {
+  if (!_swarm.running) return;
+  _swarm.wave++;
+  if (_swarm.wave > _swarm.WAVES) {
+    clearInterval(_swarm.waveTimer);
+    log('SWARM: all waves done. Holding ' + (_swarm.HOLD_DURATION/1000) + 's...');
+    apSetStatus('SWARM: holding (' + _swarm.atoms.length + ' atoms)');
+    // HOLD phase: flashes continue, then fade out
+    _swarm.holdTimer = setTimeout(function() {
+      if (_swarm.running) {
+        swarmFadeOut();
+      }
+    }, _swarm.HOLD_DURATION);
+    return;
+  }
+
+  apSetStatus('SWARM [' + _swarm.wave + '/' + _swarm.WAVES + '] +' + _swarm.ATOMS_PER_WAVE + ' atoms');
+  var H = _swarm.CUBE_HALF;
+  var S = _swarm.GRID_STEP;
+  var N = _swarm.ATOMS_PER_WAVE;
+  var offsets = _swarm.PLANE_OFFSETS;
+
+  for (var i = 0; i < N; i++) {
+    // Pick a random lattice point in the cube volume
+    var gx = (Math.floor(Math.random() * (H*2/S)) - H/S) * S;
+    var gz = (Math.floor(Math.random() * (H*2/S)) - H/S) * S;
+    // Y: snap to one of the horizontal plane levels or stay near a vertical plane
+    var gy;
+    var r = Math.random();
+    if (r < 0.4) {
+      // On a horizontal shelf
+      var shelf = offsets[Math.floor(Math.random() * offsets.length)];
+      gy = (shelf + H) * 0.7;
+    } else if (r < 0.7) {
+      // Near a vertical X-plane
+      gx = offsets[Math.floor(Math.random() * offsets.length)];
+      gy = Math.random() * H * 1.4;
+    } else {
+      // Near a vertical Z-plane
+      gz = offsets[Math.floor(Math.random() * offsets.length)];
+      gy = Math.random() * H * 1.4;
+    }
+    // Small jitter so atoms don’t stack perfectly
+    gx += (Math.random() - 0.5) * S * 0.3;
+    gy += (Math.random() - 0.5) * S * 0.3;
+    gz += (Math.random() - 0.5) * S * 0.3;
+
+    // Clip to lattice boundary (xz plane)
+    if (!inLatticeBounds(gx, gz)) { i--; continue; }
+    var type = Math.random() < 0.5 ? 'A' : 'B';
+    _swarm.atoms.push({ x:gx, y:gy, z:gz, type:type });
+  }
+
+  swarmRebuildPoints();
+  log('SWARM wave ' + _swarm.wave + ': ' + _swarm.atoms.length + ' atoms');
+}
+
+function swarmRebuildPoints() {
+  for (var i = _swarm.group.children.length - 1; i >= 0; i--) {
+    var c = _swarm.group.children[i];
+    if (c.isPoints) { c.geometry.dispose(); _swarm.group.remove(c); }
+  }
+
+  var atoms = _swarm.atoms;
+  if (!atoms.length) return;
+
+  var positions = new Float32Array(atoms.length * 3);
+  var colors = new Float32Array(atoms.length * 3);
+
+  for (var i = 0; i < atoms.length; i++) {
+    positions[i*3]   = atoms[i].x;
+    positions[i*3+1] = atoms[i].y;
+    positions[i*3+2] = atoms[i].z;
+    if (atoms[i].type === 'A') {
+      colors[i*3] = 0; colors[i*3+1] = 0.83; colors[i*3+2] = 1;
+    } else {
+      colors[i*3] = 1; colors[i*3+1] = 0.84; colors[i*3+2] = 0;
+    }
+  }
+
+  var geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  var mat = new THREE.PointsMaterial({
+    size: _swarm.POINT_SIZE,
+    sizeAttenuation: false,
+    vertexColors: true,
+    transparent: true,
+    opacity: 0.85
+  });
+  _swarm.pointsMat = mat; // ref for breathing
+  _swarm.group.add(new THREE.Points(geo, mat));
+}
+
+function swarmFlash() {
+  if (!_swarm.running || _swarm.atoms.length < 20) return;
+  var atoms = _swarm.atoms;
+  var R = _swarm.FLASH_RANGE;
+  var N = _swarm.FLASH_SOURCES;
+  var positions = [];
+  var colors = [];
+
+  // Multiple simultaneous sources — wisp-style per-vertex color
+  for (var s = 0; s < N; s++) {
+    var idx = Math.floor(Math.random() * atoms.length);
+    var src = atoms[idx];
+    // Ghost palette: both types converge toward grey-cyan
+    // A (cyan) → desaturated ice-blue, B (gold) → cool grey-white
+    var srcR = src.type === 'A' ? 0.15 : 0.25;
+    var srcG = src.type === 'A' ? 0.45 : 0.35;
+    var srcB = src.type === 'A' ? 0.55 : 0.40;
+
+    for (var i = 0; i < atoms.length; i++) {
+      if (i === idx) continue;
+      if (atoms[i].type !== src.type) continue;
+      var dx = atoms[i].x - src.x;
+      var dy = atoms[i].y - src.y;
+      var dz = atoms[i].z - src.z;
+      var d2 = dx*dx + dy*dy + dz*dz;
+      if (d2 <= R*R) {
+        // Source vertex: brighter
+        positions.push(src.x, src.y, src.z);
+        colors.push(srcR * 1.5, srcG * 1.5, srcB * 1.5);
+        // Target vertex: fades with distance (wisp decay)
+        var fade = 1 - Math.sqrt(d2) / R;
+        positions.push(atoms[i].x, atoms[i].y, atoms[i].z);
+        colors.push(srcR * fade * 0.6, srcG * fade * 0.6, srcB * fade * 0.6);
+      }
+    }
+  }
+  if (!positions.length) return;
+
+  var geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+  // Additive blending — from Möbius v1 wisp math: ghost rays accumulate
+  var mat = new THREE.LineBasicMaterial({
+    vertexColors: true,
+    transparent: true,
+    opacity: _swarm.FLASH_OPACITY,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false
+  });
+  var lines = new THREE.LineSegments(geo, mat);
+  _swarm.flashGroup.add(lines);
+
+  // Fade and remove after hold
+  setTimeout(function() {
+    if (_swarm.flashGroup) {
+      _swarm.flashGroup.remove(lines);
+      geo.dispose();
+      mat.dispose();
+    }
+  }, _swarm.FLASH_HOLD);
+}
+
+// ── Fade out: background returns, atoms dissolve ──
+function swarmFadeOut() {
+  if (!_swarm.running) return;
+  log('SWARM: fading out...');
+  apSetStatus('SWARM: fading...');
+  if (_swarm.flashTimer) { clearInterval(_swarm.flashTimer); _swarm.flashTimer = null; }
+  if (_swarm.breathTimer) { clearInterval(_swarm.breathTimer); _swarm.breathTimer = null; }
+
+  // Bring UI back
+  swarmFadeUI(false);
+
+  var step = 0;
+  var totalSteps = 100;
+  var fade = setInterval(function() {
+    if (!_swarm.running) { clearInterval(fade); return; }
+    step++;
+    var t = step / totalSteps;
+    // Fade background back
+    var r = Math.round(1 + (5 - 1) * t);
+    var g = Math.round(1 + (5 - 1) * t);
+    var b = Math.round(8 + (16 - 8) * t);
+    renderer.setClearColor((r << 16) | (g << 8) | b);
+    // Fade atoms
+    if (_swarm.pointsMat) _swarm.pointsMat.opacity = 0.85 * (1 - t);
+    // Restore grid
+    gridHelper.material.opacity = 0.15 + t * 0.85;
+    axesHelper.visible = t > 0.5;
+    if (step >= totalSteps) {
+      clearInterval(fade);
+      gridHelper.material.opacity = 1;
+      swarmCleanup();
+      log('SWARM: complete — ' + _swarm.atoms.length + ' atoms dissolved');
+    }
+  }, 30);
+}
+
+function swarmCleanup() {
+  _swarm.running = false;
+  if (_swarm.waveTimer) { clearInterval(_swarm.waveTimer); _swarm.waveTimer = null; }
+  if (_swarm.flashTimer) { clearInterval(_swarm.flashTimer); _swarm.flashTimer = null; }
+  if (_swarm.breathTimer) { clearInterval(_swarm.breathTimer); _swarm.breathTimer = null; }
+  if (_swarm.holdTimer) { clearTimeout(_swarm.holdTimer); _swarm.holdTimer = null; }
+  [_swarm.group, _swarm.flashGroup].forEach(function(grp) {
+    if (grp) {
+      for (var i = grp.children.length - 1; i >= 0; i--) {
+        var c = grp.children[i];
+        if (c.geometry) c.geometry.dispose();
+        if (c.material) c.material.dispose();
+        grp.remove(c);
+      }
+      scene.remove(grp);
+    }
+  });
+  _swarm.group = null;
+  _swarm.flashGroup = null;
+  _swarm.pointsMat = null;
+  _swarm.atoms = [];
+  renderer.setClearColor(_swarm.origBg);
+  gridHelper.material.opacity = 1;
+  gridHelper.material.transparent = false;
+  axesHelper.visible = true;
+  document.getElementById('ap-toggle').classList.remove('running');
+  document.getElementById('ap-stop').classList.remove('visible');
+  apSetStatus('done');
+}
+
+function swarmStop() {
+  _swarm.running = false;
+  if (_swarm.waveTimer) { clearInterval(_swarm.waveTimer); _swarm.waveTimer = null; }
+  if (_swarm.flashTimer) { clearInterval(_swarm.flashTimer); _swarm.flashTimer = null; }
+  if (_swarm.breathTimer) { clearInterval(_swarm.breathTimer); _swarm.breathTimer = null; }
+  if (_swarm.holdTimer) { clearTimeout(_swarm.holdTimer); _swarm.holdTimer = null; }
+  [_swarm.group, _swarm.flashGroup].forEach(function(grp) {
+    if (grp) {
+      for (var i = grp.children.length - 1; i >= 0; i--) {
+        var c = grp.children[i];
+        if (c.geometry) c.geometry.dispose();
+        if (c.material) c.material.dispose();
+        grp.remove(c);
+      }
+      scene.remove(grp);
+    }
+  });
+  _swarm.group = null;
+  _swarm.flashGroup = null;
+  _swarm.pointsMat = null;
+  _swarm.atoms = [];
+  // Restore everything
+  renderer.setClearColor(_swarm.origBg);
+  gridHelper.material.opacity = 1;
+  gridHelper.material.transparent = false;
+  axesHelper.visible = true;
+  swarmFadeUI(false);
+  document.getElementById('ap-toggle').classList.remove('running');
+  document.getElementById('ap-stop').classList.remove('visible');
+  apSetStatus('done');
+}
+
+var _origApStop = apStop;
+apStop = function() {
+  if (_swarm.running) swarmStop();
+  _origApStop();
+};
+
+// ═══════════════════════════════════════════════════════
+// §12  AUTOPILOT — pre-loaded animation sequences
+// ═══════════════════════════════════════════════════════
+var _apTimer = null;
+var _apRunning = false;
+
+var _apSequences = {
+  genesis: {
+    name: 'GENESIS',
+    steps: [
+      { cmd:'RESET', wait:400 },
+      { cmd:'A',     wait:300 },
+      { cmd:'HEX',   wait:800 },
+      { cmd:'FRACTALIZE', wait:800 },
+      { cmd:'FRACTALIZE', wait:800 },
+      { cmd:'FRACTALIZE', wait:800 },
+      { cmd:'FRACTALIZE', wait:800 },
+      { cmd:'GRAB',  wait:1500 },
+      { cmd:'NODE',  wait:0 }
+    ]
+  },
+  duality: {
+    name: 'DUALITY',
+    steps: [
+      { cmd:'RESET', wait:400 },
+      { cmd:'A',     wait:300 },
+      { cmd:'PENT',  wait:600 },
+      { cmd:'FRACTALIZE', wait:600 },
+      { cmd:'B',     wait:400 },
+      { cmd:'HEX',   wait:600 },
+      { cmd:'FRACTALIZE', wait:600 },
+      { cmd:'UNION', wait:800 },
+      { cmd:'FRACTALIZE', wait:800 },
+      { cmd:'A',     wait:300 },
+      { cmd:'GRAB',  wait:1500 },
+      { cmd:'NODE',  wait:0 }
+    ]
+  },
+  growth: {
+    name: 'GROWTH',
+    steps: [
+      { cmd:'RESET', wait:400 },
+      { cmd:'A',     wait:200 },
+      { cmd:'RANDOM', wait:600 },
+      { cmd:'B',     wait:200 },
+      { cmd:'RANDOM', wait:600 },
+      { cmd:'PRODUCT', wait:1000 },
+      { cmd:'ITERATE', wait:1200 },
+      { cmd:'ITERATE', wait:1500 },
+      { cmd:'A',     wait:300 },
+      { cmd:'GRAB',  wait:1500 },
+      { cmd:'NODE',  wait:0 }
+    ]
+  },
+  algebra: {
+    name: 'ALGEBRA',
+    steps: [
+      { cmd:'RESET', wait:400 },
+      { cmd:'ALGEBRA', wait:1000 },
+      { cmd:'GRAB',  wait:1500 },
+      { cmd:'NODE',  wait:300 },
+      { cmd:'B',     wait:200 },
+      { cmd:'HEX',   wait:600 },
+      { cmd:'FRACTALIZE', wait:600 },
+      { cmd:'FRACTALIZE', wait:600 },
+      { cmd:'GRAB',  wait:1500 },
+      { cmd:'NODE',  wait:0 }
+    ]
+  },
+  cosmos: {
+    name: 'COSMOS',
+    steps: [
+      { cmd:'RESET', wait:400 },
+      { cmd:'A',     wait:200 },
+      { cmd:'C60',   wait:800 },
+      { cmd:'FRACTALIZE', wait:800 },
+      { cmd:'FRACTALIZE', wait:1000 },
+      { cmd:'GRAB',  wait:1500 },
+      { cmd:'NODE',  wait:300 },
+      { cmd:'MOBIUSIFY', wait:800 },
+      { cmd:'MOBIUSIFY', wait:800 },
+      { cmd:'GRAB',  wait:1500 },
+      { cmd:'NODE',  wait:0 }
+    ]
+  }
+};
+
+function apToggleMenu() {
+  var menu = document.getElementById('ap-menu');
+  menu.classList.toggle('open');
+}
+
+function apSetStatus(msg) {
+  document.getElementById('ap-status').textContent = msg;
+}
+
+function apRun(seqName) {
+  if (_apRunning) apStop();
+  var seq = _apSequences[seqName];
+  if (!seq) return;
+
+  _apRunning = true;
+  document.getElementById('ap-toggle').classList.add('running');
+  document.getElementById('ap-stop').classList.add('visible');
+  document.getElementById('ap-menu').classList.remove('open');
+
+  var steps = seq.steps;
+  var idx = 0;
+
+  function tick() {
+    if (!_apRunning || idx >= steps.length) {
+      apDone();
+      return;
+    }
+    var step = steps[idx];
+    apSetStatus(seq.name + ' [' + (idx+1) + '/' + steps.length + '] ' + step.cmd);
+    cmd(step.cmd);
+    idx++;
+    if (idx < steps.length) {
+      _apTimer = setTimeout(tick, step.wait || 500);
+    } else {
+      apDone();
+    }
+  }
+
+  log('=== AUTOPILOT: ' + seq.name + ' (' + steps.length + ' steps) ===');
+  tick();
+}
+
+function apStop() {
+  _apRunning = false;
+  if (_apTimer) { clearTimeout(_apTimer); _apTimer = null; }
+  document.getElementById('ap-toggle').classList.remove('running');
+  document.getElementById('ap-stop').classList.remove('visible');
+  apSetStatus('stopped');
+  log('AUTOPILOT: stopped');
+}
+
+function apDone() {
+  _apRunning = false;
+  _apTimer = null;
+  document.getElementById('ap-toggle').classList.remove('running');
+  document.getElementById('ap-stop').classList.remove('visible');
+  apSetStatus('done');
+  log('AUTOPILOT: complete');
+}
+
+// ═══════════════════════════════════════════════════════
+// §13  FLOATING CMD INPUT
+// ═══════════════════════════════════════════════════════
+var cmdInput = document.getElementById('cmd-input');
+cmdInput.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    cmdBarRun();
+  }
+  // Prevent R from triggering hard reset while typing
+  e.stopPropagation();
+});
+
+function cmdBarRun() {
+  var val = cmdInput.value.trim();
+  if (!val) return;
+  // Support comma-separated batch: "HEX, FRACTALIZE, FRACTALIZE"
+  var parts = val.split(',').map(function(s){ return s.trim(); }).filter(Boolean);
+  if (parts.length > 1) {
+    batch(parts);
+  } else {
+    cmd(val);
+  }
+  cmdInput.value = '';
+  cmdInput.focus();
+}
+
+// ═══════════════════════════════════════════════════════
+// §15  EXPORT / IMPORT — round-trip validation
+//     export: serialize state → .mnet text
+//     import: parse .mnet text → rebuild state
+//     strict: 1 bad byte = reject + banner
+// ═══════════════════════════════════════════════════════
+var _ioMode = 'export'; // 'export' or 'import'
+
+function bannerShow(title, body, isOk) {
+  var b = document.getElementById('banner');
+  document.getElementById('b-title').textContent = title;
+  document.getElementById('b-body').textContent = body;
+  b.className = isOk ? 'open ok' : 'open';
+}
+function bannerClose() {
+  document.getElementById('banner').className = '';
+}
+
+function ioClose() {
+  document.getElementById('io-overlay').className = '';
+}
+
+function ioAction() {
+  if (_ioMode === 'export') {
+    // Copy to clipboard
+    var ta = document.getElementById('io-text');
+    ta.select();
+    document.execCommand('copy');
+    bannerShow('Copied!', 'State exported to clipboard as .mnet text.', true);
+    log('EXPORT: copied to clipboard');
+  } else {
+    // Import
+    ioImportRun();
+  }
+}
+
+// ─── EXPORT: serialize current state to .mnet ───
+function ioExport() {
+  _ioMode = 'export';
+  var lines = [];
+  lines.push('# MachineNet Graph Sandbox — .mnet export');
+  lines.push('# v4.9 | ' + new Date().toISOString());
+  lines.push('');
+
+  // Lattice
+  lines.push('# ── Lattice boundary');
+  lines.push('set lattice.boundary ' + latticeBoundary);
+  lines.push('set lattice.radius ' + latticeRadius);
+  lines.push('');
+
+  // Camera
+  lines.push('# ── Camera');
+  lines.push('set camera.position ' + camera.position.x.toFixed(2) + ' ' + camera.position.y.toFixed(2) + ' ' + camera.position.z.toFixed(2));
+  lines.push('');
+
+  // Graphs
+  ['A','B','R'].forEach(function(key) {
+    var g = graphs[key];
+    if (!g.nodes.length && !g.edges.length) return;
+
+    lines.push('# ── Graph ' + key);
+    lines.push('graph ' + key);
+    lines.push('');
+
+    // Nodes
+    var nodeCount = 0;
+    g.nodes.forEach(function(n) {
+      // Validate: position must be finite numbers
+      if (!isFinite(n.pos[0]) || !isFinite(n.pos[1]) || !isFinite(n.pos[2])) {
+        bannerShow('Hey! You can\'t do that.', 'Node ' + n.id + ' has invalid position [' + n.pos.join(', ') + ']. Cannot export non-finite coordinates.', false);
+        return;
+      }
+      lines.push('node ' + n.id + ' ' + n.pos[0].toFixed(3) + ' ' + n.pos[1].toFixed(3) + ' ' + n.pos[2].toFixed(3));
+      nodeCount++;
+    });
+    if (nodeCount) lines.push('');
+
+    // Edges
+    g.edges.forEach(function(e) {
+      lines.push('edge ' + e[0] + ' ' + e[1]);
+    });
+    if (g.edges.length) lines.push('');
+    lines.push('endgraph');
+    lines.push('');
+  });
+
+  // Active state
+  lines.push('# ── Active state');
+  lines.push(activeGraph);
+  lines.push(activeTool.toUpperCase());
+  lines.push('');
+  lines.push('# Total: A(' + graphs.A.nodes.length + 'n,' + graphs.A.edges.length + 'e)');
+  lines.push('#        B(' + graphs.B.nodes.length + 'n,' + graphs.B.edges.length + 'e)');
+  lines.push('#        R(' + graphs.R.nodes.length + 'n,' + graphs.R.edges.length + 'e)');
+
+  var text = lines.join('\n');
+  document.getElementById('io-title').textContent = 'EXPORT — .mnet';
+  document.getElementById('io-text').value = text;
+  document.getElementById('io-text').readOnly = true;
+  document.getElementById('io-action').textContent = 'COPY';
+  document.getElementById('io-overlay').className = 'open';
+  log('EXPORT: ' + lines.length + ' lines generated');
+}
+
+// ─── IMPORT: open overlay for paste ───
+function ioImportOpen() {
+  _ioMode = 'import';
+  document.getElementById('io-title').textContent = 'IMPORT — paste .mnet text';
+  document.getElementById('io-text').value = '';
+  document.getElementById('io-text').readOnly = false;
+  document.getElementById('io-action').textContent = 'IMPORT';
+  document.getElementById('io-overlay').className = 'open';
+  document.getElementById('io-text').focus();
+}
+
+// ─── IMPORT: parse + validate + rebuild ───
+function ioImportRun() {
+  var raw = document.getElementById('io-text').value;
+  if (!raw.trim()) {
+    bannerShow('Hey! You can\'t do that.', 'Nothing to import. Paste .mnet text first.', false);
+    return;
+  }
+
+  var lines = raw.split('\n');
+  var errors = [];
+  var lineNum = 0;
+
+  // Temp state
+  var newGraphs = {
+    A: { nodes:[], edges:[], color:0x00d4ff, name:'A' },
+    B: { nodes:[], edges:[], color:0xffd700, name:'B' },
+    R: { nodes:[], edges:[], color:0xff69b4, name:'Result' }
+  };
+  var newBoundary = 'CUBE';
+  var newRadius = 10;
+  var newCamera = null;
+  var newActiveGraph = 'A';
+  var newActiveTool = 'NODE';
+  var currentGraphKey = null;
+  var maxNodeId = 0;
+  var nodeIdSet = {};  // track all declared node ids
+
+  // Pass 1: Validate every line
+  for (var i = 0; i < lines.length; i++) {
+    lineNum = i + 1;
+    var line = lines[i].trim();
+
+    // Skip empty and comments
+    if (!line || line.charAt(0) === '#') continue;
+
+    var parts = line.split(/\s+/);
+    var cmd0 = parts[0].toLowerCase();
+
+    if (cmd0 === 'set') {
+      if (parts.length < 3) { errors.push('L' + lineNum + ': set needs <variable> <value>'); continue; }
+      var varName = parts[1].toLowerCase();
+      if (varName === 'lattice.boundary') {
+        var val = parts[2].toUpperCase();
+        if (val !== 'CUBE' && val !== 'PENT' && val !== 'HEX') {
+          errors.push('L' + lineNum + ': boundary must be CUBE, PENT, or HEX (got: ' + parts[2] + ')');
+        } else { newBoundary = val; }
+      } else if (varName === 'lattice.radius') {
+        var r = parseFloat(parts[2]);
+        if (!isFinite(r) || r < 1 || r > 50) {
+          errors.push('L' + lineNum + ': radius must be 1–50 (got: ' + parts[2] + ')');
+        } else { newRadius = r; }
+      } else if (varName === 'camera.position') {
+        if (parts.length < 5) { errors.push('L' + lineNum + ': camera.position needs x y z'); continue; }
+        var cx = parseFloat(parts[2]), cy = parseFloat(parts[3]), cz = parseFloat(parts[4]);
+        if (!isFinite(cx) || !isFinite(cy) || !isFinite(cz)) {
+          errors.push('L' + lineNum + ': camera position has non-finite values');
+        } else { newCamera = [cx, cy, cz]; }
+      }
+      // Unknown set vars are silently skipped (forward compat)
+
+    } else if (cmd0 === 'graph') {
+      if (parts.length < 2) { errors.push('L' + lineNum + ': graph needs A, B, or R'); continue; }
+      var gk = parts[1].toUpperCase();
+      if (gk !== 'A' && gk !== 'B' && gk !== 'R') {
+        errors.push('L' + lineNum + ': graph must be A, B, or R (got: ' + parts[1] + ')');
+      } else { currentGraphKey = gk; }
+
+    } else if (cmd0 === 'endgraph') {
+      currentGraphKey = null;
+
+    } else if (cmd0 === 'node') {
+      if (!currentGraphKey) { errors.push('L' + lineNum + ': node outside graph block'); continue; }
+      if (parts.length < 5) { errors.push('L' + lineNum + ': node needs <id> <x> <y> <z>'); continue; }
+      var nid = parseInt(parts[1]);
+      var nx = parseFloat(parts[2]), ny = parseFloat(parts[3]), nz = parseFloat(parts[4]);
+      if (!isFinite(nid) || nid < 0) { errors.push('L' + lineNum + ': node id must be >= 0 integer'); continue; }
+      if (!isFinite(nx) || !isFinite(ny) || !isFinite(nz)) { errors.push('L' + lineNum + ': node position non-finite'); continue; }
+      newGraphs[currentGraphKey].nodes.push({ id:nid, pos:[nx,ny,nz], label:currentGraphKey+nid });
+      nodeIdSet[currentGraphKey + ':' + nid] = true;
+      if (nid > maxNodeId) maxNodeId = nid;
+
+    } else if (cmd0 === 'edge') {
+      if (!currentGraphKey) { errors.push('L' + lineNum + ': edge outside graph block'); continue; }
+      if (parts.length < 3) { errors.push('L' + lineNum + ': edge needs <id1> <id2>'); continue; }
+      var e0 = parseInt(parts[1]), e1 = parseInt(parts[2]);
+      if (!isFinite(e0) || !isFinite(e1)) { errors.push('L' + lineNum + ': edge ids must be integers'); continue; }
+      newGraphs[currentGraphKey].edges.push([e0, e1]);
+
+    } else if (cmd0 === 'a' || cmd0 === 'b') {
+      newActiveGraph = cmd0.toUpperCase();
+
+    } else if (['node','edge','move','grab','delete'].indexOf(cmd0) >= 0) {
+      newActiveTool = cmd0.toUpperCase();
+
+    } else {
+      // Unknown line — strict reject
+      errors.push('L' + lineNum + ': unknown command \"' + line + '\"');
+    }
+  }
+
+  // Pass 2: Validate edge references
+  ['A','B','R'].forEach(function(key) {
+    newGraphs[key].edges.forEach(function(e, ei) {
+      if (!nodeIdSet[key + ':' + e[0]]) errors.push('Graph ' + key + ' edge ' + ei + ': node ' + e[0] + ' not declared');
+      if (!nodeIdSet[key + ':' + e[1]]) errors.push('Graph ' + key + ' edge ' + ei + ': node ' + e[1] + ' not declared');
+    });
+  });
+
+  // REJECT if any errors
+  if (errors.length) {
+    var msg = errors.length + ' error' + (errors.length > 1 ? 's' : '') + ' found:\n\n' + errors.slice(0, 8).join('\n');
+    if (errors.length > 8) msg += '\n... and ' + (errors.length - 8) + ' more';
+    bannerShow('Sorry, this doesn\'t work here.', msg, false);
+    log('IMPORT REJECTED: ' + errors.length + ' errors');
+    errors.forEach(function(e) { log('  ' + e); });
+    return;
+  }
+
+  // APPLY — everything validated, commit
+  graphs.A = newGraphs.A;
+  graphs.B = newGraphs.B;
+  graphs.R = newGraphs.R;
+  nodeIdCounter = maxNodeId + 1;
+  latticeBoundary = newBoundary;
+  latticeRadius = newRadius;
+  rebuildLattice();
+  setLatticeBoundary(newBoundary);
+  if (newCamera) camera.position.set(newCamera[0], newCamera[1], newCamera[2]);
+  setGraph(newActiveGraph);
+  setTool(newActiveTool.toLowerCase());
+  rebuildScene();
+
+  ioClose();
+  var totalN = graphs.A.nodes.length + graphs.B.nodes.length + graphs.R.nodes.length;
+  var totalE = graphs.A.edges.length + graphs.B.edges.length + graphs.R.edges.length;
+  bannerShow('Import successful!', totalN + ' nodes, ' + totalE + ' edges loaded. Lattice: ' + newBoundary + ' R=' + newRadius, true);
+  log('IMPORT: ' + totalN + ' nodes, ' + totalE + ' edges, boundary=' + newBoundary);
+}
+
+animate();
+</script>
+</body>
+</html>

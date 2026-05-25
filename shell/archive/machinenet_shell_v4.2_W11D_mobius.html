@@ -1,0 +1,1964 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MachineNet · Goldberg recursive shell + MOBIUSIFY v4.2-W11D · v2 (polish)</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 100%; height: 100%;
+    background: #050510; color: #e0f0ff;
+    font-family: 'Share Tech Mono', 'Consolas', 'Menlo', monospace;
+    overflow: hidden; user-select: none;
+  }
+  #cv { position: fixed; inset: 0; display: block; cursor: none; }
+
+  
+  /* §M MOBIUSIFY */
+  body.pickle { background: #8B008B !important; }
+  body.pickle #hud, body.pickle #ctl { opacity: 0.3; }
+  #mobius-log {
+    position: fixed;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 20;
+    font-size: 11px;
+    font-family: 'Share Tech Mono', 'Consolas', monospace;
+    color: #ff69b4;
+    background: rgba(5, 5, 16, 0.85);
+    border: 1px solid #ff69b422;
+    border-radius: 4px;
+    padding: 8px 10px;
+    max-height: 40vh;
+    max-width: 420px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+    pointer-events: auto;
+    cursor: pointer;
+    user-select: text;
+    transition: border-color 0.2s, background 0.2s;
+  }
+  #mobius-log:hover {
+    border-color: #ff69b4aa;
+    background: rgba(20, 5, 30, 0.95);
+  }
+  #mobius-log.copied {
+    border-color: #00ff88;
+  }
+  #mobius-log:empty { display: none; }
+  /* §M FOCUS MODE */
+  body.focus-mode { transition: background 0.6s; }
+  body.focus-mode .panel { opacity: 0.15 !important; transition: opacity 0.6s; }
+  body.focus-mode #mobius-log { opacity: 0.3; }
+  #focus-label {
+    position: fixed; top: 50%; right: 20px; z-index: 25;
+    transform: translateY(-50%);
+    font-size: 12px; color: #ffd700; opacity: 0;
+    transition: opacity 0.4s;
+    pointer-events: none;
+    text-align: right;
+  }
+  body.focus-mode #focus-label { opacity: 1; }
+  .btn.mobius { background: #2a0030; border-color: #ff69b4; color: #ff69b4; }
+  .btn.mobius.on { background: #ff69b4; color: #000; }
+  #mobius-slider { width: 80px; }
+
+  /* AOE2-style small reticle that follows the cursor */
+  #reticle {
+    position: fixed; pointer-events: none; z-index: 10;
+    width: 22px; height: 22px;
+    transform: translate(-50%, -50%);
+    opacity: 0.55;
+  }
+  #reticle::before, #reticle::after {
+    content: ''; position: absolute; background: #ffd700;
+  }
+  #reticle::before {
+    left: 50%; top: 2px; bottom: 2px; width: 1px; transform: translateX(-50%);
+  }
+  #reticle::after {
+    top: 50%; left: 2px; right: 2px; height: 1px; transform: translateY(-50%);
+  }
+  #reticle .corner {
+    position: absolute; width: 5px; height: 5px;
+    border-color: #ffd700; border-style: solid;
+  }
+  #reticle .corner.tl { top: 0; left: 0; border-width: 1px 0 0 1px; }
+  #reticle .corner.tr { top: 0; right: 0; border-width: 1px 1px 0 0; }
+  #reticle .corner.bl { bottom: 0; left: 0; border-width: 0 0 1px 1px; }
+  #reticle .corner.br { bottom: 0; right: 0; border-width: 0 1px 1px 0; }
+  #reticle.aim { opacity: 1; }
+
+  /* Lock-in progress ring around reticle when holding */
+  #lockring {
+    position: fixed; pointer-events: none; z-index: 11;
+    width: 30px; height: 30px;
+    transform: translate(-50%, -50%);
+    display: none;
+  }
+  #lockring svg { width: 100%; height: 100%; }
+  #lockring.on { display: block; }
+
+  .panel {
+    position: fixed;
+    padding: 12px 14px;
+    font-size: 11px;
+    line-height: 1.7;
+    letter-spacing: 0.04em;
+    background: rgba(5, 5, 16, 0.85);
+    border: 1px solid #2a4858;
+  }
+  #hud    { top: 16px; left: 16px; pointer-events: none; max-width: 460px; }
+  #legend { top: 16px; right: 16px; pointer-events: none; text-align: right; }
+  #picked { bottom: 200px; left: 16px; pointer-events: none; max-width: 380px; }
+  #ctl    { bottom: 16px; left: 16px; right: 16px; pointer-events: auto; padding: 14px 18px; }
+
+  #status {
+    position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    color: #ffd700; font-size: 14px; letter-spacing: 0.15em; text-transform: uppercase;
+    pointer-events: none; text-align: center;
+  }
+  #status .bar {
+    margin-top: 14px;
+    width: 280px; height: 4px;
+    background: #1a2838;
+    border: 1px solid #2a4858;
+  }
+  #status .bar > div {
+    height: 100%; background: #ffd700; width: 0%;
+    transition: width 0.05s linear;
+  }
+
+  #err {
+    position: fixed; top: 0; left: 0; right: 0;
+    background: #ff3050cc; color: #fff;
+    padding: 16px 20px; font-size: 12px; line-height: 1.5;
+    white-space: pre-wrap; display: none; z-index: 1000;
+  }
+  #toast {
+    position: fixed; top: 16px; left: 50%; transform: translateX(-50%);
+    background: rgba(5, 5, 16, 0.95); border: 1px solid #ffd700;
+    color: #ffd700; padding: 10px 18px; font-size: 11px;
+    letter-spacing: 0.05em; display: none; z-index: 50;
+  }
+  #toast.show { display: block; animation: fadeout 3s forwards; }
+  @keyframes fadeout {
+    0% { opacity: 1; } 70% { opacity: 1; } 100% { opacity: 0; }
+  }
+
+  .lbl   { color: #7090a0; }
+  .gold  { color: #ffd700; }
+  .pent  { color: #ff6b35; }
+  .hex   { color: #00d4ff; }
+  .red   { color: #ff3050; }
+  b { color: #00d4ff; font-weight: normal; }
+
+  .btn {
+    display: inline-block;
+    padding: 6px 14px;
+    margin: 2px 4px 2px 0;
+    border: 1px solid #2a4858;
+    cursor: pointer;
+    color: #7090a0;
+    user-select: none;
+    transition: all 0.15s;
+    font-size: 11px;
+    background: #050510;
+    font-family: inherit;
+  }
+  .btn:hover { color: #e0f0ff; border-color: #4060a0; }
+  .btn.on    { color: #ffd700; border-color: #ffd700; background: #ffd70011; }
+  .btn.pent  { color: #ff6b35; border-color: #ff6b35aa; }
+  .btn.hex   { color: #00d4ff; border-color: #00d4ffaa; }
+  .btn.gold  { color: #ffd700; border-color: #ffd700; background: #ffd70011; }
+  .btn.red   { color: #ff3050; border-color: #ff305088; }
+
+  .ctl-row { margin: 6px 0; display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
+  .ctl-grp { display: inline-flex; align-items: center; gap: 8px; }
+
+  input[type=range] { width: 130px; vertical-align: middle; accent-color: #ffd700; }
+  .num { color: #00d4ff; min-width: 36px; display: inline-block; text-align: right; }
+
+  #invariants { font-size: 10px; color: #5070a0; margin-top: 4px; }
+  #invariants .v { color: #00d4ff; }
+  #invariants .gold { color: #ffd700; }
+
+  .hint-bar { font-size: 10px; color: #5070a0; margin-top: 4px; }
+  .hint-bar .key { color: #ffd700; }
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+
+<!-- Custom cursor reticle -->
+<div id="reticle">
+  <div class="corner tl"></div>
+  <div class="corner tr"></div>
+  <div class="corner bl"></div>
+  <div class="corner br"></div>
+</div>
+<div id="lockring">
+  <svg viewBox="0 0 30 30">
+    <circle cx="15" cy="15" r="13" fill="none" stroke="#ffd700" stroke-width="1.5"
+            stroke-dasharray="81.7" stroke-dashoffset="81.7" id="lockring-arc"
+            transform="rotate(-90 15 15)"/>
+  </svg>
+</div>
+
+<div id="err"></div>
+<div id="toast"></div>
+<div id="status" style="display:none">
+  <div id="status-msg">booting...</div>
+  <div class="bar"><div id="status-bar"></div></div>
+</div>
+
+<!-- HUD -->
+<div id="hud" class="panel">
+  <div class="lbl">MachineNet &middot; Goldberg recursive shell + MOBIUSIFY v4.2-W11D &middot; v2</div>
+  <div><span class="lbl">level</span> <b id="g-level">0</b> &middot; <span class="lbl">faces</span> <b id="g-faces">0</b></div>
+  <div><span class="pent" id="g-pents">12</span> pent &middot; <span class="hex" id="g-hexes">20</span> hex &middot; <span class="lbl">anchors</span> <b id="g-anchors">12</b></div>
+  <div><span class="lbl">vertices</span> <b id="g-verts">0</b> &middot; <span class="lbl">edges</span> <b id="g-edges">0</b></div>
+  <div class="gold" style="margin-top:6px">12 anchors descend forever &middot; click <span class="key">+</span> hold to refine</div>
+  <div id="invariants"></div>
+  <div class="hint-bar"><span class="key">click+hold 0.35s</span> on a face to refine &middot; <span class="key">shift+click</span> to inspect</div>
+</div>
+
+<!-- Legend -->
+<div id="legend" class="panel">
+  <div class="lbl">drag &middot; orbit</div>
+  <div class="lbl">scroll &middot; zoom camera</div>
+  <div class="lbl">click+hold face &middot; refine that cell</div>
+  <div class="lbl">shift+click face &middot; inspect</div>
+  <div style="margin-top:6px" class="lbl"><span class="pent">orange</span> pentagons (anchors)</div>
+  <div class="lbl"><span class="hex">cyan</span> hexagons</div>
+  <div class="lbl"><span class="gold">gold subtle</span> aimed face</div>
+  <div class="lbl"><span class="gold">gold bright</span> selected (shift)</div>
+</div>
+
+<!-- Picked panel -->
+<div id="picked" class="panel" style="display:none"></div>
+
+<!-- Main control bar -->
+<div id="ctl" class="panel">
+  <div class="ctl-row">
+    <span class="ctl-grp">
+      <button class="btn pent" id="b-refine-pents">refine all pents</button>
+      <button class="btn hex"  id="b-refine-hexes">refine all hexes</button>
+      <button class="btn gold" id="b-refine-all">refine ALL</button>
+    </span>
+    <span class="ctl-grp">
+      <button class="btn"     id="b-back">back</button>
+      <button class="btn red" id="b-reset">reset</button>
+    </span>
+    <span class="ctl-grp">
+      <button class="btn" id="b-save">save .json</button>
+      <button class="btn" id="b-load">load .json</button>
+      <input type="file" id="f-load" accept="application/json" style="display:none">
+    </span>
+    <span class="ctl-grp">
+      <button class="btn" id="b-auto">auto-rotate <b class="gold" id="b-auto-state">off</b></button>
+      <button class="btn" id="b-wire">wireframe <b class="gold" id="b-wire-state">on</b></button>
+      <button class="btn" id="b-fill">face fill <b class="gold" id="b-fill-state">on</b></button>
+    </span>
+    <span class="ctl-grp">
+      <span class="lbl">budget</span>
+      <input id="s-budget" type="range" min="20000" max="5000000" step="50000" value="500000">
+      <span class="num" id="v-budget">120k</span>
+    </span>
+
+    <span class="ctl-grp">
+      <button class="btn mobius" id="b-mobius">MOBIUSIFY <b id="b-mobius-state">off</b></button>
+      <span class="lbl">twist</span>
+      <input id="mobius-slider" type="range" min="0" max="1" step="0.01" value="0" disabled style="width:80px;">
+      <select id="mobius-select" class="btn" disabled style="display:none;background:#111;color:#ff69b4;border-color:#ff69b4;padding:2px 6px;font-size:11px;">
+        <option value="0.00">0.00 sphere</option>
+        <option value="0.10">0.10</option>
+        <option value="0.20">0.20</option>
+        <option value="0.30">0.30</option>
+        <option value="0.40">0.40 fish</option>
+        <option value="0.50">0.50 half</option>
+        <option value="0.60">0.60</option>
+        <option value="0.70">0.70</option>
+        <option value="0.80">0.80</option>
+        <option value="0.90">0.90</option>
+        <option value="1.00">1.00 mobius</option>
+      </select>
+      <span class="num" id="v-twist">0.00</span>
+    </span>
+  </div>
+  <div class="ctl-row">
+    <span class="ctl-grp"><span class="lbl">inner scale</span>
+      <input id="s-inner" type="range" min="0.15" max="0.85" step="0.01" value="0.45">
+      <span class="num" id="v-inner">0.45</span>
+    </span>
+    <span class="ctl-grp"><span class="lbl">mid scale</span>
+      <input id="s-mid" type="range" min="0.3" max="1.0" step="0.01" value="0.70">
+      <span class="num" id="v-mid">0.70</span>
+    </span>
+    <span class="ctl-grp"><span class="lbl">jitter</span>
+      <input id="s-jit" type="range" min="0" max="0.15" step="0.005" value="0">
+      <span class="num" id="v-jit">0.00</span>
+    </span>
+    <span class="ctl-grp"><span class="lbl">surface</span>
+      <button class="btn on" data-surface="planar">planar</button>
+      <button class="btn"    data-surface="spherical">spherical</button>
+    </span>
+  </div>
+</div>
+
+<div id="mobius-log" title="Click to copy log"></div>
+<div id="focus-label">FOCUS MODE<br><span style="font-size:10px;color:#ff69b4;">hover plane · mouse out to exit</span></div>
+
+<!-- Three.js (CDN) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js"></script>
+
+<!-- Inlined math kernel -->
+<script>
+// ============================================================================
+//  goldberg_kernel — inlined from goldberg_kernel.js for self-contained build
+// ============================================================================
+(function(global){
+"use strict";
+var GK = {};
+
+function vsub(a, b){ return [a[0]-b[0], a[1]-b[1], a[2]-b[2]]; }
+function vscale(a, s){ return [a[0]*s, a[1]*s, a[2]*s]; }
+function vlen(a){ return Math.sqrt(a[0]*a[0]+a[1]*a[1]+a[2]*a[2]); }
+function vnorm(a){ var L=vlen(a); return L>1e-12 ? vscale(a, 1/L) : [0,0,0]; }
+function vlerp(a, b, t){ return [a[0]*(1-t)+b[0]*t, a[1]*(1-t)+b[1]*t, a[2]*(1-t)+b[2]*t]; }
+function vcross(a, b){ return [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]]; }
+function vdot(a, b){ return a[0]*b[0]+a[1]*b[1]+a[2]*b[2]; }
+
+var PHI = (1+Math.sqrt(5))/2;
+GK.PHI = PHI;
+
+function buildC60Vertices(){
+  var raw = [];
+  var permsEven = [[0,1,2],[1,2,0],[2,0,1]];
+  function pushAll(a, b, c){
+    for (var i=0;i<permsEven.length;i++){
+      var p = permsEven[i];
+      for (var sa=-1; sa<=1; sa+=2)
+      for (var sb=-1; sb<=1; sb+=2)
+      for (var sc=-1; sc<=1; sc+=2){
+        if (a===0 && sa===-1) continue;
+        if (b===0 && sb===-1) continue;
+        if (c===0 && sc===-1) continue;
+        var v = [0,0,0];
+        v[p[0]] = sa*a; v[p[1]] = sb*b; v[p[2]] = sc*c;
+        raw.push(v);
+      }
+    }
+  }
+  pushAll(0,1,3*PHI);
+  pushAll(1, 2+PHI, 2*PHI);
+  pushAll(PHI, 2, 2*PHI+1);
+  var dedup = [];
+  for (var i=0;i<raw.length;i++){
+    var v=raw[i], found=false;
+    for (var j=0;j<dedup.length;j++){
+      var u=dedup[j];
+      if (Math.abs(u[0]-v[0])<0.001 && Math.abs(u[1]-v[1])<0.001 && Math.abs(u[2]-v[2])<0.001){ found=true; break; }
+    }
+    if (!found) dedup.push(v);
+  }
+  for (var i=0;i<dedup.length;i++) dedup[i] = vscale(vnorm(dedup[i]), 1.6);
+  return dedup;
+}
+
+function buildC60Faces(verts){
+  var minD = Infinity;
+  for (var i=0;i<verts.length;i++)
+    for (var j=i+1;j<verts.length;j++){
+      var d = vlen(vsub(verts[i], verts[j]));
+      if (d>0.01 && d<minD) minD=d;
+    }
+  var edgeLen = minD;
+  var tol = edgeLen*0.05;
+  var adj = [];
+  for (var i=0;i<verts.length;i++){
+    var nbrs = [];
+    for (var j=0;j<verts.length;j++){
+      if (i===j) continue;
+      var d = vlen(vsub(verts[i], verts[j]));
+      if (Math.abs(d-edgeLen) < tol) nbrs.push(j);
+    }
+    adj.push(nbrs);
+  }
+  for (var i=0;i<verts.length;i++){
+    var v = verts[i];
+    var n = vnorm(v);
+    var ref = adj[i][0];
+    var rv = vsub(verts[ref], v);
+    var t = vnorm(vsub(rv, vscale(n, vdot(rv, n))));
+    var e2 = vcross(n, t);
+    adj[i].sort(function(a, b){
+      var va = vsub(verts[a], v), vb = vsub(verts[b], v);
+      return Math.atan2(vdot(va,e2), vdot(va,t)) - Math.atan2(vdot(vb,e2), vdot(vb,t));
+    });
+  }
+  function nextInFace(u, v){
+    var nbrs = adj[v];
+    var idx = nbrs.indexOf(u);
+    if (idx<0) return -1;
+    return nbrs[(idx+nbrs.length-1) % nbrs.length];
+  }
+  var visited = {}, faces = [];
+  for (var u=0;u<verts.length;u++){
+    for (var k=0;k<adj[u].length;k++){
+      var v = adj[u][k];
+      var key = u+','+v;
+      if (visited[key]) continue;
+      var face = [u], a=u, b=v;
+      for (var step=0; step<20; step++){
+        visited[a+','+b] = true;
+        var c = nextInFace(a, b);
+        if (c<0 || c===u) break;
+        face.push(b);
+        a=b; b=c;
+      }
+      if (face[face.length-1] !== b) face.push(b);
+      if (face.length===5 || face.length===6) faces.push(face);
+    }
+  }
+  return faces;
+}
+
+GK.buildC60 = function(){
+  var verts = buildC60Vertices();
+  var faces = buildC60Faces(verts);
+  var meshFaces = [];
+  for (var i=0;i<faces.length;i++){
+    var f = faces[i], pts = [];
+    for (var k=0;k<f.length;k++) pts.push(verts[f[k]].slice());
+    var type = (f.length===5) ? 'pent' : 'hex';
+    meshFaces.push({
+      pts: pts, type: type, level: 0,
+      lineage: [i], id: 'F'+i,
+      anchor: type==='pent' ? ('A'+i) : null
+    });
+  }
+  return { faces: meshFaces, history: [], counter: meshFaces.length };
+};
+
+function centroid(pts){
+  var c = [0,0,0];
+  for (var i=0;i<pts.length;i++){ c[0]+=pts[i][0]; c[1]+=pts[i][1]; c[2]+=pts[i][2]; }
+  return [c[0]/pts.length, c[1]/pts.length, c[2]/pts.length];
+}
+function projectToSphere(p, R){
+  var L = vlen(p);
+  if (L<1e-12) return p;
+  return vscale(p, R/L);
+}
+
+GK.refineFace = function(face, params){
+  params = params || {};
+  var innerScale = params.innerScale != null ? params.innerScale : 0.45;
+  var midScale = params.midScale != null ? params.midScale : 0.70;
+  var preservePent = params.preservePentInPent !== false;
+  var preserveHex = params.preserveHexInHex !== false;
+  var surfaceMode = params.surfaceMode || 'planar';
+  var sphereR = params.sphereR != null ? params.sphereR : 1.6;
+  var jitter = params.jitter != null ? params.jitter : 0;
+  var counterRef = params.counterRef || { val: 0 };
+
+  var pts = face.pts;
+  var n = pts.length;
+  var c = centroid(pts);
+
+  var inner = [];
+  for (var i=0;i<n;i++){
+    var p = vlerp(c, pts[i], innerScale);
+    if (surfaceMode === 'spherical') p = projectToSphere(p, sphereR);
+    inner.push(p);
+  }
+  var midRing = [];
+  for (var i=0;i<n;i++){
+    var m = vlerp(pts[i], pts[(i+1)%n], 0.5);
+    var pulled = vlerp(c, m, midScale);
+    if (surfaceMode === 'spherical') pulled = projectToSphere(pulled, sphereR);
+    midRing.push(pulled);
+  }
+  if (jitter > 0){
+    function jit(p){
+      return [p[0]+(Math.random()-0.5)*jitter, p[1]+(Math.random()-0.5)*jitter, p[2]+(Math.random()-0.5)*jitter];
+    }
+    for (var i=0;i<inner.length;i++) inner[i] = jit(inner[i]);
+    for (var i=0;i<midRing.length;i++) midRing[i] = jit(midRing[i]);
+  }
+
+  var subFaces = [];
+  var innerType;
+  if (face.type === 'pent') innerType = preservePent ? 'pent' : 'hex';
+  else                      innerType = preserveHex  ? 'hex'  : 'pent';
+
+  counterRef.val += 1;
+  subFaces.push({
+    pts: inner.slice(),
+    type: innerType,
+    level: face.level + 1,
+    lineage: (face.lineage || []).concat([0]),
+    id: (face.id||'F?') + '.c' + counterRef.val,
+    anchor: innerType === 'pent' ? (face.anchor || 'A?') : null
+  });
+
+  for (var i=0;i<n;i++){
+    var j = (i+1)%n;
+    var em = vlerp(pts[i], pts[j], 0.5);
+    if (surfaceMode === 'spherical') em = projectToSphere(em, sphereR);
+    var hexPts = [
+      pts[i].slice(), em, pts[j].slice(),
+      inner[j].slice(), midRing[i].slice(), inner[i].slice()
+    ];
+    counterRef.val += 1;
+    subFaces.push({
+      pts: hexPts, type: 'hex',
+      level: face.level + 1,
+      lineage: (face.lineage || []).concat([i+1]),
+      id: (face.id||'F?') + '.e' + counterRef.val,
+      anchor: null
+    });
+  }
+  return subFaces;
+};
+
+// Predict face count for a refinement (so we can check the budget BEFORE running)
+GK.predictRefineAll = function(state){
+  // Each face becomes 1 inner + n surrounding = (1 + n) faces
+  // Pent (n=5) becomes 6 faces. Hex (n=6) becomes 7 faces.
+  var total = 0;
+  for (var i=0;i<state.faces.length;i++){
+    var f = state.faces[i];
+    total += 1 + f.pts.length;
+  }
+  return total;
+};
+GK.predictRefinePents = function(state){
+  var total = 0;
+  for (var i=0;i<state.faces.length;i++){
+    var f = state.faces[i];
+    if (f.type === 'pent') total += 1 + f.pts.length;
+    else                   total += 1;
+  }
+  return total;
+};
+GK.predictRefineHexes = function(state){
+  var total = 0;
+  for (var i=0;i<state.faces.length;i++){
+    var f = state.faces[i];
+    if (f.type === 'hex') total += 1 + f.pts.length;
+    else                  total += 1;
+  }
+  return total;
+};
+
+GK.refineOne = function(state, faceIdx, params){
+  if (faceIdx < 0 || faceIdx >= state.faces.length) return state;
+  var counterRef = { val: state.counter };
+  var p = Object.assign({}, params || {}, { counterRef: counterRef });
+  var subs = GK.refineFace(state.faces[faceIdx], p);
+  var newFaces = state.faces.slice();
+  newFaces.splice(faceIdx, 1);
+  for (var i=0;i<subs.length;i++) newFaces.push(subs[i]);
+  return {
+    faces: newFaces,
+    history: state.history.concat([{ op:'refineOne', idx:faceIdx, snapshot:state.faces }]),
+    counter: counterRef.val
+  };
+};
+
+GK.refineAll = function(state, params){
+  var counterRef = { val: state.counter };
+  var p = Object.assign({}, params || {}, { counterRef: counterRef });
+  var newFaces = [];
+  for (var i=0;i<state.faces.length;i++){
+    var subs = GK.refineFace(state.faces[i], p);
+    for (var k=0;k<subs.length;k++) newFaces.push(subs[k]);
+  }
+  return {
+    faces: newFaces,
+    history: state.history.concat([{ op:'refineAll', snapshot:state.faces }]),
+    counter: counterRef.val
+  };
+};
+
+GK.refineAllPents = function(state, params){
+  var counterRef = { val: state.counter };
+  var p = Object.assign({}, params || {}, { counterRef: counterRef });
+  var newFaces = [];
+  for (var i=0;i<state.faces.length;i++){
+    if (state.faces[i].type === 'pent'){
+      var subs = GK.refineFace(state.faces[i], p);
+      for (var k=0;k<subs.length;k++) newFaces.push(subs[k]);
+    } else newFaces.push(state.faces[i]);
+  }
+  return {
+    faces: newFaces,
+    history: state.history.concat([{ op:'refineAllPents', snapshot:state.faces }]),
+    counter: counterRef.val
+  };
+};
+
+GK.refineAllHexes = function(state, params){
+  var counterRef = { val: state.counter };
+  var p = Object.assign({}, params || {}, { counterRef: counterRef });
+  var newFaces = [];
+  for (var i=0;i<state.faces.length;i++){
+    if (state.faces[i].type === 'hex'){
+      var subs = GK.refineFace(state.faces[i], p);
+      for (var k=0;k<subs.length;k++) newFaces.push(subs[k]);
+    } else newFaces.push(state.faces[i]);
+  }
+  return {
+    faces: newFaces,
+    history: state.history.concat([{ op:'refineAllHexes', snapshot:state.faces }]),
+    counter: counterRef.val
+  };
+};
+
+GK.undo = function(state){
+  if (state.history.length === 0) return state;
+  var last = state.history[state.history.length-1];
+  return { faces: last.snapshot, history: state.history.slice(0,-1), counter: state.counter };
+};
+GK.reset = function(){ return GK.buildC60(); };
+
+GK.invariants = function(state){
+  var pents=0, hexes=0, maxLevel=0;
+  var perLevel={}, anchors={};
+  for (var i=0;i<state.faces.length;i++){
+    var f = state.faces[i];
+    if (f.type==='pent'){
+      pents++;
+      if (f.anchor) anchors[f.anchor] = (anchors[f.anchor]||0)+1;
+    } else hexes++;
+    if (f.level > maxLevel) maxLevel = f.level;
+    perLevel[f.level] = perLevel[f.level] || { pent:0, hex:0 };
+    if (f.type==='pent') perLevel[f.level].pent++; else perLevel[f.level].hex++;
+  }
+  var vertSet = {}, edgeSum = 0;
+  for (var i=0;i<state.faces.length;i++){
+    edgeSum += state.faces[i].pts.length;
+    for (var k=0;k<state.faces[i].pts.length;k++){
+      var p = state.faces[i].pts[k];
+      vertSet[p[0].toFixed(3)+','+p[1].toFixed(3)+','+p[2].toFixed(3)] = true;
+    }
+  }
+  return {
+    pents:pents, hexes:hexes, faces:state.faces.length,
+    edges: Math.floor(edgeSum/2),
+    vertices: Object.keys(vertSet).length,
+    maxLevel: maxLevel, perLevel: perLevel,
+    anchorCount: Object.keys(anchors).length, anchors: anchors
+  };
+};
+
+GK.serialize = function(state){
+  return {
+    version: '1.0',
+    counter: state.counter,
+    faces: state.faces.map(function(f){
+      return {
+        pts: f.pts.map(function(p){ return p.slice(); }),
+        type: f.type, level: f.level,
+        lineage: f.lineage ? f.lineage.slice() : [],
+        id: f.id, anchor: f.anchor
+      };
+    })
+  };
+};
+GK.deserialize = function(obj){
+  if (!obj || obj.version !== '1.0') throw new Error('GK: invalid serialized state');
+  return {
+    faces: obj.faces.map(function(f){
+      return {
+        pts: f.pts.map(function(p){ return p.slice(); }),
+        type: f.type, level: f.level,
+        lineage: f.lineage ? f.lineage.slice() : [],
+        id: f.id, anchor: f.anchor
+      };
+    }),
+    history: [], counter: obj.counter || 0
+  };
+};
+
+global.GK = GK;
+})(typeof globalThis !== 'undefined' ? globalThis : this);
+</script>
+
+<!-- App -->
+<script>
+window.onerror = function(msg, src, line, col, err){
+    document.body.classList.add('pickle');
+  var e = document.getElementById('err');
+  e.style.display = 'block';
+  e.textContent = 'JS ERROR: ' + msg + ' (line ' + line + ', col ' + col + ')';
+  if (err && err.stack) e.textContent += '\n\n' + err.stack;
+  return false;
+};
+
+(function(){
+"use strict";
+
+function $(id){ return document.getElementById(id); }
+
+// ----- Status & toast -----
+function showStatus(msg, progress){
+  $('status').style.display = 'block';
+  $('status-msg').textContent = msg;
+  $('status-bar').style.width = ((progress || 0) * 100) + '%';
+}
+function hideStatus(){ $('status').style.display = 'none'; }
+
+function toast(msg){
+  var t = $('toast');
+  t.textContent = msg;
+  t.className = '';
+  void t.offsetWidth; // restart anim
+  t.className = 'show';
+}
+
+// ============================================================================
+// §A Three.js setup
+// ============================================================================
+showStatus('booting');
+var cv = $('cv');
+var scene = new THREE.Scene();
+scene.background = new THREE.Color(0x050510);
+var camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 0.05, 1000);
+camera.position.set(0, 0, 6);
+var renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: true });
+renderer.setPixelRatio(window.devicePixelRatio || 1);
+renderer.setSize(window.innerWidth, window.innerHeight);
+window.addEventListener('resize', function(){
+  camera.aspect = window.innerWidth/window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+var dirLight = new THREE.DirectionalLight(0xffffff, 0.6);
+dirLight.position.set(5, 5, 5);
+scene.add(dirLight);
+
+// ============================================================================
+// §B App state
+// ============================================================================
+var App = {
+  state: GK.buildC60(),
+  hovered: -1,        // face the reticle is on (subtle highlight)
+  selected: -1,       // shift+click selected face (inspection)
+  meshGroup: new THREE.Group(),
+  params: {
+    innerScale: 0.45, midScale: 0.70, jitter: 0, surfaceMode: 'planar', sphereR: 1.6
+  },
+  flags: {
+    autoRotate: false, wireframe: true, faceFill: true
+  },
+  budget: 500000,     // max face count before auto-rollback warning
+  isBuilding: false,  // guard against re-entry during heavy compute
+  lockHold: {
+    active: false,
+    faceIdx: -1,
+    startTime: 0,
+    duration: 350,    // ms hold required to commit refine
+  }
+};
+scene.add(App.meshGroup);
+
+// ============================================================================
+// §C Render (chunked across frames for heavy meshes)
+// ============================================================================
+function disposeChildren(group){
+  while (group.children.length > 0){
+    var c = group.children[0];
+    group.remove(c);
+    if (c.geometry) c.geometry.dispose();
+    if (c.material) c.material.dispose();
+  }
+}
+
+// Build BufferGeometry data — fast, single pass — then create meshes.
+function buildSceneSync(){
+  disposeChildren(App.meshGroup);
+  var faces = App.state.faces;
+  var nFaces = faces.length;
+
+  // Wireframe edges
+  if (App.flags.wireframe){
+    var pentPos = [], hexPos = [];
+    for (var fi=0; fi<nFaces; fi++){
+      var f = faces[fi];
+      var arr = (f.type==='pent') ? pentPos : hexPos;
+      var pts = f.pts, np = pts.length;
+      for (var i=0;i<np;i++){
+        var a=pts[i], b=pts[(i+1)%np];
+        arr.push(a[0],a[1],a[2], b[0],b[1],b[2]);
+      }
+    }
+    if (pentPos.length > 0){
+      var pg = new THREE.BufferGeometry();
+      pg.setAttribute('position', new THREE.Float32BufferAttribute(pentPos, 3));
+      App.meshGroup.add(new THREE.LineSegments(pg, new THREE.LineBasicMaterial({ color: 0xff6b35 })));
+    }
+    if (hexPos.length > 0){
+      var hg = new THREE.BufferGeometry();
+      hg.setAttribute('position', new THREE.Float32BufferAttribute(hexPos, 3));
+      App.meshGroup.add(new THREE.LineSegments(hg, new THREE.LineBasicMaterial({ color: 0x00d4ff, transparent: true, opacity: 0.55 })));
+    }
+  }
+
+  // SINGLE merged fill mesh per type (instead of one mesh per face).
+  // This is the big perf win. We still get per-face hit detection via
+  // a parallel pickable-faces buffer (see below).
+  var pentFill = [], hexFill = [];
+  for (var fi=0; fi<nFaces; fi++){
+    var f = faces[fi];
+    var pts = f.pts;
+    var arr = (f.type==='pent') ? pentFill : hexFill;
+    for (var k=1; k<pts.length-1; k++){
+      arr.push(pts[0][0],   pts[0][1],   pts[0][2]);
+      arr.push(pts[k][0],   pts[k][1],   pts[k][2]);
+      arr.push(pts[k+1][0], pts[k+1][1], pts[k+1][2]);
+    }
+  }
+  if (App.flags.faceFill){
+    if (pentFill.length > 0){
+      var pfg = new THREE.BufferGeometry();
+      pfg.setAttribute('position', new THREE.Float32BufferAttribute(pentFill, 3));
+      App.meshGroup.add(new THREE.Mesh(pfg, new THREE.MeshBasicMaterial({
+        color: 0xff6b35, transparent: true, opacity: 0.16, side: THREE.DoubleSide
+      })));
+    }
+    if (hexFill.length > 0){
+      var hfg = new THREE.BufferGeometry();
+      hfg.setAttribute('position', new THREE.Float32BufferAttribute(hexFill, 3));
+      App.meshGroup.add(new THREE.Mesh(hfg, new THREE.MeshBasicMaterial({
+        color: 0x00d4ff, transparent: true, opacity: 0.05, side: THREE.DoubleSide
+      })));
+    }
+  }
+
+  // Subtle aimed-face highlight (just the OUTLINE of the aimed face in gold, no big fill).
+  if (App.hovered >= 0 && App.hovered < nFaces){
+    var f = faces[App.hovered];
+    var ringPos = [];
+    var pts = f.pts;
+    for (var i=0;i<pts.length;i++){
+      var a=pts[i], b=pts[(i+1)%pts.length];
+      ringPos.push(a[0],a[1],a[2], b[0],b[1],b[2]);
+    }
+    var rg = new THREE.BufferGeometry();
+    rg.setAttribute('position', new THREE.Float32BufferAttribute(ringPos, 3));
+    App.meshGroup.add(new THREE.LineSegments(rg, new THREE.LineBasicMaterial({
+      color: 0xffd700, transparent: true, opacity: 0.85
+    })));
+    // tiny corner dots
+    var dotPos = [];
+    for (var i=0;i<pts.length;i++){ dotPos.push(pts[i][0], pts[i][1], pts[i][2]); }
+    var dg = new THREE.BufferGeometry();
+    dg.setAttribute('position', new THREE.Float32BufferAttribute(dotPos, 3));
+    App.meshGroup.add(new THREE.Points(dg, new THREE.PointsMaterial({
+      color: 0xffd700, size: 4, sizeAttenuation: false
+    })));
+  }
+
+  // Selected face (shift+click): same subtle treatment but a hair brighter
+  if (App.selected >= 0 && App.selected < nFaces && App.selected !== App.hovered){
+    var f = faces[App.selected];
+    var ringPos = [];
+    var pts = f.pts;
+    for (var i=0;i<pts.length;i++){
+      var a=pts[i], b=pts[(i+1)%pts.length];
+      ringPos.push(a[0],a[1],a[2], b[0],b[1],b[2]);
+    }
+    var rg = new THREE.BufferGeometry();
+    rg.setAttribute('position', new THREE.Float32BufferAttribute(ringPos, 3));
+    App.meshGroup.add(new THREE.LineSegments(rg, new THREE.LineBasicMaterial({
+      color: 0xffd700, transparent: false, linewidth: 2
+    })));
+  }
+}
+
+// Picking uses per-face invisible Mesh objects.
+// We rebuild this rarely (after refines), separately from the visible mesh.
+var pickGroup = new THREE.Group();
+scene.add(pickGroup);
+
+function buildPickGroup(){
+  disposeChildren(pickGroup);
+  var faces = App.state.faces;
+  for (var fi=0; fi<faces.length; fi++){
+    var f = faces[fi];
+    var pts = f.pts;
+    var verts = [];
+    for (var k=1; k<pts.length-1; k++){
+      verts.push(pts[0][0],pts[0][1],pts[0][2]);
+      verts.push(pts[k][0],pts[k][1],pts[k][2]);
+      verts.push(pts[k+1][0],pts[k+1][1],pts[k+1][2]);
+    }
+    if (verts.length === 0) continue;
+    var fg = new THREE.BufferGeometry();
+    fg.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
+    var m = new THREE.Mesh(fg, new THREE.MeshBasicMaterial({ visible: false, side: THREE.DoubleSide }));
+    m.userData.faceIndex = fi;
+    pickGroup.add(m);
+  }
+}
+
+// Chunked build for heavy refinements — keep frames alive while assembling.
+function buildSceneChunked(onComplete){
+  App.isBuilding = true;
+  showStatus('building scene...', 0);
+  // For simplicity we do two phases: pick group, then visible mesh.
+  // Each is fast in Three.js itself; the cost is mostly the data preparation
+  // in goldberg_kernel during refinement (which has already happened by the
+  // time we're here). We just chunk into 2 frames so the status bar shows.
+  setTimeout(function(){
+    showStatus('building pick group...', 0.25);
+    buildPickGroup();
+    setTimeout(function(){
+      showStatus('building visible mesh...', 0.7);
+      setTimeout(function(){
+        buildSceneSync();
+        showStatus('done', 1.0);
+        setTimeout(function(){
+          hideStatus();
+          App.isBuilding = false;
+          if (onComplete) onComplete();
+        }, 120);
+      }, 16);
+    }, 16);
+  }, 0);
+}
+
+// ============================================================================
+// §D HUD
+// ============================================================================
+function updateHUD(){
+  var inv = GK.invariants(App.state);
+  $('g-level').textContent = inv.maxLevel;
+  $('g-faces').textContent = inv.faces;
+  $('g-pents').textContent = inv.pents;
+  $('g-hexes').textContent = inv.hexes;
+  $('g-anchors').textContent = inv.anchorCount;
+  $('g-verts').textContent = inv.vertices;
+  $('g-edges').textContent = inv.edges;
+  var rows = [], levels = Object.keys(inv.perLevel).sort(function(a,b){ return +a-+b; });
+  for (var i=0;i<levels.length;i++){
+    var L = levels[i], row = inv.perLevel[L];
+    rows.push('L<span class="v">'+L+'</span>: <span class="pent">'+row.pent+'p</span>+<span class="hex">'+row.hex+'h</span>');
+  }
+  $('invariants').innerHTML = rows.join(' &middot; ');
+  if (App.selected >= 0 && App.selected < App.state.faces.length){
+    var f = App.state.faces[App.selected];
+    var ec = $('picked');
+    ec.style.display = 'block';
+    ec.innerHTML =
+      '<div class="gold">' + (f.type==='pent' ? '<span class="pent">' : '<span class="hex">') + f.type.toUpperCase() + '</span> &middot; id ' + f.id + '</div>' +
+      '<div class="lbl">level <b>' + f.level + '</b> &middot; ' + f.pts.length + ' vertices</div>' +
+      (f.anchor ? '<div class="gold">anchor: ' + f.anchor + '</div>' : '') +
+      '<div class="lbl">lineage: ' + (f.lineage||[]).join(' &rarr; ') + '</div>';
+  } else {
+    $('picked').style.display = 'none';
+  }
+}
+
+// ============================================================================
+// §E Interaction with reticle + lock-hold to refine
+// ============================================================================
+var orbit = { theta: 0.5, phi: 0.2, radius: 6, isDown: false, lastX: 0, lastY: 0, moved: false };
+function updateCamera(){
+  var x = orbit.radius * Math.cos(orbit.phi) * Math.sin(orbit.theta);
+  var y = orbit.radius * Math.sin(orbit.phi);
+  var z = orbit.radius * Math.cos(orbit.phi) * Math.cos(orbit.theta);
+  camera.position.set(x, y, z);
+  camera.lookAt(0, 0, 0);
+}
+updateCamera();
+
+var raycaster = new THREE.Raycaster();
+function pickFace(clientX, clientY){
+  var rect = cv.getBoundingClientRect();
+  var mouse = new THREE.Vector2(
+    ((clientX - rect.left) / rect.width) * 2 - 1,
+    -((clientY - rect.top) / rect.height) * 2 + 1
+  );
+  raycaster.setFromCamera(mouse, camera);
+  var hits = raycaster.intersectObjects(pickGroup.children, false);
+  for (var i=0;i<hits.length;i++){
+    if (hits[i].object.userData && hits[i].object.userData.faceIndex !== undefined){
+      return hits[i].object.userData.faceIndex;
+    }
+  }
+  return -1;
+}
+
+// Reticle follows the cursor; orbit when dragging.
+var lastMouseX = window.innerWidth/2, lastMouseY = window.innerHeight/2;
+function moveReticle(x, y){
+  var r = $('reticle');
+  r.style.left = x + 'px';
+  r.style.top  = y + 'px';
+  var lr = $('lockring');
+  lr.style.left = x + 'px';
+  lr.style.top  = y + 'px';
+}
+
+cv.addEventListener('mousedown', function(e){
+  if (App.isBuilding) return;
+  orbit.isDown = true;
+  orbit.lastX = e.clientX;
+  orbit.lastY = e.clientY;
+  orbit.moved = false;
+  // Start lock-hold ONLY if a face is under cursor and not shift-clicking
+  var fi = pickFace(e.clientX, e.clientY);
+  if (!e.shiftKey && fi >= 0){
+    App.lockHold.active = true;
+    App.lockHold.faceIdx = fi;
+    App.lockHold.startTime = performance.now();
+    $('lockring').classList.add('on');
+  }
+});
+
+window.addEventListener('mousemove', function(e){
+  lastMouseX = e.clientX;
+  lastMouseY = e.clientY;
+  moveReticle(e.clientX, e.clientY);
+
+  if (orbit.isDown){
+    var dx = e.clientX - orbit.lastX, dy = e.clientY - orbit.lastY;
+    if (Math.abs(dx)+Math.abs(dy) > 3){
+      orbit.moved = true;
+      // movement cancels lock-hold (you're orbiting)
+      if (App.lockHold.active){
+        App.lockHold.active = false;
+        $('lockring').classList.remove('on');
+      }
+    }
+    if (orbit.moved){
+      orbit.theta -= dx * 0.005;
+      orbit.phi   += dy * 0.005;
+      orbit.phi = Math.max(-1.4, Math.min(1.4, orbit.phi));
+      orbit.lastX = e.clientX;
+      orbit.lastY = e.clientY;
+      updateCamera();
+    }
+  } else {
+    // hover detection without orbit
+    if (App.isBuilding) return;
+    var f = pickFace(e.clientX, e.clientY);
+    if (f !== App.hovered){
+      App.hovered = f;
+      $('reticle').classList.toggle('aim', f >= 0);
+      buildSceneSync(); // hover rebuild — light because it's just outline
+    }
+  }
+});
+
+window.addEventListener('mouseup', function(e){
+  var wasDown = orbit.isDown;
+  orbit.isDown = false;
+  if (!wasDown) return;
+
+  if (orbit.moved){
+    App.lockHold.active = false;
+    $('lockring').classList.remove('on');
+    return;
+  }
+
+  // Not moved — interpret as click intent
+  var fi = pickFace(e.clientX, e.clientY);
+  if (e.shiftKey){
+    if (fi >= 0){
+      App.selected = (App.selected === fi) ? -1 : fi;
+      buildSceneSync();
+      updateHUD();
+    }
+    App.lockHold.active = false;
+    $('lockring').classList.remove('on');
+    return;
+  }
+
+  // Plain click: was the hold long enough?
+  if (App.lockHold.active && App.lockHold.faceIdx === fi){
+    var heldFor = performance.now() - App.lockHold.startTime;
+    if (heldFor >= App.lockHold.duration){
+      App.lockHold.active = false;
+      $('lockring').classList.remove('on');
+      commitRefine(fi);
+      return;
+    }
+  }
+  // Not long enough — show hint
+  App.lockHold.active = false;
+  $('lockring').classList.remove('on');
+  if (fi >= 0) toast('hold click for ~0.35s to refine');
+});
+
+cv.addEventListener('wheel', function(e){
+  e.preventDefault();
+  orbit.radius *= Math.exp(e.deltaY * 0.001);
+  orbit.radius = Math.max(1.8, Math.min(40, orbit.radius));
+  updateCamera();
+}, { passive: false });
+
+// ============================================================================
+// §F Refine operations with budget guard + chunked rebuild
+// ============================================================================
+function checkBudget(predictedCount){
+  if (predictedCount > App.budget){
+    toast('refine would push to ' + predictedCount.toLocaleString() + ' faces (budget ' + App.budget.toLocaleString() + ') — blocked. raise budget if you mean it.');
+    return false;
+  }
+  return true;
+}
+
+function commitRefine(fi){
+  if (App.isBuilding) return;
+  // refineOne adds (1 + n) faces and removes 1, so net = n. Cheap. Always allowed.
+  App.state = GK.refineOne(App.state, fi, App.params);
+  App.hovered = -1;
+  App.selected = -1;
+  buildSceneChunked(updateHUD);
+}
+
+$('b-refine-all').addEventListener('click', function(){
+  if (App.isBuilding) return;
+  var pred = GK.predictRefineAll(App.state);
+  if (!checkBudget(pred)) return;
+  showStatus('predicted ' + pred.toLocaleString() + ' faces — refining all...', 0.05);
+  setTimeout(function(){
+    App.state = GK.refineAll(App.state, App.params);
+    App.hovered = -1; App.selected = -1;
+    buildSceneChunked(updateHUD);
+  }, 30);
+});
+$('b-refine-pents').addEventListener('click', function(){
+  if (App.isBuilding) return;
+  var pred = GK.predictRefinePents(App.state);
+  if (!checkBudget(pred)) return;
+  showStatus('refining pentagons...', 0.05);
+  setTimeout(function(){
+    App.state = GK.refineAllPents(App.state, App.params);
+    App.hovered = -1; App.selected = -1;
+    buildSceneChunked(updateHUD);
+  }, 30);
+});
+$('b-refine-hexes').addEventListener('click', function(){
+  if (App.isBuilding) return;
+  var pred = GK.predictRefineHexes(App.state);
+  if (!checkBudget(pred)) return;
+  showStatus('refining hexagons...', 0.05);
+  setTimeout(function(){
+    App.state = GK.refineAllHexes(App.state, App.params);
+    App.hovered = -1; App.selected = -1;
+    buildSceneChunked(updateHUD);
+  }, 30);
+});
+$('b-back').addEventListener('click', function(){
+  if (App.isBuilding) return;
+  App.state = GK.undo(App.state);
+  App.hovered = -1; App.selected = -1;
+  buildSceneChunked(updateHUD);
+});
+$('b-reset').addEventListener('click', function(){
+  if (App.isBuilding) return;
+  App.state = GK.reset();
+  App.hovered = -1; App.selected = -1;
+  buildSceneChunked(updateHUD);
+});
+
+$('b-save').addEventListener('click', function(){
+  var obj = GK.serialize(App.state);
+  var blob = new Blob([JSON.stringify(obj, null, 2)], { type: 'application/json' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = 'goldberg_state_L' + GK.invariants(App.state).maxLevel + '_' + Date.now() + '.json';
+  a.click();
+  setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+});
+$('b-load').addEventListener('click', function(){ $('f-load').click(); });
+$('f-load').addEventListener('change', function(e){
+  var file = e.target.files[0];
+  if (!file) return;
+  var rd = new FileReader();
+  rd.onload = function(ev){
+    try {
+      var obj = JSON.parse(ev.target.result);
+      App.state = GK.deserialize(obj);
+      App.hovered = -1; App.selected = -1;
+      buildSceneChunked(updateHUD);
+    } catch(err){ alert('failed to load: ' + err.message); }
+  };
+  rd.readAsText(file);
+});
+
+function syncFlagButton(id, stateName){
+  $(id+'-state').textContent = App.flags[stateName] ? 'on' : 'off';
+  $(id+'-state').className = App.flags[stateName] ? 'gold' : 'lbl';
+}
+$('b-auto').addEventListener('click', function(){
+  App.flags.autoRotate = !App.flags.autoRotate;
+  syncFlagButton('b-auto', 'autoRotate');
+});
+$('b-wire').addEventListener('click', function(){
+  App.flags.wireframe = !App.flags.wireframe;
+  syncFlagButton('b-wire', 'wireframe');
+  buildSceneSync();
+});
+$('b-fill').addEventListener('click', function(){
+  App.flags.faceFill = !App.flags.faceFill;
+  syncFlagButton('b-fill', 'faceFill');
+  buildSceneSync();
+});
+
+// Sliders
+function bindSlider(sliderId, valueId, paramName){
+  $(sliderId).addEventListener('input', function(e){
+    App.params[paramName] = +e.target.value;
+    $(valueId).textContent = (+e.target.value).toFixed(2);
+  });
+}
+bindSlider('s-inner', 'v-inner', 'innerScale');
+bindSlider('s-mid',   'v-mid',   'midScale');
+bindSlider('s-jit',   'v-jit',   'jitter');
+
+$('s-budget').addEventListener('input', function(e){
+  App.budget = +e.target.value;
+  var k = Math.round(App.budget / 1000);
+  $('v-budget').textContent = k + 'k';
+});
+
+document.querySelectorAll('.btn[data-surface]').forEach(function(b){
+  b.addEventListener('click', function(){
+    document.querySelectorAll('.btn[data-surface]').forEach(function(b2){ b2.classList.remove('on'); });
+    b.classList.add('on');
+    App.params.surfaceMode = b.dataset.surface;
+  });
+});
+
+// ============================================================================
+// §G Animate + lock-hold ring update
+
+// ============================================================================
+// §M  MOBIUSIFY ENGINE
+// ============================================================================
+// Math: Mobius strip parameterization with half-twist
+//   x(u,v) = (R + v*cos(u/2)) * cos(u)
+//   y(u,v) = (R + v*cos(u/2)) * sin(u)
+//   z(u,v) = v * sin(u/2)
+// where u in [0, 2*PI], v in [-w, w]
+//
+// Euler: V-E+F = chi.  Sphere chi=2 -> F=32.  Mobius chi=0 -> F=30.
+// Two faces die. They render ghost (magenta).
+
+(function(){
+  var mLog = document.getElementById('mobius-log');
+  var mBtn = document.getElementById('b-mobius');
+  var mSlider = document.getElementById('mobius-slider');
+  var mSelect = document.getElementById('mobius-select');
+  var mValue = document.getElementById('v-twist');
+  var HEAVY_THRESHOLD_MS = 30;   // if compute > 30ms, swap to dropdown
+  var lastComputeMs = 0;         // track last embed compute time
+  var useDropdown = false;       // current control mode
+  var mState = document.getElementById('b-mobius-state');
+  
+  var MOBIUS_R = 2.5;       // strip radius
+  var MOBIUS_W = 0.8;       // strip half-width
+  var spherePositions = null;  // cached sphere vertex positions per face
+  var mobiusPositions = null;  // computed mobius vertex positions per face
+  var ghostFaceIdx = [];       // indices of the 2 faces that die
+  var mobiusActive = false;
+  var mobiusT = 0;             // interpolation: 0=sphere, 1=mobius
+  var pickleMode = false;
+  
+  function mlog(msg) {
+    var ts = new Date().toLocaleTimeString();
+    var line = '[' + ts + ' M] ' + msg;
+    console.log('[MOBIUS] ' + msg);
+    if (mLog) {
+      mLog.textContent += line + '\n';
+      mLog.scrollTop = mLog.scrollHeight;
+    }
+  }
+  
+  // Click log to select all + copy
+  if (mLog) {
+    mLog.addEventListener('click', function() {
+      var range = document.createRange();
+      range.selectNodeContents(mLog);
+      var sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+      try {
+        navigator.clipboard.writeText(mLog.textContent).then(function() {
+          mLog.classList.add('copied');
+          setTimeout(function() { mLog.classList.remove('copied'); }, 800);
+        });
+      } catch(e) {
+        document.execCommand('copy');
+        mLog.classList.add('copied');
+        setTimeout(function() { mLog.classList.remove('copied'); }, 800);
+      }
+    });
+  }
+  
+  function enterPickle(reason) {
+    pickleMode = true;
+    document.body.classList.add('pickle');
+    mlog('PICKLE: ' + reason);
+    mlog('Untoggle MOBIUSIFY to restore.');
+  }
+  
+  function exitPickle() {
+    pickleMode = false;
+    document.body.classList.remove('pickle');
+    mlog('Pickle cleared.');
+  }
+
+  // Find the two most "antipodal" hexagonal faces (furthest centroids)
+  function findGhostFaces(faces) {
+    var hexIdxs = [];
+    for (var i = 0; i < faces.length; i++) {
+      if (faces[i].type === 'hex') hexIdxs.push(i);
+    }
+    if (hexIdxs.length < 2) return [0, 1]; // fallback
+    
+    var bestDist = -1, bestPair = [hexIdxs[0], hexIdxs[1]];
+    // Centroids
+    var cents = {};
+    for (var k = 0; k < hexIdxs.length; k++) {
+      var idx = hexIdxs[k];
+      var pts = faces[idx].pts;
+      var cx = 0, cy = 0, cz = 0;
+      for (var p = 0; p < pts.length; p++) {
+        cx += pts[p][0]; cy += pts[p][1]; cz += pts[p][2];
+      }
+      cents[idx] = [cx/pts.length, cy/pts.length, cz/pts.length];
+    }
+    // Find most antipodal pair
+    for (var a = 0; a < hexIdxs.length; a++) {
+      for (var b = a+1; b < hexIdxs.length; b++) {
+        var ca = cents[hexIdxs[a]], cb = cents[hexIdxs[b]];
+        var dx = ca[0]-cb[0], dy = ca[1]-cb[1], dz = ca[2]-cb[2];
+        var d = dx*dx + dy*dy + dz*dz;
+        if (d > bestDist) { bestDist = d; bestPair = [hexIdxs[a], hexIdxs[b]]; }
+      }
+    }
+    return bestPair;
+  }
+
+  // Map a 3D point from sphere to Mobius strip position
+  // Uses spherical coordinates of the original point to assign (u,v) on strip
+  function sphereToMobius(pt, R, W) {
+    var x = pt[0], y = pt[1], z = pt[2];
+    var r = Math.sqrt(x*x + y*y + z*z);
+    if (r < 1e-10) return [R, 0, 0];
+    
+    // Spherical coords
+    var theta = Math.atan2(y, x);              // azimuthal: -PI to PI -> map to u: 0 to 2PI
+    var phi = Math.acos(Math.max(-1, Math.min(1, z / r)));  // polar: 0 to PI -> map to v: -W to W
+    
+    var u = theta + Math.PI;                   // 0 to 2*PI
+    var v = (phi / Math.PI - 0.5) * 2 * W;    // -W to W
+    
+    // Mobius parameterization with half-twist
+    var cosU = Math.cos(u), sinU = Math.sin(u);
+    var cosHU = Math.cos(u / 2), sinHU = Math.sin(u / 2);
+    
+    var mx = (R + v * cosHU) * cosU;
+    var my = (R + v * cosHU) * sinU;
+    var mz = v * sinHU;
+    
+    return [mx, my, mz];
+  }
+
+  // Compute all Mobius positions for current state
+  function computeMobiusPositions(faces) {
+    mlog('Computing Mobius embedding for ' + faces.length + ' faces...');
+    var t0 = performance.now();
+    
+    var positions = [];
+    for (var fi = 0; fi < faces.length; fi++) {
+      var pts = faces[fi].pts;
+      var mpts = [];
+      for (var pi = 0; pi < pts.length; pi++) {
+        mpts.push(sphereToMobius(pts[pi], MOBIUS_R, MOBIUS_W));
+      }
+      positions.push(mpts);
+    }
+    
+    var elapsed = (performance.now() - t0).toFixed(1);
+    mlog('Mobius positions computed in ' + elapsed + 'ms');
+    return positions;
+  }
+
+  // Cache sphere positions
+  function cacheSpherePositions(faces) {
+    var positions = [];
+    for (var fi = 0; fi < faces.length; fi++) {
+      var pts = faces[fi].pts;
+      var spts = [];
+      for (var pi = 0; pi < pts.length; pi++) {
+        spts.push(pts[pi].slice());
+      }
+      positions.push(spts);
+    }
+    return positions;
+  }
+
+  // Apply interpolated positions to state (with bounds guards)
+  function applyMobiusLerp(faces, spherePos, mobiusPos, t) {
+    var maxFi = Math.min(faces.length, spherePos.length, mobiusPos.length);
+    for (var fi = 0; fi < maxFi; fi++) {
+      var pts = faces[fi].pts;
+      var sp = spherePos[fi];
+      var mp = mobiusPos[fi];
+      if (!sp || !mp) continue;
+      var maxPi = Math.min(pts.length, sp.length, mp.length);
+      for (var pi = 0; pi < maxPi; pi++) {
+        var s = sp[pi];
+        var m = mp[pi];
+        if (!s || !m) continue;
+        pts[pi][0] = s[0] * (1-t) + m[0] * t;
+        pts[pi][1] = s[1] * (1-t) + m[1] * t;
+        pts[pi][2] = s[2] * (1-t) + m[2] * t;
+      }
+    }
+  }
+
+  // Restore sphere positions (with bounds guards)
+  function restoreSphere(faces, spherePos) {
+    var maxFi = Math.min(faces.length, spherePos.length);
+    for (var fi = 0; fi < maxFi; fi++) {
+      var pts = faces[fi].pts;
+      var sp = spherePos[fi];
+      if (!sp) continue;
+      var maxPi = Math.min(pts.length, sp.length);
+      for (var pi = 0; pi < maxPi; pi++) {
+        if (!sp[pi]) continue;
+        pts[pi][0] = sp[pi][0];
+        pts[pi][1] = sp[pi][1];
+        pts[pi][2] = sp[pi][2];
+      }
+    }
+  }
+
+  // Patch buildSceneSync to color ghost faces
+  var _origBuildScene = buildSceneSync;
+  buildSceneSync = function() {
+    // If mobius active, mark ghost faces before rendering
+    if (mobiusActive && ghostFaceIdx.length === 2 && mobiusT > 0.01) {
+      // Temporarily change ghost face types for rendering
+      var faces = App.state.faces;
+      var saved = [];
+      for (var g = 0; g < ghostFaceIdx.length; g++) {
+        var gi = ghostFaceIdx[g];
+        if (gi < faces.length) {
+          saved.push({ idx: gi, type: faces[gi].type });
+          faces[gi]._ghost = true;
+        }
+      }
+    }
+    
+    _origBuildScene();
+    
+    // §M FOCUS MODE: cluster filled + rest invisible
+    if (App._focusCluster && focusActive) {
+      var cs = App._focusCluster;
+      var faces = App.state.faces;
+      var clusterWire = [];
+      var clusterFill = [];
+      
+      // Remove ALL existing children first (clean slate for focus)
+      disposeChildren(App.meshGroup);
+      
+      for (var fi = 0; fi < faces.length; fi++) {
+        if (!cs[fi]) continue;  // skip non-cluster faces entirely
+        var f = faces[fi];
+        var pts = f.pts;
+        
+        // Gold wireframe for cluster
+        for (var i=0; i<pts.length; i++) {
+          var a=pts[i], b=pts[(i+1)%pts.length];
+          clusterWire.push(a[0],a[1],a[2], b[0],b[1],b[2]);
+        }
+        // Filled triangles for cluster
+        var fillColor = f.type === 'pent' ? 1 : 0;  // flag for color
+        for (var k=1; k<pts.length-1; k++) {
+          clusterFill.push(pts[0][0],pts[0][1],pts[0][2]);
+          clusterFill.push(pts[k][0],pts[k][1],pts[k][2]);
+          clusterFill.push(pts[k+1][0],pts[k+1][1],pts[k+1][2]);
+        }
+      }
+      
+      // Cluster fill: warm color
+      if (clusterFill.length > 0) {
+        var cfg = new THREE.BufferGeometry();
+        cfg.setAttribute('position', new THREE.Float32BufferAttribute(clusterFill, 3));
+        App.meshGroup.add(new THREE.Mesh(cfg, new THREE.MeshBasicMaterial({
+          color: 0x1a4a6a, transparent: true, opacity: 0.4,
+          side: THREE.DoubleSide
+        })));
+      }
+      // Cluster wireframe: gold
+      if (clusterWire.length > 0) {
+        var cwg = new THREE.BufferGeometry();
+        cwg.setAttribute('position', new THREE.Float32BufferAttribute(clusterWire, 3));
+        App.meshGroup.add(new THREE.LineSegments(cwg, new THREE.LineBasicMaterial({
+          color: 0xffd700, transparent: false
+        })));
+      }
+    }
+    
+    // Add ghost face overlays (magenta wireframe + fill)
+    if (mobiusActive && ghostFaceIdx.length === 2 && mobiusT > 0.01) {
+      var faces = App.state.faces;
+      for (var g = 0; g < ghostFaceIdx.length; g++) {
+        var gi = ghostFaceIdx[g];
+        if (gi >= faces.length) continue;
+        var f = faces[gi];
+        var pts = f.pts;
+        
+        // Ghost wireframe - magenta
+        var ghostWire = [];
+        for (var i = 0; i < pts.length; i++) {
+          var a = pts[i], b = pts[(i+1) % pts.length];
+          ghostWire.push(a[0],a[1],a[2], b[0],b[1],b[2]);
+        }
+        var gwg = new THREE.BufferGeometry();
+        gwg.setAttribute('position', new THREE.Float32BufferAttribute(ghostWire, 3));
+        App.meshGroup.add(new THREE.LineSegments(gwg, new THREE.LineBasicMaterial({
+          color: 0xff69b4, transparent: true, opacity: Math.min(1, mobiusT * 2)
+        })));
+        
+        // Ghost fill - magenta transparent
+        var ghostFill = [];
+        for (var k = 1; k < pts.length - 1; k++) {
+          ghostFill.push(pts[0][0], pts[0][1], pts[0][2]);
+          ghostFill.push(pts[k][0], pts[k][1], pts[k][2]);
+          ghostFill.push(pts[k+1][0], pts[k+1][1], pts[k+1][2]);
+        }
+        var gfg = new THREE.BufferGeometry();
+        gfg.setAttribute('position', new THREE.Float32BufferAttribute(ghostFill, 3));
+        App.meshGroup.add(new THREE.Mesh(gfg, new THREE.MeshBasicMaterial({
+          color: 0xff69b4, transparent: true, 
+          opacity: 0.25 * mobiusT,
+          side: THREE.DoubleSide
+        })));
+        
+        // Clean up temp flag
+        delete faces[gi]._ghost;
+      }
+    }
+  };
+
+  // ── TOGGLE ─────────────────────────────────────────────────────────────
+  mBtn.addEventListener('click', function() {
+    try {
+      if (!mobiusActive) {
+        // ACTIVATE
+        mobiusActive = true;
+        mBtn.classList.add('on');
+        mState.textContent = 'ON';
+        
+        mlog('=== MOBIUSIFY ENGAGED ===');
+        mlog('Euler: V-E+F = chi');
+        mlog('Sphere: 60-90+32 = 2  ✓');
+        mlog('Mobius: 60-90+30 = 0  ✓');
+        mlog('Two faces will die.');
+        
+        // Freeze auto-rotate during computation
+        var wasRotating = App.flags.autoRotate;
+        App.flags.autoRotate = false;
+        
+        // Cache sphere positions
+        spherePositions = cacheSpherePositions(App.state.faces);
+        mlog('Sphere positions cached: ' + spherePositions.length + ' faces');
+        
+        // Find ghost faces (most antipodal hex pair)
+        ghostFaceIdx = findGhostFaces(App.state.faces);
+        mlog('Ghost faces (antipodal hex pair): [' + ghostFaceIdx[0] + ', ' + ghostFaceIdx[1] + ']');
+        
+        // Compute Mobius embedding (timed — decides slider vs dropdown)
+        var t0 = performance.now();
+        mobiusPositions = computeMobiusPositions(App.state.faces);
+        lastComputeMs = performance.now() - t0;
+        
+        // Adaptive control: slider for light, dropdown for heavy
+        if (lastComputeMs > HEAVY_THRESHOLD_MS) {
+          useDropdown = true;
+          mSlider.style.display = 'none';
+          mSelect.style.display = '';
+          mSelect.disabled = false;
+          mSlider.disabled = true;
+          mlog('Heavy state (' + lastComputeMs.toFixed(0) + 'ms) -> DROPDOWN mode');
+        } else {
+          useDropdown = false;
+          mSlider.style.display = '';
+          mSelect.style.display = 'none';
+          mSlider.disabled = false;
+          mSelect.disabled = true;
+          mlog('Light state (' + lastComputeMs.toFixed(0) + 'ms) -> SLIDER mode (smooth flow)');
+        }
+        
+        // Euler check — use face count only (V/E from invariants is unreliable after refinement)
+        var inv = GK.invariants(App.state);
+        mlog('Faces: ' + inv.faces + ' (pent=' + inv.pents + ' hex=' + inv.hexes + ')');
+        mlog('Note: V/E counts unreliable after refinement (vertex dedup rounding).');
+        mlog('Face-only chi: F_sphere=' + inv.faces + '  F_mobius=' + (inv.faces - 2));
+        mlog('For base C60: chi=2 (32 faces). After MOBIUSIFY: chi=0 (30 faces).');
+        if (inv.faces === 32) {
+          mlog('Base C60 detected — clean topology. Ghost faces exact.');
+        } else {
+          mlog('Refined state — ' + inv.faces + ' faces. Ghost faces approximate.');
+          mlog('Rendering anyway — topology is exploratory at this level.');
+        }
+        
+        // Restore rotation
+        App.flags.autoRotate = wasRotating;
+        
+        mlog('Slider enabled. Drag to twist.');
+        
+      } else {
+        // DEACTIVATE
+        mobiusActive = false;
+        mBtn.classList.remove('on');
+        mState.textContent = 'off';
+        mSlider.disabled = true;
+        mSelect.disabled = true;
+        mSlider.value = 0;
+        mSelect.value = '0.00';
+        if (mValue) mValue.textContent = '0.00';
+        mobiusT = 0;
+        useDropdown = false;
+        mSlider.style.display = '';
+        mSelect.style.display = 'none';
+        
+        // Restore original sphere positions
+        if (spherePositions) {
+          restoreSphere(App.state.faces, spherePositions);
+        }
+        spherePositions = null;
+        mobiusPositions = null;
+        ghostFaceIdx = [];
+        
+        if (pickleMode) exitPickle();
+        
+        buildSceneSync();
+        updateHUD();
+        mlog('=== MOBIUSIFY DISENGAGED ===');
+        mlog('Sphere restored. All faces live.');
+      }
+    } catch (err) {
+      enterPickle('Toggle error: ' + err.message);
+      console.error(err);
+    }
+  });
+
+  // ── SLIDER ─────────────────────────────────────────────────────────────
+  // Shared twist handler for both controls
+  function applyTwist(newT) {
+    if (!mobiusActive || !spherePositions || !mobiusPositions || pickleMode) return;
+    try {
+      // Validate cache
+      if (spherePositions.length !== App.state.faces.length) {
+        mlog('Cache mismatch. Re-caching...');
+        spherePositions = cacheSpherePositions(App.state.faces);
+        mobiusPositions = computeMobiusPositions(App.state.faces);
+        ghostFaceIdx = findGhostFaces(App.state.faces);
+      }
+      
+      mobiusT = newT;
+      if (mValue) mValue.textContent = mobiusT.toFixed(2);
+      
+      var t0 = performance.now();
+      applyMobiusLerp(App.state.faces, spherePositions, mobiusPositions, mobiusT);
+      buildSceneSync();
+      buildPickGroup();
+      var renderMs = performance.now() - t0;
+      
+      // Only log on dropdown (slider would spam)
+      if (useDropdown) {
+        mlog('Twist -> ' + mobiusT.toFixed(2) + ' (' + renderMs.toFixed(0) + 'ms render)');
+      }
+      updateHUD();
+      
+    } catch (err) {
+      if (!pickleMode) {
+        enterPickle('Twist error: ' + err.message);
+        mSlider.disabled = true;
+        mSelect.disabled = true;
+      }
+      console.error(err);
+    }
+  }
+
+  // SLIDER — smooth flow for light states
+  mSlider.addEventListener('input', function(e) {
+    applyTwist(parseFloat(e.target.value));
+  });
+
+  // DROPDOWN — discrete steps for heavy states
+  mSelect.addEventListener('change', function(e) {
+    mlog('Step: ' + e.target.value + ' (' + App.state.faces.length + ' faces)');
+    applyTwist(parseFloat(e.target.value));
+  });
+
+  mlog('MOBIUSIFY engine loaded.');
+  mlog('Click button to engage. Light=slider, heavy=dropdown (auto).');
+  mlog('Shift+click face to enter FOCUS MODE (plane isolation).');
+
+  // Local vector helpers (GK kernel scopes these privately)
+  function _vsub(a,b){ return [a[0]-b[0], a[1]-b[1], a[2]-b[2]]; }
+  function _vcross(a,b){ return [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]]; }
+  function _vdot(a,b){ return a[0]*b[0]+a[1]*b[1]+a[2]*b[2]; }
+  function _vlen(a){ return Math.sqrt(a[0]*a[0]+a[1]*a[1]+a[2]*a[2]); }
+  function _vnorm(a){ var L=_vlen(a); return L>1e-12 ? [a[0]/L,a[1]/L,a[2]/L] : [0,0,0]; }
+  function _vscale(a,s){ return [a[0]*s, a[1]*s, a[2]*s]; }
+
+  // ── §M FOCUS MODE ──────────────────────────────────────────────────────
+  // Hover a face -> enter focus: background = face color, other faces dim
+  // Mouse out -> 3s timer -> restore full shape
+  var focusActive = false;
+  var focusTimer = null;
+  var focusFaceIdx = -1;
+  var FOCUS_EXIT_DELAY = 3000;  // 3 seconds after mouse leaves face
+  var savedBg = '';
+  var focusLabel = document.getElementById('focus-label');
+  
+  // Build adjacency: for each face, find faces sharing an edge
+  function buildFaceAdj(faces) {
+    var edgeMap = {};  // 'x1,y1,z1|x2,y2,z2' -> [faceIdx, ...]
+    function edgeKey(a, b) {
+      var ka = a[0].toFixed(4)+','+a[1].toFixed(4)+','+a[2].toFixed(4);
+      var kb = b[0].toFixed(4)+','+b[1].toFixed(4)+','+b[2].toFixed(4);
+      return ka < kb ? ka+'|'+kb : kb+'|'+ka;
+    }
+    for (var fi = 0; fi < faces.length; fi++) {
+      var pts = faces[fi].pts;
+      for (var i = 0; i < pts.length; i++) {
+        var key = edgeKey(pts[i], pts[(i+1)%pts.length]);
+        if (!edgeMap[key]) edgeMap[key] = [];
+        edgeMap[key].push(fi);
+      }
+    }
+    // Build adj list
+    var adj = [];
+    for (var fi = 0; fi < faces.length; fi++) adj.push([]);
+    for (var key in edgeMap) {
+      var arr = edgeMap[key];
+      for (var a = 0; a < arr.length; a++) {
+        for (var b = a+1; b < arr.length; b++) {
+          if (adj[arr[a]].indexOf(arr[b]) < 0) adj[arr[a]].push(arr[b]);
+          if (adj[arr[b]].indexOf(arr[a]) < 0) adj[arr[b]].push(arr[a]);
+        }
+      }
+    }
+    return adj;
+  }
+  
+  // BFS: find all faces coplanar (within threshold) with seed face
+  function findCoplanarCluster(faces, adj, seedIdx, threshold) {
+    var seed = faces[seedIdx];
+    var pts = seed.pts;
+    if (pts.length < 3) return [seedIdx];
+    var n = _vnorm(_vcross(_vsub(pts[1],pts[0]), _vsub(pts[2],pts[0])));
+    
+    var visited = {};
+    visited[seedIdx] = true;
+    var queue = [seedIdx];
+    var cluster = [seedIdx];
+    
+    while (queue.length > 0) {
+      var cur = queue.shift();
+      var neighbors = adj[cur] || [];
+      for (var i = 0; i < neighbors.length; i++) {
+        var ni = neighbors[i];
+        if (visited[ni]) continue;
+        var nf = faces[ni];
+        if (nf.pts.length < 3) continue;
+        var nn = _vnorm(_vcross(_vsub(nf.pts[1],nf.pts[0]), _vsub(nf.pts[2],nf.pts[0])));
+        var dot = Math.abs(_vdot(n, nn));
+        if (dot > (1 - threshold)) {  // nearly parallel normals
+          visited[ni] = true;
+          cluster.push(ni);
+          queue.push(ni);
+        }
+      }
+    }
+    return cluster;
+  }
+
+  function enterFocus(faceIdx) {
+    if (focusActive && focusFaceIdx === faceIdx) return;
+    if (focusTimer) { clearTimeout(focusTimer); focusTimer = null; }
+    
+    focusActive = true;
+    focusFaceIdx = faceIdx;
+    
+    var face = App.state.faces[faceIdx];
+    if (!face) return;
+    
+    mlog('FOCUS: face ' + faceIdx + ' (' + face.type + ')');
+    
+    // Background color based on face type
+    var bgColor = face.type === 'pent' ? '#1a0800' : '#000a1a';
+    savedBg = document.body.style.background;
+    document.body.style.background = bgColor;
+    document.body.classList.add('focus-mode');
+    
+    // Build adjacency + find coplanar cluster
+    var adj = buildFaceAdj(App.state.faces);
+    var cluster = findCoplanarCluster(App.state.faces, adj, faceIdx, 0.15);
+    mlog('FOCUS: plane cluster = ' + cluster.length + ' faces');
+    
+    // Store cluster for render filtering
+    var clusterSet = {};
+    for (var i = 0; i < cluster.length; i++) clusterSet[cluster[i]] = true;
+    App._focusCluster = clusterSet;
+    buildSceneSync();
+  }
+
+  function exitFocus() {
+    if (!focusActive) return;
+    focusActive = false;
+    focusFaceIdx = -1;
+    document.body.style.background = savedBg || '#050510';
+    document.body.classList.remove('focus-mode');
+    App._focusCluster = null;
+    buildSceneSync();
+    mlog('FOCUS: exited.');
+  }
+
+  function scheduleFocusExit() {
+    if (focusTimer) clearTimeout(focusTimer);
+    focusTimer = setTimeout(function() {
+      exitFocus();
+      focusTimer = null;
+    }, FOCUS_EXIT_DELAY);
+  }
+
+  // Hook into the existing hover detection
+  // FOCUS MODE: shift+click to engage, click empty to exit
+  var focusError = false;
+  document.addEventListener('click', function(e) {
+    if (focusError) return;
+    try {
+      var hoveredFace = App.hovered;
+      
+      if (e.shiftKey && hoveredFace >= 0 && hoveredFace < App.state.faces.length) {
+        // Shift+click on face = enter/toggle focus
+        if (focusActive && focusFaceIdx === hoveredFace) {
+          exitFocus();
+        } else {
+          enterFocus(hoveredFace);
+        }
+      } else if (focusActive && !e.shiftKey) {
+        // Regular click while in focus = EXIT (click anywhere to leave)
+        exitFocus();
+        mlog('FOCUS: exit (click out)');
+      }
+    } catch(err) {
+      focusError = true;
+      mlog('Focus mode error: ' + err.message + ' (disabled)');
+      try { exitFocus(); } catch(e2) {}
+    }
+  });
+  
+  // Cancel exit timer if mouse is still over a face
+  document.addEventListener('mousemove', function() {
+    if (focusActive && App.hovered >= 0) {
+      if (focusTimer) { clearTimeout(focusTimer); focusTimer = null; }
+    }
+  });
+  
+  // === FOCUS EXIT KEYS (CAD-style) ===
+  // ESC, Spacebar, I = exit focus
+  document.addEventListener('keydown', function(e) {
+    if (focusActive) {
+      if (e.key === 'Escape' || e.key === ' ' || e.key === 'i' || e.key === 'I') {
+        e.preventDefault();
+        exitFocus();
+        mlog('FOCUS: exit (' + (e.key === ' ' ? 'Space' : e.key) + ')');
+      }
+    }
+  });
+  
+  // Middle mouse double-click = exit focus (standard 3D CAD)
+  var lastMiddleClick = 0;
+  document.addEventListener('mousedown', function(e) {
+    if (e.button === 1 && focusActive) {  // middle mouse = button 1
+      var now = performance.now();
+      if (now - lastMiddleClick < 400) {  // double-click threshold
+        exitFocus();
+        mlog('FOCUS: exit (middle double-click)');
+      }
+      lastMiddleClick = now;
+    }
+  });
+  
+  // Right-click = exit focus
+  document.addEventListener('contextmenu', function(e) {
+    if (focusActive) {
+      e.preventDefault();
+      exitFocus();
+      mlog('FOCUS: exit (right-click)');
+    }
+  });
+  mlog('Two hexagonal faces will die (chi: 2 -> 0).');
+  mlog('On error: background -> pickle (#8B008B).');
+  
+})();
+
+// ============================================================================
+function animate(){
+  requestAnimationFrame(animate);
+  if (App.flags.autoRotate && !App.isBuilding){
+    App.meshGroup.rotation.y += 0.0015;
+    pickGroup.rotation.y = App.meshGroup.rotation.y;
+  }
+  // Update lock-hold ring
+  if (App.lockHold.active){
+    var elapsed = performance.now() - App.lockHold.startTime;
+    var pct = Math.min(1, elapsed / App.lockHold.duration);
+    var arc = $('lockring-arc');
+    if (arc){
+      var circ = 81.7; // 2*pi*13
+      arc.setAttribute('stroke-dashoffset', circ * (1 - pct));
+    }
+    if (pct >= 1){
+      // auto-commit if held long enough even without mouseup
+      var fi = App.lockHold.faceIdx;
+      App.lockHold.active = false;
+      $('lockring').classList.remove('on');
+      // Wait for mouseup to commit (so user can release to confirm or drag-away to cancel)
+      // Actually: commit now when ring fills, AOE2-style
+      orbit.isDown = false;
+      commitRefine(fi);
+    }
+  }
+  renderer.render(scene, camera);
+}
+
+showStatus('first build', 0);
+buildPickGroup();
+buildSceneSync();
+updateHUD();
+syncFlagButton('b-auto', 'autoRotate');
+syncFlagButton('b-wire', 'wireframe');
+syncFlagButton('b-fill', 'faceFill');
+hideStatus();
+moveReticle(window.innerWidth/2, window.innerHeight/2);
+animate();
+
+})();
+</script>
+</body>
+</html>
+

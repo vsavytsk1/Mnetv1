@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MachineNet · Goldberg recursive shell · v1</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 100%; height: 100%;
+    background: #050510; color: #e0f0ff;
+    font-family: 'Share Tech Mono', 'Consolas', 'Menlo', monospace;
+    overflow: hidden; user-select: none;
+  }
+  #cv { position: fixed; inset: 0; display: block; cursor: crosshair; }
+  .panel {
+    position: fixed;
+    padding: 12px 14px;
+    font-size: 11px;
+    line-height: 1.7;
+    letter-spacing: 0.04em;
+    background: rgba(5, 5, 16, 0.85);
+    border: 1px solid #2a4858;
+  }
+  #hud    { top: 16px; left: 16px; pointer-events: none; max-width: 460px; }
+  #legend { top: 16px; right: 16px; pointer-events: none; text-align: right; }
+  #picked { bottom: 200px; left: 16px; pointer-events: none; max-width: 380px; }
+  #ctl    { bottom: 16px; left: 16px; right: 16px; pointer-events: auto; padding: 14px 18px; }
+
+  #status {
+    position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    color: #ffd700; font-size: 14px; letter-spacing: 0.15em; text-transform: uppercase;
+    pointer-events: none;
+  }
+  #err {
+    position: fixed; top: 0; left: 0; right: 0;
+    background: #ff3050cc; color: #fff;
+    padding: 16px 20px; font-size: 12px; line-height: 1.5;
+    white-space: pre-wrap; display: none; z-index: 1000;
+  }
+
+  .lbl   { color: #7090a0; }
+  .gold  { color: #ffd700; }
+  .pent  { color: #ff6b35; }
+  .hex   { color: #00d4ff; }
+  .red   { color: #ff3050; }
+  b { color: #00d4ff; font-weight: normal; }
+
+  .btn {
+    display: inline-block;
+    padding: 6px 14px;
+    margin: 2px 4px 2px 0;
+    border: 1px solid #2a4858;
+    cursor: pointer;
+    color: #7090a0;
+    user-select: none;
+    transition: all 0.15s;
+    font-size: 11px;
+    background: #050510;
+    font-family: inherit;
+  }
+  .btn:hover { color: #e0f0ff; border-color: #4060a0; }
+  .btn.on    { color: #ffd700; border-color: #ffd700; background: #ffd70011; }
+  .btn.pent  { color: #ff6b35; border-color: #ff6b35aa; }
+  .btn.hex   { color: #00d4ff; border-color: #00d4ffaa; }
+  .btn.gold  { color: #ffd700; border-color: #ffd700; background: #ffd70011; }
+  .btn.red   { color: #ff3050; border-color: #ff305088; }
+
+  .ctl-row { margin: 6px 0; display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
+  .ctl-grp { display: inline-flex; align-items: center; gap: 8px; }
+
+  input[type=range] {
+    width: 130px;
+    vertical-align: middle;
+    accent-color: #ffd700;
+  }
+
+  .num { color: #00d4ff; min-width: 36px; display: inline-block; text-align: right; }
+
+  #invariants { font-size: 10px; color: #5070a0; margin-top: 4px; }
+  #invariants .v { color: #00d4ff; }
+  #invariants .gold { color: #ffd700; }
+  #invariants .pent { color: #ff6b35; }
+  #invariants .hex  { color: #00d4ff; }
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+<div id="err"></div>
+<div id="status">booting...</div>
+
+<!-- HUD -->
+<div id="hud" class="panel">
+  <div class="lbl">MachineNet &middot; Goldberg recursive shell &middot; v1.0</div>
+  <div><span class="lbl">level</span> <b id="g-level">0</b> &middot; <span class="lbl">faces</span> <b id="g-faces">0</b></div>
+  <div><span class="pent" id="g-pents">12</span> pent &middot; <span class="hex" id="g-hexes">20</span> hex &middot; <span class="lbl">anchors</span> <b id="g-anchors">12</b></div>
+  <div><span class="lbl">vertices</span> <b id="g-verts">0</b> &middot; <span class="lbl">edges</span> <b id="g-edges">0</b></div>
+  <div class="gold" style="margin-top:6px">12 pentagons stay 12 under full refine &middot; they're the anchors</div>
+  <div id="invariants"></div>
+</div>
+
+<!-- Legend -->
+<div id="legend" class="panel">
+  <div class="lbl">drag &middot; orbit</div>
+  <div class="lbl">scroll &middot; zoom camera</div>
+  <div class="lbl">click face &middot; refine that cell</div>
+  <div class="lbl">shift+click face &middot; inspect</div>
+  <div style="margin-top:6px" class="lbl"><span class="pent">orange</span> pentagons (anchors)</div>
+  <div class="lbl"><span class="hex">cyan</span> hexagons</div>
+  <div class="lbl"><span class="gold">gold</span> hovered / selected</div>
+  <div class="lbl"><span class="red">red</span> ancestor lineage</div>
+</div>
+
+<!-- Picked panel -->
+<div id="picked" class="panel" style="display:none"></div>
+
+<!-- Main control bar -->
+<div id="ctl" class="panel">
+  <div class="ctl-row">
+    <span class="ctl-grp">
+      <button class="btn pent" id="b-refine-pents">refine all pents</button>
+      <button class="btn hex"  id="b-refine-hexes">refine all hexes</button>
+      <button class="btn gold" id="b-refine-all">refine ALL</button>
+    </span>
+    <span class="ctl-grp">
+      <button class="btn"     id="b-back">back</button>
+      <button class="btn red" id="b-reset">reset</button>
+    </span>
+    <span class="ctl-grp">
+      <button class="btn" id="b-save">save .json</button>
+      <button class="btn" id="b-load">load .json</button>
+      <input type="file" id="f-load" accept="application/json" style="display:none">
+    </span>
+    <span class="ctl-grp">
+      <button class="btn" id="b-auto">auto-rotate <b class="gold" id="b-auto-state">on</b></button>
+      <button class="btn" id="b-wire">wireframe <b class="gold" id="b-wire-state">on</b></button>
+      <button class="btn" id="b-fill">face fill <b class="gold" id="b-fill-state">on</b></button>
+    </span>
+  </div>
+  <div class="ctl-row">
+    <span class="ctl-grp"><span class="lbl">inner scale</span>
+      <input id="s-inner" type="range" min="0.15" max="0.85" step="0.01" value="0.45">
+      <span class="num" id="v-inner">0.45</span>
+    </span>
+    <span class="ctl-grp"><span class="lbl">mid scale</span>
+      <input id="s-mid" type="range" min="0.3" max="1.0" step="0.01" value="0.70">
+      <span class="num" id="v-mid">0.70</span>
+    </span>
+    <span class="ctl-grp"><span class="lbl">jitter</span>
+      <input id="s-jit" type="range" min="0" max="0.15" step="0.005" value="0">
+      <span class="num" id="v-jit">0.00</span>
+    </span>
+    <span class="ctl-grp"><span class="lbl">surface</span>
+      <button class="btn on" data-surface="planar">planar</button>
+      <button class="btn"    data-surface="spherical">spherical</button>
+    </span>
+  </div>
+</div>
+
+<!-- Math kernel inline -->
+<script src="goldberg_kernel.js"></script>
+
+<!-- Three.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js"></script>
+
+<script>
+window.onerror = function(msg, src, line, col, err){
+  var e = document.getElementById('err');
+  e.style.display = 'block';
+  e.textContent = 'JS ERROR: ' + msg + ' (line ' + line + ', col ' + col + ')';
+  if (err && err.stack) e.textContent += '\n\n' + err.stack;
+  var s = document.getElementById('status');
+  if (s) s.style.display = 'none';
+  return false;
+};
+
+(function(){
+"use strict";
+
+function $(id){ return document.getElementById(id); }
+function setStatus(msg){ var s = $('status'); if (s) s.textContent = msg; }
+function hideStatus(){ var s = $('status'); if (s) s.style.display = 'none'; }
+setStatus('booting');
+
+// ============================================================================
+// §A Render setup
+// ============================================================================
+var cv = $('cv');
+var scene = new THREE.Scene();
+scene.background = new THREE.Color(0x050510);
+
+var camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.05, 1000);
+camera.position.set(0, 0, 6);
+
+var renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: true });
+renderer.setPixelRatio(window.devicePixelRatio || 1);
+renderer.setSize(window.innerWidth, window.innerHeight);
+window.addEventListener('resize', function(){
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+var dirLight = new THREE.DirectionalLight(0xffffff, 0.6);
+dirLight.position.set(5, 5, 5);
+scene.add(dirLight);
+
+// ============================================================================
+// §B Application state
+// ============================================================================
+var App = {
+  state: GK.buildC60(),
+  hovered: -1,
+  selected: -1,
+  meshGroup: new THREE.Group(),
+  params: {
+    innerScale: 0.45,
+    midScale:   0.70,
+    jitter:     0.00,
+    surfaceMode: 'planar',
+    sphereR:    1.6
+  },
+  flags: {
+    autoRotate: true,
+    wireframe:  true,
+    faceFill:   true
+  }
+};
+scene.add(App.meshGroup);
+
+// ============================================================================
+// §C Render the state
+// ============================================================================
+function disposeChildren(group){
+  while (group.children.length > 0){
+    var c = group.children[0];
+    group.remove(c);
+    if (c.geometry) c.geometry.dispose();
+    if (c.material) c.material.dispose();
+  }
+}
+
+function buildScene(){
+  disposeChildren(App.meshGroup);
+
+  // Wireframe edges
+  if (App.flags.wireframe){
+    var pentPos = [];
+    var hexPos  = [];
+    for (var fi = 0; fi < App.state.faces.length; fi++){
+      var f = App.state.faces[fi];
+      var arr = (f.type === 'pent') ? pentPos : hexPos;
+      var pts = f.pts;
+      for (var i = 0; i < pts.length; i++){
+        var a = pts[i], b = pts[(i+1) % pts.length];
+        arr.push(a[0], a[1], a[2], b[0], b[1], b[2]);
+      }
+    }
+    if (pentPos.length > 0){
+      var pg = new THREE.BufferGeometry();
+      pg.setAttribute('position', new THREE.Float32BufferAttribute(pentPos, 3));
+      var pm = new THREE.LineBasicMaterial({ color: 0xff6b35, linewidth: 2 });
+      App.meshGroup.add(new THREE.LineSegments(pg, pm));
+    }
+    if (hexPos.length > 0){
+      var hg = new THREE.BufferGeometry();
+      hg.setAttribute('position', new THREE.Float32BufferAttribute(hexPos, 3));
+      var hm = new THREE.LineBasicMaterial({ color: 0x00d4ff, transparent: true, opacity: 0.6 });
+      App.meshGroup.add(new THREE.LineSegments(hg, hm));
+    }
+  }
+
+  // Face fills (also used for raycast)
+  for (var fi = 0; fi < App.state.faces.length; fi++){
+    var f = App.state.faces[fi];
+    var verts = [];
+    for (var k = 1; k < f.pts.length - 1; k++){
+      verts.push(f.pts[0][0],   f.pts[0][1],   f.pts[0][2]);
+      verts.push(f.pts[k][0],   f.pts[k][1],   f.pts[k][2]);
+      verts.push(f.pts[k+1][0], f.pts[k+1][1], f.pts[k+1][2]);
+    }
+    if (verts.length === 0) continue;
+    var fg = new THREE.BufferGeometry();
+    fg.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
+    fg.computeVertexNormals();
+
+    var color, opacity;
+    if (f.type === 'pent'){ color = 0xff6b35; opacity = App.flags.faceFill ? 0.20 : 0.001; }
+    else                  { color = 0x00d4ff; opacity = App.flags.faceFill ? 0.06 : 0.001; }
+    if (fi === App.hovered){ color = 0xffd700; opacity = 0.45; }
+    if (fi === App.selected){ color = 0xffd700; opacity = 0.55; }
+
+    var fm = new THREE.MeshBasicMaterial({
+      color: color, transparent: true, opacity: opacity, side: THREE.DoubleSide
+    });
+    var mesh = new THREE.Mesh(fg, fm);
+    mesh.userData.faceIndex = fi;
+    App.meshGroup.add(mesh);
+  }
+}
+
+// ============================================================================
+// §D HUD
+// ============================================================================
+function updateHUD(){
+  var inv = GK.invariants(App.state);
+  $('g-level').textContent  = inv.maxLevel;
+  $('g-faces').textContent  = inv.faces;
+  $('g-pents').textContent  = inv.pents;
+  $('g-hexes').textContent  = inv.hexes;
+  $('g-anchors').textContent = inv.anchorCount;
+  $('g-verts').textContent  = inv.vertices;
+  $('g-edges').textContent  = inv.edges;
+
+  // Per-level breakdown
+  var rows = [];
+  var levels = Object.keys(inv.perLevel).sort(function(a, b){ return +a - +b; });
+  for (var i = 0; i < levels.length; i++){
+    var L = levels[i];
+    var row = inv.perLevel[L];
+    rows.push('L<span class="v">' + L + '</span>: <span class="pent">' + row.pent + 'p</span>+<span class="hex">' + row.hex + 'h</span>');
+  }
+  $('invariants').innerHTML = rows.join(' &middot; ');
+
+  // Selected panel
+  if (App.selected >= 0 && App.selected < App.state.faces.length){
+    var f = App.state.faces[App.selected];
+    var ec = $('picked');
+    ec.style.display = 'block';
+    ec.innerHTML =
+      '<div class="gold">' + (f.type === 'pent' ? '<span class="pent">' : '<span class="hex">') + f.type.toUpperCase() + '</span> &middot; id ' + f.id + '</div>' +
+      '<div class="lbl">level <b>' + f.level + '</b> &middot; ' + f.pts.length + ' vertices</div>' +
+      (f.anchor ? '<div class="gold">anchor: ' + f.anchor + '</div>' : '') +
+      '<div class="lbl">lineage: ' + (f.lineage || []).join(' &rarr; ') + '</div>';
+  } else {
+    $('picked').style.display = 'none';
+  }
+}
+
+// ============================================================================
+// §E Interaction: orbit / hover / click
+// ============================================================================
+var orbit = {
+  theta: 0.5, phi: 0.2, radius: 6,
+  isDown: false, lastX: 0, lastY: 0, moved: false
+};
+
+function updateCamera(){
+  var x = orbit.radius * Math.cos(orbit.phi) * Math.sin(orbit.theta);
+  var y = orbit.radius * Math.sin(orbit.phi);
+  var z = orbit.radius * Math.cos(orbit.phi) * Math.cos(orbit.theta);
+  camera.position.set(x, y, z);
+  camera.lookAt(0, 0, 0);
+}
+updateCamera();
+
+var raycaster = new THREE.Raycaster();
+
+function pickFace(clientX, clientY){
+  var rect = cv.getBoundingClientRect();
+  var mouse = new THREE.Vector2(
+    ((clientX - rect.left) / rect.width) * 2 - 1,
+    -((clientY - rect.top) / rect.height) * 2 + 1
+  );
+  raycaster.setFromCamera(mouse, camera);
+  var hits = raycaster.intersectObjects(App.meshGroup.children, false);
+  for (var i = 0; i < hits.length; i++){
+    if (hits[i].object.userData && hits[i].object.userData.faceIndex !== undefined){
+      return hits[i].object.userData.faceIndex;
+    }
+  }
+  return -1;
+}
+
+cv.addEventListener('mousedown', function(e){
+  orbit.isDown = true;
+  orbit.lastX = e.clientX;
+  orbit.lastY = e.clientY;
+  orbit.moved = false;
+});
+
+window.addEventListener('mousemove', function(e){
+  if (!orbit.isDown){
+    var f = pickFace(e.clientX, e.clientY);
+    if (f !== App.hovered){
+      App.hovered = f;
+      buildScene();
+    }
+    return;
+  }
+  var dx = e.clientX - orbit.lastX;
+  var dy = e.clientY - orbit.lastY;
+  if (Math.abs(dx) + Math.abs(dy) > 3) orbit.moved = true;
+  orbit.theta -= dx * 0.005;
+  orbit.phi   += dy * 0.005;
+  orbit.phi = Math.max(-1.4, Math.min(1.4, orbit.phi));
+  orbit.lastX = e.clientX;
+  orbit.lastY = e.clientY;
+  updateCamera();
+});
+
+window.addEventListener('mouseup', function(e){
+  if (orbit.isDown && !orbit.moved){
+    var fi = pickFace(e.clientX, e.clientY);
+    if (fi >= 0){
+      if (e.shiftKey){
+        App.selected = (App.selected === fi) ? -1 : fi;
+        buildScene();
+        updateHUD();
+      } else {
+        App.state = GK.refineOne(App.state, fi, App.params);
+        App.hovered = -1;
+        App.selected = -1;
+        buildScene();
+        updateHUD();
+      }
+    }
+  }
+  orbit.isDown = false;
+});
+
+cv.addEventListener('wheel', function(e){
+  e.preventDefault();
+  orbit.radius *= Math.exp(e.deltaY * 0.001);
+  orbit.radius = Math.max(1.8, Math.min(40, orbit.radius));
+  updateCamera();
+}, { passive: false });
+
+// ============================================================================
+// §F Controls
+// ============================================================================
+function syncFlagButton(id, stateName){
+  $(id + '-state').textContent = App.flags[stateName] ? 'on' : 'off';
+  $(id + '-state').className = App.flags[stateName] ? 'gold' : 'lbl';
+}
+
+$('b-refine-all').addEventListener('click', function(){
+  App.state = GK.refineAll(App.state, App.params);
+  buildScene(); updateHUD();
+});
+$('b-refine-pents').addEventListener('click', function(){
+  App.state = GK.refineAllPents(App.state, App.params);
+  buildScene(); updateHUD();
+});
+$('b-refine-hexes').addEventListener('click', function(){
+  App.state = GK.refineAllHexes(App.state, App.params);
+  buildScene(); updateHUD();
+});
+$('b-back').addEventListener('click', function(){
+  App.state = GK.undo(App.state);
+  App.hovered = -1; App.selected = -1;
+  buildScene(); updateHUD();
+});
+$('b-reset').addEventListener('click', function(){
+  App.state = GK.reset();
+  App.hovered = -1; App.selected = -1;
+  buildScene(); updateHUD();
+});
+
+$('b-save').addEventListener('click', function(){
+  var obj = GK.serialize(App.state);
+  var blob = new Blob([JSON.stringify(obj, null, 2)], { type: 'application/json' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = 'goldberg_state_L' + GK.invariants(App.state).maxLevel + '_' + Date.now() + '.json';
+  a.click();
+  setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+});
+$('b-load').addEventListener('click', function(){ $('f-load').click(); });
+$('f-load').addEventListener('change', function(e){
+  var file = e.target.files[0];
+  if (!file) return;
+  var rd = new FileReader();
+  rd.onload = function(ev){
+    try {
+      var obj = JSON.parse(ev.target.result);
+      App.state = GK.deserialize(obj);
+      App.hovered = -1; App.selected = -1;
+      buildScene(); updateHUD();
+    } catch(err){
+      alert('failed to load: ' + err.message);
+    }
+  };
+  rd.readAsText(file);
+});
+
+$('b-auto').addEventListener('click', function(){
+  App.flags.autoRotate = !App.flags.autoRotate;
+  syncFlagButton('b-auto', 'autoRotate');
+});
+$('b-wire').addEventListener('click', function(){
+  App.flags.wireframe = !App.flags.wireframe;
+  syncFlagButton('b-wire', 'wireframe');
+  buildScene();
+});
+$('b-fill').addEventListener('click', function(){
+  App.flags.faceFill = !App.flags.faceFill;
+  syncFlagButton('b-fill', 'faceFill');
+  buildScene();
+});
+
+// Sliders
+function bindSlider(sliderId, valueId, paramName){
+  $(sliderId).addEventListener('input', function(e){
+    App.params[paramName] = +e.target.value;
+    $(valueId).textContent = (+e.target.value).toFixed(2);
+  });
+}
+bindSlider('s-inner', 'v-inner', 'innerScale');
+bindSlider('s-mid',   'v-mid',   'midScale');
+bindSlider('s-jit',   'v-jit',   'jitter');
+
+document.querySelectorAll('.btn[data-surface]').forEach(function(b){
+  b.addEventListener('click', function(){
+    document.querySelectorAll('.btn[data-surface]').forEach(function(b2){ b2.classList.remove('on'); });
+    b.classList.add('on');
+    App.params.surfaceMode = b.dataset.surface;
+  });
+});
+
+// ============================================================================
+// §G Animate
+// ============================================================================
+function animate(){
+  requestAnimationFrame(animate);
+  if (App.flags.autoRotate){
+    App.meshGroup.rotation.y += 0.0015;
+  }
+  renderer.render(scene, camera);
+}
+
+setStatus('building C60');
+buildScene();
+updateHUD();
+syncFlagButton('b-auto', 'autoRotate');
+syncFlagButton('b-wire', 'wireframe');
+syncFlagButton('b-fill', 'faceFill');
+hideStatus();
+animate();
+
+})();
+</script>
+</body>
+</html>

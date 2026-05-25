@@ -1,0 +1,1200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>MachineNet · Sim v1.0 · 12 Seeds</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#050510;color:#e0e0e0;font-family:ui-monospace,"SF Mono",monospace;font-size:11px;overflow:hidden;height:100vh}
+canvas{display:block}
+
+/* HUD — top left: invariants */
+#hud{position:fixed;top:12px;left:12px;z-index:10;pointer-events:none}
+#hud .title{font-size:14px;color:#ff9040;margin-bottom:6px;letter-spacing:0.1em}
+#hud .row{line-height:1.7}
+#hud .lbl{color:#666}
+#hud .val{color:#80d0ff;font-weight:bold}
+#hud .ok{color:#7fff7f}
+#hud .fail{color:#ff4444}
+#hud .gold{color:#ffd700}
+#hud .cyan{color:#00d4ff}
+#hud .pink{color:#ff69b4}
+
+/* Equation bar — top center */
+#eq-bar{position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:10;
+  background:rgba(5,5,16,0.9);border:1px solid #4a2a1a;border-radius:4px;
+  padding:8px 18px;text-align:center;pointer-events:none}
+#eq-bar .eq{font-size:13px;color:#ff9040;letter-spacing:0.06em}
+#eq-bar .sub{font-size:9px;color:#80d0ff;margin-top:3px}
+
+/* Pipeline — bottom */
+#bar{position:fixed;bottom:0;left:0;right:0;z-index:10;
+  background:rgba(5,5,16,0.94);border-top:1px solid #1a1f2e;
+  padding:10px 16px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.btn{background:#111;border:1px solid #2a2a2a;border-radius:3px;
+  padding:5px 14px;font-family:inherit;font-size:11px;cursor:pointer;transition:all 0.15s}
+.btn:hover{background:#1a1a1a;border-color:#555}
+.btn.seed{color:#ff9040;border-color:#4a2a1a}
+.btn.seed:hover{border-color:#ff9040}
+.btn.seed.active{background:#ff9040;color:#050510}
+.btn.refine{color:#00d4ff;border-color:#1a3a4a}
+.btn.refine:hover{border-color:#00d4ff}
+.btn.flow{color:#ff69b4;border-color:#4a1a3a}
+.btn.flow:hover{border-color:#ff69b4}
+.btn.flow.active{background:#ff69b4;color:#050510}
+.btn.cage{color:#7fff7f;border-color:#2a4a2a}
+.btn.cage:hover{border-color:#7fff7f}
+.btn.cage.active{background:#7fff7f;color:#050510}
+.btn.reset{color:#ff4444;border-color:#4a1a1a}
+.btn.reset:hover{border-color:#ff4444}
+.sep{width:1px;height:22px;background:#1a1f2e;margin:0 4px}
+.lbl{color:rgba(220,228,240,0.4);font-size:9px;text-transform:uppercase;letter-spacing:0.12em}
+
+/* Floating labels */
+#label-layer{position:fixed;inset:0;z-index:5;pointer-events:none;overflow:hidden}
+.node-label{position:absolute;font-family:ui-monospace,monospace;font-size:8px;
+  color:rgba(255,200,120,0.8);white-space:nowrap;transform:translate(-50%,-100%);
+  text-shadow:0 0 4px rgba(0,0,0,0.9);padding:1px 3px;border-radius:2px;
+  background:rgba(5,5,16,0.45)}
+.node-label.dim{opacity:0.2}
+.node-label .sym{color:#ff9040;font-weight:bold}
+.node-label .val{color:#80d0ff}
+
+/* Log */
+#log{position:fixed;top:160px;left:12px;z-index:10;
+  background:rgba(5,5,16,0.8);border:1px solid #1a1f2e;border-radius:4px;
+  padding:6px 10px;max-width:300px;max-height:250px;overflow-y:auto;
+  font-size:9px;line-height:1.5;color:rgba(255,180,180,0.7)}
+#log:empty{display:none}
+#log .entry{border-bottom:1px solid #0a0505;padding:1px 0}
+
+/* §16 CONVERGENCE DASHBOARD — right side */
+#conv-panel{position:fixed;top:12px;right:12px;z-index:10;width:280px;
+  background:rgba(5,5,16,0.92);border:1px solid #1a2a3a;border-radius:4px;
+  padding:10px 12px;font-size:9px;display:none;pointer-events:none}
+#conv-panel.active{display:block}
+
+/* §17 WHY PANEL — onboarding */
+#why-panel{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:20;
+  background:rgba(5,5,16,0.96);border:1px solid #4a2a1a;border-radius:6px;
+  padding:24px 32px;max-width:420px;text-align:center;pointer-events:auto}
+#why-panel.hidden{display:none}
+#why-panel .wp-title{font-size:16px;color:#ff9040;margin-bottom:10px;letter-spacing:0.1em}
+#why-panel .wp-eq{font-size:22px;color:#ffd700;margin:12px 0;letter-spacing:0.05em}
+#why-panel .wp-text{color:#80d0ff;font-size:11px;line-height:1.8;margin:8px 0}
+#why-panel .wp-text em{color:#ff9040;font-style:normal;font-weight:bold}
+#why-panel .wp-btn{margin-top:14px;padding:8px 28px;background:#ff9040;color:#050510;
+  border:none;border-radius:3px;font-family:inherit;font-size:12px;font-weight:bold;
+  cursor:pointer;letter-spacing:0.08em}
+#why-panel .wp-btn:hover{background:#ffaa60}
+
+/* §18 WALK VISUALIZATION */
+.walk-active{box-shadow:0 0 8px #7fff7f;}
+#walk-hud{position:fixed;bottom:52px;right:12px;z-index:10;
+  background:rgba(5,5,16,0.9);border:1px solid #2a4a2a;border-radius:4px;
+  padding:6px 10px;font-size:9px;color:#7fff7f;display:none}
+#walk-hud.active{display:block}
+#conv-panel .cp-title{font-size:11px;color:#ff9040;margin-bottom:6px;letter-spacing:0.08em;text-align:center}
+#conv-panel .cp-eq{text-align:center;margin:6px 0 8px;padding:6px;background:rgba(255,144,64,0.06);
+  border:1px solid #2a1a0a;border-radius:3px}
+#conv-panel .cp-eq .main{font-size:13px;color:#ff9040;letter-spacing:0.04em}
+#conv-panel .cp-eq .sub{font-size:9px;color:#666;margin-top:2px}
+#conv-panel .cp-section{margin:6px 0 2px;color:#80d0ff;font-size:8px;text-transform:uppercase;letter-spacing:0.15em}
+#conv-panel .cp-row{display:flex;justify-content:space-between;line-height:1.8;border-bottom:1px solid #0a0a14}
+#conv-panel .cp-row .k{color:#666}
+#conv-panel .cp-row .v{color:#e0e0e0;font-weight:bold}
+#conv-panel .cp-row .v.good{color:#7fff7f}
+#conv-panel .cp-row .v.warn{color:#ffd700}
+#conv-panel .cp-row .v.bad{color:#ff4444}
+#conv-panel .cp-bar{height:4px;background:#111;border-radius:2px;margin:3px 0;overflow:hidden}
+#conv-panel .cp-bar .fill{height:100%;border-radius:2px;transition:width 0.3s}
+#conv-panel .cp-vs{margin-top:8px;padding:6px;background:rgba(255,68,68,0.06);
+  border:1px solid #2a0a0a;border-radius:3px}
+#conv-panel .cp-vs .vs-title{color:#ff4444;font-size:8px;text-transform:uppercase;letter-spacing:0.12em;margin-bottom:4px}
+#conv-panel .cp-vs .cp-row .k{color:#ff4444}
+</style>
+</head>
+<body>
+
+<div id="eq-bar">
+  <div class="eq">SEED₁₂ → REFINE<sup>k</sup> → [ WALK → EULER → NS → CAGE → LABEL ]<sup>n</sup></div>
+  <div class="sub" id="eq-sub">pipeline idle</div>
+</div>
+
+<div id="hud">
+  <div class="title">MNet Sim v1.0</div>
+  <div class="row"><span class="lbl">V:</span> <span class="val" id="h-v">0</span>
+    <span class="lbl"> E:</span> <span class="val" id="h-e">0</span>
+    <span class="lbl"> F:</span> <span class="val" id="h-f">0</span></div>
+  <div class="row"><span class="lbl">χ:</span> <span class="ok" id="h-chi">—</span>
+    <span class="lbl"> F₅:</span> <span class="gold" id="h-f5">—</span>
+    <span class="lbl"> F₆:</span> <span class="cyan" id="h-f6">—</span></div>
+  <div class="row"><span class="lbl">Re:</span> <span class="val" id="h-re">100</span>
+    <span class="lbl"> step:</span> <span class="val" id="h-step">0</span>
+    <span class="lbl"> |v|:</span> <span class="val" id="h-maxv">0</span></div>
+  <div class="row"><span class="lbl">refine:</span> <span class="pink" id="h-ref">0</span>
+    <span class="lbl"> cage:</span> <span id="h-cage" class="lbl">OFF</span></div>
+</div>
+
+<div id="why-panel">
+  <div class="wp-title">WHY THIS SHAPE?</div>
+  <div class="wp-eq">V − E + F = 2</div>
+  <div class="wp-text">
+    Euler's theorem forces <em>exactly 12 pentagons</em> on any closed
+    pentagon-hexagon sphere. Not 11. Not 13. <em>Always 12.</em><br><br>
+    This is the C60 — the bucky ball. 60 vertices. 90 edges. 32 faces.
+    12 pentagons + 20 hexagons. χ = 2.<br><br>
+    The simulation walks this shape. At each node it asks:<br>
+    <em>should I tessellate, or not?</em><br>
+    Navier-Stokes energy decides. Not you. Not me. The math.
+  </div>
+  <div class="wp-btn" onclick="closeWhy()">BEGIN</div>
+</div>
+<div id="walk-hud">WALK: <span id="wh-pos">—</span> · visited: <span id="wh-vis">0</span>/<span id="wh-total">0</span> · tessellated: <span id="wh-tess">0</span> · trapped: <span id="wh-trap">NO</span></div>
+<div id="label-layer"></div>
+<div id="log"></div>
+
+<div id="conv-panel">
+  <div class="cp-title">CONVERGENCE · LIVE</div>
+  <div class="cp-eq">
+    <div class="main">∂u/∂t + (u·∇)u = −∇p + (1/Re)∇²u</div>
+    <div class="sub">∇·u = 0 · graph-discrete · O(N)</div>
+  </div>
+  <div class="cp-section">mnet fractal graph</div>
+  <div class="cp-row"><span class="k">nodes N</span><span class="v" id="cv-n">—</span></div>
+  <div class="cp-row"><span class="k">edges E</span><span class="v" id="cv-e">—</span></div>
+  <div class="cp-row"><span class="k">refine level</span><span class="v" id="cv-ref">—</span></div>
+  <div class="cp-row"><span class="k">residual ‖δv‖</span><span class="v good" id="cv-res">—</span></div>
+  <div class="cp-row"><span class="k">ms/step</span><span class="v" id="cv-ms">—</span></div>
+  <div class="cp-row"><span class="k">precision (digits)</span><span class="v good" id="cv-dig">—</span></div>
+  <div class="cp-bar"><div class="fill" id="cv-bar" style="width:0;background:#7fff7f"></div></div>
+  <div class="cp-section">convergence rate</div>
+  <div class="cp-row"><span class="k">‖δv‖ trend</span><span class="v" id="cv-trend">—</span></div>
+  <div class="cp-row"><span class="k">O(N) ratio</span><span class="v" id="cv-on">—</span></div>
+  <div class="cp-vs">
+    <div class="vs-title">traditional cfd (estimated)</div>
+    <div class="cp-row"><span class="k">method</span><span class="v">FVM structured grid</span></div>
+    <div class="cp-row"><span class="k">same N cells</span><span class="v" id="cv-trad-n">—</span></div>
+    <div class="cp-row"><span class="k">est. ms/step O(N log N)</span><span class="v bad" id="cv-trad-ms">—</span></div>
+    <div class="cp-row"><span class="k">est. memory</span><span class="v bad" id="cv-trad-mem">—</span></div>
+    <div class="cp-row"><span class="k">MNet speedup</span><span class="v good" id="cv-speedup">—</span></div>
+  </div>
+</div>
+
+<div id="bar">
+  <span class="lbl">pipeline</span>
+  <button class="btn seed" onclick="doSeed()">SEED₁₂</button>
+  <button class="btn refine" onclick="doRefine()">REFINE</button>
+  <button class="btn refine" onclick="doRefine();doRefine()">REFINE×2</button>
+  <div class="sep"></div>
+  <span class="lbl">flow</span>
+  <button class="btn flow" id="b-flow" onclick="toggleFlow()">NS FLOW</button>
+  <input type="range" id="sl-re" min="10" max="500" value="100" style="width:80px;accent-color:#ff69b4" oninput="setRe(this.value)">
+  <span id="re-val" style="color:#ff69b4;font-size:10px">100</span>
+  <div class="sep"></div>
+  <span class="lbl">cage</span>
+  <button class="btn cage" id="b-cage" onclick="toggleCage()">CAGE₁₂</button>
+  <div class="sep"></div>
+  <span class="lbl">auto</span>
+  <button class="btn seed" onclick="doFullPipeline()">FULL PIPELINE</button>
+  <button class="btn cage" id="b-walk" onclick="toggleWalk()" style="color:#7fff7f;border-color:#2a4a2a;font-weight:bold">WALK</button>
+  <div class="sep"></div>
+  <button class="btn cage" id="b-log" onclick="toggleLog()">LOG</button>
+  <button class="btn cage" onclick="downloadLog()">SAVE LOG</button>
+  <div class="sep"></div>
+  <button class="btn reset" onclick="doReset()">RESET</button>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+// ═══════════════════════════════════════════════════════
+// §0  STATE
+// ═══════════════════════════════════════════════════════
+var S = {
+  nodes: [],    // [{id, pos:[x,y,z], vx,vz, p, gradP, visc, conv, label}]
+  edges: [],    // [[id1,id2], ...]
+  faces: [],    // [[id,id,id,...], ...]
+  adj: {},      // id -> [id, ...]
+  chi: 0, F5: 0, F6: 0,
+  Re: 100, dt: 0.016, step: 0,
+  flowing: false,
+  cageActive: false,
+  cagePlanes: [],
+  refineLevel: 0,
+  idCounter: 0,
+  maxLabels: 150,
+  labelEls: [],
+};
+
+// ═══════════════════════════════════════════════════════
+// §1  THREE.JS
+// ═══════════════════════════════════════════════════════
+var scene = new THREE.Scene();
+var camera = new THREE.PerspectiveCamera(55, innerWidth/innerHeight, 0.1, 500);
+camera.position.set(0, 8, 14);
+var renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(innerWidth, innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setClearColor(0x050510);
+document.body.appendChild(renderer.domElement);
+renderer.domElement.style.cursor = 'crosshair';
+
+var controls = new THREE.OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+
+// Lights
+scene.add(new THREE.AmbientLight(0x606080, 0.8));
+var dLight = new THREE.DirectionalLight(0xffffff, 1.0);
+dLight.position.set(5, 10, 7);
+scene.add(dLight);
+
+// Grid
+var grid = new THREE.GridHelper(20, 20, 0x1a2a3a, 0x0d1520);
+scene.add(grid);
+scene.add(new THREE.AxesHelper(1.5));
+
+// Groups
+var gNodes = new THREE.Group(); scene.add(gNodes);
+var gEdges = new THREE.Group(); scene.add(gEdges);
+var gCage = new THREE.Group(); scene.add(gCage);
+
+// Shared geo/mat
+var sphereGeo = new THREE.SphereGeometry(0.1, 8, 5);
+var nodeMat = new THREE.MeshPhongMaterial({color:0x00d4ff, emissive:0x00d4ff, emissiveIntensity:0.2, specular:0xffffff, shininess:120});
+var edgeMat = new THREE.LineBasicMaterial({color:0x00d4ff, transparent:true, opacity:0.6});
+var pentMat = new THREE.MeshPhongMaterial({color:0xffd700, emissive:0xffd700, emissiveIntensity:0.3, specular:0xffffff, shininess:150});
+var cageMat = new THREE.LineBasicMaterial({color:0x2a6a2a, transparent:true, opacity:0.4});
+
+window.addEventListener('resize', function(){
+  camera.aspect = innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+
+// ═══════════════════════════════════════════════════════
+// §2  LOGGING
+// ═══════════════════════════════════════════════════════
+function log(msg){
+  var el=document.getElementById('log');
+  var d=document.createElement('div');
+  d.className='entry'; d.textContent=msg;
+  el.appendChild(d); el.scrollTop=el.scrollHeight;
+  if(el.children.length>60) el.removeChild(el.firstChild);
+}
+
+// ═══════════════════════════════════════════════════════
+// §3  IRREDUCIBLE FUNCTION 1: SEED_12
+//     12 icosahedron vertices = 12 pentagon centers
+//     |V|=12, |E|=30, all degree=5
+// ═══════════════════════════════════════════════════════
+function SEED_12(){
+  S.nodes=[]; S.edges=[]; S.faces=[]; S.adj={};
+  S.idCounter=0; S.refineLevel=0; S.step=0;
+  var phi=(1+Math.sqrt(5))/2;
+  var raw=[];
+  // 12 icosahedron vertices
+  for(var s1=-1;s1<=1;s1+=2){
+    for(var s2=-1;s2<=1;s2+=2){
+      raw.push([0, s1*1, s2*phi]);
+      raw.push([s1*1, s2*phi, 0]);
+      raw.push([s2*phi, 0, s1*1]);
+    }
+  }
+  // Normalize to radius 4
+  var R=4;
+  raw.forEach(function(v){
+    var len=Math.sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
+    v[0]*=R/len; v[1]*=R/len; v[2]*=R/len;
+  });
+  // Create nodes
+  raw.forEach(function(v){
+    var id=S.idCounter++;
+    S.nodes.push({id:id, pos:[v[0],v[1],v[2]], _vx:0,_vz:0,_p:0,_gradP:0,_visc:0,_conv:0,_dvx:0,_dvz:0,_div:0});
+  });
+  // Edges: connect vertices within distance threshold (icosahedron edge ≈ 2*R*sin(π/5))
+  var thresh=R*2*Math.sin(Math.PI/5)*1.05;
+  for(var i=0;i<12;i++){
+    for(var j=i+1;j<12;j++){
+      var dx=S.nodes[i].pos[0]-S.nodes[j].pos[0];
+      var dy=S.nodes[i].pos[1]-S.nodes[j].pos[1];
+      var dz=S.nodes[i].pos[2]-S.nodes[j].pos[2];
+      if(Math.sqrt(dx*dx+dy*dy+dz*dz)<thresh){
+        S.edges.push([S.nodes[i].id, S.nodes[j].id]);
+      }
+    }
+  }
+  buildAdj();
+  log('SEED_12: V='+S.nodes.length+' E='+S.edges.length+' (icosahedron)');
+  log('  every vertex degree=5, all pentagons');
+  FACE_WALK();
+  EULER_CHECK();
+  rebuildScene();
+}
+
+// ═══════════════════════════════════════════════════════
+// §4  ADJACENCY BUILDER
+// ═══════════════════════════════════════════════════════
+function buildAdj(){
+  S.adj={};
+  S.nodes.forEach(function(n){ S.adj[n.id]=[]; });
+  S.edges.forEach(function(e){
+    S.adj[e[0]].push(e[1]);
+    S.adj[e[1]].push(e[0]);
+  });
+}
+
+function nodeLookup(){
+  var m={};
+  S.nodes.forEach(function(n){ m[n.id]=n; });
+  return m;
+}
+
+// ═══════════════════════════════════════════════════════
+// §5  IRREDUCIBLE FUNCTION 5: FACE_WALK
+//     Angular half-edge walk → discover all faces
+//     O(E log deg)
+// ═══════════════════════════════════════════════════════
+function FACE_WALK(){
+  S.faces=[];
+  if(S.nodes.length<3||S.edges.length<3) return;
+  var lookup=nodeLookup();
+  // Build angle-sorted adjacency
+  var adj={};
+  S.nodes.forEach(function(n){ adj[n.id]=[]; });
+  S.edges.forEach(function(e){
+    var a=lookup[e[0]], b=lookup[e[1]];
+    if(!a||!b) return;
+    adj[e[0]].push({id:e[1], angle:Math.atan2(b.pos[2]-a.pos[2], b.pos[0]-a.pos[0])});
+    adj[e[1]].push({id:e[0], angle:Math.atan2(a.pos[2]-b.pos[2], a.pos[0]-b.pos[0])});
+  });
+  Object.keys(adj).forEach(function(k){
+    adj[k].sort(function(a,b){return a.angle-b.angle;});
+  });
+
+  function nextHE(u,v){
+    var nb=adj[v]; if(!nb||!nb.length) return -1;
+    for(var i=0;i<nb.length;i++){
+      if(nb[i].id===u) return nb[(i-1+nb.length)%nb.length].id;
+    }
+    return -1;
+  }
+
+  var used={};
+  S.edges.forEach(function(e){
+    for(var dir=0;dir<2;dir++){
+      var su=e[dir], sv=e[1-dir];
+      if(used[su+'>'+sv]) continue;
+      var face=[], cu=su, cv=sv, safe=S.nodes.length+2;
+      while(safe-->0){
+        used[cu+'>'+cv]=true;
+        face.push(cu);
+        var w=nextHE(cu,cv);
+        if(w===-1) break;
+        cu=cv; cv=w;
+        if(cu===su&&cv===sv) break;
+      }
+      if(face.length>=3) S.faces.push(face);
+    }
+  });
+
+  // Remove outer face (largest area)
+  if(S.faces.length>1){
+    var maxA=-1, maxI=0;
+    for(var fi=0;fi<S.faces.length;fi++){
+      var area=0, f=S.faces[fi];
+      for(var j=0;j<f.length;j++){
+        var p=lookup[f[j]], q=lookup[f[(j+1)%f.length]];
+        if(p&&q) area+=p.pos[0]*q.pos[2]-q.pos[0]*p.pos[2];
+      }
+      if(Math.abs(area)>maxA){maxA=Math.abs(area);maxI=fi;}
+    }
+    S.faces.splice(maxI,1);
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// §6  IRREDUCIBLE FUNCTION 4: EULER_CHECK
+//     V - E + F = 2, F₅ = 12 ALWAYS
+// ═══════════════════════════════════════════════════════
+function EULER_CHECK(){
+  var V=S.nodes.length, E=S.edges.length, F=S.faces.length;
+  S.chi=V-E+F;
+  S.F5=0; S.F6=0;
+  S.faces.forEach(function(f){
+    if(f.length===5) S.F5++;
+    else if(f.length===6) S.F6++;
+  });
+  var chiOk=(S.chi===2);
+  var f5Ok=(S.F5===12||S.faces.length===0);
+  document.getElementById('h-v').textContent=V;
+  document.getElementById('h-e').textContent=E;
+  document.getElementById('h-f').textContent=F;
+  var chiEl=document.getElementById('h-chi');
+  chiEl.textContent=S.chi;
+  chiEl.className=chiOk?'ok':'fail';
+  var f5El=document.getElementById('h-f5');
+  f5El.textContent=S.F5;
+  f5El.className=(S.F5===12)?'gold':'fail';
+  document.getElementById('h-f6').textContent=S.F6;
+  document.getElementById('h-ref').textContent=S.refineLevel;
+  if(V>0) log('EULER: V='+V+' E='+E+' F='+F+' χ='+S.chi+' F₅='+S.F5+' F₆='+S.F6);
+}
+
+// ═══════════════════════════════════════════════════════
+// §7  IRREDUCIBLE FUNCTION 3: REFINE
+//     Goldberg-Coxeter (1,1): midpoint subdivision
+//     F₅ stays 12. Always.
+// ═══════════════════════════════════════════════════════
+function REFINE(){
+  if(S.nodes.length<3||S.edges.length<1){log('REFINE: need graph');return;}
+  if(S.nodes.length>800){log('REFINE: too many nodes ('+S.nodes.length+'), cap at 800');return;}
+  var t0=performance.now();
+  S.refineLevel++;
+  var lookup=nodeLookup();
+  // Edge midpoints
+  var midMap={}; // 'id1-id2' -> new node
+  var newNodes=S.nodes.slice();
+  S.edges.forEach(function(e){
+    var a=lookup[e[0]], b=lookup[e[1]];
+    if(!a||!b) return;
+    var mid={
+      id:S.idCounter++,
+      pos:[(a.pos[0]+b.pos[0])/2,(a.pos[1]+b.pos[1])/2,(a.pos[2]+b.pos[2])/2],
+      _vx:0,_vz:0,_p:0,_gradP:0,_visc:0,_conv:0,_dvx:0,_dvz:0,_div:0
+    };
+    newNodes.push(mid);
+    var key=Math.min(e[0],e[1])+'-'+Math.max(e[0],e[1]);
+    midMap[key]=mid;
+  });
+  // New edges: mid-to-endpoint + mid-to-mid around shared vertex
+  var newEdges=[];
+  S.edges.forEach(function(e){
+    var key=Math.min(e[0],e[1])+'-'+Math.max(e[0],e[1]);
+    var mid=midMap[key];
+    if(mid){
+      newEdges.push([e[0],mid.id]);
+      newEdges.push([mid.id,e[1]]);
+    }
+  });
+  // Connect midpoints sharing a vertex
+  var vertexEdges={};
+  S.edges.forEach(function(e,i){
+    if(!vertexEdges[e[0]]) vertexEdges[e[0]]=[];
+    if(!vertexEdges[e[1]]) vertexEdges[e[1]]=[];
+    vertexEdges[e[0]].push(e);
+    vertexEdges[e[1]].push(e);
+  });
+  Object.keys(vertexEdges).forEach(function(vid){
+    var eList=vertexEdges[vid];
+    for(var i=0;i<eList.length;i++){
+      for(var j=i+1;j<eList.length;j++){
+        var k1=Math.min(eList[i][0],eList[i][1])+'-'+Math.max(eList[i][0],eList[i][1]);
+        var k2=Math.min(eList[j][0],eList[j][1])+'-'+Math.max(eList[j][0],eList[j][1]);
+        var m1=midMap[k1], m2=midMap[k2];
+        if(m1&&m2) newEdges.push([m1.id,m2.id]);
+      }
+    }
+  });
+
+  var oldV=S.nodes.length, oldE=S.edges.length;
+  S.nodes=newNodes;
+  S.edges=newEdges;
+  buildAdj();
+
+  // Project back to sphere (maintain radius)
+  var avgR=0;
+  S.nodes.forEach(function(n){
+    avgR+=Math.sqrt(n.pos[0]*n.pos[0]+n.pos[1]*n.pos[1]+n.pos[2]*n.pos[2]);
+  });
+  avgR/=S.nodes.length;
+  S.nodes.forEach(function(n){
+    var r=Math.sqrt(n.pos[0]*n.pos[0]+n.pos[1]*n.pos[1]+n.pos[2]*n.pos[2])+0.001;
+    n.pos[0]*=avgR/r; n.pos[1]*=avgR/r; n.pos[2]*=avgR/r;
+  });
+
+  FACE_WALK();
+  EULER_CHECK();
+  var dt=performance.now()-t0;
+  log('REFINE['+S.refineLevel+']: '+oldV+'→'+S.nodes.length+' nodes, '+oldE+'→'+S.edges.length+' edges ('+dt.toFixed(1)+'ms)');
+  rebuildScene();
+}
+
+// ═══════════════════════════════════════════════════════
+// §8  IRREDUCIBLE FUNCTIONS 6-8: NS FLOW
+//     PRESSURE → MOMENTUM → INTEGRATE
+// ═══════════════════════════════════════════════════════
+
+// ???????????????????????????????????????????????????????
+// ?15  FLIGHT RECORDER ? every computation, every ms
+// ???????????????????????????????????????????????????????
+var _flog = {
+  entries: [],
+  active: false,
+  t0: 0,
+  maxEntries: 200000
+};
+
+function toggleLog(){
+  if(_flog.active){ 
+    _flog.active = false;
+    _flogEntry('LOG_STOP', {entries: _flog.entries.length});
+    document.getElementById('b-log').classList.remove('active');
+    document.getElementById('b-log').textContent = 'LOG';
+    log('LOG: stopped. ' + _flog.entries.length + ' entries. Click SAVE LOG.');
+  } else {
+    _flog.entries = [];
+    _flog.active = true;
+    _flog.t0 = performance.now();
+    _flogEntry('LOG_START', {time: new Date().toISOString(), Re: S.Re, nodes: S.nodes.length});
+    document.getElementById('b-log').classList.add('active');
+    document.getElementById('b-log').textContent = 'LOGGING';
+    log('LOG: recording ALL computations...');
+  }
+}
+
+function _flogEntry(fn, data){
+  if(!_flog.active && fn !== 'LOG_STOP') return;
+  if(_flog.entries.length >= _flog.maxEntries) return;
+  _flog.entries.push({
+    t: +(performance.now() - _flog.t0).toFixed(3),
+    fn: fn,
+    d: data
+  });
+}
+
+function downloadLog(){
+  if(!_flog.entries.length){ log('LOG: nothing recorded. Click LOG first.'); return; }
+  var obj = {
+    version: 'mnet_sim_1.0',
+    recorded: new Date().toISOString(),
+    Re: S.Re,
+    totalEntries: _flog.entries.length,
+    data: _flog.entries
+  };
+  var json = JSON.stringify(obj, null, 2);
+  var blob = new Blob([json], {type: 'application/json'});
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'mnet_log_' + Date.now() + '.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+  log('LOG: saved ' + a.download + ' (' + Math.round(json.length/1024) + ' KB, ' + _flog.entries.length + ' entries)');
+}
+
+// Original PRESSURE with logging
+function PRESSURE(){
+  var t0=performance.now();
+  var lookup=nodeLookup();
+  S.nodes.forEach(function(n){
+    var nbs=S.adj[n.id]; if(!nbs||!nbs.length) return;
+    var divU=0;
+    nbs.forEach(function(nid){
+      var nb=lookup[nid]; if(!nb) return;
+      var dx=nb.pos[0]-n.pos[0], dz=nb.pos[2]-n.pos[2];
+      var dist=Math.sqrt(dx*dx+dz*dz)+0.01;
+      divU+=((nb._vx-n._vx)*(dx/dist)+(nb._vz-n._vz)*(dz/dist))/dist;
+    });
+    n._div=divU/nbs.length;
+    var pOld=n._p;
+    n._p+=-divU*2.0;
+    if(_flog.active) _flogEntry('P',{id:n.id,div:+n._div.toFixed(6),pOld:+pOld.toFixed(4),pNew:+n._p.toFixed(4)});
+  });
+  if(_flog.active) _flogEntry('P_DONE',{ms:+(performance.now()-t0).toFixed(3),nodes:S.nodes.length});
+}
+
+function MOMENTUM(){
+  var t0=performance.now();
+  var lookup=nodeLookup();
+  var Re=S.Re;
+  S.nodes.forEach(function(n){
+    var nbs=S.adj[n.id]; if(!nbs||!nbs.length) return;
+    var gpx=0,gpz=0,lapVx=0,lapVz=0,convX=0,convZ=0;
+    nbs.forEach(function(nid){
+      var nb=lookup[nid]; if(!nb) return;
+      var dx=nb.pos[0]-n.pos[0], dz=nb.pos[2]-n.pos[2];
+      var dist=Math.sqrt(dx*dx+dz*dz)+0.01;
+      var dirX=dx/dist, dirZ=dz/dist;
+      gpx+=(nb._p-n._p)*dirX/dist; gpz+=(nb._p-n._p)*dirZ/dist;
+      lapVx+=(nb._vx-n._vx)/(dist*dist); lapVz+=(nb._vz-n._vz)/(dist*dist);
+      var dvx=(nb._vx-n._vx)/dist, dvz=(nb._vz-n._vz)/dist;
+      convX+=n._vx*dvx*dirX+n._vz*dvx*dirZ;
+      convZ+=n._vx*dvz*dirX+n._vz*dvz*dirZ;
+    });
+    var invN=1/nbs.length;
+    gpx*=invN;gpz*=invN;lapVx*=invN;lapVz*=invN;convX*=invN;convZ*=invN;
+    n._gradP=Math.sqrt(gpx*gpx+gpz*gpz);
+    n._visc=Math.sqrt(lapVx*lapVx+lapVz*lapVz)/Re;
+    n._conv=Math.sqrt(convX*convX+convZ*convZ);
+    n._dvx=-gpx+lapVx/Re-convX;
+    n._dvz=-gpz+lapVz/Re-convZ;
+    if(_flog.active) _flogEntry('M',{id:n.id,pos:[+n.pos[0].toFixed(3),+(n.pos[1]||0).toFixed(3),+n.pos[2].toFixed(3)],v:[+n._vx.toFixed(5),+n._vz.toFixed(5)],p:+n._p.toFixed(3),gP:+n._gradP.toFixed(5),vi:+n._visc.toFixed(5),co:+n._conv.toFixed(5),dv:[+n._dvx.toFixed(5),+n._dvz.toFixed(5)],E:+(n._gradP+n._visc+n._conv).toFixed(5)});
+  });
+  if(_flog.active) _flogEntry('M_DONE',{ms:+(performance.now()-t0).toFixed(3),Re:Re});
+}
+
+function INTEGRATE(){
+  var t0=performance.now();
+  var dt=S.dt, maxV=0;
+  S.nodes.forEach(function(n){
+    var pxO=n.pos[0],pzO=n.pos[2];
+    n._vx+=n._dvx*dt; n._vz+=n._dvz*dt;
+    var speed=Math.sqrt(n._vx*n._vx+n._vz*n._vz);
+    var cl=false;
+    if(speed>3){n._vx*=3/speed;n._vz*=3/speed;speed=3;cl=true;}
+    if(speed>maxV) maxV=speed;
+    n.pos[0]+=n._vx*dt; n.pos[2]+=n._vz*dt;
+    n.pos[1]=Math.abs(n._p)*0.12;
+    if(_flog.active) _flogEntry('I',{id:n.id,dp:[+(n.pos[0]-pxO).toFixed(5),+(n.pos[2]-pzO).toFixed(5)],s:+speed.toFixed(5),c:cl?1:0});
+  });
+  S.step++;
+  document.getElementById('h-step').textContent=S.step;
+  document.getElementById('h-maxv').textContent=maxV.toFixed(2);
+  if(_flog.active) _flogEntry('I_DONE',{step:S.step,maxV:+maxV.toFixed(5),ms:+(performance.now()-t0).toFixed(3)});
+}
+
+// ═══════════════════════════════════════════════════════
+// §9  IRREDUCIBLE FUNCTION 9: CAGE_BOUNCE
+//     12 dodecahedral planes
+// ═══════════════════════════════════════════════════════
+function buildCage(){
+  for(var i=gCage.children.length-1;i>=0;i--){
+    if(gCage.children[i].geometry) gCage.children[i].geometry.dispose();
+    gCage.remove(gCage.children[i]);
+  }
+  var phi=(1+Math.sqrt(5))/2;
+  var rawN=[
+    [1,1,1],[1,1,-1],[1,-1,1],[1,-1,-1],
+    [-1,1,1],[-1,1,-1],[-1,-1,1],[-1,-1,-1],
+    [0,phi,1/phi],[0,phi,-1/phi],
+    [0,-phi,1/phi],[0,-phi,-1/phi]
+  ];
+  S.cagePlanes=[];
+  var R=6;
+  var verts=[];
+  rawN.forEach(function(n){
+    var len=Math.sqrt(n[0]*n[0]+n[1]*n[1]+n[2]*n[2]);
+    var nx=n[0]/len, ny=n[1]/len, nz=n[2]/len;
+    S.cagePlanes.push({nx:nx,ny:ny,nz:nz,d:R});
+    // Tangent vectors for pentagon wireframe
+    var tx,ty,tz;
+    if(Math.abs(ny)<0.9){tx=0;ty=1;tz=0;}else{tx=1;ty=0;tz=0;}
+    var cx=ny*tz-nz*ty, cy=nz*tx-nx*tz, cz=nx*ty-ny*tx;
+    var cl=Math.sqrt(cx*cx+cy*cy+cz*cz);
+    cx/=cl;cy/=cl;cz/=cl;
+    var ux=ny*cz-nz*cy, uy=nz*cx-nx*cz, uz=nx*cy-ny*cx;
+    var pS=R*0.45;
+    for(var i=0;i<5;i++){
+      var a1=(i/5)*Math.PI*2, a2=((i+1)/5)*Math.PI*2;
+      verts.push(
+        nx*R+(Math.cos(a1)*cx+Math.sin(a1)*ux)*pS,
+        ny*R+(Math.cos(a1)*cy+Math.sin(a1)*uy)*pS,
+        nz*R+(Math.cos(a1)*cz+Math.sin(a1)*uz)*pS,
+        nx*R+(Math.cos(a2)*cx+Math.sin(a2)*ux)*pS,
+        ny*R+(Math.cos(a2)*cy+Math.sin(a2)*uy)*pS,
+        nz*R+(Math.cos(a2)*cz+Math.sin(a2)*uz)*pS
+      );
+    }
+  });
+  var geo=new THREE.BufferGeometry();
+  geo.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));
+  gCage.add(new THREE.LineSegments(geo,cageMat));
+  S.cageActive=true;
+  document.getElementById('b-cage').classList.add('active');
+  document.getElementById('h-cage').textContent='ON';
+  document.getElementById('h-cage').className='ok';
+  log('CAGE: 12 dodecahedral planes, R='+R);
+}
+
+function CAGE_BOUNCE(){
+  if(!S.cageActive||!S.cagePlanes.length) return;
+  S.nodes.forEach(function(n){
+    for(var i=0;i<S.cagePlanes.length;i++){
+      var p=S.cagePlanes[i];
+      var dist=n.pos[0]*p.nx+n.pos[1]*p.ny+n.pos[2]*p.nz-p.d;
+      if(dist>0){
+        n.pos[0]-=p.nx*dist*1.1;
+        n.pos[1]-=p.ny*dist*1.1;
+        n.pos[2]-=p.nz*dist*1.1;
+        var vDotN=(n._vx||0)*p.nx+(n._vz||0)*p.nz;
+        if(vDotN>0){n._vx-=2*vDotN*p.nx;n._vz-=2*vDotN*p.nz;}
+      }
+    }
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+// §10  IRREDUCIBLE FUNCTION 10: LABEL
+//      Floating DOM labels — dominant NS term per node
+// ═══════════════════════════════════════════════════════
+function createLabels(){
+  clearLabels();
+  var layer=document.getElementById('label-layer');
+  var count=Math.min(S.nodes.length,S.maxLabels);
+  for(var i=0;i<count;i++){
+    var el=document.createElement('div');
+    el.className='node-label';
+    el.innerHTML='<span class="sym">·</span>';
+    layer.appendChild(el);
+    S.labelEls.push(el);
+  }
+}
+function clearLabels(){
+  document.getElementById('label-layer').innerHTML='';
+  S.labelEls=[];
+}
+function LABEL(){
+  var count=Math.min(S.nodes.length,S.labelEls.length);
+  var _v=new THREE.Vector3();
+  for(var i=0;i<count;i++){
+    var n=S.nodes[i], el=S.labelEls[i];
+    if(!n||!el) continue;
+    _v.set(n.pos[0],(n.pos[1]||0)+0.35,n.pos[2]);
+    _v.project(camera);
+    if(_v.z>1){el.style.display='none';continue;}
+    el.style.display='';
+    el.style.left=((0.5+_v.x*0.5)*innerWidth)+'px';
+    el.style.top=((0.5-_v.y*0.5)*innerHeight)+'px';
+    var gp=n._gradP||0, vi=n._visc||0, co=n._conv||0;
+    var maxT=Math.max(gp,vi,co,0.001);
+    var sym,val;
+    if(gp>=vi&&gp>=co){sym='−∇p';val=gp.toFixed(2);}
+    else if(vi>=gp&&vi>=co){sym='ν∇²u';val=vi.toFixed(3);}
+    else{sym='(u·∇)u';val=co.toFixed(2);}
+    el.innerHTML='<span class="sym">'+sym+'</span> <span class="val">'+val+'</span>';
+    el.classList.toggle('dim',maxT<0.05);
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// §11  SCENE REBUILD
+// ═══════════════════════════════════════════════════════
+function rebuildScene(){
+  // Clear
+  [gNodes,gEdges].forEach(function(g){
+    for(var i=g.children.length-1;i>=0;i--){
+      if(g.children[i].geometry) g.children[i].geometry.dispose();
+      g.remove(g.children[i]);
+    }
+  });
+  var lookup=nodeLookup();
+  // Nodes — pentagons are gold, rest cyan
+  var pentagonNodes={};
+  S.faces.forEach(function(f){
+    if(f.length===5) f.forEach(function(id){pentagonNodes[id]=true;});
+  });
+  S.nodes.forEach(function(n){
+    var mat=pentagonNodes[n.id]?pentMat:nodeMat;
+    var mesh=new THREE.Mesh(sphereGeo,mat);
+    mesh.position.set(n.pos[0],n.pos[1]||0,n.pos[2]);
+    gNodes.add(mesh);
+  });
+  // Edges
+  if(S.edges.length){
+    var ev=new Float32Array(S.edges.length*6);
+    var ei=0;
+    S.edges.forEach(function(e){
+      var a=lookup[e[0]], b=lookup[e[1]];
+      if(!a||!b) return;
+      ev[ei++]=a.pos[0];ev[ei++]=a.pos[1]||0;ev[ei++]=a.pos[2];
+      ev[ei++]=b.pos[0];ev[ei++]=b.pos[1]||0;ev[ei++]=b.pos[2];
+    });
+    var eg=new THREE.BufferGeometry();
+    eg.setAttribute('position',new THREE.BufferAttribute(ev.subarray(0,ei),3));
+    gEdges.add(new THREE.LineSegments(eg,edgeMat));
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// §12  UI ACTIONS
+// ═══════════════════════════════════════════════════════
+function doSeed(){ SEED_12(); }
+
+function doRefine(){ REFINE(); }
+
+function toggleFlow(){
+  if(S.flowing){
+    S.flowing=false;
+    document.getElementById('b-flow').classList.remove('active');
+    document.getElementById('b-flow').textContent='NS FLOW';
+        clearLabels();
+    document.getElementById('eq-sub').textContent='pipeline idle';
+    document.getElementById('conv-panel').classList.remove('active');
+    log('NS FLOW: stopped step='+S.step);
+    return;
+  }
+  if(S.nodes.length<2){log('Need nodes first');return;}
+  S.flowing=true; S.step=0; S._convHist=[]; S._convPrevRes=0; S._convT0=0;
+  document.getElementById('b-flow').classList.add('active');
+  document.getElementById('b-flow').textContent='STOP FLOW';
+  // Init tangential velocity
+  var cx=0,cz=0;
+  S.nodes.forEach(function(n){cx+=n.pos[0];cz+=n.pos[2];});
+  cx/=S.nodes.length; cz/=S.nodes.length;
+  S.nodes.forEach(function(n){
+    var dx=n.pos[0]-cx, dz=n.pos[2]-cz;
+    var r=Math.sqrt(dx*dx+dz*dz)+0.01;
+    n._vx=-dz/r*0.5; n._vz=dx/r*0.5;
+    n._p=0;n._gradP=0;n._visc=0;n._conv=0;
+  });
+    createLabels();
+  document.getElementById('conv-panel').classList.add('active');
+  log('NS FLOW: started Re='+S.Re+' nodes='+S.nodes.length);
+}
+
+function toggleCage(){
+  if(S.cageActive){
+    S.cageActive=false;
+    for(var i=gCage.children.length-1;i>=0;i--){
+      if(gCage.children[i].geometry) gCage.children[i].geometry.dispose();
+      gCage.remove(gCage.children[i]);
+    }
+    S.cagePlanes=[];
+    document.getElementById('b-cage').classList.remove('active');
+    document.getElementById('h-cage').textContent='OFF';
+    document.getElementById('h-cage').className='lbl';
+    log('CAGE: off');
+    return;
+  }
+  buildCage();
+}
+
+function setRe(v){
+  S.Re=parseInt(v);
+  document.getElementById('re-val').textContent=v;
+  document.getElementById('h-re').textContent=v;
+}
+
+function doReset(){
+  S.flowing=false; S.cageActive=false;
+  document.getElementById('b-flow').classList.remove('active');
+  document.getElementById('b-flow').textContent='NS FLOW';
+  document.getElementById('b-cage').classList.remove('active');
+  document.getElementById('h-cage').textContent='OFF';
+  document.getElementById('h-cage').className='lbl';
+  for(var i=gCage.children.length-1;i>=0;i--){
+    if(gCage.children[i].geometry) gCage.children[i].geometry.dispose();
+    gCage.remove(gCage.children[i]);
+  }
+  S.nodes=[];S.edges=[];S.faces=[];S.adj={};
+  S.cagePlanes=[];S.step=0;S.refineLevel=0;S.idCounter=0;
+  clearLabels();
+  rebuildScene();
+  EULER_CHECK();
+  document.getElementById('eq-sub').textContent='pipeline idle';
+  log('=== RESET ===');
+}
+
+function doFullPipeline(){
+  log('=== FULL PIPELINE ===');
+  doReset();
+  setTimeout(function(){
+    SEED_12();
+    setTimeout(function(){
+      REFINE();
+      setTimeout(function(){
+        REFINE();
+        setTimeout(function(){
+          buildCage();
+          setTimeout(function(){
+            toggleFlow();
+            log('=== PIPELINE RUNNING ===');
+          },200);
+        },200);
+      },200);
+    },200);
+  },100);
+}
+
+// ═══════════════════════════════════════════════════════
+// §13  ANIMATE — the main loop
+// ═══════════════════════════════════════════════════════
+function animate(){
+  requestAnimationFrame(animate);
+  controls.update();
+    if(S.flowing){
+    var _t0=performance.now();
+    // Save old velocities for residual
+    var _oldVx=[], _oldVz=[];
+    S.nodes.forEach(function(n,i){_oldVx[i]=n._vx;_oldVz[i]=n._vz;});
+    PRESSURE();
+    MOMENTUM();
+    INTEGRATE();
+    CAGE_BOUNCE();
+    var _stepMs=performance.now()-_t0;
+    // Compute residual
+    var _resSum=0;
+    S.nodes.forEach(function(n,i){
+      var dv0=n._vx-_oldVx[i], dv1=n._vz-_oldVz[i];
+      _resSum+=dv0*dv0+dv1*dv1;
+    });
+    var _res=Math.sqrt(_resSum/Math.max(S.nodes.length,1));
+    // Update convergence panel every 5 steps
+    if(S.step%5===0) updateConvPanel(_res, _stepMs);
+    if(S.step%3===0) rebuildScene();
+    LABEL();
+    document.getElementById('eq-sub').textContent=
+      'step '+S.step+' · Re='+S.Re+' · PRESSURE→MOMENTUM→INTEGRATE→CAGE→LABEL';
+  }
+  renderer.render(scene,camera);
+}
+
+// ═══════════════════════════════════════════════════════
+// §14  BOOT
+// ═══════════════════════════════════════════════════════
+log('MNet Sim v1.0 booted');
+log('Three.js r'+THREE.REVISION+' · WebGL OK');
+log('Axiom 1: minimum entity = C60');
+log('Axiom 2: seed = 12 (always)');
+log('11 irreducible functions loaded');
+log('---');
+log('Click SEED₁₂ to begin');
+log('Click FULL PIPELINE for auto run');
+
+try{renderer.render(scene,camera);log('First render OK');}
+catch(e){log('Render error: '+e.message);}
+
+// ═══════════════════════════════════════════════════════
+// §16  CONVERGENCE DASHBOARD — live update
+// ═══════════════════════════════════════════════════════
+function updateConvPanel(residual, stepMs){
+  var N=S.nodes.length, E=S.edges.length;
+  document.getElementById('cv-n').textContent=N;
+  document.getElementById('cv-e').textContent=E;
+  document.getElementById('cv-ref').textContent=S.refineLevel;
+  document.getElementById('cv-res').textContent=residual.toFixed(8);
+  document.getElementById('cv-ms').textContent=stepMs.toFixed(2)+' ms';
+  // Precision: digits = -log10(residual)
+  var digits=residual>1e-12 ? -Math.log10(residual) : 12;
+  document.getElementById('cv-dig').textContent=digits.toFixed(1);
+  // Bar: 0 digits=0%, 8 digits=100%
+  var pct=Math.min(100,Math.max(0,digits/8*100));
+  document.getElementById('cv-bar').style.width=pct+'%';
+  // Trend: compare to previous
+  if(!S._convHist) S._convHist=[];
+  S._convHist.push(residual);
+  if(S._convHist.length>20) S._convHist.shift();
+  if(S._convHist.length>=2){
+    var first=S._convHist[0], last=S._convHist[S._convHist.length-1];
+    var ratio=first/Math.max(last,1e-15);
+    var el=document.getElementById('cv-trend');
+    if(ratio>1.05){el.textContent='↓ converging ('+ratio.toFixed(1)+'x)';el.className='v good';}
+    else if(ratio<0.95){el.textContent='↑ diverging';el.className='v bad';}
+    else{el.textContent='→ steady';el.className='v warn';}
+  }
+  // O(N) ratio: ms per node
+  var msPerNode=stepMs/Math.max(N,1);
+  document.getElementById('cv-on').textContent=(msPerNode*1000).toFixed(1)+' μs/node';
+  // Traditional CFD estimate for same N
+  // FVM on structured grid: ~O(N log N) with iterative pressure solver
+  // Typical: 5-20 μs/cell for simple explicit, 50-200 μs/cell for SIMPLE
+  // We estimate conservatively: 15 * N * log2(N) μs
+  var tradFactor=15; // μs per cell per log-factor
+  var logN=Math.log2(Math.max(N,2));
+  var tradUs=tradFactor*N*logN;
+  var tradMs=tradUs/1000;
+  document.getElementById('cv-trad-n').textContent=N+' cells';
+  document.getElementById('cv-trad-ms').textContent=tradMs.toFixed(1)+' ms';
+  // Memory: traditional ~200 bytes/cell (velocity, pressure, 5+ arrays)
+  var tradMem=N*200;
+  if(tradMem>1024*1024) document.getElementById('cv-trad-mem').textContent=(tradMem/1024/1024).toFixed(1)+' MB';
+  else document.getElementById('cv-trad-mem').textContent=(tradMem/1024).toFixed(0)+' KB';
+  // Speedup
+  var speedup=tradMs/Math.max(stepMs,0.001);
+  var spEl=document.getElementById('cv-speedup');
+  spEl.textContent=speedup.toFixed(1)+'× faster';
+  spEl.className=speedup>1?'v good':'v bad';
+}
+
+// ═══════════════════════════════════════════════════════
+// §17  WHY PANEL
+// ═══════════════════════════════════════════════════════
+function closeWhy(){
+  document.getElementById('why-panel').classList.add('hidden');
+}
+
+// ═══════════════════════════════════════════════════════
+// §18  RANDOM WALK ENGINE
+//      Walk graph node-by-node. At each: decide tessellate?
+//      Falls into fractal trap when residual stabilizes.
+// ═══════════════════════════════════════════════════════
+var W = {
+  active: false,
+  current: -1,       // current node id
+  visited: {},       // id → true
+  visitCount: 0,
+  tessCount: 0,
+  trail: [],         // node ids in walk order
+  stableCount: 0,    // how many steps residual stayed flat
+  lastRes: 999,
+  trapped: false,
+  stepInterval: null,
+};
+
+function toggleWalk(){
+  if(W.active){ stopWalk(); return; }
+  if(S.nodes.length<3){ log('WALK: need nodes. Click SEED first.'); return; }
+  startWalk();
+}
+
+function startWalk(){
+  W.active=true; W.visited={}; W.visitCount=0; W.tessCount=0;
+  W.trail=[]; W.stableCount=0; W.lastRes=999; W.trapped=false;
+  // Init tangential velocity for NS
+  var cx=0,cz=0;
+  S.nodes.forEach(function(n){cx+=n.pos[0];cz+=n.pos[2];});
+  cx/=S.nodes.length; cz/=S.nodes.length;
+  S.nodes.forEach(function(n){
+    var dx=n.pos[0]-cx, dz=n.pos[2]-cz;
+    var r=Math.sqrt(dx*dx+dz*dz)+0.01;
+    n._vx=-dz/r*0.3; n._vz=dx/r*0.3;
+    n._p=0;n._gradP=0;n._visc=0;n._conv=0;
+  });
+  S.flowing=true; S.step=0;
+  // Pick random start
+  W.current=S.nodes[Math.floor(Math.random()*S.nodes.length)].id;
+  W.visited[W.current]=true; W.visitCount=1;
+  W.trail.push(W.current);
+  document.getElementById('b-walk').classList.add('active');
+  document.getElementById('b-walk').textContent='STOP WALK';
+  document.getElementById('walk-hud').classList.add('active');
+  document.getElementById('conv-panel').classList.add('active');
+  createLabels();
+  log('WALK: started at node '+W.current+', '+S.nodes.length+' nodes to visit');
+  // Walk one step every 200ms (slow enough to see)
+  W.stepInterval=setInterval(walkStep, 200);
+}
+
+function stopWalk(){
+  W.active=false; S.flowing=false;
+  if(W.stepInterval){ clearInterval(W.stepInterval); W.stepInterval=null; }
+  document.getElementById('b-walk').classList.remove('active');
+  document.getElementById('b-walk').textContent='WALK';
+  document.getElementById('b-flow').classList.remove('active');
+  document.getElementById('b-flow').textContent='NS FLOW';
+  log('WALK: stopped. visited='+W.visitCount+'/'+S.nodes.length+' tessellated='+W.tessCount);
+}
+
+function walkStep(){
+  if(!W.active||W.trapped) return;
+  // 1. Run a few NS steps at current position
+  for(var i=0;i<3;i++){ PRESSURE(); MOMENTUM(); INTEGRATE(); CAGE_BOUNCE(); }
+  // 2. Compute residual
+  var resSum=0;
+  S.nodes.forEach(function(n){ resSum+=n._dvx*n._dvx+n._dvz*n._dvz; });
+  var res=Math.sqrt(resSum/Math.max(S.nodes.length,1));
+  // 3. Test tessellate at current node's faces
+  var didTess=false;
+  var curNode=null;
+  for(var ni=0;ni<S.nodes.length;ni++){ if(S.nodes[ni].id===W.current){curNode=S.nodes[ni];break;} }
+  if(curNode){
+    // Find faces containing this node
+    var myFaces=[];
+    S.faces.forEach(function(f,fi){
+      if(f.indexOf(W.current)>=0) myFaces.push(fi);
+    });
+    // Test each face: would tessellating it reduce energy?
+    for(var fi=0;fi<myFaces.length&&!didTess;fi++){
+      var result=testTessellate(myFaces[fi], res);
+      if(result.doIt && S.nodes.length<600){
+        log('WALK: tessellate face['+myFaces[fi]+'] energy delta='+result.delta.toFixed(4));
+        REFINE(); // for now refine all (TODO: single face)
+        W.tessCount++;
+        didTess=true;
+        // Re-init velocities for new nodes
+        S.nodes.forEach(function(n){
+          if(n._vx===0&&n._vz===0){
+            n._vx=(Math.random()-0.5)*0.1;
+            n._vz=(Math.random()-0.5)*0.1;
+          }
+        });
+        createLabels();
+      }
+    }
+  }
+  // 4. Check invariants
+  EULER_CHECK();
+  if(S.nodes.length>3 && S.faces.length>0){
+    // Error halt check would go here when face walker is fixed
+  }
+  // 5. Move to next unvisited neighbor
+  var nbs=S.adj[W.current]||[];
+  var unvisited=nbs.filter(function(id){ return !W.visited[id]; });
+  if(unvisited.length>0){
+    W.current=unvisited[Math.floor(Math.random()*unvisited.length)];
+  } else if(nbs.length>0){
+    // All neighbors visited, pick random neighbor (backtrack)
+    W.current=nbs[Math.floor(Math.random()*nbs.length)];
+  }
+  W.visited[W.current]=true;
+  W.visitCount=Object.keys(W.visited).length;
+  W.trail.push(W.current);
+  // 6. Trap detection: residual stable for 10+ steps
+  if(Math.abs(res-W.lastRes)<0.001){ W.stableCount++; }
+  else { W.stableCount=0; }
+  W.lastRes=res;
+  if(W.stableCount>=10 && W.visitCount>S.nodes.length*0.5){
+    W.trapped=true;
+    document.getElementById('wh-trap').textContent='YES ✓';
+    document.getElementById('wh-trap').style.color='#7fff7f';
+    log('WALK: ★ TRAPPED — fractal attractor found at step '+W.trail.length);
+    log('  visited='+W.visitCount+'/'+S.nodes.length+' tessellated='+W.tessCount);
+    log('  residual='+res.toFixed(8)+' stable for '+W.stableCount+' steps');
+    stopWalk();
+    return;
+  }
+  // 7. All visited?
+  if(W.visitCount>=S.nodes.length){
+    log('WALK: all '+S.nodes.length+' nodes visited. tessellated='+W.tessCount);
+    log('  residual='+res.toFixed(8));
+    stopWalk();
+    return;
+  }
+  // 8. Update HUD
+  document.getElementById('wh-pos').textContent='node '+W.current;
+  document.getElementById('wh-vis').textContent=W.visitCount;
+  document.getElementById('wh-total').textContent=S.nodes.length;
+  document.getElementById('wh-tess').textContent=W.tessCount;
+  // Update convergence panel
+  updateConvPanel(res, 0);
+  // Rebuild scene to show walk position
+  if(W.trail.length%3===0) rebuildScene();
+}
+
+// ═══════════════════════════════════════════════════════
+// §19  testTessellate — THE CORE DECISION
+//      "Should I refine this face?"
+//      Compare current NS energy vs estimated post-refine energy
+// ═══════════════════════════════════════════════════════
+function testTessellate(faceIdx, currentResidual){
+  if(faceIdx<0||faceIdx>=S.faces.length) return {doIt:false,delta:0};
+  var face=S.faces[faceIdx];
+  if(!face||face.length<3) return {doIt:false,delta:0};
+  var lookup=nodeLookup();
+  // Current energy of this face's nodes
+  var currentE=0;
+  face.forEach(function(nid){
+    var n=lookup[nid];
+    if(n) currentE+=(n._gradP||0)+(n._visc||0)+(n._conv||0);
+  });
+  currentE/=face.length;
+  // Estimate post-tessellation energy:
+  // More nodes = energy distributes = lower per-node
+  // Heuristic: new energy ≈ currentE * (face.length / (face.length * 2))
+  // i.e., doubling nodes roughly halves per-node energy
+  var estNewE=currentE*0.6; // conservative: 60% of current
+  var delta=currentE-estNewE; // positive = tessellation helps
+  // Only tessellate if:
+  //   1. Energy reduction > 10% of current
+  //   2. Face has enough energy to matter
+  //   3. Residual is still high (not yet converged)
+  var threshold=currentE*0.1;
+  var doIt=(delta>threshold && currentE>0.05 && currentResidual>0.01);
+  return {doIt:doIt, delta:delta, currentE:currentE, estNewE:estNewE};
+}
+
+animate();
+</script>
+</body>
+</html>

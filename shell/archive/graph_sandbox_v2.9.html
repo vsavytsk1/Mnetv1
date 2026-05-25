@@ -1,0 +1,1553 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>MachineNet · Graph Sandbox v2.9</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#050510;color:#e0e0e0;font-family:ui-monospace,"SF Mono",monospace;font-size:11px;overflow:hidden;height:100vh}
+canvas{display:block}
+
+/* HUD */
+#hud{position:fixed;top:12px;left:12px;z-index:10;pointer-events:none}
+#hud .title{font-size:13px;color:#00d4ff;margin-bottom:4px;letter-spacing:0.08em}
+#hud .info{color:rgba(220,228,240,0.6);line-height:1.6}
+#hud .info b{color:#ffd700}
+#hud .info .cyan{color:#00d4ff}
+#hud .info .gold{color:#ffd700}
+#hud .info .pink{color:#ff69b4}
+
+/* Controls bar */
+#bar{position:fixed;bottom:0;left:0;right:0;z-index:10;
+  background:rgba(5,5,16,0.92);border-top:1px solid #1a1f2e;
+  padding:8px 16px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.btn{background:#111;color:#555;border:1px solid #2a2a2a;border-radius:3px;
+  padding:4px 12px;font-family:inherit;font-size:11px;cursor:pointer;transition:all 0.15s}
+.btn:hover{background:#1a1a1a;border-color:#555}
+.btn.active{background:#555;color:#050510;border-color:#555}
+/* Graph selector buttons keep their identity */
+.btn.g-a{color:#00d4ff;border-color:#1a3a4a}
+.btn.g-a:hover{border-color:#00d4ff}
+.btn.g-a.active{background:#00d4ff;color:#050510;border-color:#00d4ff}
+.btn.g-b{color:#ffd700;border-color:#4a3a1a}
+.btn.g-b:hover{border-color:#ffd700}
+.btn.g-b.active{background:#ffd700;color:#050510;border-color:#ffd700}
+/* Themed by active graph */
+.btn.themed{color:#555;border-color:#2a2a2a}
+body.graph-A .btn.themed{color:#00d4ff;border-color:#1a3a4a}
+body.graph-A .btn.themed:hover{background:#0a1a2a;border-color:#00d4ff}
+body.graph-A .btn.themed.active{background:#00d4ff;color:#050510}
+body.graph-B .btn.themed{color:#ffd700;border-color:#4a3a1a}
+body.graph-B .btn.themed:hover{background:#2a1a0a;border-color:#ffd700}
+body.graph-B .btn.themed.active{background:#ffd700;color:#050510}
+/* Ops always pink */
+.btn.op{color:#ff69b4;border-color:#4a1a3a}
+.btn.op:hover{border-color:#ff69b4}
+.sep{width:1px;height:20px;background:#1a1f2e;margin:0 4px}
+.lbl{color:rgba(220,228,240,0.5);font-size:10px;text-transform:uppercase;letter-spacing:0.1em}
+
+/* Log — LEFT side, red accent like fractal geom */
+#log{position:fixed;top:80px;left:12px;z-index:10;
+  background:rgba(5,5,16,0.85);border:1px solid #1a1f2e;border-radius:4px;
+  padding:8px 12px;max-width:320px;max-height:300px;overflow-y:auto;
+  font-size:10px;line-height:1.5;color:rgba(255,180,180,0.75)}
+#log:empty{display:none}
+#log:hover{cursor:text;border-color:#4a1a1a;background:rgba(10,5,5,0.95)}
+#log{-webkit-user-select:text;user-select:text}
+#log .entry{border-bottom:1px solid #1a0a0a;padding:2px 0}
+#log .op{color:#ff69b4;font-weight:bold}
+#log .g{color:#00d4ff}
+#log .ok{color:#7fff7f}
+#log .warn{color:#ffd700}
+
+/* Mode indicator */
+#mode{position:fixed;top:50%;right:16px;transform:translateY(-50%);z-index:10;
+  font-size:12px;color:#ffd700;text-align:right;pointer-events:none}
+
+/* Snap tags */
+#snap-bar{position:fixed;bottom:42px;left:16px;z-index:10;display:flex;gap:4px;flex-wrap:wrap}
+.snap-tag{background:#1a1a2a;color:#7f7fff;border:1px solid #2a2a4a;border-radius:3px;
+  padding:2px 8px;font-size:10px;cursor:pointer;font-family:inherit;transition:all 0.15s}
+.snap-tag:hover{background:#2a2a4a;border-color:#7f7fff;color:#fff}
+</style>
+</head>
+<body class="graph-A">
+
+<div id="hud">
+  <div class="title">MachineNet · Graph Sandbox</div>
+  <div class="info">
+    <b>Graph A</b>: <span class="cyan" id="h-a">0 nodes, 0 edges</span><br>
+    <b>Graph B</b>: <span class="gold" id="h-b">0 nodes, 0 edges</span><br>
+    <span class="pink" id="h-result"></span>
+  </div>
+</div>
+
+<div id="mode"></div>
+<div id="log"></div>
+
+<div id="bar">
+  <span class="lbl">graph</span>
+  <button class="btn g-a active" id="b-ga" onclick="setGraph('A')">A (cyan)</button>
+  <button class="btn g-b" id="b-gb" onclick="setGraph('B')">B (gold)</button>
+  <div class="sep"></div>
+
+  <span class="lbl">tool</span>
+  <button class="btn themed active" id="b-node" onclick="setTool('node')">+ node</button>
+  <button class="btn themed" id="b-edge" onclick="setTool('edge')">-- edge</button>
+  <button class="btn themed" id="b-move" onclick="setTool('move')">+ move</button>
+  <button class="btn themed" id="b-grab" onclick="setTool('grab')">grab</button>
+  <button class="btn themed" id="b-delete" onclick="setTool('delete')">X delete</button>
+  <div class="sep"></div>
+
+  <span class="lbl">ops (A . B)</span>
+  <button class="btn op" onclick="graphOp('union')">A U B</button>
+  <button class="btn op" onclick="graphOp('intersect')">A n B</button>
+  <button class="btn op" onclick="graphOp('product')">A x B</button>
+  <button class="btn op" onclick="graphOp('diff')">A - B</button>
+  <div class="sep"></div>
+
+  <span class="lbl">util</span>
+  <button class="btn themed" onclick="randomGraph()">random</button>
+  <button class="btn themed" onclick="iterateOp()">iterate x2</button>
+  <button class="btn themed" onclick="clearGraph()">clear</button>
+  <button class="btn themed" onclick="togglePlane()">plane lock</button>
+  <button class="btn themed" onclick="snapSave()">SNAP</button>
+  <div class="sep"></div>
+  <span class="lbl">shape</span>
+  <button class="btn themed" onclick="genPoly(5)">PENT</button>
+  <button class="btn themed" onclick="genPoly(6)">HEX</button>
+  <button class="btn themed" onclick="genC60()">C60</button>
+  <div class="sep"></div>
+  <span class="lbl">MATH</span>
+  <button class="btn op" onclick="algebraGraph()" style="font-weight:bold">ALGEBRA</button>
+  <button class="btn op" onclick="fractalizeGraph()" style="font-weight:bold">MANDELBROT</button>
+  <button class="btn themed" onclick="subdivideGraph()" style="font-weight:bold">FRACTALIZE</button>
+  <button class="btn" onclick="mobiusifyGraph()" style="font-weight:bold;color:#ff4444;border-color:#4a1a1a">MOBIUSIFY</button>
+</div>
+<div id="snap-bar" style="position:fixed;bottom:42px;left:16px;z-index:10;display:flex;gap:4px;flex-wrap:wrap"></div>
+
+<!-- Three.js + OrbitControls (inline fallback) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+<script>
+// ═══════════════════════════════════════════════════════
+// §0  BOOT DIAGNOSTICS
+// ═══════════════════════════════════════════════════════
+function bootLog(msg) {
+  var el = document.getElementById('log');
+  var d = document.createElement('div');
+  d.className = 'entry';
+  d.innerHTML = msg;
+  el.appendChild(d);
+  console.log('[BOOT]', msg);
+}
+bootLog('Three.js: ' + (typeof THREE !== 'undefined' ? 'r' + THREE.REVISION : '<span style="color:red">MISSING</span>'));
+bootLog('OrbitControls: ' + (typeof THREE !== 'undefined' && THREE.OrbitControls ? 'OK' : '<span style="color:red">MISSING</span>'));
+bootLog('WebGL: ' + (function(){ try { var c = document.createElement('canvas'); return !!c.getContext('webgl2') || !!c.getContext('webgl'); } catch(e) { return false; } })());
+bootLog('Window: ' + innerWidth + 'x' + innerHeight);
+// ═══════════════════════════════════════════════════════
+// §1  STATE
+// ═══════════════════════════════════════════════════════
+var graphs = {
+  A: { nodes: [], edges: [], color: 0x00d4ff, name: 'A' },
+  B: { nodes: [], edges: [], color: 0xffd700, name: 'B' },
+  R: { nodes: [], edges: [], color: 0xff69b4, name: 'Result' }
+};
+var activeGraph = 'A';
+var activeTool = 'node';
+var edgeStart = null;       // first node of edge being drawn
+var planeLocked = false;
+var lastOp = null;
+var nodeIdCounter = 0;
+
+// ── SNAPSHOT TRACE ──
+var snapshots = [];   // [{label, graphs, nodeIdCounter}]
+var snapVersion = 0;
+
+function snapSave(label) {
+  snapVersion++;
+  var tag = label || 'v' + snapVersion;
+  snapshots.push({
+    label: tag,
+    nodeIdCounter: nodeIdCounter,
+    graphs: {
+      A: { nodes: JSON.parse(JSON.stringify(graphs.A.nodes)), edges: graphs.A.edges.map(function(e){return e.slice();}), color: graphs.A.color, name: graphs.A.name },
+      B: { nodes: JSON.parse(JSON.stringify(graphs.B.nodes)), edges: graphs.B.edges.map(function(e){return e.slice();}), color: graphs.B.color, name: graphs.B.name },
+      R: { nodes: JSON.parse(JSON.stringify(graphs.R.nodes)), edges: graphs.R.edges.map(function(e){return e.slice();}), color: graphs.R.color, name: graphs.R.name }
+    }
+  });
+  log('SNAP saved: ' + tag + ' (' + snapshots.length + ' total)');
+  updateSnapHUD();
+}
+
+function snapRestore(index) {
+  if (index < 0 || index >= snapshots.length) { log('No snapshot at index ' + index); return; }
+  var s = snapshots[index];
+  nodeIdCounter = s.nodeIdCounter;
+  ['A','B','R'].forEach(function(k) {
+    graphs[k] = { nodes: JSON.parse(JSON.stringify(s.graphs[k].nodes)), edges: s.graphs[k].edges.map(function(e){return e.slice();}), color: s.graphs[k].color, name: s.graphs[k].name };
+  });
+  log('SNAP restored: ' + s.label);
+  rebuildScene();
+}
+
+function updateSnapHUD() {
+  var el = document.getElementById('snap-bar');
+  if (!el) return;
+  if (!snapshots.length) { el.innerHTML = ''; return; }
+  el.innerHTML = snapshots.map(function(s, i) {
+    return '<span class="snap-tag" onclick="snapRestore('+i+')">' + s.label + '</span>';
+  }).join('');
+}
+
+// ── GRAB STATE ──
+var grabActive = false;
+var grabAnchor = null;   // world pos where grab started
+var grabLiftY = 1.5;     // how high to lift
+
+// ═══════════════════════════════════════════════════════
+// §2  THREE.JS SETUP
+// ═══════════════════════════════════════════════════════
+var scene, camera, renderer, controls;
+try {
+  scene = new THREE.Scene();
+  camera = new THREE.PerspectiveCamera(60, innerWidth/innerHeight, 0.1, 1000);
+  camera.position.set(0, 10, 14);
+  camera.lookAt(0, 0, 0);
+  
+  renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setSize(innerWidth, innerHeight);
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  renderer.setClearColor(0x050510);
+  document.body.appendChild(renderer.domElement);
+  bootLog('Renderer: ' + renderer.domElement.width + 'x' + renderer.domElement.height);
+  
+  if (THREE.OrbitControls) {
+    controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.08;
+    controls.target.set(0, 0, 0);
+    bootLog('Controls: OrbitControls OK');
+  } else {
+    bootLog('<span style="color:#ffd700">Controls: OrbitControls not found, orbit disabled</span>');
+    controls = { update: function(){}, enabled: true, enableRotate: true };
+  }
+} catch(err) {
+  bootLog('<span style="color:red">INIT ERROR: ' + err.message + '</span>');
+}
+
+// Grid — prominent lattice
+var gridHelper = new THREE.GridHelper(20, 20, 0x1a2a3a, 0x0d1520);
+scene.add(gridHelper);
+// Sub-grid dots at every lattice point for snap reference
+var dotGeo = new THREE.BufferGeometry();
+var dotVerts = [];
+for (var gx = -10; gx <= 10; gx++) {
+  for (var gz = -10; gz <= 10; gz++) {
+    dotVerts.push(gx, 0.01, gz);
+  }
+}
+dotGeo.setAttribute('position', new THREE.Float32BufferAttribute(dotVerts, 3));
+scene.add(new THREE.Points(dotGeo, new THREE.PointsMaterial({ color: 0x2a3a4a, size: 2, sizeAttenuation: false })));
+bootLog('Grid: 20x20 + lattice dots');
+
+// Axes — small, subtle
+var axesHelper = new THREE.AxesHelper(1.5);
+scene.add(axesHelper);
+bootLog('Axes: R=x G=y B=z');
+
+// Lights
+scene.add(new THREE.AmbientLight(0x606080, 0.8));
+var dirLight = new THREE.DirectionalLight(0xffffff, 1.0);
+dirLight.position.set(5, 10, 7);
+scene.add(dirLight);
+bootLog('Lights: ambient + directional');
+
+// Groups for each graph
+var groupA = new THREE.Group(); scene.add(groupA);
+var groupB = new THREE.Group(); scene.add(groupB);
+var groupR = new THREE.Group(); scene.add(groupR);
+var groupMap = { A: groupA, B: groupB, R: groupR };
+
+// Raycaster
+var raycaster = new THREE.Raycaster();
+var mouse = new THREE.Vector2();
+var plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+var planeIntersect = new THREE.Vector3();
+
+// ═══════════════════════════════════════════════════════
+// §3  GRAPH DATA OPERATIONS
+// ═══════════════════════════════════════════════════════
+function addNode(graphKey, pos) {
+  var g = graphs[graphKey];
+  var id = nodeIdCounter++;
+  var node = { id: id, pos: [pos.x, pos.y || 0, pos.z], label: graphKey + id };
+  g.nodes.push(node);
+  log('+ node ' + node.label + ' at (' + pos.x.toFixed(2) + ', ' + (pos.y||0).toFixed(2) + ', ' + pos.z.toFixed(2) + ')');
+  log('  Graph ' + graphKey + ': ' + g.nodes.length + ' nodes, ' + g.edges.length + ' edges');
+  rebuildScene();
+  return node;
+}
+
+function addEdge(graphKey, id1, id2) {
+  var g = graphs[graphKey];
+  // Check no duplicate
+  for (var i = 0; i < g.edges.length; i++) {
+    var e = g.edges[i];
+    if ((e[0]===id1 && e[1]===id2) || (e[0]===id2 && e[1]===id1)) return;
+  }
+  g.edges.push([id1, id2]);
+  log('+ edge ' + graphKey + id1 + ' ⟷ ' + graphKey + id2);
+  rebuildScene();
+}
+
+function removeNode(graphKey, id) {
+  var g = graphs[graphKey];
+  g.nodes = g.nodes.filter(function(n){ return n.id !== id; });
+  g.edges = g.edges.filter(function(e){ return e[0] !== id && e[1] !== id; });
+  log('- node ' + graphKey + id);
+  rebuildScene();
+}
+
+function findNodeAt(graphKey, screenX, screenY) {
+  mouse.x = (screenX / innerWidth) * 2 - 1;
+  mouse.y = -(screenY / innerHeight) * 2 + 1;
+  raycaster.setFromCamera(mouse, camera);
+  var group = groupMap[graphKey];
+  var hits = raycaster.intersectObjects(group.children, true);
+  for (var i = 0; i < hits.length; i++) {
+    var obj = hits[i].object;
+    if (obj.userData && obj.userData.nodeId !== undefined) {
+      return obj.userData.nodeId;
+    }
+  }
+  return null;
+}
+
+// Snap to nearest grid point (grid = 1 unit spacing)
+function snapToGrid(v) {
+  return new THREE.Vector3(Math.round(v.x), 0, Math.round(v.z));
+}
+
+function getWorldClick(screenX, screenY) {
+  mouse.x = (screenX / innerWidth) * 2 - 1;
+  mouse.y = -(screenY / innerHeight) * 2 + 1;
+  raycaster.setFromCamera(mouse, camera);
+  var hit = raycaster.ray.intersectPlane(plane, planeIntersect);
+  if (hit) {
+    var snapped = snapToGrid(planeIntersect);
+    log('  ray->grid (' + snapped.x.toFixed(0) + ', 0, ' + snapped.z.toFixed(0) + ')');
+    return snapped;
+  }
+  log('  ray missed plane!');
+  return null;
+}
+
+// Raw world click (no snap, no log) for grab
+function getWorldClickRaw(screenX, screenY) {
+  mouse.x = (screenX / innerWidth) * 2 - 1;
+  mouse.y = -(screenY / innerHeight) * 2 + 1;
+  raycaster.setFromCamera(mouse, camera);
+  var hit = raycaster.ray.intersectPlane(plane, planeIntersect);
+  return hit ? planeIntersect.clone() : null;
+}
+
+// ── GRAB: lift entire graph, move, snap down ──
+function grabStart(sx, sy) {
+  var g = graphs[activeGraph];
+  if (!g.nodes.length) { log('Nothing to grab.'); return; }
+  grabAnchor = getWorldClickRaw(sx, sy);
+  if (!grabAnchor) return;
+  grabActive = true;
+  controls.enableRotate = false;
+  controls.enablePan = false;
+  // Store original positions + lift
+  for (var i = 0; i < g.nodes.length; i++) {
+    g.nodes[i]._grabOrig = g.nodes[i].pos.slice();
+    g.nodes[i].pos[1] = grabLiftY;
+  }
+  log('GRAB: lifted ' + g.nodes.length + ' nodes');
+  rebuildScene();
+  updateMode();
+}
+
+function grabEnd(commit) {
+  var g = graphs[activeGraph];
+  grabActive = false;
+  if (!planeLocked) {
+    controls.enableRotate = true;
+    controls.enablePan = true;
+  }
+  if (commit) {
+    // Snap all nodes to grid + drop to Y=0
+    for (var i = 0; i < g.nodes.length; i++) {
+      g.nodes[i].pos[0] = Math.round(g.nodes[i].pos[0]);
+      g.nodes[i].pos[1] = 0;
+      g.nodes[i].pos[2] = Math.round(g.nodes[i].pos[2]);
+      delete g.nodes[i]._grabOrig;
+    }
+    log('GRAB: dropped + snapped to grid');
+  } else {
+    // Cancel: restore originals
+    for (var i = 0; i < g.nodes.length; i++) {
+      if (g.nodes[i]._grabOrig) {
+        g.nodes[i].pos = g.nodes[i]._grabOrig.slice();
+        delete g.nodes[i]._grabOrig;
+      }
+    }
+    log('GRAB: cancelled');
+  }
+  rebuildScene();
+  updateMode();
+}
+
+// ═══════════════════════════════════════════════════════
+// §4  GRAPH ALGEBRA — The Math
+// ═══════════════════════════════════════════════════════
+
+// UNION: A ∪ B = combine all nodes and edges
+function graphUnion(gA, gB) {
+  var R = { nodes: [], edges: [], color: 0xff69b4, name: 'A∪B' };
+  var idMap = {};
+  // Copy A
+  gA.nodes.forEach(function(n) {
+    var newId = nodeIdCounter++;
+    idMap['A'+n.id] = newId;
+    R.nodes.push({ id: newId, pos: n.pos.slice(), label: 'R'+newId });
+  });
+  // Copy B (offset to avoid overlap)
+  gB.nodes.forEach(function(n) {
+    var newId = nodeIdCounter++;
+    idMap['B'+n.id] = newId;
+    R.nodes.push({ id: newId, pos: n.pos.slice(), label: 'R'+newId });
+  });
+  // Edges
+  gA.edges.forEach(function(e) { R.edges.push([idMap['A'+e[0]], idMap['A'+e[1]]]); });
+  gB.edges.forEach(function(e) { R.edges.push([idMap['B'+e[0]], idMap['B'+e[1]]]); });
+  return R;
+}
+
+// INTERSECTION: A ∩ B = nodes close enough to match, shared edges
+function graphIntersect(gA, gB) {
+  var R = { nodes: [], edges: [], color: 0xff69b4, name: 'A∩B' };
+  var THRESH = 1.5;
+  var matchA = {}, matchB = {};
+  // Find matching nodes (within distance threshold)
+  gA.nodes.forEach(function(a) {
+    gB.nodes.forEach(function(b) {
+      var dx = a.pos[0]-b.pos[0], dz = a.pos[2]-b.pos[2];
+      var dist = Math.sqrt(dx*dx + dz*dz);
+      if (dist < THRESH && !matchA[a.id] && !matchB[b.id]) {
+        var newId = nodeIdCounter++;
+        var mid = [(a.pos[0]+b.pos[0])/2, 0, (a.pos[2]+b.pos[2])/2];
+        R.nodes.push({ id: newId, pos: mid, label: 'R'+newId });
+        matchA[a.id] = newId;
+        matchB[b.id] = newId;
+      }
+    });
+  });
+  // Edges: only if both endpoints matched
+  gA.edges.forEach(function(e) {
+    if (matchA[e[0]] && matchA[e[1]]) {
+      R.edges.push([matchA[e[0]], matchA[e[1]]]);
+    }
+  });
+  return R;
+}
+
+// CARTESIAN PRODUCT: A × B = |V_A|×|V_B| nodes
+function graphProduct(gA, gB) {
+  var R = { nodes: [], edges: [], color: 0xff69b4, name: 'A×B' };
+  var grid = {};
+  // Create product nodes
+  gA.nodes.forEach(function(a) {
+    gB.nodes.forEach(function(b) {
+      var newId = nodeIdCounter++;
+      var pos = [a.pos[0] + b.pos[0]*0.3, 0, a.pos[2] + b.pos[2]*0.3];
+      R.nodes.push({ id: newId, pos: pos, label: 'R'+newId });
+      grid[a.id + ',' + b.id] = newId;
+    });
+  });
+  // Edges: (a1,b)-(a2,b) if a1~a2, or (a,b1)-(a,b2) if b1~b2
+  gA.edges.forEach(function(ea) {
+    gB.nodes.forEach(function(b) {
+      var id1 = grid[ea[0]+','+b.id], id2 = grid[ea[1]+','+b.id];
+      if (id1 !== undefined && id2 !== undefined) R.edges.push([id1, id2]);
+    });
+  });
+  gB.edges.forEach(function(eb) {
+    gA.nodes.forEach(function(a) {
+      var id1 = grid[a.id+','+eb[0]], id2 = grid[a.id+','+eb[1]];
+      if (id1 !== undefined && id2 !== undefined) R.edges.push([id1, id2]);
+    });
+  });
+  return R;
+}
+
+// DIFFERENCE: A - B = A with matched nodes/edges removed
+function graphDiff(gA, gB) {
+  var R = { nodes: [], edges: [], color: 0xff69b4, name: 'A−B' };
+  var THRESH = 1.5;
+  var removeSet = {};
+  // Find A nodes that are too close to any B node
+  gA.nodes.forEach(function(a) {
+    gB.nodes.forEach(function(b) {
+      var dx = a.pos[0]-b.pos[0], dz = a.pos[2]-b.pos[2];
+      if (Math.sqrt(dx*dx + dz*dz) < THRESH) removeSet[a.id] = true;
+    });
+  });
+  var idMap = {};
+  gA.nodes.forEach(function(n) {
+    if (!removeSet[n.id]) {
+      var newId = nodeIdCounter++;
+      idMap[n.id] = newId;
+      R.nodes.push({ id: newId, pos: n.pos.slice(), label: 'R'+newId });
+    }
+  });
+  gA.edges.forEach(function(e) {
+    if (idMap[e[0]] !== undefined && idMap[e[1]] !== undefined) {
+      R.edges.push([idMap[e[0]], idMap[e[1]]]);
+    }
+  });
+  return R;
+}
+
+// ═══════════════════════════════════════════════════════
+// §5  SCENE REBUILD
+// ═══════════════════════════════════════════════════════
+var nodeSphereGeo = new THREE.SphereGeometry(0.12, 10, 6);
+
+// Pre-allocate materials (never recreated)
+var matCache = {
+  A: new THREE.MeshPhongMaterial({ color:0x00d4ff, emissive:0x00d4ff, emissiveIntensity:0.15, specular:0xffffff, shininess:120 }),
+  B: new THREE.MeshPhongMaterial({ color:0xffd700, emissive:0xffd700, emissiveIntensity:0.15, specular:0xffffff, shininess:120 }),
+  R: new THREE.MeshPhongMaterial({ color:0xff69b4, emissive:0xff69b4, emissiveIntensity:0.15, specular:0xffffff, shininess:120 })
+};
+// Hover material — white hot glow
+var matHover = new THREE.MeshPhongMaterial({ color:0xffffff, emissive:0xffffff, emissiveIntensity:0.6, specular:0xffffff, shininess:200 });
+// Selected/chain-start material — green glow  
+var matSelected = new THREE.MeshPhongMaterial({ color:0x7fff7f, emissive:0x7fff7f, emissiveIntensity:0.5, specular:0xffffff, shininess:200 });
+// Grab-ready material — bright white-tinted pulse to say "you can grab me"
+var matGrabReady = {
+  A: new THREE.MeshPhongMaterial({ color:0x80efff, emissive:0x00d4ff, emissiveIntensity:0.45, specular:0xffffff, shininess:200 }),
+  B: new THREE.MeshPhongMaterial({ color:0xffef80, emissive:0xffd700, emissiveIntensity:0.45, specular:0xffffff, shininess:200 }),
+  R: new THREE.MeshPhongMaterial({ color:0xff9fd4, emissive:0xff69b4, emissiveIntensity:0.45, specular:0xffffff, shininess:200 })
+};
+var grabReadyLineMatCache = {
+  A: new THREE.LineBasicMaterial({ color:0x80efff }),
+  B: new THREE.LineBasicMaterial({ color:0xffef80 }),
+  R: new THREE.LineBasicMaterial({ color:0xff9fd4 })
+};
+var lineMatCache = {
+  A: new THREE.LineBasicMaterial({ color:0x00d4ff }),
+  B: new THREE.LineBasicMaterial({ color:0xffd700 }),
+  R: new THREE.LineBasicMaterial({ color:0xff69b4 })
+};
+
+// ── FILM (soap membrane) materials ──
+var filmMatCache = {
+  A: new THREE.MeshPhongMaterial({ color:0x00d4ff, emissive:0x00d4ff, emissiveIntensity:0.08, transparent:true, opacity:0, side:THREE.DoubleSide, depthWrite:false }),
+  B: new THREE.MeshPhongMaterial({ color:0xffd700, emissive:0xffd700, emissiveIntensity:0.08, transparent:true, opacity:0, side:THREE.DoubleSide, depthWrite:false }),
+  R: new THREE.MeshPhongMaterial({ color:0xff69b4, emissive:0xff69b4, emissiveIntensity:0.08, transparent:true, opacity:0, side:THREE.DoubleSide, depthWrite:false })
+};
+var filmMeshes = { A:null, B:null, R:null };
+var filmTargetOpacity = { A:0, B:0, R:0 };
+var filmCurrentOpacity = { A:0, B:0, R:0 };
+var FILM_MAX_OPACITY = 0.28;
+var FILM_FADE_SPEED = 0.06;
+var FILM_RADIUS = 8;  // distance at which film starts appearing
+
+// Node lookup cache for fast edge resolution
+var nodeLookup = {};
+function buildNodeLookup(g) {
+  var m = {};
+  for (var i = 0; i < g.nodes.length; i++) m[g.nodes[i].id] = g.nodes[i];
+  return m;
+}
+
+// ── TRIANGLE FINDER: detect faces from edge adjacency ──
+function findTriangles(g) {
+  if (g.nodes.length > 500) return []; // skip for huge graphs (perf)
+  var adj = {};
+  g.nodes.forEach(function(n) { adj[n.id] = {}; });
+  g.edges.forEach(function(e) {
+    if (adj[e[0]]) adj[e[0]][e[1]] = true;
+    if (adj[e[1]]) adj[e[1]][e[0]] = true;
+  });
+  var tris = [];
+  var seen = {};
+  g.edges.forEach(function(e) {
+    var a = e[0], b = e[1];
+    if (!adj[a] || !adj[b]) return;
+    var na = Object.keys(adj[a]);
+    for (var i = 0; i < na.length; i++) {
+      var c = parseInt(na[i]);
+      if (c !== b && adj[b][c]) {
+        var tri = [a,b,c].sort(function(x,y){return x-y;});
+        var key = tri.join(',');
+        if (!seen[key]) { seen[key]=true; tris.push(tri); }
+      }
+    }
+  });
+  return tris;
+}
+
+// ── Build film mesh from triangles ──
+function buildFilmMesh(key) {
+  // Remove old
+  if (filmMeshes[key]) {
+    if (filmMeshes[key].geometry) filmMeshes[key].geometry.dispose();
+    scene.remove(filmMeshes[key]);
+    filmMeshes[key] = null;
+  }
+  var g = graphs[key];
+  if (!g.nodes.length || !g.edges.length) return;
+  var tris = findTriangles(g);
+  if (!tris.length) return;
+  var lookup = buildNodeLookup(g);
+  var verts = new Float32Array(tris.length * 9);
+  var vi = 0;
+  for (var i = 0; i < tris.length; i++) {
+    var na = lookup[tris[i][0]], nb = lookup[tris[i][1]], nc = lookup[tris[i][2]];
+    if (!na || !nb || !nc) continue;
+    verts[vi++]=na.pos[0]; verts[vi++]=(na.pos[1]||0.12)+0.02; verts[vi++]=na.pos[2];
+    verts[vi++]=nb.pos[0]; verts[vi++]=(nb.pos[1]||0.12)+0.02; verts[vi++]=nb.pos[2];
+    verts[vi++]=nc.pos[0]; verts[vi++]=(nc.pos[1]||0.12)+0.02; verts[vi++]=nc.pos[2];
+  }
+  if (vi === 0) return;
+  var geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(verts.subarray(0, vi), 3));
+  geo.computeVertexNormals();
+  var mesh = new THREE.Mesh(geo, filmMatCache[key]);
+  mesh.renderOrder = 1; // render after opaque
+  scene.add(mesh);
+  filmMeshes[key] = mesh;
+}
+
+function rebuildScene() {
+  var t0 = performance.now();
+  ['A','B','R'].forEach(function(key) {
+    var group = groupMap[key];
+    // Fast clear
+    for (var i = group.children.length - 1; i >= 0; i--) {
+      var c = group.children[i];
+      if (c.geometry) c.geometry.dispose();
+      group.remove(c);
+    }
+    var g = graphs[key];
+    if (!g.nodes.length) return;
+    var lookup = buildNodeLookup(g);
+    var mat = matCache[key];
+    // Nodes
+    for (var ni = 0; ni < g.nodes.length; ni++) {
+      var n = g.nodes[ni];
+      var mesh = new THREE.Mesh(nodeSphereGeo, mat);
+      mesh.position.set(n.pos[0], n.pos[1] || 0.12, n.pos[2]);
+      mesh.userData = { nodeId: n.id, graphKey: key };
+      group.add(mesh);
+    }
+    // Edges — batch into single BufferGeometry
+    if (g.edges.length) {
+      var ev = new Float32Array(g.edges.length * 6);
+      var ei = 0;
+      for (var j = 0; j < g.edges.length; j++) {
+        var n1 = lookup[g.edges[j][0]];
+        var n2 = lookup[g.edges[j][1]];
+        if (n1 && n2) {
+          ev[ei++]=n1.pos[0]; ev[ei++]=n1.pos[1]||0.12; ev[ei++]=n1.pos[2];
+          ev[ei++]=n2.pos[0]; ev[ei++]=n2.pos[1]||0.12; ev[ei++]=n2.pos[2];
+        }
+      }
+      var eg = new THREE.BufferGeometry();
+      eg.setAttribute('position', new THREE.BufferAttribute(ev.subarray(0, ei), 3));
+      group.add(new THREE.LineSegments(eg, lineMatCache[key]));
+    }
+    // Rebuild film geometry (triangles stay ready, opacity controlled in animate)
+    buildFilmMesh(key);
+
+    // Auto-apply grab-ready glow if grab tool is active on this graph
+    if (activeTool === 'grab' && key === activeGraph) {
+      for (var gi = 0; gi < group.children.length; gi++) {
+        var gc = group.children[gi];
+        if (gc.userData && gc.userData.nodeId !== undefined) {
+          gc.material = matGrabReady[key];
+          gc.scale.setScalar(1.3);
+        }
+        if (gc.isLineSegments) {
+          gc.material = grabReadyLineMatCache[key];
+        }
+      }
+    }
+  });
+  var dt = performance.now() - t0;
+  if (dt > 5) log('rebuild: ' + dt.toFixed(1) + 'ms');
+  updateHUD();
+}
+
+// Highlight system — hover + edge-chain selection
+var lastHoverId = null;
+var lastHoverMesh = null;
+var lastHoverOrigMat = null;
+var chainMesh = null;
+var chainOrigMat = null;
+
+function highlightNode(hoverId) {
+  // Un-highlight previous hover (but not if it's the chain-start)
+  if (lastHoverMesh && lastHoverId !== edgeStart) {
+    lastHoverMesh.material = lastHoverOrigMat;
+  }
+  lastHoverId = hoverId;
+  lastHoverMesh = null;
+  lastHoverOrigMat = null;
+  
+  if (hoverId === null) return;
+  
+  // Find the mesh
+  var group = groupMap[activeGraph];
+  for (var i = 0; i < group.children.length; i++) {
+    var c = group.children[i];
+    if (c.userData && c.userData.nodeId === hoverId) {
+      lastHoverMesh = c;
+      lastHoverOrigMat = matCache[activeGraph];
+      c.material = matHover;
+      // Scale up slightly
+      c.scale.setScalar(1.5);
+      break;
+    }
+  }
+  
+  // Keep chain-start highlighted green
+  updateChainHighlight();
+}
+
+function updateChainHighlight() {
+  // Clear old chain highlight
+  if (chainMesh && chainMesh !== lastHoverMesh) {
+    chainMesh.material = chainOrigMat || matCache[activeGraph];
+    chainMesh.scale.setScalar(1.0);
+  }
+  chainMesh = null;
+  chainOrigMat = null;
+  
+  if (edgeStart === null) return;
+  
+  var group = groupMap[activeGraph];
+  for (var i = 0; i < group.children.length; i++) {
+    var c = group.children[i];
+    if (c.userData && c.userData.nodeId === edgeStart) {
+      chainMesh = c;
+      chainOrigMat = matCache[activeGraph];
+      c.material = matSelected;
+      c.scale.setScalar(1.8);
+      break;
+    }
+  }
+}
+
+// Reset scales on rebuild
+var _origRebuild = rebuildScene;
+rebuildScene = function() {
+  lastHoverMesh = null;
+  chainMesh = null;
+  _origRebuild();
+  updateChainHighlight();
+};
+
+// ═══════════════════════════════════════════════════════
+// §6  UI
+// ═══════════════════════════════════════════════════════
+function setGraph(key) {
+  // If currently grabbing a different graph, drop it first
+  if (grabActive && activeGraph !== key) {
+    grabEnd(true); // commit drop before switching
+    log('Auto-dropped ' + activeGraph + ' before switching to ' + key);
+  }
+  activeGraph = key;
+  document.getElementById('b-ga').className = key==='A' ? 'btn g-a active' : 'btn g-a';
+  document.getElementById('b-gb').className = key==='B' ? 'btn g-b active' : 'btn g-b';
+  // Theme the body for CSS cascade
+  document.body.className = 'graph-' + key;
+  // Rebuild to transfer grab glow to new active graph
+  if (activeTool === 'grab') rebuildScene();
+  updateMode();
+}
+
+function setTool(tool) {
+  var prevTool = activeTool;
+  activeTool = tool;
+  edgeStart = null;
+  // End any active grab
+  if (tool !== 'grab' && grabActive) grabEnd(false);
+  ['node','edge','move','grab','delete'].forEach(function(t) {
+    document.getElementById('b-'+t).className = t===tool ? 'btn themed active' : 'btn themed';
+  });
+  // Only rebuild when entering/leaving grab (to apply/clear glow)
+  if (tool === 'grab' || prevTool === 'grab') rebuildScene();
+  updateMode();
+}
+
+
+function updateMode() {
+  var m = document.getElementById('mode');
+  var labels = { node: 'CLICK TO PLACE', edge: 'CLICK TWO NODES', move: 'DRAG NODE', grab: grabActive ? 'CLICK TO DROP' : 'CLICK TO GRAB GRAPH', delete: 'CLICK TO DELETE' };
+  m.innerHTML = '<b style="color:'+(activeGraph==='A'?'#00d4ff':'#ffd700')+'">Graph '+activeGraph+'</b><br>'+labels[activeTool];
+}
+
+function updateHUD() {
+  document.getElementById('h-a').textContent = graphs.A.nodes.length+' nodes, '+graphs.A.edges.length+' edges';
+  document.getElementById('h-b').textContent = graphs.B.nodes.length+' nodes, '+graphs.B.edges.length+' edges';
+  var r = graphs.R;
+  document.getElementById('h-result').textContent = r.nodes.length ? r.name+': '+r.nodes.length+' nodes, '+r.edges.length+' edges' : '';
+}
+
+function log(msg) {
+  var el = document.getElementById('log');
+  // Pure text only — strip any HTML
+  var clean = msg.replace(/<[^>]*>/g, '');
+  var d = document.createElement('div');
+  d.className = 'entry';
+  d.textContent = clean;
+  el.appendChild(d);
+  el.scrollTop = el.scrollHeight;
+  if (el.children.length > 80) el.removeChild(el.firstChild);
+}
+
+// ═══════════════════════════════════════════════════════
+// §7  OPERATIONS
+// ═══════════════════════════════════════════════════════
+function graphOp(op) {
+  var gA = graphs.A, gB = graphs.B;
+  if (!gA.nodes.length || !gB.nodes.length) { log('Need nodes in both A and B'); return; }
+  var result;
+  if (op === 'union')     result = graphUnion(gA, gB);
+  if (op === 'intersect') result = graphIntersect(gA, gB);
+  if (op === 'product')   result = graphProduct(gA, gB);
+  if (op === 'diff')      result = graphDiff(gA, gB);
+  graphs.R = result;
+  lastOp = op;
+  log('<span class="op">OP: ' + result.name + ' → ' + result.nodes.length + ' nodes, ' + result.edges.length + ' edges</span>');
+  rebuildScene();
+}
+
+function iterateOp() {
+  if (!lastOp) { log('No operation to iterate. Run an op first.'); return; }
+  if (!graphs.R.nodes.length) { log('No result to iterate on.'); return; }
+  // Move result → A, keep B, re-run
+  graphs.A = { nodes: graphs.R.nodes.slice(), edges: graphs.R.edges.slice(), color: 0x00d4ff, name: 'A' };
+  graphs.A.nodes.forEach(function(n) { n.label = 'A' + n.id; });
+  log('Iterate: Result → A, re-running ' + lastOp);
+  graphOp(lastOp);
+}
+
+function randomGraph() {
+  var g = graphs[activeGraph];
+  g.nodes = []; g.edges = [];
+  var N = 5 + Math.floor(Math.random() * 8);
+  var ox = activeGraph === 'B' ? 5 : -5;
+  
+  // Place nodes on grid in a ring
+  for (var i = 0; i < N; i++) {
+    var id = nodeIdCounter++;
+    var angle = (i / N) * Math.PI * 2;
+    var r = 3 + Math.random() * 2;
+    var x = Math.round(Math.cos(angle) * r + ox);
+    var z = Math.round(Math.sin(angle) * r);
+    g.nodes.push({ id: id, pos: [x, 0, z], label: activeGraph + id });
+  }
+  
+  // CLOSED graph: connect each node to next (Hamiltonian cycle)
+  for (var i = 0; i < N; i++) {
+    g.edges.push([g.nodes[i].id, g.nodes[(i+1) % N].id]);
+  }
+  // Extra random edges for richness
+  var extra = Math.floor(N * 0.5);
+  for (var j = 0; j < extra; j++) {
+    var a = Math.floor(Math.random() * N), b = Math.floor(Math.random() * N);
+    if (a !== b) {
+      var dup = false;
+      for (var k = 0; k < g.edges.length; k++) {
+        if ((g.edges[k][0]===g.nodes[a].id && g.edges[k][1]===g.nodes[b].id) ||
+            (g.edges[k][0]===g.nodes[b].id && g.edges[k][1]===g.nodes[a].id)) { dup=true; break; }
+      }
+      if (!dup) g.edges.push([g.nodes[a].id, g.nodes[b].id]);
+    }
+  }
+  log('Random ' + activeGraph + ': ' + N + ' nodes, ' + g.edges.length + ' edges (closed)');
+  rebuildScene();
+}
+
+function clearGraph() {
+  graphs[activeGraph] = { nodes: [], edges: [], color: graphs[activeGraph].color, name: activeGraph };
+  graphs.R = { nodes: [], edges: [], color: 0xff69b4, name: 'Result' };
+  log('Cleared ' + activeGraph);
+  rebuildScene();
+}
+
+// ═══════════════════════════════════════════════════════
+// §MATH  THE ALGEBRA GRAPH — one iteration
+// ═══════════════════════════════════════════════════════
+function algebraGraph() {
+  // Clear A
+  graphs.A = { nodes:[], edges:[], color:0x00d4ff, name:'A' };
+  graphs.R = { nodes:[], edges:[], color:0xff69b4, name:'Result' };
+  
+  // Define operations by TYPE
+  var ops = [
+    // Arithmetic (number → number)
+    { name:'+',   type:'num', takes:'num',  x:-6, z:-4 },
+    { name:'−',   type:'num', takes:'num',  x:-4, z:-4 },
+    { name:'×',   type:'num', takes:'num',  x:-2, z:-4 },
+    { name:'÷',   type:'num', takes:'num',  x: 0, z:-4 },
+    { name:'neg', type:'num', takes:'num',  x: 2, z:-4 },
+    { name:'inv', type:'num', takes:'num',  x: 4, z:-4 },
+    
+    // Exponential (number → number)
+    { name:'pow', type:'num', takes:'num',  x:-5, z:-1 },
+    { name:'exp', type:'num', takes:'num',  x:-3, z:-1 },
+    { name:'log', type:'num', takes:'num',  x:-1, z:-1 },
+    { name:'√',   type:'num', takes:'num',  x: 1, z:-1 },
+    
+    // Linear algebra → number
+    { name:'det',  type:'num', takes:'mat', x: 3, z:-1 },
+    { name:'tr',   type:'num', takes:'mat', x: 5, z:-1 },
+    { name:'dot',  type:'num', takes:'vec', x: 7, z:-1 },
+    
+    // Linear algebra → matrix/vector
+    { name:'Mᵀ',    type:'mat', takes:'mat', x:-5, z: 2 },
+    { name:'M†',    type:'mat', takes:'mat', x:-3, z: 2 },
+    { name:'M×M',   type:'mat', takes:'mat', x:-1, z: 2 },
+    { name:'cross',type:'vec', takes:'vec', x: 1, z: 2 },
+    { name:'eig',  type:'set', takes:'mat', x: 3, z: 2 },
+    
+    // Calculus (function → function)
+    { name:'d/dx', type:'fn', takes:'fn',   x:-4, z: 5 },
+    { name:'∫dx',  type:'fn', takes:'fn',   x:-2, z: 5 },
+    { name:'lim',  type:'fn', takes:'fn',   x: 0, z: 5 },
+    { name:'Σ',    type:'num', takes:'fn',  x: 2, z: 5 },
+    { name:'Π',    type:'num', takes:'fn',  x: 4, z: 5 },
+    
+    // Set theory
+    { name:'∪',    type:'set', takes:'set', x:-3, z: 8 },
+    { name:'∩',    type:'set', takes:'set', x:-1, z: 8 },
+    { name:'Aᶜ',   type:'set', takes:'set', x: 1, z: 8 },
+    { name:'|A|',  type:'num', takes:'set', x: 3, z: 8 },
+  ];
+  
+  // Create nodes
+  var g = graphs.A;
+  var nodeMap = {};
+  for (var i = 0; i < ops.length; i++) {
+    var op = ops[i];
+    var id = nodeIdCounter++;
+    g.nodes.push({ id: id, pos: [op.x, 0, op.z], label: op.name });
+    nodeMap[i] = { id: id, type: op.type, takes: op.takes, name: op.name };
+  }
+  
+  // Create edges: output type of A is compatible input of B
+  var edgeCount = 0;
+  for (var a = 0; a < ops.length; a++) {
+    for (var b = 0; b < ops.length; b++) {
+      if (a === b) continue;
+      // Edge exists if A's output type matches B's input type
+      if (nodeMap[a].type === nodeMap[b].takes) {
+        g.edges.push([nodeMap[a].id, nodeMap[b].id]);
+        edgeCount++;
+      }
+    }
+  }
+  
+  // Count by type
+  var types = {};
+  ops.forEach(function(o) { types[o.type] = (types[o.type]||0) + 1; });
+  
+  log('=== ALGEBRA GRAPH ===');
+  log(ops.length + ' operations, ' + edgeCount + ' composition edges');
+  log('Types: num=' + (types.num||0) + ' mat=' + (types.mat||0) + ' vec=' + (types.vec||0) + ' fn=' + (types.fn||0) + ' set=' + (types.set||0));
+  log('Density: ' + (edgeCount / (ops.length * (ops.length-1)) * 100).toFixed(1) + '%');
+  
+  // Count self-loops per type (how many ops feed back into same type)
+  var selfLoops = {};
+  ops.forEach(function(o) {
+    if (o.type === o.takes) selfLoops[o.type] = (selfLoops[o.type]||0) + 1;
+  });
+  log('Self-composable: num=' + (selfLoops.num||0) + ' mat=' + (selfLoops.mat||0) + ' fn=' + (selfLoops.fn||0) + ' set=' + (selfLoops.set||0));
+  
+  setGraph('A');
+  rebuildScene();
+  log('Click iterate with Graph B to see product explosion.');
+}
+
+// ═══════════════════════════════════════════════════════
+// FRACTALIZE: Mandelbrot on the lattice
+// z → z² + c, where c = grid position in complex plane
+// ═══════════════════════════════════════════════════════
+function fractalizeGraph() {
+  log('=== FRACTALIZE: z → z² + c ===');
+  log('Computing Mandelbrot on lattice...');
+  
+  // Clear A and R
+  graphs.A = { nodes:[], edges:[], color:0x00d4ff, name:'A (bounded)' };
+  graphs.B = { nodes:[], edges:[], color:0xffd700, name:'B (escaped)' };
+  graphs.R = { nodes:[], edges:[], color:0xff69b4, name:'Result' };
+  
+  var gA = graphs.A; // bounded set
+  var gB = graphs.B; // escaped set
+  var MAX_ITER = 50;
+  var BAIL = 4; // |z|² > 4 = escaped
+  
+  // Grid: real axis x ∈ [-2, 1], imag axis z ∈ [-1.5, 1.5]
+  // Map to lattice: step 0.1 = fine resolution
+  var STEP = 0.15;
+  var xMin = -2, xMax = 1;
+  var zMin = -1.5, zMax = 1.5;
+  
+  var boundedNodes = [];
+  var escapedNodes = [];
+  var gridMap = {}; // 'x,z' -> nodeId for edge building
+  var totalNodes = 0;
+  
+  for (var cx = xMin; cx <= xMax; cx += STEP) {
+    for (var cz = zMin; cz <= zMax; cz += STEP) {
+      // Mandelbrot iteration: z = z² + c
+      var zr = 0, zi = 0;
+      var iter = 0;
+      while (iter < MAX_ITER && zr*zr + zi*zi <= BAIL) {
+        var tmp = zr*zr - zi*zi + cx;
+        zi = 2*zr*zi + cz;
+        zr = tmp;
+        iter++;
+      }
+      
+      var id = nodeIdCounter++;
+      // Scale up for 3D: multiply by 5 to fill the grid
+      var px = cx * 5;
+      var pz = cz * 5;
+      var key = Math.round(cx/STEP) + ',' + Math.round(cz/STEP);
+      
+      if (iter === MAX_ITER) {
+        // BOUNDED: stays in set
+        gA.nodes.push({ id:id, pos:[px, 0, pz], label:'M'+id, iter:iter });
+        gridMap[key] = { id:id, graph:'A' };
+        boundedNodes.push(id);
+      } else {
+        // ESCAPED: flies away
+        // Height = escape speed (faster escape = higher)
+        var h = (1 - iter/MAX_ITER) * 2;
+        gB.nodes.push({ id:id, pos:[px, h, pz], label:'E'+id, iter:iter });
+        gridMap[key] = { id:id, graph:'B' };
+        escapedNodes.push(id);
+      }
+      totalNodes++;
+    }
+  }
+  
+  // Build edges: connect adjacent bounded nodes (4-connectivity)
+  var dx = [1, 0, -1, 0];
+  var dz = [0, 1, 0, -1];
+  var edgesA = 0, edgesB = 0;
+  
+  for (var cx = xMin; cx <= xMax; cx += STEP) {
+    for (var cz = zMin; cz <= zMax; cz += STEP) {
+      var ki = Math.round(cx/STEP);
+      var kj = Math.round(cz/STEP);
+      var key1 = ki + ',' + kj;
+      var n1 = gridMap[key1];
+      if (!n1) continue;
+      
+      for (var d = 0; d < 4; d++) {
+        var key2 = (ki+dx[d]) + ',' + (kj+dz[d]);
+        var n2 = gridMap[key2];
+        if (!n2) continue;
+        // Only connect same-type (bounded-bounded, escaped-escaped)
+        if (n1.graph === n2.graph && n1.id < n2.id) {
+          if (n1.graph === 'A') { gA.edges.push([n1.id, n2.id]); edgesA++; }
+          else { gB.edges.push([n1.id, n2.id]); edgesB++; }
+        }
+      }
+    }
+  }
+  
+  log('Lattice: ' + totalNodes + ' points (' + Math.round((xMax-xMin)/STEP) + 'x' + Math.round((zMax-zMin)/STEP) + ')');
+  log('Bounded (cyan): ' + boundedNodes.length + ' nodes, ' + edgesA + ' edges');
+  log('Escaped (gold): ' + escapedNodes.length + ' nodes, ' + edgesB + ' edges');
+  log('Bounded ratio: ' + (boundedNodes.length/totalNodes*100).toFixed(1) + '%');
+  log('z → z² + c, max ' + MAX_ITER + ' iterations, bail |z|² > ' + BAIL);
+  log('The boundary IS the fractal.');
+  
+  rebuildScene();
+  
+  // Auto plane lock for top-down view
+  if (!planeLocked) togglePlane();
+}
+
+// ═══════════════════════════════════════════════════════
+// FRACTALIZE: subdivide the active graph
+// Each edge gets a midpoint node. Midpoints sharing
+// a vertex get connected. Graph refines fractally.
+// ═══════════════════════════════════════════════════════
+var fractalIter = 0;
+
+// ═══════════════════════════════════════════════════════
+// SHAPE PRIMITIVES: Pentagon, Hexagon, C60
+// ═══════════════════════════════════════════════════════
+function genPoly(sides) {
+  var g = graphs[activeGraph];
+  g.nodes = []; g.edges = [];
+  var r = 3;
+  var ox = activeGraph === 'B' ? 5 : -5;
+  for (var i = 0; i < sides; i++) {
+    var angle = (i / sides) * Math.PI * 2 - Math.PI/2;
+    var id = nodeIdCounter++;
+    g.nodes.push({ id:id, pos:[Math.round(Math.cos(angle)*r + ox), 0, Math.round(Math.sin(angle)*r)], label:activeGraph+id });
+  }
+  for (var i = 0; i < sides; i++) {
+    g.edges.push([g.nodes[i].id, g.nodes[(i+1)%sides].id]);
+  }
+  log((sides===5?'PENTAGON':sides===6?'HEXAGON':sides+'-gon') + ' in ' + activeGraph + ': ' + sides + ' nodes, ' + sides + ' edges');
+  log('  V-E+F = ' + sides + '-' + sides + '+1 = 1 (disk, chi=1)');
+  rebuildScene();
+}
+
+function genC60() {
+  var g = graphs[activeGraph];
+  g.nodes = []; g.edges = [];
+  var ox = activeGraph === 'B' ? 5 : -5;
+  // C60 truncated icosahedron: 60 vertices, 90 edges, 32 faces (12 pent + 20 hex)
+  // Golden ratio
+  var phi = (1 + Math.sqrt(5)) / 2;
+  // Generate vertices from even permutations of (0, ±1, ±3φ)
+  // Simplified: use icosahedron vertices then truncate
+  var verts = [];
+  // 12 icosahedron vertices
+  var ico = [];
+  for (var i = 0; i < 12; i++) {
+    var lat, lon;
+    if (i === 0) { lat = Math.PI/2; lon = 0; }
+    else if (i === 11) { lat = -Math.PI/2; lon = 0; }
+    else if (i < 6) { lat = Math.atan(0.5); lon = (i-1) * Math.PI*2/5; }
+    else { lat = -Math.atan(0.5); lon = (i-6) * Math.PI*2/5 + Math.PI/5; }
+    ico.push([Math.cos(lat)*Math.cos(lon)*4, Math.cos(lat)*Math.sin(lon)*4, Math.sin(lat)*4]);
+  }
+  // Place 5 nodes around each icosahedron vertex (truncation)
+  var allNodes = [];
+  ico.forEach(function(v, vi) {
+    for (var j = 0; j < 5; j++) {
+      var angle = j * Math.PI * 2 / 5;
+      var r = 0.8;
+      // Perturb around icosahedron vertex
+      var px = v[0] + Math.cos(angle)*r + ox;
+      var pz = v[2] + Math.sin(angle)*r;
+      var id = nodeIdCounter++;
+      g.nodes.push({ id:id, pos:[Math.round(px), 0, Math.round(pz)], label:activeGraph+id });
+      allNodes.push({ id:id, icoIdx:vi, localIdx:j });
+    }
+  });
+  // Connect within each pentagon (5-cycle)
+  for (var vi = 0; vi < 12; vi++) {
+    for (var j = 0; j < 5; j++) {
+      var a = allNodes[vi*5 + j].id;
+      var b = allNodes[vi*5 + (j+1)%5].id;
+      g.edges.push([a, b]);
+    }
+  }
+  // Connect between pentagons (nearest neighbors across icosahedron edges)
+  // Use distance-based heuristic
+  for (var i = 0; i < g.nodes.length; i++) {
+    for (var j = i+1; j < g.nodes.length; j++) {
+      var ni = allNodes[i], nj = allNodes[j];
+      if (ni.icoIdx === nj.icoIdx) continue; // same pentagon, already connected
+      var dx = g.nodes[i].pos[0]-g.nodes[j].pos[0];
+      var dz = g.nodes[i].pos[2]-g.nodes[j].pos[2];
+      var dist = Math.sqrt(dx*dx + dz*dz);
+      if (dist < 2.0) { // threshold for inter-pentagon edges
+        g.edges.push([g.nodes[i].id, g.nodes[j].id]);
+      }
+    }
+  }
+  log('C60 in ' + activeGraph + ': ' + g.nodes.length + ' nodes, ' + g.edges.length + ' edges');
+  log('  12 pentagons + 20 hexagons = 32 faces');
+  log('  V-E+F = 60-90+32 = 2 (sphere, chi=2)');
+  rebuildScene();
+}
+
+// ═══════════════════════════════════════════════════════
+// MOBIUSIFY: remove 2 antipodal nodes (chi: 2 → 0)
+// ═══════════════════════════════════════════════════════
+function mobiusifyGraph() {
+  var g = graphs[activeGraph];
+  if (g.nodes.length < 4) { log('Need at least 4 nodes to MOBIUSIFY.'); return; }
+  
+  // Find the two most distant nodes (antipodal pair)
+  var maxDist = 0, antipodal = [0, 1];
+  for (var i = 0; i < g.nodes.length; i++) {
+    for (var j = i+1; j < g.nodes.length; j++) {
+      var dx = g.nodes[i].pos[0] - g.nodes[j].pos[0];
+      var dz = g.nodes[i].pos[2] - g.nodes[j].pos[2];
+      var d = dx*dx + dz*dz;
+      if (d > maxDist) { maxDist = d; antipodal = [g.nodes[i].id, g.nodes[j].id]; }
+    }
+  }
+  
+  var beforeN = g.nodes.length, beforeE = g.edges.length;
+  
+  // Count faces before (Euler: F = E - V + 2 for connected planar)
+  var chiB = beforeE - beforeN + 2;
+  
+  // Remove antipodal nodes and their edges
+  var removeSet = {};
+  removeSet[antipodal[0]] = true;
+  removeSet[antipodal[1]] = true;
+  g.nodes = g.nodes.filter(function(n) { return !removeSet[n.id]; });
+  g.edges = g.edges.filter(function(e) { return !removeSet[e[0]] && !removeSet[e[1]]; });
+  
+  var afterN = g.nodes.length, afterE = g.edges.length;
+  var chiA = afterE - afterN + 2;
+  
+  log('=== MOBIUSIFY ===');
+  log('Removed 2 antipodal nodes (max distance: ' + Math.sqrt(maxDist).toFixed(1) + ')');
+  log('Before: ' + beforeN + ' nodes, ' + beforeE + ' edges');
+  log('After:  ' + afterN + ' nodes, ' + afterE + ' edges');
+  log('Euler estimate: chi ' + chiB + ' -> ' + chiA);
+  log('Two faces die. Topology changes.');
+  
+  rebuildScene();
+}
+
+function subdivideGraph() {
+  var gk = activeGraph;
+  var g = graphs[gk];
+  if (g.nodes.length < 2 || g.edges.length < 1) {
+    log('Need a graph with edges to fractalize.'); return;
+  }
+  
+  var t0 = performance.now();
+  fractalIter++;
+  
+  var oldNodes = g.nodes.length;
+  var oldEdges = g.edges.length;
+  
+  // Build lookup
+  var lookup = {};
+  g.nodes.forEach(function(n) { lookup[n.id] = n; });
+  
+  // Build adjacency: which edges touch each node
+  var adj = {};  // nodeId -> [edgeIndex, ...]
+  g.edges.forEach(function(e, i) {
+    if (!adj[e[0]]) adj[e[0]] = [];
+    if (!adj[e[1]]) adj[e[1]] = [];
+    adj[e[0]].push(i);
+    adj[e[1]].push(i);
+  });
+  
+  // Step 1: Create midpoint node for each edge
+  var midpoints = [];  // index = edge index, value = new node
+  var newNodes = g.nodes.slice(); // keep originals
+  var newEdges = [];
+  
+  g.edges.forEach(function(e, i) {
+    var n1 = lookup[e[0]], n2 = lookup[e[1]];
+    if (!n1 || !n2) return;
+    var mid = {
+      id: nodeIdCounter++,
+      pos: [(n1.pos[0]+n2.pos[0])/2, 0, (n1.pos[2]+n2.pos[2])/2],
+      label: gk + 'm' + i
+    };
+    midpoints[i] = mid;
+    newNodes.push(mid);
+    
+    // Connect midpoint to both endpoints
+    newEdges.push([e[0], mid.id]);
+    newEdges.push([mid.id, e[1]]);
+  });
+  
+  // Step 2: Connect midpoints that share a vertex
+  // For each original node, find all its edge midpoints and connect them in a ring
+  Object.keys(adj).forEach(function(nid) {
+    var edgeIndices = adj[nid];
+    if (edgeIndices.length < 2) return;
+    // Connect consecutive midpoints around this node
+    for (var i = 0; i < edgeIndices.length; i++) {
+      for (var j = i+1; j < edgeIndices.length; j++) {
+        var m1 = midpoints[edgeIndices[i]];
+        var m2 = midpoints[edgeIndices[j]];
+        if (m1 && m2) {
+          newEdges.push([m1.id, m2.id]);
+        }
+      }
+    }
+  });
+  
+  // Step 3: Optionally keep original edges too (full refinement)
+  // g.edges.forEach(function(e) { newEdges.push([e[0], e[1]]); });
+  
+  // Apply
+  g.nodes = newNodes;
+  g.edges = newEdges;
+  
+  var dt = performance.now() - t0;
+  
+  log('=== FRACTALIZE iter ' + fractalIter + ' ===');
+  log('Before: ' + oldNodes + ' nodes, ' + oldEdges + ' edges');
+  log('After:  ' + g.nodes.length + ' nodes, ' + g.edges.length + ' edges');
+  log('Growth: nodes ×' + (g.nodes.length/oldNodes).toFixed(2) + ', edges ×' + (g.edges.length/oldEdges).toFixed(2));
+  log('Density: ' + (2*g.edges.length / (g.nodes.length * (g.nodes.length-1)) * 100).toFixed(3) + '%');
+  log('Compute: ' + dt.toFixed(1) + 'ms');
+  
+  rebuildScene();
+}
+
+function togglePlane() {
+  planeLocked = !planeLocked;
+  controls.enableRotate = !planeLocked;
+  log('Plane lock: ' + (planeLocked ? 'ON (top-down)' : 'OFF (orbit)'));
+  if (planeLocked) {
+    camera.position.set(0, 15, 0.01);
+    camera.lookAt(0, 0, 0);
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// §8  MOUSE INTERACTION
+// ═══════════════════════════════════════════════════════
+var isDragging = false;
+var dragNodeId = null;
+
+// Use pointerup instead of mousedown to avoid OrbitControls eating clicks
+var pointerDownTime = 0;
+var pointerDownPos = {x:0, y:0};
+
+renderer.domElement.addEventListener('pointerdown', function(e) {
+  if (e.button !== 0) return;
+  pointerDownTime = performance.now();
+  pointerDownPos = { x: e.clientX, y: e.clientY };
+});
+
+renderer.domElement.addEventListener('pointerup', function(e) {
+  if (e.button !== 0) return;
+  var dt = performance.now() - pointerDownTime;
+  var dx = Math.abs(e.clientX - pointerDownPos.x);
+  var dy = Math.abs(e.clientY - pointerDownPos.y);
+  // Only count as click if short + no drag (otherwise it's an orbit)
+  if (dt > 300 || dx > 5 || dy > 5) return;
+  
+  log('click (' + e.clientX + ',' + e.clientY + ') tool=' + activeTool + ' graph=' + activeGraph);
+
+  // Check both graphs for node hits
+  var nodeId = findNodeAt(activeGraph, e.clientX, e.clientY);
+  log('  hit: ' + (nodeId !== null ? 'node ' + activeGraph + nodeId : 'empty'));
+
+  if (activeTool === 'node' && nodeId === null) {
+    var pos = getWorldClick(e.clientX, e.clientY);
+    if (pos) addNode(activeGraph, pos);
+
+  } else if (activeTool === 'edge') {
+    if (nodeId !== null) {
+      if (edgeStart === null) {
+        edgeStart = nodeId;
+        log('Edge start: ' + activeGraph + nodeId);
+      } else {
+        addEdge(activeGraph, edgeStart, nodeId);
+        // CHAIN MODE: last node becomes new start
+        edgeStart = nodeId;
+        log('Chain: next from ' + activeGraph + nodeId + ' (ESC to stop)');
+      }
+    }
+
+  } else if (activeTool === 'delete' && nodeId !== null) {
+    removeNode(activeGraph, nodeId);
+
+  } else if (activeTool === 'move' && nodeId !== null) {
+    isDragging = true;
+    dragNodeId = nodeId;
+    controls.enabled = false;
+
+  } else if (activeTool === 'grab') {
+    if (!grabActive) {
+      grabStart(e.clientX, e.clientY);
+    } else {
+      grabEnd(true);
+    }
+  }
+});
+
+// Track if mouse is over a node - pause orbit when hovering
+var hoveringNode = false;
+
+renderer.domElement.addEventListener('mousemove', function(e) {
+  // Update mouse world pos for film proximity
+  updateMouseWorld(e);
+  // Grab: move entire graph
+  if (grabActive) {
+    var pos = getWorldClickRaw(e.clientX, e.clientY);
+    if (pos && grabAnchor) {
+      var dx = pos.x - grabAnchor.x;
+      var dz = pos.z - grabAnchor.z;
+      var g = graphs[activeGraph];
+      for (var i = 0; i < g.nodes.length; i++) {
+        g.nodes[i].pos[0] = g.nodes[i]._grabOrig[0] + dx;
+        g.nodes[i].pos[2] = g.nodes[i]._grabOrig[2] + dz;
+      }
+      rebuildScene();
+    }
+    return;
+  }
+  if (isDragging && dragNodeId !== null) {
+    // Use raw (no log spam) + snap for smooth drag
+    var rawPos = getWorldClickRaw(e.clientX, e.clientY);
+    if (rawPos) {
+      var snapped = snapToGrid(rawPos);
+      var g = graphs[activeGraph];
+      var node = g.nodes.find(function(n){ return n.id === dragNodeId; });
+      if (node) {
+        node.pos[0] = snapped.x;
+        node.pos[2] = snapped.z;
+        rebuildScene();
+      }
+    }
+    return;
+  }
+  // Check hover over node - freeze orbit + highlight
+  var hoverId = findNodeAt(activeGraph, e.clientX, e.clientY);
+  highlightNode(hoverId);
+  if (hoverId !== null && !hoveringNode) {
+    hoveringNode = true;
+    controls.enableRotate = false;
+    controls.enablePan = false;
+    renderer.domElement.style.cursor = 'pointer';
+  } else if (hoverId === null && hoveringNode) {
+    hoveringNode = false;
+    if (!planeLocked) {
+      controls.enableRotate = true;
+      controls.enablePan = true;
+    }
+    renderer.domElement.style.cursor = 'crosshair';
+  }
+});
+
+renderer.domElement.addEventListener('mouseup', function() {
+  if (isDragging) {
+    isDragging = false;
+    dragNodeId = null;
+    controls.enabled = true;
+  }
+});
+
+// ═══════════════════════════════════════════════════════
+// §9  RESIZE + ANIMATE
+// ═══════════════════════════════════════════════════════
+window.addEventListener('resize', function() {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+
+// ── Mouse world position for film proximity ──
+var mouseWorld = new THREE.Vector3();
+var _filmPlane = new THREE.Plane(new THREE.Vector3(0,1,0), 0);
+
+function updateMouseWorld(e) {
+  if (!e) return;
+  var mx = (e.clientX / innerWidth) * 2 - 1;
+  var my = -(e.clientY / innerHeight) * 2 + 1;
+  raycaster.setFromCamera(new THREE.Vector2(mx, my), camera);
+  raycaster.ray.intersectPlane(_filmPlane, mouseWorld);
+}
+
+// Compute centroid of a graph
+function graphCentroid(g) {
+  if (!g.nodes.length) return null;
+  var cx=0, cz=0;
+  for (var i=0; i<g.nodes.length; i++) { cx+=g.nodes[i].pos[0]; cz+=g.nodes[i].pos[2]; }
+  return { x: cx/g.nodes.length, z: cz/g.nodes.length };
+}
+
+function animate() {
+  requestAnimationFrame(animate);
+  controls.update();
+  // Film fade: compute proximity per graph
+  ['A','B','R'].forEach(function(key) {
+    if (!filmMeshes[key]) { filmCurrentOpacity[key]=0; return; }
+    var c = graphCentroid(graphs[key]);
+    if (!c) { filmTargetOpacity[key]=0; }
+    else {
+      var dx = mouseWorld.x - c.x;
+      var dz = mouseWorld.z - c.z;
+      var dist = Math.sqrt(dx*dx + dz*dz);
+      // Fade: 0 at FILM_RADIUS, max at 0
+      // Film only shows on active graph when grab tool is selected
+      if (activeTool === 'grab' && key === activeGraph) {
+        filmTargetOpacity[key] = dist < FILM_RADIUS ? FILM_MAX_OPACITY * (1 - dist/FILM_RADIUS) : 0;
+      } else {
+        filmTargetOpacity[key] = 0;
+      }
+    }
+    // Smooth lerp
+    filmCurrentOpacity[key] += (filmTargetOpacity[key] - filmCurrentOpacity[key]) * FILM_FADE_SPEED;
+    if (filmCurrentOpacity[key] < 0.001) filmCurrentOpacity[key] = 0;
+    filmMatCache[key].opacity = filmCurrentOpacity[key];
+    filmMeshes[key].visible = filmCurrentOpacity[key] > 0.001;
+  });
+  renderer.render(scene, camera);
+}
+
+// ═══════════════════════════════════════════════════════
+// §10  INIT
+// ═══════════════════════════════════════════════════════
+// ESC = cancel edge chain, R = hard reset
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    if (edgeStart !== null) {
+      log('Edge chain cancelled.');
+      edgeStart = null;
+    }
+  }
+  if ((e.key === 'r' || e.key === 'R') && !e.ctrlKey && !e.metaKey) {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+    e.preventDefault();
+    graphs.A = { nodes:[], edges:[], color:0x00d4ff, name:'A' };
+    graphs.B = { nodes:[], edges:[], color:0xffd700, name:'B' };
+    graphs.R = { nodes:[], edges:[], color:0xff69b4, name:'Result' };
+    edgeStart = null;
+    lastOp = null;
+    nodeIdCounter = 0;
+    log('=== HARD RESET (R) ===');
+    rebuildScene();
+  }
+});
+
+// Auto-select all log text on hover
+var logEl = document.getElementById('log');
+logEl.addEventListener('mouseenter', function() {
+  var range = document.createRange();
+  range.selectNodeContents(logEl);
+  var sel = window.getSelection();
+  sel.removeAllRanges();
+  sel.addRange(range);
+});
+
+renderer.domElement.style.cursor = 'crosshair';
+
+updateMode();
+bootLog('Scene children: ' + scene.children.length);
+bootLog('Camera pos: (' + camera.position.x.toFixed(1) + ',' + camera.position.y.toFixed(1) + ',' + camera.position.z.toFixed(1) + ')');
+bootLog('---');
+log('Graph Sandbox v2.9 ready');
+log('Surface film appears as mouse nears graph.');
+log('Click canvas to place nodes.');
+log('Build A (cyan) + B (gold), then operate.');
+log('SNAP = save state, click tags to restore.');
+log('GRAB = lift + move entire graph.');
+
+// Test: render one frame immediately and log
+try {
+  renderer.render(scene, camera);
+  bootLog('First render: OK (' + renderer.info.render.calls + ' draw calls)');
+} catch(err) {
+  bootLog('<span style="color:red">Render error: ' + err.message + '</span>');
+}
+
+animate();
+</script>
+</body>
+</html>

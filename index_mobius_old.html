@@ -1,0 +1,2741 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>MÃ¶bius v22 Â· Surface Flow + Zoom-aware Envelope</title>
+<style>
+  body { margin:0; overflow:hidden; background:#0a0c12; font-family:ui-monospace,monospace; color:#ccd1e0; }
+  canvas { display:block; cursor:grab; }
+  body.dragging canvas { cursor: grabbing; }
+  .label {
+    position:fixed; top:14px; left:14px; z-index:10;
+    background:rgba(10,12,18,0.78); padding:10px 14px; border-radius:6px;
+    border:1px solid #1a1f2e; font-size:12px; line-height:1.7;
+    pointer-events: none;
+    opacity: 1;
+    transition: opacity 0.7s ease;
+  }
+  .label.hidden { opacity: 0; }
+
+  /* v16.2: CONTROLS LEGEND â€” top-right counterpart to the HUD label.
+     Same panel aesthetic (bg, border, font, padding), small kbd-style keys
+     on the left and the action on the right. Auto-hides with the HUD so
+     they breathe together. Tight design: two columns, low opacity, the
+     cyan title matches the HUD title color for kinship. */
+  .legend {
+    position: fixed; top: 14px; right: 14px; z-index: 10;
+    background: rgba(10,12,18,0.78); padding: 10px 14px; border-radius: 6px;
+    border: 1px solid #1a1f2e; font-family: ui-monospace, monospace;
+    font-size: 11px; line-height: 1.7;
+    pointer-events: none;
+    opacity: 1;
+    transition: opacity 0.7s ease;
+    color: rgba(220,228,240,0.62);
+  }
+  .legend.hidden { opacity: 0; }
+  .legend-title {
+    color: #00d4ff; font-size: 10px; letter-spacing: 0.10em;
+    margin-bottom: 6px; font-weight: 600;
+  }
+  .legend-row {
+    display: grid; grid-template-columns: 96px 1fr; gap: 10px;
+    align-items: baseline;
+  }
+  .legend-row kbd {
+    color: rgba(220,228,240,0.92);
+    background: rgba(255,255,255,0.04);
+    padding: 0 5px; border-radius: 3px;
+    font-family: inherit; font-size: 10px; font-weight: 500;
+    border: 1px solid rgba(255,255,255,0.08);
+    white-space: nowrap;
+    text-align: center;
+  }
+  /* v15.2: PAUSE indicator â€” appears at top center when sim is frozen */
+  .pause-indicator {
+    position: fixed; top: 18px; left: 50%; transform: translateX(-50%);
+    z-index: 11;
+    background: rgba(10,12,18,0.85);
+    border: 1px solid #00d4ff;
+    border-radius: 6px;
+    padding: 8px 16px;
+    font-family: ui-monospace, monospace;
+    font-size: 12px;
+    color: #00d4ff;
+    letter-spacing: 0.06em;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+  .pause-indicator.visible { opacity: 1; }
+
+  /* v21: ENVELOPE MYSTERY PANEL â€” slides in from the right when a
+     dodecahedral face is clicked. Same dark family as the HUD + legend,
+     ui-monospace throughout, warm-honey accent (#e8b86a) replacing cyan
+     for the envelope tag and accent rules so it reads as "this is the
+     bigger context around the calculation" not part of the strip's
+     own technical chrome. */
+  .envelope-panel {
+    position: fixed; top: 0; right: 0; height: 100vh;
+    width: 460px; max-width: 92vw;
+    background: rgba(10,12,18,0.96);
+    border-left: 1px solid #2a2620;
+    box-shadow: -20px 0 40px rgba(0,0,0,0.5);
+    padding: 56px 38px 48px;
+    z-index: 30;
+    transform: translateX(100%);
+    transition: transform 0.55s cubic-bezier(0.22, 0.61, 0.36, 1);
+    overflow-y: auto;
+    font-family: ui-monospace, monospace;
+    color: rgba(230, 226, 216, 0.92);
+  }
+  .envelope-panel.open { transform: translateX(0); }
+  .envelope-panel .close {
+    position: absolute; top: 16px; right: 18px;
+    background: none; border: 1px solid #2a2620;
+    color: rgba(230, 226, 216, 0.55);
+    font-family: inherit; font-size: 14px;
+    width: 30px; height: 30px; border-radius: 4px;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .envelope-panel .close:hover {
+    color: rgba(230, 226, 216, 0.95);
+    border-color: #e8b86a;
+  }
+  .envelope-panel .tag {
+    font-size: 10px; letter-spacing: 0.18em;
+    color: #e8b86a; text-transform: uppercase;
+    margin-bottom: 14px; font-weight: 600;
+  }
+  .envelope-panel h2 {
+    font-family: ui-monospace, monospace;
+    font-weight: 500; font-size: 22px; line-height: 1.25;
+    color: rgba(230, 226, 216, 0.96);
+    margin-bottom: 10px;
+  }
+  .envelope-panel .technical {
+    font-size: 11px; letter-spacing: 0.02em; line-height: 1.5;
+    color: rgba(230, 226, 216, 0.5);
+    margin-bottom: 26px;
+  }
+  .envelope-panel .body {
+    font-size: 13px; line-height: 1.65;
+    color: rgba(230, 226, 216, 0.85);
+    margin-bottom: 22px;
+  }
+  .envelope-panel .rule {
+    height: 1px; background: #2a2620; margin: 22px 0;
+  }
+  .envelope-panel .atoms-label {
+    font-size: 10px; letter-spacing: 0.16em;
+    color: rgba(230, 226, 216, 0.45); text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .envelope-panel .atoms {
+    font-size: 12px; line-height: 1.5;
+    color: rgba(230, 226, 216, 0.82);
+    list-style: none; padding: 0;
+  }
+  .envelope-panel .atoms li {
+    padding: 6px 0; border-bottom: 1px solid #1f1c18;
+  }
+  .envelope-panel .atoms li:last-child { border-bottom: none; }
+  .envelope-panel .footer {
+    margin-top: 26px; font-size: 11px; line-height: 1.55;
+    color: rgba(230, 226, 216, 0.5); font-style: italic;
+  }
+  .envelope-panel .footer:empty { display: none; }
+
+  /* v22: ENVELOPE TOGGLE PULSE â€” triggered when zoom crossing auto-toggles
+     the envelope. Brief expanding glow ring + tint flash so the user gets
+     monkey-brain feedback ("the mode changed, here is the button"). 800ms,
+     fires by adding the .pulse class then removing it on animationend. */
+  @keyframes envelopePulse {
+    0%   { box-shadow: 0 0 0 0 rgba(232, 184, 106, 0.65); transform: scale(1); }
+    50%  { box-shadow: 0 0 0 14px rgba(232, 184, 106, 0.0); transform: scale(1.08); }
+    100% { box-shadow: 0 0 0 0 rgba(232, 184, 106, 0.0); transform: scale(1); }
+  }
+  .pulse-envelope { animation: envelopePulse 0.8s ease-out; }
+  .label .title { color:#00d4ff; font-weight:bold; margin-bottom:6px; }
+  .label .stat span { color:#fff; }
+  .label .small { color:#8a92a8; font-size:11px; }
+  .label .msg { color:#8a92a8; font-size:11px; margin-top:8px; }
+  .label .msg.closed { color:#7fffa0; font-weight:bold; font-size:12px; }
+  .label .msg.over { color:#ff9090; }
+  .controls {
+    position:fixed; bottom:20px; left:50%; transform:translateX(-50%); z-index:10;
+    background:rgba(10,12,18,0.88); padding:12px 18px; border-radius:8px;
+    border:1px solid #1a1f2e; display:flex; align-items:center; gap:14px;
+    font-size:12px;
+  }
+  .controls button {
+    background:#1a1f2e; color:#ccd1e0; border:1px solid #2a3040;
+    padding:6px 14px; border-radius:4px; cursor:pointer; font-family:inherit; font-size:12px;
+  }
+  .controls button:hover { background:#2a3040; }
+  .controls button.primary { background:#00d4ff; color:#0a0c12; border-color:#00d4ff; }
+  .controls button.primary:hover { background:#33ddff; }
+</style>
+</head>
+<body>
+
+<div class="label">
+  <div class="title">MÃ¶bius v22 Â· Surface Flow + Zoom-aware</div>
+  <div class="stat">substrate: <span>MÃ¶bius Â· Ï‡=0</span></div>
+  <div class="stat">pentagons: <span id="pentN">0</span> / 12</div>
+  <div class="stat" id="selStat" style="display:none;">selected: <span id="selN" style="color:#00d4ff;">0</span> Â· shift+click to toggle</div>
+  <div class="msg" id="msg">click strip â†’ pentagon Â· shift+click â†’ select Â· drag orbit Â· shift+drag pan Â· scroll zoom</div>
+</div>
+
+<div class="legend" id="legend">
+  <div class="legend-title">CONTROLS</div>
+  <div class="legend-row"><kbd>click</kbd><span>place / remove</span></div>
+  <div class="legend-row"><kbd>â‡§ click</kbd><span>select Â· toggle</span></div>
+  <div class="legend-row"><kbd>drag</kbd><span>orbit</span></div>
+  <div class="legend-row"><kbd>â‡§ drag</kbd><span>pan</span></div>
+  <div class="legend-row"><kbd>scroll</kbd><span>zoom</span></div>
+  <div class="legend-row"><kbd>hover 2s</kbd><span>pause + inspect</span></div>
+  <div class="legend-row"><kbd>click empty</kbd><span>open mystery</span></div>
+  <div class="legend-row"><kbd>esc</kbd><span>resume / close</span></div>
+</div>
+
+<!-- v21: ENVELOPE MYSTERY PANEL â€” populated dynamically on click -->
+<aside class="envelope-panel" id="envelopePanel" aria-hidden="true">
+  <button class="close" id="envelopeClose" aria-label="Close">Ã—</button>
+  <div class="tag">Mystery Â· open question</div>
+  <h2 id="envTitle">â€”</h2>
+  <div class="technical" id="envTechnical">â€”</div>
+  <div class="body" id="envBody">â€”</div>
+  <div class="rule"></div>
+  <div class="atoms-label">5 structural elements implicated</div>
+  <ul class="atoms" id="envAtoms"></ul>
+  <div class="footer" id="envFooter">â€”</div>
+</aside>
+
+<div id="pauseIndicator" class="pause-indicator">â¸  PAUSED  Â·  lemon = real neighbors  Â·  amber = ideal local  Â·  orangeâ†‘ / redâ†“ = dodecahedra  Â·  click to resume</div>
+
+<div class="controls">
+  <span>density</span>
+  <input type="range" id="density" min="20" max="480" step="4" value="120" style="width:130px; accent-color:#00d4ff;">
+  <span id="densityVal" style="color:#00d4ff; font-weight:bold; min-width:28px; text-align:right;">120</span>
+  <span style="margin-left:8px;">zoom</span>
+  <input type="range" id="zoom" min="25" max="800" step="1" value="82" style="width:110px; accent-color:#c7f0ff;">
+  <span id="zoomVal" style="color:#c7f0ff; font-weight:bold; min-width:32px; text-align:right;">8.2</span>
+  <span style="margin-left:8px;">gravity</span>
+  <input type="range" id="gravity" min="0" max="200" step="1" value="0" style="width:120px; accent-color:#ff9090;">
+  <span id="gravityVal" style="color:#ff9090; font-weight:bold; min-width:28px; text-align:right;">0</span>
+  <span style="margin-left:8px;">shimmer</span>
+  <input type="range" id="shimmer" min="0" max="100" step="1" value="0" style="width:90px; accent-color:#7fffaa;">
+  <span id="shimmerVal" style="color:#7fffaa; font-weight:bold; min-width:28px; text-align:right;">0</span>
+  <span style="margin-left:8px;">Hz</span>
+  <input type="range" id="solfeggio" min="0" max="9" step="1" value="5" style="width:110px; accent-color:#b066ff;">
+  <span id="solfeggioVal" style="display:inline-flex; flex-direction:column; align-items:flex-start; min-width:80px; line-height:1.1;">
+    <span style="color:#b066ff; font-weight:bold; font-size:13px;" id="solfeggioCode">MIRA</span>
+    <span style="color:#b066ff; font-size:9px; opacity:0.7;" id="solfeggioHz">528 Hz</span>
+  </span>
+  <button id="place12" class="primary">place 12</button>
+  <button id="clear">clear</button>
+  <button id="resetView">reset</button>
+  <button id="envelopeToggle" style="background:transparent; border:1px solid #5a4a32; color:#e8b86a; font-family:ui-monospace,monospace; font-size:11px; letter-spacing:0.08em; padding:6px 12px; border-radius:6px; cursor:pointer;">envelope Â· on</button>
+  <span style="margin-left:8px; color:#9070d0;">flow</span>
+  <input type="range" id="flowMix" min="0" max="100" step="1" value="50" style="width:90px; accent-color:#9070d0;">
+  <button id="flowToggle" style="background:transparent; border:1px solid #3a2e58; color:#b066ff; font-family:ui-monospace,monospace; font-size:11px; letter-spacing:0.08em; padding:6px 10px; border-radius:6px; cursor:pointer;">flow Â· on</button>
+</div>
+<div id="solfeggioMeaning" style="position:fixed; bottom:64px; left:50%; transform:translateX(-50%); color:#b066ff; font-family:ui-monospace,monospace; font-size:11px; opacity:0.75; pointer-events:none;">Miracle Â· DNA repair</div>
+
+<script type="module">
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+//   MÃ–BIUS v17 Â· A Visualization of a Dodecahedron Living on a MÃ¶bius Strip
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+//
+//   This file is a single-page Three.js sim. No build step, no bundler.
+//   Drop it in any directory, double-click it, the browser does the rest.
+//   Tested where module-scripts work: Chrome 61+, Firefox 60+, Safari 11+,
+//   Edge 16+. Three.js is loaded via a direct ESM URL (no import-map), so
+//   older browsers without import-map support still run it.
+//
+//   THE MATH (short version)
+//   â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+//   A MÃ¶bius strip has Euler characteristic Ï‡=0 â€” it's a one-sided surface
+//   with a half-twist. A regular dodecahedron has 12 pentagonal faces, each
+//   sharing an edge with 5 neighbors. This sim places pentagons on the
+//   MÃ¶bius and visualizes the dodecahedral relationships between them.
+//   When you pause on a pentagon (hover-hold 2s), the local dodecahedron
+//   emerges in 3D space along the surface normal at that point â€” both
+//   above (orange) and below (red), mirrored across the strip's tangent
+//   plane. The flat-tangent flower (amber) shows what the IDEAL local
+//   neighborhood would be; the gold rings on other placed pentagons show
+//   what the ACTUAL global neighbors are. The gap between them is the
+//   visible imprint of the MÃ¶bius twist on dodecahedral symmetry.
+//
+//   FILE LAYOUT (search these markers to jump around)
+//   â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+//     Â§A  PALETTE          â€” all named colors used across the sim
+//     Â§B  CONFIG / SCENE   â€” renderer, camera, fog
+//     Â§C  TESSERACT CENTER â€” wave + face grid + wisps + click bursts
+//     Â§D  STRIP GEOMETRY   â€” vertexPos, paramToWorld, getNormal
+//     Â§E  SCALE MODULE     â€” cellScale / pentagonScale (single source)
+//     Â§F  LATTICE          â€” the strip's wireframe
+//     Â§G  PENTAGONS        â€” state, hit detection, marker rendering
+//     Â§H  GHOST MODULES    â€” flower + dodecahedron-lower-ring (pure)
+//     Â§I  ECHO + PREVIEW   â€” dodecahedral cyan arcs + click ghost rays
+//     Â§J  PAUSE STATE      â€” hover-hold-to-pause + ghost rendering
+//     Â§K  CAMERA           â€” orbit + CAD pan + zoom + drag-freeze
+//     Â§L  UI BINDINGS      â€” sliders, buttons, keys, HUD auto-hide
+//     Â§M  ANIMATION LOOP   â€” animate() â€” the only thing called per frame
+//
+//   DOCTRINE NOTES
+//   â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+//   This file ships in .secret-mine/ until the next Sunday sober pass.
+//   Solfeggio Hz controls + Îº flavor text are aesthetic, not canonical
+//   math â€” they MAY NOT migrate to docs/ without a doctrine review.
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+
+import * as THREE from 'https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js';
+
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// Â§A  PALETTE â€” new named colors added at v17
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+//   v17 consolidation note: this section holds colors that didn't have a
+//   named home before. The legacy palettes (TESSERACT_*, ECHO_COLOR_*,
+//   COLOR_PENT_*, PREVIEW_*) still live in their respective sections â€”
+//   Â§C tesseract, Â§G pentagons, Â§I echo+preview. v17.2 will collapse
+//   them all into this block; for v17 the diff stays surgical.
+
+// Background / structural
+const COLOR_BG_HEX        = 0x0a0c12;
+const COLOR_LATTICE_HEX   = 0x82a0b8;   // v16: pushed brighter for net contrast
+
+// Pause-state ghost layers (only visible when sim is frozen on a pentagon)
+//   lemon â€” rings around real placed neighbors (what IS)
+//   amber â€” ideal local tangent-flower (what the math LOCALLY says)
+//   orange â€” dodecahedron fold-up above the strip
+//   red    â€” dodecahedron fold-down, mirror across the tangent plane
+const COLOR_LEMON_GOLD   = { r: 1.00, g: 0.83, b: 0.29 };
+const COLOR_AMBER_FLOWER = { r: 1.00, g: 0.65, b: 0.20 };
+const COLOR_ORANGE_UP    = { r: 1.00, g: 0.55, b: 0.12 };
+const COLOR_RED_DOWN     = { r: 0.96, g: 0.22, b: 0.18 };
+
+// v21: ENVELOPE â€” the big Ï†-derived dodecahedron that contains the whole
+// MÃ¶bius. Its 12 pentagonal faces each carry one of the 12 open questions
+// in physics that this work is organized around (drawn from the SpookyPrimes
+// research). The envelope sits at scale ~3Ã— the MÃ¶bius outer radius, so the
+// strip lives comfortably inside it. Colors are warm + light so the envelope
+// reads as atmospheric context, not foreground geometry.
+const DODEC_SCALE              = 5.5;                      // vertex circumradius â€” MÃ¶bius strip outer extent â‰ˆ 4.25, breathing room
+const DODEC_COLOR_HEX          = 0xc4a878;                 // warm tan â€” edges
+const DODEC_HOVER_FACE_OPACITY = 0.10;                     // face fill opacity when mouse intersects it
+const DODEC_EDGE_OPACITY       = 0.28;                     // wireframe edge opacity (atmospheric, not loud)
+const DODEC_HOVER_COLOR        = { r: 1.00, g: 0.78, b: 0.45 };  // warm honey on hover
+
+// v22: ENVELOPE INRADIUS â€” the dodecahedron's face-center distance from
+// origin. Math: for a regular dodecahedron with vertex circumradius r,
+// the inradius (face center distance) = r Ã— (Ï†Â²) / âˆš(3Â·(3-Ï†)) â‰ˆ r Ã— 0.7947.
+// When the camera dist drops below this, the camera is INSIDE the envelope,
+// and v22 auto-toggles the envelope OFF so it doesn't clip into the strip.
+// Zoom back out past it â†’ envelope returns. No memory of user state by
+// design; user can re-click the toggle anytime.
+const DODEC_INRADIUS = DODEC_SCALE * 0.7947;
+
+// v22: SURFACE FLOW palette â€” the "paper flow" effect spawned at the
+// click point on the MÃ¶bius surface. Mystic blue (tesseract family) at
+// one extreme, delirium purple (solfeggio family) at the other. The
+// slider mixes between them; extreme positions also damp opacity so the
+// flow "disappears into the background" at the edges of the range.
+const FLOW_COLOR_BLUE    = { r: 0.31, g: 0.72, b: 1.00 };   // #4fb8ff â€” mystic
+const FLOW_COLOR_PURPLE  = { r: 0.69, g: 0.40, b: 1.00 };   // #b066ff â€” delirium
+
+
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// Â§B  CONFIG / SCENE â€” renderer, camera, fog
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(COLOR_BG_HEX);
+// v14.1: Fog blends distant geometry into the background instead of just clipping.
+// At extreme zoom-out the strip & wisps dissolve into the void; the tesseract at
+// origin stays bright until very far. This is Vlad's "render in background color
+// when compute is limited" â€” graceful fade rather than crash.
+scene.fog = new THREE.Fog(COLOR_BG_HEX, 22, 75);
+const camera = new THREE.PerspectiveCamera(50, innerWidth/innerHeight, 0.05, 200);
+const renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(innerWidth, innerHeight);
+document.body.appendChild(renderer.domElement);
+
+// ===== The ephemeral center â€” Wavy Cube =====
+// REVERSED FOCUS: instead of a bright cube blinking on, a faint square wave-form is
+// always drawn around the center. The cube only EMERGES into visibility during the
+// peaks of the Solfeggio resonance â€” like a watermark revealed by amplitude.
+
+const CUBE_HALF = 0.038;  // pixel-cluster scale â€” blends with the lattice
+const FACE_GRID = 6;      // fewer ripples for the tinier cube
+
+// (1) Faint background wave-form â€” closed-loop oscilloscope trace around the cube
+const WAVE_SEGMENTS = 48;
+const waveGeo = new THREE.BufferGeometry();
+const wavePositions = new Float32Array(WAVE_SEGMENTS * 2 * 3);
+const waveColors = new Float32Array(WAVE_SEGMENTS * 2 * 3);
+waveGeo.setAttribute('position', new THREE.BufferAttribute(wavePositions, 3));
+waveGeo.setAttribute('color', new THREE.BufferAttribute(waveColors, 3));
+const waveLines = new THREE.LineSegments(waveGeo, new THREE.LineBasicMaterial({
+  vertexColors: true, transparent: true, opacity: 1.0,
+  blending: THREE.AdditiveBlending, depthWrite: false
+}));
+scene.add(waveLines);
+
+// (2) The six faces of the cube â€” each is a small NxN grid that RIPPLES.
+//     The face's surface position is offset along the face normal by sin waves â€”
+//     so each face becomes a tiny standing-wave interference pattern.
+//     6 faces Ã— FACE_GRID Ã— (FACE_GRID-1) Ã— 2 (horiz + vert lines) Ã— 2 (segment endpoints) Ã— 3 (xyz)
+const FACE_LINES_PER_FACE = FACE_GRID * (FACE_GRID - 1) * 2;  // grid lines per face
+const TOTAL_FACE_LINES = 6 * FACE_LINES_PER_FACE;
+const faceGeo = new THREE.BufferGeometry();
+const facePositions = new Float32Array(TOTAL_FACE_LINES * 2 * 3);
+const faceColors = new Float32Array(TOTAL_FACE_LINES * 2 * 3);
+faceGeo.setAttribute('position', new THREE.BufferAttribute(facePositions, 3));
+faceGeo.setAttribute('color', new THREE.BufferAttribute(faceColors, 3));
+const faceLines = new THREE.LineSegments(faceGeo, new THREE.LineBasicMaterial({
+  vertexColors: true, transparent: true, opacity: 1.0,
+  blending: THREE.AdditiveBlending, depthWrite: false
+}));
+scene.add(faceLines);
+
+// The 6 faces of a cube: each has a normal axis (which axis is "up off the face")
+// and two tangent axes (which two axes span the face's 2D surface).
+// nIdx = which axis is the normal (0=x, 1=y, 2=z), nSign = +1 or -1
+const CUBE_FACES = [
+  { nIdx: 0, nSign:  1, tIdx: 1, bIdx: 2 },  // +X face
+  { nIdx: 0, nSign: -1, tIdx: 1, bIdx: 2 },  // -X face
+  { nIdx: 1, nSign:  1, tIdx: 0, bIdx: 2 },  // +Y face
+  { nIdx: 1, nSign: -1, tIdx: 0, bIdx: 2 },  // -Y face
+  { nIdx: 2, nSign:  1, tIdx: 0, bIdx: 1 },  // +Z face
+  { nIdx: 2, nSign: -1, tIdx: 0, bIdx: 1 }   // -Z face
+];
+
+// =====================================================================
+// CHANGE 1 (v14): TESSERACT CENTER â€” pure-math procedural blue spectral cube
+// Palette: icy white-cyan core â†’ tesseract cyan mid â†’ deep cobalt outer
+// All procedural: inner core (icosahedron, additive blend), radial haze wisps
+// (sparse LineSegments), recolored wave + face grid.
+// =====================================================================
+const TESSERACT_CORE  = { r: 0.78, g: 0.94, b: 1.00 };  // #c7f0ff â€” icy white-cyan, hottest
+const TESSERACT_MID   = { r: 0.31, g: 0.72, b: 1.00 };  // #4fb8ff â€” classic tesseract cyan
+const TESSERACT_OUTER = { r: 0.10, g: 0.31, b: 0.72 };  // #1a4fb8 â€” deep cobalt at edges
+
+// (3a) Inner brilliant core â€” tiny icosahedron at origin, additive-blended.
+// Smaller than CUBE_HALF so it reads as a contained bright point of light,
+// not a competing shape. Pure math: THREE generates the icosahedron vertices
+// from Ï† (golden ratio); we just position + animate.
+const CORE_RADIUS = CUBE_HALF * 0.42;
+const coreGeo = new THREE.IcosahedronGeometry(CORE_RADIUS, 1);
+const coreMat = new THREE.MeshBasicMaterial({
+  color: new THREE.Color(TESSERACT_CORE.r, TESSERACT_CORE.g, TESSERACT_CORE.b),
+  transparent: true, opacity: 0.85,
+  blending: THREE.AdditiveBlending, depthWrite: false
+});
+const coreMesh = new THREE.Mesh(coreGeo, coreMat);
+scene.add(coreMesh);
+
+// (3b) Radial haze wisps â€” sparse line segments radiating from origin,
+// pure procedural (sin/cos sweep + per-wisp phase offset). Gives the "contained
+// luminous energy" haze without textures. Wisps live in a small sphere of
+// radius ~CUBE_HALF * 2.2 and fade with distance from center.
+const NUM_WISPS = 14;
+const WISP_SEGMENTS = 6;  // each wisp = 6 short segments (12 endpoints)
+const wispGeo = new THREE.BufferGeometry();
+const wispPositions = new Float32Array(NUM_WISPS * WISP_SEGMENTS * 2 * 3);
+const wispColors = new Float32Array(NUM_WISPS * WISP_SEGMENTS * 2 * 3);
+wispGeo.setAttribute('position', new THREE.BufferAttribute(wispPositions, 3));
+wispGeo.setAttribute('color', new THREE.BufferAttribute(wispColors, 3));
+const wispLines = new THREE.LineSegments(wispGeo, new THREE.LineBasicMaterial({
+  vertexColors: true, transparent: true, opacity: 1.0,
+  blending: THREE.AdditiveBlending, depthWrite: false
+}));
+scene.add(wispLines);
+
+// Pre-randomized wisp directions on the unit sphere (Fibonacci-ish distribution
+// so they spread evenly, no clustering). Stored as unit vectors; per-frame we
+// modulate length + phase via sin(t) so they breathe.
+const WISP_DIRS = [];
+for (let i = 0; i < NUM_WISPS; i++) {
+  const golden = Math.PI * (3 - Math.sqrt(5));  // golden angle
+  const phi = Math.acos(1 - 2 * (i + 0.5) / NUM_WISPS);
+  const theta = golden * i;
+  WISP_DIRS.push([
+    Math.sin(phi) * Math.cos(theta),
+    Math.sin(phi) * Math.sin(theta),
+    Math.cos(phi)
+  ]);
+}
+
+// =====================================================================
+// CHANGE A (v15): TESSERACT CLICK BURSTS
+// Every click spawns a tiny icy-wireframe icosahedron at the click point.
+// It scales up fast, peaks, then collapses â€” like a quantum-tesseract pop.
+// InstancedMesh lets us have many bursts at once with one draw call.
+// =====================================================================
+const MAX_BURSTS = 24;
+const BURST_DURATION_MS = 380;
+const BURST_PEAK_SCALE = 0.42;        // peak radius â€” slightly bigger than a pentagon
+const burstGeo = new THREE.IcosahedronGeometry(1, 1);  // unit, instance-scaled
+const burstMat = new THREE.MeshBasicMaterial({
+  color: new THREE.Color(TESSERACT_CORE.r, TESSERACT_CORE.g, TESSERACT_CORE.b),
+  transparent: true, opacity: 0.95,
+  blending: THREE.AdditiveBlending, depthWrite: false,
+  wireframe: true   // wireframe makes it read as tesseract, not flash
+});
+const burstMesh = new THREE.InstancedMesh(burstGeo, burstMat, MAX_BURSTS);
+burstMesh.count = 0;
+scene.add(burstMesh);
+
+const clickBursts = [];   // { x, y, z, startTime }
+const _burstMat4 = new THREE.Matrix4();
+const _burstEuler = new THREE.Euler();
+const _burstScale = new THREE.Vector3();
+
+function spawnClickBurst(x, y, z) {
+  if (clickBursts.length >= MAX_BURSTS) clickBursts.shift();
+  clickBursts.push({ x, y, z, startTime: performance.now() });
+}
+
+function updateClickBursts(now) {
+  let active = 0;
+  for (let i = clickBursts.length - 1; i >= 0; i--) {
+    const b = clickBursts[i];
+    const t = (now - b.startTime) / BURST_DURATION_MS;
+    if (t >= 1.0) { clickBursts.splice(i, 1); continue; }
+    // Scale curve: fast rise (0 -> peak in first 25%), slow decay (75% remaining)
+    let scale;
+    if (t < 0.25) {
+      const u = t / 0.25;
+      scale = BURST_PEAK_SCALE * (1 - (1 - u) * (1 - u));  // ease-out
+    } else {
+      const u = (t - 0.25) / 0.75;
+      scale = BURST_PEAK_SCALE * (1 - u) * (1 - u);  // ease-in to zero
+    }
+    // Tumble: gives the icosahedron some character as it pops
+    const elapsed = now - b.startTime;
+    _burstEuler.set(elapsed * 0.006, elapsed * 0.008, elapsed * 0.004);
+    _burstMat4.makeRotationFromEuler(_burstEuler);
+    _burstMat4.setPosition(b.x, b.y, b.z);
+    _burstScale.set(scale, scale, scale);
+    _burstMat4.scale(_burstScale);
+    burstMesh.setMatrixAt(active, _burstMat4);
+    active++;
+  }
+  burstMesh.count = active;
+  if (active > 0) burstMesh.instanceMatrix.needsUpdate = true;
+}
+
+let solfeggioIndex = 5;  // start at 528 Hz MIRA
+
+function updateCenter(now, dt) {
+  // Solfeggio drives everything
+  const hz = SOLFEGGIO[solfeggioIndex].hz;
+  const omega = (hz / VISIBLE_DIVISOR) * 2 * Math.PI;
+  const t = now * 0.001;
+  // The full sine carries sign â€” we use it to drive the WAVE shape
+  // The rectified (positive-only) part drives the cube's resonance reveal
+  const wave = Math.sin(omega * t);
+  // Sharper flicker â€” steeper curve so the cube SNAPS in/out instead of fading.
+  // Math.pow(x, 0.25) lifts the curve toward 1 fast (most of the cycle is fully bright)
+  // and crashes to 0 fast at the edges. Quantum-collapse vibe.
+  const resonance = Math.pow(Math.max(0, wave), 0.25);
+
+  // Sub-pixel jitter â€” always present so even the wave-form trembles
+  const jx = 0.008 * Math.sin(t * 17 + 1.3);
+  const jy = 0.008 * Math.sin(t * 22 + 2.7);
+  const jz = 0.008 * Math.sin(t * 25 + 0.9);
+
+  // --- (1) Continuous oscilloscope trace ---
+  // Path: trace the square cube outline as a closed loop, but perturb each point
+  // perpendicularly by sin(phase + Ï‰t) so it looks like a vibrating beam.
+  // When wave>0 the beam pushes outward, when wave<0 it pulls inward.
+  // This makes the cube outline ALWAYS visibly oscillating, never static.
+  const beamOffset = 0.025 * wave;  // how far the beam bows from the cube outline
+  let widx = 0;
+  for (let i = 0; i < WAVE_SEGMENTS; i++) {
+    const phase0 = (i     / WAVE_SEGMENTS) * Math.PI * 2;
+    const phase1 = ((i+1) / WAVE_SEGMENTS) * Math.PI * 2;
+    // Sample two points on the cube's silhouette circle, perturbed radially by the wave
+    const r0 = CUBE_HALF * Math.SQRT2 + beamOffset * Math.sin(phase0 * 4 + omega*t*3);
+    const r1 = CUBE_HALF * Math.SQRT2 + beamOffset * Math.sin(phase1 * 4 + omega*t*3);
+    // 3D rotating view plane â€” rotate around Y so the trace is always angled
+    const tilt = t * 0.4;
+    const a0 = phase0 + tilt, a1 = phase1 + tilt;
+    const x0 = jx + r0 * Math.cos(a0), y0 = jy + r0 * Math.sin(a0) * 0.6, z0 = jz + r0 * Math.sin(a0) * 0.8;
+    const x1 = jx + r1 * Math.cos(a1), y1 = jy + r1 * Math.sin(a1) * 0.6, z1 = jz + r1 * Math.sin(a1) * 0.8;
+    wavePositions[widx*3 + 0] = x0; wavePositions[widx*3 + 1] = y0; wavePositions[widx*3 + 2] = z0; widx++;
+    wavePositions[widx*3 + 0] = x1; wavePositions[widx*3 + 1] = y1; wavePositions[widx*3 + 2] = z1; widx++;
+  }
+  // Wave brightness â€” faint baseline matching lattice, slight pop on resonance.
+  // v14: now in TESSERACT BLUE â€” interpolate core (hot) â†’ mid (cool) by resonance.
+  const waveBright = 0.22 + 0.45 * resonance;
+  const wMix = resonance;  // 0 = cool mid, 1 = hot core
+  const wR = waveBright * (TESSERACT_MID.r + (TESSERACT_CORE.r - TESSERACT_MID.r) * wMix);
+  const wG = waveBright * (TESSERACT_MID.g + (TESSERACT_CORE.g - TESSERACT_MID.g) * wMix);
+  const wB = waveBright * (TESSERACT_MID.b + (TESSERACT_CORE.b - TESSERACT_MID.b) * wMix);
+  for (let i = 0; i < WAVE_SEGMENTS * 2; i++) {
+    waveColors[i*3]     = wR;
+    waveColors[i*3 + 1] = wG;
+    waveColors[i*3 + 2] = wB;
+  }
+  waveGeo.attributes.position.needsUpdate = true;
+  waveGeo.attributes.color.needsUpdate = true;
+
+  // --- (2) Wavy cube faces â€” each face is a small NxN lattice that ripples in/out ---
+  // For each face, parameterize a 2D grid in tangent/bitangent space.
+  // Each grid point is offset along the face NORMAL by sin(kx + ky + Ï‰t) â€” a 2D standing wave.
+  // Draw the grid as horizontal + vertical line segments between adjacent points.
+  // When wave is positive, faces bulge outward; when negative, dimple inward. The cube *breathes*.
+  let fidx = 0;
+  const waveAmpFace = 0.018 * (0.5 + 0.5 * resonance);  // ripple amplitude grows with resonance
+  const waveK = 5.5;  // spatial frequency on each face
+  // Precompute jitter-offset center
+  const cx = jx, cy = jy, cz = jz;
+
+  // Each face's surface-grid samples. Reuse a small 2D array.
+  const gridPts = new Array(FACE_GRID * FACE_GRID);
+
+  for (let f = 0; f < 6; f++) {
+    const face = CUBE_FACES[f];
+    // Build the grid in 3D
+    for (let i = 0; i < FACE_GRID; i++) {
+      for (let j = 0; j < FACE_GRID; j++) {
+        // u, v in [-1, 1] over the face
+        const u = (i / (FACE_GRID - 1)) * 2 - 1;
+        const v = (j / (FACE_GRID - 1)) * 2 - 1;
+        // Base point on face: normal axis at Â±CUBE_HALF, tangent/bitangent at u/v Ã— CUBE_HALF
+        const pt = [0, 0, 0];
+        pt[face.nIdx] = face.nSign * CUBE_HALF;
+        pt[face.tIdx] = u * CUBE_HALF;
+        pt[face.bIdx] = v * CUBE_HALF;
+        // Ripple: displacement ALONG the face normal, driven by 2D standing wave
+        const ripple = waveAmpFace * Math.sin(waveK * u + waveK * v + omega * t * 2);
+        pt[face.nIdx] += face.nSign * ripple;
+        // Cube rotation (apply same rotation as before so all 6 faces rotate together)
+        const rx = t * 0.35, ry = t * 0.27;
+        // Rotate around X then Y
+        const cosrx = Math.cos(rx), sinrx = Math.sin(rx);
+        const cosry = Math.cos(ry), sinry = Math.sin(ry);
+        let x = pt[0], y = pt[1], z = pt[2];
+        // X-rotation: y, z change
+        let y1 = y * cosrx - z * sinrx;
+        let z1 = y * sinrx + z * cosrx;
+        // Y-rotation: x, z change
+        let x2 = x * cosry + z1 * sinry;
+        let z2 = -x * sinry + z1 * cosry;
+        gridPts[i * FACE_GRID + j] = [cx + x2, cy + y1, cz + z2];
+      }
+    }
+    // Connect horizontal neighbors (i, j) - (i+1, j)
+    for (let i = 0; i < FACE_GRID - 1; i++) {
+      for (let j = 0; j < FACE_GRID; j++) {
+        const a = gridPts[i * FACE_GRID + j];
+        const b = gridPts[(i + 1) * FACE_GRID + j];
+        facePositions[fidx*3+0] = a[0]; facePositions[fidx*3+1] = a[1]; facePositions[fidx*3+2] = a[2]; fidx++;
+        facePositions[fidx*3+0] = b[0]; facePositions[fidx*3+1] = b[1]; facePositions[fidx*3+2] = b[2]; fidx++;
+      }
+    }
+    // Connect vertical neighbors (i, j) - (i, j+1)
+    for (let i = 0; i < FACE_GRID; i++) {
+      for (let j = 0; j < FACE_GRID - 1; j++) {
+        const a = gridPts[i * FACE_GRID + j];
+        const b = gridPts[i * FACE_GRID + j + 1];
+        facePositions[fidx*3+0] = a[0]; facePositions[fidx*3+1] = a[1]; facePositions[fidx*3+2] = a[2]; fidx++;
+        facePositions[fidx*3+0] = b[0]; facePositions[fidx*3+1] = b[1]; facePositions[fidx*3+2] = b[2]; fidx++;
+      }
+    }
+  }
+  // Cube face brightness â€” drops to 0 when wave is negative, so the cube genuinely
+  // flickers OUT of existence on the negative half of each cycle. Real flicker at any Hz.
+  // v14: tesseract palette â€” cool MID base, hot CORE on resonance peaks.
+  const faceBright = 0.95 * resonance;
+  const fMix = resonance;
+  const fcR = faceBright * (TESSERACT_MID.r + (TESSERACT_CORE.r - TESSERACT_MID.r) * fMix);
+  const fcG = faceBright * (TESSERACT_MID.g + (TESSERACT_CORE.g - TESSERACT_MID.g) * fMix);
+  const fcB = faceBright * (TESSERACT_MID.b + (TESSERACT_CORE.b - TESSERACT_MID.b) * fMix);
+  for (let i = 0; i < fidx; i++) {
+    faceColors[i*3]     = fcR;
+    faceColors[i*3 + 1] = fcG;
+    faceColors[i*3 + 2] = fcB;
+  }
+  faceGeo.attributes.position.needsUpdate = true;
+  faceGeo.attributes.color.needsUpdate = true;
+  faceGeo.setDrawRange(0, fidx);
+
+  // --- (3a) Inner brilliant core â€” position + pulse ---
+  // Stays at the cube's center (jitter-offset), scales with resonance so it
+  // brightens on peaks. Slow tumble independent of cube rotation.
+  coreMesh.position.set(jx, jy, jz);
+  const coreScale = 0.55 + 0.55 * resonance;  // 0.55 quiet, 1.1 at peak
+  coreMesh.scale.setScalar(coreScale);
+  coreMesh.rotation.x = t * 0.7;
+  coreMesh.rotation.y = t * 0.5;
+  // Core brightness rides the resonance â€” additive blend on a dark scene
+  // means opacity is the brightness knob.
+  coreMat.opacity = 0.55 + 0.40 * resonance;
+
+  // --- (3b) Haze wisps â€” sparse radial lines, breathing in/out ---
+  // Each wisp is WISP_SEGMENTS short segments along its direction, fading from
+  // bright at the cube surface to dark at the outer reach. Length modulated
+  // by per-wisp phase + global resonance â€” gives the "contained energy" haze.
+  let widx2 = 0;
+  const wispOuterMax = CUBE_HALF * 3.2;
+  for (let wi = 0; wi < NUM_WISPS; wi++) {
+    const dir = WISP_DIRS[wi];
+    // Per-wisp phase so they don't all breathe in sync (chaotic looks alive)
+    const wPhase = wi * 0.7;
+    const breath = 0.5 + 0.5 * Math.sin(t * 1.4 + wPhase);
+    // Length scales with resonance â€” on peaks the wisps push out further
+    const wispLen = wispOuterMax * (0.45 + 0.55 * breath) * (0.7 + 0.4 * resonance);
+    // Inner endpoint sits just outside the cube core surface, outer trails away
+    const rInner = CUBE_HALF * 1.05;
+    for (let s = 0; s < WISP_SEGMENTS; s++) {
+      const tA = s / WISP_SEGMENTS;
+      const tB = (s + 1) / WISP_SEGMENTS;
+      const rA = rInner + (wispLen - rInner) * tA;
+      const rB = rInner + (wispLen - rInner) * tB;
+      const xA = jx + dir[0] * rA, yA = jy + dir[1] * rA, zA = jz + dir[2] * rA;
+      const xB = jx + dir[0] * rB, yB = jy + dir[1] * rB, zB = jz + dir[2] * rB;
+      wispPositions[widx2*3+0] = xA; wispPositions[widx2*3+1] = yA; wispPositions[widx2*3+2] = zA; widx2++;
+      wispPositions[widx2*3+0] = xB; wispPositions[widx2*3+1] = yB; wispPositions[widx2*3+2] = zB; widx2++;
+    }
+    // Color: hot at inner end (CORE), cool at outer end (OUTER), all multiplied
+    // by a brightness that fades with distance from cube and rides resonance.
+    // We just wrote 2*WISP_SEGMENTS endpoints; color them index by index.
+    const startEndpoint = widx2 - WISP_SEGMENTS * 2;
+    for (let s = 0; s < WISP_SEGMENTS; s++) {
+      const tA = s / WISP_SEGMENTS;
+      const tB = (s + 1) / WISP_SEGMENTS;
+      // Brightness falls off cubically along the wisp; resonance lifts the curve
+      const brA = (1 - tA) * (1 - tA) * (0.30 + 0.55 * resonance);
+      const brB = (1 - tB) * (1 - tB) * (0.30 + 0.55 * resonance);
+      // Color: blend CORE â†’ MID â†’ OUTER as we travel outward
+      const cA = tA < 0.5
+        ? mixColor(TESSERACT_CORE, TESSERACT_MID, tA * 2)
+        : mixColor(TESSERACT_MID, TESSERACT_OUTER, (tA - 0.5) * 2);
+      const cB = tB < 0.5
+        ? mixColor(TESSERACT_CORE, TESSERACT_MID, tB * 2)
+        : mixColor(TESSERACT_MID, TESSERACT_OUTER, (tB - 0.5) * 2);
+      const idxA = (startEndpoint + s * 2) * 3;
+      const idxB = (startEndpoint + s * 2 + 1) * 3;
+      wispColors[idxA + 0] = cA.r * brA;
+      wispColors[idxA + 1] = cA.g * brA;
+      wispColors[idxA + 2] = cA.b * brA;
+      wispColors[idxB + 0] = cB.r * brB;
+      wispColors[idxB + 1] = cB.g * brB;
+      wispColors[idxB + 2] = cB.b * brB;
+    }
+  }
+  wispGeo.attributes.position.needsUpdate = true;
+  wispGeo.attributes.color.needsUpdate = true;
+}
+
+// Small helper: linear color mix, returns {r,g,b}. Used by the wisp shader.
+function mixColor(a, b, t) {
+  return {
+    r: a.r + (b.r - a.r) * t,
+    g: a.g + (b.g - a.g) * t,
+    b: a.b + (b.b - a.b) * t
+  };
+}
+
+// === The Numerology Hour: Solfeggio frequencies + Schumann resonance ===
+// These are the "guru frequencies" â€” believed in sound healing to do everything from
+// repair DNA (528 Hz) to align you with the Earth's heartbeat (7.83 Hz Schumann).
+// We scale them down by VISIBLE_DIVISOR so the cube pulses at a watchable rate.
+const VISIBLE_DIVISOR = 256;  // 528 Hz â†’ ~2.06 Hz visible pulse
+const SOLFEGGIO = [
+  { hz:   7.83, code: "GAEA",   name: "Schumann", meaning: "Earth's heartbeat" },
+  { hz: 174,    code: "NOXA",   name: "UTâ‚‹â‚‚",     meaning: "Pain & stress relief" },
+  { hz: 285,    code: "MENDA",  name: "UTâ‚‹â‚",     meaning: "Tissue & organ healing" },
+  { hz: 396,    code: "LUMEN",  name: "UT",       meaning: "Liberation from fear" },
+  { hz: 417,    code: "VERTA",  name: "RE",       meaning: "Facilitating change" },
+  { hz: 528,    code: "MIRA",   name: "MI",       meaning: "Miracle Â· DNA repair" },
+  { hz: 639,    code: "CORDIS", name: "FA",       meaning: "Heart connection" },
+  { hz: 741,    code: "VOXA",   name: "SOL",      meaning: "Awakening intuition" },
+  { hz: 852,    code: "NUMEN",  name: "LA",       meaning: "Spiritual order" },
+  { hz: 963,    code: "AETHA",  name: "SI",       meaning: "Divine consciousness" }
+];
+// ===== MÃ¶bius parameters =====
+const R = 3.0;
+const WIDTH = 1.25;
+let U_STEPS = 120;
+
+// =====================================================================
+// SCALE MODULE (v15.9): SINGLE SOURCE OF TRUTH for scale.
+// As density (U_STEPS) changes the lattice gets finer or coarser. Pentagons
+// (placed pink ones, amber flower ghosts, lemon rings around neighbors, and
+// the orange/red dodecahedron fold-up) all derive their size from this
+// module â€” so the visual ratio of pentagon to lattice-cell stays roughly
+// constant whether you're at density 20 or density 480.
+//
+// Calibration: at U_STEPS=120 (the default), pentagonR = 0.18 â€” same as
+// the original hardcoded value, so v15.8 visuals are preserved exactly at
+// that density. Crank density up â†’ pentagons shrink. Crank it down â†’
+// pentagons grow with the chunky lattice cells.
+//
+// cellScale() returns the approximate world-space width of one lattice
+// cell along the strip (in the u-direction, central radius Râ‰ˆ3).
+// pentagonScale() returns the pentagon circumradius derived from cellScale.
+// =====================================================================
+const BASE_U_STEPS = 120;
+const PENTAGON_CELL_RATIO = 1.15;   // pentagon â‰ˆ 1.15 cell-widths across â€” tuned so
+                                    // pentagonScale() = 0.18 exactly at U_STEPS=120
+function cellScale() {
+  // World-space width of a lattice cell along the strip's u-direction.
+  // Strip's central radius is R, so one full loop is 2Ï€R â‰ˆ 18.85 world units;
+  // dividing by U_STEPS gives the per-cell arc.
+  return (2 * Math.PI / U_STEPS) * R;
+}
+function pentagonScale() {
+  return cellScale() * PENTAGON_CELL_RATIO;
+}
+let V_STEPS = 18;
+const AMPLITUDE = 0.55;   // height of pentagon bump (along normal)
+const SIGMA = 0.45;       // bump falloff in parameter space
+
+// ===== Parameterization =====
+function paramToWorld(u, v) {
+  const cosU2 = Math.cos(u/2);
+  const sinU2 = Math.sin(u/2);
+  return [
+    (R + v * cosU2) * Math.cos(u),
+    (R + v * cosU2) * Math.sin(u),
+    v * sinU2
+  ];
+}
+
+// ===== Surface normal â€” numerical, force outward =====
+function getNormal(u, v) {
+  const h = 0.001;
+  const p0 = paramToWorld(u, v);
+  const p1 = paramToWorld(u + h, v);
+  const p2 = paramToWorld(u, v + h);
+  const tux = (p1[0]-p0[0])/h, tuy = (p1[1]-p0[1])/h, tuz = (p1[2]-p0[2])/h;
+  const tvx = (p2[0]-p0[0])/h, tvy = (p2[1]-p0[1])/h, tvz = (p2[2]-p0[2])/h;
+  let nx = tuy*tvz - tuz*tvy;
+  let ny = tuz*tvx - tux*tvz;
+  let nz = tux*tvy - tuy*tvx;
+  const mag = Math.hypot(nx, ny, nz);
+  if (mag < 1e-6) return [0, 0, 1];
+  nx /= mag; ny /= mag; nz /= mag;
+  // Force "outward" â€” flip if normal points back at origin
+  // (this is what makes both sides bend in the SAME direction)
+  const dot = nx*p0[0] + ny*p0[1] + nz*p0[2];
+  if (dot < 0) return [-nx, -ny, -nz];
+  return [nx, ny, nz];
+}
+
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// Â§N  DODECAHEDRON ENVELOPE (v21) â€” the 12 mysteries around the strip
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+//   The big Ï†-derived dodecahedron that contains the entire MÃ¶bius. 12
+//   pentagonal faces, each carrying one of the 12 open questions in
+//   modern physics that this whole geometry is organized around.
+//
+//   The math (vertex/edge/face computation) is borrowed from the
+//   SpookyPrimes companion repo and re-implemented in this sim's style;
+//   the content (questions + 20 named structural atoms) is the canon
+//   from that work. Visually atmospheric: warm-tan wireframe at low
+//   opacity, faces invisible by default but raycast-able. Mouse over
+//   a face â†’ faint honey glow; click â†’ side panel slides in with the
+//   mystery.
+//
+//   Math note: 20 vertices = 8 cube corners (Â±1,Â±1,Â±1) + 12 from Ï†:
+//   (0, Â±1/Ï†, Â±Ï†), (Â±1/Ï†, Â±Ï†, 0), (Â±Ï†, 0, Â±1/Ï†). 30 edges = pairs at
+//   minimum distance. 12 faces = coplanar 5-cycles in the adjacency
+//   graph. Scaled uniformly by DODEC_SCALE so the strip sits inside.
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+
+// --- Geometry, derived from Ï† at load time ---
+const ENVELOPE_PHI    = (1 + Math.sqrt(5)) / 2;
+const ENVELOPE_INVPHI = 1 / ENVELOPE_PHI;
+
+const envelopeVertices = [];                // [[x,y,z], â€¦] (length 20, pre-scale)
+for (const x of [-1, 1]) for (const y of [-1, 1]) for (const z of [-1, 1]) {
+  envelopeVertices.push([x, y, z]);
+}
+for (const a of [-1, 1]) for (const b of [-1, 1]) {
+  envelopeVertices.push([0, a * ENVELOPE_INVPHI, b * ENVELOPE_PHI]);
+  envelopeVertices.push([a * ENVELOPE_INVPHI, b * ENVELOPE_PHI, 0]);
+  envelopeVertices.push([a * ENVELOPE_PHI, 0, b * ENVELOPE_INVPHI]);
+}
+// Scale all 20 vertices uniformly so the envelope sits OUTSIDE the strip.
+for (const v of envelopeVertices) { v[0] *= DODEC_SCALE; v[1] *= DODEC_SCALE; v[2] *= DODEC_SCALE; }
+
+// Edges: pairs at minimum vertex-vertex distance. Use a tolerance on
+// the squared distance to avoid float noise.
+function _envDist2(a, b) { const dx=a[0]-b[0], dy=a[1]-b[1], dz=a[2]-b[2]; return dx*dx+dy*dy+dz*dz; }
+let envelopeMinD2 = Infinity;
+for (let i = 0; i < 20; i++) for (let j = i+1; j < 20; j++) {
+  const d2 = _envDist2(envelopeVertices[i], envelopeVertices[j]);
+  if (d2 < envelopeMinD2) envelopeMinD2 = d2;
+}
+const envelopeEdges = [];                   // [[i,j], â€¦] length 30
+const envelopeAdjacency = Array.from({length: 20}, () => []);
+for (let i = 0; i < 20; i++) for (let j = i+1; j < 20; j++) {
+  if (Math.abs(_envDist2(envelopeVertices[i], envelopeVertices[j]) - envelopeMinD2) < envelopeMinD2 * 1e-3) {
+    envelopeEdges.push([i, j]);
+    envelopeAdjacency[i].push(j);
+    envelopeAdjacency[j].push(i);
+  }
+}
+
+// Faces: coplanar 5-cycles. DFS for all 5-cycles in the adjacency graph,
+// dedupe by sorted vertex set, then filter by coplanarity.
+function _envFind5Cycles() {
+  const found = new Set();
+  const dfs = (path) => {
+    if (path.length === 5) {
+      const last = path[4], first = path[0];
+      if (envelopeAdjacency[last].includes(first)) {
+        found.add([...path].sort((a,b) => a-b).join(','));
+      }
+      return;
+    }
+    for (const nbr of envelopeAdjacency[path[path.length-1]]) {
+      if (!path.includes(nbr)) dfs([...path, nbr]);
+    }
+  };
+  for (let s = 0; s < 20; s++) dfs([s]);
+  return [...found].map(s => s.split(',').map(Number));
+}
+function _envCoplanar(indices) {
+  const p = indices.map(i => envelopeVertices[i]);
+  const v1 = [p[1][0]-p[0][0], p[1][1]-p[0][1], p[1][2]-p[0][2]];
+  const v2 = [p[2][0]-p[0][0], p[2][1]-p[0][1], p[2][2]-p[0][2]];
+  const n = [v1[1]*v2[2]-v1[2]*v2[1], v1[2]*v2[0]-v1[0]*v2[2], v1[0]*v2[1]-v1[1]*v2[0]];
+  const nm = Math.hypot(n[0], n[1], n[2]);
+  if (nm < 1e-8) return false;
+  n[0]/=nm; n[1]/=nm; n[2]/=nm;
+  for (let k = 3; k < 5; k++) {
+    const d = n[0]*(p[k][0]-p[0][0]) + n[1]*(p[k][1]-p[0][1]) + n[2]*(p[k][2]-p[0][2]);
+    if (Math.abs(d) > DODEC_SCALE * 1e-3) return false;
+  }
+  return true;
+}
+function _envOrderCycle(indices) {
+  const set = new Set(indices);
+  const ordered = [indices[0]];
+  let prev = null;
+  while (ordered.length < 5) {
+    for (const nbr of envelopeAdjacency[ordered[ordered.length-1]]) {
+      if (set.has(nbr) && nbr !== prev) {
+        prev = ordered[ordered.length-1];
+        ordered.push(nbr);
+        break;
+      }
+    }
+  }
+  return ordered;
+}
+const envelopeFaces = _envFind5Cycles().filter(_envCoplanar).map(_envOrderCycle);
+// (envelopeFaces.length should be exactly 12; if not, geometry is corrupt.)
+
+// Per-face centroid + outward unit normal (used for label positioning
+// and could be used for back-face culling if we wanted to suppress
+// hovering faces behind the camera).
+const envelopeFaceCentroids = envelopeFaces.map(face => {
+  const c = [0, 0, 0];
+  for (const i of face) { c[0]+=envelopeVertices[i][0]; c[1]+=envelopeVertices[i][1]; c[2]+=envelopeVertices[i][2]; }
+  return [c[0]/5, c[1]/5, c[2]/5];
+});
+
+// --- Content: the 12 open questions (one per dodecahedral face).
+//     Adapted from the SpookyPrimes "Dodecahedron of Open Questions".
+const ENVELOPE_QUESTIONS = [
+  { title: "Why this algebra and not another?", technical: "Step 4 â€” variational selection of A_F in the Connes spectral action program", body: "The Standard Model can be built from a very specific small algebra: â„‚ âŠ• â„ âŠ• Mâ‚ƒ(â„‚). Why this one? We don't have a principle that picks it out. Every attempt to derive it from a single 'minimize this functional' principle has failed, including the one this work was built to test.", footer: "The canonical open question of the program â€” the whole geometry is organized around it." },
+  { title: "Three different inputs, identical output", technical: "The 16-dimensional plateau", body: "If you compute the space of allowed Dirac operators for three different algebras â€” â„‚âŠ•Mâ‚ƒ(â„‚), â„âŠ•Mâ‚ƒ(â„‚), and the full Standard Model algebra â€” you get the exact same 16-dimensional subspace. Not just the same dimension; the same subspace. You cannot tell these three algebras apart by looking at their Dirac content alone.", footer: "Verified at machine precision (10â»Â¹âµ). The cleanest computational finding of the program." },
+  { title: "Why does it take two conditions?", technical: "Two-condition characterization rather than one functional", body: "We can characterize the Standard Model algebra as the smallest one satisfying (1) full Yukawa freedom AND (2) the right gauge factors with the right hypercharge action. But that's two conditions, not one. A real Step 4 closure would be a single principle that implies both. We don't have it.", footer: "" },
+  { title: "Why are quarks and leptons different?", technical: "The 8 â†’ 16 leptoquark carveout mechanism", body: "Patiâ€“Salam unification says leptons are essentially the 'fourth color' of quarks â€” at high energy, quark and lepton Yukawa couplings should be locked together. In the Standard Model they're not. The algebraic structure that breaks the lock is identified, but the physical mechanism that selects 'broken' over 'unified' is not.", footer: "Source of the well-known m_b / m_Ï„ â‰ˆ 3 prediction after RG running." },
+  { title: "Why exactly three generations?", technical: "The fermion generation count problem", body: "Electrons have heavier siblings: muons and taus. Up quarks have charm and top, down has strange and bottom. Three copies of everything, with vastly different masses. Why three and not two, four, or seven? No framework derives this â€” it's an empirical brute fact.", footer: "Open in every theory of fundamental physics, including this one." },
+  { title: "A suspiciously precise coincidence", technical: "The Koide residue", body: "Take the three charged lepton masses and form a specific combination: K = (mâ‚‘ + m_Î¼ + m_Ï„) / (âˆšmâ‚‘ + âˆšm_Î¼ + âˆšm_Ï„)Â². The result is 2/3 to about one part in 100,000. Nobody knows whether this is a deep hint or a meaningless coincidence. The formula doesn't survive RG running cleanly, which makes it harder to take seriously, but the precision keeps physicists from dismissing it.", footer: "Currently undecidable. Coincidence or hint, we cannot tell." },
+  { title: "The worst prediction in physics", technical: "The cosmological constant problem", body: "Quantum field theory predicts a vacuum energy density. Observation gives a different one. They differ by 10Â¹Â²â° â€” a factor of one followed by 120 zeros. No serious framework, including this one, addresses this discrepancy at all.", footer: "If physics has a single hole, this is the one." },
+  { title: "Why does any of this work at all?", technical: "The unreasonable effectiveness of mathematics (Wigner, 1960)", body: "Internal mathematical structures built without reference to physics â€” operator algebras, symmetry groups, geometric objects â€” keep turning out to describe physical reality with bizarre precision. Why? We have no idea. This isn't a question within the theory; it's a question about why the theory is possible at all.", footer: "The meta-defect. Has been open for 65 years." },
+  { title: "Why these specific signs?", technical: "KO-dimension 6 signature", body: "The Standard Model bimodule has three sign relations between its structural operators. These signs single out one possibility out of eight. Connes proved you need exactly this one to recover the SM. But 'you need it because it works' isn't a derivation. Why does nature pick this signature?", footer: "Stated, not derived. Like much of foundational physics." },
+  { title: "Does the spectral action actually do its job?", technical: "Spectral action critical point in A", body: "The spectral action is the candidate functional for closing Step 4. It produces the right physics when you fix the algebra and vary the Dirac operator. The harder question â€” whether varying the algebra itself gives the SM as a critical point â€” has not been settled in the published literature.", footer: "Whoever closes this closes Step 4." },
+  { title: "Why these particular masses?", technical: "Yukawa hierarchy magnitudes", body: "The electron weighs 0.5 MeV. The top quark weighs 173,000 MeV. Why these specific numbers, with ratios spanning six orders of magnitude? The 16-dimensional Dirac space contains room for these parameters, but doesn't fix their values.", footer: "" },
+  { title: "Why do flavors mix the way they do?", technical: "Mixing matrices (CKM, PMNS)", body: "Quark flavors and neutrino flavors don't line up cleanly with the eigenstates of weak interaction. The 'rotation' matrices between them (CKM for quarks, PMNS for neutrinos) have specific empirical values that this framework does not derive. They're inputs, not outputs.", footer: "" },
+];
+// The 20 structural atoms (vertices of the dodecahedron, in vertex-index order)
+const ENVELOPE_ATOMS = [
+  "Spectral action S", "Dirac operator D", "Heat kernel coefficient aâ‚„",
+  "Algebra representation Ï€", "Cosmological constant value Î›", "Grading operator Î³",
+  "Yukawa coupling matrix", "Real structure J", "Unitary group U(A_F)",
+  "dim D(A_F) = 16", "SU(2)_L factor", "Order-one condition",
+  "Quark-lepton paired Yukawa", "Charged lepton mass triple", "Î» vs Î»* on right-handed up/down",
+  "Mâ‚ƒ(â„‚) summand", "U(1)_Y factor", "Bimodule H_F",
+  "â„‚ summand of A_F (the contested one)", "â„ summand of A_F",
+];
+// Attach the 5 atoms implicated by each face to its question record.
+envelopeFaces.forEach((face, i) => {
+  ENVELOPE_QUESTIONS[i].atomNames = face.map(idx => ENVELOPE_ATOMS[idx]);
+});
+
+// --- Rendering: a wireframe LineSegments for the 30 edges, plus 12
+//     individual face meshes (invisible by default) that serve as
+//     raycast targets for hover + click.
+const envelopeEdgePositions = new Float32Array(30 * 2 * 3);
+envelopeEdges.forEach(([a, b], i) => {
+  const va = envelopeVertices[a], vb = envelopeVertices[b];
+  envelopeEdgePositions[i*6+0] = va[0]; envelopeEdgePositions[i*6+1] = va[1]; envelopeEdgePositions[i*6+2] = va[2];
+  envelopeEdgePositions[i*6+3] = vb[0]; envelopeEdgePositions[i*6+4] = vb[1]; envelopeEdgePositions[i*6+5] = vb[2];
+});
+const envelopeEdgeGeo = new THREE.BufferGeometry();
+envelopeEdgeGeo.setAttribute('position', new THREE.BufferAttribute(envelopeEdgePositions, 3));
+const envelopeEdgeMat = new THREE.LineBasicMaterial({
+  color: DODEC_COLOR_HEX, transparent: true, opacity: DODEC_EDGE_OPACITY,
+  depthWrite: false
+});
+const envelopeEdgeLines = new THREE.LineSegments(envelopeEdgeGeo, envelopeEdgeMat);
+scene.add(envelopeEdgeLines);
+
+// 12 face meshes â€” triangle fan from centroid to each pentagon's 5 vertices.
+// Invisible by default (opacity 0); the hovered face gets a faint honey glow.
+// Each mesh's userData carries its face index so we can identify it on raycast.
+const envelopeFaceMeshes = envelopeFaces.map((face, idx) => {
+  const c = envelopeFaceCentroids[idx];
+  const facePositions = new Float32Array(5 * 9);  // 5 triangles Ã— 3 verts Ã— 3 coords
+  for (let k = 0; k < 5; k++) {
+    const a = face[k], b = face[(k + 1) % 5];
+    const va = envelopeVertices[a], vb = envelopeVertices[b];
+    facePositions[k*9+0] = c[0];  facePositions[k*9+1] = c[1];  facePositions[k*9+2] = c[2];
+    facePositions[k*9+3] = va[0]; facePositions[k*9+4] = va[1]; facePositions[k*9+5] = va[2];
+    facePositions[k*9+6] = vb[0]; facePositions[k*9+7] = vb[1]; facePositions[k*9+8] = vb[2];
+  }
+  const faceGeo = new THREE.BufferGeometry();
+  faceGeo.setAttribute('position', new THREE.BufferAttribute(facePositions, 3));
+  faceGeo.computeVertexNormals();
+  const faceMat = new THREE.MeshBasicMaterial({
+    color: new THREE.Color(DODEC_HOVER_COLOR.r, DODEC_HOVER_COLOR.g, DODEC_HOVER_COLOR.b),
+    transparent: true, opacity: 0.0,                  // invisible by default
+    side: THREE.DoubleSide, depthWrite: false,
+    blending: THREE.AdditiveBlending,                 // glow not paint
+  });
+  const mesh = new THREE.Mesh(faceGeo, faceMat);
+  mesh.userData = { envelopeFaceIdx: idx };
+  scene.add(mesh);
+  return mesh;
+});
+
+// Hover state for the envelope (separate from MÃ¶bius pentagon hover)
+let hoveredEnvelopeFaceIdx = -1;
+function setHoveredEnvelopeFace(newIdx) {
+  if (newIdx === hoveredEnvelopeFaceIdx) return;
+  // Turn off the previous face
+  if (hoveredEnvelopeFaceIdx >= 0) {
+    envelopeFaceMeshes[hoveredEnvelopeFaceIdx].material.opacity = 0;
+  }
+  // Turn on the new one
+  if (newIdx >= 0) {
+    envelopeFaceMeshes[newIdx].material.opacity = DODEC_HOVER_FACE_OPACITY;
+  }
+  hoveredEnvelopeFaceIdx = newIdx;
+}
+
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// Â§O  SURFACE FLOW (v22) â€” the "paper flow" effect on click
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+//   When the user clicks an empty point on the MÃ¶bius surface, a small
+//   anticipation point appears for 1.5 seconds (window for the monkey
+//   brain to register "something is about to happen") â€” then six thin
+//   curved lines radiate outward from the click point along the strip
+//   surface, growing for 2 seconds and fading for 0.5 seconds. Colors
+//   gradient from mystic blue (tesseract palette) to delirium purple
+//   (solfeggio family). A slider mixes the balance; at the extremes
+//   the flow fades to background.
+//
+//   The lines live ON the strip surface â€” each sample is projected
+//   through vertexPos(u,v) so the flow follows the MÃ¶bius curvature.
+//   Pool of 6 concurrent bursts, oldest gets recycled when the pool
+//   is full. Toggle button disables future spawns; in-flight ones
+//   complete their fade.
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+const FLOW_NUM_BURSTS    = 6;                  // concurrent burst pool size
+const FLOW_NUM_LINES     = 6;                  // radial spokes per burst
+const FLOW_NUM_SAMPLES   = 12;                 // samples along each line
+const FLOW_SEGMENTS      = FLOW_NUM_SAMPLES - 1;
+const FLOW_BUFFER_SIZE   = FLOW_NUM_BURSTS * FLOW_NUM_LINES * FLOW_SEGMENTS * 2 * 3;
+const FLOW_DELAY_MS      = 1500;               // anticipation pause
+const FLOW_GROW_MS       = 2000;               // line growth phase
+const FLOW_FADE_MS       = 500;                // dissolve phase
+const FLOW_TOTAL_MS      = FLOW_DELAY_MS + FLOW_GROW_MS + FLOW_FADE_MS;
+const FLOW_LENGTH_U      = 1.2;                // line length in u-direction (along strip)
+const FLOW_LENGTH_V      = 0.35;               // shorter in v-direction (across strip)
+
+let flowOn         = true;
+let flowMixRatio   = 0.5;                       // 0=pure blue, 1=pure purple
+
+const flowBursts = [];
+for (let i = 0; i < FLOW_NUM_BURSTS; i++) {
+  flowBursts.push({ u: 0, v: 0, startTime: -1 });
+}
+
+const flowGeo       = new THREE.BufferGeometry();
+const flowPositions = new Float32Array(FLOW_BUFFER_SIZE);
+const flowColors    = new Float32Array(FLOW_BUFFER_SIZE);
+flowGeo.setAttribute('position', new THREE.BufferAttribute(flowPositions, 3));
+flowGeo.setAttribute('color',    new THREE.BufferAttribute(flowColors,    3));
+const flowLineSegments = new THREE.LineSegments(flowGeo, new THREE.LineBasicMaterial({
+  vertexColors: true, transparent: true, opacity: 1.0,
+  blending: THREE.AdditiveBlending, depthWrite: false
+}));
+scene.add(flowLineSegments);
+
+function spawnSurfaceFlow(u, v) {
+  if (!flowOn) return;
+  // Recycle oldest slot
+  let slot = 0;
+  let oldestT = flowBursts[0].startTime;
+  for (let i = 1; i < FLOW_NUM_BURSTS; i++) {
+    if (flowBursts[i].startTime < oldestT) {
+      slot = i;
+      oldestT = flowBursts[i].startTime;
+    }
+  }
+  flowBursts[slot] = { u, v, startTime: performance.now() };
+}
+
+function updateSurfaceFlow() {
+  const now = performance.now();
+  // Slider extreme damping: fades to 0 in the outer 15% on each end.
+  // 0.15 < ratio < 0.85 â†’ full opacity. Else linear fade to 0 at 0/1.
+  let sliderMaster = 1.0;
+  if      (flowMixRatio < 0.15) sliderMaster = flowMixRatio / 0.15;
+  else if (flowMixRatio > 0.85) sliderMaster = (1 - flowMixRatio) / 0.15;
+
+  let idx = 0;
+  const PER_BURST = FLOW_NUM_LINES * FLOW_SEGMENTS * 2 * 3;
+
+  for (let b = 0; b < FLOW_NUM_BURSTS; b++) {
+    const burst = flowBursts[b];
+
+    if (burst.startTime < 0) {
+      // Inactive slot â€” zero its block
+      for (let i = 0; i < PER_BURST; i++) { flowPositions[idx+i] = 0; flowColors[idx+i] = 0; }
+      idx += PER_BURST;
+      continue;
+    }
+
+    const age = now - burst.startTime;
+    if (age >= FLOW_TOTAL_MS) {
+      burst.startTime = -1;
+      for (let i = 0; i < PER_BURST; i++) { flowPositions[idx+i] = 0; flowColors[idx+i] = 0; }
+      idx += PER_BURST;
+      continue;
+    }
+
+    // Phase
+    let tipReached, burstOpacity;
+    if (age < FLOW_DELAY_MS) {
+      tipReached = 0;
+      burstOpacity = 0;
+    } else if (age < FLOW_DELAY_MS + FLOW_GROW_MS) {
+      const t = (age - FLOW_DELAY_MS) / FLOW_GROW_MS;
+      tipReached = t * t * (3 - 2 * t);   // smoothstep
+      burstOpacity = 1.0;
+    } else {
+      const t = (age - FLOW_DELAY_MS - FLOW_GROW_MS) / FLOW_FADE_MS;
+      tipReached = 1.0;
+      burstOpacity = 1 - t;
+    }
+    burstOpacity *= sliderMaster;
+
+    for (let l = 0; l < FLOW_NUM_LINES; l++) {
+      const theta = (l / FLOW_NUM_LINES) * Math.PI * 2;
+      const du = Math.cos(theta) * FLOW_LENGTH_U;
+      const dv = Math.sin(theta) * FLOW_LENGTH_V;
+
+      for (let s = 0; s < FLOW_SEGMENTS; s++) {
+        const s1 = s       / FLOW_SEGMENTS;
+        const s2 = (s + 1) / FLOW_SEGMENTS;
+
+        // Past the leading edge â†’ zero the segment
+        if (s1 >= tipReached) {
+          for (let i = 0; i < 6; i++) { flowPositions[idx+i] = 0; flowColors[idx+i] = 0; }
+          idx += 6;
+          continue;
+        }
+
+        // Surface (u,v) â†’ world
+        const ce = Math.min(s2, tipReached);
+        let u1 = burst.u + du * s1, v1 = burst.v + dv * s1;
+        let u2 = burst.u + du * ce, v2 = burst.v + dv * ce;
+        v1 = Math.max(-WIDTH, Math.min(WIDTH, v1));
+        v2 = Math.max(-WIDTH, Math.min(WIDTH, v2));
+        const p1 = vertexPos(u1, v1);
+        const p2 = vertexPos(u2, v2);
+
+        // Color: blueâ†’purple gradient along line, slider biases overall mix
+        const r1 = flowMixRatio * 0.6 + s1 * 0.4;
+        const r2 = flowMixRatio * 0.6 + ce * 0.4;
+        const cR1 = FLOW_COLOR_BLUE.r * (1-r1) + FLOW_COLOR_PURPLE.r * r1;
+        const cG1 = FLOW_COLOR_BLUE.g * (1-r1) + FLOW_COLOR_PURPLE.g * r1;
+        const cB1 = FLOW_COLOR_BLUE.b * (1-r1) + FLOW_COLOR_PURPLE.b * r1;
+        const cR2 = FLOW_COLOR_BLUE.r * (1-r2) + FLOW_COLOR_PURPLE.r * r2;
+        const cG2 = FLOW_COLOR_BLUE.g * (1-r2) + FLOW_COLOR_PURPLE.g * r2;
+        const cB2 = FLOW_COLOR_BLUE.b * (1-r2) + FLOW_COLOR_PURPLE.b * r2;
+
+        // Leading-edge fade: brighter at the tip, soft toward the trailing samples
+        const headFade1 = 0.55 + 0.45 * s1;   // back is dimmer
+        const headFade2 = 0.55 + 0.45 * ce;   // tip is brightest
+        const a1 = burstOpacity * headFade1;
+        const a2 = burstOpacity * headFade2;
+
+        flowPositions[idx  ] = p1[0]; flowPositions[idx+1] = p1[1]; flowPositions[idx+2] = p1[2];
+        flowColors[idx  ] = cR1 * a1; flowColors[idx+1] = cG1 * a1; flowColors[idx+2] = cB1 * a1;
+        flowPositions[idx+3] = p2[0]; flowPositions[idx+4] = p2[1]; flowPositions[idx+5] = p2[2];
+        flowColors[idx+3] = cR2 * a2; flowColors[idx+4] = cG2 * a2; flowColors[idx+5] = cB2 * a2;
+        idx += 6;
+      }
+    }
+  }
+
+  flowGeo.attributes.position.needsUpdate = true;
+  flowGeo.attributes.color.needsUpdate    = true;
+}
+
+// ===== State =====
+const pentagons = []; // {u, v, activation, target}
+
+function getLift(u, v) {
+  let total = 0;
+  for (const p of pentagons) {
+    if (p.activation <= 0) continue;
+    // Periodic distance in u
+    let du = u - p.u;
+    while (du > Math.PI) du -= 2*Math.PI;
+    while (du < -Math.PI) du += 2*Math.PI;
+    const dv = v - p.v;
+    const d2 = du*du + dv*dv*0.8;  // anisotropic falloff
+    total += AMPLITUDE * p.activation * Math.exp(-d2 / (SIGMA*SIGMA));
+  }
+  return total;
+}
+
+// ===== Central attractor â€” F = k/rÂ² gravity pulling toward origin =====
+// v14: allow pullFrac to exceed 1.0 so the surface can fold through the origin
+//      symmetrically, revealing the Ï‡=0 self-intersection structure.
+let GRAVITY_K = 0;  // strength, controlled by slider (0..7.0 for 0..200%)
+const GRAVITY_EPS = 0.4;       // softening â€” keeps rÂ² from going to zero
+const GRAVITY_MAX_PULL = 1.85; // raised cap â€” at 200% slider, fully invert through origin
+
+function applyGravity(x, y, z) {
+  if (GRAVITY_K === 0) return [x, y, z];
+  const r2 = x*x + y*y + z*z;
+  const r = Math.sqrt(r2);
+  if (r < 0.001) return [x, y, z];
+  let pullFrac = GRAVITY_K / (r2 + GRAVITY_EPS);
+  if (pullFrac > GRAVITY_MAX_PULL) pullFrac = GRAVITY_MAX_PULL;
+  // scale âˆˆ [1 - GRAVITY_MAX_PULL, 1] â€” at 200% slider, scale crosses zero and
+  // becomes negative, flipping points through origin to the opposite side at
+  // a reduced distance. The MÃ¶bius then folds symmetrically into itself.
+  const scale = 1 - pullFrac;
+  return [x * scale, y * scale, z * scale];
+}
+
+// ===== Quantum flux â€” fBm shimmer on every lattice point =====
+// Perlin-style hash â†’ smooth pseudo-random gradient per integer lattice point
+function hash3(i, j, k) {
+  const s = Math.sin(i * 127.1 + j * 311.7 + k * 74.7) * 43758.5453;
+  return s - Math.floor(s);  // [0,1)
+}
+// 3D value-noise (cheaper than full Perlin, still smooth) â€” trilinear interpolation between 8 cube corners
+function smoothNoise3(x, y, z) {
+  const ix = Math.floor(x), iy = Math.floor(y), iz = Math.floor(z);
+  const fx = x - ix, fy = y - iy, fz = z - iz;
+  // smoothstep for fade
+  const u = fx*fx*(3-2*fx), v = fy*fy*(3-2*fy), w = fz*fz*(3-2*fz);
+  const c000 = hash3(ix, iy, iz),     c100 = hash3(ix+1, iy, iz);
+  const c010 = hash3(ix, iy+1, iz),   c110 = hash3(ix+1, iy+1, iz);
+  const c001 = hash3(ix, iy, iz+1),   c101 = hash3(ix+1, iy, iz+1);
+  const c011 = hash3(ix, iy+1, iz+1), c111 = hash3(ix+1, iy+1, iz+1);
+  const x00 = c000 + u*(c100 - c000), x10 = c010 + u*(c110 - c010);
+  const x01 = c001 + u*(c101 - c001), x11 = c011 + u*(c111 - c011);
+  const y0 = x00 + v*(x10 - x00), y1 = x01 + v*(x11 - x01);
+  return (y0 + w*(y1 - y0)) * 2 - 1;  // â†’ [-1, 1]
+}
+// Fractional Brownian Motion = stacked octaves of noise
+function fbm(x, y, z) {
+  let sum = 0, amp = 0.5, freq = 1;
+  for (let i = 0; i < 3; i++) {
+    sum += amp * smoothNoise3(x*freq, y*freq, z*freq);
+    freq *= 2; amp *= 0.5;
+  }
+  return sum;  // â‰ˆ [-0.875, 0.875]
+}
+
+let SHIMMER_K = 0;  // intensity, controlled by slider
+let shimmerTime = 0;  // advances per frame so noise field "flows"
+
+function applyShimmer(x, y, z, u, v) {
+  if (SHIMMER_K === 0) return [x, y, z];
+  // Use (u, v) as spatial coords for noise â€” neighboring lattice points get correlated noise
+  // Three independent fBm samples (one per axis), offset in time-space, so each point wobbles in 3D
+  const t = shimmerTime;
+  const dx = fbm(u * 0.8, v * 1.2, t)         * SHIMMER_K;
+  const dy = fbm(u * 0.8 + 13, v * 1.2 + 7, t) * SHIMMER_K;
+  const dz = fbm(u * 0.8 + 5, v * 1.2 + 31, t) * SHIMMER_K;
+  return [x + dx, y + dy, z + dz];
+}
+
+function vertexPos(u, v) {
+  const [x0, y0, z0] = paramToWorld(u, v);
+  const lift = getLift(u, v);
+  let x = x0, y = y0, z = z0;
+  if (lift !== 0) {
+    const [nx, ny, nz] = getNormal(u, v);
+    x += nx*lift; y += ny*lift; z += nz*lift;
+  }
+  [x, y, z] = applyGravity(x, y, z);
+  [x, y, z] = applyShimmer(x, y, z, u, v);
+  return [x, y, z];
+}
+
+// ===== Build hex lattice (rebuildable on density change) =====
+let gridPoints = [];
+let lineIndices = [];
+let positions = null;
+
+const lineGeo = new THREE.BufferGeometry();
+// v16: lattice "net" gets slightly more presence â€” color pushed brighter
+// (0x6a7a90 â†’ 0x82a0b8, cooler+lighter slate-blue) and opacity bumped from
+// 0.60 to 0.72. The lattice was reading too dim against bg in the wider
+// galactic shots; this keeps it as context but ensures the strip's surface
+// shape is legible at low density too.
+const lines = new THREE.LineSegments(lineGeo, new THREE.LineBasicMaterial({
+  color: COLOR_LATTICE_HEX, transparent: true, opacity: 0.72
+}));
+scene.add(lines);
+
+function rebuildLattice() {
+  gridPoints = [];
+  for (let i = 0; i <= U_STEPS; i++) {
+    const u = (i / U_STEPS) * Math.PI * 2;
+    for (let j = 0; j <= V_STEPS; j++) {
+      const v = (j / V_STEPS) * 2 * WIDTH - WIDTH;
+      gridPoints.push([u, v]);
+    }
+  }
+  lineIndices = [];
+  for (let i = 0; i <= U_STEPS; i++) {
+    for (let j = 0; j <= V_STEPS; j++) {
+      if (i < U_STEPS) {
+        const cur = i * (V_STEPS + 1) + j;
+        lineIndices.push(cur, cur + (V_STEPS + 1));
+      }
+      if (j < V_STEPS && ((i + j) % 2 === 0)) {
+        const cur = i * (V_STEPS + 1) + j;
+        lineIndices.push(cur, cur + 1);
+      }
+    }
+  }
+  positions = new Float32Array(gridPoints.length * 3);
+  lineGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  lineGeo.setIndex(lineIndices);
+}
+rebuildLattice();
+
+// ===== Pentagon markers (drawn in tangent plane, vertex-colored for hover) =====
+// v15.8: bumped â€” when paused, BOTH dodecahedra (up + down mirror) render at the
+// hovered pentagon. Each is 5 faces Ã— 5 edges = 25 edges, so 2 Ã— 25 = 50 fold-up
+// edges. Plus lemon rings (up to 49), amber flower (25), and the usual inner +
+// selection edges for all placed pentagons.
+const PENT_BUFFER_SIZE = 50 * 14 * 2 * 3 + 50 * 5 * 2 * 3 + 50 * 2 * 3;
+const pentPositions = new Float32Array(PENT_BUFFER_SIZE);
+const pentColors = new Float32Array(PENT_BUFFER_SIZE);
+const pentGeo = new THREE.BufferGeometry();
+pentGeo.setAttribute('position', new THREE.BufferAttribute(pentPositions, 3));
+pentGeo.setAttribute('color', new THREE.BufferAttribute(pentColors, 3));
+const pentLines = new THREE.LineSegments(pentGeo, new THREE.LineBasicMaterial({
+  vertexColors: true, transparent: true, opacity: 0.95
+}));
+scene.add(pentLines);
+
+// =====================================================================
+// CHANGE 2 (v14): DODECAHEDRAL TRACE ECHOES
+// When pentagons are active, draw faint cyan traces connecting nearest-neighbor
+// pentagon pairs â€” routed as geodesic-ish arcs along the lifted MÃ¶bius surface.
+// This is the Ï‡=0 substrate visualizing what GP(1,0) wants to be:
+// the dodecahedron's edge graph drawn on a one-sided surface.
+// Pure math: nearest-neighbor pairs in 3D world space, arcs sampled via vertexPos.
+// =====================================================================
+const ECHO_ARC_SAMPLES = 14;        // segments per arc â€” smoother at higher
+const ECHO_MAX_NEIGHBORS = 3;       // each pentagon connects to its 3 nearest
+                                    // (dodecahedron is 3-regular: 3 edges/vertex)
+const ECHO_BUFFER_SIZE = 50 * ECHO_MAX_NEIGHBORS * 2 * ECHO_ARC_SAMPLES * 2 * 3;
+const echoPositions = new Float32Array(ECHO_BUFFER_SIZE);
+const echoColors = new Float32Array(ECHO_BUFFER_SIZE);
+const echoGeo = new THREE.BufferGeometry();
+echoGeo.setAttribute('position', new THREE.BufferAttribute(echoPositions, 3));
+echoGeo.setAttribute('color', new THREE.BufferAttribute(echoColors, 3));
+const echoLines = new THREE.LineSegments(echoGeo, new THREE.LineBasicMaterial({
+  vertexColors: true, transparent: true, opacity: 0.85,
+  blending: THREE.AdditiveBlending, depthWrite: false
+}));
+scene.add(echoLines);
+
+const ECHO_COLOR_NEAR = { r: 0.00, g: 0.83, b: 1.00 };  // #00d4ff cyan hot
+const ECHO_COLOR_FAR  = { r: 0.10, g: 0.31, b: 0.72 };  // #1a4fb8 deep blue tail
+
+function updateDodecahedralEcho() {
+  let widx = 0;
+  // Snapshot active pentagons (those past activation threshold) with their world pos
+  const active = [];
+  for (let i = 0; i < pentagons.length; i++) {
+    const p = pentagons[i];
+    if (p.target === 0 || p.activation <= 0.15) continue;
+    const pos = vertexPos(p.u, p.v);
+    active.push({ idx: i, u: p.u, v: p.v, pos, act: p.activation, selected: !!p.selected });
+  }
+  // Skip drawing if too few â€” echo only meaningful with 4+ active vertices
+  if (active.length < 4) {
+    echoGeo.setDrawRange(0, 0);
+    return;
+  }
+  // For each active pentagon, find its K nearest neighbors in 3D world space.
+  // Deduplicate pairs (aâ†’b and bâ†’a are the same edge).
+  const seen = new Set();
+  for (let i = 0; i < active.length; i++) {
+    const a = active[i];
+    const dists = [];
+    for (let j = 0; j < active.length; j++) {
+      if (i === j) continue;
+      const b = active[j];
+      const d = Math.hypot(a.pos[0]-b.pos[0], a.pos[1]-b.pos[1], a.pos[2]-b.pos[2]);
+      dists.push({ j, d });
+    }
+    dists.sort((x, y) => x.d - y.d);
+    const k = Math.min(ECHO_MAX_NEIGHBORS, dists.length);
+    for (let n = 0; n < k; n++) {
+      const j = dists[n].j;
+      const key = i < j ? `${i}_${j}` : `${j}_${i}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const b = active[j];
+      // Route arc through parameter space â€” interpolate (u,v) linearly, but
+      // handle the MÃ¶bius wrap in u (shortest-path mod 2Ï€).
+      let du = b.u - a.u;
+      if (du > Math.PI) du -= 2 * Math.PI;
+      if (du < -Math.PI) du += 2 * Math.PI;
+      const dv = b.v - a.v;
+      // Edge brightness scales with both pentagons' activation
+      const edgeAct = Math.min(a.act, b.act);
+      // v15: edges between two SELECTED pentagons glow brighter â€” the
+      // "chosen ones connect to each other" signal in the dodecahedral graph.
+      const selectionBoost = (a.selected && b.selected) ? 1.8 : 1.0;
+      for (let s = 0; s < ECHO_ARC_SAMPLES; s++) {
+        const tA = s / ECHO_ARC_SAMPLES;
+        const tB = (s + 1) / ECHO_ARC_SAMPLES;
+        const uA = a.u + du * tA, vA = a.v + dv * tA;
+        const uB = a.u + du * tB, vB = a.v + dv * tB;
+        const pA = vertexPos((uA + 2*Math.PI) % (2*Math.PI), vA);
+        const pB = vertexPos((uB + 2*Math.PI) % (2*Math.PI), vB);
+        echoPositions[widx*3+0] = pA[0]; echoPositions[widx*3+1] = pA[1]; echoPositions[widx*3+2] = pA[2];
+        // Color: hot cyan near the endpoints, deeper blue mid-arc
+        // (Bell curve: max brightness at the ends, dimmer in middle â€”
+        // gives the "edge implies vertex" reading)
+        const fadeA = Math.abs(tA - 0.5) * 2;  // 0 in middle, 1 at ends
+        const fadeB = Math.abs(tB - 0.5) * 2;
+        const cA = mixColor(ECHO_COLOR_FAR, ECHO_COLOR_NEAR, fadeA);
+        const cB = mixColor(ECHO_COLOR_FAR, ECHO_COLOR_NEAR, fadeB);
+        // v16: echo brightness dimmed ~28% so the cyan connection lines read
+        // as context, not foreground. Selection-boosted edges between selected
+        // pentagons still pop because the selectionBoost multiplier survives
+        // intact â€” the absolute baseline just sits lower now.
+        const brA = (0.22 + 0.42 * fadeA) * edgeAct * selectionBoost;
+        const brB = (0.22 + 0.42 * fadeB) * edgeAct * selectionBoost;
+        echoColors[widx*3+0] = cA.r * brA;
+        echoColors[widx*3+1] = cA.g * brA;
+        echoColors[widx*3+2] = cA.b * brA;
+        widx++;
+        echoPositions[widx*3+0] = pB[0]; echoPositions[widx*3+1] = pB[1]; echoPositions[widx*3+2] = pB[2];
+        echoColors[widx*3+0] = cB.r * brB;
+        echoColors[widx*3+1] = cB.g * brB;
+        echoColors[widx*3+2] = cB.b * brB;
+        widx++;
+      }
+    }
+  }
+  echoGeo.attributes.position.needsUpdate = true;
+  echoGeo.attributes.color.needsUpdate = true;
+  echoGeo.setDrawRange(0, widx);
+}
+
+
+// Palette
+const COLOR_PENT_DEFAULT  = [1.0, 0.565, 0.565];   // #ff9090 â€” curvature stress
+const COLOR_PENT_HOVER    = [0.498, 1.0, 0.667];   // #7fffaa â€” interaction state
+// v15: selection ring uses bright tesseract cyan, pulses with time
+const COLOR_PENT_SELECTED = [0.00, 0.83, 1.00];    // #00d4ff â€” locked-in cyan
+
+let hoveredPentIdx = -1;  // index in pentagons array of the one under the mouse, or -1
+
+// =====================================================================
+// CHANGE (v15.2): HOLD-TO-PAUSE
+// Hover the same pentagon for PAUSE_HOVER_MS continuously â†’ the whole sim
+// freezes. Time-based things (lifts, shimmer, burst pool, center wave,
+// preview rays, ring pulses) all hold their state. The orbit camera still
+// works â€” so you can rotate around the frozen scene to inspect it.
+// Click anywhere, move off the pentagon, or press Space/Esc to resume.
+// As the 2-second charge builds, the hovered pentagon's green ring
+// brightens â€” that's the "PAUSE imminent" signal.
+// =====================================================================
+const PAUSE_HOVER_MS = 2000;
+let hoverStartTime = null;  // performance.now() when we started hovering current pentagon
+let isPaused = false;
+const pauseIndicator = document.getElementById('pauseIndicator');
+
+function setPaused(v) {
+  if (isPaused === v) return;
+  isPaused = v;
+  pauseIndicator.classList.toggle('visible', v);
+  if (!v) {
+    // On resume: reset dt baseline so we don't get a huge jump next frame
+    lastTime = performance.now();
+    // Require a fresh hover-hold to repause
+    hoverStartTime = null;
+  }
+}
+
+function resumeFromPause() {
+  if (isPaused) setPaused(false);
+}
+
+// =====================================================================
+// MODULE: GHOST FLOWER GENERATION (v15.5, reusable primitive)
+// Given an (u, v) point on the MÃ¶bius and a size/distance, produces a
+// 5-pentagon flower laid out in the local tangent plane. This is the
+// "where would the dodecahedral neighbors sit if the strip were locally
+// flat" generator. Vlad's design intent: we'll reuse this elsewhere, so
+// it's a clean pure function returning corner positions â€” no side
+// effects, no rendering, just geometry.
+//
+// Args:
+//   u, v          : center on MÃ¶bius parameter space
+//   sizeOpt       : circumradius of each ghost pentagon (default pentagonScale()*0.92)
+//   distOpt       : center-to-center distance from u,v to each ghost
+//                   (default pentagonScale()*1.62 â‰ˆ 2Â·apothem so edges would touch)
+//   startAngle    : rotation offset of the flower (default Ï€/10 = 18Â°)
+// Returns:
+//   { centers: [[x,y,z],...x5], corners: [[[x,y,z]x5],...x5],
+//     tangent:[tx,ty,tz], bitangent:[bx,by,bz] }
+// =====================================================================
+function computeGhostFlower(u, v, sizeOpt, distOpt, startAngle) {
+  const ghostSize = (sizeOpt !== undefined) ? sizeOpt : pentagonScale() * 0.92;
+  const ghostDist = (distOpt !== undefined) ? distOpt : pentagonScale() * 1.62;
+  const sa0 = (startAngle !== undefined) ? startAngle : Math.PI / 10;
+
+  // Tangent frame at (u, v) â€” same construction the placed pentagons use
+  const center = vertexPos(u, v);
+  const h = 0.001;
+  const p0 = paramToWorld(u, v);
+  const p1 = paramToWorld(u + h, v);
+  let tx = (p1[0]-p0[0])/h, ty = (p1[1]-p0[1])/h, tz = (p1[2]-p0[2])/h;
+  const tmag = Math.hypot(tx, ty, tz);
+  tx /= tmag; ty /= tmag; tz /= tmag;
+  const n = getNormal(u, v);
+  const bx = n[1]*tz - n[2]*ty;
+  const by = n[2]*tx - n[0]*tz;
+  const bz = n[0]*ty - n[1]*tx;
+
+  const centers = [];
+  const corners = [];
+  for (let g = 0; g < 5; g++) {
+    const ga = (Math.PI * 2 * g / 5) + sa0;
+    const ox = Math.cos(ga) * ghostDist;
+    const oy = Math.sin(ga) * ghostDist;
+    const gCx = center[0] + ox * tx + oy * bx;
+    const gCy = center[1] + ox * ty + oy * by;
+    const gCz = center[2] + ox * tz + oy * bz;
+    centers.push([gCx, gCy, gCz]);
+
+    const ghostCorners = [];
+    for (let i = 0; i < 5; i++) {
+      const a = Math.PI * 2 * i / 5 - Math.PI / 2;
+      const ca = Math.cos(a), saa = Math.sin(a);
+      ghostCorners.push([
+        gCx + ghostSize * (ca*tx + saa*bx),
+        gCy + ghostSize * (ca*ty + saa*by),
+        gCz + ghostSize * (ca*tz + saa*bz)
+      ]);
+    }
+    corners.push(ghostCorners);
+  }
+  return { centers, corners, tangent: [tx, ty, tz], bitangent: [bx, by, bz] };
+}
+
+// =====================================================================
+// MODULE: DODECAHEDRON LOWER-RING FOLD-UP (v15.7, parameterized v15.8)
+// Given a position on the MÃ¶bius surface and its tangent frame, builds
+// the 5 dodecahedron faces that share an edge with the central pentagon
+// at that position. Each face folds at the exact dodecahedral dihedral
+// angle (arccos(-1/âˆš5) â‰ˆ 116.565Â°), pivoted around its shared edge
+// using the surface normal as the alignment axis.
+//
+// v15.8: added `dir` parameter. dir=+1 folds the dodecahedron UP along
+// +N (above the strip); dir=-1 folds DOWN along -N (below the strip).
+// The strip's tangent plane becomes the mirror plane between the two
+// dodecahedra â€” same construction, opposite half-space.
+//
+// Args:
+//   u, v        : center on MÃ¶bius parameter space
+//   pentagonR   : pentagon circumradius (default pentagonScale() â€” derives from density)
+//   dir         : +1 (default) for fold UP, -1 for fold DOWN
+// Returns:
+//   { faces: [[[x,y,z]x5], ...x5], faceCenters: [[x,y,z]x5], faceNormals: [[x,y,z]x5] }
+// =====================================================================
+function computeDodecahedronLowerRing(u, v, pentagonR, dir) {
+  const R = (pentagonR !== undefined) ? pentagonR : pentagonScale();
+  const dirSign = (dir !== undefined) ? dir : 1;
+  const COS_DIHEDRAL = -1 / Math.sqrt(5);   // â‰ˆ -0.4472, the dodec dihedral cos
+  const SIN_DIHEDRAL = 2 / Math.sqrt(5);    // â‰ˆ 0.8944
+  const APOTHEM = R * Math.cos(Math.PI / 5); // pentagon apothem (face-center to edge midpoint)
+  const R_IN = R * 1.30901699;               // dodec inradius for this pentagon size
+
+  // Tangent frame at the strip surface
+  const center = vertexPos(u, v);
+  const h = 0.001;
+  const p0 = paramToWorld(u, v);
+  const p1 = paramToWorld(u + h, v);
+  let tx = (p1[0]-p0[0])/h, ty = (p1[1]-p0[1])/h, tz = (p1[2]-p0[2])/h;
+  const tmag = Math.hypot(tx, ty, tz);
+  tx /= tmag; ty /= tmag; tz /= tmag;
+  const N_raw = getNormal(u, v);  // surface normal at the pentagon
+  // v15.8: apply dirSign to the lift direction â€” dir=-1 mirrors the whole
+  // dodecahedron across the strip's tangent plane.
+  const N = [N_raw[0] * dirSign, N_raw[1] * dirSign, N_raw[2] * dirSign];
+  const bx = N_raw[1]*tz - N_raw[2]*ty;
+  const by = N_raw[2]*tx - N_raw[0]*tz;
+  const bz = N_raw[0]*ty - N_raw[1]*tx;
+
+  // Hovered pentagon's 5 vertices (face0 in canonical terms). Match the
+  // angle convention the existing pentagon renderer uses so edges line up.
+  // These are in the strip plane and identical for dir=+1 and dir=-1.
+  const V0 = [];
+  for (let i = 0; i < 5; i++) {
+    const a = i * Math.PI * 2 / 5 - Math.PI / 2;
+    V0.push([
+      center[0] + R * (Math.cos(a) * tx + Math.sin(a) * bx),
+      center[1] + R * (Math.cos(a) * ty + Math.sin(a) * by),
+      center[2] + R * (Math.cos(a) * tz + Math.sin(a) * bz)
+    ]);
+  }
+
+  // Dodecahedron center sits along the lift direction at distance R_IN
+  // (above the strip for dir=+1, below for dir=-1)
+  const dodecCenter = [center[0] + R_IN * N[0], center[1] + R_IN * N[1], center[2] + R_IN * N[2]];
+
+  const faces = [];
+  const faceCenters = [];
+  const faceNormals = [];
+
+  for (let i = 0; i < 5; i++) {
+    const v_a = V0[i];
+    const v_b = V0[(i + 1) % 5];
+
+    // Shared edge midpoint (in the strip plane)
+    const M = [(v_a[0]+v_b[0])/2, (v_a[1]+v_b[1])/2, (v_a[2]+v_b[2])/2];
+
+    // Outward perpendicular in face0's plane (from face0 center toward M)
+    const opRaw = [M[0]-center[0], M[1]-center[1], M[2]-center[2]];
+    const opMag = Math.hypot(opRaw[0], opRaw[1], opRaw[2]);
+    const op = [opRaw[0]/opMag, opRaw[1]/opMag, opRaw[2]/opMag];
+
+    // Face[i]'s center: pivot around shared edge by dihedral angle, using
+    // the (possibly flipped) lift direction N.
+    const c_i = [
+      M[0] + APOTHEM * (-COS_DIHEDRAL * op[0] + SIN_DIHEDRAL * N[0]),
+      M[1] + APOTHEM * (-COS_DIHEDRAL * op[1] + SIN_DIHEDRAL * N[1]),
+      M[2] + APOTHEM * (-COS_DIHEDRAL * op[2] + SIN_DIHEDRAL * N[2])
+    ];
+    faceCenters.push(c_i);
+
+    // Face[i]'s outward normal: direction from dodec center to face center
+    const niRaw = [c_i[0]-dodecCenter[0], c_i[1]-dodecCenter[1], c_i[2]-dodecCenter[2]];
+    const niMag = Math.hypot(niRaw[0], niRaw[1], niRaw[2]);
+    const N_i = [niRaw[0]/niMag, niRaw[1]/niMag, niRaw[2]/niMag];
+    faceNormals.push(N_i);
+
+    // Build face[i]'s local 2D frame. Tangent axis = direction from c_i to v_a
+    const tRaw = [v_a[0]-c_i[0], v_a[1]-c_i[1], v_a[2]-c_i[2]];
+    const tMag = Math.hypot(tRaw[0], tRaw[1], tRaw[2]);
+    const t_i = [tRaw[0]/tMag, tRaw[1]/tMag, tRaw[2]/tMag];
+    const b_i = [
+      N_i[1]*t_i[2] - N_i[2]*t_i[1],
+      N_i[2]*t_i[0] - N_i[0]*t_i[2],
+      N_i[0]*t_i[1] - N_i[1]*t_i[0]
+    ];
+
+    const verts = [];
+    for (let j = 0; j < 5; j++) {
+      const a = j * Math.PI * 2 / 5;
+      verts.push([
+        c_i[0] + R * (Math.cos(a) * t_i[0] + Math.sin(a) * b_i[0]),
+        c_i[1] + R * (Math.cos(a) * t_i[1] + Math.sin(a) * b_i[1]),
+        c_i[2] + R * (Math.cos(a) * t_i[2] + Math.sin(a) * b_i[2])
+      ]);
+    }
+    faces.push(verts);
+  }
+  return { faces, faceCenters, faceNormals };
+}
+
+function updatePentagonMarkers() {
+  const now = performance.now() * 0.001;
+  // Subtle pulse for selection rings â€” sin curve in [0.65, 1.0]
+  const selPulse = 0.65 + 0.35 * (0.5 + 0.5 * Math.sin(now * 2.4));
+  let idx = 0;
+  for (let pi = 0; pi < pentagons.length; pi++) {
+    const p = pentagons[pi];
+    if (p.activation <= 0.05) continue;
+    const center = vertexPos(p.u, p.v);
+    const h = 0.001;
+    const p0 = paramToWorld(p.u, p.v);
+    const p1 = paramToWorld(p.u + h, p.v);
+    let tx = (p1[0]-p0[0])/h, ty = (p1[1]-p0[1])/h, tz = (p1[2]-p0[2])/h;
+    const tmag = Math.hypot(tx, ty, tz);
+    tx /= tmag; ty /= tmag; tz /= tmag;
+    const n = getNormal(p.u, p.v);
+    const bx = n[1]*tz - n[2]*ty;
+    const by = n[2]*tx - n[0]*tz;
+    const bz = n[0]*ty - n[1]*tx;
+    const size = pentagonScale() * p.activation;
+    // v15.2: if this pentagon is hovered, brighten the green as the 2-sec
+    // pause-charge builds. When paused, a slow pulse signals "frozen state."
+    let col;
+    if (pi === hoveredPentIdx) {
+      let mult = 1.0;
+      if (isPaused) {
+        mult = 1.3 + 0.25 * Math.sin(performance.now() * 0.005);
+      } else if (hoverStartTime !== null) {
+        const charge = Math.min(1, (performance.now() - hoverStartTime) / PAUSE_HOVER_MS);
+        mult = 1.0 + 0.7 * charge;  // ramps to 1.7Ã— over 2 sec
+      }
+      col = [Math.min(2, COLOR_PENT_HOVER[0] * mult),
+             Math.min(2, COLOR_PENT_HOVER[1] * mult),
+             Math.min(2, COLOR_PENT_HOVER[2] * mult)];
+    } else {
+      col = COLOR_PENT_DEFAULT;
+    }
+
+    // Inner pentagon outline (existing visual)
+    const corners = [];
+    for (let i = 0; i < 5; i++) {
+      const a = Math.PI * 2 * i / 5 - Math.PI / 2;
+      const ca = Math.cos(a), sa = Math.sin(a);
+      corners.push([
+        center[0] + size * (ca*tx + sa*bx),
+        center[1] + size * (ca*ty + sa*by),
+        center[2] + size * (ca*tz + sa*bz)
+      ]);
+    }
+    for (let i = 0; i < 5; i++) {
+      const c1 = corners[i], c2 = corners[(i+1)%5];
+      pentPositions[idx++] = c1[0]; pentPositions[idx++] = c1[1]; pentPositions[idx++] = c1[2];
+      pentColors[idx-3] = col[0]; pentColors[idx-2] = col[1]; pentColors[idx-1] = col[2];
+      pentPositions[idx++] = c2[0]; pentPositions[idx++] = c2[1]; pentPositions[idx++] = c2[2];
+      pentColors[idx-3] = col[0]; pentColors[idx-2] = col[1]; pentColors[idx-1] = col[2];
+    }
+
+    // v15: selection ring â€” outer pentagon at 1.55Ã— size, in pulsing cyan
+    if (p.selected) {
+      const ringSize = size * 1.55;
+      const ringCorners = [];
+      // Rotate 36Â° (Ï€/5) so the ring's vertices land between the inner ones
+      const ringOffset = Math.PI / 5;
+      for (let i = 0; i < 5; i++) {
+        const a = Math.PI * 2 * i / 5 - Math.PI / 2 + ringOffset;
+        const ca = Math.cos(a), sa = Math.sin(a);
+        ringCorners.push([
+          center[0] + ringSize * (ca*tx + sa*bx),
+          center[1] + ringSize * (ca*ty + sa*by),
+          center[2] + ringSize * (ca*tz + sa*bz)
+        ]);
+      }
+      const rR = COLOR_PENT_SELECTED[0] * selPulse;
+      const rG = COLOR_PENT_SELECTED[1] * selPulse;
+      const rB = COLOR_PENT_SELECTED[2] * selPulse;
+      for (let i = 0; i < 5; i++) {
+        const c1 = ringCorners[i], c2 = ringCorners[(i+1)%5];
+        pentPositions[idx++] = c1[0]; pentPositions[idx++] = c1[1]; pentPositions[idx++] = c1[2];
+        pentColors[idx-3] = rR; pentColors[idx-2] = rG; pentColors[idx-1] = rB;
+        pentPositions[idx++] = c2[0]; pentPositions[idx++] = c2[1]; pentPositions[idx++] = c2[2];
+        pentColors[idx-3] = rR; pentColors[idx-2] = rG; pentColors[idx-1] = rB;
+      }
+    }
+  }
+
+  // v15.6: DUAL GHOSTS, FULL SET â€” both layers active simultaneously when paused.
+  //   LAYER 1 (lemon-gold rings): v15.4 logic, extended in v15.6. Every OTHER
+  //     placed pentagon gets a gold ring (not just K=5 nearest). With ~12
+  //     placed, the entire dodecahedral structure lights up in gold during
+  //     pause â€” the fog naturally dims far ones so nearness reads as
+  //     brightness without a hard cutoff.
+  //   LAYER 2 (amber flower): v15.5 module computeGhostFlower(). Generates
+  //     5 ghosts in the tangent plane at the hovered pentagon â€” the IDEAL
+  //     local dodecahedral neighbors, as if the strip were flat there.
+  // The two layers together: amber = what the math says LOCALLY, lemon = what
+  // the geometry has GLOBALLY. Their displacement IS the dodecahedral curvature.
+  if (isPaused && hoveredPentIdx >= 0 && hoveredPentIdx < pentagons.length) {
+    const ph = pentagons[hoveredPentIdx];
+    if (ph && ph.target === 1 && ph.activation > 0.5) {
+      const phCenter = vertexPos(ph.u, ph.v);
+
+      // 1) Find the 5 nearest placed pentagons (the dodecahedral neighbors).
+      //    World-space distance â€” same metric the cyan echo uses.
+      const candidates = [];
+      for (let pi = 0; pi < pentagons.length; pi++) {
+        if (pi === hoveredPentIdx) continue;
+        const p = pentagons[pi];
+        if (p.target !== 1 || p.activation <= 0.5) continue;
+        const pPos = vertexPos(p.u, p.v);
+        const dx = pPos[0] - phCenter[0];
+        const dy = pPos[1] - phCenter[1];
+        const dz = pPos[2] - phCenter[2];
+        candidates.push({ p, pos: pPos, d: Math.sqrt(dx*dx + dy*dy + dz*dz) });
+      }
+      candidates.sort((a, b) => a.d - b.d);
+      // v15.6: every placed pentagon gets a lemon ring during pause, not
+      // just the K=5 nearest. With ~12 placed (place12) the full dodecahedral
+      // structure lights up in gold; the fog naturally dims far ones, so
+      // adjacency reads as "nearer = brighter" without needing a hard cutoff.
+      const K = candidates.length;
+
+      // 2) Gold pulse â€” same 4-sec cycle as v15.3 so transition is seamless
+      const ghostPulse = 0.55 + 0.35 * Math.sin(performance.now() * 0.004);
+      const goldR = COLOR_LEMON_GOLD.r * ghostPulse;
+      const goldG = COLOR_LEMON_GOLD.g * ghostPulse;
+      const goldB = COLOR_LEMON_GOLD.b * ghostPulse;
+
+      // 3) Draw a gold ring AROUND each of the K nearest neighbors. Ring sits
+      //    slightly outside the placed pentagon's pink outline and is rotated
+      //    36Â° so the corners interleave (reads as "this is on top, this is
+      //    being highlighted as a neighbor").
+      for (let n = 0; n < K; n++) {
+        const nb = candidates[n];
+        const np = nb.p;
+        const nCenter = nb.pos;
+
+        // Re-derive tangent frame at this neighbor so the ring lies flat on
+        // the strip at the neighbor's location (NOT in the hovered one's
+        // tangent plane â€” that was the v15.3 bug)
+        const hh = 0.001;
+        const nP0 = paramToWorld(np.u, np.v);
+        const nP1 = paramToWorld(np.u + hh, np.v);
+        let nTx = (nP1[0]-nP0[0])/hh, nTy = (nP1[1]-nP0[1])/hh, nTz = (nP1[2]-nP0[2])/hh;
+        const nTmag = Math.hypot(nTx, nTy, nTz);
+        nTx /= nTmag; nTy /= nTmag; nTz /= nTmag;
+        const nN = getNormal(np.u, np.v);
+        const nBx = nN[1]*nTz - nN[2]*nTy;
+        const nBy = nN[2]*nTx - nN[0]*nTz;
+        const nBz = nN[0]*nTy - nN[1]*nTx;
+
+        const ringSize = pentagonScale() * np.activation * 1.42;   // surrounds the pink ~1.18Ã— pentagon
+        const ringRot  = Math.PI / 5;                    // 36Â° offset
+        const ghostCorners = [];
+        for (let i = 0; i < 5; i++) {
+          const a = Math.PI * 2 * i / 5 - Math.PI / 2 + ringRot;
+          const ca = Math.cos(a), sa = Math.sin(a);
+          ghostCorners.push([
+            nCenter[0] + ringSize * (ca*nTx + sa*nBx),
+            nCenter[1] + ringSize * (ca*nTy + sa*nBy),
+            nCenter[2] + ringSize * (ca*nTz + sa*nBz)
+          ]);
+        }
+        for (let i = 0; i < 5; i++) {
+          const c1 = ghostCorners[i], c2 = ghostCorners[(i+1)%5];
+          pentPositions[idx++] = c1[0]; pentPositions[idx++] = c1[1]; pentPositions[idx++] = c1[2];
+          pentColors[idx-3] = goldR; pentColors[idx-2] = goldG; pentColors[idx-1] = goldB;
+          pentPositions[idx++] = c2[0]; pentPositions[idx++] = c2[1]; pentPositions[idx++] = c2[2];
+          pentColors[idx-3] = goldR; pentColors[idx-2] = goldG; pentColors[idx-1] = goldB;
+        }
+      }
+
+      // v15.5: ALSO render the tangent-plane FLOWER from computeGhostFlower.
+      // The lemon-gold rings above show ACTUAL nearest neighbors. The amber
+      // flower below shows the IDEAL local dodecahedral neighbors (where they
+      // would sit if the strip were locally flat). The gap between the two
+      // encodes how much the MÃ¶bius twist has displaced the dodecahedron's
+      // perfect symmetry â€” visible curvature feedback in one frame.
+      //
+      // Pulse is offset by Ï€ so the two layers don't beat in unison; the
+      // amber breathes opposite to the lemon, creating a parallax-like
+      // visual rhythm that helps the eye separate them.
+      const flower = computeGhostFlower(ph.u, ph.v);
+      const flowerPulse = 0.40 + 0.25 * Math.sin(performance.now() * 0.004 + Math.PI);
+      const amberR = COLOR_AMBER_FLOWER.r * flowerPulse;
+      const amberG = COLOR_AMBER_FLOWER.g * flowerPulse;
+      const amberB = COLOR_AMBER_FLOWER.b * flowerPulse;
+      for (let g = 0; g < flower.corners.length; g++) {
+        const fCorners = flower.corners[g];
+        for (let i = 0; i < 5; i++) {
+          const c1 = fCorners[i], c2 = fCorners[(i+1)%5];
+          pentPositions[idx++] = c1[0]; pentPositions[idx++] = c1[1]; pentPositions[idx++] = c1[2];
+          pentColors[idx-3] = amberR; pentColors[idx-2] = amberG; pentColors[idx-1] = amberB;
+          pentPositions[idx++] = c2[0]; pentPositions[idx++] = c2[1]; pentPositions[idx++] = c2[2];
+          pentColors[idx-3] = amberR; pentColors[idx-2] = amberG; pentColors[idx-1] = amberB;
+        }
+      }
+
+      // v15.8: DODECAHEDRON FOLD UP + DOWN MIRROR
+      // Two dodecahedra emerge from the hovered pentagon: one folds UP along
+      // +N (orange, sunrise) and one folds DOWN along -N (red, sunset).
+      // The strip's tangent plane at the hovered pentagon is the mirror
+      // plane between them â€” same construction, mirrored half-space.
+      //
+      // Each call generates the 5 lower-ring faces in that half-space, all
+      // sharing the central pentagon's edges as their bottom edges, all
+      // tilted at the exact dodecahedral dihedral angle. Pulse phases at
+      // Ï€/2 (up) and 3Ï€/2 (down) keep the two mirrored sets breathing
+      // opposite â€” like a heartbeat through the strip.
+      const tNow = performance.now() * 0.004;
+      const dodecUp = computeDodecahedronLowerRing(ph.u, ph.v, undefined, +1);
+      const dodecDn = computeDodecahedronLowerRing(ph.u, ph.v, undefined, -1);
+
+      const upPulse = 0.45 + 0.35 * Math.sin(tNow + Math.PI / 2);
+      const orangeR = COLOR_ORANGE_UP.r * upPulse;
+      const orangeG = COLOR_ORANGE_UP.g * upPulse;
+      const orangeB = COLOR_ORANGE_UP.b * upPulse;
+      for (let f = 0; f < dodecUp.faces.length; f++) {
+        const verts = dodecUp.faces[f];
+        for (let i = 0; i < 5; i++) {
+          const c1 = verts[i], c2 = verts[(i+1)%5];
+          pentPositions[idx++] = c1[0]; pentPositions[idx++] = c1[1]; pentPositions[idx++] = c1[2];
+          pentColors[idx-3] = orangeR; pentColors[idx-2] = orangeG; pentColors[idx-1] = orangeB;
+          pentPositions[idx++] = c2[0]; pentPositions[idx++] = c2[1]; pentPositions[idx++] = c2[2];
+          pentColors[idx-3] = orangeR; pentColors[idx-2] = orangeG; pentColors[idx-1] = orangeB;
+        }
+      }
+
+      const dnPulse = 0.45 + 0.35 * Math.sin(tNow + 3 * Math.PI / 2);
+      const redR = COLOR_RED_DOWN.r * dnPulse;
+      const redG = COLOR_RED_DOWN.g * dnPulse;
+      const redB = COLOR_RED_DOWN.b * dnPulse;
+      for (let f = 0; f < dodecDn.faces.length; f++) {
+        const verts = dodecDn.faces[f];
+        for (let i = 0; i < 5; i++) {
+          const c1 = verts[i], c2 = verts[(i+1)%5];
+          pentPositions[idx++] = c1[0]; pentPositions[idx++] = c1[1]; pentPositions[idx++] = c1[2];
+          pentColors[idx-3] = redR; pentColors[idx-2] = redG; pentColors[idx-1] = redB;
+          pentPositions[idx++] = c2[0]; pentPositions[idx++] = c2[1]; pentPositions[idx++] = c2[2];
+          pentColors[idx-3] = redR; pentColors[idx-2] = redG; pentColors[idx-1] = redB;
+        }
+      }
+    }
+  }
+
+  pentGeo.attributes.position.needsUpdate = true;
+  pentGeo.attributes.color.needsUpdate = true;
+  pentGeo.setDrawRange(0, idx / 3);
+}
+
+function updateLatticePositions() {
+  for (let k = 0; k < gridPoints.length; k++) {
+    const [u, v] = gridPoints[k];
+    const [x, y, z] = vertexPos(u, v);
+    positions[k*3] = x; positions[k*3+1] = y; positions[k*3+2] = z;
+  }
+  lineGeo.attributes.position.needsUpdate = true;
+}
+
+function refreshAll() {
+  updateLatticePositions();
+  updatePentagonMarkers();
+  updateDodecahedralEcho();  // v14: dodecahedral trace echoes
+  rebuildRaycastMesh();
+  updateStatus();
+}
+
+// ===== Pentagon ops =====
+function placePentagon(u, v) {
+  pentagons.push({ u, v, activation: 0, target: 1, selected: false });
+}
+function removePentagonNear(u, v, threshold = 0.22) {
+  // Tighter: must click visually close to the pentagon
+  let bestIdx = -1, bestD = Infinity;
+  for (let i = pentagons.length - 1; i >= 0; i--) {
+    const p = pentagons[i];
+    if (p.target === 0) continue;
+    let du = u - p.u;
+    while (du > Math.PI) du -= 2*Math.PI;
+    while (du < -Math.PI) du += 2*Math.PI;
+    const d = Math.hypot(du, (v - p.v) * 0.7);
+    if (d < bestD && d < threshold) { bestD = d; bestIdx = i; }
+  }
+  if (bestIdx >= 0) { pentagons[bestIdx].target = 0; return true; }
+  return false;
+}
+
+function place12() {
+  for (const p of pentagons) p.target = 0;
+  // Icosahedral-ish: 12 evenly spaced in u, alternating v
+  for (let i = 0; i < 12; i++) {
+    const u = (i / 12) * Math.PI * 2;
+    const v = (i % 2 === 0) ? 0.5 : -0.5;
+    placePentagon(u, v);
+  }
+}
+
+function clearAll() {
+  for (const p of pentagons) p.target = 0;
+}
+
+// =====================================================================
+// CHANGE 3 (v14): GREEN-CLICK PATH PREVIEW
+// When the user clicks the strip, before the pentagon lift begins, we briefly
+// "stop time" on that placement and fan out N ghost rays from the click point
+// along the surface â€” the "possible paths forward from this if-space choice."
+// Rays fade over PREVIEW_DURATION_MS, then the pentagon commits and the
+// existing lift animation handles "joining surfaces."
+// =====================================================================
+const PREVIEW_DURATION_MS = 520;   // v15.1: longer so rays are clearly seen
+const PREVIEW_NUM_RAYS = 7;
+const PREVIEW_RAY_SAMPLES = 10;
+const PREVIEW_RAY_REACH = 0.95;    // v15.1: slightly longer reach
+
+// Ghost-ray geometry buffer (capacity: 1 preview at a time Ã— N rays Ã— samples Ã— 2 endpoints Ã— 3)
+const PREVIEW_BUFFER_SIZE = PREVIEW_NUM_RAYS * PREVIEW_RAY_SAMPLES * 2 * 3;
+const previewPositions = new Float32Array(PREVIEW_BUFFER_SIZE);
+const previewColors = new Float32Array(PREVIEW_BUFFER_SIZE);
+const previewGeo = new THREE.BufferGeometry();
+previewGeo.setAttribute('position', new THREE.BufferAttribute(previewPositions, 3));
+previewGeo.setAttribute('color', new THREE.BufferAttribute(previewColors, 3));
+const previewLines = new THREE.LineSegments(previewGeo, new THREE.LineBasicMaterial({
+  vertexColors: true, transparent: true, opacity: 1.0,
+  blending: THREE.AdditiveBlending, depthWrite: false
+}));
+scene.add(previewLines);
+previewGeo.setDrawRange(0, 0);
+
+// Preview state machine. Null = idle. Active = currently rendering ghost rays.
+let activePreview = null;
+// shape: { u, v, startTime, committed: bool }
+
+function startPathPreview(u, v) {
+  activePreview = { u, v, startTime: performance.now(), committed: false };
+}
+
+function updatePathPreview(now) {
+  if (!activePreview) {
+    previewGeo.setDrawRange(0, 0);
+    return false;
+  }
+  const elapsed = now - activePreview.startTime;
+  const tNorm = elapsed / PREVIEW_DURATION_MS;
+  // Commit the pentagon at 55% through the preview â€” so lift begins as rays
+  // are still fading. Feels like "the choice was made, surfaces now join."
+  if (!activePreview.committed && tNorm >= 0.55) {
+    placePentagon(activePreview.u, activePreview.v);
+    activePreview.committed = true;
+  }
+  if (tNorm >= 1.0) {
+    activePreview = null;
+    previewGeo.setDrawRange(0, 0);
+    return false;
+  }
+  // v15.1: rays were getting drowned by the burst at click moment. Separate
+  // EXTENT and BRIGHTNESS curves so rays grow fast, hold extended, then
+  // retract â€” and stay bright through most of the cycle, not just at start.
+  // Extent: smoothstep up in first 18%, hold to 72%, smoothstep down to 100%
+  let reach;
+  if (tNorm < 0.18) {
+    const u = tNorm / 0.18;
+    reach = u * u * (3 - 2 * u);      // smoothstep ease-in
+  } else if (tNorm < 0.72) {
+    reach = 1.0;                       // hold at full extent
+  } else {
+    const u = (tNorm - 0.72) / 0.28;
+    reach = 1.0 - u * u * (3 - 2 * u); // smoothstep ease-out
+  }
+  // Brightness: quick ramp-in over first 12%, slow linear fade across the rest.
+  // Boost factor punches through additive blending against the burst.
+  let brightnessBase;
+  if (tNorm < 0.12) {
+    brightnessBase = tNorm / 0.12;
+  } else {
+    brightnessBase = Math.max(0, 1.0 - (tNorm - 0.12) / 0.88);
+  }
+  const BRIGHTNESS_BOOST = 1.85;
+  // Draw N ghost rays in N angular directions in the local (u,v) plane
+  let widx = 0;
+  for (let r = 0; r < PREVIEW_NUM_RAYS; r++) {
+    const angle = (r / PREVIEW_NUM_RAYS) * Math.PI * 2;
+    // Direction in (u,v) â€” convert to non-degenerate stretch (u wraps, v capped)
+    const dirU = Math.cos(angle) * PREVIEW_RAY_REACH;
+    const dirV = Math.sin(angle) * PREVIEW_RAY_REACH * 0.45;  // v has tighter range
+    for (let s = 0; s < PREVIEW_RAY_SAMPLES; s++) {
+      const sA = (s / PREVIEW_RAY_SAMPLES) * reach;
+      const sB = ((s + 1) / PREVIEW_RAY_SAMPLES) * reach;
+      const uA = activePreview.u + dirU * sA;
+      const vA = Math.max(-WIDTH, Math.min(WIDTH, activePreview.v + dirV * sA));
+      const uB = activePreview.u + dirU * sB;
+      const vB = Math.max(-WIDTH, Math.min(WIDTH, activePreview.v + dirV * sB));
+      const pA = vertexPos((uA + 2*Math.PI) % (2*Math.PI), vA);
+      const pB = vertexPos((uB + 2*Math.PI) % (2*Math.PI), vB);
+      previewPositions[widx*3+0] = pA[0]; previewPositions[widx*3+1] = pA[1]; previewPositions[widx*3+2] = pA[2];
+      // Color: green at base of ray (interaction color), fading to deep cyan tip
+      const tEdge = s / PREVIEW_RAY_SAMPLES;
+      const baseGreen = { r: 0.498, g: 1.0, b: 0.667 };  // #7fffaa â€” same as hover
+      const tipCyan   = { r: 0.00,  g: 0.83, b: 1.00 };  // #00d4ff
+      const cA = mixColor(baseGreen, tipCyan, tEdge);
+      const cB = mixColor(baseGreen, tipCyan, (s + 1) / PREVIEW_RAY_SAMPLES);
+      // v15.1: brighter at base (Ã—1.0), modest taper toward tip (Ã—0.7), boosted overall
+      const brA = brightnessBase * (1 - tEdge * 0.30) * BRIGHTNESS_BOOST;
+      const brB = brightnessBase * (1 - (s+1)/PREVIEW_RAY_SAMPLES * 0.30) * BRIGHTNESS_BOOST;
+      previewColors[widx*3+0] = cA.r * brA;
+      previewColors[widx*3+1] = cA.g * brA;
+      previewColors[widx*3+2] = cA.b * brA;
+      widx++;
+      previewPositions[widx*3+0] = pB[0]; previewPositions[widx*3+1] = pB[1]; previewPositions[widx*3+2] = pB[2];
+      previewColors[widx*3+0] = cB.r * brB;
+      previewColors[widx*3+1] = cB.g * brB;
+      previewColors[widx*3+2] = cB.b * brB;
+      widx++;
+    }
+  }
+  previewGeo.attributes.position.needsUpdate = true;
+  previewGeo.attributes.color.needsUpdate = true;
+  previewGeo.setDrawRange(0, widx);
+  return true;  // signal that a refresh is needed (lattice may have been touched)
+}
+
+// ===== Animation tick =====
+function tickLifts(dt) {
+  let any = false;
+  const speed = 3;
+  for (let i = pentagons.length - 1; i >= 0; i--) {
+    const p = pentagons[i];
+    const diff = p.target - p.activation;
+    if (Math.abs(diff) < 0.001) {
+      if (p.target === 0) pentagons.splice(i, 1);
+      continue;
+    }
+    const step = Math.sign(diff) * Math.min(Math.abs(diff), dt * speed);
+    p.activation += step;
+    any = true;
+  }
+  return any;
+}
+
+function updateStatus() {
+  const active = pentagons.filter(p => p.target === 1).length;
+  document.getElementById('pentN').textContent = active;
+  // v15: selected counter, only visible when at least one is selected
+  const selCount = pentagons.filter(p => p.target === 1 && p.selected).length;
+  const selStat = document.getElementById('selStat');
+  document.getElementById('selN').textContent = selCount;
+  selStat.style.display = (selCount > 0) ? 'block' : 'none';
+  const msg = document.getElementById('msg');
+  if (active === 12) {
+    msg.textContent = 'âœ“ 12 pentagons on MÃ¶bius (Ï‡=0)Â·curvature woven into the twist';
+    msg.className = 'msg closed';
+  } else if (active > 12) {
+    msg.textContent = `${active} pentagons â€” over budget Â· MÃ¶bius can\'t hold this`;
+    msg.className = 'msg over';
+  } else {
+    msg.textContent = `${active}/12 Â· click strip â†’ toggle Â· shift+click â†’ select Â· drag Â· scroll`;
+    msg.className = 'msg';
+  }
+}
+
+// ===== Click detection â€” raycast against the LIFTED surface =====
+const meshUSteps = 80, meshVSteps = 12;
+const meshIndices = [];
+const meshVertCount = (meshUSteps + 1) * (meshVSteps + 1);
+const meshVerts = new Float32Array(meshVertCount * 3);
+for (let i = 0; i <= meshUSteps; i++) {
+  for (let j = 0; j <= meshVSteps; j++) {
+    if (i < meshUSteps && j < meshVSteps) {
+      const a = i*(meshVSteps+1)+j;
+      const b = (i+1)*(meshVSteps+1)+j;
+      const c = (i+1)*(meshVSteps+1)+j+1;
+      const d = i*(meshVSteps+1)+j+1;
+      meshIndices.push(a,b,c, a,c,d);
+    }
+  }
+}
+const mobiusMeshGeo = new THREE.BufferGeometry();
+mobiusMeshGeo.setAttribute('position', new THREE.BufferAttribute(meshVerts, 3));
+mobiusMeshGeo.setIndex(meshIndices);
+const mobiusMesh = new THREE.Mesh(
+  mobiusMeshGeo,
+  new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.0, side: THREE.DoubleSide, depthWrite: false })
+);
+scene.add(mobiusMesh);
+
+function rebuildRaycastMesh() {
+  let k = 0;
+  for (let i = 0; i <= meshUSteps; i++) {
+    const u = (i / meshUSteps) * Math.PI * 2;
+    for (let j = 0; j <= meshVSteps; j++) {
+      const v = (j / meshVSteps) * 2 * WIDTH - WIDTH;
+      const [x, y, z] = vertexPos(u, v);
+      meshVerts[k++] = x; meshVerts[k++] = y; meshVerts[k++] = z;
+    }
+  }
+  mobiusMeshGeo.attributes.position.needsUpdate = true;
+  mobiusMeshGeo.computeBoundingSphere();
+}
+
+function findUVFromHit(x, y, z) {
+  // Search the LIFTED surface (vertexPos), not the flat one â€” clicks match what you see
+  let bestU = 0, bestV = 0, bestD = Infinity;
+  for (let i = 0; i < 36; i++) {
+    for (let j = 0; j < 18; j++) {
+      const u = (i / 36) * Math.PI * 2;
+      const v = (j / 17) * 2 * WIDTH - WIDTH;
+      const [px, py, pz] = vertexPos(u, v);
+      const d = (x-px)**2 + (y-py)**2 + (z-pz)**2;
+      if (d < bestD) { bestD = d; bestU = u; bestV = v; }
+    }
+  }
+  for (let pass = 0; pass < 3; pass++) {
+    const range = 0.3 / (pass + 1);
+    for (let i = -5; i <= 5; i++) {
+      for (let j = -5; j <= 5; j++) {
+        const u = bestU + (i / 5) * range;
+        const v = Math.max(-WIDTH, Math.min(WIDTH, bestV + (j / 5) * range));
+        const uu = (u + 2*Math.PI) % (2*Math.PI);
+        const [px, py, pz] = vertexPos(uu, v);
+        const d = (x-px)**2 + (y-py)**2 + (z-pz)**2;
+        if (d < bestD) { bestD = d; bestU = uu; bestV = v; }
+      }
+    }
+  }
+  return [bestU, bestV];
+}
+
+const raycaster = new THREE.Raycaster();
+const mouseNDC = new THREE.Vector2();
+
+// =====================================================================
+// CHANGE (v14.2): SCREEN-PRECISE CLICKS
+// Hover + click detection switched from world-space distance (0.45 units)
+// to screen-pixel distance. The pixel threshold scales naturally with zoom,
+// and the hover highlight becomes the canonical "click here = remove"
+// indicator. Click anywhere NOT highlighted = place, regardless of how
+// close it is to another pentagon. Pentagons can sit right next to each
+// other now without one click eating two.
+// =====================================================================
+const PENTAGON_HIT_PX = 22;  // pixel radius around pentagon center counts as "on it"
+
+// Reusable scratch vector to avoid GC churn in the hover loop
+const _projectScratch = new THREE.Vector3();
+const _camForward = new THREE.Vector3();
+
+function isInFrontOfCamera(wx, wy, wz) {
+  // Cheap dot-product test: vector from camera to point, dotted with camera's
+  // forward direction. Positive means in front. Avoids weird projection
+  // artifacts for points behind the camera.
+  camera.getWorldDirection(_camForward);
+  const dx = wx - camera.position.x;
+  const dy = wy - camera.position.y;
+  const dz = wz - camera.position.z;
+  return (dx * _camForward.x + dy * _camForward.y + dz * _camForward.z) > 0;
+}
+
+function projectWorldToScreenPixels(wx, wy, wz) {
+  _projectScratch.set(wx, wy, wz);
+  _projectScratch.project(camera);  // -> NDC [-1, 1]
+  const rect = renderer.domElement.getBoundingClientRect();
+  return {
+    x: (_projectScratch.x * 0.5 + 0.5) * rect.width,
+    y: (1 - (_projectScratch.y * 0.5 + 0.5)) * rect.height
+  };
+}
+
+function findHoveredPentagon(clientX, clientY) {
+  const rect = renderer.domElement.getBoundingClientRect();
+  const cx = clientX - rect.left;
+  const cy = clientY - rect.top;
+  let bestIdx = -1, bestD = Infinity;
+  for (let i = 0; i < pentagons.length; i++) {
+    const p = pentagons[i];
+    if (p.target === 0 || p.activation <= 0.15) continue;
+    const wp = vertexPos(p.u, p.v);
+    if (!isInFrontOfCamera(wp[0], wp[1], wp[2])) continue;
+    const sp = projectWorldToScreenPixels(wp[0], wp[1], wp[2]);
+    const d = Math.hypot(sp.x - cx, sp.y - cy);
+    if (d < bestD && d < PENTAGON_HIT_PX) { bestD = d; bestIdx = i; }
+  }
+  return bestIdx;
+}
+
+function handleClick(e) {
+  // v15.2: any click resumes from pause first (so the click itself doesn't
+  // happen on stale state â€” the pause was for inspection, click means "go").
+  if (isPaused) {
+    setPaused(false);
+    // Don't return â€” let the click also do its normal action
+  }
+  // v15: every click spawns a tesseract burst at the click point.
+  // Shift+click on a hovered pentagon TOGGLES persistent selection (green).
+  // Normal click on hovered pentagon removes (v14.2 behavior).
+  // Normal click on surface places (existing flow with preview rays).
+  if (hoveredPentIdx >= 0) {
+    const p = pentagons[hoveredPentIdx];
+    const wp = vertexPos(p.u, p.v);
+    spawnClickBurst(wp[0], wp[1], wp[2]);
+    if (e.shiftKey) {
+      // v15: persistent selection toggle, do NOT remove
+      p.selected = !p.selected;
+      updatePentagonMarkers();
+      return;
+    }
+    p.target = 0;
+    hoveredPentIdx = -1;
+    renderer.domElement.style.cursor = 'default';
+    return;
+  }
+
+  const rect = renderer.domElement.getBoundingClientRect();
+  mouseNDC.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+  mouseNDC.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+  raycaster.setFromCamera(mouseNDC, camera);
+  const hits = raycaster.intersectObject(mobiusMesh);
+  if (hits.length === 0) {
+    // v21: MÃ¶bius missed â€” fall through to the envelope IF it's enabled.
+    // The raycaster against the array hits all 12 faces; we take the closest.
+    if (envelopeOn) {
+      const envHits = raycaster.intersectObjects(envelopeFaceMeshes, false);
+      if (envHits.length > 0) {
+        const faceIdx = envHits[0].object.userData.envelopeFaceIdx;
+        openEnvelopePanel(faceIdx);
+      }
+    }
+    return;
+  }
+  const hp = hits[0].point;
+
+  // v15: burst at click point on surface
+  spawnClickBurst(hp.x, hp.y, hp.z);
+
+  // Snap to nearest (u,v) on the lifted surface, route through preview rays
+  const [u, v] = findUVFromHit(hp.x, hp.y, hp.z);
+  startPathPreview(u, v);
+  // v22: spawn the paper-flow effect from the click point. Path preview
+  // animates first (~520ms), then the 1500ms anticipation pause begins,
+  // then six radial lines bloom outward along the surface.
+  spawnSurfaceFlow(u, v);
+}
+
+// ===== Orbit camera =====
+let yaw = 0.5, pitch = 0.35, dist = 8.2;
+// v16.1: camera target â€” gets translated by pan. updateCamera positions the
+// camera on a sphere around the target, and looks at the target. So orbit
+// rotates the sphere, pan slides the whole rig (camera + lookAt point) in
+// the screen-plane.
+const cameraTarget = new THREE.Vector3(0, 0, 0);
+function updateCamera() {
+  camera.position.x = cameraTarget.x + dist * Math.cos(pitch) * Math.sin(yaw);
+  camera.position.y = cameraTarget.y + dist * Math.sin(pitch);
+  camera.position.z = cameraTarget.z + dist * Math.cos(pitch) * Math.cos(yaw);
+  camera.lookAt(cameraTarget);
+}
+updateCamera();
+
+function updateHover(e) {
+  // v15.5: HOVER LOCK while paused. Once the sim is frozen on a pentagon,
+  // mouse movement within the canvas no longer shifts the hover target.
+  // This anchors the gold rings/flower to the chosen pentagon while the
+  // user inspects (drag-orbit still works, click still resumes + acts,
+  // leave-canvas / Esc / Space all release pause).
+  if (isPaused) return;
+  // v14.2: screen-space pixel distance, consistent with click logic above.
+  const newHover = findHoveredPentagon(e.clientX, e.clientY);
+  if (newHover !== hoveredPentIdx) {
+    // v15.2: hover changed â€” reset pause-charge timer
+    hoverStartTime = (newHover >= 0) ? performance.now() : null;
+    hoveredPentIdx = newHover;
+    renderer.domElement.style.cursor = (newHover >= 0) ? 'pointer' : 'default';
+    updatePentagonMarkers();  // repaint colors
+  }
+
+  // v21: ENVELOPE HOVER â€” only when NOT over a MÃ¶bius pentagon. Raycast
+  // against the 12 dodecahedral faces; whichever face the ray pierces
+  // first (closest hit) gets a faint honey glow. The cursor stays as
+  // a pointer to invite the click. This gives the "big difference in
+  // hovering" â€” the MÃ¶bius hover is tight and green and works at the
+  // pentagon level; the envelope hover is broad and warm and works
+  // wherever empty space falls between pentagons.
+  if (hoveredPentIdx < 0 && envelopeOn) {
+    const rect = renderer.domElement.getBoundingClientRect();
+    mouseNDC.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+    mouseNDC.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+    raycaster.setFromCamera(mouseNDC, camera);
+    const envHits = raycaster.intersectObjects(envelopeFaceMeshes, false);
+    const newEnvIdx = (envHits.length > 0) ? envHits[0].object.userData.envelopeFaceIdx : -1;
+    setHoveredEnvelopeFace(newEnvIdx);
+    if (newEnvIdx >= 0) renderer.domElement.style.cursor = 'pointer';
+  } else {
+    // Mouse is over a MÃ¶bius pentagon, or envelope is off â€” clear envelope hover
+    setHoveredEnvelopeFace(-1);
+  }
+}
+
+// =====================================================================
+// CAMERA DRAG (v16.1): dual-mode with AutoCAD/SolidWorks-style pan.
+//   plain drag         â†’ orbit (existing yaw/pitch around target)
+//   Shift+drag         â†’ pan   (translates the cameraTarget in screen plane)
+//   middle-button drag â†’ pan   (for users with a 3-button mouse)
+//
+// The pan is the standard matrix trick: read camera's right and up basis
+// vectors directly from columns 0 and 1 of camera.matrix (these are the
+// world-space axes aligned to screen horizontal/vertical at the current
+// orientation), then translate cameraTarget along those axes by the
+// mouse delta, scaled by the world-space pixel size at the focal distance.
+//
+// Pan scale is computed each move so it stays calibrated as you zoom in/out
+// â€” drag of 1 pixel always slides the world by exactly the world-units
+// that pixel covers on screen.
+// =====================================================================
+const _camRight = new THREE.Vector3();
+const _camUp    = new THREE.Vector3();
+
+let mouseDown = null, dragged = false, dragMode = 'orbit';
+renderer.domElement.addEventListener('mousedown', e => {
+  mouseDown = { x: e.clientX, y: e.clientY };
+  dragged = false;
+  // v16.1: choose orbit vs pan at drag start. Shift or middle-button = pan.
+  dragMode = (e.shiftKey || e.button === 1) ? 'pan' : 'orbit';
+  document.body.classList.add('dragging');
+  // Prevent middle-click default (autoscroll on Windows) when panning
+  if (e.button === 1) e.preventDefault();
+});
+renderer.domElement.addEventListener('mousemove', e => {
+  if (mouseDown) {
+    const dx = e.clientX - mouseDown.x, dy = e.clientY - mouseDown.y;
+    if (!dragged && Math.hypot(dx, dy) > 5) dragged = true;
+    if (dragged) {
+      if (dragMode === 'pan') {
+        // v16.1: CAD-style pan. World-units per screen pixel at focal distance:
+        const fovRad = camera.fov * Math.PI / 180;
+        const panScale = 2 * dist * Math.tan(fovRad / 2) / renderer.domElement.clientHeight;
+        // Camera basis (right, up) read from view matrix columns 0, 1
+        _camRight.setFromMatrixColumn(camera.matrix, 0);
+        _camUp.setFromMatrixColumn(camera.matrix, 1);
+        // Drag right (dx>0) â†’ world appears to follow cursor right â†’ target
+        //   moves LEFT in world â†’ subtract along world-right
+        // Drag down (dy>0)  â†’ world appears to follow cursor down  â†’ target
+        //   moves UP in world â†’ add along world-up
+        cameraTarget.addScaledVector(_camRight, -dx * panScale);
+        cameraTarget.addScaledVector(_camUp,     dy * panScale);
+      } else {
+        // orbit (existing behavior)
+        yaw -= dx * 0.006;
+        pitch += dy * 0.006;
+        pitch = Math.max(-Math.PI/2+0.05, Math.min(Math.PI/2-0.05, pitch));
+      }
+      mouseDown = { x: e.clientX, y: e.clientY };
+      updateCamera();
+    }
+  } else {
+    updateHover(e);
+  }
+});
+renderer.domElement.addEventListener('mouseup', e => {
+  document.body.classList.remove('dragging');
+  if (!dragged && mouseDown) handleClick(e);
+  mouseDown = null; dragged = false;
+});
+// v16.1: suppress the browser's context menu on right-click â€” frees right-click
+// for camera operations later if we want them, and avoids accidental menu pops.
+renderer.domElement.addEventListener('contextmenu', e => e.preventDefault());
+renderer.domElement.addEventListener('wheel', e => {
+  e.preventDefault();
+  // v14.1: scroll still works, but it also updates the zoom slider so the two
+  // controls stay in sync. Wider range than before (2.5..80) since fog handles
+  // the "things vanish into bg" failure mode gracefully now.
+  dist = Math.max(2.5, Math.min(80, dist + e.deltaY * 0.01 * Math.max(1, dist * 0.15)));
+  document.getElementById('zoom').value = Math.round(dist * 10);
+  document.getElementById('zoomVal').textContent = dist.toFixed(1);
+  updateCamera();
+  checkEnvelopeZoomBoundary();   // v22: auto-toggle envelope on inradius crossing
+}, { passive: false });
+
+// v15.2: keyboard escape from pause (Space toggles, Esc unpauses)
+// =====================================================================
+// ENVELOPE PANEL (v21) â€” opens when a dodecahedral face is clicked,
+// populates with that face's mystery, closes via Ã— / Esc / overlay click.
+// =====================================================================
+const envelopePanelEl = document.getElementById('envelopePanel');
+const envTitleEl      = document.getElementById('envTitle');
+const envTechEl       = document.getElementById('envTechnical');
+const envBodyEl       = document.getElementById('envBody');
+const envAtomsEl      = document.getElementById('envAtoms');
+const envFooterEl     = document.getElementById('envFooter');
+function openEnvelopePanel(faceIdx) {
+  const q = ENVELOPE_QUESTIONS[faceIdx];
+  if (!q) return;
+  envTitleEl.textContent  = q.title;
+  envTechEl.textContent   = q.technical;
+  envBodyEl.textContent   = q.body;
+  envFooterEl.textContent = q.footer || '';
+  envAtomsEl.innerHTML = '';
+  for (const name of q.atomNames) {
+    const li = document.createElement('li');
+    li.textContent = name;
+    envAtomsEl.appendChild(li);
+  }
+  envelopePanelEl.classList.add('open');
+  envelopePanelEl.setAttribute('aria-hidden', 'false');
+}
+function closeEnvelopePanel() {
+  envelopePanelEl.classList.remove('open');
+  envelopePanelEl.setAttribute('aria-hidden', 'true');
+}
+document.getElementById('envelopeClose').addEventListener('click', closeEnvelopePanel);
+
+// v21: ENVELOPE TOGGLE â€” clean on/off for the big-daddy shape. When OFF:
+// the wireframe + the 12 face raycasters all hide, hover falls back to
+// "nothing" in empty space, click on empty does nothing. Just the strip.
+let envelopeOn = true;
+const envelopeToggleBtn = document.getElementById('envelopeToggle');
+function setEnvelopeOn(on) {
+  envelopeOn = on;
+  envelopeEdgeLines.visible = on;
+  for (const m of envelopeFaceMeshes) m.visible = on;
+  if (!on) setHoveredEnvelopeFace(-1);     // clear any active glow
+  envelopeToggleBtn.textContent = on ? 'envelope Â· on' : 'envelope Â· off';
+  envelopeToggleBtn.style.color = on ? '#e8b86a' : '#5a4a32';
+  envelopeToggleBtn.style.borderColor = on ? '#5a4a32' : '#2a2620';
+}
+envelopeToggleBtn.addEventListener('click', () => setEnvelopeOn(!envelopeOn));
+
+// v22: FLOW TOGGLE â€” same idiom as envelope toggle. When OFF, no new
+// surface-flow bursts spawn; in-flight bursts complete their fade.
+const flowToggleBtn = document.getElementById('flowToggle');
+function setFlowOn(on) {
+  flowOn = on;
+  flowToggleBtn.textContent  = on ? 'flow Â· on' : 'flow Â· off';
+  flowToggleBtn.style.color  = on ? '#b066ff' : '#3a2e58';
+  flowToggleBtn.style.borderColor = on ? '#3a2e58' : '#1f1a30';
+}
+flowToggleBtn.addEventListener('click', () => setFlowOn(!flowOn));
+
+// v22: FLOW-MIX slider â€” biases the blueâ†”purple gradient of the flow lines.
+// Extremes (< 0.15, > 0.85) damp the opacity so the effect fades to bg,
+// implementing Vlad's "outside it disappears" behavior.
+document.getElementById('flowMix').addEventListener('input', e => {
+  flowMixRatio = parseInt(e.target.value, 10) / 100;
+});
+
+// v22: ZOOM-AWARE ENVELOPE â€” when the camera dist crosses the dodecahedron's
+// inradius (we're now INSIDE the envelope), auto-toggle envelope OFF so it
+// stops clipping into the strip view. When dist crosses BACK OUT past the
+// inradius, envelope auto-toggles ON. No memory of who flipped it last â€”
+// per the doctrine, monkey brain just sees the button glow and knows the
+// mode changed. The pulse animation fires either direction.
+let wasInsideEnvelope = (dist < DODEC_INRADIUS);
+function checkEnvelopeZoomBoundary() {
+  const inside = (dist < DODEC_INRADIUS);
+  if (inside === wasInsideEnvelope) return;
+  wasInsideEnvelope = inside;
+  // Crossing the boundary â€” flip envelope, pulse the button
+  setEnvelopeOn(!inside);
+  envelopeToggleBtn.classList.remove('pulse-envelope');
+  // Force a reflow so the next add-class actually replays the animation
+  void envelopeToggleBtn.offsetWidth;
+  envelopeToggleBtn.classList.add('pulse-envelope');
+}
+envelopeToggleBtn.addEventListener('animationend', () => {
+  envelopeToggleBtn.classList.remove('pulse-envelope');
+});
+
+addEventListener('keydown', e => {
+  if (e.code === 'Escape') {
+    // v21: Esc closes envelope panel first if open, else resumes from pause
+    if (envelopePanelEl.classList.contains('open')) { closeEnvelopePanel(); return; }
+    resumeFromPause();
+  }
+  else if (e.code === 'Space') {
+    // Toggle. If hovering nothing, we can't engage from scratch via space â€”
+    // but Space DOES resume if currently paused. Prevents accidental pause-lock.
+    if (isPaused) resumeFromPause();
+    e.preventDefault();
+  }
+});
+
+// v15.2: leaving the canvas resumes (no more hover-target â†’ can't be paused on it)
+renderer.domElement.addEventListener('mouseleave', () => {
+  hoverStartTime = null;
+  if (hoveredPentIdx !== -1) {
+    hoveredPentIdx = -1;
+    renderer.domElement.style.cursor = 'default';
+  }
+  setHoveredEnvelopeFace(-1);  // v21: also clear envelope hover
+  if (isPaused) setPaused(false);
+});
+
+// ===== UI =====
+document.getElementById('place12').addEventListener('click', place12);
+document.getElementById('clear').addEventListener('click', clearAll);
+document.getElementById('resetView').addEventListener('click', () => {
+  yaw = 0.5; pitch = 0.35; dist = 8.2;
+  cameraTarget.set(0, 0, 0);  // v16.1: clear pan offset
+  updateCamera();
+});
+document.getElementById('density').addEventListener('input', e => {
+  const val = parseInt(e.target.value);
+  U_STEPS = val;
+  V_STEPS = Math.max(3, Math.round(val * 0.15));
+  const densityValEl = document.getElementById('densityVal');
+  densityValEl.textContent = val;
+  // v15.6: DENSITY LIMIT-BREAK. Original max was 240; pushing past it into
+  // [240..480] is "limit-breaking" territory where the lattice is so dense
+  // it'd overwhelm the eye. We fade the lattice line opacity toward the
+  // background as a graceful saturation â€” same trick as the v14.1 zoom fog.
+  // The densityVal color shifts from cyan â†’ amber â†’ red as we cross over,
+  // signaling "you're in over-the-line territory."
+  let latticeOpacity = 0.72;
+  if (val <= 240) {
+    densityValEl.style.color = '#00d4ff';
+  } else {
+    const t = Math.min(1, (val - 240) / 240);    // 0..1 across [240..480]
+    latticeOpacity = 0.72 * (1 - t * 0.88);       // 0.72 â†’ ~0.09
+    // hue shift cyan â†’ amber â†’ red as we cross
+    const r = Math.round(0   + (255 - 0)   * t);
+    const g = Math.round(212 + (80  - 212) * t);
+    const b = Math.round(255 + (40  - 255) * t);
+    densityValEl.style.color = `rgb(${r},${g},${b})`;
+  }
+  lines.material.opacity = latticeOpacity;
+  rebuildLattice();
+  refreshAll();
+});
+document.getElementById('gravity').addEventListener('input', e => {
+  const val = parseInt(e.target.value);
+  // v14: 0..200 slider â†’ 0..7.0 K. Slider=100 â†’ K=3.5 (legacy "100%" behavior).
+  // Slider=200 â†’ K=7.0, which combined with raised GRAVITY_MAX_PULL=1.85 causes
+  // the MÃ¶bius to fold symmetrically through its own origin.
+  GRAVITY_K = (val / 100) * 3.5;
+  document.getElementById('gravityVal').textContent = val;
+  refreshAll();
+});
+document.getElementById('shimmer').addEventListener('input', e => {
+  const val = parseInt(e.target.value);
+  SHIMMER_K = (val / 100) * 0.18;
+  document.getElementById('shimmerVal').textContent = val;
+});
+document.getElementById('solfeggio').addEventListener('input', e => {
+  solfeggioIndex = parseInt(e.target.value);
+  const s = SOLFEGGIO[solfeggioIndex];
+  document.getElementById('solfeggioCode').textContent = s.code;
+  document.getElementById('solfeggioHz').textContent = `${s.hz} Hz Â· ${s.name}`;
+  document.getElementById('solfeggioMeaning').textContent = s.meaning;
+});
+
+// v14.1: zoom slider â€” slider value / 10 = camera dist. Synced with wheel.
+document.getElementById('zoom').addEventListener('input', e => {
+  const val = parseInt(e.target.value);
+  dist = val / 10;
+  document.getElementById('zoomVal').textContent = dist.toFixed(1);
+  updateCamera();
+  checkEnvelopeZoomBoundary();   // v22: auto-toggle envelope on inradius crossing
+});
+
+// v14.1: HUD auto-hide. The top-left label fades out after a couple seconds of
+// idle. Any control interaction (slider drag, button press, scroll-zoom) brings
+// it back briefly so you can read the state, then it fades again. The strip
+// stays the focus, the chrome only shows when needed.
+const hudLabel = document.querySelector('.label');
+const hudLegend = document.getElementById('legend');  // v16.2
+let hudHideTimer = null;
+const HUD_VISIBLE_MS = 2200;
+function pingHUD() {
+  hudLabel.classList.remove('hidden');
+  hudLegend.classList.remove('hidden');  // v16.2: legend rides the same timer
+  clearTimeout(hudHideTimer);
+  hudHideTimer = setTimeout(() => {
+    hudLabel.classList.add('hidden');
+    hudLegend.classList.add('hidden');
+  }, HUD_VISIBLE_MS);
+}
+// Trigger on every control + the canvas wheel/click (so click-to-place also reveals)
+document.querySelectorAll('.controls input, .controls button').forEach(el => {
+  el.addEventListener('input', pingHUD);
+  el.addEventListener('mousedown', pingHUD);
+  el.addEventListener('click', pingHUD);
+});
+renderer.domElement.addEventListener('wheel', pingHUD, { passive: true });
+renderer.domElement.addEventListener('mousedown', pingHUD);
+// Initial show, then fade
+pingHUD();
+
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+
+// ===== Initial state: place 12 on load =====
+place12();
+refreshAll();
+
+// ===== Loop =====
+let lastTime = performance.now();
+function animate() {
+  requestAnimationFrame(animate);
+  const now = performance.now();
+
+  // v15.2: check whether we should engage pause (hovering same pentagon for 2s)
+  if (!isPaused && hoveredPentIdx >= 0 && hoverStartTime !== null) {
+    if (now - hoverStartTime >= PAUSE_HOVER_MS) {
+      setPaused(true);
+    }
+  }
+
+  // v15.2: when paused, only re-skin pentagon markers (so the locked-state
+  // pulse breathes) and re-render the scene (so orbit-drag works on the
+  // frozen geometry). No tick, no shimmer, no preview, no burst â€” frozen.
+  //
+  // v16.1: ALSO freeze dt-driven updates during active camera drag (orbit OR
+  // pan). The drag itself wants smooth 60fps camera motion; freezing the
+  // sim keeps the frame budget free for the GPU to redraw the existing
+  // scene at the new viewpoint. When the drag ends, the sim resumes â€” we
+  // bump lastTime so dt doesn't spike on the next active frame.
+  const isCameraDragging = (mouseDown !== null && dragged);
+  if (isPaused) {
+    if (!isCameraDragging) updatePentagonMarkers();  // skip pulse refresh during drag
+    renderer.render(scene, camera);
+    return;
+  }
+  if (isCameraDragging) {
+    renderer.render(scene, camera);
+    return;
+  }
+  // If we just exited a drag this frame, reset lastTime so dt isn't huge
+  if (mouseDown === null && lastTime < now - 100) lastTime = now;
+
+  const dt = Math.min(0.1, (now - lastTime) / 1000);
+  lastTime = now;
+  let needsRefresh = tickLifts(dt);
+  if (SHIMMER_K > 0) {
+    shimmerTime += dt * 0.4;  // gentle flow
+    needsRefresh = true;
+  }
+  // v15: if any pentagons are selected, refresh every frame so the selection
+  // ring pulse animates smoothly. Cheap â€” just re-skinning existing geometry.
+  if (!needsRefresh) {
+    for (let i = 0; i < pentagons.length; i++) {
+      if (pentagons[i].selected) { needsRefresh = true; break; }
+    }
+  }
+  // v15.2: also refresh while pause-charge is building so the brightness ramp is live
+  if (!needsRefresh && hoveredPentIdx >= 0 && hoverStartTime !== null) {
+    needsRefresh = true;
+  }
+  // v14: path preview runs per-frame while active, may itself trigger refresh
+  if (updatePathPreview(now)) needsRefresh = true;
+  if (needsRefresh) refreshAll();
+  updateCenter(now, dt);
+  updateClickBursts(now);  // v15: tesseract burst pool
+  updateSurfaceFlow();     // v22: paper-flow lines on the MÃ¶bius surface
+  renderer.render(scene, camera);
+}
+animate();
+</script>
+</body>
+</html>
+

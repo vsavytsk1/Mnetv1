@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sacred Math Tree v0.1 ? Limits</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0a0c12;color:#dce4f0;font-family:ui-monospace,"SF Mono",Menlo,monospace;
+  font-size:14px;overflow:hidden;height:100vh;width:100vw;user-select:none;-webkit-user-select:none}
+#canvas{width:100%;height:100%;position:absolute;top:0;left:0}
+#hud{position:fixed;top:16px;left:16px;z-index:10;font-size:12px;opacity:0.7;pointer-events:none}
+#hud .stat{margin:4px 0}
+#hud .val{color:#00d4ff}
+#title-bar{position:fixed;top:16px;right:16px;z-index:10;font-size:11px;
+  letter-spacing:0.12em;text-transform:uppercase;opacity:0.5}
+#challenge-box{position:fixed;bottom:40px;left:50%;transform:translateX(-50%);
+  z-index:20;background:rgba(10,12,18,0.95);border:1px solid #1a1f2e;border-radius:8px;
+  padding:24px 32px;max-width:500px;width:90%;display:none;text-align:center}
+#challenge-box .q{font-size:16px;margin-bottom:16px;line-height:1.5}
+#challenge-box .opts{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+#challenge-box .opt{padding:10px 20px;border:1px solid #2a2f3e;border-radius:6px;
+  background:rgba(255,255,255,0.03);cursor:pointer;font-family:inherit;font-size:14px;
+  color:#dce4f0;transition:all 0.2s}
+#challenge-box .opt:hover{border-color:#00d4ff;background:rgba(0,212,255,0.08)}
+#challenge-box .opt.correct{border-color:#4ade80;background:rgba(74,222,128,0.15);color:#4ade80}
+#challenge-box .opt.wrong{border-color:#f87171;background:rgba(248,113,113,0.15);color:#f87171}
+#challenge-box .feedback{margin-top:14px;font-size:13px;min-height:20px}
+.katex{font-size:1.1em}
+#zoom-hint{position:fixed;bottom:12px;right:16px;font-size:11px;opacity:0.35;z-index:5}
+</style>
+</head>
+<body>
+
+<div id="hud">
+  <div class="stat">Nodes: <span class="val" id="h-nodes">1</span></div>
+  <div class="stat">Solved: <span class="val" id="h-solved">0</span></div>
+  <div class="stat">Depth: <span class="val" id="h-depth">0</span></div>
+  <div class="stat">Branches: <span class="val" id="h-branches">0</span></div>
+</div>
+
+<div id="title-bar">Sacred Math Tree v0.1</div>
+<div id="zoom-hint">scroll = zoom ? drag = pan ? click = explore</div>
+
+<svg id="canvas"></svg>
+
+<div id="challenge-box">
+  <div class="q" id="ch-question"></div>
+  <div id="ch-latex"></div>
+  <div class="opts" id="ch-opts"></div>
+  <div class="feedback" id="ch-feedback"></div>
+</div>
+
+<script>
+// ???????????????????????????????????????????????????????
+// SACRED MATH TREE ? Kernel (pure data, no DOM)
+// ???????????????????????????????????????????????????????
+
+const TREE = {
+  id:"root", label:"Limits", type:"domain",
+  latex:"\\lim_{x \\to a} f(x) = L",
+  desc:"The foundation of all calculus",
+  children:[
+    { id:"formal", label:"Formal Definition", type:"concept",
+      latex:"\\forall\\,\\varepsilon>0,\\;\\exists\\,\\delta>0:\\;|x-a|<\\delta \\Rightarrow |f(x)-L|<\\varepsilon",
+      desc:"The epsilon-delta definition",
+      children:[
+        { id:"ch_eps", label:"Epsilon Challenge", type:"challenge",
+          question:"f(x) = 2x, a = 3, L = 6.\nIf \u03B5 = 0.1, what is \u03B4?",
+          qlatex:"f(x)=2x,\\;a=3,\\;L=6,\\;\\varepsilon=0.1\\;\\Rightarrow\\;\\delta=\\,?",
+          options:["0.01","0.05","0.1","1.0"], answer:1,
+          children:[
+            { id:"eps_deeper", label:"Why \u03B4 = \u03B5/2?", type:"concept",
+              latex:"|f(x)-L|=|2x-6|=2|x-3|<\\varepsilon \\;\\Rightarrow\\; |x-3|<\\frac{\\varepsilon}{2}=\\delta",
+              desc:"The algebra reveals the relationship",
+              children:[] }
+          ]
+        }
+      ]
+    },
+    { id:"intuitive", label:"Intuitive: Approaching", type:"concept",
+      latex:"\\text{As }x\\to 3,\\;f(x)=2x\\to\\,?",
+      desc:"What value does f(x) get closer and closer to?",
+      children:[
+        { id:"ch_approach", label:"Approach Challenge", type:"challenge",
+          question:"As x approaches 3, what does f(x) = 2x approach?",
+          qlatex:"\\lim_{x\\to 3}2x = \\,?",
+          options:["5","6","7","undefined"], answer:1,
+          children:[
+            { id:"one_sided", label:"One-Sided Limits", type:"concept",
+              latex:"\\lim_{x\\to 3^-}2x = \\lim_{x\\to 3^+}2x = 6",
+              desc:"Left and right must agree",
+              children:[] }
+          ]
+        }
+      ]
+    },
+    { id:"visual", label:"Visual: Zoom Forever", type:"concept",
+      latex:"\\text{Magnify the graph at }x=a",
+      desc:"If you zoom in infinitely, f(x) becomes a straight line at L",
+      children:[
+        { id:"ch_visual", label:"Zoom Challenge", type:"challenge",
+          question:"Zoom into f(x) = x\u00B2 at x = 2.\nWhat does the tangent line's slope approach?",
+          qlatex:"\\lim_{h\\to 0}\\frac{(2+h)^2 - 4}{h} = \\,?",
+          options:["2","3","4","8"], answer:2,
+          children:[
+            { id:"derivative_hint", label:"This is the Derivative!", type:"concept",
+              latex:"f'(x)=\\lim_{h\\to 0}\\frac{f(x+h)-f(x)}{h}",
+              desc:"The limit definition of the derivative. The tree grows...",
+              children:[] }
+          ]
+        }
+      ]
+    },
+    { id:"dne", label:"When Limits Don't Exist", type:"concept",
+      latex:"\\lim_{x\\to 0}\\sin\\left(\\frac{1}{x}\\right)=\\text{DNE}",
+      desc:"Sometimes there is no answer. The branch is a dead end... or is it?",
+      children:[] }
+  ]
+};
+
+// State
+let expanded = new Set(["root"]);
+let solved   = new Set();
+let failed   = new Set();
+let activeChallenge = null;
+
+// ???????????????????????????????????????????????????????
+// LAYOUT ENGINE ? compute positions for visible nodes
+// ???????????????????????????????????????????????????????
+
+function collectVisible(node, depth, parentId) {
+  let list = [{node, depth, parentId}];
+  if (expanded.has(node.id) && node.children) {
+    for (let ch of node.children) {
+      list = list.concat(collectVisible(ch, depth+1, node.id));
+    }
+  }
+  return list;
+}
+
+function layoutTree(root) {
+  let visible = collectVisible(root, 0, null);
+  // Group by depth
+  let byDepth = {};
+  for (let v of visible) {
+    if (!byDepth[v.depth]) byDepth[v.depth] = [];
+    byDepth[v.depth].push(v);
+  }
+  let maxDepth = Math.max(...Object.keys(byDepth).map(Number));
+  // Assign positions
+  let positioned = [];
+  let W = 1200, H = 800;
+  let xStep = W / (maxDepth + 2);
+  for (let d = 0; d <= maxDepth; d++) {
+    let row = byDepth[d] || [];
+    let yStep = H / (row.length + 1);
+    for (let i = 0; i < row.length; i++) {
+      positioned.push({
+        ...row[i],
+        x: 100 + d * xStep,
+        y: yStep * (i + 1)
+      });
+    }
+  }
+  return positioned;
+}
+
+// ???????????????????????????????????????????????????????
+// SVG RENDERER
+// ???????????????????????????????????????????????????????
+
+const svg = document.getElementById('canvas');
+let viewX = 0, viewY = 0, viewScale = 1;
+
+function nodeColor(node) {
+  if (failed.has(node.id)) return '#f87171';
+  if (solved.has(node.id)) return '#4ade80';
+  if (node.type === 'domain') return '#ffd700';
+  if (node.type === 'concept') return '#00d4ff';
+  if (node.type === 'challenge') return '#b066ff';
+  return '#555';
+}
+
+function renderTree() {
+  let positioned = layoutTree(TREE);
+  // Build lookup
+  let lookup = {};
+  for (let p of positioned) lookup[p.node.id] = p;
+
+  let html = '';
+  // Viewbox
+  let vb = `${viewX} ${viewY} ${1200/viewScale} ${800/viewScale}`;
+  svg.setAttribute('viewBox', vb);
+
+  // Links
+  for (let p of positioned) {
+    if (p.parentId && lookup[p.parentId]) {
+      let par = lookup[p.parentId];
+      let col = failed.has(p.node.id) ? 'rgba(248,113,113,0.3)' : 'rgba(0,212,255,0.2)';
+      let dx = (p.x - par.x) / 2;
+      html += `<path d="M${par.x},${par.y} C${par.x+dx},${par.y} ${p.x-dx},${p.y} ${p.x},${p.y}" 
+        fill="none" stroke="${col}" stroke-width="2"/>`;
+    }
+  }
+  // Nodes
+  for (let p of positioned) {
+    let r = p.node.type === 'domain' ? 28 : (p.node.type === 'challenge' ? 20 : 22);
+    let col = nodeColor(p.node);
+    let opacity = expanded.has(p.node.id) ? 1 : 0.7;
+    let glow = solved.has(p.node.id) ? `<circle cx="${p.x}" cy="${p.y}" r="${r+6}" fill="none" stroke="${col}" stroke-width="1" opacity="0.3"/>` : '';
+    let hasKids = p.node.children && p.node.children.length > 0 && !expanded.has(p.node.id);
+    let plus = hasKids ? `<text x="${p.x+r+4}" y="${p.y+4}" fill="${col}" font-size="14" opacity="0.5">+</text>` : '';
+    html += glow;
+    html += `<circle cx="${p.x}" cy="${p.y}" r="${r}" fill="rgba(10,12,18,0.9)" 
+      stroke="${col}" stroke-width="2" opacity="${opacity}" 
+      style="cursor:pointer" data-id="${p.node.id}"/>`;
+    // Label
+    let label = p.node.label;
+    if (label.length > 22) label = label.substring(0, 20) + '...';
+    html += `<text x="${p.x}" y="${p.y + r + 16}" fill="${col}" font-size="11" 
+      text-anchor="middle" opacity="0.85" style="pointer-events:none">${label}</text>`;
+    // Type badge
+    let badge = p.node.type === 'challenge' ? '?' : (p.node.type === 'domain' ? '\u2605' : '\u25CB');
+    html += `<text x="${p.x}" y="${p.y + 5}" fill="${col}" font-size="14" 
+      text-anchor="middle" style="pointer-events:none">${badge}</text>`;
+    html += plus;
+  }
+  svg.innerHTML = html;
+
+  // Update HUD
+  document.getElementById('h-nodes').textContent = positioned.length;
+  document.getElementById('h-solved').textContent = solved.size;
+  document.getElementById('h-depth').textContent = Math.max(...positioned.map(p => p.depth));
+  document.getElementById('h-branches').textContent = expanded.size - 1;
+}
+
+// ???????????????????????????????????????????????????????
+// INTERACTION
+// ???????????????????????????????????????????????????????
+
+function findNode(tree, id) {
+  if (tree.id === id) return tree;
+  if (tree.children) {
+    for (let ch of tree.children) {
+      let found = findNode(ch, id);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
+svg.addEventListener('click', function(e) {
+  let el = e.target;
+  if (el.tagName === 'circle' && el.dataset.id) {
+    let node = findNode(TREE, el.dataset.id);
+    if (!node) return;
+
+    if (node.type === 'challenge' && !solved.has(node.id)) {
+      showChallenge(node);
+    } else {
+      // Toggle expand
+      if (expanded.has(node.id)) {
+        // Don't collapse root
+        if (node.id !== 'root') expanded.delete(node.id);
+      } else {
+        expanded.add(node.id);
+      }
+      renderTree();
+    }
+  }
+});
+
+// Challenge box
+function showChallenge(node) {
+  activeChallenge = node;
+  let box = document.getElementById('challenge-box');
+  document.getElementById('ch-question').textContent = node.question;
+  let latexEl = document.getElementById('ch-latex');
+  latexEl.innerHTML = '';
+  if (node.qlatex) {
+    katex.render(node.qlatex, latexEl, {throwOnError: false, displayMode: true});
+  }
+  let optsEl = document.getElementById('ch-opts');
+  optsEl.innerHTML = '';
+  node.options.forEach(function(opt, i) {
+    let btn = document.createElement('div');
+    btn.className = 'opt';
+    btn.textContent = opt;
+    btn.addEventListener('click', function() { answerChallenge(i); });
+    optsEl.appendChild(btn);
+  });
+  document.getElementById('ch-feedback').textContent = '';
+  box.style.display = 'block';
+}
+
+function answerChallenge(idx) {
+  if (!activeChallenge) return;
+  let opts = document.querySelectorAll('#ch-opts .opt');
+  if (idx === activeChallenge.answer) {
+    opts[idx].classList.add('correct');
+    document.getElementById('ch-feedback').textContent = 'Correct! Branch grows...';
+    document.getElementById('ch-feedback').style.color = '#4ade80';
+    solved.add(activeChallenge.id);
+    expanded.add(activeChallenge.id);
+    setTimeout(function() {
+      document.getElementById('challenge-box').style.display = 'none';
+      activeChallenge = null;
+      renderTree();
+    }, 1200);
+  } else {
+    opts[idx].classList.add('wrong');
+    document.getElementById('ch-feedback').textContent = 'Not quite. The dead branch stays visible.';
+    document.getElementById('ch-feedback').style.color = '#f87171';
+    failed.add(activeChallenge.id + '_opt' + idx);
+  }
+}
+
+// Pan & zoom
+let dragging = false, dragStart = {x:0, y:0};
+svg.addEventListener('pointerdown', function(e) {
+  if (e.target.tagName !== 'circle') {
+    dragging = true;
+    dragStart = {x: e.clientX, y: e.clientY};
+    svg.setPointerCapture(e.pointerId);
+  }
+});
+svg.addEventListener('pointermove', function(e) {
+  if (dragging) {
+    let dx = (e.clientX - dragStart.x) / viewScale;
+    let dy = (e.clientY - dragStart.y) / viewScale;
+    viewX -= dx; viewY -= dy;
+    dragStart = {x: e.clientX, y: e.clientY};
+    renderTree();
+  }
+});
+svg.addEventListener('pointerup', function() { dragging = false; });
+svg.addEventListener('wheel', function(e) {
+  e.preventDefault();
+  let factor = e.deltaY > 0 ? 0.9 : 1.1;
+  viewScale *= factor;
+  viewScale = Math.max(0.3, Math.min(3, viewScale));
+  renderTree();
+}, {passive: false});
+
+// Init
+renderTree();
+</script>
+</body>
+</html>

@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sacred Math Tree v1.2</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#06070b;color:#dce4f0;font-family:ui-monospace,"SF Mono",Menlo,monospace;
+  overflow:hidden;height:100vh;width:100vw}
+
+#world{width:100%;height:100%;position:absolute;
+  perspective:2400px;perspective-origin:50% 15%}
+#plane{position:absolute;width:6000px;height:8000px;
+  transform-style:preserve-3d}
+
+/* EQUATION BOXES */
+.eq{position:absolute;background:rgba(6,8,14,0.93);
+  border:1.5px solid rgba(0,212,255,0.3);border-radius:5px;
+  padding:10px 16px;cursor:pointer;min-width:100px;text-align:center;
+  opacity:0;transform:scale(0.4) translateY(-30px);pointer-events:auto;
+  transition:opacity 0.6s,transform 0.5s ease-out,border-color 0.3s,box-shadow 0.3s}
+.eq.show{opacity:1;transform:scale(1) translateY(0)}
+.eq:hover{border-color:#00d4ff;box-shadow:0 0 22px rgba(0,212,255,0.12)}
+.eq.t-root{border-color:rgba(255,215,0,0.5);
+  box-shadow:0 0 30px rgba(255,215,0,0.08),0 0 60px rgba(255,215,0,0.03)}
+.eq.t-root:hover{border-color:#ffd700;box-shadow:0 0 40px rgba(255,215,0,0.18)}
+.eq.t-tool{border-color:rgba(176,102,255,0.4)}
+.eq.t-tool:hover{border-color:#b066ff;box-shadow:0 0 20px rgba(176,102,255,0.15)}
+.eq.t-result{border-color:rgba(74,222,128,0.4)}
+.eq.t-result:hover{border-color:#4ade80;box-shadow:0 0 20px rgba(74,222,128,0.15)}
+.eq.t-dead{border-color:rgba(248,113,113,0.3);opacity:0.5!important}
+.eq .tag{font-size:9px;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:4px;opacity:0.4}
+.eq .tag.gold{color:#ffd700}.eq .tag.purp{color:#b066ff}
+.eq .tag.grn{color:#4ade80}.eq .tag.red{color:#f87171}
+.eq .katex{font-size:1.0em}
+.eq .sub{font-size:9px;opacity:0.28;margin-top:6px;font-style:italic;max-width:260px}
+
+/* FLOATING OPS ? the sparkle ring around unexpanded nodes */
+.ops-ring{position:absolute;pointer-events:none}
+.op-btn{position:absolute;background:rgba(176,102,255,0.08);
+  border:1px solid rgba(176,102,255,0.35);border-radius:12px;
+  padding:4px 10px;font-size:10px;color:#b066ff;cursor:pointer;
+  pointer-events:auto;white-space:nowrap;
+  opacity:0;transform:scale(0.3);
+  transition:opacity 0.5s,transform 0.4s ease-out,border-color 0.2s,background 0.2s;
+  letter-spacing:0.06em}
+.op-btn.show{opacity:1;transform:scale(1)}
+.op-btn:hover{border-color:#b066ff;background:rgba(176,102,255,0.18);
+  box-shadow:0 0 12px rgba(176,102,255,0.2)}
+.op-btn .cost{color:#ffd700;font-size:9px;margin-left:4px}
+
+/* LINKS */
+svg.lk{position:absolute;top:0;left:0;width:6000px;height:8000px;pointer-events:none}
+svg.lk path{fill:none;stroke-width:1.5}
+svg.lk line{stroke-width:1;opacity:0.08;stroke:#1a1f2e}
+
+/* SPARKLE on root */
+@keyframes sparkle{0%{box-shadow:0 0 20px rgba(255,215,0,0.08)}
+  50%{box-shadow:0 0 40px rgba(255,215,0,0.15),0 0 80px rgba(255,215,0,0.05)}
+  100%{box-shadow:0 0 20px rgba(255,215,0,0.08)}}
+.eq.t-root.show{animation:sparkle 3s ease-in-out infinite}
+
+/* GACHA HUD */
+#ghud{position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:30;
+  display:flex;gap:18px;align-items:center;font-size:12px}
+#ghud .gem{display:flex;align-items:center;gap:5px}
+#ghud .gem .ct{color:#ffd700;font-weight:bold;font-size:15px}
+#ghud .xp{color:#b066ff}.ghud .str{color:#f97316}
+.tok-pop{position:fixed;pointer-events:none;z-index:40;font-size:18px;font-weight:bold;
+  color:#ffd700;animation:tokfly 1.2s ease-out forwards}
+@keyframes tokfly{0%{opacity:1;transform:translateY(0)}100%{opacity:0;transform:translateY(-80px)}}
+#combo{position:fixed;top:48px;left:50%;transform:translateX(-50%);z-index:25;
+  font-size:22px;font-weight:bold;opacity:0;transition:opacity 0.3s;
+  text-shadow:0 0 24px rgba(255,215,0,0.3)}
+#shud{position:fixed;top:12px;left:12px;z-index:20;font-size:11px;opacity:0.4}
+#shud div{margin:3px 0}#shud .v{color:#00d4ff}
+#ver{position:fixed;top:12px;right:12px;z-index:20;font-size:9px;
+  letter-spacing:0.14em;text-transform:uppercase;opacity:0.22}
+#bot{position:fixed;bottom:10px;left:50%;transform:translateX(-50%);z-index:20;
+  font-size:10px;opacity:0.22}
+</style>
+</head>
+<body>
+
+<div id="ghud">
+  <div class="gem">&#9670; <span class="ct" id="g-tok">3</span></div>
+  <div class="xp">XP <span id="g-xp">0</span></div>
+  <div style="color:#f97316">&#128293; <span id="g-str">0</span></div>
+</div>
+<div id="combo"></div>
+<div id="shud"><div>nodes <span class="v" id="h-n">1</span></div>
+  <div>depth <span class="v" id="h-d">0</span></div></div>
+<div id="ver">sacred math tree v1.2</div>
+<div id="bot">click ops to explore downward &middot; scroll zoom &middot; drag pan</div>
+
+<div id="world"><div id="plane"><svg class="lk" id="lksvg"></svg></div></div>
+
+<script>
+// ?????????????????????????????????????????????
+// TREE DATA ? grows DOWNWARD (Y increases = deeper)
+// ?????????????????????????????????????????????
+const T={id:"eq0",tag:"START",type:"root",
+  latex:"\\lim_{x \\to 0} \\frac{\\sin x}{x}",
+  sub:"famous limit. what tools can you try?",cost:0,xp:0,
+  ch:[
+    {id:"t1",tag:"DIRECT SUB",type:"tool",
+     latex:"\\frac{\\sin(0)}{0} = \\frac{0}{0}",
+     sub:"indeterminate! we need another way",cost:1,xp:5,
+     ch:[{id:"t1d",tag:"DEAD END",type:"dead",
+       latex:"\\frac{0}{0}\\;\\text{undefined}",
+       sub:"but now you KNOW. that is data.",cost:0,xp:10,ch:[]}]},
+    {id:"t2",tag:"L\u2019H\u00D4PITAL",type:"tool",
+     latex:"\\overset{\\text{L\u2019H}}{=}\\lim_{x\\to 0}\\frac{\\cos x}{1}",
+     sub:"differentiate top & bottom",cost:1,xp:5,
+     ch:[{id:"t2r",tag:"EVALUATE",type:"result",
+       latex:"\\frac{\\cos 0}{1}=\\boxed{1}",
+       sub:"the limit is 1! but WHY does this rule work?",cost:1,xp:25,
+       ch:[{id:"t2r2",tag:"THE REASON",type:"result",
+         latex:"\\frac{f}{g}\\approx\\frac{f'(a)\\cdot(x-a)}{g'(a)\\cdot(x-a)}=\\frac{f'(a)}{g'(a)}",
+         sub:"near a, functions ARE their derivatives",cost:1,xp:40,ch:[]}]}]},
+    {id:"t3",tag:"SQUEEZE",type:"tool",
+     latex:"\\cos x \\leq \\frac{\\sin x}{x} \\leq 1",
+     sub:"trap between two known limits",cost:1,xp:5,
+     ch:[{id:"t3r",tag:"SQUEEZED",type:"result",
+       latex:"\\lim\\cos x=1,\\;\\lim 1=1\\;\\Rightarrow\\;\\boxed{1}",
+       sub:"both sides = 1. middle has no choice. elegant.",cost:1,xp:30,ch:[]}]},
+    {id:"t4",tag:"TAYLOR SERIES",type:"tool",
+     latex:"\\sin x=x-\\tfrac{x^3}{6}+\\tfrac{x^5}{120}-\\cdots",
+     sub:"expand then divide by x",cost:2,xp:10,
+     ch:[{id:"t4r",tag:"DIVIDE",type:"result",
+       latex:"1-\\tfrac{x^2}{6}+\\tfrac{x^4}{120}-\\cdots\\;\\to\\;\\boxed{1}",
+       sub:"all x terms vanish. only 1 survives. most beautiful proof.",cost:1,xp:50,ch:[]}]}
+  ]};
+
+// ?????????????????????????????????????????????
+// STATE
+// ?????????????????????????????????????????????
+let tokens=3,xp=0,streak=0,combo=0,comboT=null;
+let opened=new Set(["eq0"]);
+let items=[];
+
+// gacha helpers
+function flyPop(el,txt,col){
+  let r=el.getBoundingClientRect();
+  let p=document.createElement('div');p.className='tok-pop';p.style.color=col||'#ffd700';
+  p.textContent=txt;p.style.left=r.left+r.width/2-20+'px';p.style.top=r.top-10+'px';
+  document.body.appendChild(p);setTimeout(()=>p.remove(),1300)}
+function addTok(n,el){tokens+=n;if(el)flyPop(el,'+'+n+' \u2666');updH()}
+function addXP(n,el){xp+=n;if(el)flyPop(el,'+'+n+' XP','#b066ff');updH()}
+function bumpStr(el){streak++;combo++;
+  let c=document.getElementById('combo');
+  if(combo>=2){c.textContent=combo+'x COMBO';c.style.opacity='1';
+    c.style.color=combo>=5?'#ffd700':combo>=3?'#f97316':'#b066ff'}
+  clearTimeout(comboT);comboT=setTimeout(()=>{combo=0;c.style.opacity='0'},3500);
+  if(streak===3)addTok(2,el);if(streak===5)addTok(3,el);if(streak===8)addTok(5,el)}
+function updH(){document.getElementById('g-tok').textContent=tokens;
+  document.getElementById('g-xp').textContent=xp;
+  document.getElementById('g-str').textContent=streak}
+
+// ?????????????????????????????????????????????
+// LAYOUT ? DOWNWARD tree (Y = depth)
+// ?????????????????????????????????????????????
+const CX=3000,CY=600;  // root position
+const DY=380;           // vertical step per depth
+const XSP=400;          // horizontal spread
+
+function layout(n,d,xc,px,py){
+  let nx=px!==null?xc:CX;
+  let ny=py!==null?py+DY:CY;
+  items.push({n,x:nx,y:ny,d,px:px!==null?px:null,py:py!==null?py:null,
+    ppx:px!==null?((px===null)?CX:arguments[2]):null});
+  if(opened.has(n.id)&&n.ch&&n.ch.length){
+    let c=n.ch.length;
+    let spread=XSP*Math.min(c,5);
+    let sx=nx-spread/2,st=c>1?spread/(c-1):0;
+    for(let i=0;i<c;i++){
+      layout(n.ch[i],d+1,c===1?nx:sx+st*i,nx,ny);
+    }
+  }
+}
+
+// ?????????????????????????????????????????????
+// RENDER
+// ?????????????????????????????????????????????
+const plane=document.getElementById('plane');
+const lksvg=document.getElementById('lksvg');
+
+function render(){
+  items=[];
+  layout(T,0,CX,null,null);
+  plane.querySelectorAll('.eq,.ops-ring,.op-btn').forEach(e=>e.remove());
+  let lk={};items.forEach(i=>lk[i.n.id]=i);
+
+  // links ? curved downward
+  let svg='';
+  for(let it of items){
+    let pid=findPid(T,it.n.id,null);
+    if(pid&&lk[pid]){
+      let p=lk[pid];
+      let x1=p.x,y1=p.y+40,x2=it.x,y2=it.y-40;
+      let my=(y1+y2)/2;
+      let col=it.n.type==='dead'?'rgba(248,113,113,0.18)':
+              it.n.type==='result'?'rgba(74,222,128,0.22)':'rgba(0,212,255,0.18)';
+      svg+='<path d="M'+x1+','+y1+' C'+x1+','+my+' '+x2+','+my+' '+x2+','+y2+'" stroke="'+col+'"/>';
+    }
+  }
+  lksvg.innerHTML=svg;
+
+  // nodes
+  for(let it of items){
+    let n=it.n;
+    let box=document.createElement('div');
+    box.className='eq t-'+n.type;
+    box.style.left=(it.x-150)+'px';
+    box.style.top=(it.y-35)+'px';
+    box.style.maxWidth='300px';
+    box.dataset.id=n.id;
+
+    let tc=n.type==='root'?'gold':n.type==='tool'?'purp':n.type==='result'?'grn':'red';
+    box.innerHTML='<div class="tag '+tc+'">'+n.tag+'</div>'+
+      '<div class="ltx"></div>'+(n.sub?'<div class="sub">'+n.sub+'</div>':'');
+    plane.appendChild(box);
+    try{katex.render(n.latex,box.querySelector('.ltx'),{throwOnError:false,displayMode:true})}catch(e){}
+
+    // animate in
+    let delay=it.d*80;
+    setTimeout(()=>box.classList.add('show'),delay+50);
+
+    // if node has unopened children, show floating op buttons AROUND it
+    if(opened.has(n.id)&&n.ch&&n.ch.length){
+      let hasUnopened=n.ch.some(c=>!opened.has(c.id));
+      if(!hasUnopened){
+        // all children opened ? node is just a passthrough, click to collapse
+        box.addEventListener('click',e=>{e.stopPropagation();
+          if(n.id!=='eq0'){opened.delete(n.id);collAll(n);render()}});
+      }
+    } else if(!n.ch||!n.ch.length){
+      // leaf ? click to collapse parent chain? or just glow
+      box.addEventListener('click',e=>{e.stopPropagation()});
+    }
+
+    // show OP BUTTONS floating around for unexpanded children
+    if(opened.has(n.id)&&n.ch){
+      let unopened=n.ch.filter(c=>!opened.has(c.id));
+      if(unopened.length>0){
+        let count=unopened.length;
+        let arcStart=-90-(count-1)*25;
+        let arcStep=50;
+        let radius=130;
+        unopened.forEach((ch,i)=>{
+          let angle=(arcStart+i*arcStep)*Math.PI/180;
+          let ox=Math.cos(angle)*radius;
+          let oy=Math.sin(angle)*radius+80; // bias downward
+          let btn=document.createElement('div');
+          btn.className='op-btn';
+          btn.style.left=(it.x+ox-50)+'px';
+          btn.style.top=(it.y+oy)+'px';
+          let costTxt=ch.cost>0?' <span class="cost">\u2666'+ch.cost+'</span>':'';
+          btn.innerHTML=ch.tag+costTxt;
+          plane.appendChild(btn);
+          setTimeout(()=>btn.classList.add('show'),delay+200+i*100);
+
+          btn.addEventListener('click',e=>{
+            e.stopPropagation();
+            if(ch.cost>0&&tokens<ch.cost){
+              btn.style.borderColor='#f87171';
+              btn.style.boxShadow='0 0 16px rgba(248,113,113,0.25)';
+              setTimeout(()=>{btn.style.borderColor='';btn.style.boxShadow=''},500);
+              return;
+            }
+            tokens-=ch.cost;
+            opened.add(ch.id);
+            addXP(ch.xp,btn);bumpStr(btn);
+            if(ch.type==='result'||ch.type==='dead')addTok(1,btn);
+            updH();render();
+          });
+        });
+      }
+    }
+  }
+  document.getElementById('h-n').textContent=items.length;
+  document.getElementById('h-d').textContent=Math.max(...items.map(i=>i.d));
+}
+
+function collAll(n){if(n.ch)n.ch.forEach(c=>{opened.delete(c.id);collAll(c)})}
+function findPid(t,tid,pid){if(t.id===tid)return pid;
+  if(t.ch)for(let c of t.ch){let f=findPid(c,tid,t.id);if(f!==null)return f}return null}
+
+// ?????????????????????????????????????????????
+// PAN ZOOM ? looking DOWN at hanging tree
+// ?????????????????????????????????????????????
+let px=-2500,py=-200,zm=0.38,tilt=55;
+function upT(){plane.style.left=px+'px';plane.style.top=py+'px';
+  plane.style.transform='rotateX('+tilt+'deg) scale('+zm+') translateZ(-100px)'}
+let drag=false,lm={x:0,y:0};
+document.addEventListener('pointerdown',e=>{
+  if(e.target.closest('.eq,.op-btn'))return;drag=true;lm={x:e.clientX,y:e.clientY}});
+document.addEventListener('pointermove',e=>{
+  if(!drag)return;px+=e.clientX-lm.x;py+=e.clientY-lm.y;lm={x:e.clientX,y:e.clientY};upT()});
+document.addEventListener('pointerup',()=>{drag=false});
+document.addEventListener('wheel',e=>{e.preventDefault();
+  zm*=e.deltaY>0?0.92:1.08;zm=Math.max(0.1,Math.min(2.5,zm));upT()},{passive:false});
+
+upT();render();
+</script>
+</body>
+</html>

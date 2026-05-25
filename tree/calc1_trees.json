@@ -1,0 +1,762 @@
+[
+  {
+    "id": "sinx",
+    "title": "lim sin(x)/x",
+    "chapter": "Limits",
+    "difficulty": 1
+  },
+  {
+    "id": "euler_e",
+    "title": "lim (1+1/n)^n",
+    "chapter": "Limits",
+    "difficulty": 2,
+    "tree": {
+      "id": "e0",
+      "tag": "START",
+      "type": "root",
+      "latex": "\\lim_{n\\to\\infty}\\left(1+\\frac{1}{n}\\right)^n",
+      "sub": "what number is this?",
+      "cost": 0,
+      "xp": 0,
+      "ch": [
+        {
+          "id": "e1",
+          "tag": "PLUG IN",
+          "type": "tool",
+          "latex": "n=10:\\;2.594\\quad n=100:\\;2.705\\quad n=10000:\\;2.718",
+          "sub": "it's converging...",
+          "cost": 1,
+          "xp": 5,
+          "ch": [
+            {
+              "id": "e1r",
+              "tag": "RECOGNIZE",
+              "type": "result",
+              "latex": "\\approx 2.71828\\ldots = e",
+              "sub": "Euler's number!",
+              "cost": 0,
+              "xp": 15,
+              "ch": []
+            }
+          ]
+        },
+        {
+          "id": "e2",
+          "tag": "LOG TRICK",
+          "type": "tool",
+          "latex": "\\ln L = \\lim_{n\\to\\infty} n\\ln\\left(1+\\frac{1}{n}\\right)",
+          "sub": "take ln of both sides",
+          "cost": 1,
+          "xp": 10,
+          "ch": [
+            {
+              "id": "e2r",
+              "tag": "L'HOPITAL",
+              "type": "result",
+              "latex": "= \\lim_{t\\to 0}\\frac{\\ln(1+t)}{t}=\\frac{1/(1+t)}{1}\\bigg|_0=\\boxed{1}",
+              "sub": "so ln L = 1, L = e",
+              "cost": 1,
+              "xp": 30,
+              "ch": []
+            }
+          ]
+        },
+        {
+          "id": "e3",
+          "tag": "BINOMIAL",
+          "type": "tool",
+          "latex": "\\left(1+\\frac{1}{n}\\right)^n=\\sum_{k=0}^{n}\\binom{n}{k}\\frac{1}{n^k}",
+          "sub": "expand it",
+          "cost": 2,
+          "xp": 10,
+          "ch": [
+            {
+              "id": "e3r",
+              "tag": "LIMIT TERM",
+              "type": "result",
+              "latex": "\\to \\sum_{k=0}^{\\infty}\\frac{1}{k!}=e",
+              "sub": "the series definition of e",
+              "cost": 1,
+              "xp": 40,
+              "ch": []
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "id": "power_rule",
+    "title": "d/dx x^n",
+    "chapter": "Derivatives",
+    "difficulty": 1,
+    "tree": {
+      "id": "p0",
+      "tag": "START",
+      "type": "root",
+      "latex": "\\frac{d}{dx}x^n = \\;?",
+      "sub": "the first rule you learn",
+      "cost": 0,
+      "xp": 0,
+      "ch": [
+        {
+          "id": "p1",
+          "tag": "DEFINITION",
+          "type": "tool",
+          "latex": "\\lim_{h\\to 0}\\frac{(x+h)^n - x^n}{h}",
+          "sub": "from first principles",
+          "cost": 1,
+          "xp": 5,
+          "ch": [
+            {
+              "id": "p1a",
+              "tag": "BINOMIAL",
+              "type": "result",
+              "latex": "(x+h)^n = x^n + nx^{n-1}h + \\binom{n}{2}x^{n-2}h^2+\\cdots",
+              "sub": "expand, cancel x^n, divide by h",
+              "cost": 1,
+              "xp": 20,
+              "ch": [
+                {
+                  "id": "p1b",
+                  "tag": "RESULT",
+                  "type": "result",
+                  "latex": "= nx^{n-1}+0+0+\\cdots = \\boxed{nx^{n-1}}",
+                  "sub": "all h terms vanish",
+                  "cost": 0,
+                  "xp": 25,
+                  "ch": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "p2",
+          "tag": "TRY n=2",
+          "type": "tool",
+          "latex": "\\frac{d}{dx}x^2 = \\lim_{h\\to 0}\\frac{(x+h)^2-x^2}{h}",
+          "sub": "start with a case",
+          "cost": 1,
+          "xp": 5,
+          "ch": [
+            {
+              "id": "p2r",
+              "tag": "SIMPLIFY",
+              "type": "result",
+              "latex": "= \\lim_{h\\to 0}\\frac{2xh+h^2}{h}=2x=\\boxed{2x^1}",
+              "sub": "pattern: 2x^(2-1)",
+              "cost": 0,
+              "xp": 10,
+              "ch": []
+            }
+          ]
+        },
+        {
+          "id": "p3",
+          "tag": "TRY n=3",
+          "type": "tool",
+          "latex": "\\frac{d}{dx}x^3 = 3x^2",
+          "sub": "another case",
+          "cost": 1,
+          "xp": 5,
+          "ch": [
+            {
+              "id": "p3d",
+              "tag": "PATTERN",
+              "type": "dead",
+              "latex": "n=2:\\;2x^1\\quad n=3:\\;3x^2\\quad n=?:\\; nx^{n-1}",
+              "sub": "pattern is clear but NOT a proof",
+              "cost": 0,
+              "xp": 5,
+              "ch": []
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "id": "dsin",
+    "title": "d/dx sin(x)",
+    "chapter": "Derivatives",
+    "difficulty": 2,
+    "tree": {
+      "id": "s0",
+      "tag": "START",
+      "type": "root",
+      "latex": "\\frac{d}{dx}\\sin x = \\;?",
+      "sub": "needs the squeeze result",
+      "cost": 0,
+      "xp": 0,
+      "ch": [
+        {
+          "id": "s1",
+          "tag": "DEFINITION",
+          "type": "tool",
+          "latex": "\\lim_{h\\to 0}\\frac{\\sin(x+h)-\\sin x}{h}",
+          "sub": "difference quotient",
+          "cost": 1,
+          "xp": 5,
+          "ch": [
+            {
+              "id": "s1a",
+              "tag": "SUM FORMULA",
+              "type": "result",
+              "latex": "= \\lim_{h\\to 0}\\frac{\\sin x\\cos h+\\cos x\\sin h-\\sin x}{h}",
+              "sub": "sin(a+b) = sin a cos b + cos a sin b",
+              "cost": 1,
+              "xp": 15,
+              "ch": [
+                {
+                  "id": "s1b",
+                  "tag": "SPLIT",
+                  "type": "result",
+                  "latex": "= \\sin x\\cdot\\underbrace{\\frac{\\cos h-1}{h}}_{\\to 0}+\\cos x\\cdot\\underbrace{\\frac{\\sin h}{h}}_{\\to 1}",
+                  "sub": "two known limits!",
+                  "cost": 1,
+                  "xp": 20,
+                  "ch": [
+                    {
+                      "id": "s1c",
+                      "tag": "ANSWER",
+                      "type": "result",
+                      "latex": "= 0 + \\cos x \\cdot 1 = \\boxed{\\cos x}",
+                      "sub": "sin' = cos. elegant.",
+                      "cost": 0,
+                      "xp": 30,
+                      "ch": []
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "s2",
+          "tag": "EULER",
+          "type": "tool",
+          "latex": "\\sin x = \\frac{e^{ix}-e^{-ix}}{2i}",
+          "sub": "complex exponential",
+          "cost": 2,
+          "xp": 10,
+          "ch": [
+            {
+              "id": "s2r",
+              "tag": "DIFFERENTIATE",
+              "type": "result",
+              "latex": "\\frac{ie^{ix}+ie^{-ix}}{2i}=\\frac{e^{ix}+e^{-ix}}{2}=\\boxed{\\cos x}",
+              "sub": "one line with Euler",
+              "cost": 1,
+              "xp": 40,
+              "ch": []
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "id": "chain",
+    "title": "d/dx f(g(x))",
+    "chapter": "Derivatives",
+    "difficulty": 3,
+    "tree": {
+      "id": "c0",
+      "tag": "START",
+      "type": "root",
+      "latex": "\\frac{d}{dx}f(g(x)) = \\;?",
+      "sub": "composition of functions",
+      "cost": 0,
+      "xp": 0,
+      "ch": [
+        {
+          "id": "c1",
+          "tag": "INTUITION",
+          "type": "tool",
+          "latex": "\\Delta f \\approx f'(g)\\cdot\\Delta g,\\quad \\Delta g \\approx g'(x)\\cdot\\Delta x",
+          "sub": "small changes multiply",
+          "cost": 1,
+          "xp": 5,
+          "ch": [
+            {
+              "id": "c1r",
+              "tag": "COMBINE",
+              "type": "result",
+              "latex": "\\frac{\\Delta f}{\\Delta x}=\\frac{\\Delta f}{\\Delta g}\\cdot\\frac{\\Delta g}{\\Delta x}\\to\\boxed{f'(g(x))\\cdot g'(x)}",
+              "sub": "the chain rule",
+              "cost": 0,
+              "xp": 20,
+              "ch": []
+            }
+          ]
+        },
+        {
+          "id": "c2",
+          "tag": "EXAMPLE",
+          "type": "tool",
+          "latex": "\\frac{d}{dx}\\sin(x^2) = \\;?",
+          "sub": "f=sin, g=x^2",
+          "cost": 1,
+          "xp": 5,
+          "ch": [
+            {
+              "id": "c2r",
+              "tag": "APPLY",
+              "type": "result",
+              "latex": "= \\cos(x^2)\\cdot 2x = \\boxed{2x\\cos(x^2)}",
+              "sub": "outer' ? inner'",
+              "cost": 0,
+              "xp": 15,
+              "ch": []
+            }
+          ]
+        },
+        {
+          "id": "c3",
+          "tag": "FORMAL",
+          "type": "tool",
+          "latex": "\\lim_{h\\to 0}\\frac{f(g(x+h))-f(g(x))}{h}",
+          "sub": "from definition",
+          "cost": 2,
+          "xp": 10,
+          "ch": [
+            {
+              "id": "c3d",
+              "tag": "PROBLEM",
+              "type": "dead",
+              "latex": "\\text{if } g(x+h)=g(x) \\text{ then } \\frac{0}{0}",
+              "sub": "division by zero when g is flat!",
+              "cost": 0,
+              "xp": 10,
+              "ch": []
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "id": "int_power",
+    "title": "integral x^n dx",
+    "chapter": "Integrals",
+    "difficulty": 1,
+    "tree": {
+      "id": "i0",
+      "tag": "START",
+      "type": "root",
+      "latex": "\\int x^n\\,dx = \\;?",
+      "sub": "reverse the power rule",
+      "cost": 0,
+      "xp": 0,
+      "ch": [
+        {
+          "id": "i1",
+          "tag": "REVERSE",
+          "type": "tool",
+          "latex": "\\text{if } \\frac{d}{dx}x^{n+1}=(n+1)x^n",
+          "sub": "undo the derivative",
+          "cost": 1,
+          "xp": 5,
+          "ch": [
+            {
+              "id": "i1r",
+              "tag": "DIVIDE",
+              "type": "result",
+              "latex": "\\int x^n\\,dx = \\boxed{\\frac{x^{n+1}}{n+1}+C}",
+              "sub": "don't forget +C",
+              "cost": 0,
+              "xp": 20,
+              "ch": []
+            }
+          ]
+        },
+        {
+          "id": "i2",
+          "tag": "n = -1",
+          "type": "tool",
+          "latex": "\\int x^{-1}\\,dx = \\int\\frac{1}{x}\\,dx",
+          "sub": "what happens at n=-1?",
+          "cost": 1,
+          "xp": 10,
+          "ch": [
+            {
+              "id": "i2d",
+              "tag": "BLOWS UP",
+              "type": "dead",
+              "latex": "\\frac{x^0}{0} = \\frac{1}{0}\\;\\text{UNDEFINED}",
+              "sub": "the formula breaks!",
+              "cost": 0,
+              "xp": 5,
+              "ch": []
+            },
+            {
+              "id": "i2r",
+              "tag": "SPECIAL CASE",
+              "type": "result",
+              "latex": "\\int\\frac{1}{x}\\,dx = \\boxed{\\ln|x|+C}",
+              "sub": "that's WHY ln exists",
+              "cost": 1,
+              "xp": 30,
+              "ch": []
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "id": "improper",
+    "title": "integral 1/x^p",
+    "chapter": "Integrals",
+    "difficulty": 3,
+    "tree": {
+      "id": "im0",
+      "tag": "START",
+      "type": "root",
+      "latex": "\\int_1^{\\infty}\\frac{1}{x^p}\\,dx\\quad\\text{converge?}",
+      "sub": "depends on p",
+      "cost": 0,
+      "xp": 0,
+      "ch": [
+        {
+          "id": "im1",
+          "tag": "p = 1",
+          "type": "tool",
+          "latex": "\\int_1^{\\infty}\\frac{1}{x}\\,dx = \\ln x\\big|_1^\\infty = \\infty",
+          "sub": "DIVERGES",
+          "cost": 1,
+          "xp": 10,
+          "ch": [
+            {
+              "id": "im1d",
+              "tag": "HARMONIC",
+              "type": "dead",
+              "latex": "\\sum\\frac{1}{n}=\\infty",
+              "sub": "harmonic series diverges too",
+              "cost": 0,
+              "xp": 10,
+              "ch": []
+            }
+          ]
+        },
+        {
+          "id": "im2",
+          "tag": "p = 2",
+          "type": "tool",
+          "latex": "\\int_1^{\\infty}\\frac{1}{x^2}\\,dx = -\\frac{1}{x}\\bigg|_1^\\infty = 1",
+          "sub": "CONVERGES to 1",
+          "cost": 1,
+          "xp": 10,
+          "ch": [
+            {
+              "id": "im2r",
+              "tag": "FINITE AREA",
+              "type": "result",
+              "latex": "\\text{infinite length, finite area} = \\boxed{1}",
+              "sub": "Gabriel's horn paradox",
+              "cost": 0,
+              "xp": 20,
+              "ch": []
+            }
+          ]
+        },
+        {
+          "id": "im3",
+          "tag": "GENERAL",
+          "type": "tool",
+          "latex": "\\int_1^\\infty x^{-p}dx=\\frac{x^{1-p}}{1-p}\\bigg|_1^\\infty",
+          "sub": "evaluate at infinity",
+          "cost": 2,
+          "xp": 15,
+          "ch": [
+            {
+              "id": "im3r",
+              "tag": "THE RULE",
+              "type": "result",
+              "latex": "\\text{converges iff } p>1:\\quad\\boxed{\\frac{1}{p-1}}",
+              "sub": "p=1 is the exact boundary",
+              "cost": 1,
+              "xp": 35,
+              "ch": []
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "id": "taylor_ex",
+    "title": "Taylor of e^x",
+    "chapter": "Series",
+    "difficulty": 2,
+    "tree": {
+      "id": "tx0",
+      "tag": "START",
+      "type": "root",
+      "latex": "e^x = \\sum_{n=0}^{\\infty}\\;?",
+      "sub": "the most beautiful series",
+      "cost": 0,
+      "xp": 0,
+      "ch": [
+        {
+          "id": "tx1",
+          "tag": "DERIVATIVES",
+          "type": "tool",
+          "latex": "f=e^x:\\; f'=e^x,\\; f''=e^x,\\; f^{(n)}=e^x",
+          "sub": "every derivative is itself",
+          "cost": 1,
+          "xp": 5,
+          "ch": [
+            {
+              "id": "tx1r",
+              "tag": "AT x=0",
+              "type": "result",
+              "latex": "f^{(n)}(0)=e^0=1\\;\\forall n",
+              "sub": "all coefficients = 1/n!",
+              "cost": 0,
+              "xp": 10,
+              "ch": [
+                {
+                  "id": "tx1s",
+                  "tag": "THE SERIES",
+                  "type": "result",
+                  "latex": "e^x = \\boxed{\\sum_{n=0}^{\\infty}\\frac{x^n}{n!}}=1+x+\\frac{x^2}{2}+\\frac{x^3}{6}+\\cdots",
+                  "sub": "converges everywhere",
+                  "cost": 1,
+                  "xp": 30,
+                  "ch": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "tx2",
+          "tag": "x = 1",
+          "type": "tool",
+          "latex": "e = 1+1+\\frac{1}{2}+\\frac{1}{6}+\\frac{1}{24}+\\cdots",
+          "sub": "plug in x=1",
+          "cost": 1,
+          "xp": 10,
+          "ch": [
+            {
+              "id": "tx2r",
+              "tag": "COMPUTE",
+              "type": "result",
+              "latex": "\\approx 2.71828\\ldots",
+              "sub": "connects to lim(1+1/n)^n",
+              "cost": 0,
+              "xp": 15,
+              "ch": []
+            }
+          ]
+        },
+        {
+          "id": "tx3",
+          "tag": "x = ix",
+          "type": "tool",
+          "latex": "e^{ix}=1+ix-\\frac{x^2}{2}-\\frac{ix^3}{6}+\\cdots",
+          "sub": "plug in imaginary",
+          "cost": 2,
+          "xp": 15,
+          "ch": [
+            {
+              "id": "tx3r",
+              "tag": "EULER'S",
+              "type": "result",
+              "latex": "e^{ix}=\\cos x+i\\sin x\\quad\\Rightarrow\\quad\\boxed{e^{i\\pi}+1=0}",
+              "sub": "the most beautiful equation",
+              "cost": 1,
+              "xp": 50,
+              "ch": []
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "id": "ftc",
+    "title": "Fund. Thm. Calculus",
+    "chapter": "Integration",
+    "difficulty": 3,
+    "tree": {
+      "id": "f0",
+      "tag": "START",
+      "type": "root",
+      "latex": "\\frac{d}{dx}\\int_a^x f(t)\\,dt = \\;?",
+      "sub": "the bridge",
+      "cost": 0,
+      "xp": 0,
+      "ch": [
+        {
+          "id": "f1",
+          "tag": "GEOMETRIC",
+          "type": "tool",
+          "latex": "F(x)=\\text{area under } f \\text{ from } a \\text{ to } x",
+          "sub": "area is a function of endpoint",
+          "cost": 1,
+          "xp": 5,
+          "ch": [
+            {
+              "id": "f1r",
+              "tag": "THIN STRIP",
+              "type": "result",
+              "latex": "F(x+h)-F(x)\\approx f(x)\\cdot h",
+              "sub": "area of thin rectangle",
+              "cost": 1,
+              "xp": 15,
+              "ch": [
+                {
+                  "id": "f1s",
+                  "tag": "DIVIDE",
+                  "type": "result",
+                  "latex": "\\frac{F(x+h)-F(x)}{h}\\to\\boxed{f(x)}",
+                  "sub": "derivative of integral = original function",
+                  "cost": 0,
+                  "xp": 30,
+                  "ch": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "f2",
+          "tag": "PART 2",
+          "type": "tool",
+          "latex": "\\int_a^b f(x)\\,dx = F(b)-F(a)",
+          "sub": "if F' = f",
+          "cost": 1,
+          "xp": 10,
+          "ch": [
+            {
+              "id": "f2r",
+              "tag": "EXAMPLE",
+              "type": "result",
+              "latex": "\\int_0^1 x^2\\,dx=\\frac{x^3}{3}\\bigg|_0^1=\\boxed{\\frac{1}{3}}",
+              "sub": "plug in boundaries",
+              "cost": 0,
+              "xp": 15,
+              "ch": []
+            }
+          ]
+        },
+        {
+          "id": "f3",
+          "tag": "PARADOX",
+          "type": "tool",
+          "latex": "\\text{derivatives destroy info, integrals create it?}",
+          "sub": "how can they be inverse?",
+          "cost": 1,
+          "xp": 5,
+          "ch": [
+            {
+              "id": "f3r",
+              "tag": "THE +C",
+              "type": "result",
+              "latex": "F(x)+C\\text{ all have same derivative}",
+              "sub": "+C is the destroyed info. FTC recovers it with F(a).",
+              "cost": 1,
+              "xp": 25,
+              "ch": []
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "id": "eps_delta",
+    "title": "epsilon-delta",
+    "chapter": "Limits",
+    "difficulty": 4,
+    "tree": {
+      "id": "ed0",
+      "tag": "START",
+      "type": "root",
+      "latex": "\\forall\\epsilon>0,\\;\\exists\\delta>0:\\;|x-a|<\\delta\\Rightarrow|f(x)-L|<\\epsilon",
+      "sub": "the formal definition",
+      "cost": 0,
+      "xp": 0,
+      "ch": [
+        {
+          "id": "ed1",
+          "tag": "TRANSLATE",
+          "type": "tool",
+          "latex": "\\text{\"however close you want f to L, I can get x close enough to a\"}",
+          "sub": "it's a challenge-response game",
+          "cost": 1,
+          "xp": 5,
+          "ch": [
+            {
+              "id": "ed1r",
+              "tag": "THE GAME",
+              "type": "result",
+              "latex": "\\text{you pick } \\epsilon.\\;\\text{I pick } \\delta.\\;\\text{I always win.}",
+              "sub": "that's what 'limit exists' means",
+              "cost": 0,
+              "xp": 15,
+              "ch": []
+            }
+          ]
+        },
+        {
+          "id": "ed2",
+          "tag": "EXAMPLE",
+          "type": "tool",
+          "latex": "\\lim_{x\\to 3}2x=6:\\;\\text{find }\\delta",
+          "sub": "given epsilon",
+          "cost": 1,
+          "xp": 10,
+          "ch": [
+            {
+              "id": "ed2a",
+              "tag": "WORK",
+              "type": "result",
+              "latex": "|2x-6|<\\epsilon\\;\\Leftrightarrow\\;|x-3|<\\frac{\\epsilon}{2}",
+              "sub": "so delta = epsilon/2",
+              "cost": 1,
+              "xp": 20,
+              "ch": [
+                {
+                  "id": "ed2b",
+                  "tag": "VERIFY",
+                  "type": "result",
+                  "latex": "\\delta=\\frac{\\epsilon}{2}:\\;|x-3|<\\delta\\Rightarrow|2x-6|=2|x-3|<2\\delta=\\epsilon\\;\\checkmark",
+                  "sub": "proof complete",
+                  "cost": 0,
+                  "xp": 30,
+                  "ch": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "ed3",
+          "tag": "FAILS",
+          "type": "tool",
+          "latex": "\\lim_{x\\to 0}\\sin\\frac{1}{x}\\;\\text{does NOT exist}",
+          "sub": "no delta works for small epsilon",
+          "cost": 2,
+          "xp": 10,
+          "ch": [
+            {
+              "id": "ed3d",
+              "tag": "WHY",
+              "type": "dead",
+              "latex": "\\text{oscillates between -1 and 1 infinitely near 0}",
+              "sub": "no single L works",
+              "cost": 0,
+              "xp": 15,
+              "ch": []
+            }
+          ]
+        }
+      ]
+    }
+  }
+]

@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+
+<html lang="en"><head><meta charset="UTF-8">
+<title>MNet v6 · Analysis Dashboard</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#050510;color:#e0e0e0;font-family:ui-monospace,"SF Mono",monospace;font-size:11px;padding:20px}
+h1{color:#ff9040;font-size:16px;margin-bottom:10px;letter-spacing:0.1em}
+h2{color:#80d0ff;font-size:12px;margin:16px 0 8px;letter-spacing:0.08em}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
+.card{background:rgba(10,15,25,0.9);border:1px solid #1a2a3a;border-radius:4px;padding:12px}
+.card .ct{color:#ff9040;font-size:10px;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.1em}
+canvas{width:100%;height:200px;display:block;margin:4px 0}
+.stat{display:flex;justify-content:space-between;line-height:1.8;border-bottom:1px solid #0a0a14}
+.stat .k{color:#555}.stat .v{font-weight:bold}
+.ok{color:#7fff7f}.fail{color:#ff4444}.gold{color:#ffd700}.cy{color:#00d4ff}
+table{width:100%;border-collapse:collapse;font-size:9px;margin:8px 0}
+th{color:#ff9040;text-align:left;padding:4px 6px;border-bottom:1px solid #2a2a2a}
+td{padding:3px 6px;border-bottom:1px solid #0a0a14}
+tr:hover{background:rgba(255,144,64,0.05)}
+.conv{color:#7fff7f}.div{color:#ff4444}.steady{color:#ffd700}
+#re-slider{width:300px;accent-color:#ff69b4}
+.slider-row{margin:10px 0;display:flex;align-items:center;gap:10px}
+.slider-row label{color:#ff69b4}
+.verdict-box{background:rgba(127,255,127,0.08);border:1px solid #2a4a2a;border-radius:4px;padding:14px;margin:12px 0;text-align:center}
+.verdict-box.warn{background:rgba(255,215,0,0.08);border-color:#4a4a1a}
+.verdict-box h3{font-size:14px;margin-bottom:6px}
+</style>
+</head><body>
+<h1>MNet v6 · 19 Runs · Analytical Dashboard</h1>
+
+<div class="grid">
+  <div class="card">
+    <div class="ct">Aggregate</div>
+    <div class="stat"><span class="k">Total runs</span><span class="v cy" id="dRuns">—</span></div>
+    <div class="stat"><span class="k">Converging</span><span class="v ok" id="dConv">—</span></div>
+    <div class="stat"><span class="k">Steady</span><span class="v gold" id="dSteady">—</span></div>
+    <div class="stat"><span class="k">Diverging</span><span class="v fail" id="dDiv">—</span></div>
+    <div class="stat"><span class="k">Avg conv ratio</span><span class="v" id="dRatio">—</span></div>
+    <div class="stat"><span class="k">Contained (r&lt;10)</span><span class="v" id="dCont">—</span></div>
+  </div>
+  <div class="card">
+    <div class="ct">Residual Distribution</div>
+    <canvas id="cHist"></canvas>
+    <div class="stat"><span class="k">Mean residual (final)</span><span class="v" id="dMean">—</span></div>
+    <div class="stat"><span class="k">Std dev</span><span class="v" id="dStd">—</span></div>
+    <div class="stat"><span class="k">Coefficient of variation</span><span class="v" id="dCV">—</span></div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="ct">Residual Curves — All Runs</div>
+  <div class="slider-row">
+    <label>Filter by Re:</label>
+    <input type="range" id="re-slider" min="0" max="500" value="500" oninput="filterRe(this.value)">
+    <span id="re-val" style="color:#ff69b4;font-weight:bold">all</span>
+  </div>
+  <canvas id="cCurves" style="height:300px"></canvas>
+</div>
+
+<div class="verdict-box warn" id="verdict">
+  <h3>Loading...</h3>
+</div>
+
+<h2>Run-by-Run Detail</h2>
+<table>
+  <thead><tr>
+    <th>File</th><th>Re</th><th>N</th><th>Entries</th>
+    <th>Res Start</th><th>Res End</th><th>Conv Ratio</th><th>Verdict</th>
+  </tr></thead>
+  <tbody id="tBody"></tbody>
+</table>
+
+<script src="v6_dashboard_data.js"></script>
+<script>
+// DATA loaded from v6_dashboard_data.js
+window.onload=function(){render();};
+
+function render(){
+  var n=DATA.length;
+  var conv=0,div=0,steady=0,contained=0;
+  var finals=[];
+  DATA.forEach(function(r){
+    var cr=r.conv_ratio;
+    if(cr>1.1)conv++;else if(cr<0.9)div++;else steady++;
+    var last=r.residuals[r.residuals.length-1]||0;
+    finals.push(last);
+  });
+  document.getElementById('dRuns').textContent=n;
+  document.getElementById('dConv').textContent=conv+' ('+Math.round(conv/n*100)+'%)';
+  document.getElementById('dSteady').textContent=steady+' ('+Math.round(steady/n*100)+'%)';
+  document.getElementById('dDiv').textContent=div+' ('+Math.round(div/n*100)+'%)';
+  var avgR=DATA.reduce(function(a,r){return a+r.conv_ratio;},0)/n;
+  document.getElementById('dRatio').textContent=avgR.toFixed(3)+'×';
+  document.getElementById('dCont').textContent=(n-1)+'/'+n;
+
+  // Stats
+  var mean=finals.reduce(function(a,b){return a+b;},0)/finals.length;
+  var variance=finals.reduce(function(a,b){return a+(b-mean)*(b-mean);},0)/finals.length;
+  var std=Math.sqrt(variance);
+  var cv=std/Math.max(mean,0.001)*100;
+  document.getElementById('dMean').textContent=mean.toFixed(4);
+  document.getElementById('dStd').textContent=std.toFixed(4);
+  document.getElementById('dCV').textContent=cv.toFixed(1)+'%';
+
+  // Verdict
+  var vEl=document.getElementById('verdict');
+  if(cv<5){
+    vEl.className='verdict-box';vEl.style.borderColor='#2a4a2a';vEl.style.background='rgba(127,255,127,0.08)';
+    vEl.innerHTML='<h3 style="color:#7fff7f">NOT RANDOM NOISE</h3><p style="color:#80d0ff">CV='+cv.toFixed(1)+'% — All runs converge to the same steady state ('+mean.toFixed(3)+'±'+std.toFixed(3)+'). The method produces repeatable results.</p>';
+  } else if(cv<20){
+    vEl.className='verdict-box warn';
+    vEl.innerHTML='<h3 style="color:#ffd700">PARTIALLY DETERMINISTIC</h3><p style="color:#80d0ff">CV='+cv.toFixed(1)+'% — Some clustering visible but high variance.</p>';
+  } else {
+    vEl.className='verdict-box';vEl.style.borderColor='#4a1a1a';vEl.style.background='rgba(255,68,68,0.08)';
+    vEl.innerHTML='<h3 style="color:#ff4444">RANDOM NOISE</h3><p>CV='+cv.toFixed(1)+'% — Results scatter widely.</p>';
+  }
+
+  drawHist(finals);
+  drawCurves(DATA);
+  fillTable(DATA);
+}
+
+function drawHist(vals){
+  var c=document.getElementById('cHist');var ctx=c.getContext('2d');
+  c.width=c.offsetWidth*2;c.height=400;ctx.scale(2,2);
+  var w=c.offsetWidth,h=200;
+  var min=Math.min.apply(null,vals),max=Math.max.apply(null,vals);
+  var bins=20,bw=(max-min)/bins||1;
+  var counts=new Array(bins).fill(0);
+  vals.forEach(function(v){var b=Math.min(bins-1,Math.floor((v-min)/bw));counts[b]++;});
+  var maxC=Math.max.apply(null,counts);
+  ctx.fillStyle='#111';ctx.fillRect(0,0,w,h);
+  var barW=w/bins;
+  counts.forEach(function(c2,i){
+    var bh=c2/maxC*(h-20);
+    ctx.fillStyle='rgba(0,212,255,0.6)';
+    ctx.fillRect(i*barW+1,h-bh,barW-2,bh);
+  });
+  ctx.fillStyle='#555';ctx.font='8px monospace';
+  ctx.fillText(min.toFixed(2),2,h-2);ctx.fillText(max.toFixed(2),w-40,h-2);
+}
+
+function drawCurves(data){
+  var c=document.getElementById('cCurves');var ctx=c.getContext('2d');
+  c.width=c.offsetWidth*2;c.height=600;ctx.scale(2,2);
+  var w=c.offsetWidth,h=300;
+  ctx.fillStyle='#080810';ctx.fillRect(0,0,w,h);
+  // Find global min/max
+  var gMin=Infinity,gMax=-Infinity,maxLen=0;
+  data.forEach(function(r){r.residuals.forEach(function(v){if(v<gMin)gMin=v;if(v>gMax)gMax=v;});
+    if(r.residuals.length>maxLen)maxLen=r.residuals.length;});
+  if(gMax===gMin)gMax=gMin+1;
+  var colors=['#00d4ff','#ff9040','#7fff7f','#ff69b4','#ffd700','#ff4444','#80d0ff','#cc66ff'];
+  data.forEach(function(r,ri){
+    var pts=r.residuals;if(!pts.length)return;
+    ctx.strokeStyle=colors[ri%colors.length];ctx.lineWidth=0.8;ctx.globalAlpha=0.7;
+    ctx.beginPath();
+    pts.forEach(function(v,i){
+      var x=i/(maxLen-1)*w;var y=h-(v-gMin)/(gMax-gMin)*(h-20)-10;
+      if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
+    });
+    ctx.stroke();
+  });
+  ctx.globalAlpha=1;
+  // Axes
+  ctx.strokeStyle='#333';ctx.lineWidth=0.5;
+  ctx.beginPath();ctx.moveTo(0,h-10);ctx.lineTo(w,h-10);ctx.stroke();
+  ctx.fillStyle='#555';ctx.font='8px monospace';
+  ctx.fillText(gMin.toFixed(2),2,h-2);ctx.fillText(gMax.toFixed(2),2,14);
+  ctx.fillText('step 0',2,h+8||h-2);ctx.fillText('step '+maxLen,w-50,h-2);
+}
+
+function filterRe(v){
+  v=parseInt(v);document.getElementById('re-val').textContent=v>=500?'all':'≤'+v;
+  var filtered=v>=500?DATA:DATA.filter(function(r){return(r.Re||0)<=v;});
+  drawCurves(filtered);
+}
+
+function fillTable(data){
+  var tb=document.getElementById('tBody');tb.innerHTML='';
+  data.forEach(function(r){
+    var last=r.residuals[r.residuals.length-1]||0;
+    var first=r.residuals[0]||0;
+    var cr=r.conv_ratio;
+    var cls=cr>1.1?'conv':cr<0.9?'div':'steady';
+    var vrd=cr>1.1?'CONV':cr<0.9?'DIV':'STEADY';
+    var tr=document.createElement('tr');
+    tr.innerHTML='<td>'+r.file.slice(-20)+'</td><td>'+r.Re+'</td><td>'+r.N+'</td>'
+      +'<td>'+(r.residuals.length*2760)+'</td>'
+      +'<td>'+first.toFixed(4)+'</td><td>'+last.toFixed(4)+'</td>'
+      +'<td>'+cr.toFixed(2)+'×</td><td class="'+cls+'">'+vrd+'</td>';
+    tb.appendChild(tr);
+  });
+}
+</script>
+</body></html>

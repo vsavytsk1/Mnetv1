@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sacred Math Tree v1.5</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0b0d14;color:#e8ecf4;font-family:ui-monospace,"SF Mono",Menlo,monospace;
+  overflow:hidden;height:100vh;width:100vw}
+#plane{position:absolute;transform-origin:0 0}
+
+/* BOXES ? all get smooth position transitions for the BREATHING re-layout */
+.eq{position:absolute;background:rgba(14,17,28,0.96);
+  border:1px solid rgba(100,120,160,0.18);border-radius:6px;
+  padding:14px 20px;cursor:pointer;min-width:110px;text-align:center;
+  pointer-events:auto;
+  /* THE KEY: smooth position + opacity transitions */
+  transition:left 0.7s cubic-bezier(0.22,1,0.36,1),
+             top 0.7s cubic-bezier(0.22,1,0.36,1),
+             opacity 0.5s ease-out,border-color 0.3s,box-shadow 0.3s}
+.eq.fresh{opacity:0;transform:scale(0.6)}
+.eq.show{opacity:1;transform:scale(1);
+  transition:left 0.7s cubic-bezier(0.22,1,0.36,1),
+             top 0.7s cubic-bezier(0.22,1,0.36,1),
+             opacity 0.5s ease-out,transform 0.5s ease-out,
+             border-color 0.3s,box-shadow 0.3s}
+.eq:hover{border-color:rgba(140,165,210,0.4);box-shadow:0 0 20px rgba(120,150,200,0.08)}
+.eq.t-root{border-color:rgba(255,200,60,0.4);background:rgba(18,16,10,0.96)}
+.eq.t-root:hover{border-color:rgba(255,215,80,0.6);box-shadow:0 0 30px rgba(255,200,60,0.12)}
+.eq.t-tool{border-color:rgba(160,120,255,0.3);background:rgba(16,14,24,0.96)}
+.eq.t-tool:hover{border-color:rgba(180,140,255,0.5);box-shadow:0 0 20px rgba(160,120,255,0.1)}
+.eq.t-result{border-color:rgba(80,220,140,0.3);background:rgba(10,18,14,0.96)}
+.eq.t-result:hover{border-color:rgba(100,240,160,0.5);box-shadow:0 0 20px rgba(80,220,140,0.1)}
+.eq.t-dead{border-color:rgba(220,80,80,0.25);background:rgba(20,12,12,0.96)}
+.eq.unopened{opacity:0.35;border-style:dashed;cursor:default}
+.eq.unopened:hover{opacity:0.5;box-shadow:0 0 15px rgba(100,120,160,0.06)}
+.eq .tag{font-size:9px;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:6px;font-weight:600}
+.eq .tag.gold{color:#e8b44c}.eq .tag.purp{color:#a78bfa}
+.eq .tag.grn{color:#6ee7a0}.eq .tag.red{color:#f87171}
+.eq .ltx{color:#fff;margin:4px 0}
+.eq .ltx .katex{font-size:1.15em;color:#fff}
+.eq .sub{font-size:10px;opacity:0.3;margin-top:8px;font-style:italic;color:#8899bb}
+.eq .lock{font-size:18px;opacity:0.3;margin:8px 0}
+
+/* OP BUTTONS ? appear on click, disappear after choice */
+.op-btn{position:absolute;background:rgba(120,90,220,0.06);
+  border:1px solid rgba(140,110,240,0.35);border-radius:16px;
+  padding:6px 14px;font-size:11px;color:#a78bfa;cursor:pointer;
+  pointer-events:auto;white-space:nowrap;font-weight:500;
+  transition:left 0.7s cubic-bezier(0.22,1,0.36,1),
+             top 0.7s cubic-bezier(0.22,1,0.36,1),
+             opacity 0.5s,border-color 0.2s,background 0.2s}
+.op-btn.fresh{opacity:0;transform:scale(0.4)}
+.op-btn.show{opacity:1;transform:scale(1);
+  transition:left 0.7s cubic-bezier(0.22,1,0.36,1),
+             top 0.7s cubic-bezier(0.22,1,0.36,1),
+             opacity 0.4s,transform 0.35s ease-out,border-color 0.2s,background 0.2s}
+.op-btn:hover{border-color:#a78bfa;background:rgba(140,110,240,0.14);
+  box-shadow:0 0 14px rgba(140,110,240,0.15)}
+.op-btn .cost{color:#e8b44c;font-size:10px;margin-left:5px}
+
+/* LINKS ? SVG with transitions */
+svg.lk{position:absolute;top:0;left:0;pointer-events:none}
+svg.lk path{fill:none;stroke-width:1.5;transition:d 0.7s cubic-bezier(0.22,1,0.36,1)}
+
+/* FREEZE FLASH */
+@keyframes freezeFlash{0%{opacity:0}15%{opacity:1}100%{opacity:0}}
+#freeze{position:fixed;top:0;left:0;width:100%;height:100%;
+  pointer-events:none;z-index:50;background:rgba(160,140,255,0.03);opacity:0}
+#freeze.flash{animation:freezeFlash 0.6s ease-out}
+
+/* SPARKLE */
+@keyframes sparkle{0%{box-shadow:0 0 15px rgba(255,200,60,0.04)}
+  50%{box-shadow:0 0 35px rgba(255,200,60,0.12),0 0 70px rgba(255,200,60,0.04)}
+  100%{box-shadow:0 0 15px rgba(255,200,60,0.04)}}
+.eq.t-root.show{animation:sparkle 3.5s ease-in-out infinite}
+
+/* GACHA */
+#ghud{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:30;
+  display:flex;gap:20px;align-items:center;font-size:13px}
+.gem{display:flex;align-items:center;gap:5px}
+.gem .ct{color:#e8b44c;font-weight:bold;font-size:16px}
+.tok-pop{position:fixed;pointer-events:none;z-index:40;font-size:18px;font-weight:bold;
+  color:#e8b44c;animation:tokfly 1.2s ease-out forwards}
+@keyframes tokfly{0%{opacity:1;transform:translateY(0)}100%{opacity:0;transform:translateY(-80px)}}
+#combo{position:fixed;top:50px;left:50%;transform:translateX(-50%);z-index:25;
+  font-size:22px;font-weight:bold;opacity:0;transition:opacity 0.3s;
+  text-shadow:0 0 20px rgba(255,200,60,0.3)}
+#shud{position:fixed;top:14px;left:14px;z-index:20;font-size:11px;opacity:0.35}
+#shud div{margin:3px 0}#shud .v{color:#7aa2f7}
+#ver{position:fixed;top:14px;right:14px;z-index:20;font-size:9px;
+  letter-spacing:0.14em;text-transform:uppercase;opacity:0.2}
+#bot{position:fixed;bottom:12px;left:50%;transform:translateX(-50%);z-index:20;
+  font-size:10px;opacity:0.2}
+</style>
+</head>
+<body>
+<div id="freeze"></div>
+<div id="ghud">
+  <div class="gem">&#9670; <span class="ct" id="g-tok">3</span></div>
+  <div style="color:#a78bfa;font-size:12px">XP <span id="g-xp">0</span></div>
+  <div style="color:#f97316;font-size:12px">&#128293;<span id="g-str">0</span></div>
+</div>
+<div id="combo"></div>
+<div id="shud"><div>nodes <span class="v" id="h-n">1</span></div>
+  <div>depth <span class="v" id="h-d">0</span></div></div>
+<div id="ver">v1.5</div>
+<div id="bot">click to explore &middot; scroll zoom &middot; drag pan</div>
+<div id="plane"><svg class="lk" id="lksvg"></svg></div>
+
+<script>
+const T={id:"eq0",tag:"START",type:"root",
+  latex:"\\lim_{x \\to 0} \\frac{\\sin x}{x}",
+  sub:"what tools can you apply?",cost:0,xp:0,
+  ch:[
+    {id:"t1",tag:"DIRECT SUB",type:"tool",
+     latex:"\\frac{\\sin(0)}{0} = \\frac{0}{0}",
+     sub:"indeterminate! need another way",cost:1,xp:5,
+     ch:[{id:"t1d",tag:"DEAD END",type:"dead",
+       latex:"\\frac{0}{0}\\;\\text{undefined}",sub:"now you KNOW.",cost:0,xp:10,ch:[]}]},
+    {id:"t2",tag:"L\u2019H\u00D4PITAL",type:"tool",
+     latex:"\\overset{\\text{L\u2019H}}{=}\\;\\lim_{x\\to 0}\\frac{\\cos x}{1}",
+     sub:"differentiate top & bottom",cost:1,xp:5,
+     ch:[{id:"t2r",tag:"EVALUATE",type:"result",
+       latex:"\\frac{\\cos 0}{1}=\\boxed{1}",sub:"why does this work?",cost:1,xp:25,
+       ch:[{id:"t2r2",tag:"THE REASON",type:"result",
+         latex:"\\frac{f}{g}\\approx\\frac{f'(a)(x-a)}{g'(a)(x-a)}=\\frac{f'(a)}{g'(a)}",
+         sub:"near a, functions ARE their derivatives",cost:1,xp:40,ch:[]}]}]},
+    {id:"t3",tag:"SQUEEZE",type:"tool",
+     latex:"\\cos x \\leq \\frac{\\sin x}{x} \\leq 1",
+     sub:"trap between two known limits",cost:1,xp:5,
+     ch:[{id:"t3r",tag:"SQUEEZED",type:"result",
+       latex:"\\lim\\cos x=1,\\;\\lim 1=1\\;\\Rightarrow\\;\\boxed{1}",
+       sub:"both = 1. middle has no choice.",cost:1,xp:30,ch:[]}]},
+    {id:"t4",tag:"TAYLOR",type:"tool",
+     latex:"\\sin x = x - \\frac{x^3}{3!}+\\frac{x^5}{5!}-\\cdots",
+     sub:"expand then divide by x",cost:2,xp:10,
+     ch:[{id:"t4r",tag:"DIVIDE BY x",type:"result",
+       latex:"1 - \\frac{x^2}{6}+\\frac{x^4}{120}-\\cdots\\;\\xrightarrow{x\\to 0}\\;\\boxed{1}",
+       sub:"all x terms vanish. only 1 survives.",cost:1,xp:50,ch:[]}]}
+  ]};
+
+let tokens=3,xp=0,streak=0,combo=0,comboT=null;
+let opened=new Set(["eq0"]);
+let existingEls={};  // id -> DOM element (for smooth transitions)
+
+function flyPop(el,txt,col){let r=el.getBoundingClientRect();let p=document.createElement('div');
+  p.className='tok-pop';p.style.color=col||'#e8b44c';p.textContent=txt;
+  p.style.left=r.left+r.width/2-20+'px';p.style.top=r.top-10+'px';
+  document.body.appendChild(p);setTimeout(()=>p.remove(),1300)}
+function addTok(n,el){tokens+=n;if(el)flyPop(el,'+'+n+' \u2666');updH()}
+function addXP(n,el){xp+=n;if(el)flyPop(el,'+'+n+' XP','#a78bfa');updH()}
+function bumpStr(el){streak++;combo++;let c=document.getElementById('combo');
+  if(combo>=2){c.textContent=combo+'x COMBO';c.style.opacity='1';
+    c.style.color=combo>=5?'#e8b44c':combo>=3?'#f97316':'#a78bfa'}
+  clearTimeout(comboT);comboT=setTimeout(()=>{combo=0;c.style.opacity='0'},3500);
+  if(streak===3)addTok(2,el);if(streak===5)addTok(3,el);if(streak===8)addTok(5,el)}
+function updH(){document.getElementById('g-tok').textContent=tokens;
+  document.getElementById('g-xp').textContent=xp;
+  document.getElementById('g-str').textContent=streak}
+function freezeFlash(){let f=document.getElementById('freeze');
+  f.classList.remove('flash');void f.offsetWidth;f.classList.add('flash')}
+
+// ?????????????????????????????????????????????
+// LAYOUT ? all nodes get positions, even unopened (shown as ghosts)
+// ?????????????????????????????????????????????
+let items=[];
+const CX=2000,CY=100,DY=300,XSP=460;
+
+function layout(n,d,xc,px,py,opened_branch){
+  let nx=px!==null?xc:CX,ny=py!==null?py+DY:CY;
+  let isOpen=opened.has(n.id);
+  let isVisible=opened_branch; // parent chain is opened
+  items.push({n,x:nx,y:ny,d,isOpen,isVisible});
+
+  if(n.ch&&n.ch.length){
+    let c=n.ch.length;
+    // spread based on subtree width
+    let spread=XSP*Math.min(c,5);
+    let sx=nx-spread/2,st=c>1?spread/(c-1):0;
+    for(let i=0;i<c;i++){
+      let childX=c===1?nx:sx+st*i;
+      layout(n.ch[i],d+1,childX,nx,ny,isVisible&&isOpen);
+    }
+  }
+}
+
+// ?????????????????????????????????????????????
+// RENDER ? reuse DOM elements, animate positions
+// ?????????????????????????????????????????????
+const plane=document.getElementById('plane');
+const lksvg=document.getElementById('lksvg');
+
+function render(isClick){
+  items=[];
+  layout(T,0,CX,null,null,true);
+
+  if(isClick) freezeFlash();
+
+  let lk={};items.forEach(i=>lk[i.n.id]=i);
+  let maxX=0,maxY=0;
+  items.forEach(i=>{if(i.isVisible){if(i.x+200>maxX)maxX=i.x+200;if(i.y+200>maxY)maxY=i.y+200}});
+  lksvg.setAttribute('width',maxX);lksvg.setAttribute('height',maxY);
+  lksvg.setAttribute('viewBox','0 0 '+maxX+' '+maxY);
+
+  // Links
+  let svg='';
+  for(let it of items){
+    if(!it.isVisible)continue;
+    let pid=findPid(T,it.n.id,null);
+    if(pid&&lk[pid]&&lk[pid].isVisible){
+      let p=lk[pid],x1=p.x,y1=p.y+48,x2=it.x,y2=it.y-48,my=(y1+y2)/2;
+      let col=it.n.type==='dead'?'rgba(220,80,80,0.18)':
+              it.n.type==='result'?'rgba(80,220,140,0.2)':'rgba(100,130,200,0.14)';
+      if(!it.isOpen&&!opened.has(it.n.id)) col='rgba(100,120,160,0.07)';
+      svg+='<path d="M'+x1+','+y1+' C'+x1+','+my+' '+x2+','+my+' '+x2+','+y2+'" stroke="'+col+'"/>';
+    }
+  }
+  lksvg.innerHTML=svg;
+
+  // Mark old elements for removal
+  let usedIds=new Set();
+  let usedOpIds=new Set();
+
+  // Nodes
+  for(let it of items){
+    if(!it.isVisible) continue;
+    let n=it.n;
+    let isOpened=opened.has(n.id);
+    let newLeft=(it.x-150),newTop=(it.y-42);
+    usedIds.add(n.id);
+
+    let box=existingEls[n.id];
+    if(box){
+      // EXISTING ? just animate position (THE BREATHING)
+      box.style.left=newLeft+'px';
+      box.style.top=newTop+'px';
+    } else {
+      // NEW ? create fresh
+      box=document.createElement('div');
+      let ghostClass=isOpened?'':'unopened';
+      box.className='eq t-'+n.type+' fresh '+(ghostClass);
+      box.style.left=newLeft+'px';box.style.top=newTop+'px';
+      box.style.maxWidth='300px';box.dataset.id=n.id;
+      let tc=n.type==='root'?'gold':n.type==='tool'?'purp':n.type==='result'?'grn':'red';
+
+      if(isOpened){
+        box.innerHTML='<div class="tag '+tc+'">'+n.tag+'</div><div class="ltx"></div>'+
+          (n.sub?'<div class="sub">'+n.sub+'</div>':'');
+        try{katex.render(n.latex,box.querySelector('.ltx'),{throwOnError:false,displayMode:true})}catch(e){}
+      } else {
+        // GHOST ? unopened, just tag + lock
+        box.innerHTML='<div class="tag '+tc+'">'+n.tag+'</div><div class="lock">\u{1F512}</div>';
+      }
+      plane.appendChild(box);
+      existingEls[n.id]=box;
+      requestAnimationFrame(()=>requestAnimationFrame(()=>{box.classList.remove('fresh');box.classList.add('show')}));
+    }
+
+    // Update opened/unopened state
+    if(isOpened&&box.classList.contains('unopened')){
+      box.classList.remove('unopened');
+      box.innerHTML='<div class="tag '+(n.type==='root'?'gold':n.type==='tool'?'purp':n.type==='result'?'grn':'red')+'">'+n.tag+'</div><div class="ltx"></div>'+
+        (n.sub?'<div class="sub">'+n.sub+'</div>':'');
+      try{katex.render(n.latex,box.querySelector('.ltx'),{throwOnError:false,displayMode:true})}catch(e){}
+    }
+
+    // Click handlers
+    box.onclick=null;
+    if(isOpened&&n.ch&&n.ch.length&&!n.ch.some(c=>!opened.has(c.id))){
+      box.onclick=e=>{e.stopPropagation();
+        if(n.id!=='eq0'){opened.delete(n.id);collAll(n);render(true)}};
+    }
+  }
+
+  // OP BUTTONS for nodes with unopened children
+  plane.querySelectorAll('.op-btn').forEach(e=>e.remove());
+  for(let it of items){
+    if(!it.isVisible||!opened.has(it.n.id)||!it.n.ch) continue;
+    let un=it.n.ch.filter(c=>!opened.has(c.id));
+    if(!un.length) continue;
+    let total=un.length,spread=total*125;
+    let sx=it.x-spread/2+62;
+    un.forEach((ch,i)=>{
+      let bx=total===1?it.x:sx+i*125;
+      let btn=document.createElement('div');btn.className='op-btn fresh';
+      btn.style.left=(bx-60)+'px';btn.style.top=(it.y+68)+'px';
+      let costTxt=ch.cost>0?' <span class="cost">\u2666'+ch.cost+'</span>':'';
+      btn.innerHTML=ch.tag+costTxt;
+      plane.appendChild(btn);
+      setTimeout(()=>{btn.classList.remove('fresh');btn.classList.add('show')},150+i*60);
+      btn.addEventListener('click',e=>{e.stopPropagation();
+        if(ch.cost>0&&tokens<ch.cost){
+          btn.style.borderColor='#f87171';btn.style.boxShadow='0 0 16px rgba(248,80,80,0.2)';
+          setTimeout(()=>{btn.style.borderColor='';btn.style.boxShadow=''},500);return}
+        tokens-=ch.cost;opened.add(ch.id);addXP(ch.xp,btn);bumpStr(btn);
+        if(ch.type==='result'||ch.type==='dead')addTok(1,btn);updH();
+        render(true);  // THE CLICK ? re-layout, everything breathes
+      });
+    });
+  }
+
+  // Cleanup removed nodes
+  Object.keys(existingEls).forEach(id=>{
+    if(!usedIds.has(id)){existingEls[id].remove();delete existingEls[id]}
+  });
+
+  document.getElementById('h-n').textContent=items.filter(i=>i.isVisible).length;
+  document.getElementById('h-d').textContent=Math.max(...items.filter(i=>i.isVisible).map(i=>i.d));
+}
+
+function collAll(n){if(n.ch)n.ch.forEach(c=>{opened.delete(c.id);delete existingEls[c.id];collAll(c)})}
+function findPid(t,tid,pid){if(t.id===tid)return pid;
+  if(t.ch)for(let c of t.ch){let f=findPid(c,tid,t.id);if(f!==null)return f}return null}
+
+// PAN ZOOM
+let panX=0,panY=0,zm=0.55;
+function centerOnRoot(){panX=(window.innerWidth/2/zm)-CX;panY=60/zm;upT()}
+function upT(){plane.style.zoom=zm;plane.style.left=panX+'px';plane.style.top=panY+'px'}
+let drag=false,lm={x:0,y:0};
+document.addEventListener('pointerdown',e=>{if(e.target.closest('.eq,.op-btn'))return;
+  drag=true;lm={x:e.clientX,y:e.clientY}});
+document.addEventListener('pointermove',e=>{if(!drag)return;
+  panX+=(e.clientX-lm.x)/zm;panY+=(e.clientY-lm.y)/zm;lm={x:e.clientX,y:e.clientY};upT()});
+document.addEventListener('pointerup',()=>{drag=false});
+document.addEventListener('wheel',e=>{e.preventDefault();let oldZm=zm;
+  zm*=e.deltaY>0?0.92:1.08;zm=Math.max(0.18,Math.min(2.0,zm));
+  let mx=e.clientX,my=e.clientY;panX=mx/zm-(mx/oldZm-panX);panY=my/zm-(my/oldZm-panY);
+  upT()},{passive:false});
+
+centerOnRoot();render(false);
+</script>
+</body>
+</html>

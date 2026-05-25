@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sacred Math Tree v2.5</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0b0d14;color:#e8ecf4;font-family:ui-monospace,"SF Mono",Menlo,monospace;overflow:hidden;height:100vh;width:100vw}
+#plane{position:absolute;transform-origin:0 0}
+
+.eq{position:absolute;background:rgba(14,17,28,0.96);
+  border:1px solid rgba(100,120,160,0.18);border-radius:6px;
+  padding:14px 20px;min-width:110px;text-align:center;
+  width:300px;pointer-events:none;
+  transition:left 0.6s cubic-bezier(0.22,1,0.36,1),top 0.6s cubic-bezier(0.22,1,0.36,1),opacity 0.5s ease-out,transform 0.45s ease-out,border-color 0.3s,box-shadow 0.3s;
+  opacity:0;transform:scale(0.3);transform-origin:50% 0%;
+}
+
+/* ghost: visible, dashed, clickable, waiting */
+.eq.ghost{opacity:0.45;transform:scale(0.9);pointer-events:auto;border-style:dashed;cursor:pointer}
+.eq.ghost:hover{opacity:0.65;box-shadow:0 0 20px rgba(100,120,160,0.1)}
+
+/* alive: full, solid, content visible */
+.eq.alive{opacity:1;transform:scale(1);pointer-events:auto;cursor:default;border-style:solid}
+
+.eq.t-root{border-color:rgba(255,200,60,0.4);background:rgba(18,16,10,0.96)}
+.eq.t-root.alive:hover{border-color:rgba(255,215,80,0.6);box-shadow:0 0 30px rgba(255,200,60,0.12)}
+.eq.t-tool{border-color:rgba(160,120,255,0.3);background:rgba(16,14,24,0.96)}
+.eq.t-tool.alive:hover{border-color:rgba(180,140,255,0.5);box-shadow:0 0 20px rgba(160,120,255,0.1)}
+.eq.t-result{border-color:rgba(80,220,140,0.3);background:rgba(10,18,14,0.96)}
+.eq.t-result.alive:hover{border-color:rgba(100,240,160,0.5);box-shadow:0 0 20px rgba(80,220,140,0.1)}
+.eq.t-dead{border-color:rgba(220,80,80,0.25);background:rgba(20,12,12,0.96)}
+
+/* hover token badge */
+.eq .tok-badge{position:absolute;top:-10px;right:-10px;
+  background:rgba(14,17,28,0.95);border:1px solid rgba(232,180,76,0.5);
+  border-radius:10px;padding:2px 8px;font-size:10px;color:#e8b44c;
+  font-weight:600;opacity:0;transform:scale(0.5);pointer-events:none;
+  transition:opacity 0.2s,transform 0.2s}
+.eq.ghost:hover .tok-badge{opacity:1;transform:scale(1)}
+
+/* inner content ? hidden until alive */
+.eq .inner{opacity:0;transition:opacity 0.4s ease-in 0.15s}
+.eq.alive .inner{opacity:1}
+/* ghost shows only tag + lock */
+.eq .ghost-inner{opacity:0;transition:opacity 0.3s}
+.eq.ghost .ghost-inner{opacity:1}
+
+.eq .tag{font-size:9px;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:6px;font-weight:600}
+.eq .tag.gold{color:#e8b44c}.eq .tag.purp{color:#a78bfa}.eq .tag.grn{color:#6ee7a0}.eq .tag.red{color:#f87171}
+.eq .ltx{color:#fff;margin:4px 0}.eq .ltx .katex{font-size:1.15em;color:#fff}
+.eq .sub{font-size:10px;opacity:0.3;margin-top:8px;font-style:italic;color:#8899bb}
+.eq .lock-icon{font-size:18px;opacity:0.4;margin:4px 0}
+
+/* LINES */
+svg.lk{position:absolute;top:0;left:0;pointer-events:none}
+svg.lk path{fill:none;stroke-width:1.8;stroke:rgba(100,120,160,0.0);
+  stroke-dasharray:2000;stroke-dashoffset:2000;
+  transition:stroke 0.4s ease-out,stroke-dashoffset 1s ease-out}
+svg.lk path.ghost-line{stroke:rgba(100,120,160,0.06);stroke-dashoffset:0;stroke-dasharray:none}
+svg.lk path.alive-line{stroke-dashoffset:0;stroke-dasharray:none}
+
+@keyframes sparkle{0%{box-shadow:0 0 15px rgba(255,200,60,0.04)}50%{box-shadow:0 0 40px rgba(255,200,60,0.14),0 0 80px rgba(255,200,60,0.04)}100%{box-shadow:0 0 15px rgba(255,200,60,0.04)}}
+.eq.t-root.alive{animation:sparkle 3s ease-in-out infinite}
+
+/* INNER GLOW ? flash happens INSIDE the clicked box */
+@keyframes innerGlow{
+  0%{box-shadow:0 0 0px rgba(180,160,255,0)}
+  20%{box-shadow:0 0 40px rgba(180,160,255,0.2),inset 0 0 30px rgba(180,160,255,0.06)}
+  100%{box-shadow:none}}
+.eq.glow-flash{animation:innerGlow 0.6s ease-out}
+
+/* BOTTOM BAR ? MNet exact proportions */
+#bar{position:fixed;bottom:0;left:0;right:0;z-index:10;
+  background:rgba(5,5,16,0.95);border-top:1px solid #1a1f2e;
+  padding:8px 14px;display:flex;align-items:center;gap:16px;
+  transform:translateY(0);transition:transform 0.4s}
+.b{background:#111;border:1px solid #2a2a2a;border-radius:3px;
+  padding:4px 12px;font-family:inherit;font-size:10px;cursor:pointer;transition:all 0.15s}
+.b:hover{border-color:#555;background:#1a1a1a}
+.sl{color:rgba(220,228,240,0.35);font-size:8px;text-transform:uppercase;letter-spacing:0.12em}
+#bar .sb-row{display:flex;align-items:center;gap:5px}
+#bar .sb-label{color:#555;font-size:10px}
+#bar input[type=range]{width:70px;accent-color:#ff69b4}
+#bar .sb-val{color:#80d0ff;font-weight:bold;font-size:10px;min-width:26px}
+
+/* ZOOM GATE BANNER ? PAPYRUS like Avatar, those lazy bastards */
+#zoom-gate{position:fixed;top:0;left:0;width:100%;height:100%;z-index:100;
+  display:flex;align-items:center;justify-content:center;flex-direction:column;
+  background:rgba(8,10,16,0.88);pointer-events:none;
+  opacity:0;transition:opacity 0.35s ease-out}
+#zoom-gate.show{opacity:1;pointer-events:auto}
+#zoom-gate .zg-msg{font-family:Papyrus,'Papyrus',fantasy;
+  font-size:42px;color:#f87171;text-align:center;line-height:1.4;
+  text-shadow:0 0 40px rgba(248,113,113,0.15);padding:0 40px;font-weight:bold}
+#zoom-gate .zg-sub{font-family:Papyrus,'Papyrus',fantasy;
+  font-size:18px;color:#8899bb;margin-top:12px;text-align:center}
+#zoom-gate .zg-zoom{font-family:ui-monospace,monospace;font-size:12px;
+  color:#e8b44c;margin-top:18px;opacity:0.5}
+#ghud{position:fixed;top:12px;right:12px;z-index:30;display:flex;gap:12px;align-items:center;font-size:9px;opacity:0.6}
+.gem{display:flex;align-items:center;gap:5px}.gem .ct{color:#ffd700;font-weight:bold;font-size:11px}
+.tp{position:fixed;pointer-events:none;z-index:40;font-size:11px;font-weight:600;color:#e8b44c;animation:tf 1.2s ease-out forwards}
+@keyframes tf{0%{opacity:1;transform:translateY(0)}100%{opacity:0;transform:translateY(-80px)}}
+#combo{position:fixed;top:50px;left:50%;transform:translateX(-50%);z-index:25;font-size:22px;font-weight:bold;opacity:0;transition:opacity 0.3s;text-shadow:0 0 20px rgba(255,200,60,0.3)}
+/* HUD ? MNet style, top left */
+#hud{position:fixed;top:12px;left:12px;z-index:20;pointer-events:none;font-size:11px}
+#hud .title{font-size:11px;color:#ff9040;margin-bottom:5px;letter-spacing:0.1em}
+#hud .row{line-height:1.7}
+.lbl{color:#555}.val{color:#80d0ff;font-weight:bold}
+.gold{color:#ffd700}.grn{color:#7fff7f}.pink{color:#ff69b4}
+
+
+/* LOG ? MNet floating panel */
+#logp{position:fixed;top:180px;left:12px;z-index:10;
+  background:rgba(5,5,16,0.85);border:1px solid #1a1f2e;border-radius:4px;
+  padding:6px 10px;max-width:280px;max-height:220px;overflow-y:auto;
+  font-size:9px;line-height:1.5;color:rgba(180,200,255,0.7);
+  opacity:0.35;transition:opacity 0.3s}
+#logp:hover{opacity:0.92}
+#logp .log-click{color:#ffd700}
+#logp .log-tok{color:#a78bfa}
+#logp .log-xp{color:#7fff7f}
+#logp .log-state{color:#555}
+#logp .log-err{color:#ff4444}
+
+/* GRID ? MNet design language */
+#grid-cv{position:absolute;top:0;left:0;pointer-events:none;z-index:0}
+svg.lk{z-index:1}
+.eq{z-index:2}
+</style>
+</head>
+<body>
+<div id="ghud"><div class="gem">&#9670;<span class="ct" id="g-tok">3</span></div>
+<div style="color:#a78bfa;font-size:12px">XP <span id="g-xp">0</span></div>
+<div style="color:#f97316;font-size:12px">&#128293;<span id="g-str">0</span></div></div>
+<div id="combo"></div>
+<div id="hud">
+<div class="row"><span class="lbl">nodes </span><span class="val" id="h-n">1</span></div>
+<div class="row"><span class="lbl">depth </span><span class="val" id="h-d">0</span></div>
+<div class="row"><span class="lbl">zoom  </span><span class="val" id="h-zm">60%</span></div>
+<div class="row"><span class="lbl">wave  </span><span class="val" id="h-wv">0.50</span></div>
+<div class="row"><span class="lbl">spread</span><span class="val" id="h-sp">1.0x</span></div>
+<div class="row"><span class="lbl">dy    </span><span class="val" id="h-dy">320</span></div>
+<div class="row"><span class="lbl">lock  </span><span class="val" id="h-lk">off</span></div>
+</div>
+<div id="ver">v2.5</div>
+<div id="zoom-gate"><div class="zg-msg">zoom in, wanderer</div><div class="zg-sub">read the equation before you touch it</div><div class="zg-zoom">you: <span id="zg-cur">35%</span> &middot; need: <span id="zg-need">50%</span></div></div>
+<div id="bar">
+<span class="sl">tree</span>
+<div class="sb-row"><span class="sb-label">wave</span><input type="range" id="sl-wave" min="0" max="100" value="50"><span class="sb-val" id="sv-wave">50</span></div>
+<div class="sb-row"><span class="sb-label">spread</span><input type="range" id="sl-spread" min="10" max="100" value="50"><span class="sb-val" id="sv-spread">50</span></div>
+<div class="sb-row"><span class="sb-label">depth</span><input type="range" id="sl-depth" min="10" max="100" value="50"><span class="sb-val" id="sv-depth">50</span></div>
+<div class="sb-row"><span class="sb-label">lock</span><input type="range" id="sl-zlock" min="0" max="100" value="0"><span class="sb-val" id="sv-zlock">off</span></div>
+</div>
+<div id="logp" id="con-log"></div>
+<div id="plane"><canvas id="grid-cv"></canvas><svg class="lk" id="lksvg"></svg></div>
+<script>
+
+// ??? CONSOLE LOG ???
+const CON=document.getElementById('logp');
+let logBuf=[];
+function clog(msg,cls){
+  let t=new Date();
+  let ts=t.getMinutes().toString().padStart(2,'0')+':'+t.getSeconds().toString().padStart(2,'0')+'.'+t.getMilliseconds().toString().padStart(3,'0');
+  let line='<span class="'+(cls||'')+'">'+ts+' '+msg+'</span>';
+  logBuf.push(line);
+  if(logBuf.length>200)logBuf.shift();
+  CON.innerHTML=logBuf.join('\n');
+  CON.scrollTop=CON.scrollHeight;
+}
+// Auto-select on hover
+document.getElementById('logp').addEventListener('mouseenter',()=>{
+  let body=document.getElementById('logp');
+  let sel=window.getSelection();
+  let range=document.createRange();
+  range.selectNodeContents(body);
+  sel.removeAllRanges();
+  sel.addRange(range);
+});
+clog('Sacred Math Tree v2.5 init','log-state');
+clog('KaTeX: '+(typeof katex!=='undefined'?'loaded':'MISSING'),'log-state');
+
+const T={id:"eq0",tag:"START",type:"root",latex:"\\lim_{x \\to 0} \\frac{\\sin x}{x}",sub:"click to explore",cost:0,xp:0,ch:[
+{id:"t1",tag:"DIRECT SUB",type:"tool",latex:"\\frac{\\sin(0)}{0}=\\frac{0}{0}",sub:"indeterminate!",cost:1,xp:5,ch:[
+  {id:"t1d",tag:"DEAD END",type:"dead",latex:"\\frac{0}{0}\\;\\text{undefined}",sub:"now you KNOW.",cost:0,xp:10,ch:[]}]},
+{id:"t2",tag:"L\u2019H\u00D4PITAL",type:"tool",latex:"\\overset{\\text{L\u2019H}}{=}\\lim_{x\\to 0}\\frac{\\cos x}{1}",sub:"diff top & bottom",cost:1,xp:5,ch:[
+  {id:"t2r",tag:"EVALUATE",type:"result",latex:"\\frac{\\cos 0}{1}=\\boxed{1}",sub:"why does this work?",cost:1,xp:25,ch:[
+    {id:"t2r2",tag:"THE REASON",type:"result",latex:"\\frac{f}{g}\\approx\\frac{f'(a)(x-a)}{g'(a)(x-a)}=\\frac{f'(a)}{g'(a)}",sub:"functions ARE their derivatives",cost:1,xp:40,ch:[]}]}]},
+{id:"t3",tag:"SQUEEZE",type:"tool",latex:"\\cos x\\leq\\frac{\\sin x}{x}\\leq 1",sub:"trap it",cost:1,xp:5,ch:[
+  {id:"t3r",tag:"SQUEEZED",type:"result",latex:"\\lim\\cos x=1,\\lim 1=1\\Rightarrow\\boxed{1}",sub:"no choice.",cost:1,xp:30,ch:[]}]},
+{id:"t4",tag:"TAYLOR",type:"tool",latex:"\\sin x=x-\\frac{x^3}{3!}+\\frac{x^5}{5!}-\\cdots",sub:"expand & divide",cost:2,xp:10,ch:[
+  {id:"t4r",tag:"DIVIDE",type:"result",latex:"1-\\frac{x^2}{6}+\\frac{x^4}{120}-\\cdots\\to\\boxed{1}",sub:"only 1 survives.",cost:1,xp:50,ch:[]}]}]};
+
+let tokens=3,xp=0,streak=0,combo=0,comboT=null,wave=0.5;
+let opened=new Set(),kidsShown=new Set();
+let E={},P={},items=[],lk={};
+const CX=2000,CY=100;
+let XSP_CUR=460,DY_CUR=320;
+const plane=document.getElementById('plane'),lksvg=document.getElementById('lksvg');
+// ??? SANDBOX SLIDERS ???
+let spread=1.0, depth=1.0, zoomLock=0;
+const BASE_XSP=460, BASE_DY=320;
+
+function onSlider(id,cb){document.getElementById(id).addEventListener('input',cb)}
+onSlider('sl-wave',e=>{wave=e.target.value/100;document.getElementById('sv-wave').textContent=e.target.value;
+  let h=document.getElementById('h-wv');if(h)h.textContent=wave.toFixed(2);rebuildPaths()});
+onSlider('sl-spread',e=>{
+  spread=0.3+e.target.value/100*1.7; // 0.3x to 2.0x
+  document.getElementById('sv-spread').textContent=e.target.value;
+  clog('spread: '+spread.toFixed(2)+'x (XSP='+Math.round(BASE_XSP*spread)+')','log-state');
+  let hs=document.getElementById('h-sp');if(hs)hs.textContent=spread.toFixed(1)+'x';
+  relayout()});
+onSlider('sl-depth',e=>{
+  depth=0.3+e.target.value/100*1.7;
+  document.getElementById('sv-depth').textContent=e.target.value;
+  clog('depth: '+depth.toFixed(2)+'x (DY='+Math.round(BASE_DY*depth)+')','log-state');
+  let hd=document.getElementById('h-dy');if(hd)hd.textContent=Math.round(BASE_DY*depth);
+  relayout()});
+onSlider('sl-zlock',e=>{
+  zoomLock=e.target.value/100; // 0 to 1.0
+  let pct=Math.round(zoomLock*100);
+  document.getElementById('sv-zlock').textContent=pct===0?'off':pct+'%';
+  clog('zoomLock: '+(pct===0?'off':pct+'%'),'log-state');
+  let hl=document.getElementById('h-lk');if(hl)hl.textContent=pct===0?'off':pct+'%'});
+
+
+// ??? GRID ? MNet design language ???
+const gridCv = document.getElementById('grid-cv');
+const gridCtx = gridCv.getContext('2d');
+
+function drawGrid(){
+  let mx=0,my=0;
+  items.forEach(i=>{if(i.x+300>mx)mx=i.x+300;if(i.y+400>my)my=i.y+400});
+  mx=Math.max(mx,4000);my=Math.max(my,3000);
+  gridCv.width=mx;gridCv.height=my;
+  gridCtx.clearRect(0,0,mx,my);
+
+  // Grid spacing = matches tree spacing
+  let gx=XSP_CUR*0.5;  // horizontal grid = half the node spread
+  let gy=DY_CUR*0.5;    // vertical grid = half the depth step
+  gx=Math.max(40,gx);gy=Math.max(40,gy);
+
+  // Minor grid
+  gridCtx.strokeStyle='rgba(0,212,255,0.018)';
+  gridCtx.lineWidth=0.5;
+  gridCtx.beginPath();
+  for(let x=0;x<mx;x+=gx){gridCtx.moveTo(x,0);gridCtx.lineTo(x,my)}
+  for(let y=0;y<my;y+=gy){gridCtx.moveTo(0,y);gridCtx.lineTo(mx,y)}
+  gridCtx.stroke();
+
+  // Major grid (every 4th line)
+  gridCtx.strokeStyle='rgba(0,212,255,0.035)';
+  gridCtx.lineWidth=0.5;
+  gridCtx.beginPath();
+  for(let x=0;x<mx;x+=gx*4){gridCtx.moveTo(x,0);gridCtx.lineTo(x,my)}
+  for(let y=0;y<my;y+=gy*4){gridCtx.moveTo(0,y);gridCtx.lineTo(mx,y)}
+  gridCtx.stroke();
+
+  // Center crosshair at root position
+  gridCtx.strokeStyle='rgba(0,212,255,0.06)';
+  gridCtx.lineWidth=1;
+  gridCtx.beginPath();
+  gridCtx.moveTo(CX,0);gridCtx.lineTo(CX,my);
+  gridCtx.stroke();
+}
+
+function relayout(){
+  // Recompute all positions with new spread/depth
+  items=[];
+  XSP_CUR=BASE_XSP*spread;
+  DY_CUR=BASE_DY*depth;
+  collect(T,0,CX,null,null);
+  lk={};items.forEach(i=>lk[i.n.id]=i);
+  // Move all existing boxes to new positions
+  items.forEach(it=>{
+    let box=E[it.n.id];
+    if(box){box.style.left=(it.x-150)+'px';box.style.top=(it.y-42)+'px'}
+  });
+  // Rebuild SVG size + paths
+  let mx=0,my=0;items.forEach(i=>{if(i.x+200>mx)mx=i.x+200;if(i.y+400>my)my=i.y+400});
+  lksvg.setAttribute('width',mx);lksvg.setAttribute('height',my);lksvg.setAttribute('viewBox','0 0 '+mx+' '+my);
+  rebuildPaths();
+  drawGrid();
+}
+
+
+function fp(el,txt,col){let r=el.getBoundingClientRect(),p=document.createElement('div');p.className='tp';p.style.color=col||'#e8b44c';p.textContent=txt;p.style.left=r.left+r.width/2-20+'px';p.style.top=r.top-10+'px';document.body.appendChild(p);setTimeout(()=>p.remove(),1300)}
+function aT(n,el){tokens+=n;clog('+'+n+' tokens (now:'+tokens+')','log-tok');if(el)fp(el,'+'+n+' \u2666');uH()}
+function aX(n,el){xp+=n;clog('+'+n+' XP (now:'+xp+')','log-xp');if(el)fp(el,'+'+n+' XP','#a78bfa');uH()}
+function bS(el){streak++;combo++;clog('streak:'+streak+' combo:'+combo,'log-tok');let c=document.getElementById('combo');if(combo>=2){c.textContent=combo+'x COMBO';c.style.opacity='1';c.style.color=combo>=5?'#e8b44c':combo>=3?'#f97316':'#a78bfa'}clearTimeout(comboT);comboT=setTimeout(()=>{combo=0;c.style.opacity='0'},3500);if(streak===3)aT(2,el);if(streak===5)aT(3,el);if(streak===8)aT(5,el)}
+function uH(){document.getElementById('g-tok').textContent=tokens;document.getElementById('g-xp').textContent=xp;document.getElementById('g-str').textContent=streak}
+function fl(box){if(!box)return;box.classList.remove('glow-flash');void box.offsetWidth;box.classList.add('glow-flash')}
+function fP(t,tid,pid){if(t.id===tid)return pid;if(t.ch)for(let c of t.ch){let f=fP(c,tid,t.id);if(f!==null)return f}return null}
+function lnC(n){return n.type==='dead'?'rgba(220,80,80,0.25)':n.type==='result'?'rgba(80,220,140,0.3)':'rgba(130,150,210,0.22)'}
+
+// MEASURE box heights after rendering KaTeX
+let boxH={};
+
+function mkD(pid,cid){
+  let pi=lk[pid],ci=lk[cid];if(!pi||!ci)return'M0,0';
+  let pH=boxH[pid]||84,cH=boxH[cid]||84;
+  // center-bottom of parent -> center-top of child
+  let x1=pi.x,y1=pi.y-42+pH; // bottom center of parent
+  let x2=ci.x,y2=ci.y-42;     // top center of child
+  let dy=y2-y1,my=(y1+y2)/2;
+  let w=wave;
+  let cy1=y1+dy*(0.15+0.35*w),cy2=y2-dy*(0.15+0.35*w);
+  return'M'+x1+','+y1+' C'+x1+','+cy1+' '+x2+','+cy2+' '+x2+','+y2;
+}
+
+function collect(n,d,xc,px,py){
+  let nx=px!==null?xc:CX,ny=py!==null?py+DY_CUR:CY;
+  items.push({n,x:nx,y:ny,d});
+  if(n.ch&&n.ch.length){let c=n.ch.length,sp=XSP_CUR*Math.min(c,5),sx=nx-sp/2,st=c>1?sp/(c-1):0;
+    for(let i=0;i<c;i++)collect(n.ch[i],d+1,c===1?nx:sx+st*i,nx,ny)}}
+
+function rebuildPaths(){
+  Object.keys(P).forEach(id=>{let pid=P[id].dataset.from;P[id].setAttribute('d',mkD(pid,id))});
+  // debug: log first path d
+  let firstP=Object.values(P)[0];
+  if(firstP)clog('path0 d='+firstP.getAttribute('d'),'log-state');
+}
+
+function build(){
+  items=[];collect(T,0,CX,null,null);lk={};items.forEach(i=>lk[i.n.id]=i);
+  let mx=0,my=0;items.forEach(i=>{if(i.x+200>mx)mx=i.x+200;if(i.y+400>my)my=i.y+400});
+  lksvg.setAttribute('width',mx);lksvg.setAttribute('height',my);lksvg.setAttribute('viewBox','0 0 '+mx+' '+my);
+
+  items.forEach(it=>{
+    let n=it.n,tc=n.type==='root'?'gold':n.type==='tool'?'purp':n.type==='result'?'grn':'red';
+    // PATH
+    let pid=fP(T,n.id,null);
+    if(pid){let p=document.createElementNS('http://www.w3.org/2000/svg','path');p.dataset.from=pid;p.dataset.to=n.id;lksvg.appendChild(p);P[n.id]=p}
+    // BOX
+    let box=document.createElement('div');
+    box.className='eq t-'+n.type; // starts invisible (opacity:0)
+    box.style.left=(it.x-150)+'px';box.style.top=(it.y-42)+'px';
+    let badge=n.cost>0?'<div class="tok-badge">\u2666'+n.cost+'</div>':'';
+    box.innerHTML=badge+
+      '<div class="ghost-inner"><div class="tag '+tc+'">'+n.tag+'</div><div class="lock-icon">\u{1F512}</div></div>'+
+      '<div class="inner"><div class="tag '+tc+'">'+n.tag+'</div><div class="ltx"></div>'+(n.sub?'<div class="sub">'+n.sub+'</div>':'')+'</div>';
+    plane.appendChild(box);
+    try{katex.render(n.latex,box.querySelector('.inner .ltx'),{throwOnError:false,displayMode:true})}catch(e){}
+    E[n.id]=box;
+  });
+
+  // MEASURE: temporarily make all boxes visible to get real heights
+  Object.values(E).forEach(b=>{b.style.opacity='1';b.style.position='absolute'});
+  Object.keys(E).forEach(id=>{boxH[id]=E[id].offsetHeight||84});
+  Object.values(E).forEach(b=>{b.style.opacity=''});
+
+  // Now set all path d attributes with real measured heights
+  Object.keys(P).forEach(id=>{let pid=P[id].dataset.from;P[id].setAttribute('d',mkD(pid,id))});
+
+  clog('build: '+items.length+' nodes, '+Object.keys(P).length+' paths','log-state');
+  clog('boxH: '+JSON.stringify(boxH),'log-state');
+  // log first few box positions for debug
+  items.slice(0,3).forEach(it=>{
+    let b=E[it.n.id],r=b.getBoundingClientRect();
+    clog('box '+it.n.id+': layout('+it.x+','+it.y+') css('+b.style.left+','+b.style.top+') w='+b.offsetWidth,'log-state');
+  });
+  // ROOT starts alive immediately ? alone, mysterious, top of screen
+  makeAlive('eq0');
+
+  // Setup all clicks
+  items.forEach(it=>{
+    let n=it.n,box=E[n.id];
+    box.addEventListener('click',ev=>{
+      ev.stopPropagation();
+      // If alive and has kids not yet shown ? reveal kids
+      if(opened.has(n.id)&&!kidsShown.has(n.id)&&n.ch&&n.ch.length){
+        if(zoomLock>0&&zm<zoomLock){
+          clog('ZOOM LOCK: need '+Math.round(zoomLock*100)+'% have '+Math.round(zm*100)+'%','log-err');
+          let g=document.getElementById('zoom-gate');
+          document.getElementById('zg-cur').textContent=Math.round(zm*100)+'%';
+          document.getElementById('zg-need').textContent=Math.round(zoomLock*100)+'%';
+          g.classList.add('show');
+          setTimeout(()=>{g.classList.remove('show')},2000);
+          return}
+        showKids(n);return}
+      // If ghost ? unlock it
+      if(!opened.has(n.id)&&box.classList.contains('ghost')){
+        if(zoomLock>0&&zm<zoomLock){
+          clog('ZOOM LOCK: need '+Math.round(zoomLock*100)+'% have '+Math.round(zm*100)+'%','log-err');
+          let g=document.getElementById('zoom-gate');
+          document.getElementById('zg-cur').textContent=Math.round(zm*100)+'%';
+          document.getElementById('zg-need').textContent=Math.round(zoomLock*100)+'%';
+          g.classList.add('show');
+          setTimeout(()=>{g.classList.remove('show')},2000);
+          return}
+        if(n.cost>0&&tokens<n.cost){clog('NOT ENOUGH: need '+n.cost+' have '+tokens,'log-err');box.style.borderColor='#f87171';box.style.boxShadow='0 0 18px rgba(248,80,80,0.2)';setTimeout(()=>{box.style.borderColor='';box.style.boxShadow=''},500);return}
+        unlockNode(n,box);return}
+      // Already alive + kids shown ? do nothing (NO COLLAPSE)
+    });
+  });
+}
+
+function makeAlive(id){clog('ALIVE: '+id,'log-click');
+  opened.add(id);let box=E[id];
+  box.classList.remove('ghost');box.classList.add('alive');
+  boxH[id]=box.offsetHeight||84;
+  rebuildPaths();updCount();
+}
+
+function showKids(parent){
+  if(kidsShown.has(parent.id)){clog('showKids: '+parent.id+' already shown','log-state');return;}
+  kidsShown.add(parent.id);fl(E[parent.id]);
+  clog('REVEAL KIDS of '+parent.id+': ['+parent.ch.map(c=>c.id).join(', ')+']','log-click');
+  parent.ch.forEach((ch,i)=>{
+    setTimeout(()=>{
+      // Line fades in as ghost
+      let path=P[ch.id];
+      if(path){path.classList.add('ghost-line')}
+      // Box appears as ghost
+      setTimeout(()=>{E[ch.id].classList.add('ghost')},200);
+    },i*120);
+  });
+}
+
+function unlockNode(n,box){clog('UNLOCK: '+n.id+' (cost:'+n.cost+' tok:'+tokens+')','log-click');
+  fl(box);tokens-=n.cost;opened.add(n.id);
+  // 1: line traces with color
+  let path=P[n.id];
+  if(path){path.classList.remove('ghost-line');path.style.stroke=lnC(n);path.classList.add('alive-line')}
+  // 2: box goes alive
+  setTimeout(()=>{
+    box.classList.remove('ghost');box.classList.add('alive');
+    boxH[n.id]=box.offsetHeight||84;rebuildPaths();
+    aX(n.xp,box);bS(box);
+    if(n.type==='result'||n.type==='dead')aT(1,box);uH();
+  },250);
+  // 3: show kids after a beat
+  setTimeout(()=>{if(n.ch&&n.ch.length)showKids(n)},500);
+  updCount();
+}
+
+function updCount(){let vis=items.filter(i=>opened.has(i.n.id));document.getElementById('h-n').textContent=vis.length;document.getElementById('h-d').textContent=Math.max(0,...vis.map(i=>i.d))}
+
+// PAN ZOOM ? root at TOP, 20% from top edge
+let panX=0,panY=0,zm=0.6;
+function center(){panX=(window.innerWidth/2/zm)-CX;panY=40/zm;upT()}
+function upT(){plane.style.zoom=zm;plane.style.left=panX+'px';plane.style.top=panY+'px';
+  let ze=document.getElementById('h-zm');if(ze)ze.textContent=Math.round(zm*100)+'%'}
+let drag=false,lm={x:0,y:0};
+document.addEventListener('pointerdown',e=>{if(e.target.closest('.eq'))return;drag=true;lm={x:e.clientX,y:e.clientY}});
+document.addEventListener('pointermove',e=>{if(!drag)return;panX+=(e.clientX-lm.x)/zm;panY+=(e.clientY-lm.y)/zm;lm={x:e.clientX,y:e.clientY};upT()});
+document.addEventListener('pointerup',()=>{drag=false});
+document.addEventListener('wheel',e=>{e.preventDefault();let oz=zm;zm*=e.deltaY>0?0.92:1.08;zm=Math.max(0.18,Math.min(2.0,zm));panX=e.clientX/zm-(e.clientX/oz-panX);panY=e.clientY/zm-(e.clientY/oz-panY);upT()},{passive:false});
+
+build();drawGrid();center();
+clog('zoom:'+zm.toFixed(2)+' pan:'+Math.round(panX)+','+Math.round(panY),'log-state');
+clog('opened: ['+[...opened].join(", ")+']','log-state');
+clog('ready. click the golden box.','log-state');
+</script>
+</body>
+</html>

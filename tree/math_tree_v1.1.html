@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sacred Math Tree v1.1</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#08090e;color:#dce4f0;font-family:ui-monospace,"SF Mono",Menlo,monospace;
+  overflow:hidden;height:100vh;width:100vw}
+
+#world{width:100%;height:100%;position:absolute;top:0;left:0;
+  perspective:2200px;perspective-origin:50% 30%}
+#plane{position:absolute;width:8000px;height:5000px;
+  transform-style:preserve-3d;transition:none}
+
+/* NODE BOXES ? the LaTeX rectangles */
+.nb{position:absolute;background:rgba(8,11,18,0.94);
+  border:1.5px solid rgba(0,212,255,0.3);border-radius:5px;
+  padding:10px 16px;cursor:pointer;min-width:100px;text-align:center;
+  opacity:0;transform:scale(0.5);pointer-events:auto;
+  transition:opacity 0.5s ease-out,transform 0.45s ease-out,
+  border-color 0.3s,box-shadow 0.3s}
+.nb.show{opacity:1;transform:scale(1)}
+.nb:hover{border-color:#00d4ff;box-shadow:0 0 20px rgba(0,212,255,0.12)}
+.nb.t-root{border-color:rgba(255,215,0,0.5)}
+.nb.t-root:hover{border-color:#ffd700;box-shadow:0 0 28px rgba(255,215,0,0.15)}
+.nb.t-tool{border-color:rgba(176,102,255,0.4)}
+.nb.t-tool:hover{border-color:#b066ff;box-shadow:0 0 20px rgba(176,102,255,0.12)}
+.nb.t-result{border-color:rgba(74,222,128,0.4)}
+.nb.t-result:hover{border-color:#4ade80;box-shadow:0 0 20px rgba(74,222,128,0.12)}
+.nb.t-dead{border-color:rgba(248,113,113,0.3);opacity:0.55!important}
+.nb .tag{font-size:9px;letter-spacing:0.1em;text-transform:uppercase;
+  margin-bottom:5px;opacity:0.4}
+.nb .tag.c-gold{color:#ffd700}.nb .tag.c-purple{color:#b066ff}
+.nb .tag.c-green{color:#4ade80}.nb .tag.c-red{color:#f87171}
+.nb .ltx{margin:2px 0}.nb .katex{font-size:1.0em}
+.nb .sub{font-size:9px;opacity:0.3;margin-top:6px;font-style:italic;max-width:260px}
+.nb .plus{position:absolute;right:5px;top:50%;transform:translateY(-50%);
+  font-size:18px;opacity:0.25;color:#00d4ff}
+
+/* LINKS SVG */
+svg.lk{position:absolute;top:0;left:0;width:8000px;height:5000px;
+  pointer-events:none;z-index:0}
+svg.lk path{fill:none;stroke-width:2;transition:stroke-dashoffset 1s ease-out}
+
+/* TOKENS / GACHA HUD */
+#ghud{position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:30;
+  display:flex;gap:16px;align-items:center;font-size:12px}
+#ghud .gem{display:flex;align-items:center;gap:4px}
+#ghud .gem .icon{font-size:16px}
+#ghud .gem .ct{color:#ffd700;font-weight:bold;font-size:14px}
+#ghud .xp{color:#b066ff;font-size:11px}
+#ghud .streak{color:#f97316;font-size:11px}
+
+/* TOKEN POPUP */
+.tok-pop{position:fixed;pointer-events:none;z-index:40;
+  font-size:18px;font-weight:bold;color:#ffd700;
+  animation:tokfly 1.2s ease-out forwards}
+@keyframes tokfly{0%{opacity:1;transform:translateY(0)}
+  100%{opacity:0;transform:translateY(-80px)}}
+
+/* COMBO */
+#combo{position:fixed;top:50px;left:50%;transform:translateX(-50%);z-index:25;
+  font-size:20px;font-weight:bold;opacity:0;transition:opacity 0.3s;
+  text-shadow:0 0 20px rgba(255,215,0,0.3)}
+
+/* SIDE HUD */
+#shud{position:fixed;top:12px;left:12px;z-index:20;font-size:11px;opacity:0.45}
+#shud div{margin:3px 0}
+#shud .v{color:#00d4ff}
+#ver{position:fixed;top:12px;right:12px;z-index:20;font-size:9px;
+  letter-spacing:0.14em;text-transform:uppercase;opacity:0.25}
+#bot{position:fixed;bottom:10px;left:50%;transform:translateX(-50%);z-index:20;
+  font-size:10px;opacity:0.25}
+</style>
+</head>
+<body>
+
+<div id="ghud">
+  <div class="gem"><span class="icon">&#9670;</span><span class="ct" id="g-tok">3</span></div>
+  <div class="xp">XP <span id="g-xp">0</span></div>
+  <div class="streak">&#128293; <span id="g-str">0</span></div>
+</div>
+<div id="combo"></div>
+<div id="shud">
+  <div>nodes <span class="v" id="h-n">1</span></div>
+  <div>depth <span class="v" id="h-d">0</span></div>
+</div>
+<div id="ver">sacred math tree v1.1</div>
+<div id="bot">click to explore &middot; scroll zoom &middot; drag pan &middot; tokens unlock branches</div>
+
+<div id="world">
+  <div id="plane">
+    <svg class="lk" id="lksvg"></svg>
+  </div>
+</div>
+
+<script>
+// ?????????????????????????????????????????????
+// TREE DATA
+// ?????????????????????????????????????????????
+const T={id:"eq0",tag:"START",type:"root",
+  latex:"\\lim_{x \\to 0} \\frac{\\sin x}{x}",
+  sub:"famous limit. what tools do we have?",cost:0,xp:0,
+  ch:[
+    {id:"t1",tag:"DIRECT SUB",type:"tool",
+     latex:"\\frac{\\sin(0)}{0} = \\frac{0}{0}",
+     sub:"indeterminate form! we need another way",cost:1,xp:5,
+     ch:[
+       {id:"t1d",tag:"DEAD END",type:"dead",
+        latex:"\\frac{0}{0} \\;\\text{is undefined}",
+        sub:"but now you KNOW direct sub fails here. that's data.",cost:0,xp:10,ch:[]}
+     ]},
+    {id:"t2",tag:"L\u2019HOPITAL\u2019S RULE",type:"tool",
+     latex:"\\overset{\\text{L\u2019H}}{=}\\;\\lim_{x\\to 0}\\frac{\\cos x}{1}",
+     sub:"differentiate top & bottom when 0/0",cost:1,xp:5,
+     ch:[
+       {id:"t2r",tag:"EVALUATE",type:"result",
+        latex:"\\frac{\\cos 0}{1} = \\frac{1}{1} = \\boxed{1}",
+        sub:"the limit is 1. but WHY does L\u2019Hopital work?",cost:1,xp:25,
+        ch:[
+          {id:"t2r2",tag:"THE REASON",type:"result",
+           latex:"\\frac{f(x)}{g(x)}\\approx\\frac{f\u2019(a)(x\\!-\\!a)}{g\u2019(a)(x\\!-\\!a)}=\\frac{f\u2019(a)}{g\u2019(a)}",
+           sub:"near a, functions behave like their derivatives. linear approximation.",cost:1,xp:40,ch:[]}
+        ]}
+     ]},
+    {id:"t3",tag:"SQUEEZE THEOREM",type:"tool",
+     latex:"\\cos x \\;\\leq\\; \\frac{\\sin x}{x} \\;\\leq\\; 1",
+     sub:"trap it between two known limits",cost:1,xp:5,
+     ch:[
+       {id:"t3r",tag:"SQUEEZE RESULT",type:"result",
+        latex:"\\lim\\cos x=1,\\;\\lim 1=1 \\;\\Rightarrow\\; \\boxed{\\lim\\frac{\\sin x}{x}=1}",
+        sub:"both sides go to 1. the middle has no choice. elegant.",cost:1,xp:30,ch:[]}
+     ]},
+    {id:"t4",tag:"TAYLOR SERIES",type:"tool",
+     latex:"\\sin x = x - \\frac{x^3}{3!} + \\frac{x^5}{5!} - \\cdots",
+     sub:"expand, then divide by x",cost:2,xp:10,
+     ch:[
+       {id:"t4r",tag:"DIVIDE BY x",type:"result",
+        latex:"\\frac{\\sin x}{x} = 1 - \\frac{x^2}{6} + \\frac{x^4}{120}-\\cdots \\;\\to\\; \\boxed{1}",
+        sub:"all x terms vanish. only 1 survives. the most beautiful proof.",cost:1,xp:50,ch:[]}
+     ]}
+  ]
+};
+
+// ?????????????????????????????????????????????
+// GACHA STATE
+// ?????????????????????????????????????????????
+let tokens=3, xp=0, streak=0, combo=0;
+let opened=new Set(["eq0"]);
+let comboTimer=null;
+
+function addTokens(n,fromEl){
+  tokens+=n;
+  document.getElementById('g-tok').textContent=tokens;
+  // fly popup
+  if(fromEl){
+    let r=fromEl.getBoundingClientRect();
+    let pop=document.createElement('div');
+    pop.className='tok-pop';
+    pop.textContent='+'+n+' \u2666';
+    pop.style.left=r.left+r.width/2-20+'px';
+    pop.style.top=r.top-10+'px';
+    document.body.appendChild(pop);
+    setTimeout(()=>pop.remove(),1300);
+  }
+}
+function addXP(n,fromEl){
+  xp+=n;
+  document.getElementById('g-xp').textContent=xp;
+  if(fromEl){
+    let r=fromEl.getBoundingClientRect();
+    let pop=document.createElement('div');
+    pop.className='tok-pop';
+    pop.style.color='#b066ff';
+    pop.textContent='+'+n+' XP';
+    pop.style.left=r.left+r.width/2-20+'px';
+    pop.style.top=r.top+'px';
+    document.body.appendChild(pop);
+    setTimeout(()=>pop.remove(),1300);
+  }
+}
+function bumpStreak(fromEl){
+  streak++;combo++;
+  document.getElementById('g-str').textContent=streak;
+  let cel=document.getElementById('combo');
+  if(combo>=2){
+    cel.textContent=combo+'x COMBO';
+    cel.style.opacity='1';
+    cel.style.color=combo>=5?'#ffd700':combo>=3?'#f97316':'#b066ff';
+  }
+  clearTimeout(comboTimer);
+  comboTimer=setTimeout(()=>{combo=0;cel.style.opacity='0'},3000);
+  // bonus tokens at milestones
+  if(streak===3) addTokens(2,fromEl);
+  if(streak===5) addTokens(3,fromEl);
+  if(streak===8) addTokens(5,fromEl);
+}
+function updHud(){
+  document.getElementById('g-tok').textContent=tokens;
+  document.getElementById('g-xp').textContent=xp;
+  document.getElementById('g-str').textContent=streak;
+}
+
+// ?????????????????????????????????????????????
+// LAYOUT
+// ?????????????????????????????????????????????
+const XS=460,YS=300;
+let items=[];
+
+function layout(node,depth,yc,px,py){
+  let nx=px!==null?px+XS:(4000);
+  let ny=py!==null?yc:(2000);
+  items.push({n:node,x:nx,y:ny,d:depth});
+  if(opened.has(node.id)&&node.ch&&node.ch.length){
+    let c=node.ch.length;
+    let sp=YS*Math.min(c,5);
+    let sy=ny-sp/2, st=c>1?sp/(c-1):0;
+    for(let i=0;i<c;i++){
+      layout(node.ch[i],depth+1,c===1?ny:sy+st*i,nx,ny);
+    }
+  }
+}
+
+// ?????????????????????????????????????????????
+// RENDER
+// ?????????????????????????????????????????????
+const plane=document.getElementById('plane');
+const lksvg=document.getElementById('lksvg');
+
+function render(){
+  items=[];
+  layout(T,0,null,null,null);
+  plane.querySelectorAll('.nb').forEach(e=>e.remove());
+  let lk={};items.forEach(i=>lk[i.n.id]=i);
+
+  // links
+  let svg='';
+  for(let it of items){
+    let pid=findPid(T,it.n.id,null);
+    if(pid&&lk[pid]){
+      let p=lk[pid];
+      let x1=p.x+150,y1=p.y,x2=it.x-50,y2=it.y;
+      let mx=(x1+x2)/2;
+      let col=it.n.type==='dead'?'rgba(248,113,113,0.15)':
+              it.n.type==='result'?'rgba(74,222,128,0.2)':'rgba(0,212,255,0.15)';
+      svg+='<path d="M'+x1+','+y1+' C'+mx+','+y1+' '+mx+','+y2+' '+x2+','+y2+'" stroke="'+col+'"/>';
+    }
+  }
+  lksvg.innerHTML=svg;
+
+  // nodes
+  for(let it of items){
+    let n=it.n;
+    let box=document.createElement('div');
+    box.className='nb t-'+n.type;
+    box.style.left=(it.x-150)+'px';
+    box.style.top=(it.y-45)+'px';
+    box.style.maxWidth='300px';
+    box.dataset.id=n.id;
+
+    let tagCol=n.type==='root'?'c-gold':n.type==='tool'?'c-purple':
+               n.type==='result'?'c-green':'c-red';
+    let costBadge='';
+    if(!opened.has(n.id)&&n.cost>0){
+      costBadge=' <span style="color:#ffd700;font-size:10px">\u2666'+n.cost+'</span>';
+    }
+    let hasK=n.ch&&n.ch.length>0&&!opened.has(n.id);
+    box.innerHTML=
+      '<div class="tag '+tagCol+'">'+n.tag+costBadge+'</div>'+
+      '<div class="ltx"></div>'+
+      (n.sub?'<div class="sub">'+n.sub+'</div>':'')+
+      (hasK?'<div class="plus">+</div>':'');
+
+    plane.appendChild(box);
+    let ltxEl=box.querySelector('.ltx');
+    try{katex.render(n.latex,ltxEl,{throwOnError:false,displayMode:true})}
+    catch(e){ltxEl.textContent=n.latex}
+
+    requestAnimationFrame(()=>{requestAnimationFrame(()=>{box.classList.add('show')})});
+
+    box.addEventListener('click',function(e){
+      e.stopPropagation();
+      if(opened.has(n.id)){
+        if(n.id!=='eq0'){opened.delete(n.id);collAll(n);render()}
+        return;
+      }
+      // GACHA: need tokens to open
+      if(n.cost>0&&tokens<n.cost){
+        box.style.borderColor='#f87171';
+        box.style.boxShadow='0 0 20px rgba(248,113,113,0.2)';
+        setTimeout(()=>{box.style.borderColor='';box.style.boxShadow=''},600);
+        return;
+      }
+      tokens-=n.cost;
+      opened.add(n.id);
+      addXP(n.xp,box);
+      bumpStreak(box);
+      // earn back a token for result nodes (reward exploration)
+      if(n.type==='result') addTokens(1,box);
+      if(n.type==='dead') addTokens(1,box); // even dead ends teach
+      updHud();
+      render();
+    });
+  }
+  document.getElementById('h-n').textContent=items.length;
+  document.getElementById('h-d').textContent=Math.max(...items.map(i=>i.d));
+}
+
+function collAll(n){if(n.ch)n.ch.forEach(c=>{opened.delete(c.id);collAll(c)})}
+function findPid(t,tid,pid){
+  if(t.id===tid)return pid;
+  if(t.ch)for(let c of t.ch){let f=findPid(c,tid,t.id);if(f!==null)return f}
+  return null;
+}
+
+// ?????????????????????????????????????????????
+// PAN ZOOM
+// ?????????????????????????????????????????????
+let px=-3400,py=-1600,zm=0.42,tilt=50;
+const pl=document.getElementById('plane');
+function upT(){pl.style.left=px+'px';pl.style.top=py+'px';
+  pl.style.transform='rotateX('+tilt+'deg) scale('+zm+') translateZ(-180px)'}
+let drag=false,lm={x:0,y:0};
+document.addEventListener('pointerdown',e=>{
+  if(e.target.closest('.nb'))return;drag=true;lm={x:e.clientX,y:e.clientY}});
+document.addEventListener('pointermove',e=>{
+  if(!drag)return;px+=e.clientX-lm.x;py+=e.clientY-lm.y;lm={x:e.clientX,y:e.clientY};upT()});
+document.addEventListener('pointerup',()=>{drag=false});
+document.addEventListener('wheel',e=>{e.preventDefault();
+  zm*=e.deltaY>0?0.93:1.07;zm=Math.max(0.12,Math.min(2.2,zm));upT()},{passive:false});
+
+upT();render();
+</script>
+</body>
+</html>

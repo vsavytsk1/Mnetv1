@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sacred Math Tree v1.8</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0b0d14;color:#e8ecf4;font-family:ui-monospace,"SF Mono",Menlo,monospace;overflow:hidden;height:100vh;width:100vw}
+#plane{position:absolute;transform-origin:0 0}
+
+.eq{position:absolute;background:rgba(14,17,28,0.96);
+  border:1px solid rgba(100,120,160,0.18);border-radius:6px;
+  padding:14px 20px;min-width:110px;text-align:center;
+  max-width:300px;pointer-events:none;
+  opacity:0;transform:scale(0.3);
+  transition:opacity 0.5s ease-out,transform 0.45s ease-out,border-color 0.3s,box-shadow 0.3s}
+
+/* ghost: visible, dashed, clickable, waiting */
+.eq.ghost{opacity:0.45;transform:scale(0.9);pointer-events:auto;border-style:dashed;cursor:pointer}
+.eq.ghost:hover{opacity:0.65;box-shadow:0 0 20px rgba(100,120,160,0.1)}
+
+/* alive: full, solid, content visible */
+.eq.alive{opacity:1;transform:scale(1);pointer-events:auto;cursor:default;border-style:solid}
+
+.eq.t-root{border-color:rgba(255,200,60,0.4);background:rgba(18,16,10,0.96)}
+.eq.t-root.alive:hover{border-color:rgba(255,215,80,0.6);box-shadow:0 0 30px rgba(255,200,60,0.12)}
+.eq.t-tool{border-color:rgba(160,120,255,0.3);background:rgba(16,14,24,0.96)}
+.eq.t-tool.alive:hover{border-color:rgba(180,140,255,0.5);box-shadow:0 0 20px rgba(160,120,255,0.1)}
+.eq.t-result{border-color:rgba(80,220,140,0.3);background:rgba(10,18,14,0.96)}
+.eq.t-result.alive:hover{border-color:rgba(100,240,160,0.5);box-shadow:0 0 20px rgba(80,220,140,0.1)}
+.eq.t-dead{border-color:rgba(220,80,80,0.25);background:rgba(20,12,12,0.96)}
+
+/* hover token badge */
+.eq .tok-badge{position:absolute;top:-10px;right:-10px;
+  background:rgba(14,17,28,0.95);border:1px solid rgba(232,180,76,0.5);
+  border-radius:10px;padding:2px 8px;font-size:10px;color:#e8b44c;
+  font-weight:600;opacity:0;transform:scale(0.5);pointer-events:none;
+  transition:opacity 0.2s,transform 0.2s}
+.eq.ghost:hover .tok-badge{opacity:1;transform:scale(1)}
+
+/* inner content ? hidden until alive */
+.eq .inner{opacity:0;transition:opacity 0.4s ease-in 0.15s}
+.eq.alive .inner{opacity:1}
+/* ghost shows only tag + lock */
+.eq .ghost-inner{opacity:0;transition:opacity 0.3s}
+.eq.ghost .ghost-inner{opacity:1}
+
+.eq .tag{font-size:9px;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:6px;font-weight:600}
+.eq .tag.gold{color:#e8b44c}.eq .tag.purp{color:#a78bfa}.eq .tag.grn{color:#6ee7a0}.eq .tag.red{color:#f87171}
+.eq .ltx{color:#fff;margin:4px 0}.eq .ltx .katex{font-size:1.15em;color:#fff}
+.eq .sub{font-size:10px;opacity:0.3;margin-top:8px;font-style:italic;color:#8899bb}
+.eq .lock-icon{font-size:18px;opacity:0.4;margin:4px 0}
+
+/* LINES */
+svg.lk{position:absolute;top:0;left:0;pointer-events:none}
+svg.lk path{fill:none;stroke-width:1.8;stroke:rgba(100,120,160,0.0);
+  stroke-dasharray:2000;stroke-dashoffset:2000;
+  transition:stroke 0.4s ease-out,stroke-dashoffset 1s ease-out}
+svg.lk path.ghost-line{stroke:rgba(100,120,160,0.06);stroke-dashoffset:0;stroke-dasharray:none}
+svg.lk path.alive-line{stroke-dashoffset:0;stroke-dasharray:none}
+
+@keyframes sparkle{0%{box-shadow:0 0 15px rgba(255,200,60,0.04)}50%{box-shadow:0 0 40px rgba(255,200,60,0.14),0 0 80px rgba(255,200,60,0.04)}100%{box-shadow:0 0 15px rgba(255,200,60,0.04)}}
+.eq.t-root.alive{animation:sparkle 3s ease-in-out infinite}
+
+@keyframes ff{0%{opacity:0}12%{opacity:1}100%{opacity:0}}
+#freeze{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:50;background:rgba(180,160,255,0.04);opacity:0}
+#freeze.flash{animation:ff 0.5s ease-out}
+
+#wc{position:fixed;bottom:14px;right:14px;z-index:30;display:flex;align-items:center;gap:8px;font-size:10px;opacity:0.35;transition:opacity 0.3s}
+#wc:hover{opacity:0.8}#wc input{width:80px;accent-color:#a78bfa}
+#ghud{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:30;display:flex;gap:20px;align-items:center;font-size:13px}
+.gem{display:flex;align-items:center;gap:5px}.gem .ct{color:#e8b44c;font-weight:bold;font-size:16px}
+.tp{position:fixed;pointer-events:none;z-index:40;font-size:18px;font-weight:bold;color:#e8b44c;animation:tf 1.2s ease-out forwards}
+@keyframes tf{0%{opacity:1;transform:translateY(0)}100%{opacity:0;transform:translateY(-80px)}}
+#combo{position:fixed;top:50px;left:50%;transform:translateX(-50%);z-index:25;font-size:22px;font-weight:bold;opacity:0;transition:opacity 0.3s;text-shadow:0 0 20px rgba(255,200,60,0.3)}
+#shud{position:fixed;top:14px;left:14px;z-index:20;font-size:11px;opacity:0.35}
+#shud div{margin:3px 0}#shud .v{color:#7aa2f7}
+#ver{position:fixed;top:14px;right:14px;z-index:20;font-size:9px;opacity:0.2;letter-spacing:0.14em;text-transform:uppercase}
+</style>
+</head>
+<body>
+<div id="freeze"></div>
+<div id="ghud"><div class="gem">&#9670;<span class="ct" id="g-tok">3</span></div>
+<div style="color:#a78bfa;font-size:12px">XP <span id="g-xp">0</span></div>
+<div style="color:#f97316;font-size:12px">&#128293;<span id="g-str">0</span></div></div>
+<div id="combo"></div>
+<div id="shud"><div>nodes <span class="v" id="h-n">1</span></div><div>depth <span class="v" id="h-d">0</span></div></div>
+<div id="ver">v1.8</div>
+<div id="wc"><span style="color:#8899bb;text-transform:uppercase;letter-spacing:0.08em">wave</span><input type="range" id="wsl" min="0" max="100" value="50"></div>
+<div id="plane"><svg class="lk" id="lksvg"></svg></div>
+<script>
+const T={id:"eq0",tag:"START",type:"root",latex:"\\lim_{x \\to 0} \\frac{\\sin x}{x}",sub:"click to explore",cost:0,xp:0,ch:[
+{id:"t1",tag:"DIRECT SUB",type:"tool",latex:"\\frac{\\sin(0)}{0}=\\frac{0}{0}",sub:"indeterminate!",cost:1,xp:5,ch:[
+  {id:"t1d",tag:"DEAD END",type:"dead",latex:"\\frac{0}{0}\\;\\text{undefined}",sub:"now you KNOW.",cost:0,xp:10,ch:[]}]},
+{id:"t2",tag:"L\u2019H\u00D4PITAL",type:"tool",latex:"\\overset{\\text{L\u2019H}}{=}\\lim_{x\\to 0}\\frac{\\cos x}{1}",sub:"diff top & bottom",cost:1,xp:5,ch:[
+  {id:"t2r",tag:"EVALUATE",type:"result",latex:"\\frac{\\cos 0}{1}=\\boxed{1}",sub:"why does this work?",cost:1,xp:25,ch:[
+    {id:"t2r2",tag:"THE REASON",type:"result",latex:"\\frac{f}{g}\\approx\\frac{f'(a)(x-a)}{g'(a)(x-a)}=\\frac{f'(a)}{g'(a)}",sub:"functions ARE their derivatives",cost:1,xp:40,ch:[]}]}]},
+{id:"t3",tag:"SQUEEZE",type:"tool",latex:"\\cos x\\leq\\frac{\\sin x}{x}\\leq 1",sub:"trap it",cost:1,xp:5,ch:[
+  {id:"t3r",tag:"SQUEEZED",type:"result",latex:"\\lim\\cos x=1,\\lim 1=1\\Rightarrow\\boxed{1}",sub:"no choice.",cost:1,xp:30,ch:[]}]},
+{id:"t4",tag:"TAYLOR",type:"tool",latex:"\\sin x=x-\\frac{x^3}{3!}+\\frac{x^5}{5!}-\\cdots",sub:"expand & divide",cost:2,xp:10,ch:[
+  {id:"t4r",tag:"DIVIDE",type:"result",latex:"1-\\frac{x^2}{6}+\\frac{x^4}{120}-\\cdots\\to\\boxed{1}",sub:"only 1 survives.",cost:1,xp:50,ch:[]}]}]};
+
+let tokens=3,xp=0,streak=0,combo=0,comboT=null,wave=0.5;
+let opened=new Set(),kidsShown=new Set();
+let E={},P={},items=[],lk={};
+const CX=2000,CY=100,DY=320,XSP=460;
+const plane=document.getElementById('plane'),lksvg=document.getElementById('lksvg');
+document.getElementById('wsl').addEventListener('input',e=>{wave=e.target.value/100;rebuildPaths()});
+
+function fp(el,txt,col){let r=el.getBoundingClientRect(),p=document.createElement('div');p.className='tp';p.style.color=col||'#e8b44c';p.textContent=txt;p.style.left=r.left+r.width/2-20+'px';p.style.top=r.top-10+'px';document.body.appendChild(p);setTimeout(()=>p.remove(),1300)}
+function aT(n,el){tokens+=n;if(el)fp(el,'+'+n+' \u2666');uH()}
+function aX(n,el){xp+=n;if(el)fp(el,'+'+n+' XP','#a78bfa');uH()}
+function bS(el){streak++;combo++;let c=document.getElementById('combo');if(combo>=2){c.textContent=combo+'x COMBO';c.style.opacity='1';c.style.color=combo>=5?'#e8b44c':combo>=3?'#f97316':'#a78bfa'}clearTimeout(comboT);comboT=setTimeout(()=>{combo=0;c.style.opacity='0'},3500);if(streak===3)aT(2,el);if(streak===5)aT(3,el);if(streak===8)aT(5,el)}
+function uH(){document.getElementById('g-tok').textContent=tokens;document.getElementById('g-xp').textContent=xp;document.getElementById('g-str').textContent=streak}
+function fl(){let f=document.getElementById('freeze');f.classList.remove('flash');void f.offsetWidth;f.classList.add('flash')}
+function fP(t,tid,pid){if(t.id===tid)return pid;if(t.ch)for(let c of t.ch){let f=fP(c,tid,t.id);if(f!==null)return f}return null}
+function lnC(n){return n.type==='dead'?'rgba(220,80,80,0.25)':n.type==='result'?'rgba(80,220,140,0.3)':'rgba(130,150,210,0.22)'}
+
+// MEASURE box heights after rendering KaTeX
+let boxH={};
+
+function mkD(pid,cid){
+  let pi=lk[pid],ci=lk[cid];if(!pi||!ci)return'M0,0';
+  let pH=boxH[pid]||84,cH=boxH[cid]||84;
+  // center-bottom of parent -> center-top of child
+  let x1=pi.x,y1=pi.y-42+pH; // bottom center of parent
+  let x2=ci.x,y2=ci.y-42;     // top center of child
+  let dy=y2-y1,my=(y1+y2)/2;
+  let w=wave;
+  let cy1=y1+dy*(0.15+0.35*w),cy2=y2-dy*(0.15+0.35*w);
+  return'M'+x1+','+y1+' C'+x1+','+cy1+' '+x2+','+cy2+' '+x2+','+y2;
+}
+
+function collect(n,d,xc,px,py){
+  let nx=px!==null?xc:CX,ny=py!==null?py+DY:CY;
+  items.push({n,x:nx,y:ny,d});
+  if(n.ch&&n.ch.length){let c=n.ch.length,sp=XSP*Math.min(c,5),sx=nx-sp/2,st=c>1?sp/(c-1):0;
+    for(let i=0;i<c;i++)collect(n.ch[i],d+1,c===1?nx:sx+st*i,nx,ny)}}
+
+function rebuildPaths(){Object.keys(P).forEach(id=>{let pid=P[id].dataset.from;P[id].setAttribute('d',mkD(pid,id))})}
+
+function build(){
+  items=[];collect(T,0,CX,null,null);lk={};items.forEach(i=>lk[i.n.id]=i);
+  let mx=0,my=0;items.forEach(i=>{if(i.x+200>mx)mx=i.x+200;if(i.y+400>my)my=i.y+400});
+  lksvg.setAttribute('width',mx);lksvg.setAttribute('height',my);lksvg.setAttribute('viewBox','0 0 '+mx+' '+my);
+
+  items.forEach(it=>{
+    let n=it.n,tc=n.type==='root'?'gold':n.type==='tool'?'purp':n.type==='result'?'grn':'red';
+    // PATH
+    let pid=fP(T,n.id,null);
+    if(pid){let p=document.createElementNS('http://www.w3.org/2000/svg','path');p.dataset.from=pid;p.dataset.to=n.id;lksvg.appendChild(p);P[n.id]=p}
+    // BOX
+    let box=document.createElement('div');
+    box.className='eq t-'+n.type; // starts invisible (opacity:0)
+    box.style.left=(it.x-150)+'px';box.style.top=(it.y-42)+'px';
+    let badge=n.cost>0?'<div class="tok-badge">\u2666'+n.cost+'</div>':'';
+    box.innerHTML=badge+
+      '<div class="ghost-inner"><div class="tag '+tc+'">'+n.tag+'</div><div class="lock-icon">\u{1F512}</div></div>'+
+      '<div class="inner"><div class="tag '+tc+'">'+n.tag+'</div><div class="ltx"></div>'+(n.sub?'<div class="sub">'+n.sub+'</div>':'')+'</div>';
+    plane.appendChild(box);
+    try{katex.render(n.latex,box.querySelector('.inner .ltx'),{throwOnError:false,displayMode:true})}catch(e){}
+    E[n.id]=box;
+    // Measure height
+    boxH[n.id]=box.offsetHeight||84;
+  });
+
+  // Set all path d attributes now that heights are measured
+  Object.keys(P).forEach(id=>{let pid=P[id].dataset.from;P[id].setAttribute('d',mkD(pid,id))});
+
+  // ROOT starts alive immediately ? alone, mysterious, top of screen
+  makeAlive('eq0');
+
+  // Setup all clicks
+  items.forEach(it=>{
+    let n=it.n,box=E[n.id];
+    box.addEventListener('click',ev=>{
+      ev.stopPropagation();
+      // If alive and has kids not yet shown ? reveal kids
+      if(opened.has(n.id)&&!kidsShown.has(n.id)&&n.ch&&n.ch.length){
+        showKids(n);return}
+      // If ghost ? unlock it
+      if(!opened.has(n.id)&&box.classList.contains('ghost')){
+        if(n.cost>0&&tokens<n.cost){box.style.borderColor='#f87171';box.style.boxShadow='0 0 18px rgba(248,80,80,0.2)';setTimeout(()=>{box.style.borderColor='';box.style.boxShadow=''},500);return}
+        unlockNode(n,box);return}
+      // Already alive + kids shown ? do nothing (NO COLLAPSE)
+    });
+  });
+}
+
+function makeAlive(id){
+  opened.add(id);let box=E[id];
+  box.classList.remove('ghost');box.classList.add('alive');
+  boxH[id]=box.offsetHeight||84;
+  rebuildPaths();updCount();
+}
+
+function showKids(parent){
+  if(kidsShown.has(parent.id))return;
+  kidsShown.add(parent.id);fl();
+  parent.ch.forEach((ch,i)=>{
+    setTimeout(()=>{
+      // Line fades in as ghost
+      let path=P[ch.id];
+      if(path){path.classList.add('ghost-line')}
+      // Box appears as ghost
+      setTimeout(()=>{E[ch.id].classList.add('ghost')},200);
+    },i*120);
+  });
+}
+
+function unlockNode(n,box){
+  fl();tokens-=n.cost;opened.add(n.id);
+  // 1: line traces with color
+  let path=P[n.id];
+  if(path){path.classList.remove('ghost-line');path.style.stroke=lnC(n);path.classList.add('alive-line')}
+  // 2: box goes alive
+  setTimeout(()=>{
+    box.classList.remove('ghost');box.classList.add('alive');
+    boxH[n.id]=box.offsetHeight||84;rebuildPaths();
+    aX(n.xp,box);bS(box);
+    if(n.type==='result'||n.type==='dead')aT(1,box);uH();
+  },250);
+  // 3: show kids after a beat
+  setTimeout(()=>{if(n.ch&&n.ch.length)showKids(n)},500);
+  updCount();
+}
+
+function updCount(){let vis=items.filter(i=>opened.has(i.n.id));document.getElementById('h-n').textContent=vis.length;document.getElementById('h-d').textContent=Math.max(0,...vis.map(i=>i.d))}
+
+// PAN ZOOM ? root at TOP, 20% from top edge
+let panX=0,panY=0,zm=0.6;
+function center(){panX=(window.innerWidth/2/zm)-CX;panY=window.innerHeight*0.2/zm-CY;upT()}
+function upT(){plane.style.zoom=zm;plane.style.left=panX+'px';plane.style.top=panY+'px'}
+let drag=false,lm={x:0,y:0};
+document.addEventListener('pointerdown',e=>{if(e.target.closest('.eq'))return;drag=true;lm={x:e.clientX,y:e.clientY}});
+document.addEventListener('pointermove',e=>{if(!drag)return;panX+=(e.clientX-lm.x)/zm;panY+=(e.clientY-lm.y)/zm;lm={x:e.clientX,y:e.clientY};upT()});
+document.addEventListener('pointerup',()=>{drag=false});
+document.addEventListener('wheel',e=>{e.preventDefault();let oz=zm;zm*=e.deltaY>0?0.92:1.08;zm=Math.max(0.18,Math.min(2.0,zm));panX=e.clientX/zm-(e.clientX/oz-panX);panY=e.clientY/zm-(e.clientY/oz-panY);upT()},{passive:false});
+
+build();center();
+</script>
+</body>
+</html>

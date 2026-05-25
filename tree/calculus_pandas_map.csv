@@ -1,0 +1,39 @@
+﻿Category,Calculus Concept,Math,Pandas / Python,What It Does,Example
+Limits,Limit of a sequence,lim(n??) a? = L,s.iloc[-1] or s.tail(1),Last value of a converging series,"s = pd.Series([1, 0.5, 0.25, 0.125]); s.iloc[-1]"
+Limits,Left/right limit,lim(x?a?) f(x),df[df['x'] < a].iloc[-1],Filter values approaching from one side,df[df['x'] < 0]['y'].iloc[-1]
+Limits,Numerical limit,lim(x?0) sin(x)/x,df['y'].interpolate(),Interpolate to estimate value at gap,df.set_index('x').reindex([0]).interpolate()
+Limits,Squeeze theorem check,g(x) ? f(x) ? h(x),"df[['g','f','h']].apply(check)",Verify bounds hold for all rows,(df['g'] <= df['f']) & (df['f'] <= df['h']).all()
+Limits,Convergence test,?a? converges?,s.cumsum().diff().abs() < eps,Check if partial sums stabilize,s.cumsum().diff().abs().iloc[-5:] < 1e-6
+Derivatives,First derivative,f'(x) = df/dx,df['y'].diff() / df['x'].diff(),Finite difference approximation,df['dy_dx'] = df['y'].diff() / df['x'].diff()
+Derivatives,Second derivative,f''(x) = d?f/dx?,df['dy'].diff() / df['x'].diff(),Diff of the diff,df['d2y'] = df['dy_dx'].diff() / df['x'].diff()
+Derivatives,Rate of change,?y/?x,df['y'].pct_change(),Percentage change between rows,df['rate'] = df['price'].pct_change()
+Derivatives,Critical points,f'(x) = 0,df[df['dy_dx'].abs() < eps],Find where derivative ? 0,df[df['dy_dx'].abs() < 0.01]
+Derivatives,Monotonicity,f'(x) > 0 ? increasing,df['dy_dx'] > 0,Boolean mask: where function rises,df['rising'] = df['dy_dx'] > 0
+Derivatives,Gradient (?f),"?f/?x, ?f/?y",df[cols].diff(),Partial diffs across multiple columns,"grad = df[['x','y','z']].diff()"
+Integrals,Cumulative sum,??? f(t)dt,df['y'].cumsum(),Running total = discrete integral,df['integral'] = df['y'].cumsum() * dx
+Integrals,Trapezoidal rule,??? f(x)dx ? ?,"np.trapz(df['y'], df['x'])",NumPy trapezoidal integration,"area = np.trapz(df['y'], df['x'])"
+Integrals,Riemann sum,? f(x?)?x,df['y'].sum() * dx,Sum all values ? step size,riemann = df['y'].sum() * 0.01
+Integrals,Area between curves,?(f-g)dx,(df['f'] - df['g']).cumsum(),Cumsum of difference,df['area'] = (df['f'] - df['g']).abs().cumsum() * dx
+Integrals,Moving average,1/T ? f(t)dt,df['y'].rolling(w).mean(),Sliding window average = smoothing,df['smooth'] = df['y'].rolling(10).mean()
+Series,Taylor series terms,x?/n!,pd.Series([x**n/factorial(n) for n in range(N)]),Generate series terms,terms = pd.Series([x**n/math.factorial(n) for n in range(20)])
+Series,Partial sums,S? = ??? a?,s.cumsum(),Running total of series,partial = terms.cumsum()
+Series,Geometric series,? ar?,pd.Series([a * r**n for n in range(N)]),Generate geometric sequence,geo = pd.Series([0.5**n for n in range(30)])
+Series,Power series eval,? c?x?,s.dot(pd.Series([x**n for n in range(len(s))])),Dot product = polynomial eval,val = coeffs.dot(pd.Series([x**n for n in range(len(coeffs))]))
+Series,Fourier coefficients,a? = 2/T ? f cos,df.groupby('freq').apply(fft),Group by frequency component,Use scipy.fft then pd.DataFrame
+DiffEq,Euler method,"y??? = y? + hf(x?,y?)",df['y'].shift(-1) - df['y'],Step-by-step forward integration,"for i: df.loc[i+1,'y'] = df.loc[i,'y'] + h*f(x,y)"
+DiffEq,Phase portrait data,"dy/dx = f(x,y)",pd.DataFrame(meshgrid),"Build grid of (x,y,dy/dx) values",Grid DataFrame for vector field plot
+DiffEq,Stability check,|?| < 1,df['eigenval'].abs() < 1,Filter stable eigenvalues,stable = df[df['eigenval'].abs() < 1]
+Stats,Mean (expected value),E[X] = ?xf(x)dx,df['x'].mean(),Average = continuous integral analog,mu = df['score'].mean()
+Stats,Variance,Var = E[(X-?)?],df['x'].var(),Spread = second moment,sigma2 = df['score'].var()
+Stats,Standard deviation,? = ?Var,df['x'].std(),Square root of variance,sigma = df['score'].std()
+Stats,Correlation,"? = Cov(X,Y)/????",df.corr(),Correlation matrix of all columns,"df[['x','y','z']].corr()"
+Stats,Probability density,P(a<X<b) = ?f(x)dx,df[(df['x']>a) & (df['x']<b)].shape[0] / len(df),Count fraction in range,prob = len(df.query('x > 0 and x < 1')) / len(df)
+Stats,Cumulative distribution,F(x) = P(X?x),df['x'].rank(pct=True),Empirical CDF via percentile rank,df['cdf'] = df['x'].rank(pct=True)
+Transform,Log transform,ln(x),df['x'].apply(np.log),Apply any math function,df['log_x'] = np.log(df['x'])
+Transform,Exponential,e?,df['x'].apply(np.exp),Vectorized exp,df['exp_x'] = np.exp(df['x'])
+Transform,Trig functions,"sin, cos, tan",df['x'].apply(np.sin),Any numpy function works,df['sin_x'] = np.sin(df['x'])
+Transform,Chain rule (compose),f(g(x)),df['x'].apply(g).apply(f),Chained transforms,df['x'].apply(np.sin).apply(np.exp)
+Transform,L'H?pital numeric,lim f/g via f'/g',df['f'].diff() / df['g'].diff(),Ratio of derivatives,lhopital = df['f'].diff() / df['g'].diff()
+Multi,Jacobian approx,J = [?f?/?x?],pd.DataFrame of diffs,Matrix of partial derivatives,J = pd.DataFrame({c: df[c].diff() for c in cols})
+Multi,Parametric curves,"(x(t), y(t))","df[['x','y']] with t as index",Time-indexed 2D path,"df = pd.DataFrame({'x':np.cos(t),'y':np.sin(t)}, index=t)"
+Multi,Surface data,"z = f(x,y)","df.pivot_table(values='z', index='y', columns='x')",Reshape to grid for surface plot,"surface = df.pivot_table('z','y','x')"
