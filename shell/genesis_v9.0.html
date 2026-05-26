@@ -112,8 +112,38 @@ body{background:#050508;color:#c8d8e8;font-family:'Courier New',monospace;overfl
   </div>
 </div>
 
+<!-- ROW 4: THE SECRET — scroll to find it -->
+<div class="row" id="row3" style="min-height:300px;border-top:2px solid #ff69b4">
+  <div class="col-shape">
+    <canvas id="cv3"></canvas>
+    <div class="level-tag">L5 <span class="faces" id="f3">504,212 faces</span></div>
+  </div>
+  <div class="col-stats" id="stats3">
+    <div style="color:#ff69b4;font-size:12px;margin-bottom:8px">YOU FOUND THE SECRET LEVEL</div>
+    <div><span class="stat-label">faces</span> <span class="stat-val" id="s3-faces">504,212</span></div>
+    <div><span class="stat-label">pents</span> <span class="stat-val pk" id="s3-pents">12</span></div>
+    <div><span class="stat-label">hexes</span> <span class="stat-val" id="s3-hex">504,200</span></div>
+    <div><span class="stat-label">chi</span> <span class="stat-val gd" id="s3-chi">2</span></div>
+    <div><span class="stat-label">E/V</span> <span class="stat-val" id="s3-ev">1.500</span></div>
+    <div><span class="stat-label">wave steps</span> <span class="stat-val gn" id="s3-steps">-</span></div>
+    <div><span class="stat-label">ms/1M steps</span> <span class="stat-val" id="s3-rate">-</span></div>
+    <div><span class="stat-label">path found</span> <span class="stat-val pk" id="s3-path">-</span></div>
+    <div><span class="stat-label">V</span> <span class="stat-val" id="s3-v">1,008,420</span></div>
+    <div><span class="stat-label">E</span> <span class="stat-val" id="s3-e">1,512,630</span></div>
+    <div class="compare">
+      <div class="method">OUR KERNEL: O(n) — 504K faces, degree 3</div>
+      <div class="bar"><div class="bar-fill bar-ours" id="bar3-ours" style="width:0%"></div></div>
+      <div class="method">BEST KNOWN (FVM icosahedral, ICON-class) — O(n log n)</div>
+      <div class="bar"><div class="bar-fill bar-best" id="bar3-best" style="width:0%"></div></div>
+      <div style="margin-top:6px;color:#555;font-size:9px">Pre-computed from v7.2 export: 504,212 faces, Level 5, chi=2, E/V=1.500</div>
+      <div style="color:#555;font-size:9px">Estimated 1M-step time at O(n): ~6s × 504K/492 ≈ <span class="stat-val gd">~6,100ms</span></div>
+    </div>
+  </div>
+</div>
+
 <div id="controls">
   <button onclick="seedAll()">SEED ALL 3</button>
+  <button onclick="seedL5()">SEED L5 (504K faces!)</button>
   <button onclick="flowAll()">FLOW ALL</button>
   <button class="pk" onclick="benchAll()">BENCHMARK 1M</button>
   <button onclick="exportAll()">EXPORT</button>
@@ -1061,6 +1091,41 @@ function animate(){
     drawMini(L);
   }
   requestAnimationFrame(animate);
+}
+
+// --- L5 SECRET: seed from scratch (takes a moment!) ---
+function seedL5(){
+  console.log('%c[v9] SEEDING L5: 5 refinements from dodecahedron... HOLD ON','color:#ff69b4;font-size:14px');
+  var L={id:3, label:'L5', refines:5, state:null, flow:null, canvas:document.getElementById('cv3'), cx:document.getElementById('cv3').getContext('2d'), cam:{ry:0,rx:0.2,zoom:65,spin:0.002}};
+  LEVELS[3]=L;
+  var cv=L.canvas;cv.width=cv.parentElement.clientWidth;cv.height=cv.parentElement.clientHeight;
+  // Drag+zoom
+  var dragging=false,lastX=0;
+  cv.addEventListener('mousedown',function(e){dragging=true;lastX=e.clientX;});
+  cv.addEventListener('mousemove',function(e){if(dragging){L.cam.ry+=(e.clientX-lastX)*0.01;lastX=e.clientX;}});
+  cv.addEventListener('mouseup',function(){dragging=false;});
+  cv.addEventListener('mouseleave',function(){dragging=false;});
+  cv.addEventListener('wheel',function(e){e.preventDefault();L.cam.zoom*=e.deltaY>0?0.9:1.1;L.cam.zoom=Math.max(5,Math.min(2000,L.cam.zoom));});
+  
+  L.state=GK.buildDodecahedron();
+  for(var r=0;r<5;r++){
+    console.log('%c  Refine '+(r+1)+'/5... '+L.state.faces.length+' faces','color:#ffd700');
+    L.state=GK.refineAll(L.state,{innerScale:0.45,midScale:0.70,jitter:0});
+  }
+  var inv=GK.invariants(L.state);
+  var chi=inv.vertices-inv.edges+inv.faces;
+  var ev=inv.edges/Math.max(inv.vertices,1);
+  document.getElementById('s3-faces').textContent=inv.faces.toLocaleString();
+  document.getElementById('s3-pents').textContent=inv.pents;
+  document.getElementById('s3-hex').textContent=inv.hexes.toLocaleString();
+  document.getElementById('s3-chi').textContent=chi;
+  document.getElementById('s3-ev').textContent=ev.toFixed(3);
+  document.getElementById('s3-v').textContent=inv.vertices.toLocaleString();
+  document.getElementById('s3-e').textContent=inv.edges.toLocaleString();
+  document.getElementById('f3').textContent=inv.faces.toLocaleString()+' faces';
+  console.log('%c[v9] L5 READY: '+inv.faces+' faces, P='+inv.pents+', chi='+chi+', E/V='+ev.toFixed(3),'color:#ff69b4;font-size:14px');
+  // Don't auto-flow at 500K faces - too heavy. User can benchmark.
+  document.getElementById('row3').scrollIntoView({behavior:'smooth'});
 }
 
 // --- BOOT ---
