@@ -55,7 +55,7 @@ canvas{position:fixed;top:0;left:0;z-index:0}
 <button class="btn pk" onclick="doRefineAll()">REFINE ALL</button>
 <button class="btn gd" onclick="toggleFlow()">FLOW <b id="flowState">off</b></button>
 <button class="btn pk" onclick="doPathfind()">PATH</button>
-<div class="sl"><label>FLOW X</label><input type="range" min="0" max="20" value="3" id="sl-flowx" oninput="FLOW.speed=+this.value;SV('sv-flowx',this.value)"><span class="sv" id="sv-flowx">3</span></div>
+<div class="sl"><label>FLOW X</label><input type="range" min="0" max="100" value="30" id="sl-flowx" oninput="var v=+this.value;FLOW.speed=v<1?0:Math.round(Math.pow(10,v/33.3));SV('sv-flowx',FLOW.speed)"><span class="sv" id="sv-flowx">3</span></div>
 <button class="btn" onclick="doRefinePents()">REFINE 5s</button>
 <button class="btn" onclick="doRefineHexes()">REFINE 6s</button>
 <button class="btn" onclick="doUndo()">UNDO</button>
@@ -868,19 +868,30 @@ function draw(){
       cx.fillStyle='rgba(0,40,60,'+alpha*0.3+')';cx.strokeStyle='rgba(0,180,255,'+alpha*0.6+')';
     }
     cx.fill();
-        // Stroke: edges colored by flow
-    if(ss>2){
-      if(FLOW.active&&FLOW.pressure&&fIdx>=0&&FLOW.pressure[fIdx]>0.005&&!onPath&&!isSource&&!isTarget){
-        var ep=Math.min(1,FLOW.pressure[fIdx]*4);
-        cx.strokeStyle='rgba('+(Math.round(100+155*ep))+','+(Math.round(40+60*ep))+','+(Math.round(180+70*(1-ep)))+','+alpha*0.8+')';
-        cx.lineWidth=0.5+ep*2;
-      } else if(onPath){
-        cx.strokeStyle='rgba(255,255,100,'+alpha+')';
-        cx.lineWidth=2.5;
-      }
-      cx.lineWidth=isPent?(onPath?3:1.5):(onPath?2.5:0.5);
-      cx.stroke();
-    }
+        // Stroke: edges colored by flow — THE LINES ARE THE TRUTH
+        if(ss>2){
+          if(onPath){
+            cx.strokeStyle='rgba(255,255,0,'+alpha+')';
+            cx.lineWidth=isPent?3.5:2.5;
+          } else if(isSource){
+            cx.strokeStyle='rgba(255,100,100,'+alpha+')';
+            cx.lineWidth=2;
+          } else if(isTarget){
+            cx.strokeStyle='rgba(100,255,100,'+alpha+')';
+            cx.lineWidth=2;
+          } else if(FLOW.active&&FLOW.pressure&&fIdx>=0&&FLOW.pressure[fIdx]>0.003){
+            var ep=Math.min(1,FLOW.pressure[fIdx]*3);
+            // Wave front: cyan→white→orange as pressure builds
+            var r=Math.round(50+200*ep);
+            var g=Math.round(120+130*Math.min(1,ep*2));
+            var b=Math.round(255-200*ep);
+            cx.strokeStyle='rgba('+r+','+g+','+b+','+Math.min(1,alpha*(0.3+ep*0.7))+')';
+            cx.lineWidth=0.3+ep*2.5;
+          } else {
+            cx.lineWidth=isPent?1.5:0.5;
+          }
+          cx.stroke();
+        }
     
     // Vertices: only if face is large enough
     if(cam.atom>0.2&&ss>5){
@@ -1190,16 +1201,17 @@ function waveStep(){
   if(!FLOW.active||!FLOW.adj)return;
   var n=gkState.faces.length;
   
-  // Source pumps
+    // Source pumps hard
   if(FLOW.source>=0) FLOW.pressure[FLOW.source]=1.0;
   
-  // Diffuse: each cell averages neighbors + decay
+  // Diffuse: strong propagation so wave moves FAST across the stitched execution
   var pNew=new Float32Array(n);
   for(var i=0;i<n;i++){
     var adj=FLOW.adj[i];if(!adj.length)continue;
     var sum=0;
     for(var j=0;j<adj.length;j++) sum+=FLOW.pressure[adj[j]];
-    pNew[i]=FLOW.pressure[i]*0.7+sum/adj.length*0.3;
+    // Strong mix: 40% self + 60% neighbors = fast wave
+    pNew[i]=FLOW.pressure[i]*0.4+sum/adj.length*0.6;
     
     // Velocity = max neighbor pressure delta
     var maxDp=0;
@@ -1212,8 +1224,8 @@ function waveStep(){
   }
   FLOW.pressure=pNew;
   
-  // Check if wave reached target
-  if(FLOW.target>=0&&FLOW.pressure[FLOW.target]>0.01&&!FLOW.found){
+    // Check if wave reached target (lower threshold = detect sooner)
+  if(FLOW.target>=0&&FLOW.pressure[FLOW.target]>0.001&&!FLOW.found){
     FLOW.found=true;
     // TRACE BACK: follow pressure gradient from target to source
     tracePath();
