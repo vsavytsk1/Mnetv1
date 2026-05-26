@@ -55,6 +55,7 @@ canvas{position:fixed;top:0;left:0;z-index:0}
 <button class="btn pk" onclick="doRefineAll()">REFINE ALL</button>
 <button class="btn gd" onclick="toggleFlow()">FLOW <b id="flowState">off</b></button>
 <button class="btn pk" onclick="doPathfind()">PATH</button>
+<div class="sl"><label>FLOW X</label><input type="range" min="0" max="20" value="3" id="sl-flowx" oninput="FLOW.speed=+this.value;SV('sv-flowx',this.value)"><span class="sv" id="sv-flowx">3</span></div>
 <button class="btn" onclick="doRefinePents()">REFINE 5s</button>
 <button class="btn" onclick="doRefineHexes()">REFINE 6s</button>
 <button class="btn" onclick="doUndo()">UNDO</button>
@@ -867,8 +868,19 @@ function draw(){
       cx.fillStyle='rgba(0,40,60,'+alpha*0.3+')';cx.strokeStyle='rgba(0,180,255,'+alpha*0.6+')';
     }
     cx.fill();
-    // Only stroke if face is big enough to see edges
-    if(ss>2){cx.lineWidth=isPent?1.5:0.5;cx.stroke()}
+        // Stroke: edges colored by flow
+    if(ss>2){
+      if(FLOW.active&&FLOW.pressure&&fIdx>=0&&FLOW.pressure[fIdx]>0.005&&!onPath&&!isSource&&!isTarget){
+        var ep=Math.min(1,FLOW.pressure[fIdx]*4);
+        cx.strokeStyle='rgba('+(Math.round(100+155*ep))+','+(Math.round(40+60*ep))+','+(Math.round(180+70*(1-ep)))+','+alpha*0.8+')';
+        cx.lineWidth=0.5+ep*2;
+      } else if(onPath){
+        cx.strokeStyle='rgba(255,255,100,'+alpha+')';
+        cx.lineWidth=2.5;
+      }
+      cx.lineWidth=isPent?(onPath?3:1.5):(onPath?2.5:0.5);
+      cx.stroke();
+    }
     
     // Vertices: only if face is large enough
     if(cam.atom>0.2&&ss>5){
@@ -1130,7 +1142,8 @@ var FLOW = {
   source: -1,
   target: -1,
   step: 0,
-  found: false
+  found: false,
+  speed: 3
 };
 
 function buildAdj(){
@@ -1364,8 +1377,14 @@ function setMobiusTwist(v){
 // ═══ ANIMATE ═══
 function animate(){
   if(!dragging) cam.ry+=cam.spin;
-  draw();
-  requestAnimationFrame(animate);
+    // FLOW: run N wave steps per frame based on speed slider
+    if(FLOW.active&&!FLOW.found){
+      var spd=FLOW.speed||3;
+      for(var ws=0;ws<spd;ws++) waveStep();
+      document.getElementById('h-flow').textContent=FLOW.found?'FOUND '+FLOW.step:'step '+FLOW.step;
+    }
+    draw();
+    requestAnimationFrame(animate);
 }
 
 // ═══ BOOT ═══
