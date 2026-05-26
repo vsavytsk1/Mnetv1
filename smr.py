@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """
-patch_layer5.py — adds Layer 5 (English Technical Brain) to existing vault.
+smr.py — StrangerDanger patch utility.
+Adds Layer 5 (English Technical Brain) to existing vault.
 Run ONCE after --build. Decrypts, patches, re-encrypts same passphrase.
+Part of the StrangerDanger ecosystem (github.com/vsavytsk1/StrangerDanger).
 """
 import json, hmac, hashlib, secrets, sys
 from pathlib import Path

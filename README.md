@@ -2,7 +2,7 @@
 
 | Simulation | What it is |
 |---|---|
-| [GENESIS v9.6 — NS Dashboard](https://vsavytsk1.github.io/Mnetv1/shell/genesis_v9.0.html) | **LATEST.** Navier-Stokes benchmark. 4 shapes (12→24K faces). O(n) wave diffusion. Real-time benchmarks. Secret level. |
+| [GENESIS v9.0 — NS Dashboard](https://vsavytsk1.github.io/Mnetv1/shell/genesis_v9.0.html) | **LATEST.** Navier-Stokes benchmark. 4 shapes (12→24K faces). O(n) wave diffusion. Real-time benchmarks. Secret level. |
 | [GENESIS v8.x — Flow Explorer](https://vsavytsk1.github.io/Mnetv1/shell/genesis_v8.0.html) | Goldberg fractal + wave simulation. Möbius twist. Wavefront heatmap. 100M batch compute. |
 | [GENESIS Benchmark](https://vsavytsk1.github.io/Mnetv1/shell/genesis_bench.html) | Compute cost analyzer. Time, memory, F/ms per refinement level. CSV export. |
 | [Sacred Math Tree](https://vsavytsk1.github.io/Mnetv1/) | 10 calculus trees. Autopilot plays them all. Zoom-gated. |
@@ -10,6 +10,8 @@
 | [Fractal Geometry Builder](https://vsavytsk1.github.io/Mnet/) | C60 recursive shell. Click any face. It opens forever. |
 
 > **ETHICS:** This software shall not be used for weapons, surveillance, or harm. See [ETHICS.md](./ETHICS.md).
+
+> **Engineering body of work:** The Genesis evolution chain (v7.1→v9.0) lives in [`shell/`](./shell/). The GPU benchmark engine and portable pack live in [`pack/`](./pack/). Compute receipts in [`research/compute_receipts/`](./research/compute_receipts/).
 
 > *If you're not sure what to click — click the tree. Press autopilot. Watch math grow.*
 
@@ -19,24 +21,39 @@
 
 > *634 lines. 0 dependencies. Euler forced. Navier-Stokes in a browser tab.*
 
-## Benchmark Results (v9.6)
+## Benchmark Results (GPU-verified, May 26 2026)
 
+### Browser (Canvas2D, single-thread JavaScript)
 ```
-┌──────────┬────────┬───────┬──────┬───────┬──────────────┐
-│  Level   │ Faces  │ Pents │ chi  │  E/V  │ ms / 1M steps│
-├──────────┼────────┼───────┼──────┼───────┼──────────────┤
-│  L0      │     12 │   12  │   2  │ 1.500 │     ~270ms   │
-│  L1      │     72 │   12  │   2  │ 1.500 │   ~1,100ms   │
-│  L2      │    492 │   12  │   2  │ 1.500 │   ~6,200ms   │
-│  L4      │ 24,012 │   12  │   2  │ 1.500 │     ~300s *  │
-└──────────┴────────┴───────┴──────┴───────┴──────────────┘
-  * estimated from O(n) scaling
+  Level    Faces    Pents   chi    E/V     ms / 1M steps
+  L0          12      12     2    1.500        ~270ms
+  L1          72      12     2    1.500      ~1,100ms
+  L2         492      12     2    1.500      ~6,200ms
+  L4      24,012      12     2    1.500    ~477,000ms
+```
 
-  Scaling: O(n) — linear in face count
-  Topology: chi=2, P=12, E/V=1.500 at EVERY level  
-  Engine: pure JavaScript, Canvas2D, zero dependencies
-  Platform: any browser tab
+### GPU (NVIDIA RTX 3060, CUDA sparse matrix, CuPy)
 ```
+  Level    Faces    Pents   chi    E/V     us/face/step   steps/sec
+  L0          12      12     2    1.500      18.99          4,388
+  L1          72      12     2    1.500       3.14          4,430
+  L2         492      12     2    1.500       0.46          4,408
+  L3       3,432      12     2    1.500       0.07          4,276
+  L4      24,012      12     2    1.500       0.010         4,323
+  L5     168,072      12     2    1.500       0.0016        3,720
+
+  Turbulent (Re>10K, mix=0.15, noise=0.05):
+  L5     168,072      12     2    1.500       0.0024        2,505
+```
+
+**O(n) confirmed by measurement** (not extrapolation) up to 168,072 faces.
+Topology: chi=2, P=12, E/V=1.500 at EVERY level, EVERY regime.
+GPU utilization: 100% RTX 3060 during benchmark.
+See `research/compute_receipts/` for full data.
+
+### Engines
+- **Browser:** pure JavaScript, Canvas2D, zero dependencies
+- **GPU:** Python + CuPy, sparse matrix flow (`pack/navierCrunch.py`)
 
 ## The 7 Primitives
 
