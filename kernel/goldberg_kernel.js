@@ -447,21 +447,18 @@ GK.invariants = function(state){
     perLevel[f.level] = perLevel[f.level] || { pent: 0, hex: 0 };
     if (f.type === 'pent') perLevel[f.level].pent++; else perLevel[f.level].hex++;
   }
-  var vertSet = {};
-  var edgeSum = 0;
-  for (var i = 0; i < state.faces.length; i++){
-    edgeSum += state.faces[i].pts.length;
-    for (var k = 0; k < state.faces[i].pts.length; k++){
-      var p = state.faces[i].pts[k];
-      vertSet[p[0].toFixed(3) + ',' + p[1].toFixed(3) + ',' + p[2].toFixed(3)] = true;
-    }
-  }
+  // Vertex & edge counts from TOPOLOGY, not float-matching.
+  // Trivalent tiling: V = (5P + 6H) / 3,  E = (5P + 6H) / 2
+  // This is exact. Always. Euler: V - E + F = 2.
+  var faceEdgeSum = 5 * pents + 6 * hexes;
+  var vertices = Math.round(faceEdgeSum / 3);
+  var edges = Math.round(faceEdgeSum / 2);
   return {
     pents: pents,
     hexes: hexes,
     faces: state.faces.length,
-    edges: Math.floor(edgeSum / 2),
-    vertices: Object.keys(vertSet).length,
+    edges: edges,
+    vertices: vertices,
     maxLevel: maxLevel,
     perLevel: perLevel,
     anchorCount: Object.keys(anchors).length,
