@@ -38,7 +38,7 @@ body{background:#050508;color:#c8d8e8;font-family:'Courier New',monospace;overfl
 <div id="benchLoad"></div>
 
 <div id="header">
-  <h1>GENESIS v9.3</h1>
+  <h1>GENESIS v9.5</h1>
   <div class="sub">Navier-Stokes Wave Benchmark &middot; Goldberg Kernel &middot; 3 Refinement Levels</div>
 </div>
 
@@ -890,14 +890,16 @@ function tracePath(fl){
 // --- Mini renderer for each canvas ---
 function drawMini(L){
   if(!L.state||!L.cx) return;
+  var fl=L.flow||{source:-1,target:-1,path:null,arrival:null,step:0,maxP:null,pressure:null};
   var cv=L.canvas,cx=L.cx,W=cv.width,H=cv.height;
   cx.clearRect(0,0,W,H);
-  var faces=L.state.faces,fl=L.flow;
+  var faces=L.state.faces;
   var cy=Math.cos(L.cam.ry),sy=Math.sin(L.cam.ry);
   var cx2=Math.cos(L.cam.rx),sx2=Math.sin(L.cam.rx);
   var zm=L.cam.zoom,cX=W/2,cY=H/2;
 
   var sorted=[];
+  var maxDraw=Math.min(faces.length,50000);
   for(var i=0;i<faces.length;i++){
     var f=faces[i],pts=f.pts,c=[0,0,0];
     for(var k=0;k<pts.length;k++){c[0]+=pts[k][0];c[1]+=pts[k][1];c[2]+=pts[k][2];}
@@ -908,7 +910,7 @@ function drawMini(L){
   }
   sorted.sort(function(a,b){return a.depth-b.depth;});
 
-  for(var si=0;si<sorted.length;si++){
+  for(var si=0;si<Math.min(sorted.length,maxDraw);si++){
     var f=sorted[si].face,fIdx=sorted[si].fIdx;
     var pts=f.pts,isPent=f.type==='pent';
     var pts2d=[];
@@ -993,7 +995,7 @@ function seedAll(){
 // --- FLOW all 3 ---
 function flowAll(){
   for(var li=0;li<LEVELS.length;li++){
-    if(!LEVELS[li].state) continue;
+    if(!LEVELS[li].state||!LEVELS[li].flow) continue;
     LEVELS[li].flow.active=true;
   }
   console.log('%c[v9] FLOW ON for all 3 levels','color:#00ffd5;font-size:14px');
@@ -1153,7 +1155,10 @@ function seedL5(){
   document.getElementById('s3-e').textContent=inv.edges.toLocaleString();
   document.getElementById('f3').textContent=inv.faces.toLocaleString()+' faces';
   console.log('%c[v9] L5 READY: '+inv.faces+' faces, P='+inv.pents+', chi='+chi+', E/V='+ev.toFixed(3),'color:#ff69b4;font-size:14px');
-  // Don't auto-flow at 500K faces - too heavy. User can benchmark.
+  // Build flow (adjacency) for L5
+  console.log('%c[v9] Building L5 adjacency...','color:#ffd700');
+  L.flow=makeFlow(L.state);
+  console.log('%c[v9] L5 adjacency done','color:#7fff7f');
   document.getElementById('row3').scrollIntoView({behavior:'smooth'});
 }
 
