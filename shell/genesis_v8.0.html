@@ -57,6 +57,7 @@ canvas{position:fixed;top:0;left:0;z-index:0}
 <button class="btn pk" onclick="doRefineAll()">REFINE ALL</button>
 <button class="btn gd" onclick="toggleFlow()">FLOW <b id="flowState">off</b></button>
 <button class="btn pk" onclick="doPathfind()">PATH</button>
+<button class="btn gd" onclick="doBatch100M()">100M</button>
 <div class="sl"><label>FLOW X</label><input type="range" min="0" max="100" value="15" id="sl-flowx" oninput="flowSliderChange(+this.value)"><span class="sv" id="sv-flowx">1</span></div>
 <button class="btn" onclick="doRefinePents()">REFINE 5s</button>
 <button class="btn" onclick="doRefineHexes()">REFINE 6s</button>
@@ -69,7 +70,7 @@ canvas{position:fixed;top:0;left:0;z-index:0}
 <div class="sep"></div>
 <div class="sl"><label>ZOOM</label><input type="range" min="1" max="1500" value="200" id="sl-zm" oninput="cam.zoom=+this.value;SV('sv-zm',this.value)"><span class="sv" id="sv-zm">200</span></div>
 <div class="sl"><label>ATOM</label><input type="range" min="1" max="30" value="10" id="sl-atom" oninput="cam.atom=+this.value/10;SV('sv-atom',(this.value/10).toFixed(1))"><span class="sv" id="sv-atom">1.0</span></div>
-<div class="sl"><label>MAX-F</label><input type="range" min="0" max="100" value="50" id="sl-maxf" oninput="cam.maxFaces=Math.pow(10,1+this.value/20);SV('sv-maxf',Math.round(cam.maxFaces))"><span class="sv" id="sv-maxf">50000</span></div><div class="sep"></div><div class="sl"><label>SPIN</label><input type="range" min="0" max="50" value="5" id="sl-spin" oninput="cam.spin=+this.value/1000;SV('sv-spin',this.value/1000)"><span class="sv" id="sv-spin">0.005</span></div>
+<div class="sl"><label>MAX-F</label><input type="range" min="0" max="100" value="50" id="sl-maxf" oninput="cam.maxFaces=Math.pow(10,1+this.value/20);SV('sv-maxf',Math.round(cam.maxFaces))"><span class="sv" id="sv-maxf">50000</span></div><div class="sep"></div><div class="sl"><label>SPIN</label><input type="range" min="0" max="50" value="0" id="sl-spin" oninput="cam.spin=+this.value/1000;SV('sv-spin',this.value/1000)"><span class="sv" id="sv-spin">0.000</span></div>
 <div class="sep"></div>
 <div class="sep"></div>
 <button class="btn pk" id="bMob" onclick="toggleMobius()">MOBIUS <b id="mobState">off</b></button>
@@ -1328,6 +1329,51 @@ function tracePath(){
   console.log('%c  The wave found the target. The gradient IS the path.','color:#ffd700');
   console.log('%c  The shape computed its own routing.','color:#ff69b4');
   axLog('PATH: '+path.length+' cells (wave found target in '+FLOW.step+' steps)','ax-p3');
+}
+
+// 100M BATCH: slam compute, loading bar, one click
+function doBatch100M(){
+  if(!gkState)return;
+  if(!FLOW.adj)buildAdj();
+  if(!FLOW.active){
+    // Auto-start flow if not running
+    toggleFlow();
+  }
+  if(FLOW.batching)return;
+  FLOW.batching=true;
+  var total=100000000;
+  var done=0;
+  var loadEl=document.getElementById('load');
+  if(loadEl){loadEl.style.display='block';}
+  var t0=performance.now();
+  console.log('%c[V8] 100M BATCH START','color:#ffd700;font-size:16px');
+  
+  function chunk(){
+    var c=Math.min(500000,total-done);
+    for(var i=0;i<c;i++) waveStep();
+    done+=c;
+    var pct=Math.round(done/total*100);
+    var ms=Math.round(performance.now()-t0);
+    if(loadEl){
+      loadEl.style.display='block';
+      loadEl.style.background='linear-gradient(90deg,#ff69b4 '+pct+'%,#1a1f2e '+pct+'%)';
+      loadEl.textContent='COMPUTING: '+Math.round(done/1e6)+'M / 100M steps ('+ms+'ms)';
+    }
+    document.getElementById('h-flow').textContent='step '+FLOW.step;
+    if(done<total){
+      setTimeout(chunk,0);
+    } else {
+      FLOW.batching=false;
+      var elapsed=Math.round(performance.now()-t0);
+      if(loadEl){
+        loadEl.textContent='100M DONE in '+elapsed+'ms | step '+FLOW.step+(FLOW.found?' | PATH FOUND':'');
+        loadEl.style.background='#2a4a2a';
+        setTimeout(function(){loadEl.style.display='none';},4000);
+      }
+      console.log('%c[V8] 100M DONE: '+elapsed+'ms, step '+FLOW.step,'color:#7fff7f;font-size:14px');
+    }
+  }
+  setTimeout(chunk,16);
 }
 
 function toggleFlow(){
