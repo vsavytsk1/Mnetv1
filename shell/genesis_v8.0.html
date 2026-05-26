@@ -29,7 +29,9 @@ canvas{position:fixed;top:0;left:0;z-index:0}
 .sl label{font-size:7px;color:#555;letter-spacing:0.05em;min-width:30px}
 .sl input[type=range]{width:50px;accent-color:#00ffd5}
 .sl .sv{font-size:8px;color:#00ffd5;min-width:24px}
+#load{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);padding:12px 30px;background:#1a1f2e;color:#ff69b4;font-family:'Orbitron',monospace;font-size:12px;letter-spacing:0.15em;border:1px solid #ff69b4;border-radius:4px;z-index:999;text-align:center;min-width:300px}
 </style></head><body>
+<div id="load"></div>
 <canvas id="cv"></canvas>
 <div id="title">GENESIS v8.0</div>
 <div id="euler"><span class="ok">V - E + F = 2 &middot; P = 12</span></div>
@@ -55,7 +57,7 @@ canvas{position:fixed;top:0;left:0;z-index:0}
 <button class="btn pk" onclick="doRefineAll()">REFINE ALL</button>
 <button class="btn gd" onclick="toggleFlow()">FLOW <b id="flowState">off</b></button>
 <button class="btn pk" onclick="doPathfind()">PATH</button>
-<div class="sl"><label>FLOW X</label><input type="range" min="0" max="100" value="30" id="sl-flowx" oninput="var v=+this.value;FLOW.speed=v<1?0:Math.round(Math.pow(10,v/33.3));SV('sv-flowx',FLOW.speed)"><span class="sv" id="sv-flowx">3</span></div>
+<div class="sl"><label>FLOW X</label><input type="range" min="0" max="100" value="15" id="sl-flowx" oninput="flowSliderChange(+this.value)"><span class="sv" id="sv-flowx">1</span></div>
 <button class="btn" onclick="doRefinePents()">REFINE 5s</button>
 <button class="btn" onclick="doRefineHexes()">REFINE 6s</button>
 <button class="btn" onclick="doUndo()">UNDO</button>
@@ -1154,8 +1156,62 @@ var FLOW = {
   target: -1,
   step: 0,
   found: false,
-  speed: 3
+  speed: 3,
+  batching: false
 };
+
+// Logarithmic slider: low = per-frame, high = batch with loading bar
+function flowSliderChange(v){
+  if(v < 1){ FLOW.speed = 0; SV('sv-flowx','0'); return; }
+  var steps = Math.round(Math.pow(10, v/20));
+  SV('sv-flowx', steps);
+  
+    // Below 100: per-frame smooth
+  if(steps <= 100){ FLOW.speed = Math.min(steps,30); return; }
+  
+  // Above 100: BATCH compute with loading bar
+  FLOW.speed = 5; // keep per-frame low for smoothness
+  if(!FLOW.active || FLOW.found || FLOW.batching) return;
+  
+  FLOW.batching = true;
+  var total = steps;
+  var done = 0;
+  var loadEl = document.getElementById('load');
+  if(loadEl){ loadEl.style.display = 'block'; }
+  
+  console.log('%c[V8] BATCH: computing '+total+' wave steps...','color:#ffd700');
+  
+  function doBatch(){
+    var chunk = Math.min(2000, total - done);
+    for(var i = 0; i < chunk; i++){
+      if(FLOW.found) break;
+      waveStep();
+    }
+    done += chunk;
+    
+    // Update loading bar
+    var pct = Math.round(done/total*100);
+    if(loadEl){
+      loadEl.style.background = 'linear-gradient(90deg,#ff69b4 '+pct+'%,#1a1f2e '+pct+'%)';
+      loadEl.textContent = 'COMPUTING TRUTH: '+done+'/'+total+' steps ('+pct+'%)';
+    }
+    document.getElementById('h-flow').textContent = FLOW.found ? 'FOUND '+FLOW.step : 'step '+FLOW.step;
+    
+    if(done < total && !FLOW.found){
+      setTimeout(doBatch, 0);
+    } else {
+      FLOW.batching = false;
+      if(loadEl){
+        loadEl.textContent = FLOW.found ? 'PATH FOUND in '+FLOW.step+' steps' : 'Computed '+done+' steps';
+        loadEl.style.background = FLOW.found ? '#2a5a2a' : '#1a1f2e';
+        setTimeout(function(){ loadEl.style.display='none'; }, 2000);
+      }
+      console.log('%c[V8] BATCH DONE: '+done+' steps, '+(FLOW.found?'PATH FOUND':'still seeking'),'color:#7fff7f');
+    }
+  }
+  
+  setTimeout(doBatch, 16);
+}
 
 function buildAdj(){
   if(!gkState) return;
@@ -1389,9 +1445,9 @@ function setMobiusTwist(v){
 // ═══ ANIMATE ═══
 function animate(){
   if(!dragging) cam.ry+=cam.spin;
-    // FLOW: run N wave steps per frame based on speed slider
-    if(FLOW.active&&!FLOW.found){
-      var spd=FLOW.speed||3;
+    // FLOW: run steps per frame (capped at 10 for smooth rendering)
+    if(FLOW.active&&!FLOW.found&&!FLOW.batching){
+      var spd=Math.min(10, FLOW.speed||3);
       for(var ws=0;ws<spd;ws++) waveStep();
       document.getElementById('h-flow').textContent=FLOW.found?'FOUND '+FLOW.step:'step '+FLOW.step;
     }
