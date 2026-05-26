@@ -170,8 +170,17 @@ def build_sparse_adjacency(faces):
         A = A_dense / deg
     return A
 
-def flow_benchmark(A, nF, steps=1_000_000, mix=0.6, source=0):
+REGIME_PARAMS = {
+    'stokes':     {'mix': 0.95, 'decay': 0.001, 'noise': 0.0,  'name': 'STOKES',     're': '<1'},
+    'laminar':    {'mix': 0.60, 'decay': 0.005, 'noise': 0.0,  'name': 'LAMINAR',    're': '~100'},
+    'transition': {'mix': 0.35, 'decay': 0.010, 'noise': 0.02, 'name': 'TRANSITION', 're': '~2000'},
+    'turbulent':  {'mix': 0.15, 'decay': 0.020, 'noise': 0.05, 'name': 'TURBULENT',  're': '>10000'},
+}
+
+def flow_benchmark(A, nF, steps=1_000_000, regime='laminar', source=0):
     """Run flow benchmark. Returns (elapsed_ms, final_pressure)."""
+    rp = REGIME_PARAMS[regime]
+    mix = rp['mix']; decay = rp['decay']; noise_amp = rp['noise']
     self_mix = 1.0 - mix
     if GPU_MODE:
         p = cp.zeros(nF, dtype=cp.float32)
@@ -179,6 +188,10 @@ def flow_benchmark(A, nF, steps=1_000_000, mix=0.6, source=0):
         t0 = time.perf_counter()
         for _ in range(steps):
             p = self_mix * p + mix * (A @ p)
+            if noise_amp > 0:
+                p += cp.random.uniform(-noise_amp, noise_amp, nF, dtype=cp.float32) * p
+            p *= (1.0 - decay * 0.01)
+            p = cp.maximum(p, 0)
             p[source] = 1.0
         cp.cuda.Stream.null.synchronize()
         elapsed = (time.perf_counter() - t0) * 1000
@@ -189,6 +202,10 @@ def flow_benchmark(A, nF, steps=1_000_000, mix=0.6, source=0):
         t0 = time.perf_counter()
         for _ in range(steps):
             p = self_mix * p + mix * A.dot(p)
+            if noise_amp > 0:
+                p += np.random.uniform(-noise_amp, noise_amp, nF).astype(np.float32) * p
+            p *= (1.0 - decay * 0.01)
+            p = np.maximum(p, 0)
             p[source] = 1.0
         elapsed = (time.perf_counter() - t0) * 1000
         return elapsed, p
@@ -198,6 +215,10 @@ def flow_benchmark(A, nF, steps=1_000_000, mix=0.6, source=0):
         t0 = time.perf_counter()
         for _ in range(steps):
             p = self_mix * p + mix * (A @ p)
+            if noise_amp > 0:
+                p += np.random.uniform(-noise_amp, noise_amp, nF).astype(np.float32) * p
+            p *= (1.0 - decay * 0.01)
+            p = np.maximum(p, 0)
             p[source] = 1.0
         elapsed = (time.perf_counter() - t0) * 1000
         return elapsed, p
@@ -206,8 +227,18 @@ def flow_benchmark(A, nF, steps=1_000_000, mix=0.6, source=0):
 #  MAIN: BUILD → CRUNCH → REPORT
 # ============================================================================
 def main():
+    global REGIME
+    REGIME = sys.argv[1] if len(sys.argv) > 1 else 'laminar'
+    if REGIME not in REGIME_PARAMS:
+        print(f"  Unknown regime: {REGIME}")
+        print(f"  Available: {', '.join(REGIME_PARAMS.keys())}")
+        sys.exit(1)
+    rp = REGIME_PARAMS[REGIME]
+    print(f"  REGIME: {rp['name']} (Re{rp['re']})")
+    print(f"  mix={rp['mix']}  decay={rp['decay']}  noise={rp['noise']}")
+    print()
     results = []
-    max_level = 5  # go up to L5 (will be HUGE)
+    max_level = 5
 
     print("  Building dodecahedron seed...")
     faces = build_dodecahedron()
@@ -227,7 +258,7 @@ def main():
         steps = min(1_000_000, max(10_000, 1_000_000 // max(1, inv['F'] // 100)))
         print(f"    Benchmarking {steps:,} flow steps...", end=' ', flush=True)
 
-        elapsed, pressure = flow_benchmark(A, inv['F'], steps=steps)
+        elapsed, pressure = flow_benchmark(A, inv['F'], steps=steps, regime=REGIME)
         us_per_step = (elapsed * 1000) / steps
         us_per_face_step = us_per_step / max(inv['F'], 1)
         steps_per_sec = steps / (elapsed / 1000)
@@ -266,6 +297,7 @@ def main():
     # ========================================================================
     #  GENERATE HTML REPORT
     # ========================================================================
+    rp = REGIME_PARAMS[REGIME]
     mode_str = "CUDA GPU (cupy)" if GPU_MODE else ("CPU sparse (scipy)" if sparse_mod else "CPU dense (numpy)")
 
     gpu_name = "N/A"
@@ -312,8 +344,8 @@ td{{padding:5px 8px;border-bottom:1px solid #0a0f18}}
 .grn{{color:#7fff7f}}
 .pk{{color:#ff69b4}}
 </style></head><body>
-<h1>navierCrunch v1.0 — BENCHMARK RESULTS</h1>
-<div class="sub">Goldberg-Coxeter Kernel + Sparse Matrix Flow &middot; Generated {time.strftime('%Y-%m-%d %H:%M:%S')}</div>
+<h1>navierCrunch v1.0 — {rp['name']} BENCHMARK</h1>
+<div class="sub">Goldberg-Coxeter Kernel + Sparse Matrix Flow &middot; Re{rp['re']} &middot; mix={rp['mix']} decay={rp['decay']} noise={rp['noise']} &middot; {time.strftime('%Y-%m-%d %H:%M:%S')}</div>
 
 <div class="box">
   <h2>PLATFORM</h2>
@@ -360,7 +392,7 @@ td{{padding:5px 8px;border-bottom:1px solid #0a0f18}}
 </body></html>"""
 
     # Write and open
-    out_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "navierCrunch_results.html")
+    out_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), f"navierCrunch_{REGIME}.html")
     with open(out_path, "w", encoding="utf-8") as f:
         f.write(html)
     print(f"\n  Results → {out_path}")
