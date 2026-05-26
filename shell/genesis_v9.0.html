@@ -32,13 +32,13 @@ body{background:#050508;color:#c8d8e8;font-family:'Courier New',monospace;overfl
 #controls button.pk{border-color:#ff69b4;color:#ff69b4}
 #controls button.pk:hover{background:#ff69b4;color:#050508}
 #footer{text-align:center;padding:8px;font-size:8px;color:#333}
-#benchLoad{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);padding:14px 30px;background:#0a0f18;color:#ff69b4;font-family:'Orbitron',monospace;font-size:13px;letter-spacing:0.15em;border:1px solid #ff69b4;border-radius:4px;z-index:999;text-align:center;min-width:350px}
+#benchLoad{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);padding:14px 30px;background:#0a0f18;color:#00ffd5;font-family:'Courier New',monospace;font-size:12px;letter-spacing:0.1em;border:1px solid #00ffd5;border-radius:4px;z-index:999;text-align:center;min-width:380px;box-shadow:0 0 30px rgba(0,255,213,0.2)}
 </style>
 </head><body>
 <div id="benchLoad"></div>
 
 <div id="header">
-  <h1>GENESIS v9.5</h1>
+  <h1>GENESIS v9.6</h1>
   <div class="sub">Navier-Stokes Wave Benchmark &middot; Goldberg Kernel &middot; 3 Refinement Levels</div>
 </div>
 
@@ -118,20 +118,20 @@ body{background:#050508;color:#c8d8e8;font-family:'Courier New',monospace;overfl
 <div class="row" id="row3" style="min-height:300px;border-top:2px solid #ff69b4">
   <div class="col-shape">
     <canvas id="cv3"></canvas>
-    <div class="level-tag">L5 <span class="faces" id="f3">504,212 faces</span></div>
+    <div class="level-tag">L4 <span class="faces" id="f3">24,012 faces</span></div>
   </div>
   <div class="col-stats" id="stats3">
     <div style="color:#ff69b4;font-size:12px;margin-bottom:8px">YOU FOUND THE SECRET LEVEL</div>
-    <div><span class="stat-label">faces</span> <span class="stat-val" id="s3-faces">504,212</span></div>
+    <div><span class="stat-label">faces</span> <span class="stat-val" id="s3-faces">24,012</span></div>
     <div><span class="stat-label">pents</span> <span class="stat-val pk" id="s3-pents">12</span></div>
-    <div><span class="stat-label">hexes</span> <span class="stat-val" id="s3-hex">504,200</span></div>
+    <div><span class="stat-label">hexes</span> <span class="stat-val" id="s3-hex">24,000</span></div>
     <div><span class="stat-label">chi</span> <span class="stat-val gd" id="s3-chi">2</span></div>
     <div><span class="stat-label">E/V</span> <span class="stat-val" id="s3-ev">1.500</span></div>
     <div><span class="stat-label">wave steps</span> <span class="stat-val gn" id="s3-steps">-</span></div>
     <div><span class="stat-label">ms/1M steps</span> <span class="stat-val" id="s3-rate">-</span></div>
     <div><span class="stat-label">path found</span> <span class="stat-val pk" id="s3-path">-</span></div>
-    <div><span class="stat-label">V</span> <span class="stat-val" id="s3-v">1,008,420</span></div>
-    <div><span class="stat-label">E</span> <span class="stat-val" id="s3-e">1,512,630</span></div>
+    <div><span class="stat-label">V</span> <span class="stat-val" id="s3-v">-</span></div>
+    <div><span class="stat-label">E</span> <span class="stat-val" id="s3-e">-</span></div>
     <div class="compare">
       <div class="method">OUR KERNEL: O(n) — 504K faces, degree 3</div>
       <div class="bar"><div class="bar-fill bar-ours" id="bar3-ours" style="width:0%"></div></div>
@@ -145,7 +145,7 @@ body{background:#050508;color:#c8d8e8;font-family:'Courier New',monospace;overfl
 
 <div id="controls">
   <button onclick="seedAll()">SEED ALL 3</button>
-  <button onclick="seedL5()">SEED L5 (504K faces!)</button>
+  <button onclick="seedL5()">SEED L4 (24K faces)</button>
   <button onclick="flowAll()">FLOW ALL</button>
   <button class="pk" onclick="benchAll()">BENCHMARK 1M</button>
   <button onclick="exportAll()">EXPORT</button>
@@ -1033,7 +1033,8 @@ function benchAll(){
       var ms=Math.round(performance.now()-t0);
       var pct=Math.round(done/total*100);
       loadEl.style.background='linear-gradient(90deg,#ff69b4 '+pct+'%,#0a0f18 '+pct+'%)';
-      loadEl.textContent='BENCHMARK L'+li+': '+Math.round(done/1000)+'K/1M ('+ms+'ms) ['+L.state.faces.length+' faces]';
+      var rate=done>0?ms/done:0;var eta=Math.round(rate*(total-done));
+      loadEl.textContent='BENCH L'+li+': '+Math.round(done/1000)+'K/1M ('+ms+'ms) ~'+Math.round(eta/1000)+'s left ['+L.state.faces.length+'F]';
       if(done<total){
         setTimeout(chunk,0);
       } else {
@@ -1109,9 +1110,10 @@ function initCanvases(){
 function animate(){
   for(var li=0;li<LEVELS.length;li++){
     var L=LEVELS[li];
+    if(!L||!L.state||!L.cx) continue; // skip empty levels
     L.cam.ry+=L.cam.spin||0;
     if(L.flow&&L.flow.active){
-      var stepsPerFrame=3+li*5;
+      var stepsPerFrame=Math.max(1,5-li*1); // fewer steps for bigger meshes
       for(var s=0;s<stepsPerFrame;s++) flowStep(L.flow);
       document.getElementById('s'+li+'-steps').textContent=L.flow.step.toLocaleString();
       if(L.flow.path&&!document.getElementById('s'+li+'-path').dataset.set){
@@ -1139,8 +1141,9 @@ function seedL5(){
   cv.addEventListener('wheel',function(e){e.preventDefault();L.cam.zoom*=e.deltaY>0?0.9:1.1;L.cam.zoom=Math.max(5,Math.min(2000,L.cam.zoom));});
   
   L.state=GK.buildDodecahedron();
-  for(var r=0;r<5;r++){
-    console.log('%c  Refine '+(r+1)+'/5... '+L.state.faces.length+' faces','color:#ffd700');
+  // 4 refines = 24,012 faces. Fast enough, dramatic enough.
+  for(var r=0;r<4;r++){
+    console.log('%c  Refine '+(r+1)+'/4... '+L.state.faces.length+' faces','color:#ffd700');
     L.state=GK.refineAll(L.state,{innerScale:0.45,midScale:0.70,jitter:0});
   }
   var inv=GK.invariants(L.state);
