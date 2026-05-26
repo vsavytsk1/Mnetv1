@@ -942,12 +942,14 @@ function seedAll(){
     }
     L.flow=makeFlow(L.state);
     var inv=GK.invariants(L.state);
-    document.getElementById('s'+li+'-faces').textContent=inv.F;
+    var chi=inv.vertices-inv.edges+inv.faces;
+    var ev=inv.edges/Math.max(inv.vertices,1);
+    document.getElementById('s'+li+'-faces').textContent=inv.faces;
     document.getElementById('s'+li+'-pents').textContent=inv.pents;
     document.getElementById('s'+li+'-hex').textContent=inv.hexes;
-    document.getElementById('s'+li+'-chi').textContent=inv.chi;
-    document.getElementById('s'+li+'-ev').textContent=inv['E/V'].toFixed(3);
-    document.getElementById('f'+li).textContent=inv.F+' faces';
+    document.getElementById('s'+li+'-chi').textContent=chi;
+    document.getElementById('s'+li+'-ev').textContent=ev.toFixed(3);
+    document.getElementById('f'+li).textContent=inv.faces+' faces';
     document.getElementById('s'+li+'-steps').textContent='0';
     document.getElementById('s'+li+'-rate').textContent='-';
     document.getElementById('s'+li+'-path').textContent='-';
@@ -1001,8 +1003,8 @@ function exportAll(){
     var inv=GK.invariants(L.state);
     data.levels.push({
       level:li, refines:L.refines,
-      faces:inv.F, pents:inv.pents, hexes:inv.hexes,
-      chi:inv.chi, ev:inv['E/V'],
+      faces:inv.faces, pents:inv.pents, hexes:inv.hexes,
+      chi:inv.vertices-inv.edges+inv.faces, ev:inv.edges/Math.max(inv.vertices,1),
       flowSteps:L.flow?L.flow.step:0,
       benchMs:L.flow?L.flow.benchMs:0,
       pathLength:L.flow&&L.flow.path?L.flow.path.length:0,
