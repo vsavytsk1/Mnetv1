@@ -860,10 +860,18 @@ function draw(){
       cx.fillStyle='rgba(50,255,50,'+alpha*0.8+')';cx.strokeStyle='rgba(100,255,100,'+alpha+')';
     } else if(onPath){
       cx.fillStyle='rgba(255,215,0,'+alpha*0.7+')';cx.strokeStyle='rgba(255,255,100,'+alpha+')';
-    } else if(FLOW.active&&FLOW.pressure&&fIdx>=0&&FLOW.pressure[fIdx]>0.005){
-      var p=Math.min(1,FLOW.pressure[fIdx]*3);
-      cx.fillStyle='rgba('+(Math.round(30+220*p))+','+(Math.round(10+40*p))+','+(Math.round(60+100*(1-p)))+','+alpha*0.5+')';
-      cx.strokeStyle='rgba('+(Math.round(80+170*p))+','+(Math.round(30+70*p))+','+(Math.round(150+100*(1-p)))+','+alpha*0.6+')';
+        } else if(FLOW.active&&FLOW.arrival&&fIdx>=0&&FLOW.arrival[fIdx]>=0){
+      // HEATMAP by arrival time: early=RED, mid=YELLOW/GREEN, late=CYAN/BLUE
+      var maxA=Math.max(FLOW.step,1);
+      var t=Math.min(1,FLOW.arrival[fIdx]/maxA);
+      var pk=Math.min(1,(FLOW.maxP[fIdx]||0)*2);
+      var hr,hg,hb;
+      if(t<0.25){hr=255;hg=Math.round(t*4*255);hb=0;}
+      else if(t<0.5){hr=Math.round((1-(t-0.25)*4)*255);hg=255;hb=0;}
+      else if(t<0.75){hr=0;hg=255;hb=Math.round((t-0.5)*4*255);}
+      else{hr=0;hg=Math.round((1-(t-0.75)*4)*255);hb=255;}
+      cx.fillStyle='rgba('+hr+','+hg+','+hb+','+alpha*(0.3+pk*0.5)+')';
+      cx.strokeStyle='rgba('+Math.min(255,hr+60)+','+Math.min(255,hg+60)+','+Math.min(255,hb+60)+','+alpha*0.8+')';
     } else if(isPent){
       cx.fillStyle='rgba(193,74,59,'+alpha*0.4+')';cx.strokeStyle='rgba(255,105,180,'+alpha+')';
     } else {
@@ -881,14 +889,9 @@ function draw(){
           } else if(isTarget){
             cx.strokeStyle='rgba(100,255,100,'+alpha+')';
             cx.lineWidth=2;
-          } else if(FLOW.active&&FLOW.pressure&&fIdx>=0&&FLOW.pressure[fIdx]>0.003){
-            var ep=Math.min(1,FLOW.pressure[fIdx]*3);
-            // Wave front: cyan→white→orange as pressure builds
-            var r=Math.round(50+200*ep);
-            var g=Math.round(120+130*Math.min(1,ep*2));
-            var b=Math.round(255-200*ep);
-            cx.strokeStyle='rgba('+r+','+g+','+b+','+Math.min(1,alpha*(0.3+ep*0.7))+')';
-            cx.lineWidth=0.3+ep*2.5;
+                    } else if(FLOW.active&&FLOW.arrival&&fIdx>=0&&FLOW.arrival[fIdx]>=0){
+            var pk2=Math.min(1,(FLOW.maxP[fIdx]||0)*2);
+            cx.lineWidth=0.5+pk2*2;
           } else {
             cx.lineWidth=isPent?1.5:0.5;
           }
@@ -1339,6 +1342,8 @@ function toggleFlow(){
     FLOW.velocity=new Float32Array(gkState.faces.length);
     FLOW.vorticity=new Float32Array(gkState.faces.length);
     FLOW.path=null;FLOW.found=false;FLOW.step=0;
+    FLOW.arrival=new Int32Array(gkState.faces.length);for(var ai=0;ai<gkState.faces.length;ai++)FLOW.arrival[ai]=-1;
+    FLOW.maxP=new Float32Array(gkState.faces.length);
     
     console.log('%c[V8] FLOW ON: wave from pent '+FLOW.source+' seeking pent '+FLOW.target,'color:#00ffd5;font-size:14px');
     console.log('%c  The shape will find the path. No algorithm. Just diffusion.','color:#00ffd5');
@@ -1364,6 +1369,8 @@ function doPathfind(){
   FLOW.velocity=new Float32Array(gkState.faces.length);
   FLOW.vorticity=new Float32Array(gkState.faces.length);
   FLOW.path=null;FLOW.found=false;FLOW.step=0;
+    FLOW.arrival=new Int32Array(gkState.faces.length);for(var ai=0;ai<gkState.faces.length;ai++)FLOW.arrival[ai]=-1;
+    FLOW.maxP=new Float32Array(gkState.faces.length);
   FLOW.active=true;
   document.getElementById('flowState').textContent='on';
   document.getElementById('h-flow').textContent='seeking...';
