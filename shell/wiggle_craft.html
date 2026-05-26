@@ -1,0 +1,335 @@
+﻿<!DOCTYPE html>
+<html><head><meta charset="UTF-8">
+<title>GENESIS v9.8 — WIGGLE CRAFT</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#020205;overflow:hidden;font-family:'Courier New',monospace}
+canvas{display:block}
+#hud{position:fixed;top:12px;left:14px;color:#00ffd5;font-size:10px;line-height:1.7;z-index:10}
+#hud .pk{color:#ff69b4} #hud .gd{color:#ffd700} #hud .gn{color:#7fff7f}
+#title{position:fixed;top:12px;width:100%;text-align:center;font-family:'Orbitron';color:#ff69b4;font-size:14px;letter-spacing:0.3em;z-index:10}
+#status{position:fixed;bottom:60px;width:100%;text-align:center;font-family:'Orbitron';font-size:12px;letter-spacing:0.2em;z-index:10;transition:all 0.5s}
+#controls{position:fixed;bottom:14px;width:100%;text-align:center;z-index:10}
+#controls button{background:none;border:1px solid #00ffd5;color:#00ffd5;padding:8px 22px;margin:0 6px;cursor:pointer;font-family:'Orbitron';font-size:11px;letter-spacing:0.15em;border-radius:3px;transition:all 0.3s}
+#controls button:hover{background:#00ffd5;color:#020205}
+#controls button.pk{border-color:#ff69b4;color:#ff69b4}
+#controls button.pk:hover{background:#ff69b4;color:#020205}
+#controls button.gd{border-color:#ffd700;color:#ffd700}
+#controls button.gd:hover{background:#ffd700;color:#020205}
+</style>
+</head><body>
+<div id="title">WIGGLE CRAFT</div>
+<div id="hud">
+  <div>faces <span class="pk" id="hFaces">-</span></div>
+  <div>pents <span class="pk" id="hPents">-</span></div>
+  <div>chi <span class="gd" id="hChi">-</span></div>
+  <div>phase <span class="gn" id="hPhase">STABLE</span></div>
+  <div>wiggle <span id="hWiggle">0.000</span></div>
+  <div>pos <span id="hPos">0, 0</span></div>
+</div>
+<div id="status" style="color:#00ffd5">CRAFT STABLE</div>
+<div id="controls">
+  <button onclick="doWiggle()">WIGGLE</button>
+  <button class="pk" onclick="doWarp()">WARP</button>
+  <button class="gd" onclick="doReset()">RESET</button>
+</div>
+<canvas id="cv"></canvas>
+<script>
+var cv=document.getElementById('cv'),cx=cv.getContext('2d');
+var W,H;
+function resize(){W=cv.width=innerWidth;H=cv.height=innerHeight;}
+resize();window.addEventListener('resize',resize);
+
+// === BUILD DODECAHEDRON (inline, no kernel dependency) ===
+var PHI=(1+Math.sqrt(5))/2;
+function buildDodec(){
+  var verts=[];
+  // 20 vertices of dodecahedron
+  for(var i=-1;i<=1;i+=2)for(var j=-1;j<=1;j+=2)for(var k=-1;k<=1;k+=2)
+    verts.push([i,j,k]);
+  for(var i=-1;i<=1;i+=2)for(var j=-1;j<=1;j+=2){
+    verts.push([0,i/PHI,j*PHI]);
+    verts.push([i/PHI,j*PHI,0]);
+    verts.push([j*PHI,0,i/PHI]);
+  }
+  // Normalize to unit sphere
+  for(var i=0;i<verts.length;i++){
+    var v=verts[i],l=Math.sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
+    verts[i]=[v[0]/l,v[1]/l,v[2]/l];
+  }
+  // 12 pentagonal faces (vertex indices)
+  var faces=[
+    [0,8,9,4,16],[0,16,6,14,2],[0,2,10,11,8],
+    [1,9,8,11,3],[1,3,15,7,17],[1,17,6,16,9],
+    [2,14,7,15,10],[3,11,10,15,3],[4,9,1,17,5],
+    [4,5,12,13,16],[5,17,6,13,12],[7,14,6,13,12]
+  ];
+  // Use centroids for simpler face rendering
+  var faceData=[];
+  for(var fi=0;fi<12;fi++){
+    var pts=[];
+    var c=[0,0,0];
+    // Get 5 nearest vertices to face centroid
+    // Actually just use the analytical pentagonal faces
+    faceData.push({idx:fi,type:'pent'});
+  }
+  return {verts:verts,faces:faces};
+}
+
+// === SIMPLER: build from GK inline ===
+var craftVerts=[];
+var craftFaces=[];
+var craftEdges=[];
+var baseVerts=[];
+var wigglePhase=[];
+
+function initCraft(){
+  // Dodecahedron vertices
+  var v=[];
+  for(var i=-1;i<=1;i+=2)for(var j=-1;j<=1;j+=2)for(var k=-1;k<=1;k+=2)
+    v.push([i,j,k]);
+  for(var i=-1;i<=1;i+=2)for(var j=-1;j<=1;j+=2){
+    v.push([0,i/PHI,j*PHI]);
+    v.push([i/PHI,j*PHI,0]);
+    v.push([j*PHI,0,i/PHI]);
+  }
+  for(var i=0;i<v.length;i++){
+    var p=v[i],l=Math.sqrt(p[0]*p[0]+p[1]*p[1]+p[2]*p[2]);
+    v[i]=[p[0]/l,p[1]/l,p[2]/l];
+  }
+  craftVerts=v;
+  baseVerts=v.map(function(p){return p.slice();});
+  wigglePhase=v.map(function(p,i){
+    return {
+      freq:0.5+Math.random()*2.5,
+      ampX:0.3+Math.random()*0.7,
+      ampY:0.3+Math.random()*0.7,
+      ampZ:0.3+Math.random()*0.7,
+      phase:Math.random()*Math.PI*2,
+      pentDist:0 // will be set
+    };
+  });
+  // Build edges: connect vertices within threshold distance
+  craftEdges=[];
+  for(var i=0;i<v.length;i++){
+    for(var j=i+1;j<v.length;j++){
+      var dx=v[i][0]-v[j][0],dy=v[i][1]-v[j][1],dz=v[i][2]-v[j][2];
+      var d=Math.sqrt(dx*dx+dy*dy+dz*dz);
+      if(d<0.85) craftEdges.push([i,j]);
+    }
+  }
+  document.getElementById('hFaces').textContent='12';
+  document.getElementById('hPents').textContent='12';
+  document.getElementById('hChi').textContent='2';
+}
+
+// === CRAFT STATE ===
+var craft={
+  x:0, y:0,           // screen position offset
+  targetX:0, targetY:0,
+  ry:0, rx:0.35,      // rotation
+  zoom:120,
+  wiggle:0,            // 0=stable, 1=max wiggle
+  wiggleTarget:0,
+  phase:'STABLE',      // STABLE, WIGGLING, WARPING, DESWIGGLING
+  warpT:0,
+  warpFrom:[0,0],
+  warpTo:[0,0],
+  trail:[]
+};
+
+function doWiggle(){
+  if(craft.phase==='STABLE'){
+    craft.phase='WIGGLING';
+    craft.wiggleTarget=1.0;
+    document.getElementById('status').textContent='WIGGLING...';
+    document.getElementById('status').style.color='#ffd700';
+  }
+}
+
+function doWarp(){
+  if(craft.phase==='WIGGLING'||craft.phase==='STABLE'){
+    // Pick random destination
+    craft.warpFrom=[craft.x,craft.y];
+    craft.warpTo=[(Math.random()-0.5)*W*0.5,(Math.random()-0.5)*H*0.4];
+    craft.phase='WARPING';
+    craft.warpT=0;
+    craft.wiggleTarget=1.0;
+    craft.wiggle=1.0;
+    document.getElementById('status').textContent='WARPING...';
+    document.getElementById('status').style.color='#ff69b4';
+  }
+}
+
+function doReset(){
+  craft.x=0;craft.y=0;craft.targetX=0;craft.targetY=0;
+  craft.wiggle=0;craft.wiggleTarget=0;craft.warpT=0;
+  craft.phase='STABLE';craft.trail=[];
+  for(var i=0;i<craftVerts.length;i++) craftVerts[i]=baseVerts[i].slice();
+  document.getElementById('status').textContent='CRAFT STABLE';
+  document.getElementById('status').style.color='#00ffd5';
+}
+
+// === WIGGLE ENGINE ===
+function updateWiggle(t){
+  // Smooth wiggle amount
+  craft.wiggle+=(craft.wiggleTarget-craft.wiggle)*0.03;
+  
+  var w=craft.wiggle;
+  for(var i=0;i<craftVerts.length;i++){
+    var b=baseVerts[i];
+    var wp=wigglePhase[i];
+    var wobble=w*0.4;
+    craftVerts[i]=[
+      b[0]+Math.sin(t*wp.freq+wp.phase)*wp.ampX*wobble,
+      b[1]+Math.cos(t*wp.freq*1.3+wp.phase+1)*wp.ampY*wobble,
+      b[2]+Math.sin(t*wp.freq*0.7+wp.phase+2)*wp.ampZ*wobble
+    ];
+  }
+  
+  // Phase logic
+  if(craft.phase==='WARPING'){
+    craft.warpT+=0.008;
+    // Smooth warp path (ease in-out)
+    var e=craft.warpT<0.5?2*craft.warpT*craft.warpT:1-Math.pow(-2*craft.warpT+2,2)/2;
+    craft.x=craft.warpFrom[0]+(craft.warpTo[0]-craft.warpFrom[0])*e;
+    craft.y=craft.warpFrom[1]+(craft.warpTo[1]-craft.warpFrom[1])*e;
+    // Trail
+    craft.trail.push({x:craft.x+W/2,y:craft.y+H/2,age:0,w:craft.wiggle});
+    // Mid-warp: max wiggle
+    if(craft.warpT<0.5){
+      craft.wiggleTarget=1.0+craft.warpT*2; // overshoot!
+    } else {
+      craft.wiggleTarget=Math.max(0,(1-craft.warpT)*2);
+    }
+    if(craft.warpT>=1.0){
+      craft.phase='DESWIGGLING';
+      craft.wiggleTarget=0;
+      document.getElementById('status').textContent='DESWIGGLING...';
+      document.getElementById('status').style.color='#7fff7f';
+      setTimeout(function(){
+        craft.phase='STABLE';
+        document.getElementById('status').textContent='CRAFT STABLE';
+        document.getElementById('status').style.color='#00ffd5';
+      },2000);
+    }
+  }
+  
+  // Age trail
+  for(var i=craft.trail.length-1;i>=0;i--){
+    craft.trail[i].age++;
+    if(craft.trail[i].age>120) craft.trail.splice(i,1);
+  }
+}
+
+// === RENDERER ===
+function project(p){
+  var cy=Math.cos(craft.ry),sy=Math.sin(craft.ry);
+  var crx=Math.cos(craft.rx),srx=Math.sin(craft.rx);
+  var x1=p[0]*cy-p[2]*sy;
+  var z1=p[0]*sy+p[2]*cy;
+  var y1=p[1]*crx-z1*srx;
+  var z2=p[1]*srx+z1*crx;
+  return {
+    x:W/2+craft.x+x1*craft.zoom,
+    y:H/2+craft.y-y1*craft.zoom,
+    z:z2
+  };
+}
+
+function render(t){
+  cx.fillStyle='rgba(2,2,5,0.15)';
+  cx.fillRect(0,0,W,H);
+  
+  // Trail
+  for(var i=0;i<craft.trail.length;i++){
+    var tr=craft.trail[i];
+    var a=1-tr.age/120;
+    var r=2+tr.w*8;
+    cx.beginPath();cx.arc(tr.x,tr.y,r,0,Math.PI*2);
+    var hue=180+tr.age*2;
+    cx.fillStyle='hsla('+hue+',100%,60%,'+a*0.3+')';
+    cx.fill();
+  }
+  
+  // Stars (static, draw once)
+  if(!render.stars){
+    render.stars=[];
+    for(var i=0;i<200;i++) render.stars.push({x:Math.random()*W,y:Math.random()*H,b:0.3+Math.random()*0.7});
+  }
+  for(var i=0;i<render.stars.length;i++){
+    var s=render.stars[i];
+    cx.fillStyle='rgba(200,220,255,'+s.b*0.4+')';
+    cx.fillRect(s.x,s.y,1,1);
+  }
+  
+  // Project all vertices
+  var proj=craftVerts.map(project);
+  
+  // Draw edges
+  var w=craft.wiggle;
+  for(var i=0;i<craftEdges.length;i++){
+    var e=craftEdges[i];
+    var a=proj[e[0]],b=proj[e[1]];
+    cx.beginPath();cx.moveTo(a.x,a.y);cx.lineTo(b.x,b.y);
+    // Color by wiggle state
+    if(w<0.1){
+      cx.strokeStyle='rgba(0,255,213,0.7)';
+    } else if(w<0.5){
+      cx.strokeStyle='rgba(255,215,0,'+(0.5+w)+')';
+    } else {
+      var flicker=0.5+Math.sin(t*10+i)*0.5;
+      cx.strokeStyle='rgba(255,105,180,'+flicker+')';
+    }
+    cx.lineWidth=w>0.5?1+Math.random()*2:1;
+    cx.stroke();
+  }
+  
+  // Draw vertices
+  for(var i=0;i<proj.length;i++){
+    var p=proj[i];
+    var r=2+w*3*(0.5+Math.sin(t*5+i)*0.5);
+    cx.beginPath();cx.arc(p.x,p.y,r,0,Math.PI*2);
+    if(w>0.7){
+      cx.fillStyle='rgba(255,105,180,'+(0.4+Math.random()*0.6)+')';
+    } else if(w>0.3){
+      cx.fillStyle='rgba(255,215,0,0.8)';
+    } else {
+      cx.fillStyle='rgba(0,255,213,0.9)';
+    }
+    cx.fill();
+  }
+  
+  // Warp distortion ring
+  if(craft.phase==='WARPING'){
+    var ringR=50+w*100;
+    cx.beginPath();cx.arc(W/2+craft.x,H/2+craft.y,ringR,0,Math.PI*2);
+    cx.strokeStyle='rgba(255,105,180,'+(0.3+Math.sin(t*8)*0.3)+')';
+    cx.lineWidth=2+w*3;cx.stroke();
+    // Inner ring
+    cx.beginPath();cx.arc(W/2+craft.x,H/2+craft.y,ringR*0.6,0,Math.PI*2);
+    cx.strokeStyle='rgba(0,255,213,'+(0.2+Math.sin(t*12)*0.2)+')';
+    cx.lineWidth=1;cx.stroke();
+  }
+}
+
+// === ANIMATE ===
+var t0=performance.now();
+function animate(){
+  var t=(performance.now()-t0)/1000;
+  craft.ry+=0.008;
+  craft.rx=0.35+Math.sin(t*0.3)*0.15;
+  updateWiggle(t);
+  render(t);
+  // HUD
+  document.getElementById('hPhase').textContent=craft.phase;
+  document.getElementById('hWiggle').textContent=craft.wiggle.toFixed(3);
+  document.getElementById('hPos').textContent=Math.round(craft.x)+', '+Math.round(craft.y);
+  requestAnimationFrame(animate);
+}
+
+initCraft();
+animate();
+</script>
+</body></html>
