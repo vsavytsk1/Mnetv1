@@ -1,11 +1,12 @@
-## Live simulations ? click first, read after
+## Live simulations — click first, read after
 
 | Simulation | What it is |
 |---|---|
-| [?? Sacred Math Tree](https://vsavytsk1.github.io/Mnetv1/) | **NEW.** 10 calculus trees. Autopilot plays them all. Zoom-gated. Papyrus shames you. |
-| [?? Dodecahedron of Open Questions](https://vsavytsk1.github.io/SpookyPrimes/) | 12 open physics problems. Spin it. Click a pentagon. |
-| [?? Fractal Geometry Builder](https://vsavytsk1.github.io/Mnet/) | C60 recursive shell. Click any face. It opens forever. |
-| [?? Mobius Strip ? MNet Kernel](https://vsavytsk1.github.io/Mnetv1/) | The precursor. Chi=0. Force-directed graph. The kernel that started everything. |
+| [GENESIS Explorer v7.5](https://vsavytsk1.github.io/Mnetv1/shell/genesis.html) | **NEW.** Goldberg fractal explorer. Two seeds (C60 + dodecahedron). Mobius transform. Backface cull. Zoom 0.5x-50,000x. Papyrus warnings. |
+| [GENESIS Benchmark](https://vsavytsk1.github.io/Mnetv1/shell/genesis_bench.html) | Compute cost analyzer. Time, memory, F/ms per refinement level. CSV export. |
+| [Sacred Math Tree](https://vsavytsk1.github.io/Mnetv1/) | 10 calculus trees. Autopilot plays them all. Zoom-gated. |
+| [Dodecahedron of Open Questions](https://vsavytsk1.github.io/SpookyPrimes/) | 12 open physics problems. Spin it. Click a pentagon. |
+| [Fractal Geometry Builder](https://vsavytsk1.github.io/Mnet/) | C60 recursive shell. Click any face. It opens forever. |
 
 > *If you're not sure what to click ? click the tree. Press autopilot. Watch math grow.*
 

@@ -2,6 +2,13 @@
 ## goldberg_kernel.js → Standard Notation → Known Theorems
 ### Buenos Aires, May 26, 2026
 
+> **NOTE:** This document maps functions in goldberg_kernel.js to their
+> equivalents in established mathematics and physics. Every theorem
+> referenced here was proven by others, often centuries ago. The
+> observation is that a minimal code kernel, built for visualization,
+> independently arrives at these same structures — because they are
+> the only structures that satisfy the constraints.
+
 ---
 
 ## THE TRANSLATION

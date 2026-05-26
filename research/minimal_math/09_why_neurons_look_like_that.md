@@ -2,6 +2,13 @@
 ## The Shape Is Not a Choice. It Is Forced.
 ### Buenos Aires, May 26, 2026, 11:13 PM
 
+> **NOTE:** This document describes observations made while exploring
+> a Goldberg polyhedron fractal in a browser. The resemblance to neural
+> tissue is a consequence of known mathematics (Euler characteristic,
+> Gauss-Bonnet theorem, trivalent graph theory). We do not claim
+> discovery. We show what the math produces and note the connections
+> to established neuroscience and topology.
+
 ---
 
 ## WHAT WE SAW
