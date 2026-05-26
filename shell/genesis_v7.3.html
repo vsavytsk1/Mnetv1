@@ -1,7 +1,7 @@
 ﻿<!DOCTYPE html>
 <html><head><meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>GENESIS v7.3 — Fractal Graph Explorer</title>
+<title>GENESIS v7.3.1 — Fractal Graph Explorer</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
 *{box-sizing:border-box;margin:0;padding:0}
@@ -31,7 +31,7 @@ canvas{position:fixed;top:0;left:0;z-index:0}
 .sl .sv{font-size:8px;color:#00ffd5;min-width:24px}
 </style></head><body>
 <canvas id="cv"></canvas>
-<div id="title">GENESIS v7.3</div>
+<div id="title">GENESIS v7.3.1</div>
 <div id="euler"><span class="ok">V - E + F = 2 &middot; P = 12</span></div>
 <div id="hud">
 <div><span class="lbl">V </span><span class="val" id="h-v">0</span></div>
@@ -651,7 +651,7 @@ var M = {
 };
 
 // ═══ FLIGHT RECORDER ═══
-var FL={entries:[],t0:performance.now(),session:'v7.3_'+new Date().toISOString().replace(/[:.]/g,'-').slice(0,19)};
+var FL={entries:[],t0:performance.now(),session:'v7.3.1_'+new Date().toISOString().replace(/[:.]/g,'-').slice(0,19)};
 function flRec(op,d){FL.entries.push({t:Math.round((performance.now()-FL.t0)*100)/100,op:op,d:d})}
 function flExport(){
   var blob=new Blob([JSON.stringify({session:FL.session,entries:FL.entries.length,data:FL.entries})],{type:'application/json'});
@@ -662,11 +662,10 @@ function flExport(){
 // ═══ RENDER CUTOFF — the fractal maker trick ═══
 // When faces > maxFaces, skip rendering but keep state valid.
 // Zoom out = sub-pixel = nothing to draw = GPU rests = computation flies.
-cam.maxFaces = 50000;
 // ═══ STATE ═══
 var gkState = null;
 var params = { innerScale: 0.45, midScale: 0.70, jitter: 0, surfaceMode: 'spherical', sphereR: 1.6 };
-var cam = { rx: 0.3, ry: 0, zoom: 200, atom: 1.0, spin: 0.005 };
+var cam = { rx: 0.3, ry: 0, zoom: 200, atom: 1.0, spin: 0.005, maxFaces: 50000 };
 var dragging = false, lastMouse = {x:0,y:0};
 
 function SV(id,v){document.getElementById(id).textContent=typeof v==='number'?v.toFixed(2):v}
@@ -938,7 +937,7 @@ function animate(){
 
 // ═══ BOOT ═══
 console.log('%c╔══════════════════════════════════════╗','color:#ff69b4');
-console.log('%c║  GENESIS v7.3 — Fractal Graph Explorer ║','color:#ff69b4;font-weight:bold');
+console.log('%c║  GENESIS v7.3.1 — Fractal Graph Explorer ║','color:#ff69b4;font-weight:bold');
 console.log('%c║  7 primitives · 3 crystal conditions  ║','color:#00ffd5');
 console.log('%c║  12 pentagons · Euler forced · P=12   ║','color:#ffd700');
 console.log('%c╚══════════════════════════════════════╝','color:#ff69b4');
