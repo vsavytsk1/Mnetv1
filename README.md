@@ -8,6 +8,8 @@
 | [Dodecahedron of Open Questions](https://vsavytsk1.github.io/SpookyPrimes/) | 12 open physics problems. Spin it. Click a pentagon. |
 | [Fractal Geometry Builder](https://vsavytsk1.github.io/Mnet/) | C60 recursive shell. Click any face. It opens forever. |
 
+> **ETHICS:** This software shall not be used for weapons, surveillance, or harm. See [ETHICS.md](./ETHICS.md).
+
 > *If you're not sure what to click ? click the tree. Press autopilot. Watch math grow.*
 
 ---
