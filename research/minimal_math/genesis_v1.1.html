@@ -1,0 +1,626 @@
+﻿<!DOCTYPE html>
+<html><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>GRAPH GENESIS v1.1 — 7 Primitives + Logger</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#050508;color:#c8d8e8;font-family:'Courier New',monospace;overflow:hidden;touch-action:none}
+canvas{position:fixed;top:0;left:0;z-index:0}
+#hud{position:fixed;top:10px;left:10px;z-index:5;pointer-events:none;font-size:10px;line-height:1.7}
+.lbl{color:#444}.val{color:#00ffd5}.val2{color:#ffd700}.val3{color:#ff69b4}
+#title{position:fixed;top:10px;left:50%;transform:translateX(-50%);z-index:5;pointer-events:none;
+  font-family:'Orbitron';font-size:13px;letter-spacing:0.25em;color:rgba(0,180,255,0.35)}
+#gen-display{position:fixed;top:28px;left:50%;transform:translateX(-50%);z-index:5;pointer-events:none;
+  font-family:'Orbitron';font-size:28px;font-weight:900;color:#00ffd5;text-shadow:0 0 20px rgba(0,255,213,0.15)}
+#discoveries{position:fixed;top:10px;right:10px;z-index:5;pointer-events:none;font-size:9px;
+  text-align:right;max-width:200px}
+.disc{color:#ff69b4;margin-bottom:2px}
+.disc-old{color:#444}
+#log{position:fixed;bottom:50px;right:10px;width:320px;max-height:200px;overflow-y:auto;font-size:9px;
+  background:rgba(5,5,8,0.88);border:1px solid #1a1f2e;border-radius:4px;padding:6px;z-index:5;display:none}
+#log.show{display:block}
+.log-op{color:#ffd700}.log-struct{color:#7fff7f}.log-found{color:#ff69b4;font-weight:bold}
+.log-info{color:#555}.log-p7{color:#a78bfa}
+#bar{position:fixed;bottom:0;left:0;right:0;z-index:10;background:rgba(5,5,8,0.95);
+  border-top:1px solid #1a1f2e;padding:6px 10px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:center}
+.btn{background:#0a0e18;border:1px solid #2a2a3a;color:#80d0ff;padding:5px 12px;
+  font-family:'Courier New',monospace;font-size:10px;cursor:pointer;border-radius:3px;transition:all 0.15s;white-space:nowrap}
+.btn:hover{border-color:#4a6a8a;color:#fff;background:#111828}
+.btn.active{border-color:#00ffd5;color:#00ffd5}
+.btn.gold{color:#ffd700;border-color:#332a00}.btn.pink{color:#ff69b4;border-color:#3a1a2a}
+.btn.green{color:#7fff7f;border-color:#1a3a1a}
+.sep{width:1px;height:18px;background:#1a1f2e}
+select.sel{background:#0a0e18;color:#80d0ff;border:1px solid #2a2a3a;font-family:inherit;font-size:10px;
+  padding:4px;border-radius:3px;cursor:pointer}
+input[type=range]{width:60px;accent-color:#ff69b4}
+.bar-lbl{font-size:8px;color:#444;letter-spacing:0.05em}
+</style></head><body>
+<canvas id="cv"></canvas>
+<div id="title">GRAPH GENESIS</div>
+<div id="gen-display">GEN 0</div>
+<div id="hud">
+<div><span class="lbl">nodes </span><span class="val" id="h-n">1</span></div>
+<div><span class="lbl">edges </span><span class="val" id="h-e">0</span></div>
+<div><span class="lbl">components </span><span class="val" id="h-c">1</span></div>
+<div><span class="lbl">max degree </span><span class="val" id="h-d">0</span></div>
+<div><span class="lbl">triangles </span><span class="val2" id="h-tri">0</span></div>
+<div><span class="lbl">symmetry </span><span class="val2" id="h-sym">trivial</span></div>
+<div><span class="lbl">factored </span><span class="val3" id="h-fact">no</span></div>
+<div><span class="lbl">chi </span><span class="val" id="h-chi">1</span></div>
+</div>
+<div id="discoveries"></div>
+<div id="log"></div>
+<div id="bar">
+<button class="btn green" onclick="toggle()" id="btn-run">&#9654; RUN</button>
+<button class="btn" onclick="step()">STEP</button>
+<button class="btn" onclick="reset()">RESET</button>
+<div class="sep"></div>
+<span class="bar-lbl">SPEED</span>
+<input type="range" min="1" max="50" value="5" id="sl-speed" oninput="speed=+this.value">
+<div class="sep"></div>
+<select class="sel" id="mode">
+<option value="random">random</option>
+<option value="exhaust">exhaustive</option>
+<option value="grow">max growth</option>
+<option value="symmetry">seek symmetry</option>
+<option value="reduce">minimize</option>
+</select>
+<div class="sep"></div>
+<button class="btn pink" onclick="toggleLog()">LOG</button>
+<button class="btn gold" onclick="exportLog()">EXPORT</button><button class="btn" onclick="exportGraph()">GRAPH</button><span class="bar-lbl" style="color:#555" id="bar-info">7 primitives &middot; 0 numbers &middot; graphs only</span>
+</div>
+<script>
+const cv=document.getElementById('cv'),cx=cv.getContext('2d');
+let W,H;function resize(){W=cv.width=innerWidth;H=cv.height=innerHeight}
+resize();addEventListener('resize',resize);
+
+// ═══ GRAPH ═══
+let G={nodes:[],edges:[]};
+let gen=0,running=false,speed=5,timer=null;
+let discoveries=[],opHistory=[];
+let nextId=0;
+
+function mkNode(x,y,label){
+  return{id:nextId++,x:x||W/2,y:y||H/2,vx:0,vy:0,label:label||'',degree:0,born:gen}
+}
+function mkEdge(a,b){return{from:a,to:b,born:gen}}
+function hasEdge(a,b){return G.edges.some(e=>(e.from===a&&e.to===b)||(e.from===b&&e.to===a))}
+function neighbors(id){let ns=[];G.edges.forEach(e=>{if(e.from===id)ns.push(e.to);if(e.to===id)ns.push(e.from)});return[...new Set(ns)]}
+function recalcDeg(){G.nodes.forEach(n=>n.degree=0);G.edges.forEach(e=>{let a=G.nodes.find(n=>n.id===e.from),b=G.nodes.find(n=>n.id===e.to);if(a)a.degree++;if(b)b.degree++})}
+
+function init(){
+  nextId=0;gen=0;discoveries=[];opHistory=[];
+  G={nodes:[mkNode(W/2,H/2,'origin')],edges:[]};
+  log('VOID → 1 node. existence begins.','log-info');
+  log('7 primitives armed: NODE EDGE COMPOSE TRANSFORM ITERATE AGGREGATE COMPARE','log-op');\n  recStart();
+  hud();
+}
+
+// ═══ 7 OPERATIONS ═══
+
+function P1_NODE(){
+  let parent=G.nodes[Math.floor(Math.random()*G.nodes.length)];
+  let angle=Math.random()*Math.PI*2,dist=40+Math.random()*40;
+  let n=mkNode(parent.x+Math.cos(angle)*dist,parent.y+Math.sin(angle)*dist);
+  G.nodes.push(n);
+  G.edges.push(mkEdge(parent.id,n.id));
+  recalcDeg();
+  return`P1:NODE → ${n.id} from ${parent.id}`;
+}
+
+function P2_EDGE(){
+  if(G.nodes.length<2)return P1_NODE();
+  for(let t=0;t<30;t++){
+    let a=G.nodes[Math.floor(Math.random()*G.nodes.length)];
+    let b=G.nodes[Math.floor(Math.random()*G.nodes.length)];
+    if(a.id!==b.id&&!hasEdge(a.id,b.id)){
+      G.edges.push(mkEdge(a.id,b.id));recalcDeg();
+      return`P2:EDGE → ${a.id}—${b.id}`;
+    }
+  }
+  return P1_NODE();
+}
+
+function P3_COMPOSE(){
+  for(let e1 of G.edges){
+    for(let e2 of G.edges){
+      let mid=null;
+      if(e1.to===e2.from)mid=e1.to;
+      if(e1.from===e2.to)mid=e1.from;
+      if(mid!==null){
+        let a=e1.from===mid?e1.to:e1.from;
+        let b=e2.from===mid?e2.to:e2.from;
+        if(a!==b&&!hasEdge(a,b)){
+          G.edges.push(mkEdge(a,b));recalcDeg();
+          return`P3:COMPOSE → ${a}→${mid}→${b} closed to ${a}→${b}`;
+        }
+      }
+    }
+  }
+  return P2_EDGE();
+}
+
+function P4_TRANSFORM(){
+  if(G.nodes.length<3)return P1_NODE();
+  // Find highest-degree node, split it
+  let maxN=G.nodes.reduce((a,b)=>a.degree>b.degree?a:b);
+  if(maxN.degree>=3){
+    let nb=neighbors(maxN.id);
+    let victim=nb[Math.floor(Math.random()*nb.length)];
+    // Remove edge maxN-victim, add new node between them
+    G.edges=G.edges.filter(e=>!((e.from===maxN.id&&e.to===victim)||(e.from===victim&&e.to===maxN.id)));
+    let mid=mkNode((maxN.x+G.nodes.find(n=>n.id===victim).x)/2,(maxN.y+G.nodes.find(n=>n.id===victim).y)/2);
+    G.nodes.push(mid);
+    G.edges.push(mkEdge(maxN.id,mid.id));
+    G.edges.push(mkEdge(mid.id,victim));
+    recalcDeg();
+    return`P4:TRANSFORM → split edge ${maxN.id}—${victim}, inserted ${mid.id}`;
+  }
+  // Alt: rewire
+  if(G.edges.length>0){
+    let ei=Math.floor(Math.random()*G.edges.length);
+    let e=G.edges[ei];
+    let newTarget=G.nodes[Math.floor(Math.random()*G.nodes.length)];
+    if(newTarget.id!==e.from&&newTarget.id!==e.to&&!hasEdge(e.from,newTarget.id)){
+      let old=e.to;e.to=newTarget.id;recalcDeg();
+      return`P4:TRANSFORM → rewired ${e.from}—${old} to ${e.from}—${newTarget.id}`;
+    }
+  }
+  return P1_NODE();
+}
+
+function P5_ITERATE(){
+  // Repeat whatever made the graph more complex
+  let lastOp=opHistory.length>0?opHistory[opHistory.length-1]:0;
+  let msgs=[];
+  let count=Math.min(2+Math.floor(gen/10),5);
+  for(let i=0;i<count;i++){
+    msgs.push(OPS[lastOp]());
+  }
+  return`P5:ITERATE → repeated OP${lastOp+1} x${count}: ${msgs[0].split('→')[1]||''}...`;
+}
+
+function P6_AGGREGATE(){
+  if(G.nodes.length<4)return P1_NODE();
+  // Find two leaves connected to same parent, merge
+  let leaves=G.nodes.filter(n=>n.degree===1);
+  if(leaves.length>=2){
+    let l1=leaves[0],l2=leaves[1];
+    // Redirect l2 edges to l1
+    G.edges.forEach(e=>{if(e.from===l2.id)e.from=l1.id;if(e.to===l2.id)e.to=l1.id});
+    G.edges=G.edges.filter(e=>e.from!==e.to);
+    let seen=new Set();
+    G.edges=G.edges.filter(e=>{let k=Math.min(e.from,e.to)+'-'+Math.max(e.from,e.to);if(seen.has(k))return false;seen.add(k);return true});
+    G.nodes=G.nodes.filter(n=>n.id!==l2.id);
+    recalcDeg();
+    return`P6:AGGREGATE → merged ${l2.id} into ${l1.id}`;
+  }
+  return P2_EDGE();
+}
+
+function P7_COMPARE(){
+  // Test graph properties — detect structures
+  let found=[];
+  // Triangles
+  let tris=countTriangles();
+  if(tris>0&&!discoveries.includes('TRIANGLE')){discoveries.push('TRIANGLE');found.push('TRIANGLE(3-cycle)');}
+  // Square
+  let sq=detectCycle(4);
+  if(sq&&!discoveries.includes('SQUARE')){discoveries.push('SQUARE');found.push('SQUARE(4-cycle)');}
+  // Pentagon
+  let pent=detectCycle(5);
+  if(pent&&!discoveries.includes('PENTAGON')){discoveries.push('PENTAGON');found.push('PENTAGON(5-cycle)');}
+  // Complete graphs
+  let maxClique=findMaxClique();
+  if(maxClique>=4&&!discoveries.includes('K4')){discoveries.push('K4');found.push('K4(complete-4)');}
+  if(maxClique>=5&&!discoveries.includes('K5')){discoveries.push('K5');found.push('K5(complete-5) NON-PLANAR!');}
+  // Star
+  let maxDeg=Math.max(...G.nodes.map(n=>n.degree));
+  if(maxDeg>=4&&!discoveries.includes('STAR')){discoveries.push('STAR');found.push(`STAR(hub degree ${maxDeg})`);}
+  if(maxDeg>=6&&!discoveries.includes('HUB')){discoveries.push('HUB');found.push(`HUB(degree ${maxDeg})`);}
+  // Tree (connected, E=V-1)
+  let comps=countComponents();
+  if(comps===1&&G.edges.length===G.nodes.length-1&&G.nodes.length>=4&&!discoveries.includes('TREE')){
+    discoveries.push('TREE');found.push('TREE(connected acyclic)');
+  }
+  // Has cycle
+  if(comps===1&&G.edges.length>=G.nodes.length&&!discoveries.includes('CYCLE')){
+    discoveries.push('CYCLE');found.push('CYCLE(closed path exists)');
+  }
+  // Bipartite
+  if(isBipartite()&&G.nodes.length>=4&&!discoveries.includes('BIPARTITE')){
+    discoveries.push('BIPARTITE');found.push('BIPARTITE(2-colorable)');
+  }
+  // Euler formula
+  let chi=G.nodes.length-G.edges.length+countFaces();
+  if(chi===2&&G.nodes.length>=4&&!discoveries.includes('EULER_CHI2')){
+    discoveries.push('EULER_CHI2');found.push('CHI=2 (sphere topology!)');
+  }
+  // Symmetric
+  let sym=detectSymmetry();
+  if(sym>2&&!discoveries.includes('SYM_'+sym)){
+    discoveries.push('SYM_'+sym);found.push(`SYMMETRY(${sym}-fold)`);
+  }
+  // Self-similar (subgraph matches whole — proto-fractal)
+  if(G.nodes.length>=6){
+    let half=Math.floor(G.nodes.length/2);
+    let degA=G.nodes.slice(0,half).map(n=>n.degree).sort().join(',');
+    let degB=G.nodes.slice(half).map(n=>n.degree).sort().join(',');
+    if(degA===degB&&!discoveries.includes('SELF_SIMILAR')){
+      discoveries.push('SELF_SIMILAR');found.push('SELF-SIMILAR(halves match degree sequence)');
+    }
+  }
+
+  if(found.length>0){
+    found.forEach(f=>log('★ DISCOVERED: '+f,'log-found'));
+    return`P7:COMPARE → found: ${found.join(', ')}`;
+  }
+  return`P7:COMPARE → scanned, no new structures (${discoveries.length} known)`;
+}
+
+const OPS=[P1_NODE,P2_EDGE,P3_COMPOSE,P4_TRANSFORM,P5_ITERATE,P6_AGGREGATE,P7_COMPARE];
+// ═══ GRAPH ANALYSIS ═══
+function countTriangles(){
+  let count=0;
+  for(let n of G.nodes){
+    let nb=neighbors(n.id);
+    for(let i=0;i<nb.length;i++){
+      for(let j=i+1;j<nb.length;j++){
+        if(hasEdge(nb[i],nb[j]))count++;
+      }
+    }
+  }
+  return Math.floor(count/3);
+}
+
+function detectCycle(len){
+  for(let start of G.nodes){
+    let found=dfs(start.id,[start.id],len);
+    if(found)return true;
+  }
+  return false;
+}
+function dfs(target,path,maxLen){
+  if(path.length===maxLen){return hasEdge(path[path.length-1],target)}
+  let last=path[path.length-1];
+  for(let nb of neighbors(last)){
+    if(nb===target&&path.length===maxLen)return true;
+    if(!path.includes(nb)&&path.length<maxLen){
+      if(dfs(target,[...path,nb],maxLen))return true;
+    }
+  }
+  return false;
+}
+
+function findMaxClique(){
+  let max=0;
+  for(let n of G.nodes){
+    let nb=neighbors(n.id);
+    let clique=1;
+    for(let i=0;i<nb.length;i++){
+      let allConnected=true;
+      for(let j=0;j<i;j++){
+        if(!hasEdge(nb[i],nb[j])){allConnected=false;break}
+      }
+      if(allConnected)clique++;
+    }
+    max=Math.max(max,clique);
+  }
+  return max;
+}
+
+function countComponents(){
+  let visited=new Set();let comps=0;
+  for(let n of G.nodes){
+    if(!visited.has(n.id)){
+      comps++;let q=[n.id];
+      while(q.length){let cur=q.pop();if(visited.has(cur))continue;visited.add(cur);neighbors(cur).forEach(nb=>{if(!visited.has(nb))q.push(nb)})}
+    }
+  }
+  return comps;
+}
+
+function countFaces(){
+  // Approximate: F = E - V + 2*components (Euler)
+  return G.edges.length-G.nodes.length+2*countComponents();
+}
+
+function isBipartite(){
+  if(G.nodes.length<2)return true;
+  let color=new Map();
+  let q=[G.nodes[0].id];color.set(G.nodes[0].id,0);
+  while(q.length){
+    let cur=q.shift();let c=color.get(cur);
+    for(let nb of neighbors(cur)){
+      if(!color.has(nb)){color.set(nb,1-c);q.push(nb)}
+      else if(color.get(nb)===c)return false;
+    }
+  }
+  return true;
+}
+
+function detectSymmetry(){
+  let degs=G.nodes.map(n=>n.degree).sort((a,b)=>a-b);
+  let freq={};degs.forEach(d=>freq[d]=(freq[d]||0)+1);
+  let maxFreq=Math.max(...Object.values(freq));
+  return maxFreq;
+}
+
+// ═══ STEP / RUN ═══
+function step(){
+  gen++;
+  let modeVal=document.getElementById('mode').value;
+  let opIdx;
+  
+  switch(modeVal){
+    case 'exhaust': opIdx=gen%7;break;
+    case 'grow': opIdx=[0,0,1,1,2,4,6][gen%7];break;
+    case 'symmetry': opIdx=[0,1,1,5,5,6,6][gen%7];break;
+    case 'reduce': opIdx=[5,5,3,3,6,4,4][gen%7];break;
+    default: opIdx=Math.floor(Math.random()*7);
+  }
+  
+  let msg=OPS[opIdx]();\n  recEntry(msg.split(' ')[0],{msg:msg,nodes:G.nodes.length,edges:G.edges.length});
+  opHistory.push(opIdx);
+  log(`gen ${gen}: ${msg}`, opIdx===6?'log-p7':'log-op');
+  
+  // Auto-compare every 5 gens
+  if(gen%5===0&&opIdx!==6)P7_COMPARE();\n  if(gen%50===0)recSnapshot();
+  
+  hud();
+}
+
+function toggle(){
+  running=!running;
+  document.getElementById('btn-run').textContent=running?'■ STOP':'▶ RUN';
+  document.getElementById('btn-run').classList.toggle('active',running);
+  if(running)runLoop();
+}
+
+function runLoop(){
+  if(!running)return;
+  for(let i=0;i<speed;i++)step();
+  requestAnimationFrame(runLoop);
+}
+
+function reset(){recStop();running=false;document.getElementById('btn-run').textContent='▶ RUN';init();draw()}
+function toggleLog(){document.getElementById('log').classList.toggle('show')}
+function log(msg,cls){
+  let d=document.createElement('div');d.className=cls||'';d.textContent=msg;
+  let el=document.getElementById('log');el.appendChild(d);el.scrollTop=1e9;
+  if(el.children.length>300)el.removeChild(el.firstChild);
+}
+
+function hud(){
+  document.getElementById('h-n').textContent=G.nodes.length;
+  document.getElementById('h-e').textContent=G.edges.length;
+  document.getElementById('h-c').textContent=countComponents();
+  document.getElementById('h-d').textContent=Math.max(0,...G.nodes.map(n=>n.degree));
+  document.getElementById('h-tri').textContent=countTriangles();
+  let sym=detectSymmetry();
+  document.getElementById('h-sym').textContent=sym>1?sym+'-fold':'trivial';
+  document.getElementById('h-fact').textContent=isBipartite()?'bipartite':'no';
+  document.getElementById('h-chi').textContent=G.nodes.length-G.edges.length+countFaces();
+  document.getElementById('gen-display').textContent='GEN '+gen;
+  // discoveries
+  let dEl=document.getElementById('discoveries');
+  dEl.innerHTML=discoveries.slice(-8).reverse().map((d,i)=>`<div class="${i===0?'disc':'disc-old'}">${d}</div>`).join('');
+}
+
+// ═══ PHYSICS (force-directed, MNet spring model) ═══
+function physics(){
+  let k_repel=800,k_spring=0.02,k_damp=0.85,rest=55;
+  // Repulsion (all pairs)
+  for(let i=0;i<G.nodes.length;i++){
+    for(let j=i+1;j<G.nodes.length;j++){
+      let a=G.nodes[i],b=G.nodes[j];
+      let dx=b.x-a.x,dy=b.y-a.y;
+      let d2=dx*dx+dy*dy+1;
+      let f=k_repel/d2;
+      let fx=dx/Math.sqrt(d2)*f,fy=dy/Math.sqrt(d2)*f;
+      a.vx-=fx;a.vy-=fy;b.vx+=fx;b.vy+=fy;
+    }
+  }
+  // Spring attraction (edges)
+  for(let e of G.edges){
+    let a=G.nodes.find(n=>n.id===e.from),b=G.nodes.find(n=>n.id===e.to);
+    if(!a||!b)continue;
+    let dx=b.x-a.x,dy=b.y-a.y;
+    let d=Math.sqrt(dx*dx+dy*dy)+0.1;
+    let f=k_spring*(d-rest);
+    let fx=dx/d*f,fy=dy/d*f;
+    a.vx+=fx;a.vy+=fy;b.vx-=fx;b.vy-=fy;
+  }
+  // Center gravity
+  let cx0=W/2,cy0=H/2;
+  G.nodes.forEach(n=>{
+    n.vx+=(cx0-n.x)*0.001;
+    n.vy+=(cy0-n.y)*0.001;
+  });
+  // Apply + damp
+  G.nodes.forEach(n=>{
+    n.vx*=k_damp;n.vy*=k_damp;
+    n.x+=n.vx;n.y+=n.vy;
+    n.x=Math.max(20,Math.min(W-20,n.x));
+    n.y=Math.max(20,Math.min(H-60,n.y));
+  });
+}
+
+// ═══ DRAW ═══
+function draw(){
+  cx.fillStyle='#050508';cx.fillRect(0,0,W,H);
+  
+  // Grid (MNet style)
+  cx.strokeStyle='rgba(0,180,255,0.015)';cx.lineWidth=0.5;
+  for(let x=0;x<W;x+=60){cx.beginPath();cx.moveTo(x,0);cx.lineTo(x,H);cx.stroke()}
+  for(let y=0;y<H;y+=60){cx.beginPath();cx.moveTo(0,y);cx.lineTo(W,y);cx.stroke()}
+  
+  // Edges
+  for(let e of G.edges){
+    let a=G.nodes.find(n=>n.id===e.from),b=G.nodes.find(n=>n.id===e.to);
+    if(!a||!b)continue;
+    let age=gen-e.born;
+    let alpha=Math.min(0.6,0.1+age*0.02);
+    cx.strokeStyle=`rgba(0,180,255,${alpha})`;
+    cx.lineWidth=0.8;
+    cx.beginPath();cx.moveTo(a.x,a.y);cx.lineTo(b.x,b.y);cx.stroke();
+  }
+  
+  // Nodes
+  for(let n of G.nodes){
+    let age=gen-n.born;
+    let r=2.5+Math.min(n.degree*1.2,8);
+    let alpha=Math.min(0.9,0.3+age*0.03);
+    
+    // Glow
+    let grd=cx.createRadialGradient(n.x,n.y,0,n.x,n.y,r*3);
+    let hue=n.degree<2?'0,255,213':n.degree<4?'180,220,255':'255,105,180';
+    grd.addColorStop(0,`rgba(${hue},${alpha*0.3})`);
+    grd.addColorStop(1,'rgba(0,0,0,0)');
+    cx.fillStyle=grd;cx.beginPath();cx.arc(n.x,n.y,r*3,0,Math.PI*2);cx.fill();
+    
+    // Core
+    cx.fillStyle=`rgba(${hue},${alpha})`;
+    cx.beginPath();cx.arc(n.x,n.y,r,0,Math.PI*2);cx.fill();
+    
+    // Border
+    cx.strokeStyle=`rgba(${hue},${alpha*0.5})`;cx.lineWidth=0.5;
+    cx.beginPath();cx.arc(n.x,n.y,r,0,Math.PI*2);cx.stroke();
+  }
+  
+  // Discovery labels on graph
+  if(discoveries.length>0){
+    cx.font='8px Orbitron';cx.fillStyle='rgba(255,105,180,0.3)';
+    cx.textAlign='center';
+    cx.fillText(discoveries[discoveries.length-1],W/2,H-60);
+  }
+}
+
+function animate(){
+  physics();
+  draw();
+  requestAnimationFrame(animate);
+}
+
+// ═══ DRAG (SpookyPrimes style) ═══
+let dragging=null,dragOff={x:0,y:0};
+cv.addEventListener('pointerdown',e=>{
+  let closest=null,minD=30;
+  G.nodes.forEach(n=>{let d=Math.hypot(n.x-e.clientX,n.y-e.clientY);if(d<minD){minD=d;closest=n}});
+  if(closest){dragging=closest;dragOff={x:closest.x-e.clientX,y:closest.y-e.clientY}}
+});
+cv.addEventListener('pointermove',e=>{if(dragging){dragging.x=e.clientX+dragOff.x;dragging.y=e.clientY+dragOff.y;dragging.vx=0;dragging.vy=0}});
+cv.addEventListener('pointerup',()=>{dragging=null});
+
+
+// ═══ FLIGHT RECORDER (MNet pattern) ═══
+let _rec={entries:[],active:false,t0:0,maxEntries:500000,graphSnapshots:[]};
+
+function recStart(){
+  _rec.entries=[];_rec.graphSnapshots=[];
+  _rec.active=true;_rec.t0=performance.now();
+  recEntry('REC_START',{time:new Date().toISOString(),primitives:7});
+}
+function recStop(){
+  recEntry('REC_STOP',{entries:_rec.entries.length,gen:gen});
+  _rec.active=false;
+}
+function recEntry(op,data){
+  if(!_rec.active||_rec.entries.length>=_rec.maxEntries)return;
+  _rec.entries.push({
+    t:Math.round((performance.now()-_rec.t0)*100)/100,
+    g:gen,
+    op:op,
+    d:data
+  });
+}
+function recSnapshot(){
+  if(!_rec.active)return;
+  _rec.graphSnapshots.push({
+    g:gen,
+    t:Math.round((performance.now()-_rec.t0)*100)/100,
+    V:G.nodes.length,
+    E:G.edges.length,
+    nodes:G.nodes.map(n=>({id:n.id,deg:n.degree,x:Math.round(n.x),y:Math.round(n.y)})),
+    edges:G.edges.map(e=>({f:e.from,t:e.to})),
+    discoveries:discoveries.slice(),
+    stats:{
+      components:countComponents(),
+      triangles:countTriangles(),
+      maxDeg:Math.max(0,...G.nodes.map(n=>n.degree)),
+      sym:detectSymmetry(),
+      bipartite:isBipartite(),
+      chi:G.nodes.length-G.edges.length+countFaces()
+    }
+  });
+}
+
+// Export as chunked JSON files
+function exportLog(){
+  recStop();
+  let data={
+    version:'genesis_v1.1',
+    exported:new Date().toISOString(),
+    totalEntries:_rec.entries.length,
+    totalGens:gen,
+    finalGraph:{V:G.nodes.length,E:G.edges.length},
+    discoveries:discoveries,
+    snapshots:_rec.graphSnapshots.length
+  };
+  
+  // Chunk entries (Chrome blob limit ~500MB, but keep chunks small for analysis)
+  let CHUNK=50000;
+  let chunks=Math.ceil(_rec.entries.length/CHUNK);
+  
+  // Download metadata
+  downloadJSON(data,'genesis_meta_'+gen+'.json');
+  
+  // Download entry chunks
+  for(let i=0;i<chunks;i++){
+    let chunk=_rec.entries.slice(i*CHUNK,(i+1)*CHUNK);
+    setTimeout(()=>{
+      downloadJSON({chunk:i+1,of:chunks,entries:chunk},'genesis_log_chunk'+(i+1)+'_gen'+gen+'.json');
+    },i*500);
+  }
+  
+  // Download snapshots
+  if(_rec.graphSnapshots.length>0){
+    setTimeout(()=>{
+      downloadJSON({snapshots:_rec.graphSnapshots},'genesis_snapshots_gen'+gen+'.json');
+    },chunks*500+500);
+  }
+  
+  log('EXPORTED: '+_rec.entries.length+' entries in '+chunks+' chunks + '+_rec.graphSnapshots.length+' snapshots','log-found');
+}
+
+function exportGraph(){
+  let data={
+    version:'genesis_v1.1',
+    gen:gen,
+    exported:new Date().toISOString(),
+    nodes:G.nodes.map(n=>({id:n.id,degree:n.degree,born:n.born,x:Math.round(n.x),y:Math.round(n.y)})),
+    edges:G.edges.map(e=>({from:e.from,to:e.to,born:e.born})),
+    discoveries:discoveries,
+    stats:{
+      V:G.nodes.length,E:G.edges.length,
+      components:countComponents(),
+      triangles:countTriangles(),
+      maxDeg:Math.max(0,...G.nodes.map(n=>n.degree)),
+      sym:detectSymmetry(),
+      bipartite:isBipartite(),
+      chi:G.nodes.length-G.edges.length+countFaces()
+    }
+  };
+  downloadJSON(data,'genesis_graph_gen'+gen+'.json');
+  log('GRAPH EXPORTED: '+G.nodes.length+'V '+G.edges.length+'E','log-found');
+}
+
+function downloadJSON(obj,filename){
+  let blob=new Blob([JSON.stringify(obj)],{type:'application/json'});
+  let a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download=filename;a.click();URL.revokeObjectURL(a.href);
+}
+\ninit();recStart();animate();
+</script></body></html>
+

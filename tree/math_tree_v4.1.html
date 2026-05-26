@@ -1,0 +1,1168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Sacred Math Tree v4.1</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js">
+
+// ??? FULL AUTO ? play all 10 trees one by one ???
+let fullAutoRunning = false;
+let fullAutoTimer = null;
+const TREE_ORDER = ['sinx','euler_e','power_rule','dsin','chain','int_power','improper','taylor_ex','ftc','eps_delta'];
+let fullAutoIdx = 0;
+const STEP_DELAY = 400;  // ms between each autopilot step
+const TREE_PAUSE = 1500; // ms pause between trees
+
+document.getElementById('btn-fullauto').addEventListener('click', () => {
+  if (fullAutoRunning) {
+    // STOP
+    fullAutoRunning = false;
+    clearTimeout(fullAutoTimer);
+    document.getElementById('btn-fullauto').textContent = '?? all trees';
+    document.getElementById('sv-fullauto').textContent = 'stopped';
+    clog('FULL AUTO: stopped', 'log-err');
+    return;
+  }
+  
+  // START
+  fullAutoRunning = true;
+  fullAutoIdx = 0;
+  document.getElementById('btn-fullauto').textContent = '? stop';
+  clog('FULL AUTO: starting all 10 trees', 'log-click');
+  playNextTree();
+});
+
+function playNextTree() {
+  if (!fullAutoRunning || fullAutoIdx >= TREE_ORDER.length) {
+    fullAutoRunning = false;
+    document.getElementById('btn-fullauto').textContent = '?? all trees';
+    document.getElementById('sv-fullauto').textContent = 'done!';
+    clog('FULL AUTO: ALL TREES COMPLETE!', 'log-click');
+    return;
+  }
+  
+  let treeId = TREE_ORDER[fullAutoIdx];
+  let remaining = TREE_ORDER.length - fullAutoIdx;
+  document.getElementById('sv-fullauto').textContent = remaining + ' left';
+  document.getElementById('tree-sel').value = treeId;
+  
+  clog('FULL AUTO [' + (fullAutoIdx+1) + '/10]: loading ' + treeId, 'log-click');
+  
+  // Switch tree
+  currentTreeId = treeId;
+  Object.values(E).forEach(b => b.remove());
+  while(lksvg.firstChild) lksvg.removeChild(lksvg.firstChild);
+  E = {}; P = {}; items = []; lk = {}; boxH = {}; boxW = {};
+  opened.clear(); kidsShown.clear();
+  autoBuilt = false; autoQueue = []; autoStep = 0;
+  tokens = 3; xp = 0; streak = 0; combo = 0;
+  uH();
+  document.getElementById('h-n').textContent = '0';
+  document.getElementById('h-d').textContent = '0';
+  
+  let src = TREES[treeId];
+  T.id=src.id;T.tag=src.tag;T.type=src.type;T.latex=src.latex;T.sub=src.sub;T.cost=src.cost;T.xp=src.xp;T.ch=src.ch;
+  
+  // Build + hide
+  autoBuilt = true;
+  build(); drawGrid();
+  Object.values(E).forEach(b=>{b.classList.remove('alive','ghost');b.className=b.className});
+  Object.values(P).forEach(p=>{p.classList.remove('ghost-line','alive-line');p.style.stroke='#0b0d14'});
+  opened.clear(); kidsShown.clear();
+  
+  // Start stepping through this tree
+  setTimeout(() => {
+    makeAlive(T.id);
+    fl(E[T.id]);
+    autoQueue = [T.id];
+    autoStep = 0;
+    center();
+    autoStepThrough();
+  }, 500);
+}
+
+function autoStepThrough() {
+  if (!fullAutoRunning) return;
+  
+  // Check if tree is complete
+  let allOpened = items.every(i => opened.has(i.n.id));
+  if (allOpened || autoQueue.length === 0) {
+    // Check for any remaining unopened
+    let unopened = items.filter(i => !opened.has(i.n.id));
+    if (unopened.length === 0) {
+      clog('FULL AUTO: tree ' + currentTreeId + ' COMPLETE (' + opened.size + ' nodes)', 'log-click');
+      fullAutoIdx++;
+      fullAutoTimer = setTimeout(playNextTree, TREE_PAUSE);
+      return;
+    }
+  }
+  
+  // Do one autopilot step
+  autoStep++;
+  
+  if (autoQueue.length === 0) {
+    // Find any node that has unrevealed kids or unopened ghosts
+    for (let it of items) {
+      if (opened.has(it.n.id) && !kidsShown.has(it.n.id) && it.n.ch && it.n.ch.length) {
+        autoQueue.push(it.n.id);
+        break;
+      }
+    }
+    // Or find any ghost to unlock
+    if (autoQueue.length === 0) {
+      for (let it of items) {
+        if (!opened.has(it.n.id) && E[it.n.id] && E[it.n.id].classList.contains('ghost')) {
+          tokens = Math.max(tokens, it.n.cost + 1);
+          unlockNode(it.n, E[it.n.id]);
+          fullAutoTimer = setTimeout(autoStepThrough, STEP_DELAY);
+          return;
+        }
+      }
+      // Truly done
+      clog('FULL AUTO: tree ' + currentTreeId + ' COMPLETE', 'log-click');
+      fullAutoIdx++;
+      fullAutoTimer = setTimeout(playNextTree, TREE_PAUSE);
+      return;
+    }
+  }
+  
+  let nid = autoQueue[0];
+  let node = findNode(T, nid);
+  if (!node) { autoQueue.shift(); fullAutoTimer = setTimeout(autoStepThrough, STEP_DELAY); return; }
+  
+  // If kids not shown -> show them
+  if (!kidsShown.has(nid) && node.ch && node.ch.length) {
+    showKids(node);
+    fullAutoTimer = setTimeout(autoStepThrough, STEP_DELAY);
+    return;
+  }
+  
+  // Find first ghost child to unlock
+  autoQueue.shift();
+  if (node.ch) {
+    for (let ch of node.ch) {
+      if (!opened.has(ch.id)) {
+        let box = E[ch.id];
+        if (box && box.classList.contains('ghost')) {
+          tokens = Math.max(tokens, ch.cost + 1);
+          unlockNode(ch, box);
+          autoQueue.push(ch.id);
+          fullAutoTimer = setTimeout(autoStepThrough, STEP_DELAY);
+          return;
+        }
+      } else {
+        if (!kidsShown.has(ch.id) && ch.ch && ch.ch.length) {
+          autoQueue.push(ch.id);
+        }
+      }
+    }
+    for (let ch of node.ch) {
+      if (ch.ch && ch.ch.length && !ch.ch.every(c => opened.has(c.id))) {
+        autoQueue.push(ch.id);
+      }
+    }
+  }
+  
+  fullAutoTimer = setTimeout(autoStepThrough, STEP_DELAY);
+}
+
+
+// ??? MOBILE TOUCH ? pinch zoom + pan ???
+let touches=[];
+let lastPinchDist=0;
+let lastTouchMid={x:0,y:0};
+
+document.addEventListener('touchstart',e=>{
+  if(e.target.closest('.eq')||e.target.closest('#bar')||e.target.closest('#logp'))return;
+  touches=Array.from(e.touches);
+  if(touches.length===2){
+    lastPinchDist=Math.hypot(touches[1].clientX-touches[0].clientX,touches[1].clientY-touches[0].clientY);
+    lastTouchMid={x:(touches[0].clientX+touches[1].clientX)/2,y:(touches[0].clientY+touches[1].clientY)/2};
+  }else if(touches.length===1){
+    drag=true;lm={x:touches[0].clientX,y:touches[0].clientY};
+  }
+},{passive:true});
+
+document.addEventListener('touchmove',e=>{
+  if(e.target.closest('#bar')||e.target.closest('#logp'))return;
+  touches=Array.from(e.touches);
+  
+  if(touches.length===2){
+    // PINCH ZOOM
+    e.preventDefault();
+    let dist=Math.hypot(touches[1].clientX-touches[0].clientX,touches[1].clientY-touches[0].clientY);
+    let mid={x:(touches[0].clientX+touches[1].clientX)/2,y:(touches[0].clientY+touches[1].clientY)/2};
+    
+    if(lastPinchDist>0){
+      let scale=dist/lastPinchDist;
+      let oz=zm;
+      zm*=scale;
+      zm=Math.max(0.15,Math.min(2.5,zm));
+      panX=mid.x/zm-(mid.x/oz-panX);
+      panY=mid.y/zm-(mid.y/oz-panY);
+      upT();
+    }
+    lastPinchDist=dist;
+    lastTouchMid=mid;
+    
+    // TWO-FINGER PAN
+    panX+=(mid.x-lastTouchMid.x)/zm;
+    panY+=(mid.y-lastTouchMid.y)/zm;
+    lastTouchMid=mid;
+    upT();
+  }else if(touches.length===1&&drag){
+    // ONE-FINGER PAN
+    panX+=(touches[0].clientX-lm.x)/zm;
+    panY+=(touches[0].clientY-lm.y)/zm;
+    lm={x:touches[0].clientX,y:touches[0].clientY};
+    upT();
+  }
+},{passive:false});
+
+document.addEventListener('touchend',e=>{
+  drag=false;lastPinchDist=0;
+  touches=Array.from(e.touches);
+},{passive:true});
+
+// ??? CONSOLE TOGGLE ???
+let logVisible=true;
+function toggleLog(){
+  logVisible=!logVisible;
+  document.getElementById('logp').classList.toggle('hidden',!logVisible);
+  document.getElementById('btn-log').style.color=logVisible?'#80d0ff':'#333';
+  clog('console '+(logVisible?'shown':'hidden'),'log-state');
+}
+
+// On mobile, hide console by default
+if(window.innerWidth<768){
+  logVisible=false;
+  document.getElementById('logp').classList.add('hidden');
+  document.getElementById('btn-log').style.color='#333';
+}
+
+clog('v4.1: mobile touch + console toggle ready','log-state');
+
+</script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0b0d14;color:#e8ecf4;font-family:ui-monospace,"SF Mono",Menlo,monospace;overflow:hidden;height:100vh;width:100vw}
+#plane{position:absolute;transform-origin:0 0}
+
+.eq{position:absolute;background:rgba(14,17,28,0.96);
+  border:1px solid rgba(100,120,160,0.18);border-radius:6px;
+  padding:14px 20px;min-width:110px;text-align:center;
+  min-width:140px;max-width:520px;pointer-events:none;
+  transition:left 0.6s cubic-bezier(0.22,1,0.36,1),top 0.6s cubic-bezier(0.22,1,0.36,1),opacity 0.5s ease-out,transform 0.45s ease-out,border-color 0.3s,box-shadow 0.3s;
+  opacity:0;transform:scale(0.3);transform-origin:50% 0%;
+}
+
+/* ghost: visible, dashed, clickable, waiting */
+.eq.ghost{opacity:0.45;transform:scale(0.9);pointer-events:auto;border-style:dashed;cursor:pointer}
+.eq.ghost:hover{opacity:0.65;box-shadow:0 0 20px rgba(100,120,160,0.1)}
+
+/* alive: full, solid, content visible */
+.eq.alive{opacity:1;transform:scale(1);pointer-events:auto;cursor:default;border-style:solid}
+
+.eq.t-root{border-color:rgba(255,200,60,0.4);background:rgba(18,16,10,0.96)}
+.eq.t-root.alive:hover{border-color:rgba(255,215,80,0.6);box-shadow:0 0 30px rgba(255,200,60,0.12)}
+.eq.t-tool{border-color:rgba(160,120,255,0.3);background:rgba(16,14,24,0.96)}
+.eq.t-tool.alive:hover{border-color:rgba(180,140,255,0.5);box-shadow:0 0 20px rgba(160,120,255,0.1)}
+.eq.t-result{border-color:rgba(80,220,140,0.3);background:rgba(10,18,14,0.96)}
+.eq.t-result.alive:hover{border-color:rgba(100,240,160,0.5);box-shadow:0 0 20px rgba(80,220,140,0.1)}
+.eq.t-dead{border-color:rgba(220,80,80,0.25);background:rgba(20,12,12,0.96)}
+
+/* hover token badge */
+.eq .tok-badge{position:absolute;top:-10px;right:-10px;
+  background:rgba(14,17,28,0.95);border:1px solid rgba(232,180,76,0.5);
+  border-radius:10px;padding:2px 8px;font-size:10px;color:#e8b44c;
+  font-weight:600;opacity:0;transform:scale(0.5);pointer-events:none;
+  transition:opacity 0.2s,transform 0.2s}
+.eq.ghost:hover .tok-badge{opacity:1;transform:scale(1)}
+
+/* inner content ? hidden until alive */
+.eq .inner{opacity:0;transition:opacity 0.4s ease-in 0.15s}
+.eq.alive .inner{opacity:1}
+/* ghost shows only tag + lock */
+.eq .ghost-inner{opacity:0;transition:opacity 0.3s}
+.eq.ghost .ghost-inner{opacity:1}
+
+.eq .tag{font-size:9px;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:6px;font-weight:600}
+.eq .tag.gold{color:#e8b44c}.eq .tag.purp{color:#a78bfa}.eq .tag.grn{color:#6ee7a0}.eq .tag.red{color:#f87171}
+.eq .ltx{color:#fff;margin:4px 0}.eq .ltx .katex{font-size:1.15em;color:#fff}
+.eq .sub{font-size:10px;opacity:0.3;margin-top:8px;font-style:italic;color:#8899bb}
+.eq .lock-icon{font-size:18px;opacity:0.4;margin:4px 0}
+
+/* LINES */
+svg.lk{position:absolute;top:0;left:0;pointer-events:none}
+svg.lk path{fill:none;stroke-width:1.8;stroke:rgba(100,120,160,0.0);
+  stroke-dasharray:2000;stroke-dashoffset:2000;
+  transition:stroke 0.4s ease-out,stroke-dashoffset 1s ease-out}
+svg.lk path.ghost-line{stroke:rgba(100,120,160,0.06);stroke-dashoffset:0;stroke-dasharray:none}
+svg.lk path.alive-line{stroke-dashoffset:0;stroke-dasharray:none}
+
+@keyframes sparkle{0%{box-shadow:0 0 15px rgba(255,200,60,0.04)}50%{box-shadow:0 0 40px rgba(255,200,60,0.14),0 0 80px rgba(255,200,60,0.04)}100%{box-shadow:0 0 15px rgba(255,200,60,0.04)}}
+.eq.t-root.alive{animation:sparkle 3s ease-in-out infinite}
+
+/* INNER GLOW ? flash happens INSIDE the clicked box */
+@keyframes innerGlow{
+  0%{box-shadow:0 0 0px rgba(180,160,255,0)}
+  20%{box-shadow:0 0 40px rgba(180,160,255,0.2),inset 0 0 30px rgba(180,160,255,0.06)}
+  100%{box-shadow:none}}
+.eq.glow-flash{animation:innerGlow 0.6s ease-out}
+
+/* BOTTOM BAR ? MNet exact proportions */
+#bar{position:fixed;bottom:0;left:0;right:0;z-index:10;
+  background:rgba(5,5,16,0.95);border-top:1px solid #1a1f2e;
+  padding:8px 14px;display:flex;align-items:center;gap:16px;
+  transform:translateY(0);transition:transform 0.4s}
+.b{background:#111;border:1px solid #2a2a2a;border-radius:3px;
+  padding:4px 12px;font-family:inherit;font-size:10px;cursor:pointer;transition:all 0.15s}
+.b:hover{border-color:#555;background:#1a1a1a}
+.sl{color:rgba(220,228,240,0.35);font-size:8px;text-transform:uppercase;letter-spacing:0.12em}
+#bar .sb-row{display:flex;align-items:center;gap:5px}
+#bar .sb-label{color:#555;font-size:10px}
+#bar input[type=range]{width:70px;accent-color:#ff69b4}
+#bar .sb-val{color:#80d0ff;font-weight:bold;font-size:10px;min-width:26px}
+
+/* ZOOM GATE BANNER ? PAPYRUS like Avatar, those lazy bastards */
+#zoom-gate{position:fixed;top:0;left:0;width:100%;height:100%;z-index:100;
+  display:flex;align-items:center;justify-content:center;flex-direction:column;
+  background:rgba(8,10,16,0.88);pointer-events:none;
+  opacity:0;transition:opacity 0.35s ease-out}
+#zoom-gate.show{opacity:1;pointer-events:auto}
+#zoom-gate .zg-msg{font-family:Papyrus,'Papyrus',fantasy;
+  font-size:42px;color:#f87171;text-align:center;line-height:1.4;
+  text-shadow:0 0 40px rgba(248,113,113,0.15);padding:0 40px;font-weight:bold}
+#zoom-gate .zg-sub{font-family:Papyrus,'Papyrus',fantasy;
+  font-size:18px;color:#8899bb;margin-top:12px;text-align:center}
+#zoom-gate .zg-zoom{font-family:ui-monospace,monospace;font-size:12px;
+  color:#e8b44c;margin-top:18px;opacity:0.5}
+#ghud{position:fixed;top:12px;right:12px;z-index:30;display:flex;gap:12px;align-items:center;font-size:9px;opacity:0.6}
+.gem{display:flex;align-items:center;gap:5px}.gem .ct{color:#ffd700;font-weight:bold;font-size:11px}
+.tp{position:fixed;pointer-events:none;z-index:40;font-size:11px;font-weight:600;color:#e8b44c;animation:tf 1.2s ease-out forwards}
+@keyframes tf{0%{opacity:1;transform:translateY(0)}100%{opacity:0;transform:translateY(-80px)}}
+#combo{position:fixed;top:50px;left:50%;transform:translateX(-50%);z-index:25;font-size:22px;font-weight:bold;opacity:0;transition:opacity 0.3s;text-shadow:0 0 20px rgba(255,200,60,0.3)}
+/* HUD ? MNet style, top left */
+#hud{position:fixed;top:12px;left:12px;z-index:20;pointer-events:none;font-size:11px}
+#hud .title{font-size:11px;color:#ff9040;margin-bottom:5px;letter-spacing:0.1em}
+#hud .row{line-height:1.7}
+.lbl{color:#555}.val{color:#80d0ff;font-weight:bold}
+.gold{color:#ffd700}.grn{color:#7fff7f}.pink{color:#ff69b4}
+
+
+/* LOG ? MNet floating panel */
+#logp{position:fixed;top:180px;left:12px;z-index:10;
+  background:rgba(5,5,16,0.85);border:1px solid #1a1f2e;border-radius:4px;
+  padding:6px 10px;max-width:280px;max-height:220px;overflow-y:auto;
+  font-size:9px;line-height:1.5;color:rgba(180,200,255,0.7);
+  opacity:0.35;transition:opacity 0.3s}
+#logp:hover{opacity:0.92}
+#logp .log-click{color:#ffd700}
+#logp .log-tok{color:#a78bfa}
+#logp .log-xp{color:#7fff7f}
+#logp .log-state{color:#555}
+#logp .log-err{color:#ff4444}
+
+
+/* MOBILE RESPONSIVE */
+@media(max-width:768px){
+  #hud{font-size:9px;top:6px;left:6px}
+  #hud .row{line-height:1.5}
+  #ghud{top:6px;right:6px;font-size:8px;gap:8px}
+  #bar{padding:6px 8px;gap:6px;flex-wrap:wrap;justify-content:center}
+  #bar .sb-row{gap:3px}
+  #bar .sb-label{font-size:8px}
+  #bar input[type=range]{width:45px}
+  #bar .sb-val{font-size:8px;min-width:20px}
+  #bar select{font-size:8px !important;max-width:100px}
+  .b{padding:3px 8px;font-size:9px}
+  #logp{top:auto;bottom:46px;left:6px;right:6px;max-width:none;max-height:150px;font-size:8px}
+  .eq{padding:10px 14px;min-width:100px;max-width:280px}
+  .eq .tag{font-size:8px}
+  .eq .sub{font-size:9px}
+  .eq .ltx .katex{font-size:0.95em}
+  #zoom-gate .zg-msg{font-size:28px}
+  #zoom-gate .zg-sub{font-size:14px}
+  #combo{font-size:16px;top:35px}
+}
+@media(max-width:480px){
+  #bar{gap:4px;padding:4px 6px}
+  #bar .sb-row{display:none}
+  #bar .sb-row:nth-child(6),#bar .sb-row:nth-child(7){display:flex}
+  .eq{max-width:240px;padding:8px 12px}
+}
+
+/* CONSOLE TOGGLE */
+#logp.hidden{display:none}
+#logp{transition:opacity 0.3s}
+
+/* GRID ? MNet design language */
+#grid-cv{position:absolute;top:0;left:0;pointer-events:none;z-index:0}
+svg.lk{z-index:1}
+.eq{z-index:2}
+</style>
+</head>
+<body>
+<div id="ghud"><div class="gem">&#9670;<span class="ct" id="g-tok">3</span></div>
+<div style="color:#a78bfa;font-size:12px">XP <span id="g-xp">0</span></div>
+<div style="color:#f97316;font-size:12px">&#128293;<span id="g-str">0</span></div></div>
+<div id="combo"></div>
+<div id="hud">
+<div class="row"><span class="lbl">nodes </span><span class="val" id="h-n">1</span></div>
+<div class="row"><span class="lbl">depth </span><span class="val" id="h-d">0</span></div>
+<div class="row"><span class="lbl">zoom  </span><span class="val" id="h-zm">60%</span></div>
+<div class="row"><span class="lbl">wave  </span><span class="val" id="h-wv">0.50</span></div>
+<div class="row"><span class="lbl">spread</span><span class="val" id="h-sp">1.0x</span></div>
+<div class="row"><span class="lbl">dy    </span><span class="val" id="h-dy">320</span></div>
+<div class="row"><span class="lbl">lock  </span><span class="val" id="h-lk">off</span></div>
+<div class="row"><span class="lbl">shame </span><span class="val" id="h-sh">2.0s</span></div>
+</div>
+<div id="ver">v4.1</div>
+<div id="zoom-gate"><div class="zg-msg">zoom in, wanderer</div><div class="zg-sub">read the equation before you touch it</div><div class="zg-zoom">you: <span id="zg-cur">35%</span> &middot; need: <span id="zg-need">50%</span></div></div>
+<div id="bar">
+<span class="sl">tree</span>
+<div class="sb-row"><span class="sb-label">wave</span><input type="range" id="sl-wave" min="0" max="100" value="50"><span class="sb-val" id="sv-wave">50</span></div>
+<div class="sb-row"><span class="sb-label">spread</span><input type="range" id="sl-spread" min="10" max="100" value="50"><span class="sb-val" id="sv-spread">50</span></div>
+<div class="sb-row"><span class="sb-label">depth</span><input type="range" id="sl-depth" min="10" max="100" value="50"><span class="sb-val" id="sv-depth">50</span></div>
+<div class="sb-row"><span class="sb-label">lock</span><input type="range" id="sl-zlock" min="0" max="100" value="0"><span class="sb-val" id="sv-zlock">off</span></div>
+<div class="sb-row"><span class="sb-label">shame</span><input type="range" id="sl-shame" min="5" max="100" value="20"><span class="sb-val" id="sv-shame">2s</span></div>
+<div class="sb-row" style="margin-left:8px;border-left:1px solid #1a1f2e;padding-left:8px;gap:3px;flex-wrap:wrap"><span class="sb-label" style="width:auto">tree</span><select id="tree-sel" style="background:#111;color:#80d0ff;border:1px solid #2a2a2a;border-radius:3px;padding:3px 6px;font-family:inherit;font-size:9px;cursor:pointer"><option value="sinx">1. lim sin(x)/x</option><option value="euler_e">lim (1+1/n)^n</option><option value="power_rule">d/dx x^n</option><option value="dsin">d/dx sin(x)</option><option value="chain">d/dx f(g(x))</option><option value="int_power">integral x^n dx</option><option value="improper">integral 1/x^p</option><option value="taylor_ex">Taylor of e^x</option><option value="ftc">Fund. Thm. Calculus</option><option value="eps_delta">epsilon-delta</option></select></div>
+<div class="sb-row" style="margin-left:12px;border-left:1px solid #1a1f2e;padding-left:12px"><button id="btn-auto" class="b" style="color:#ffd700;border-color:#332a00">&#9654; autopilot</button><span class="sb-val" id="sv-auto" style="color:#ffd700">ready</span>
+<button id="btn-fullauto" class="b" style="color:#7fff7f;border-color:#003300">&#9654;&#9654; all trees</button><span class="sb-val" id="sv-fullauto" style="color:#7fff7f">10</span>
+<button id="btn-log" class="b" style="color:#80d0ff;border-color:#1a2a3a" onclick="toggleLog()">&#9776; log</button></div>
+</div>
+<div id="logp"></div>
+<div id="plane"><canvas id="grid-cv"></canvas><svg class="lk" id="lksvg"></svg></div>
+<script>
+
+// ??? CONSOLE LOG ???
+const CON=document.getElementById('logp');
+let logBuf=[];
+function clog(msg,cls){
+  let t=new Date();
+  let ts=t.getMinutes().toString().padStart(2,'0')+':'+t.getSeconds().toString().padStart(2,'0')+'.'+t.getMilliseconds().toString().padStart(3,'0');
+  let line='<span class="'+(cls||'')+'">'+ts+' '+msg+'</span>';
+  logBuf.push(line);
+  if(logBuf.length>200)logBuf.shift();
+  CON.innerHTML=logBuf.join('\n');
+  CON.scrollTop=CON.scrollHeight;
+}
+// Auto-select on hover
+document.getElementById('logp').addEventListener('mouseenter',()=>{
+  let body=document.getElementById('logp');
+  let sel=window.getSelection();
+  let range=document.createRange();
+  range.selectNodeContents(body);
+  sel.removeAllRanges();
+  sel.addRange(range);
+});
+clog('Sacred Math Tree v4.1 init','log-state');
+clog('KaTeX: '+(typeof katex!=='undefined'?'loaded':'MISSING'),'log-state');
+
+let T={id:"eq0",tag:"START",type:"root",latex:"\\lim_{x \\to 0} \\frac{\\sin x}{x}",sub:"click to explore",cost:0,xp:0,ch:[
+{id:"t1",tag:"DIRECT SUB",type:"tool",latex:"\\frac{\\sin(0)}{0}=\\frac{0}{0}",sub:"indeterminate!",cost:1,xp:5,ch:[
+  {id:"t1d",tag:"DEAD END",type:"dead",latex:"\\frac{0}{0}\\;\\text{undefined}",sub:"now you KNOW.",cost:0,xp:10,ch:[]}]},
+{id:"t2",tag:"L\u2019H\u00D4PITAL",type:"tool",latex:"\\overset{\\text{L\u2019H}}{=}\\lim_{x\\to 0}\\frac{\\cos x}{1}",sub:"diff top & bottom",cost:1,xp:5,ch:[
+  {id:"t2r",tag:"EVALUATE",type:"result",latex:"\\frac{\\cos 0}{1}=\\boxed{1}",sub:"why does this work?",cost:1,xp:25,ch:[
+    {id:"t2r2",tag:"THE REASON",type:"result",latex:"\\frac{f}{g}\\approx\\frac{f'(a)(x-a)}{g'(a)(x-a)}=\\frac{f'(a)}{g'(a)}",sub:"functions ARE their derivatives",cost:1,xp:40,ch:[]}]}]},
+{id:"t3",tag:"SQUEEZE",type:"tool",latex:"\\cos x\\leq\\frac{\\sin x}{x}\\leq 1",sub:"trap it",cost:1,xp:5,ch:[
+  {id:"t3r",tag:"SQUEEZED",type:"result",latex:"\\lim\\cos x=1,\\lim 1=1\\Rightarrow\\boxed{1}",sub:"no choice.",cost:1,xp:30,ch:[]}]},
+{id:"t4",tag:"TAYLOR",type:"tool",latex:"\\sin x=x-\\frac{x^3}{3!}+\\frac{x^5}{5!}-\\cdots",sub:"expand & divide",cost:2,xp:10,ch:[
+  {id:"t4r",tag:"DIVIDE",type:"result",latex:"1-\\frac{x^2}{6}+\\frac{x^4}{120}-\\cdots\\to\\boxed{1}",sub:"only 1 survives.",cost:1,xp:50,ch:[]}]}]};
+
+
+// ??? ALL CALC 1 TREES ???
+const TREES = {sinx: T,
+euler_e: {id:"e0",tag:"START",type:"root",latex:"\\lim_{n\\to\\infty}\\left(1+\\frac{1}{n}\\right)^n",sub:"what number is this?",cost:0,xp:0,ch:[{id:"e1",tag:"PLUG IN",type:"tool",latex:"n=10:\\;2.594\\quad n=100:\\;2.705\\quad n=10000:\\;2.718",sub:"it\'s converging...",cost:1,xp:5,ch:[{id:"e1r",tag:"RECOGNIZE",type:"result",latex:"\\approx 2.71828\\ldots = e",sub:"Euler\'s number!",cost:0,xp:15,ch:[]}]},
+{id:"e2",tag:"LOG TRICK",type:"tool",latex:"\\ln L = \\lim_{n\\to\\infty} n\\ln\\left(1+\\frac{1}{n}\\right)",sub:"take ln of both sides",cost:1,xp:10,ch:[{id:"e2r",tag:"L\'HOPITAL",type:"result",latex:"= \\lim_{t\\to 0}\\frac{\\ln(1+t)}{t}=\\frac{1/(1+t)}{1}\\bigg|_0=\\boxed{1}",sub:"so ln L = 1, L = e",cost:1,xp:30,ch:[]}]},
+{id:"e3",tag:"BINOMIAL",type:"tool",latex:"\\left(1+\\frac{1}{n}\\right)^n=\\sum_{k=0}^{n}\\binom{n}{k}\\frac{1}{n^k}",sub:"expand it",cost:2,xp:10,ch:[{id:"e3r",tag:"LIMIT TERM",type:"result",latex:"\\to \\sum_{k=0}^{\\infty}\\frac{1}{k!}=e",sub:"the series definition of e",cost:1,xp:40,ch:[]}]}]},
+power_rule: {id:"p0",tag:"START",type:"root",latex:"\\frac{d}{dx}x^n = \\;?",sub:"the first rule you learn",cost:0,xp:0,ch:[{id:"p1",tag:"DEFINITION",type:"tool",latex:"\\lim_{h\\to 0}\\frac{(x+h)^n - x^n}{h}",sub:"from first principles",cost:1,xp:5,ch:[{id:"p1a",tag:"BINOMIAL",type:"result",latex:"(x+h)^n = x^n + nx^{n-1}h + \\binom{n}{2}x^{n-2}h^2+\\cdots",sub:"expand, cancel x^n, divide by h",cost:1,xp:20,ch:[{id:"p1b",tag:"RESULT",type:"result",latex:"= nx^{n-1}+0+0+\\cdots = \\boxed{nx^{n-1}}",sub:"all h terms vanish",cost:0,xp:25,ch:[]}]}]},
+{id:"p2",tag:"TRY n=2",type:"tool",latex:"\\frac{d}{dx}x^2 = \\lim_{h\\to 0}\\frac{(x+h)^2-x^2}{h}",sub:"start with a case",cost:1,xp:5,ch:[{id:"p2r",tag:"SIMPLIFY",type:"result",latex:"= \\lim_{h\\to 0}\\frac{2xh+h^2}{h}=2x=\\boxed{2x^1}",sub:"pattern: 2x^(2-1)",cost:0,xp:10,ch:[]}]},
+{id:"p3",tag:"TRY n=3",type:"tool",latex:"\\frac{d}{dx}x^3 = 3x^2",sub:"another case",cost:1,xp:5,ch:[{id:"p3d",tag:"PATTERN",type:"dead",latex:"n=2:\\;2x^1\\quad n=3:\\;3x^2\\quad n=?:\\; nx^{n-1}",sub:"pattern is clear but NOT a proof",cost:0,xp:5,ch:[]}]}]},
+dsin: {id:"s0",tag:"START",type:"root",latex:"\\frac{d}{dx}\\sin x = \\;?",sub:"needs the squeeze result",cost:0,xp:0,ch:[{id:"s1",tag:"DEFINITION",type:"tool",latex:"\\lim_{h\\to 0}\\frac{\\sin(x+h)-\\sin x}{h}",sub:"difference quotient",cost:1,xp:5,ch:[{id:"s1a",tag:"SUM FORMULA",type:"result",latex:"= \\lim_{h\\to 0}\\frac{\\sin x\\cos h+\\cos x\\sin h-\\sin x}{h}",sub:"sin(a+b) = sin a cos b + cos a sin b",cost:1,xp:15,ch:[{id:"s1b",tag:"SPLIT",type:"result",latex:"= \\sin x\\cdot\\underbrace{\\frac{\\cos h-1}{h}}_{\\to 0}+\\cos x\\cdot\\underbrace{\\frac{\\sin h}{h}}_{\\to 1}",sub:"two known limits!",cost:1,xp:20,ch:[{id:"s1c",tag:"ANSWER",type:"result",latex:"= 0 + \\cos x \\cdot 1 = \\boxed{\\cos x}",sub:"sin\' = cos. elegant.",cost:0,xp:30,ch:[]}]}]}]},
+{id:"s2",tag:"EULER",type:"tool",latex:"\\sin x = \\frac{e^{ix}-e^{-ix}}{2i}",sub:"complex exponential",cost:2,xp:10,ch:[{id:"s2r",tag:"DIFFERENTIATE",type:"result",latex:"\\frac{ie^{ix}+ie^{-ix}}{2i}=\\frac{e^{ix}+e^{-ix}}{2}=\\boxed{\\cos x}",sub:"one line with Euler",cost:1,xp:40,ch:[]}]}]},
+chain: {id:"c0",tag:"START",type:"root",latex:"\\frac{d}{dx}f(g(x)) = \\;?",sub:"composition of functions",cost:0,xp:0,ch:[{id:"c1",tag:"INTUITION",type:"tool",latex:"\\Delta f \\approx f'(g)\\cdot\\Delta g,\\quad \\Delta g \\approx g'(x)\\cdot\\Delta x",sub:"small changes multiply",cost:1,xp:5,ch:[{id:"c1r",tag:"COMBINE",type:"result",latex:"\\frac{\\Delta f}{\\Delta x}=\\frac{\\Delta f}{\\Delta g}\\cdot\\frac{\\Delta g}{\\Delta x}\\to\\boxed{f'(g(x))\\cdot g'(x)}",sub:"the chain rule",cost:0,xp:20,ch:[]}]},
+{id:"c2",tag:"EXAMPLE",type:"tool",latex:"\\frac{d}{dx}\\sin(x^2) = \\;?",sub:"f=sin, g=x^2",cost:1,xp:5,ch:[{id:"c2r",tag:"APPLY",type:"result",latex:"= \\cos(x^2)\\cdot 2x = \\boxed{2x\\cos(x^2)}",sub:"outer\' ? inner\'",cost:0,xp:15,ch:[]}]},
+{id:"c3",tag:"FORMAL",type:"tool",latex:"\\lim_{h\\to 0}\\frac{f(g(x+h))-f(g(x))}{h}",sub:"from definition",cost:2,xp:10,ch:[{id:"c3d",tag:"PROBLEM",type:"dead",latex:"\\text{if } g(x+h)=g(x) \\text{ then } \\frac{0}{0}",sub:"division by zero when g is flat!",cost:0,xp:10,ch:[]}]}]},
+int_power: {id:"i0",tag:"START",type:"root",latex:"\\int x^n\\,dx = \\;?",sub:"reverse the power rule",cost:0,xp:0,ch:[{id:"i1",tag:"REVERSE",type:"tool",latex:"\\text{if } \\frac{d}{dx}x^{n+1}=(n+1)x^n",sub:"undo the derivative",cost:1,xp:5,ch:[{id:"i1r",tag:"DIVIDE",type:"result",latex:"\\int x^n\\,dx = \\boxed{\\frac{x^{n+1}}{n+1}+C}",sub:"don\'t forget +C",cost:0,xp:20,ch:[]}]},
+{id:"i2",tag:"n = -1",type:"tool",latex:"\\int x^{-1}\\,dx = \\int\\frac{1}{x}\\,dx",sub:"what happens at n=-1?",cost:1,xp:10,ch:[{id:"i2d",tag:"BLOWS UP",type:"dead",latex:"\\frac{x^0}{0} = \\frac{1}{0}\\;\\text{UNDEFINED}",sub:"the formula breaks!",cost:0,xp:5,ch:[]},
+{id:"i2r",tag:"SPECIAL CASE",type:"result",latex:"\\int\\frac{1}{x}\\,dx = \\boxed{\\ln|x|+C}",sub:"that\'s WHY ln exists",cost:1,xp:30,ch:[]}]}]},
+improper: {id:"im0",tag:"START",type:"root",latex:"\\int_1^{\\infty}\\frac{1}{x^p}\\,dx\\quad\\text{converge?}",sub:"depends on p",cost:0,xp:0,ch:[{id:"im1",tag:"p = 1",type:"tool",latex:"\\int_1^{\\infty}\\frac{1}{x}\\,dx = \\ln x\\big|_1^\\infty = \\infty",sub:"DIVERGES",cost:1,xp:10,ch:[{id:"im1d",tag:"HARMONIC",type:"dead",latex:"\\sum\\frac{1}{n}=\\infty",sub:"harmonic series diverges too",cost:0,xp:10,ch:[]}]},
+{id:"im2",tag:"p = 2",type:"tool",latex:"\\int_1^{\\infty}\\frac{1}{x^2}\\,dx = -\\frac{1}{x}\\bigg|_1^\\infty = 1",sub:"CONVERGES to 1",cost:1,xp:10,ch:[{id:"im2r",tag:"FINITE AREA",type:"result",latex:"\\text{infinite length, finite area} = \\boxed{1}",sub:"Gabriel\'s horn paradox",cost:0,xp:20,ch:[]}]},
+{id:"im3",tag:"GENERAL",type:"tool",latex:"\\int_1^\\infty x^{-p}dx=\\frac{x^{1-p}}{1-p}\\bigg|_1^\\infty",sub:"evaluate at infinity",cost:2,xp:15,ch:[{id:"im3r",tag:"THE RULE",type:"result",latex:"\\text{converges iff } p>1:\\quad\\boxed{\\frac{1}{p-1}}",sub:"p=1 is the exact boundary",cost:1,xp:35,ch:[]}]}]},
+taylor_ex: {id:"tx0",tag:"START",type:"root",latex:"e^x = \\sum_{n=0}^{\\infty}\\;?",sub:"the most beautiful series",cost:0,xp:0,ch:[{id:"tx1",tag:"DERIVATIVES",type:"tool",latex:"f=e^x:\\; f'=e^x,\\; f''=e^x,\\; f^{(n)}=e^x",sub:"every derivative is itself",cost:1,xp:5,ch:[{id:"tx1r",tag:"AT x=0",type:"result",latex:"f^{(n)}(0)=e^0=1\\;\\forall n",sub:"all coefficients = 1/n!",cost:0,xp:10,ch:[{id:"tx1s",tag:"THE SERIES",type:"result",latex:"e^x = \\boxed{\\sum_{n=0}^{\\infty}\\frac{x^n}{n!}}=1+x+\\frac{x^2}{2}+\\frac{x^3}{6}+\\cdots",sub:"converges everywhere",cost:1,xp:30,ch:[]}]}]},
+{id:"tx2",tag:"x = 1",type:"tool",latex:"e = 1+1+\\frac{1}{2}+\\frac{1}{6}+\\frac{1}{24}+\\cdots",sub:"plug in x=1",cost:1,xp:10,ch:[{id:"tx2r",tag:"COMPUTE",type:"result",latex:"\\approx 2.71828\\ldots",sub:"connects to lim(1+1/n)^n",cost:0,xp:15,ch:[]}]},
+{id:"tx3",tag:"x = ix",type:"tool",latex:"e^{ix}=1+ix-\\frac{x^2}{2}-\\frac{ix^3}{6}+\\cdots",sub:"plug in imaginary",cost:2,xp:15,ch:[{id:"tx3r",tag:"EULER\'S",type:"result",latex:"e^{ix}=\\cos x+i\\sin x\\quad\\Rightarrow\\quad\\boxed{e^{i\\pi}+1=0}",sub:"the most beautiful equation",cost:1,xp:50,ch:[]}]}]},
+ftc: {id:"f0",tag:"START",type:"root",latex:"\\frac{d}{dx}\\int_a^x f(t)\\,dt = \\;?",sub:"the bridge",cost:0,xp:0,ch:[{id:"f1",tag:"GEOMETRIC",type:"tool",latex:"F(x)=\\text{area under } f \\text{ from } a \\text{ to } x",sub:"area is a function of endpoint",cost:1,xp:5,ch:[{id:"f1r",tag:"THIN STRIP",type:"result",latex:"F(x+h)-F(x)\\approx f(x)\\cdot h",sub:"area of thin rectangle",cost:1,xp:15,ch:[{id:"f1s",tag:"DIVIDE",type:"result",latex:"\\frac{F(x+h)-F(x)}{h}\\to\\boxed{f(x)}",sub:"derivative of integral = original function",cost:0,xp:30,ch:[]}]}]},
+{id:"f2",tag:"PART 2",type:"tool",latex:"\\int_a^b f(x)\\,dx = F(b)-F(a)",sub:"if F\' = f",cost:1,xp:10,ch:[{id:"f2r",tag:"EXAMPLE",type:"result",latex:"\\int_0^1 x^2\\,dx=\\frac{x^3}{3}\\bigg|_0^1=\\boxed{\\frac{1}{3}}",sub:"plug in boundaries",cost:0,xp:15,ch:[]}]},
+{id:"f3",tag:"PARADOX",type:"tool",latex:"\\text{derivatives destroy info, integrals create it?}",sub:"how can they be inverse?",cost:1,xp:5,ch:[{id:"f3r",tag:"THE +C",type:"result",latex:"F(x)+C\\text{ all have same derivative}",sub:"+C is the destroyed info. FTC recovers it with F(a).",cost:1,xp:25,ch:[]}]}]},
+eps_delta: {id:"ed0",tag:"START",type:"root",latex:"\\forall\\epsilon>0,\\;\\exists\\delta>0:\\;|x-a|<\\delta\\Rightarrow|f(x)-L|<\\epsilon",sub:"the formal definition",cost:0,xp:0,ch:[{id:"ed1",tag:"TRANSLATE",type:"tool",latex:"\\text{however close you want f to L, I can get x close enough to a}",sub:"it\'s a challenge-response game",cost:1,xp:5,ch:[{id:"ed1r",tag:"THE GAME",type:"result",latex:"\\text{you pick } \\epsilon.\\;\\text{I pick } \\delta.\\;\\text{I always win.}",sub:"that\'s what \'limit exists\' means",cost:0,xp:15,ch:[]}]},
+{id:"ed2",tag:"EXAMPLE",type:"tool",latex:"\\lim_{x\\to 3}2x=6:\\;\\text{find }\\delta",sub:"given epsilon",cost:1,xp:10,ch:[{id:"ed2a",tag:"WORK",type:"result",latex:"|2x-6|<\\epsilon\\;\\Leftrightarrow\\;|x-3|<\\frac{\\epsilon}{2}",sub:"so delta = epsilon/2",cost:1,xp:20,ch:[{id:"ed2b",tag:"VERIFY",type:"result",latex:"\\delta=\\frac{\\epsilon}{2}:\\;|x-3|<\\delta\\Rightarrow|2x-6|=2|x-3|<2\\delta=\\epsilon\\;\\checkmark",sub:"proof complete",cost:0,xp:30,ch:[]}]}]},
+{id:"ed3",tag:"FAILS",type:"tool",latex:"\\lim_{x\\to 0}\\sin\\frac{1}{x}\\;\\text{does NOT exist}",sub:"no delta works for small epsilon",cost:2,xp:10,ch:[{id:"ed3d",tag:"WHY",type:"dead",latex:"\\text{oscillates between -1 and 1 infinitely near 0}",sub:"no single L works",cost:0,xp:15,ch:[]}]}]}};
+
+let currentTreeId = 'sinx';
+
+document.getElementById('tree-sel').addEventListener('change', function(ev){
+  let newId = ev.target.value;
+  if(newId === currentTreeId) return;
+  currentTreeId = newId;
+  
+  // Clear everything
+  Object.values(E).forEach(b => b.remove());
+  while(lksvg.firstChild) lksvg.removeChild(lksvg.firstChild);
+  E = {}; P = {}; items = []; lk = {}; boxH = {}; boxW = {};
+  opened.clear(); kidsShown.clear();
+  autoBuilt = false; autoQueue = []; autoStep = 0;
+  tokens = 3; xp = 0; streak = 0; combo = 0;
+  uH(); updCount();
+  
+  // Set T to new tree
+  // Deep copy the new tree into T
+  let src = TREES[newId];
+  T.id=src.id;T.tag=src.tag;T.type=src.type;T.latex=src.latex;T.sub=src.sub;T.cost=src.cost;T.xp=src.xp;T.ch=src.ch;
+  // Actually we need to replace T entirely ? use a ref trick
+  // Easier: just reload the tree reference
+  clog('SWITCH TREE: ' + newId + ' (root=' + T.id + ')', 'log-click');
+  document.getElementById('sv-auto').textContent = 'ready';
+  
+  // Reset HUD
+  document.getElementById('h-n').textContent = '0';
+  document.getElementById('h-d').textContent = '0';
+  
+  drawGridEmpty();
+  center();
+});
+
+let tokens=3,xp=0,streak=0,combo=0,comboT=null,wave=0.5;
+let opened=new Set(),kidsShown=new Set();
+let E={},P={},items=[],lk={};
+const CX=2000,CY=100;
+let XSP_CUR=460,DY_CUR=320;
+const plane=document.getElementById('plane'),lksvg=document.getElementById('lksvg');
+// ??? SANDBOX SLIDERS ???
+let spread=1.0, depth=1.0, zoomLock=0;
+const BASE_XSP=460, BASE_DY=320;
+
+function onSlider(id,cb){document.getElementById(id).addEventListener('input',cb)}
+onSlider('sl-wave',e=>{wave=e.target.value/100;document.getElementById('sv-wave').textContent=e.target.value;
+  let h=document.getElementById('h-wv');if(h)h.textContent=wave.toFixed(2);rebuildPaths()});
+onSlider('sl-spread',e=>{
+  spread=0.3+e.target.value/100*1.7; // 0.3x to 2.0x
+  document.getElementById('sv-spread').textContent=e.target.value;
+  clog('spread: '+spread.toFixed(2)+'x (XSP='+Math.round(BASE_XSP*spread)+')','log-state');
+  let hs=document.getElementById('h-sp');if(hs)hs.textContent=spread.toFixed(1)+'x';
+  relayout()});
+onSlider('sl-depth',e=>{
+  depth=0.3+e.target.value/100*1.7;
+  document.getElementById('sv-depth').textContent=e.target.value;
+  clog('depth: '+depth.toFixed(2)+'x (DY='+Math.round(BASE_DY*depth)+')','log-state');
+  let hd=document.getElementById('h-dy');if(hd)hd.textContent=Math.round(BASE_DY*depth);
+  relayout()});
+onSlider('sl-zlock',e=>{
+  zoomLock=e.target.value/100; // 0 to 1.0
+  let pct=Math.round(zoomLock*100);
+  document.getElementById('sv-zlock').textContent=pct===0?'off':pct+'%';
+  clog('zoomLock: '+(pct===0?'off':pct+'%'),'log-state');
+  let hl=document.getElementById('h-lk');if(hl)hl.textContent=pct===0?'off':pct+'%'});
+
+let shameDur=2000;
+onSlider('sl-shame',e=>{
+  shameDur=e.target.value/10*1000; // 0.5s to 10s
+  let sec=(shameDur/1000).toFixed(1);
+  document.getElementById('sv-shame').textContent=sec+'s';
+  clog('shame duration: '+sec+'s','log-state');
+  let hs=document.getElementById('h-sh');if(hs)hs.textContent=sec+'s';
+});
+
+
+// ??? GRID ? MNet design language ???
+const gridCv = document.getElementById('grid-cv');
+const gridCtx = gridCv.getContext('2d');
+
+function drawGrid(){
+  let mx=0,my=0;
+  items.forEach(i=>{if(i.x+300>mx)mx=i.x+300;if(i.y+400>my)my=i.y+400});
+  mx=Math.max(mx,4000);my=Math.max(my,3000);
+  gridCv.width=mx;gridCv.height=my;
+  gridCtx.clearRect(0,0,mx,my);
+
+  // Grid spacing = matches tree spacing
+  let gx=XSP_CUR*0.5;  // horizontal grid = half the node spread
+  let gy=DY_CUR*0.5;    // vertical grid = half the depth step
+  gx=Math.max(40,gx);gy=Math.max(40,gy);
+
+  // Minor grid
+  gridCtx.strokeStyle='rgba(0,212,255,0.018)';
+  gridCtx.lineWidth=0.5;
+  gridCtx.beginPath();
+  for(let x=0;x<mx;x+=gx){gridCtx.moveTo(x,0);gridCtx.lineTo(x,my)}
+  for(let y=0;y<my;y+=gy){gridCtx.moveTo(0,y);gridCtx.lineTo(mx,y)}
+  gridCtx.stroke();
+
+  // Major grid (every 4th line)
+  gridCtx.strokeStyle='rgba(0,212,255,0.035)';
+  gridCtx.lineWidth=0.5;
+  gridCtx.beginPath();
+  for(let x=0;x<mx;x+=gx*4){gridCtx.moveTo(x,0);gridCtx.lineTo(x,my)}
+  for(let y=0;y<my;y+=gy*4){gridCtx.moveTo(0,y);gridCtx.lineTo(mx,y)}
+  gridCtx.stroke();
+
+  // Center crosshair at root position
+  gridCtx.strokeStyle='rgba(0,212,255,0.06)';
+  gridCtx.lineWidth=1;
+  gridCtx.beginPath();
+  gridCtx.moveTo(CX,0);gridCtx.lineTo(CX,my);
+  gridCtx.stroke();
+}
+
+function relayout(){
+  // Recompute all positions with new spread/depth
+  items=[];
+  XSP_CUR=BASE_XSP*spread;
+  DY_CUR=BASE_DY*depth;
+  collect(T,0,CX,null,null);
+  lk={};items.forEach(i=>lk[i.n.id]=i);
+  // Move all existing boxes to new positions (centered on actual width)
+  items.forEach(it=>{
+    let box=E[it.n.id];
+    if(box){
+      let w=boxW[it.n.id]||200;
+      box.style.left=(it.x-w/2)+'px';box.style.top=(it.y-42)+'px';
+    }
+  });
+  // Rebuild SVG size + paths
+  let mx=0,my=0;items.forEach(i=>{if(i.x+200>mx)mx=i.x+200;if(i.y+400>my)my=i.y+400});
+  lksvg.setAttribute('width',mx);lksvg.setAttribute('height',my);lksvg.setAttribute('viewBox','0 0 '+mx+' '+my);
+  rebuildPaths();
+  drawGrid();
+}
+
+
+function fp(el,txt,col){let r=el.getBoundingClientRect(),p=document.createElement('div');p.className='tp';p.style.color=col||'#e8b44c';p.textContent=txt;p.style.left=r.left+r.width/2-20+'px';p.style.top=r.top-10+'px';document.body.appendChild(p);setTimeout(()=>p.remove(),1300)}
+function aT(n,el){tokens+=n;clog('+'+n+' tokens (now:'+tokens+')','log-tok');if(el)fp(el,'+'+n+' \u2666');uH()}
+function aX(n,el){xp+=n;clog('+'+n+' XP (now:'+xp+')','log-xp');if(el)fp(el,'+'+n+' XP','#a78bfa');uH()}
+function bS(el){streak++;combo++;clog('streak:'+streak+' combo:'+combo,'log-tok');let c=document.getElementById('combo');if(combo>=2){c.textContent=combo+'x COMBO';c.style.opacity='1';c.style.color=combo>=5?'#e8b44c':combo>=3?'#f97316':'#a78bfa'}clearTimeout(comboT);comboT=setTimeout(()=>{combo=0;c.style.opacity='0'},3500);if(streak===3)aT(2,el);if(streak===5)aT(3,el);if(streak===8)aT(5,el)}
+function uH(){document.getElementById('g-tok').textContent=tokens;document.getElementById('g-xp').textContent=xp;document.getElementById('g-str').textContent=streak}
+function fl(box){if(!box)return;box.classList.remove('glow-flash');void box.offsetWidth;box.classList.add('glow-flash')}
+function fP(t,tid,pid){if(t.id===tid)return pid;if(t.ch)for(let c of t.ch){let f=fP(c,tid,t.id);if(f!==null)return f}return null}
+function lnC(n){return n.type==='dead'?'rgba(220,80,80,0.25)':n.type==='result'?'rgba(80,220,140,0.3)':'rgba(130,150,210,0.22)'}
+
+// MEASURE box heights after rendering KaTeX
+let boxH={},boxW={};
+
+function mkD(pid,cid){
+  let pi=lk[pid],ci=lk[cid];if(!pi||!ci)return'M0,0';
+  let pH=boxH[pid]||84,cH=boxH[cid]||84;
+  // center-bottom of parent -> center-top of child
+  let x1=pi.x,y1=pi.y-42+pH; // bottom center of parent
+  let x2=ci.x,y2=ci.y-42;     // top center of child
+  let dy=y2-y1,my=(y1+y2)/2;
+  let w=wave;
+  let cy1=y1+dy*(0.15+0.35*w),cy2=y2-dy*(0.15+0.35*w);
+  return'M'+x1+','+y1+' C'+x1+','+cy1+' '+x2+','+cy2+' '+x2+','+y2;
+}
+
+function collect(n,d,xc,px,py){
+  let nx=px!==null?xc:CX,ny=py!==null?py+DY_CUR:CY;
+  items.push({n,x:nx,y:ny,d});
+  if(n.ch&&n.ch.length){let c=n.ch.length,sp=XSP_CUR*Math.min(c,5),sx=nx-sp/2,st=c>1?sp/(c-1):0;
+    for(let i=0;i<c;i++)collect(n.ch[i],d+1,c===1?nx:sx+st*i,nx,ny)}}
+
+function rebuildPaths(){
+  Object.keys(P).forEach(id=>{let pid=P[id].dataset.from;P[id].setAttribute('d',mkD(pid,id))});
+  // debug: log first path d
+  let firstP=Object.values(P)[0];
+  if(firstP)clog('path0 d='+firstP.getAttribute('d'),'log-state');
+}
+
+function build(){
+  items=[];collect(T,0,CX,null,null);lk={};items.forEach(i=>lk[i.n.id]=i);
+  let mx=0,my=0;items.forEach(i=>{if(i.x+200>mx)mx=i.x+200;if(i.y+400>my)my=i.y+400});
+  lksvg.setAttribute('width',mx);lksvg.setAttribute('height',my);lksvg.setAttribute('viewBox','0 0 '+mx+' '+my);
+
+  items.forEach(it=>{
+    let n=it.n,tc=n.type==='root'?'gold':n.type==='tool'?'purp':n.type==='result'?'grn':'red';
+    // PATH
+    let pid=fP(T,n.id,null);
+    if(pid){let p=document.createElementNS('http://www.w3.org/2000/svg','path');p.dataset.from=pid;p.dataset.to=n.id;lksvg.appendChild(p);P[n.id]=p}
+    // BOX
+    let box=document.createElement('div');
+    box.className='eq t-'+n.type; // starts invisible (opacity:0)
+    box.style.left=(it.x-150)+'px';box.style.top=(it.y-42)+'px'; // will be recentered after measure
+    let badge=n.cost>0?'<div class="tok-badge">\u2666'+n.cost+'</div>':'';
+    box.innerHTML=badge+
+      '<div class="ghost-inner"><div class="tag '+tc+'">'+n.tag+'</div><div class="lock-icon">\u{1F512}</div></div>'+
+      '<div class="inner"><div class="tag '+tc+'">'+n.tag+'</div><div class="ltx"></div>'+(n.sub?'<div class="sub">'+n.sub+'</div>':'')+'</div>';
+    plane.appendChild(box);
+    try{katex.render(n.latex,box.querySelector('.inner .ltx'),{throwOnError:false,displayMode:true})}catch(e){}
+    E[n.id]=box;
+  });
+
+  // MEASURE: temporarily make all boxes visible to get real widths + heights
+  Object.values(E).forEach(b=>{b.style.opacity='1';b.style.position='absolute'});
+  Object.keys(E).forEach(id=>{
+    let b=E[id];
+    boxH[id]=b.offsetHeight||84;
+    boxW[id]=b.offsetWidth||200;
+    // RECENTER: position box so its center-x = layout x
+    let it=items.find(i=>i.n.id===id);
+    if(it) b.style.left=(it.x - boxW[id]/2)+'px';
+  });
+  Object.values(E).forEach(b=>{b.style.opacity=''});
+
+  // Now set all path d attributes with real measured heights+widths
+  Object.keys(P).forEach(id=>{let pid=P[id].dataset.from;P[id].setAttribute('d',mkD(pid,id))});
+
+  clog('build: '+items.length+' nodes, '+Object.keys(P).length+' paths','log-state');
+  clog('boxH: '+JSON.stringify(boxH),'log-state');
+  clog('boxW: '+JSON.stringify(boxW),'log-state');
+  // log first few box positions for debug
+  items.slice(0,3).forEach(it=>{
+    let b=E[it.n.id],r=b.getBoundingClientRect();
+    clog('box '+it.n.id+': layout('+it.x+','+it.y+') css('+b.style.left+','+b.style.top+') w='+b.offsetWidth,'log-state');
+  });
+  // ROOT starts alive immediately ? alone, mysterious, top of screen
+  makeAlive(T.id);
+
+  // Setup all clicks
+  items.forEach(it=>{
+    let n=it.n,box=E[n.id];
+    box.addEventListener('click',ev=>{
+      ev.stopPropagation();
+      // If alive and has kids not yet shown ? reveal kids
+      if(opened.has(n.id)&&!kidsShown.has(n.id)&&n.ch&&n.ch.length){
+        if(zoomLock>0&&zm<zoomLock){
+          clog('ZOOM LOCK: need '+Math.round(zoomLock*100)+'% have '+Math.round(zm*100)+'%','log-err');
+          let g=document.getElementById('zoom-gate');
+          document.getElementById('zg-cur').textContent=Math.round(zm*100)+'%';
+          document.getElementById('zg-need').textContent=Math.round(zoomLock*100)+'%';
+          g.classList.add('show');
+          setTimeout(()=>{g.classList.remove('show')},shameDur);
+          return}
+        showKids(n);return}
+      // If ghost ? unlock it
+      if(!opened.has(n.id)&&box.classList.contains('ghost')){
+        if(zoomLock>0&&zm<zoomLock){
+          clog('ZOOM LOCK: need '+Math.round(zoomLock*100)+'% have '+Math.round(zm*100)+'%','log-err');
+          let g=document.getElementById('zoom-gate');
+          document.getElementById('zg-cur').textContent=Math.round(zm*100)+'%';
+          document.getElementById('zg-need').textContent=Math.round(zoomLock*100)+'%';
+          g.classList.add('show');
+          setTimeout(()=>{g.classList.remove('show')},shameDur);
+          return}
+        if(n.cost>0&&tokens<n.cost){clog('NOT ENOUGH: need '+n.cost+' have '+tokens,'log-err');box.style.borderColor='#f87171';box.style.boxShadow='0 0 18px rgba(248,80,80,0.2)';setTimeout(()=>{box.style.borderColor='';box.style.boxShadow=''},500);return}
+        unlockNode(n,box);return}
+      // Already alive + kids shown ? do nothing (NO COLLAPSE)
+    });
+  });
+}
+
+function makeAlive(id){clog('ALIVE: '+id,'log-click');
+  opened.add(id);let box=E[id];
+  box.classList.remove('ghost');box.classList.add('alive');
+  boxH[id]=box.offsetHeight||84;
+  rebuildPaths();updCount();
+}
+
+function showKids(parent){
+  if(kidsShown.has(parent.id)){clog('showKids: '+parent.id+' already shown','log-state');return;}
+  kidsShown.add(parent.id);fl(E[parent.id]);
+  clog('REVEAL KIDS of '+parent.id+': ['+parent.ch.map(c=>c.id).join(', ')+']','log-click');
+  parent.ch.forEach((ch,i)=>{
+    setTimeout(()=>{
+      // Line fades in as ghost
+      let path=P[ch.id];
+      if(path){path.classList.add('ghost-line')}
+      // Box appears as ghost
+      setTimeout(()=>{E[ch.id].classList.add('ghost')},200);
+    },i*120);
+  });
+}
+
+function unlockNode(n,box){clog('UNLOCK: '+n.id+' (cost:'+n.cost+' tok:'+tokens+')','log-click');
+  fl(box);tokens-=n.cost;opened.add(n.id);
+  // 1: line traces with color
+  let path=P[n.id];
+  if(path){path.classList.remove('ghost-line');path.style.stroke=lnC(n);path.classList.add('alive-line')}
+  // 2: box goes alive
+  setTimeout(()=>{
+    box.classList.remove('ghost');box.classList.add('alive');
+    boxH[n.id]=box.offsetHeight||84;rebuildPaths();
+    aX(n.xp,box);bS(box);
+    if(n.type==='result'||n.type==='dead')aT(1,box);uH();
+  },250);
+  // 3: show kids after a beat
+  setTimeout(()=>{if(n.ch&&n.ch.length)showKids(n)},500);
+  updCount();
+}
+
+function updCount(){let vis=items.filter(i=>opened.has(i.n.id));document.getElementById('h-n').textContent=vis.length;document.getElementById('h-d').textContent=vis.length?Math.max(0,...vis.map(i=>i.d)):0}
+
+// PAN ZOOM ? root at TOP, 20% from top edge
+let panX=0,panY=0,zm=0.6;
+function center(){panX=(window.innerWidth/2/zm)-CX;panY=40/zm;upT()}
+function upT(){plane.style.zoom=zm;plane.style.left=panX+'px';plane.style.top=panY+'px';
+  let ze=document.getElementById('h-zm');if(ze)ze.textContent=Math.round(zm*100)+'%'}
+let drag=false,lm={x:0,y:0};
+document.addEventListener('pointerdown',e=>{if(e.target.closest('.eq'))return;drag=true;lm={x:e.clientX,y:e.clientY}});
+document.addEventListener('pointermove',e=>{if(!drag)return;panX+=(e.clientX-lm.x)/zm;panY+=(e.clientY-lm.y)/zm;lm={x:e.clientX,y:e.clientY};upT()});
+document.addEventListener('pointerup',()=>{drag=false});
+document.addEventListener('wheel',e=>{e.preventDefault();let oz=zm;zm*=e.deltaY>0?0.92:1.08;zm=Math.max(0.18,Math.min(2.0,zm));panX=e.clientX/zm-(e.clientX/oz-panX);panY=e.clientY/zm-(e.clientY/oz-panY);upT()},{passive:false});
+
+// ??? START EMPTY ? nothing loaded ???
+drawGridEmpty();center();
+clog('page empty. press autopilot to begin.','log-state');
+
+function drawGridEmpty(){
+  gridCv.width=4000;gridCv.height=3000;
+  gridCtx.clearRect(0,0,4000,3000);
+  gridCtx.strokeStyle='rgba(0,212,255,0.018)';gridCtx.lineWidth=0.5;
+  gridCtx.beginPath();
+  for(let x=0;x<4000;x+=230){gridCtx.moveTo(x,0);gridCtx.lineTo(x,3000)}
+  for(let y=0;y<3000;y+=160){gridCtx.moveTo(0,y);gridCtx.lineTo(4000,y)}
+  gridCtx.stroke();
+  gridCtx.strokeStyle='rgba(0,212,255,0.035)';gridCtx.beginPath();
+  for(let x=0;x<4000;x+=920){gridCtx.moveTo(x,0);gridCtx.lineTo(x,3000)}
+  for(let y=0;y<3000;y+=640){gridCtx.moveTo(0,y);gridCtx.lineTo(4000,y)}
+  gridCtx.stroke();
+}
+
+// ??? AUTOPILOT ? generates tree one step at a time ???
+let autoBuilt=false;
+let autoQueue=[];  // nodes to process
+let autoStep=0;
+
+document.getElementById('btn-auto').addEventListener('click',()=>{
+  let sv=document.getElementById('sv-auto');
+
+  // Step 0: Build the tree (but everything hidden)
+  if(!autoBuilt){
+    autoBuilt=true;
+    build();drawGrid();
+    // Hide everything ? undo what build() does
+    Object.values(E).forEach(b=>{b.classList.remove('alive','ghost');b.className=b.className});
+    Object.values(P).forEach(p=>{p.classList.remove('ghost-line','alive-line');p.style.stroke='#0b0d14'});
+    opened.clear();kidsShown.clear();
+    clog('autopilot: tree built in background ('+items.length+' nodes)','log-click');
+    sv.textContent='gen...';
+
+    // Step 1: materialize root
+    setTimeout(()=>{
+      makeAlive(T.id);
+      fl(E[T.id]);
+      clog('autopilot: ROOT materialized ('+T.id+')','log-click');
+      sv.textContent='root';
+      autoQueue=[T.id];
+      autoStep=1;
+    },300);
+    return;
+  }
+
+  // Step N: pick next node to process
+  if(autoQueue.length===0){
+    sv.textContent='done!';
+    clog('autopilot: tree complete!','log-click');
+    return;
+  }
+
+  autoStep++;
+  let nid=autoQueue[0];
+  let node=findNode(T,nid);
+  if(!node){autoQueue.shift();return}
+
+  // If kids not shown ? show them
+  if(!kidsShown.has(nid)&&node.ch&&node.ch.length){
+    showKids(node);
+    clog('autopilot['+autoStep+']: reveal kids of '+nid,'log-click');
+    sv.textContent='reveal '+nid;
+    return;
+  }
+
+  // Find first ghost child to unlock
+  autoQueue.shift();  // done with this parent
+  if(node.ch){
+    for(let ch of node.ch){
+      if(!opened.has(ch.id)){
+        // Unlock it!
+        let box=E[ch.id];
+        if(box&&box.classList.contains('ghost')){
+          tokens=Math.max(tokens,ch.cost+1); // autopilot has infinite tokens
+          unlockNode(ch,box);
+          autoQueue.push(ch.id);
+          clog('autopilot['+autoStep+']: UNLOCK '+ch.id,'log-click');
+          sv.textContent='open '+ch.id;
+          return;
+        }
+      } else {
+        // Already opened, add to queue for its kids
+        if(!kidsShown.has(ch.id)&&ch.ch&&ch.ch.length){
+          autoQueue.push(ch.id);
+        }
+      }
+    }
+    // All kids opened, queue remaining unopened descendants
+    for(let ch of node.ch){
+      if(ch.ch&&ch.ch.length&&!ch.ch.every(c=>opened.has(c.id))){
+        autoQueue.push(ch.id);
+      }
+    }
+  }
+
+  if(autoQueue.length===0){
+    sv.textContent='done!';
+    clog('autopilot: COMPLETE. '+opened.size+' nodes opened.','log-click');
+  }
+});
+
+function findNode(t,id){
+  if(t.id===id)return t;
+  if(t.ch)for(let c of t.ch){let f=findNode(c,id);if(f)return f}
+  return null;
+}
+clog('zoom:'+zm.toFixed(2)+' pan:'+Math.round(panX)+','+Math.round(panY),'log-state');
+clog('opened: ['+[...opened].join(", ")+']','log-state');
+clog('ready. click the golden box.','log-state');
+
+
+// ??? FULL AUTO ? play all 10 trees one by one ???
+let fullAutoRunning = false;
+let fullAutoTimer = null;
+const TREE_ORDER = ['sinx','euler_e','power_rule','dsin','chain','int_power','improper','taylor_ex','ftc','eps_delta'];
+let fullAutoIdx = 0;
+const STEP_DELAY = 400;  // ms between each autopilot step
+const TREE_PAUSE = 1500; // ms pause between trees
+
+document.getElementById('btn-fullauto').addEventListener('click', () => {
+  if (fullAutoRunning) {
+    // STOP
+    fullAutoRunning = false;
+    clearTimeout(fullAutoTimer);
+    document.getElementById('btn-fullauto').textContent = '?? all trees';
+    document.getElementById('sv-fullauto').textContent = 'stopped';
+    clog('FULL AUTO: stopped', 'log-err');
+    return;
+  }
+  
+  // START
+  fullAutoRunning = true;
+  fullAutoIdx = 0;
+  document.getElementById('btn-fullauto').textContent = '? stop';
+  clog('FULL AUTO: starting all 10 trees', 'log-click');
+  playNextTree();
+});
+
+function playNextTree() {
+  if (!fullAutoRunning || fullAutoIdx >= TREE_ORDER.length) {
+    fullAutoRunning = false;
+    document.getElementById('btn-fullauto').textContent = '?? all trees';
+    document.getElementById('sv-fullauto').textContent = 'done!';
+    clog('FULL AUTO: ALL TREES COMPLETE!', 'log-click');
+    return;
+  }
+  
+  let treeId = TREE_ORDER[fullAutoIdx];
+  let remaining = TREE_ORDER.length - fullAutoIdx;
+  document.getElementById('sv-fullauto').textContent = remaining + ' left';
+  document.getElementById('tree-sel').value = treeId;
+  
+  clog('FULL AUTO [' + (fullAutoIdx+1) + '/10]: loading ' + treeId, 'log-click');
+  
+  // Switch tree
+  currentTreeId = treeId;
+  Object.values(E).forEach(b => b.remove());
+  while(lksvg.firstChild) lksvg.removeChild(lksvg.firstChild);
+  E = {}; P = {}; items = []; lk = {}; boxH = {}; boxW = {};
+  opened.clear(); kidsShown.clear();
+  autoBuilt = false; autoQueue = []; autoStep = 0;
+  tokens = 3; xp = 0; streak = 0; combo = 0;
+  uH();
+  document.getElementById('h-n').textContent = '0';
+  document.getElementById('h-d').textContent = '0';
+  
+  let src = TREES[treeId];
+  T.id=src.id;T.tag=src.tag;T.type=src.type;T.latex=src.latex;T.sub=src.sub;T.cost=src.cost;T.xp=src.xp;T.ch=src.ch;
+  
+  // Build + hide
+  autoBuilt = true;
+  build(); drawGrid();
+  Object.values(E).forEach(b=>{b.classList.remove('alive','ghost');b.className=b.className});
+  Object.values(P).forEach(p=>{p.classList.remove('ghost-line','alive-line');p.style.stroke='#0b0d14'});
+  opened.clear(); kidsShown.clear();
+  
+  // Start stepping through this tree
+  setTimeout(() => {
+    makeAlive(T.id);
+    fl(E[T.id]);
+    autoQueue = [T.id];
+    autoStep = 0;
+    center();
+    autoStepThrough();
+  }, 500);
+}
+
+function autoStepThrough() {
+  if (!fullAutoRunning) return;
+  
+  // Check if tree is complete
+  let allOpened = items.every(i => opened.has(i.n.id));
+  if (allOpened || autoQueue.length === 0) {
+    // Check for any remaining unopened
+    let unopened = items.filter(i => !opened.has(i.n.id));
+    if (unopened.length === 0) {
+      clog('FULL AUTO: tree ' + currentTreeId + ' COMPLETE (' + opened.size + ' nodes)', 'log-click');
+      fullAutoIdx++;
+      fullAutoTimer = setTimeout(playNextTree, TREE_PAUSE);
+      return;
+    }
+  }
+  
+  // Do one autopilot step
+  autoStep++;
+  
+  if (autoQueue.length === 0) {
+    // Find any node that has unrevealed kids or unopened ghosts
+    for (let it of items) {
+      if (opened.has(it.n.id) && !kidsShown.has(it.n.id) && it.n.ch && it.n.ch.length) {
+        autoQueue.push(it.n.id);
+        break;
+      }
+    }
+    // Or find any ghost to unlock
+    if (autoQueue.length === 0) {
+      for (let it of items) {
+        if (!opened.has(it.n.id) && E[it.n.id] && E[it.n.id].classList.contains('ghost')) {
+          tokens = Math.max(tokens, it.n.cost + 1);
+          unlockNode(it.n, E[it.n.id]);
+          fullAutoTimer = setTimeout(autoStepThrough, STEP_DELAY);
+          return;
+        }
+      }
+      // Truly done
+      clog('FULL AUTO: tree ' + currentTreeId + ' COMPLETE', 'log-click');
+      fullAutoIdx++;
+      fullAutoTimer = setTimeout(playNextTree, TREE_PAUSE);
+      return;
+    }
+  }
+  
+  let nid = autoQueue[0];
+  let node = findNode(T, nid);
+  if (!node) { autoQueue.shift(); fullAutoTimer = setTimeout(autoStepThrough, STEP_DELAY); return; }
+  
+  // If kids not shown -> show them
+  if (!kidsShown.has(nid) && node.ch && node.ch.length) {
+    showKids(node);
+    fullAutoTimer = setTimeout(autoStepThrough, STEP_DELAY);
+    return;
+  }
+  
+  // Find first ghost child to unlock
+  autoQueue.shift();
+  if (node.ch) {
+    for (let ch of node.ch) {
+      if (!opened.has(ch.id)) {
+        let box = E[ch.id];
+        if (box && box.classList.contains('ghost')) {
+          tokens = Math.max(tokens, ch.cost + 1);
+          unlockNode(ch, box);
+          autoQueue.push(ch.id);
+          fullAutoTimer = setTimeout(autoStepThrough, STEP_DELAY);
+          return;
+        }
+      } else {
+        if (!kidsShown.has(ch.id) && ch.ch && ch.ch.length) {
+          autoQueue.push(ch.id);
+        }
+      }
+    }
+    for (let ch of node.ch) {
+      if (ch.ch && ch.ch.length && !ch.ch.every(c => opened.has(c.id))) {
+        autoQueue.push(ch.id);
+      }
+    }
+  }
+  
+  fullAutoTimer = setTimeout(autoStepThrough, STEP_DELAY);
+}
+
+
+// ??? MOBILE TOUCH ? pinch zoom + pan ???
+let touches=[];
+let lastPinchDist=0;
+let lastTouchMid={x:0,y:0};
+
+document.addEventListener('touchstart',e=>{
+  if(e.target.closest('.eq')||e.target.closest('#bar')||e.target.closest('#logp'))return;
+  touches=Array.from(e.touches);
+  if(touches.length===2){
+    lastPinchDist=Math.hypot(touches[1].clientX-touches[0].clientX,touches[1].clientY-touches[0].clientY);
+    lastTouchMid={x:(touches[0].clientX+touches[1].clientX)/2,y:(touches[0].clientY+touches[1].clientY)/2};
+  }else if(touches.length===1){
+    drag=true;lm={x:touches[0].clientX,y:touches[0].clientY};
+  }
+},{passive:true});
+
+document.addEventListener('touchmove',e=>{
+  if(e.target.closest('#bar')||e.target.closest('#logp'))return;
+  touches=Array.from(e.touches);
+  
+  if(touches.length===2){
+    // PINCH ZOOM
+    e.preventDefault();
+    let dist=Math.hypot(touches[1].clientX-touches[0].clientX,touches[1].clientY-touches[0].clientY);
+    let mid={x:(touches[0].clientX+touches[1].clientX)/2,y:(touches[0].clientY+touches[1].clientY)/2};
+    
+    if(lastPinchDist>0){
+      let scale=dist/lastPinchDist;
+      let oz=zm;
+      zm*=scale;
+      zm=Math.max(0.15,Math.min(2.5,zm));
+      panX=mid.x/zm-(mid.x/oz-panX);
+      panY=mid.y/zm-(mid.y/oz-panY);
+      upT();
+    }
+    lastPinchDist=dist;
+    lastTouchMid=mid;
+    
+    // TWO-FINGER PAN
+    panX+=(mid.x-lastTouchMid.x)/zm;
+    panY+=(mid.y-lastTouchMid.y)/zm;
+    lastTouchMid=mid;
+    upT();
+  }else if(touches.length===1&&drag){
+    // ONE-FINGER PAN
+    panX+=(touches[0].clientX-lm.x)/zm;
+    panY+=(touches[0].clientY-lm.y)/zm;
+    lm={x:touches[0].clientX,y:touches[0].clientY};
+    upT();
+  }
+},{passive:false});
+
+document.addEventListener('touchend',e=>{
+  drag=false;lastPinchDist=0;
+  touches=Array.from(e.touches);
+},{passive:true});
+
+// ??? CONSOLE TOGGLE ???
+let logVisible=true;
+function toggleLog(){
+  logVisible=!logVisible;
+  document.getElementById('logp').classList.toggle('hidden',!logVisible);
+  document.getElementById('btn-log').style.color=logVisible?'#80d0ff':'#333';
+  clog('console '+(logVisible?'shown':'hidden'),'log-state');
+}
+
+// On mobile, hide console by default
+if(window.innerWidth<768){
+  logVisible=false;
+  document.getElementById('logp').classList.add('hidden');
+  document.getElementById('btn-log').style.color='#333';
+}
+
+clog('v4.1: mobile touch + console toggle ready','log-state');
+
+</script>
+</body>
+</html>
