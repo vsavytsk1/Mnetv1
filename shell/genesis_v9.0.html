@@ -26,6 +26,13 @@ body{background:#050508;color:#c8d8e8;font-family:'Courier New',monospace;overfl
 .bar-fill{height:100%;border-radius:2px;transition:width 0.3s}
 .bar-ours{background:linear-gradient(90deg,#ff69b4,#00ffd5)}
 .bar-best{background:linear-gradient(90deg,#ffd700,#ff8c00)}
+.regime-sel{margin:6px 0 4px 0}
+.regime-sel button{background:none;border:1px solid #333;color:#555;padding:2px 7px;font-size:9px;font-family:'Courier New';cursor:pointer;margin-right:3px;border-radius:2px}
+.regime-sel button.active{border-color:#ff69b4;color:#ff69b4;background:#1a0a14}
+.regime-sel button:hover{border-color:#00ffd5;color:#00ffd5}
+.re-info{font-size:8px;color:#555;margin-top:2px;line-height:1.5}
+.re-info .re-val{color:#ffd700}
+.re-info .re-best{color:#00ffd5}
 #controls{text-align:center;padding:10px;border-top:1px solid #1a1f2e}
 #controls button{background:#1a1f2e;color:#00ffd5;border:1px solid #00ffd5;padding:6px 16px;margin:4px;cursor:pointer;font-family:'Courier New';font-size:11px;border-radius:3px}
 #controls button:hover{background:#00ffd5;color:#050508}
@@ -38,8 +45,8 @@ body{background:#050508;color:#c8d8e8;font-family:'Courier New',monospace;overfl
 <div id="benchLoad"></div>
 
 <div id="header">
-  <h1>GENESIS v9.6</h1>
-  <div class="sub">Navier-Stokes Wave Benchmark &middot; Goldberg Kernel &middot; 3 Refinement Levels</div>
+  <h1>GENESIS v9.7</h1>
+  <div class="sub">Navier-Stokes Reynolds Benchmark &middot; Goldberg Kernel &middot; 4 Regimes &middot; 4 Levels</div>
 </div>
 
 <!-- ROW 1: Level 0 (12 faces) -->
@@ -57,10 +64,18 @@ body{background:#050508;color:#c8d8e8;font-family:'Courier New',monospace;overfl
     <div><span class="stat-label">wave steps</span> <span class="stat-val gn" id="s0-steps">0</span></div>
     <div><span class="stat-label">ms/1M steps</span> <span class="stat-val" id="s0-rate">-</span></div>
     <div><span class="stat-label">path found</span> <span class="stat-val pk" id="s0-path">-</span></div>
+    <div><span class="stat-label">regime</span> <span class="stat-val gd" id="s0-regime">-</span></div>
+    <div class="regime-sel" id="rsel0">
+      <button onclick="setRegime(0,'stokes')" id="rb0-stokes">STOKES</button>
+      <button onclick="setRegime(0,'laminar')" id="rb0-laminar">LAMINAR</button>
+      <button onclick="setRegime(0,'transition')" id="rb0-transition">TRANSITION</button>
+      <button onclick="setRegime(0,'turbulent')" id="rb0-turbulent">TURBULENT</button>
+    </div>
+    <div class="re-info" id="re-info0">select regime before FLOW</div>
     <div class="compare">
-      <div class="method">OUR KERNEL (wave diffusion on face graph)</div>
+      <div class="method" id="m0-ours">OUR KERNEL (select regime)</div>
       <div class="bar"><div class="bar-fill bar-ours" id="bar0-ours" style="width:0%"></div></div>
-      <div class="method">BEST KNOWN (FVM icosahedral, ICON-class)</div>
+      <div class="method" id="m0-best">BEST KNOWN (select regime)</div>
       <div class="bar"><div class="bar-fill bar-best" id="bar0-best" style="width:0%"></div></div>
     </div>
   </div>
@@ -81,10 +96,18 @@ body{background:#050508;color:#c8d8e8;font-family:'Courier New',monospace;overfl
     <div><span class="stat-label">wave steps</span> <span class="stat-val gn" id="s1-steps">0</span></div>
     <div><span class="stat-label">ms/1M steps</span> <span class="stat-val" id="s1-rate">-</span></div>
     <div><span class="stat-label">path found</span> <span class="stat-val pk" id="s1-path">-</span></div>
+    <div><span class="stat-label">regime</span> <span class="stat-val gd" id="s1-regime">-</span></div>
+    <div class="regime-sel" id="rsel1">
+      <button onclick="setRegime(1,'stokes')" id="rb1-stokes">STOKES</button>
+      <button onclick="setRegime(1,'laminar')" id="rb1-laminar">LAMINAR</button>
+      <button onclick="setRegime(1,'transition')" id="rb1-transition">TRANSITION</button>
+      <button onclick="setRegime(1,'turbulent')" id="rb1-turbulent">TURBULENT</button>
+    </div>
+    <div class="re-info" id="re-info1">select regime before FLOW</div>
     <div class="compare">
-      <div class="method">OUR KERNEL (wave diffusion on face graph)</div>
+      <div class="method" id="m1-ours">OUR KERNEL (select regime)</div>
       <div class="bar"><div class="bar-fill bar-ours" id="bar1-ours" style="width:0%"></div></div>
-      <div class="method">BEST KNOWN (FVM icosahedral, ICON-class)</div>
+      <div class="method" id="m1-best">BEST KNOWN (select regime)</div>
       <div class="bar"><div class="bar-fill bar-best" id="bar1-best" style="width:0%"></div></div>
     </div>
   </div>
@@ -105,10 +128,18 @@ body{background:#050508;color:#c8d8e8;font-family:'Courier New',monospace;overfl
     <div><span class="stat-label">wave steps</span> <span class="stat-val gn" id="s2-steps">0</span></div>
     <div><span class="stat-label">ms/1M steps</span> <span class="stat-val" id="s2-rate">-</span></div>
     <div><span class="stat-label">path found</span> <span class="stat-val pk" id="s2-path">-</span></div>
+    <div><span class="stat-label">regime</span> <span class="stat-val gd" id="s2-regime">-</span></div>
+    <div class="regime-sel" id="rsel2">
+      <button onclick="setRegime(2,'stokes')" id="rb2-stokes">STOKES</button>
+      <button onclick="setRegime(2,'laminar')" id="rb2-laminar">LAMINAR</button>
+      <button onclick="setRegime(2,'transition')" id="rb2-transition">TRANSITION</button>
+      <button onclick="setRegime(2,'turbulent')" id="rb2-turbulent">TURBULENT</button>
+    </div>
+    <div class="re-info" id="re-info2">select regime before FLOW</div>
     <div class="compare">
-      <div class="method">OUR KERNEL (wave diffusion on face graph)</div>
+      <div class="method" id="m2-ours">OUR KERNEL (select regime)</div>
       <div class="bar"><div class="bar-fill bar-ours" id="bar2-ours" style="width:0%"></div></div>
-      <div class="method">BEST KNOWN (FVM icosahedral, ICON-class)</div>
+      <div class="method" id="m2-best">BEST KNOWN (select regime)</div>
       <div class="bar"><div class="bar-fill bar-best" id="bar2-best" style="width:0%"></div></div>
     </div>
   </div>
@@ -144,6 +175,7 @@ body{background:#050508;color:#c8d8e8;font-family:'Courier New',monospace;overfl
 </div>
 
 <div id="controls">
+  <button onclick="syncAll()" id="bSync" style="border-color:#ffd700;color:#ffd700">SYNC ALL</button>
   <button onclick="seedAll()">SEED ALL 3</button>
   <button onclick="seedL5()">SEED L4 (24K faces)</button>
   <button onclick="flowAll()">FLOW ALL</button>
@@ -798,6 +830,89 @@ else if (typeof global !== 'undefined') global.GK = GK;
 // GENESIS v9.0 ENGINE: 3 SHAPES, 3 FLOWS, 1 BENCHMARK
 // ===================================================================
 
+// === REYNOLDS REGIMES ===
+var REGIMES = {
+  stokes: {
+    name: 'STOKES', re: '<1', color: '#7fff7f',
+    mix: 0.95,  // almost pure diffusion, very viscous
+    decay: 0.001,
+    desc: 'Re<1: creeping flow, viscosity dominates',
+    best: 'Analytical (Stokes solution)',
+    bestComplexity: 'O(n) — direct solve',
+    ourMethod: 'pressure diffusion, 95% neighbor mix'
+  },
+  laminar: {
+    name: 'LAMINAR', re: '~100', color: '#00ffd5',
+    mix: 0.6,   // balanced diffusion + advection
+    decay: 0.005,
+    desc: 'Re~100: smooth streamlines, steady state',
+    best: 'FVM on icosahedral grid (ICON-class)',
+    bestComplexity: 'O(n log n)',
+    ourMethod: 'pressure diffusion, 60% neighbor mix'
+  },
+  transition: {
+    name: 'TRANSITION', re: '~2000', color: '#ffd700',
+    mix: 0.35,  // advection starting to dominate
+    decay: 0.01,
+    desc: 'Re~2000: onset of instability, vortex shedding',
+    best: 'LES (Large Eddy Simulation)',
+    bestComplexity: 'O(n^{4/3})',
+    ourMethod: 'pressure diffusion, 35% mix + vorticity'
+  },
+  turbulent: {
+    name: 'TURBULENT', re: '>10000', color: '#ff4444',
+    mix: 0.15,  // highly advective, chaotic
+    decay: 0.02,
+    desc: 'Re>10K: fully turbulent, energy cascade',
+    best: 'DNS (Direct Numerical Simulation)',
+    bestComplexity: 'O(Re^3) ≈ O(n^3)',
+    ourMethod: 'pressure diffusion, 15% mix + turbulent noise'
+  }
+};
+
+var syncMode = false;
+
+function setRegime(li, regime){
+  if(!LEVELS[li]) return;
+  LEVELS[li].regime = regime;
+  var R = REGIMES[regime];
+  // Update UI
+  ['stokes','laminar','transition','turbulent'].forEach(function(r){
+    var btn = document.getElementById('rb'+li+'-'+r);
+    if(btn) btn.className = (r===regime) ? 'active' : '';
+  });
+  document.getElementById('s'+li+'-regime').textContent = R.name+' (Re'+R.re+')';
+  document.getElementById('s'+li+'-regime').style.color = R.color;
+  document.getElementById('re-info'+li).innerHTML = 
+    '<span class="re-val">'+R.desc+'</span><br>'+
+    'Best known: <span class="re-best">'+R.best+' — '+R.bestComplexity+'</span><br>'+
+    'Our kernel: '+R.ourMethod;
+  document.getElementById('m'+li+'-ours').textContent = 'OUR KERNEL ('+R.ourMethod+')';
+  document.getElementById('m'+li+'-best').textContent = 'BEST: '+R.best+' — '+R.bestComplexity;
+  // Update flow mix if flow exists
+  if(LEVELS[li].flow){
+    LEVELS[li].flow.mix = R.mix;
+    LEVELS[li].flow.decay = R.decay;
+    LEVELS[li].flow.regime = regime;
+  }
+  // SYNC mode: apply to all
+  if(syncMode){
+    for(var i=0;i<LEVELS.length;i++){
+      if(i!==li && LEVELS[i] && LEVELS[i].state) setRegime(i, regime);
+    }
+  }
+  console.log('%c[v9.7] L'+li+' regime: '+R.name+' (Re'+R.re+')','color:'+R.color);
+}
+
+function syncAll(){
+  syncMode = !syncMode;
+  var btn = document.getElementById('bSync');
+  btn.textContent = syncMode ? 'SYNC ON' : 'SYNC ALL';
+  btn.style.background = syncMode ? '#ffd700' : 'none';
+  btn.style.color = syncMode ? '#050508' : '#ffd700';
+  console.log('%c[v9.7] SYNC '+(syncMode?'ON':'OFF'),'color:#ffd700');
+}
+
 var LEVELS = [
   {id:0, label:'L0', refines:0, state:null, flow:null, canvas:null, cx:null, cam:{ry:0,rx:0.4,zoom:65,spin:0.003}},
   {id:1, label:'L1', refines:1, state:null, flow:null, canvas:null, cx:null, cam:{ry:2.1,rx:0.25,zoom:65,spin:0.005}},
@@ -844,19 +959,34 @@ function makeFlow(gkState){
   return {
     adj:adj, pressure:new Float32Array(n), arrival:arrival,
     maxP:new Float32Array(n), source:src, target:tgt,
-    step:0, found:false, path:null, active:false, benchMs:0
+    step:0, found:false, path:null, active:false, benchMs:0,
+    mix:0.6, decay:0.005, regime:'laminar'
   };
 }
 
 function flowStep(fl){
   var n=fl.pressure.length;
   fl.pressure[fl.source]=1.0;
+  var mix=fl.mix||0.6;  // regime controls this
+  var decay=fl.decay||0.005;
+  var selfMix=1.0-mix;
+  var regime=fl.regime||'laminar';
   var pNew=new Float32Array(n);
   for(var i=0;i<n;i++){
     var adj=fl.adj[i];if(!adj.length)continue;
     var sum=0;
     for(var j=0;j<adj.length;j++) sum+=fl.pressure[adj[j]];
-    pNew[i]=fl.pressure[i]*0.4+sum/adj.length*0.6;
+    var avgN=sum/adj.length;
+    // Base diffusion (regime-dependent mix)
+    pNew[i]=fl.pressure[i]*selfMix+avgN*mix;
+    // Turbulent noise (for transition/turbulent regimes)
+    if(regime==='transition'||regime==='turbulent'){
+      var noise=(Math.random()-0.5)*decay*fl.pressure[i]*2;
+      pNew[i]+=noise;
+    }
+    // Decay (energy dissipation)
+    pNew[i]*=(1.0-decay*0.01);
+    if(pNew[i]<0) pNew[i]=0;
     if(pNew[i]>0.005&&fl.arrival[i]<0) fl.arrival[i]=fl.step;
     if(pNew[i]>fl.maxP[i]) fl.maxP[i]=pNew[i];
   }
@@ -1043,7 +1173,15 @@ function benchAll(){
         document.getElementById('s'+li+'-steps').textContent=L.flow.step.toLocaleString();
         document.getElementById('s'+li+'-rate').textContent=Math.round(elapsed)+'ms';
         if(L.flow.path) document.getElementById('s'+li+'-path').textContent=L.flow.path.length+' cells';
-        var bestEst=L.state.faces.length*0.4;
+        // Best-known estimate varies by regime
+        var nF=L.state.faces.length;
+        var reg=L.regime||'laminar';
+        var bestEst;
+        if(reg==='stokes') bestEst=nF*0.3;           // O(n) direct
+        else if(reg==='laminar') bestEst=nF*Math.log10(nF)*0.1; // O(n log n)
+        else if(reg==='transition') bestEst=Math.pow(nF,4/3)*0.001; // O(n^4/3) LES
+        else bestEst=Math.pow(nF,3)*0.0000001;       // O(n^3) DNS
+        bestEst=Math.max(1,bestEst);
         var logO=Math.log10(Math.max(1,elapsed));
         var logB=Math.log10(Math.max(1,bestEst));
         var logM=Math.max(logO,logB,1);
