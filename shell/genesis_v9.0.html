@@ -36,7 +36,7 @@ body{background:#050508;color:#c8d8e8;font-family:'Courier New',monospace;overfl
 </head><body>
 
 <div id="header">
-  <h1>GENESIS v9.2</h1>
+  <h1>GENESIS v9.3</h1>
   <div class="sub">Navier-Stokes Wave Benchmark &middot; Goldberg Kernel &middot; 3 Refinement Levels</div>
 </div>
 
@@ -767,9 +767,9 @@ else if (typeof global !== 'undefined') global.GK = GK;
 // ===================================================================
 
 var LEVELS = [
-  {id:0, label:'L0', refines:0, state:null, flow:null, canvas:null, cx:null, cam:{ry:0,rx:0.3,zoom:120}},
-  {id:1, label:'L1', refines:1, state:null, flow:null, canvas:null, cx:null, cam:{ry:0.5,rx:0.3,zoom:120}},
-  {id:2, label:'L2', refines:2, state:null, flow:null, canvas:null, cx:null, cam:{ry:1.0,rx:0.3,zoom:120}}
+  {id:0, label:'L0', refines:0, state:null, flow:null, canvas:null, cx:null, cam:{ry:0,rx:0.4,zoom:65,spin:0.003}},
+  {id:1, label:'L1', refines:1, state:null, flow:null, canvas:null, cx:null, cam:{ry:2.1,rx:0.25,zoom:65,spin:0.005}},
+  {id:2, label:'L2', refines:2, state:null, flow:null, canvas:null, cx:null, cam:{ry:4.2,rx:0.15,zoom:65,spin:0.007}}
 ];
 
 // --- Build adjacency for a GK state ---
@@ -986,10 +986,13 @@ function benchAll(){
     var ourRate=elapsed;
     // ICON model reference: ~0.5ms per step on 5M cell grid = ~500ms/1M on 500 cells
     // Scale: at 492 faces, ICON-class would be ~200ms/1M (optimized Fortran/MPI)
-    var bestEstimate=L.state.faces.length*0.4; // rough: 0.4ms per face per 1M steps
-    var maxBar=Math.max(ourRate,bestEstimate);
-    document.getElementById('bar'+li+'-ours').style.width=Math.round(ourRate/maxBar*100)+'%';
-    document.getElementById('bar'+li+'-best').style.width=Math.round(bestEstimate/maxBar*100)+'%';
+    var bestEstimate=L.state.faces.length*0.4;
+    // LOG scale bars
+    var logO=Math.log10(Math.max(1,ourRate));
+    var logB=Math.log10(Math.max(1,bestEstimate));
+    var logM=Math.max(logO,logB,1);
+    document.getElementById('bar'+li+'-ours').style.width=Math.round(logO/logM*100)+'%';
+    document.getElementById('bar'+li+'-best').style.width=Math.round(logB/logM*100)+'%';
     console.log('%c[v9] L'+li+': 1M steps in '+Math.round(elapsed)+'ms ('+L.state.faces.length+' faces)','color:#ffd700');
   }
 }
@@ -1045,8 +1048,10 @@ function initCanvases(){
 function animate(){
   for(var li=0;li<3;li++){
     var L=LEVELS[li];
+    L.cam.ry+=L.cam.spin||0;
     if(L.flow&&L.flow.active){
-      for(var s=0;s<3;s++) flowStep(L.flow);
+      var stepsPerFrame=3+li*5;
+      for(var s=0;s<stepsPerFrame;s++) flowStep(L.flow);
       document.getElementById('s'+li+'-steps').textContent=L.flow.step.toLocaleString();
       if(L.flow.path&&!document.getElementById('s'+li+'-path').dataset.set){
         document.getElementById('s'+li+'-path').textContent=L.flow.path.length+' cells';
