@@ -1,0 +1,916 @@
+﻿<!DOCTYPE html>
+<html><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GENESIS v7.1 — Fractal Graph Explorer</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#050508;color:#c8d8e8;font-family:'Courier New',monospace;overflow:hidden;touch-action:none}
+canvas{position:fixed;top:0;left:0;z-index:0}
+#hud{position:fixed;top:10px;left:10px;z-index:5;pointer-events:none;font-size:10px;line-height:1.7}
+.lbl{color:#444}.val{color:#00ffd5}.vp{color:#ff69b4}.vg{color:#ffd700}
+#title{position:fixed;top:8px;left:50%;transform:translateX(-50%);z-index:5;pointer-events:none;
+  font-family:'Orbitron';font-size:11px;letter-spacing:0.3em;color:rgba(0,180,255,0.3)}
+#euler{position:fixed;top:24px;left:50%;transform:translateX(-50%);z-index:5;pointer-events:none;
+  font-family:'Orbitron';font-size:20px;font-weight:900}
+#euler .ok{color:#00ffd5}#euler .bad{color:#ff3333}
+#axiom-log{position:fixed;top:10px;right:10px;width:280px;max-height:50%;overflow-y:auto;font-size:9px;
+  background:rgba(5,5,8,0.88);border:1px solid #1a1f2e;border-radius:4px;padding:6px;z-index:5}
+.ax-p1{color:#00ffd5}.ax-p2{color:#80d0ff}.ax-p3{color:#aaa}.ax-p4{color:#ffd700}
+.ax-p5{color:#ff9900}.ax-p6{color:#ff69b4}.ax-p7{color:#a78bfa}.ax-inv{color:#7fff7f;font-weight:bold}
+#bar{position:fixed;bottom:0;left:0;right:0;z-index:10;background:rgba(5,5,8,0.95);
+  border-top:1px solid #1a1f2e;padding:5px 8px;display:flex;gap:5px;align-items:center;flex-wrap:wrap;justify-content:center}
+.btn{background:#0a0e18;border:1px solid #2a2a3a;color:#80d0ff;padding:4px 10px;font-family:inherit;
+  font-size:9px;cursor:pointer;border-radius:3px;white-space:nowrap;transition:all 0.15s}
+.btn:hover{border-color:#4a6a8a;color:#fff}.btn.pk{color:#ff69b4;border-color:#3a1a2a}
+.btn.gn{color:#7fff7f;border-color:#1a3a1a}.btn.gd{color:#ffd700;border-color:#332a00}
+.sep{width:1px;height:16px;background:#1a1f2e}
+.sl{display:flex;align-items:center;gap:3px}
+.sl label{font-size:7px;color:#555;letter-spacing:0.05em;min-width:30px}
+.sl input[type=range]{width:50px;accent-color:#00ffd5}
+.sl .sv{font-size:8px;color:#00ffd5;min-width:24px}
+</style></head><body>
+<canvas id="cv"></canvas>
+<div id="title">GENESIS v7.1</div>
+<div id="euler"><span class="ok">V - E + F = 2 &middot; P = 12</span></div>
+<div id="hud">
+<div><span class="lbl">V </span><span class="val" id="h-v">0</span></div>
+<div><span class="lbl">E </span><span class="val" id="h-e">0</span></div>
+<div><span class="lbl">F </span><span class="val" id="h-f">0</span></div>
+<div><span class="lbl">pent </span><span class="vp" id="h-p">0</span></div>
+<div><span class="lbl">hex </span><span class="val" id="h-h">0</span></div>
+<div><span class="lbl">chi </span><span class="vg" id="h-chi">0</span></div>
+<div><span class="lbl">E/V </span><span class="vg" id="h-ev">0</span></div>
+<div><span class="lbl">level </span><span class="val" id="h-lv">0</span></div>
+<div><span class="lbl">ops </span><span class="val" id="h-ops">0</span></div>
+</div>
+<div id="axiom-log"></div>
+<div id="bar">
+<button class="btn gn" onclick="doSeed()">SEED</button>
+<button class="btn pk" onclick="doRefineAll()">REFINE ALL</button>
+<button class="btn" onclick="doRefinePents()">REFINE 5s</button>
+<button class="btn" onclick="doRefineHexes()">REFINE 6s</button>
+<button class="btn" onclick="doUndo()">UNDO</button>
+<button class="btn" onclick="doReset()">RESET</button>
+<div class="sep"></div>
+<div class="sl"><label>INNER</label><input type="range" min="10" max="90" value="45" id="sl-inner" oninput="params.innerScale=+this.value/100;SV('sv-inner',this.value/100)"><span class="sv" id="sv-inner">0.45</span></div>
+<div class="sl"><label>MID</label><input type="range" min="10" max="95" value="70" id="sl-mid" oninput="params.midScale=+this.value/100;SV('sv-mid',this.value/100)"><span class="sv" id="sv-mid">0.70</span></div>
+<div class="sl"><label>JITTER</label><input type="range" min="0" max="30" value="0" id="sl-jit" oninput="params.jitter=+this.value/100;SV('sv-jit',this.value/100)"><span class="sv" id="sv-jit">0.00</span></div>
+<div class="sep"></div>
+<div class="sl"><label>ZOOM</label><input type="range" min="10" max="500" value="200" id="sl-zm" oninput="cam.zoom=+this.value;SV('sv-zm',this.value)"><span class="sv" id="sv-zm">200</span></div>
+<div class="sl"><label>ATOM</label><input type="range" min="1" max="30" value="10" id="sl-atom" oninput="cam.atom=+this.value/10;SV('sv-atom',(this.value/10).toFixed(1))"><span class="sv" id="sv-atom">1.0</span></div>
+<div class="sl"><label>SPIN</label><input type="range" min="0" max="50" value="5" id="sl-spin" oninput="cam.spin=+this.value/1000;SV('sv-spin',this.value/1000)"><span class="sv" id="sv-spin">0.005</span></div>
+<div class="sep"></div>
+<button class="btn gd" onclick="doExport()">EXPORT</button>
+<button class="btn" onclick="doExportGraph()">GRAPH</button>
+</div>
+
+<script>
+// ============================================================================
+//  goldberg_kernel.js
+//  MachineNet Â· Goldberg-Coxeter recursive refinement Â· math kernel
+//  Vladyslav Savytskyy Â· 2026-05-22
+//
+//  STANDALONE. Pure functions. No DOM. No Three.js. No external dependencies.
+//  Exportable to Node, Deno, Unity JavaScriptEngine, Babylon.js, Three.js,
+//  raw Canvas, WebGL2 shaders (the kernel produces vertex/index buffers).
+//
+//  PUBLIC SURFACE:
+//    GK.buildC60()                          -> { faces, vertices, edges, info }
+//    GK.refineFace(face, params)            -> [ subFace, ... ]
+//    GK.refineAll(state, params)            -> newState (immutable)
+//    GK.refineOne(state, faceIdx, params)   -> newState (immutable)
+//    GK.invariants(state)                   -> { pents, hexes, depthMax, ... }
+//    GK.serialize(state)                    -> JSON-safe object
+//    GK.deserialize(obj)                    -> state
+//    GK.zoomInto(state, faceIdx)            -> { childState, transform }
+//
+//  PARAMETERS for refinement:
+//    {
+//      innerScale:   number,  // 0..1, where the inner copy of parent sits (default 0.45)
+//      midScale:     number,  // 0..1, where edge midpoints get pulled inward (default 0.7)
+//      preservePentInPent: bool,  // if true, inner-of-pent = pent. else inner = hex (default true)
+//      preserveHexInHex:   bool,  // if true, inner-of-hex = hex. else hex breaks differently (default true)
+//      surfaceMode:  'planar' | 'spherical' | 'tangent' (default 'planar')
+//      jitter:       number,  // 0..1, random perturbation to break perfect symmetry (default 0)
+//    }
+//
+//  INVARIANTS (math-checked, see GK.invariants):
+//    - Initial state: 12 pents + 20 hexes (C60).
+//    - Each pent refines into 1 pent + 5 hexes (under default params).
+//    - Each hex refines into 1 hex + 6 hexes.
+//    - Pent count at full refine: 12 * (refinement_count + 1) ... NO, wait.
+//      Actually each individual pent stays a pent through one refine step.
+//      So if we refine all faces once, we get 12 pents at level 1 + 0 at level 0 (since level 0 pents got replaced).
+//      Pentagon count after one full refine = 12 (the inner pents from the original 12).
+//      Wait, that's wrong too. Each refinement of a pent yields 1 pent (the center).
+//      So 12 pents -> 12 pents (the inner centers). Pent count stays 12 under full-refine.
+//      The CORRECTION from earlier: clicking refine on individual faces over time
+//      grows pent count if you stack levels of un-refined-parents. But a clean
+//      "refine all" keeps pent count at exactly 12.
+//
+//    Re-stated invariant: AFTER A FULL refineAll, the polyhedron has exactly 12 pentagons.
+//                        AFTER MIXED LOCAL refines, the pent count = 12 + (number of
+//                        not-yet-fully-descended ancestral pents that still exist as faces).
+//
+//  GEOMETRY:
+//    Vertices live in R^3. All face vertex arrays are oriented CCW when viewed
+//    from outside the polyhedron (outward normal = average pos / |average pos|).
+//
+// ============================================================================
+
+(function(global){
+"use strict";
+
+var GK = {};
+
+// ----------------------------------------------------------------------------
+// Â§A Vector helpers (no dependencies)
+// ----------------------------------------------------------------------------
+function v3(x, y, z){ return [x, y, z]; }
+function vadd(a, b){ return [a[0]+b[0], a[1]+b[1], a[2]+b[2]]; }
+function vsub(a, b){ return [a[0]-b[0], a[1]-b[1], a[2]-b[2]]; }
+function vscale(a, s){ return [a[0]*s, a[1]*s, a[2]*s]; }
+function vlen(a){ return Math.sqrt(a[0]*a[0] + a[1]*a[1] + a[2]*a[2]); }
+function vnorm(a){ var L = vlen(a); return L > 1e-12 ? vscale(a, 1/L) : [0,0,0]; }
+function vlerp(a, b, t){ return [a[0]*(1-t)+b[0]*t, a[1]*(1-t)+b[1]*t, a[2]*(1-t)+b[2]*t]; }
+function vcross(a, b){
+  return [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]];
+}
+function vdot(a, b){ return a[0]*b[0]+a[1]*b[1]+a[2]*b[2]; }
+
+GK.vec = { v3:v3, add:vadd, sub:vsub, scale:vscale, len:vlen, norm:vnorm, lerp:vlerp, cross:vcross, dot:vdot };
+
+// ----------------------------------------------------------------------------
+// Â§B Canonical C60 construction
+// ----------------------------------------------------------------------------
+var PHI = (1 + Math.sqrt(5)) / 2;
+GK.PHI = PHI;
+
+function buildC60Vertices(){
+  // Truncated icosahedron vertex coordinates (Wikipedia formula):
+  //   (0, Â±1, Â±3Ï†)
+  //   (Â±1, Â±(2+Ï†), Â±2Ï†)
+  //   (Â±Ï†, Â±2, Â±(2Ï†+1))
+  // and all EVEN permutations of each coordinate triple.
+  var raw = [];
+  var permsEven = [[0,1,2],[1,2,0],[2,0,1]];
+  function pushAll(a, b, c){
+    for (var i = 0; i < permsEven.length; i++){
+      var p = permsEven[i];
+      for (var sa = -1; sa <= 1; sa += 2){
+        for (var sb = -1; sb <= 1; sb += 2){
+          for (var sc = -1; sc <= 1; sc += 2){
+            if (a === 0 && sa === -1) continue;
+            if (b === 0 && sb === -1) continue;
+            if (c === 0 && sc === -1) continue;
+            var v = [0, 0, 0];
+            v[p[0]] = sa * a;
+            v[p[1]] = sb * b;
+            v[p[2]] = sc * c;
+            raw.push(v);
+          }
+        }
+      }
+    }
+  }
+  pushAll(0, 1, 3*PHI);
+  pushAll(1, 2 + PHI, 2*PHI);
+  pushAll(PHI, 2, 2*PHI + 1);
+
+  // Dedupe with tolerance
+  var dedup = [];
+  for (var i = 0; i < raw.length; i++){
+    var v = raw[i];
+    var found = false;
+    for (var j = 0; j < dedup.length; j++){
+      var u = dedup[j];
+      if (Math.abs(u[0]-v[0]) < 0.001 && Math.abs(u[1]-v[1]) < 0.001 && Math.abs(u[2]-v[2]) < 0.001){
+        found = true; break;
+      }
+    }
+    if (!found) dedup.push(v);
+  }
+  // Normalize to unit sphere
+  for (var i = 0; i < dedup.length; i++){
+    dedup[i] = vscale(vnorm(dedup[i]), 1.6);
+  }
+  return dedup;
+}
+
+function buildC60Faces(verts){
+  // Find edge length (smallest pair distance)
+  var minD = Infinity;
+  for (var i = 0; i < verts.length; i++){
+    for (var j = i+1; j < verts.length; j++){
+      var d = vlen(vsub(verts[i], verts[j]));
+      if (d > 0.01 && d < minD) minD = d;
+    }
+  }
+  var edgeLen = minD;
+  var tol = edgeLen * 0.05;
+
+  // Build adjacency
+  var adj = [];
+  for (var i = 0; i < verts.length; i++){
+    var neighbors = [];
+    for (var j = 0; j < verts.length; j++){
+      if (i === j) continue;
+      var d = vlen(vsub(verts[i], verts[j]));
+      if (Math.abs(d - edgeLen) < tol) neighbors.push(j);
+    }
+    adj.push(neighbors);
+  }
+
+  // Sort each vertex's neighbours CCW around outward normal
+  for (var i = 0; i < verts.length; i++){
+    var v = verts[i];
+    var n = vnorm(v);
+    var ref = adj[i][0];
+    var rv = vsub(verts[ref], v);
+    var dot = vdot(rv, n);
+    var tangent = vnorm(vsub(rv, vscale(n, dot)));
+    var e2 = vcross(n, tangent);
+    adj[i].sort(function(a, b){
+      var va = vsub(verts[a], v);
+      var vb = vsub(verts[b], v);
+      var aa = Math.atan2(vdot(va, e2), vdot(va, tangent));
+      var bb = Math.atan2(vdot(vb, e2), vdot(vb, tangent));
+      return aa - bb;
+    });
+  }
+
+  // Half-edge face tracing
+  function nextInFace(u, v){
+    var nbrs = adj[v];
+    var idx = nbrs.indexOf(u);
+    if (idx < 0) return -1;
+    return nbrs[(idx + nbrs.length - 1) % nbrs.length];
+  }
+
+  var visited = {};
+  var faces = [];
+  for (var u = 0; u < verts.length; u++){
+    for (var k = 0; k < adj[u].length; k++){
+      var v = adj[u][k];
+      var key = u + ',' + v;
+      if (visited[key]) continue;
+      var face = [u];
+      var a = u, b = v;
+      for (var step = 0; step < 20; step++){
+        visited[a + ',' + b] = true;
+        var c = nextInFace(a, b);
+        if (c < 0 || c === u) break;
+        face.push(b);
+        a = b; b = c;
+      }
+      if (face[face.length-1] !== b) face.push(b);
+      if (face.length === 5 || face.length === 6) faces.push(face);
+    }
+  }
+
+  return faces;
+}
+
+// ----------------------------------------------------------------------------
+// Â§C Public: build initial C60 state
+// ----------------------------------------------------------------------------
+GK.buildC60 = function(){
+  var verts = buildC60Vertices();
+  var faces = buildC60Faces(verts);
+  var meshFaces = [];
+  for (var i = 0; i < faces.length; i++){
+    var f = faces[i];
+    var pts = [];
+    for (var k = 0; k < f.length; k++) pts.push(verts[f[k]].slice());
+    var type = (f.length === 5) ? 'pent' : 'hex';
+    meshFaces.push({
+      pts: pts,
+      type: type,
+      level: 0,
+      lineage: [i],          // history of parent indices
+      id: 'F' + i,           // stable id
+      anchor: type === 'pent' ? ('A' + i) : null  // pent anchor id
+    });
+  }
+  return {
+    faces: meshFaces,
+    history: [],
+    counter: meshFaces.length
+  };
+};
+
+// ----------------------------------------------------------------------------
+// Â§D Refinement primitive: pure function from face -> sub-faces
+// ----------------------------------------------------------------------------
+function centroid(pts){
+  var c = [0, 0, 0];
+  for (var i = 0; i < pts.length; i++){ c[0] += pts[i][0]; c[1] += pts[i][1]; c[2] += pts[i][2]; }
+  return [c[0]/pts.length, c[1]/pts.length, c[2]/pts.length];
+}
+
+function projectToSphere(p, R){
+  var L = vlen(p);
+  if (L < 1e-12) return p;
+  return vscale(p, R/L);
+}
+
+GK.refineFace = function(face, params){
+  params = params || {};
+  var innerScale       = params.innerScale       != null ? params.innerScale       : 0.45;
+  var midScale         = params.midScale         != null ? params.midScale         : 0.70;
+  var preservePent     = params.preservePentInPent !== false; // default true
+  var preserveHex      = params.preserveHexInHex   !== false; // default true
+  var surfaceMode      = params.surfaceMode      || 'planar';
+  var sphereR          = params.sphereR          != null ? params.sphereR          : 1.6;
+  var jitter           = params.jitter           != null ? params.jitter           : 0;
+  var counterRef       = params.counterRef       || { val: 0 }; // for id minting
+
+  var pts = face.pts;
+  var n = pts.length;
+  var c = centroid(pts);
+
+  // Inner ring: shrink toward centroid
+  var inner = [];
+  for (var i = 0; i < n; i++){
+    var p = vlerp(c, pts[i], innerScale);
+    if (surfaceMode === 'spherical') p = projectToSphere(p, sphereR);
+    inner.push(p);
+  }
+  // Edge midpoints pulled inward
+  var midRing = [];
+  for (var i = 0; i < n; i++){
+    var m = vlerp(pts[i], pts[(i+1)%n], 0.5);
+    var pulled = vlerp(c, m, midScale);
+    if (surfaceMode === 'spherical') pulled = projectToSphere(pulled, sphereR);
+    midRing.push(pulled);
+  }
+
+  // Optional jitter
+  if (jitter > 0){
+    function jit(p){
+      return [p[0] + (Math.random()-0.5)*jitter,
+              p[1] + (Math.random()-0.5)*jitter,
+              p[2] + (Math.random()-0.5)*jitter];
+    }
+    for (var i = 0; i < inner.length; i++) inner[i] = jit(inner[i]);
+    for (var i = 0; i < midRing.length; i++) midRing[i] = jit(midRing[i]);
+  }
+
+  var subFaces = [];
+
+  // Inner polygon: same arity as parent
+  var innerType;
+  if (face.type === 'pent') innerType = preservePent ? 'pent' : 'hex';
+  else                      innerType = preserveHex  ? 'hex'  : 'pent';
+
+  counterRef.val += 1;
+  var innerId = (face.id || 'F?') + '.c' + counterRef.val;
+  subFaces.push({
+    pts: inner.slice(),
+    type: innerType,
+    level: face.level + 1,
+    lineage: (face.lineage || []).concat([0]),
+    id: innerId,
+    anchor: innerType === 'pent' ? (face.anchor || 'A?') : null  // pent inherits anchor
+  });
+
+  // Surrounding cells: one per edge of parent. Each is a 6-vertex shape.
+  for (var i = 0; i < n; i++){
+    var j = (i + 1) % n;
+    var em = vlerp(pts[i], pts[j], 0.5);
+    if (surfaceMode === 'spherical') em = projectToSphere(em, sphereR);
+    var hexPts = [
+      pts[i].slice(),
+      em,
+      pts[j].slice(),
+      inner[j].slice(),
+      midRing[i].slice(),
+      inner[i].slice()
+    ];
+    counterRef.val += 1;
+    subFaces.push({
+      pts: hexPts,
+      type: 'hex',
+      level: face.level + 1,
+      lineage: (face.lineage || []).concat([i + 1]),
+      id: (face.id || 'F?') + '.e' + counterRef.val,
+      anchor: null
+    });
+  }
+
+  return subFaces;
+};
+
+// ----------------------------------------------------------------------------
+// Â§E Public: refine operations (immutable, return new state)
+// ----------------------------------------------------------------------------
+GK.refineOne = function(state, faceIdx, params){
+  if (faceIdx < 0 || faceIdx >= state.faces.length) return state;
+  var counterRef = { val: state.counter };
+  var p = Object.assign({}, params || {}, { counterRef: counterRef });
+  var subs = GK.refineFace(state.faces[faceIdx], p);
+  var newFaces = state.faces.slice();
+  newFaces.splice(faceIdx, 1);
+  for (var i = 0; i < subs.length; i++) newFaces.push(subs[i]);
+  return {
+    faces: newFaces,
+    history: state.history.concat([{ op: 'refineOne', idx: faceIdx, snapshot: state.faces }]),
+    counter: counterRef.val
+  };
+};
+
+GK.refineAll = function(state, params){
+  var counterRef = { val: state.counter };
+  var p = Object.assign({}, params || {}, { counterRef: counterRef });
+  var newFaces = [];
+  for (var i = 0; i < state.faces.length; i++){
+    var subs = GK.refineFace(state.faces[i], p);
+    for (var k = 0; k < subs.length; k++) newFaces.push(subs[k]);
+  }
+  return {
+    faces: newFaces,
+    history: state.history.concat([{ op: 'refineAll', snapshot: state.faces }]),
+    counter: counterRef.val
+  };
+};
+
+GK.refineAllPents = function(state, params){
+  // Refine only pentagonal faces - propagates anchor lineage cleanly
+  var counterRef = { val: state.counter };
+  var p = Object.assign({}, params || {}, { counterRef: counterRef });
+  var newFaces = [];
+  for (var i = 0; i < state.faces.length; i++){
+    if (state.faces[i].type === 'pent'){
+      var subs = GK.refineFace(state.faces[i], p);
+      for (var k = 0; k < subs.length; k++) newFaces.push(subs[k]);
+    } else {
+      newFaces.push(state.faces[i]);
+    }
+  }
+  return {
+    faces: newFaces,
+    history: state.history.concat([{ op: 'refineAllPents', snapshot: state.faces }]),
+    counter: counterRef.val
+  };
+};
+
+GK.refineAllHexes = function(state, params){
+  var counterRef = { val: state.counter };
+  var p = Object.assign({}, params || {}, { counterRef: counterRef });
+  var newFaces = [];
+  for (var i = 0; i < state.faces.length; i++){
+    if (state.faces[i].type === 'hex'){
+      var subs = GK.refineFace(state.faces[i], p);
+      for (var k = 0; k < subs.length; k++) newFaces.push(subs[k]);
+    } else {
+      newFaces.push(state.faces[i]);
+    }
+  }
+  return {
+    faces: newFaces,
+    history: state.history.concat([{ op: 'refineAllHexes', snapshot: state.faces }]),
+    counter: counterRef.val
+  };
+};
+
+GK.undo = function(state){
+  if (state.history.length === 0) return state;
+  var last = state.history[state.history.length - 1];
+  return {
+    faces: last.snapshot,
+    history: state.history.slice(0, -1),
+    counter: state.counter // approximate; ids don't get reused
+  };
+};
+
+GK.reset = function(){ return GK.buildC60(); };
+
+// ----------------------------------------------------------------------------
+// Â§F Invariants & introspection
+// ----------------------------------------------------------------------------
+GK.invariants = function(state){
+  var pents = 0, hexes = 0, maxLevel = 0;
+  var perLevel = {};
+  var anchors = {};
+  for (var i = 0; i < state.faces.length; i++){
+    var f = state.faces[i];
+    if (f.type === 'pent'){
+      pents++;
+      if (f.anchor){ anchors[f.anchor] = (anchors[f.anchor] || 0) + 1; }
+    } else hexes++;
+    if (f.level > maxLevel) maxLevel = f.level;
+    perLevel[f.level] = perLevel[f.level] || { pent: 0, hex: 0 };
+    if (f.type === 'pent') perLevel[f.level].pent++; else perLevel[f.level].hex++;
+  }
+  var vertSet = {};
+  var edgeSum = 0;
+  for (var i = 0; i < state.faces.length; i++){
+    edgeSum += state.faces[i].pts.length;
+    for (var k = 0; k < state.faces[i].pts.length; k++){
+      var p = state.faces[i].pts[k];
+      vertSet[p[0].toFixed(3) + ',' + p[1].toFixed(3) + ',' + p[2].toFixed(3)] = true;
+    }
+  }
+  return {
+    pents: pents,
+    hexes: hexes,
+    faces: state.faces.length,
+    edges: Math.floor(edgeSum / 2),
+    vertices: Object.keys(vertSet).length,
+    maxLevel: maxLevel,
+    perLevel: perLevel,
+    anchorCount: Object.keys(anchors).length,
+    anchors: anchors
+  };
+};
+
+// ----------------------------------------------------------------------------
+// Â§G Serialization (for save/load, networking, persistence)
+// ----------------------------------------------------------------------------
+GK.serialize = function(state){
+  return {
+    version: '1.0',
+    counter: state.counter,
+    faces: state.faces.map(function(f){
+      return {
+        pts: f.pts.map(function(p){ return p.slice(); }),
+        type: f.type,
+        level: f.level,
+        lineage: f.lineage ? f.lineage.slice() : [],
+        id: f.id,
+        anchor: f.anchor
+      };
+    })
+  };
+};
+
+GK.deserialize = function(obj){
+  if (!obj || obj.version !== '1.0') throw new Error('GK: invalid serialized state');
+  return {
+    faces: obj.faces.map(function(f){
+      return {
+        pts: f.pts.map(function(p){ return p.slice(); }),
+        type: f.type,
+        level: f.level,
+        lineage: f.lineage ? f.lineage.slice() : [],
+        id: f.id,
+        anchor: f.anchor
+      };
+    }),
+    history: [],
+    counter: obj.counter || 0
+  };
+};
+
+// ----------------------------------------------------------------------------
+// Â§H Face-local transform: extract a face as a 2D patch
+// (useful for VR teleport-into-cell, sub-views, mini-maps)
+// ----------------------------------------------------------------------------
+GK.faceLocalFrame = function(face){
+  var pts = face.pts;
+  var c = centroid(pts);
+  var n = vnorm(c);  // outward normal (assuming polyhedron centered at origin)
+  // tangent: from centroid to first vertex, projected onto tangent plane
+  var ref = vsub(pts[0], c);
+  var refDot = vdot(ref, n);
+  var tangent = vnorm(vsub(ref, vscale(n, refDot)));
+  var bitangent = vcross(n, tangent);
+  return {
+    origin: c,
+    normal: n,
+    tangent: tangent,
+    bitangent: bitangent
+  };
+};
+
+GK.facePatch2D = function(face){
+  // Project face vertices into local 2D coords on the tangent plane
+  var frame = GK.faceLocalFrame(face);
+  var out = [];
+  for (var i = 0; i < face.pts.length; i++){
+    var p = vsub(face.pts[i], frame.origin);
+    var x = vdot(p, frame.tangent);
+    var y = vdot(p, frame.bitangent);
+    out.push([x, y]);
+  }
+  return { frame: frame, points2D: out };
+};
+
+// ----------------------------------------------------------------------------
+// Â§I Export
+// ----------------------------------------------------------------------------
+if (typeof module !== 'undefined' && module.exports) module.exports = GK;
+else if (typeof global !== 'undefined') global.GK = GK;
+
+})(typeof globalThis !== 'undefined' ? globalThis : this);
+
+</script>
+<script>
+// ═══ CONSOLE MATH LOGGER ═══
+// Chrome DevTools structured output — code that looks like math
+var M = {
+  _c: 0,
+  P1: function(d){ console.log('%cP1:NODE %c'+JSON.stringify(d),'color:#00ffd5;font-weight:bold','color:#888');M._c++ },
+  P2: function(d){ console.log('%cP2:EDGE %c'+JSON.stringify(d),'color:#80d0ff;font-weight:bold','color:#888');M._c++ },
+  P3: function(d){ console.log('%cP3:COMPOSE %c'+JSON.stringify(d),'color:#aaa;font-weight:bold','color:#888');M._c++ },
+  P4: function(d){ console.log('%cP4:TRANSFORM %c'+JSON.stringify(d),'color:#ffd700;font-weight:bold','color:#888');M._c++ },
+  P5: function(d){ console.log('%cP5:ITERATE %c'+JSON.stringify(d),'color:#ff9900;font-weight:bold','color:#888');M._c++ },
+  P6: function(d){ console.log('%cP6:AGGREGATE %c'+JSON.stringify(d),'color:#ff69b4;font-weight:bold','color:#888');M._c++ },
+  P7: function(d){ console.log('%cP7:COMPARE %c'+JSON.stringify(d),'color:#a78bfa;font-weight:bold','color:#888');M._c++ },
+  invariant: function(inv){
+    console.log('%c═══ INVARIANT CHECK ═══','color:#7fff7f;font-weight:bold');
+    console.table({V:inv.V,E:inv.E,F:inv.F,chi:inv.chi,pents:inv.pents,hexes:inv.hexes,
+      'E/V':inv.evRatio,'P=12':inv.pents===12?'✓':'✗','χ=2':inv.chi===2?'✓':'✗'});
+    if(inv.pents===12&&inv.chi===2) console.log('%c✓ TOPOLOGY VALID','color:#7fff7f;font-size:14px');
+    else console.error('✗ TOPOLOGY BROKEN: P='+inv.pents+' χ='+inv.chi);
+    performance.mark('invariant-check');
+  },
+  group: function(name){ console.group('%c'+name,'color:#ffd700;font-weight:bold');performance.mark(name+'-start') },
+  groupEnd: function(name){ console.groupEnd();performance.mark(name+'-end');
+    try{performance.measure(name,name+'-start',name+'-end')}catch(e){} },
+  seed: function(){ console.log('%c🔮 SEED: Dodecahedron (12 pentagons, Euler forced)','color:#ff69b4;font-size:14px') },
+  refine: function(what){ console.log('%c⚡ REFINE: '+what,'color:#00ffd5;font-size:12px') },
+  crystal: function(){
+    console.log('%c💎 THE 3 CRYSTAL CONDITIONS','color:#ffd700;font-size:12px');
+    console.log('%cC1: CHOICE — cannot be everything at once','color:#ffd700');
+    console.log('%cC2: IRREVERSIBLE — P6 destroys information','color:#ff69b4');
+    console.log('%cC3: CONSISTENT — P7 is deterministic','color:#a78bfa');
+  }
+};
+
+// ═══ FLIGHT RECORDER ═══
+var FL={entries:[],t0:performance.now(),session:'v7.1_'+new Date().toISOString().replace(/[:.]/g,'-').slice(0,19)};
+function flRec(op,d){FL.entries.push({t:Math.round((performance.now()-FL.t0)*100)/100,op:op,d:d})}
+function flExport(){
+  var blob=new Blob([JSON.stringify({session:FL.session,entries:FL.entries.length,data:FL.entries})],{type:'application/json'});
+  var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=FL.session+'_log.json';a.click();
+}
+
+// ═══ STATE ═══
+var gkState = null;
+var params = { innerScale: 0.45, midScale: 0.70, jitter: 0, surfaceMode: 'spherical', sphereR: 1.6 };
+var cam = { rx: 0.3, ry: 0, zoom: 200, atom: 1.0, spin: 0.005 };
+var dragging = false, lastMouse = {x:0,y:0};
+
+function SV(id,v){document.getElementById(id).textContent=typeof v==='number'?v.toFixed(2):v}
+
+// ═══ 3D → 2D PROJECTION ═══
+var cv=document.getElementById('cv'),cx=cv.getContext('2d'),W,H;
+function resize(){W=cv.width=innerWidth;H=cv.height=innerHeight}
+resize();addEventListener('resize',resize);
+
+function project(p){
+  // Rotate Y then X
+  var x=p[0],y=p[1],z=p[2];
+  var cy=Math.cos(cam.ry),sy=Math.sin(cam.ry);
+  var x1=x*cy-z*sy, z1=x*sy+z*cy;
+  var crx=Math.cos(cam.rx),srx=Math.sin(cam.rx);
+  var y1=y*crx-z1*srx, z2=y*srx+z1*crx;
+  return {x:W/2+x1*cam.zoom, y:H/2-y1*cam.zoom, z:z2};
+}
+
+function centroid3(pts){
+  var x=0,y=0,z=0;
+  for(var i=0;i<pts.length;i++){x+=pts[i][0];y+=pts[i][1];z+=pts[i][2]}
+  return [x/pts.length,y/pts.length,z/pts.length];
+}
+
+// ═══ DRAW ═══
+function draw(){
+  cx.fillStyle='#050508';cx.fillRect(0,0,W,H);
+  if(!gkState)return;
+  
+  // Sort faces by depth (painter's algorithm)
+  var sorted=[];
+  for(var i=0;i<gkState.faces.length;i++){
+    var f=gkState.faces[i];
+    var c=centroid3(f.pts);
+    var p=project(c);
+    sorted.push({face:f,depth:p.z,idx:i});
+  }
+  sorted.sort(function(a,b){return a.depth-b.depth});
+  
+  // Draw faces
+  for(var si=0;si<sorted.length;si++){
+    var f=sorted[si].face;
+    var pts2d=[];
+    for(var k=0;k<f.pts.length;k++) pts2d.push(project(f.pts[k]));
+    
+    var isPent=f.type==='pent';
+    var depth01=Math.max(0,Math.min(1,(sorted[si].depth+2)/4));
+    var alpha=0.15+depth01*0.5;
+    
+    // Fill
+    cx.beginPath();
+    cx.moveTo(pts2d[0].x,pts2d[0].y);
+    for(var k=1;k<pts2d.length;k++) cx.lineTo(pts2d[k].x,pts2d[k].y);
+    cx.closePath();
+    
+    if(isPent){
+      cx.fillStyle='rgba(193,74,59,'+alpha*0.4+')';
+      cx.strokeStyle='rgba(255,105,180,'+alpha+')';
+    } else {
+      cx.fillStyle='rgba(0,40,60,'+alpha*0.3+')';
+      cx.strokeStyle='rgba(0,180,255,'+alpha*0.6+')';
+    }
+    cx.fill();
+    cx.lineWidth=isPent?1.5:0.5;
+    cx.stroke();
+    
+    // Vertices
+    if(cam.atom>0.2){
+      for(var k=0;k<pts2d.length;k++){
+        var r=cam.atom*(isPent?2:1.2);
+        cx.fillStyle=isPent?'rgba(255,105,180,'+alpha+')':'rgba(0,255,213,'+alpha*0.6+')';
+        cx.beginPath();cx.arc(pts2d[k].x,pts2d[k].y,r,0,Math.PI*2);cx.fill();
+      }
+    }
+  }
+}
+
+// ═══ OPERATIONS ═══
+function doSeed(){
+  M.group('SEED');
+  M.seed();
+  M.crystal();
+  
+  gkState = GK.buildC60();
+  
+  // Log every vertex and edge
+  var inv = GK.invariants(gkState);
+  M.P1({vertices:inv.vertices,reason:'dodecahedron vertices from golden ratio + phi'});
+  M.P2({edges:inv.edges,reason:'trivalent connectivity, every vertex degree 3'});
+  M.P7({faces:inv.faces,pents:inv.pents,hexes:inv.hexes,chi:inv.vertices-inv.edges+inv.faces});
+  
+  var check = checkInv();
+  M.invariant(check);
+  M.groupEnd('SEED');
+  
+  flRec('SEED',check);
+  axLog('SEED: dodecahedron born','ax-inv');
+  axLog('V='+check.V+' E='+check.E+' F='+check.F+' P='+check.pents+' chi='+check.chi,'ax-p7');
+  updateHud(check);
+}
+
+function doRefineAll(){
+  if(!gkState)return doSeed();
+  M.group('REFINE_ALL');
+  M.refine('ALL faces');
+  var before=GK.invariants(gkState);
+  
+  M.P5({operation:'refineAll',facesBefore:before.faces});
+  gkState=GK.refineAll(gkState,params);
+  
+  var check=checkInv();
+  M.P6({aggregate:'centroid per face',count:before.faces});
+  M.P1({innerNodes:before.faces,midNodes:before.faces});
+  M.P2({innerEdges:before.faces,hexEdges:before.faces*6});
+  M.P4({replaced:before.faces,created:check.F});
+  M.P7({pentsAfter:check.pents,chi:check.chi,evRatio:check.evRatio});
+  M.invariant(check);
+  M.groupEnd('REFINE_ALL');
+  
+  flRec('REFINE_ALL',{before:before,after:check});
+  axLog('REFINE ALL: '+before.faces+'F → '+check.F+'F','ax-p5');
+  axLog('P='+check.pents+' chi='+check.chi+' E/V='+check.evRatio.toFixed(3),'ax-p7');
+  updateHud(check);
+}
+
+function doRefinePents(){
+  if(!gkState)return doSeed();
+  M.group('REFINE_PENTS');
+  M.refine('pentagons only');
+  gkState=GK.refineAllPents(gkState,params);
+  var check=checkInv();
+  M.invariant(check);
+  M.groupEnd('REFINE_PENTS');
+  flRec('REFINE_PENTS',check);
+  axLog('REFINE 5s: P='+check.pents+' F='+check.F,'ax-p6');
+  updateHud(check);
+}
+
+function doRefineHexes(){
+  if(!gkState)return doSeed();
+  M.group('REFINE_HEXES');
+  M.refine('hexagons only');
+  gkState=GK.refineAllHexes(gkState,params);
+  var check=checkInv();
+  M.invariant(check);
+  M.groupEnd('REFINE_HEXES');
+  flRec('REFINE_HEXES',check);
+  axLog('REFINE 6s: P='+check.pents+' F='+check.F,'ax-p4');
+  updateHud(check);
+}
+
+function doUndo(){
+  if(!gkState)return;
+  gkState=GK.undo(gkState);
+  var check=checkInv();
+  flRec('UNDO',check);
+  axLog('UNDO','ax-p3');
+  updateHud(check);
+}
+
+function doReset(){
+  gkState=null;
+  M.group('RESET');
+  console.log('%c♻ RESET to void','color:#555;font-size:12px');
+  M.groupEnd('RESET');
+  flRec('RESET',{});
+  axLog('RESET: void','ax-p3');
+  document.getElementById('euler').innerHTML='<span class="ok">VOID</span>';
+  clearHud();
+}
+
+function doExport(){
+  flExport();
+  console.log('%c📦 EXPORTED: '+FL.entries.length+' entries','color:#ffd700;font-size:12px');
+  axLog('EXPORTED '+FL.entries.length+' entries','ax-inv');
+}
+
+function doExportGraph(){
+  if(!gkState)return;
+  var inv=GK.invariants(gkState);
+  var data={session:FL.session,faces:gkState.faces.length,invariants:inv,
+    serialized:GK.serialize(gkState),params:params};
+  var blob=new Blob([JSON.stringify(data)],{type:'application/json'});
+  var a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download=FL.session+'_graph.json';a.click();
+  console.log('%c📦 GRAPH EXPORTED','color:#ffd700');
+}
+
+// ═══ INVARIANT CHECK ═══
+function checkInv(){
+  if(!gkState)return{V:0,E:0,F:0,chi:0,pents:0,hexes:0,evRatio:0};
+  var inv=GK.invariants(gkState);
+  var chi=inv.vertices-inv.edges+inv.faces;
+  return{V:inv.vertices,E:inv.edges,F:inv.faces,chi:chi,
+    pents:inv.pents,hexes:inv.hexes,maxLevel:inv.maxLevel,
+    evRatio:inv.vertices>0?inv.edges/inv.vertices:0};
+}
+
+// ═══ HUD ═══
+function updateHud(c){
+  document.getElementById('h-v').textContent=c.V;
+  document.getElementById('h-e').textContent=c.E;
+  document.getElementById('h-f').textContent=c.F;
+  document.getElementById('h-p').textContent=c.pents;
+  document.getElementById('h-h').textContent=c.hexes;
+  document.getElementById('h-chi').textContent=c.chi;
+  document.getElementById('h-ev').textContent=c.evRatio.toFixed(3);
+  document.getElementById('h-lv').textContent=c.maxLevel||0;
+  document.getElementById('h-ops').textContent=M._c;
+  var el=document.getElementById('euler');
+  if(c.pents===12&&c.chi===2) el.innerHTML='<span class="ok">V-E+F=2 · P=12 · E/V='+c.evRatio.toFixed(3)+'</span>';
+  else el.innerHTML='<span class="bad">P='+c.pents+' χ='+c.chi+' BROKEN</span>';
+}
+function clearHud(){['h-v','h-e','h-f','h-p','h-h','h-chi','h-ev','h-lv'].forEach(function(id){document.getElementById(id).textContent='-'})}
+
+function axLog(msg,cls){
+  var el=document.getElementById('axiom-log');
+  var d=document.createElement('div');d.className=cls||'';d.textContent=msg;
+  el.insertBefore(d,el.firstChild);
+  if(el.children.length>50)el.removeChild(el.lastChild);
+}
+
+// ═══ MOUSE ROTATION ═══
+cv.addEventListener('pointerdown',function(e){dragging=true;lastMouse={x:e.clientX,y:e.clientY}});
+cv.addEventListener('pointermove',function(e){
+  if(!dragging)return;
+  cam.ry+=(e.clientX-lastMouse.x)*0.005;
+  cam.rx+=(e.clientY-lastMouse.y)*0.005;
+  cam.rx=Math.max(-Math.PI/2,Math.min(Math.PI/2,cam.rx));
+  lastMouse={x:e.clientX,y:e.clientY};
+});
+cv.addEventListener('pointerup',function(){dragging=false});
+cv.addEventListener('wheel',function(e){
+  e.preventDefault();
+  cam.zoom*=e.deltaY>0?0.92:1.08;
+  cam.zoom=Math.max(10,Math.min(2000,cam.zoom));
+  document.getElementById('sl-zm').value=Math.round(cam.zoom);
+  SV('sv-zm',Math.round(cam.zoom));
+},{passive:false});
+
+// ═══ ANIMATE ═══
+function animate(){
+  if(!dragging) cam.ry+=cam.spin;
+  draw();
+  requestAnimationFrame(animate);
+}
+
+// ═══ BOOT ═══
+console.log('%c╔══════════════════════════════════════╗','color:#ff69b4');
+console.log('%c║  GENESIS v7.1 — Fractal Graph Explorer ║','color:#ff69b4;font-weight:bold');
+console.log('%c║  7 primitives · 3 crystal conditions  ║','color:#00ffd5');
+console.log('%c║  12 pentagons · Euler forced · P=12   ║','color:#ffd700');
+console.log('%c╚══════════════════════════════════════╝','color:#ff69b4');
+console.log('%cOpen this console to see every operation as structured math.','color:#555');
+console.log('%cEvery P1-P7 call prints here with timing.','color:#555');
+console.log('%cconsole.table() shows invariants after each refine.','color:#555');
+console.log('%cperformance.measure() tracks operation timing.','color:#555');
+
+doSeed();
+animate();
+</script></body></html>
+
