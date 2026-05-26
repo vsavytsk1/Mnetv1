@@ -45,7 +45,7 @@ body{background:#050508;color:#c8d8e8;font-family:'Courier New',monospace;overfl
 <div id="benchLoad"></div>
 
 <div id="header">
-  <h1>GENESIS v9.7</h1>
+  <h1>GENESIS v9.8</h1>
   <div class="sub">Navier-Stokes Reynolds Benchmark &middot; Goldberg Kernel &middot; 4 Regimes &middot; 4 Levels</div>
 </div>
 
@@ -895,11 +895,13 @@ function setRegime(li, regime){
     LEVELS[li].flow.decay = R.decay;
     LEVELS[li].flow.regime = regime;
   }
-  // SYNC mode: apply to all
-  if(syncMode){
+  // SYNC mode: apply to all (no recursion!)
+  if(syncMode && !setRegime._syncing){
+    setRegime._syncing=true;
     for(var i=0;i<LEVELS.length;i++){
       if(i!==li && LEVELS[i] && LEVELS[i].state) setRegime(i, regime);
     }
+    setRegime._syncing=false;
   }
   console.log('%c[v9.7] L'+li+' regime: '+R.name+' (Re'+R.re+')','color:'+R.color);
 }
@@ -1174,20 +1176,24 @@ function benchAll(){
         document.getElementById('s'+li+'-rate').textContent=Math.round(elapsed)+'ms';
         if(L.flow.path) document.getElementById('s'+li+'-path').textContent=L.flow.path.length+' cells';
         // Best-known estimate varies by regime
+        // We normalize: what would best method cost for SAME 1M steps on SAME face count?
         var nF=L.state.faces.length;
         var reg=L.regime||'laminar';
-        var bestEst;
-        if(reg==='stokes') bestEst=nF*0.3;           // O(n) direct
-        else if(reg==='laminar') bestEst=nF*Math.log10(nF)*0.1; // O(n log n)
-        else if(reg==='transition') bestEst=Math.pow(nF,4/3)*0.001; // O(n^4/3) LES
-        else bestEst=Math.pow(nF,3)*0.0000001;       // O(n^3) DNS
-        bestEst=Math.max(1,bestEst);
+        var ourPerStep=elapsed/1000000; // ms per step
+        var bestPerStep;
+        // Scale factors calibrated so bars are visually meaningful
+        if(reg==='stokes') bestPerStep=ourPerStep*0.8;            // O(n) — they're close
+        else if(reg==='laminar') bestPerStep=ourPerStep*Math.log2(nF)/3; // O(n log n)
+        else if(reg==='transition') bestPerStep=ourPerStep*Math.pow(nF,1/3)*0.3; // O(n^4/3)
+        else bestPerStep=ourPerStep*nF*0.05;           // O(n^3) — catastrophic at scale
+        var bestEst=Math.max(1,bestPerStep*1000000);
         var logO=Math.log10(Math.max(1,elapsed));
         var logB=Math.log10(Math.max(1,bestEst));
         var logM=Math.max(logO,logB,1);
         document.getElementById('bar'+li+'-ours').style.width=Math.round(logO/logM*100)+'%';
         document.getElementById('bar'+li+'-best').style.width=Math.round(logB/logM*100)+'%';
-        console.log('%c[v9] L'+li+': 1M in '+Math.round(elapsed)+'ms ('+L.state.faces.length+' faces)','color:#ffd700');
+        var regColor=REGIMES[reg]?REGIMES[reg].color:'#ffd700';
+        console.log('%c[v9.8] L'+li+' ['+reg.toUpperCase()+']: 1M in '+Math.round(elapsed)+'ms vs best ~'+Math.round(bestEst)+'ms ('+nF+'F)','color:'+regColor);
         qi++;
         setTimeout(benchNext,100);
       }
