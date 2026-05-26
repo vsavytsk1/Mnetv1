@@ -245,6 +245,93 @@ GK.buildC60 = function(){
 };
 
 // ----------------------------------------------------------------------------
+// §C2 Public: build dodecahedron (the PURE SEED — 12 pentagons, 0 hexagons)
+// ----------------------------------------------------------------------------
+GK.buildDodecahedron = function(){
+  // 20 vertices from golden ratio. Absolute math.
+  var phi = PHI, invPhi = 1 / PHI;
+  var raw = [
+    // 8 cube vertices
+    [ 1, 1, 1],[ 1, 1,-1],[ 1,-1, 1],[ 1,-1,-1],
+    [-1, 1, 1],[-1, 1,-1],[-1,-1, 1],[-1,-1,-1],
+    // 12 from golden rectangles
+    [0, invPhi, phi],[0, invPhi,-phi],[0,-invPhi, phi],[0,-invPhi,-phi],
+    [invPhi, phi, 0],[invPhi,-phi, 0],[-invPhi, phi, 0],[-invPhi,-phi, 0],
+    [phi, 0, invPhi],[phi, 0,-invPhi],[-phi, 0, invPhi],[-phi, 0,-invPhi]
+  ];
+  // Normalize to sphere
+  for (var i = 0; i < raw.length; i++) raw[i] = vscale(vnorm(raw[i]), 1.6);
+
+  // Find edges (nearest neighbors)
+  var dists = [];
+  for (var i = 0; i < raw.length; i++)
+    for (var j = i+1; j < raw.length; j++)
+      dists.push(vlen(vsub(raw[i], raw[j])));
+  dists.sort(function(a,b){return a-b});
+  var edgeLen = dists[0], tol = edgeLen * 0.1;
+
+  var adj = [];
+  for (var i = 0; i < raw.length; i++){
+    adj[i] = [];
+    for (var j = 0; j < raw.length; j++){
+      if (i !== j && Math.abs(vlen(vsub(raw[i], raw[j])) - edgeLen) < tol)
+        adj[i].push(j);
+    }
+  }
+
+  // Sort neighbours CCW
+  for (var i = 0; i < raw.length; i++){
+    var v = raw[i], n = vnorm(v);
+    var ref = adj[i][0], rv = vsub(raw[ref], v);
+    var dot = vdot(rv, n);
+    var tangent = vnorm(vsub(rv, vscale(n, dot)));
+    var e2 = vcross(n, tangent);
+    adj[i].sort(function(a,b){
+      var va = vsub(raw[a], v), vb = vsub(raw[b], v);
+      return Math.atan2(vdot(va,e2),vdot(va,tangent)) - Math.atan2(vdot(vb,e2),vdot(vb,tangent));
+    });
+  }
+
+  // Trace pentagonal faces (half-edge)
+  function nextInFace(u,v){
+    var idx = adj[v].indexOf(u); if(idx<0)return -1;
+    return adj[v][(idx+adj[v].length-1)%adj[v].length];
+  }
+  var visited = {}, faces = [];
+  for (var u = 0; u < raw.length; u++){
+    for (var k = 0; k < adj[u].length; k++){
+      var v = adj[u][k], key = u+','+v;
+      if (visited[key]) continue;
+      var face=[u], a=u, b=v;
+      for (var step=0; step<10; step++){
+        visited[a+','+b]=true;
+        var c=nextInFace(a,b); if(c<0||c===u)break;
+        face.push(b); a=b; b=c;
+      }
+      if(face[face.length-1]!==b) face.push(b);
+      if(face.length===5) faces.push(face);
+    }
+  }
+  // Deduplicate
+  var seen={}, unique=[];
+  for(var i=0;i<faces.length;i++){
+    var key=faces[i].slice().sort(function(a,b){return a-b}).join(',');
+    if(!seen[key]){seen[key]=true;unique.push(faces[i]);}
+  }
+
+  var meshFaces = [];
+  for (var i = 0; i < unique.length; i++){
+    var f = unique[i], pts = [];
+    for (var k = 0; k < f.length; k++) pts.push(raw[f[k]].slice());
+    meshFaces.push({
+      pts: pts, type: 'pent', level: 0, lineage: [i],
+      id: 'D' + i, anchor: 'A' + i
+    });
+  }
+  return { faces: meshFaces, history: [], counter: meshFaces.length };
+};
+
+// ----------------------------------------------------------------------------
 // §D Refinement primitive: pure function from face -> sub-faces
 // ----------------------------------------------------------------------------
 function centroid(pts){

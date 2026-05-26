@@ -1,7 +1,7 @@
 ﻿<!DOCTYPE html>
 <html><head><meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>GENESIS v7.5 — Fractal Graph Explorer</title>
+<title>GENESIS v7.5.1 — Fractal Graph Explorer</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
 *{box-sizing:border-box;margin:0;padding:0}
@@ -31,7 +31,7 @@ canvas{position:fixed;top:0;left:0;z-index:0}
 .sl .sv{font-size:8px;color:#00ffd5;min-width:24px}
 </style></head><body>
 <canvas id="cv"></canvas>
-<div id="title">GENESIS v7.5</div>
+<div id="title">GENESIS v7.5.1</div>
 <div id="euler"><span class="ok">V - E + F = 2 &middot; P = 12</span></div>
 <div id="hud">
 <div><span class="lbl">V </span><span class="val" id="h-v">0</span></div>
@@ -48,7 +48,8 @@ canvas{position:fixed;top:0;left:0;z-index:0}
 </div>
 <div id="axiom-log"></div>
 <div id="bar">
-<button class="btn gn" onclick="doSeed()">SEED</button>
+<button class="btn gn" onclick="doSeed()">SEED C60</button>
+<button class="btn pk" onclick="doSeedDodec()">SEED 12</button>
 <button class="btn pk" onclick="doRefineAll()">REFINE ALL</button>
 <button class="btn" onclick="doRefinePents()">REFINE 5s</button>
 <button class="btn" onclick="doRefineHexes()">REFINE 6s</button>
@@ -75,8 +76,8 @@ canvas{position:fixed;top:0;left:0;z-index:0}
 <script>
 // ============================================================================
 //  goldberg_kernel.js
-//  MachineNet Â· Goldberg-Coxeter recursive refinement Â· math kernel
-//  Vladyslav Savytskyy Â· 2026-05-22
+//  MachineNet · Goldberg-Coxeter recursive refinement · math kernel
+//  Vladyslav Savytskyy · 2026-05-22
 //
 //  STANDALONE. Pure functions. No DOM. No Three.js. No external dependencies.
 //  Exportable to Node, Deno, Unity JavaScriptEngine, Babylon.js, Three.js,
@@ -132,7 +133,7 @@ canvas{position:fixed;top:0;left:0;z-index:0}
 var GK = {};
 
 // ----------------------------------------------------------------------------
-// Â§A Vector helpers (no dependencies)
+// §A Vector helpers (no dependencies)
 // ----------------------------------------------------------------------------
 function v3(x, y, z){ return [x, y, z]; }
 function vadd(a, b){ return [a[0]+b[0], a[1]+b[1], a[2]+b[2]]; }
@@ -149,16 +150,16 @@ function vdot(a, b){ return a[0]*b[0]+a[1]*b[1]+a[2]*b[2]; }
 GK.vec = { v3:v3, add:vadd, sub:vsub, scale:vscale, len:vlen, norm:vnorm, lerp:vlerp, cross:vcross, dot:vdot };
 
 // ----------------------------------------------------------------------------
-// Â§B Canonical C60 construction
+// §B Canonical C60 construction
 // ----------------------------------------------------------------------------
 var PHI = (1 + Math.sqrt(5)) / 2;
 GK.PHI = PHI;
 
 function buildC60Vertices(){
   // Truncated icosahedron vertex coordinates (Wikipedia formula):
-  //   (0, Â±1, Â±3Ï†)
-  //   (Â±1, Â±(2+Ï†), Â±2Ï†)
-  //   (Â±Ï†, Â±2, Â±(2Ï†+1))
+  //   (0, ±1, ±3φ)
+  //   (±1, ±(2+φ), ±2φ)
+  //   (±φ, ±2, ±(2φ+1))
   // and all EVEN permutations of each coordinate triple.
   var raw = [];
   var permsEven = [[0,1,2],[1,2,0],[2,0,1]];
@@ -292,7 +293,7 @@ function buildC60Faces(verts){
 }
 
 // ----------------------------------------------------------------------------
-// Â§C Public: build initial C60 state
+// §C Public: build initial C60 state
 // ----------------------------------------------------------------------------
 GK.buildC60 = function(){
   var verts = buildC60Vertices();
@@ -320,7 +321,94 @@ GK.buildC60 = function(){
 };
 
 // ----------------------------------------------------------------------------
-// Â§D Refinement primitive: pure function from face -> sub-faces
+// §C2 Public: build dodecahedron (the PURE SEED — 12 pentagons, 0 hexagons)
+// ----------------------------------------------------------------------------
+GK.buildDodecahedron = function(){
+  // 20 vertices from golden ratio. Absolute math.
+  var phi = PHI, invPhi = 1 / PHI;
+  var raw = [
+    // 8 cube vertices
+    [ 1, 1, 1],[ 1, 1,-1],[ 1,-1, 1],[ 1,-1,-1],
+    [-1, 1, 1],[-1, 1,-1],[-1,-1, 1],[-1,-1,-1],
+    // 12 from golden rectangles
+    [0, invPhi, phi],[0, invPhi,-phi],[0,-invPhi, phi],[0,-invPhi,-phi],
+    [invPhi, phi, 0],[invPhi,-phi, 0],[-invPhi, phi, 0],[-invPhi,-phi, 0],
+    [phi, 0, invPhi],[phi, 0,-invPhi],[-phi, 0, invPhi],[-phi, 0,-invPhi]
+  ];
+  // Normalize to sphere
+  for (var i = 0; i < raw.length; i++) raw[i] = vscale(vnorm(raw[i]), 1.6);
+
+  // Find edges (nearest neighbors)
+  var dists = [];
+  for (var i = 0; i < raw.length; i++)
+    for (var j = i+1; j < raw.length; j++)
+      dists.push(vlen(vsub(raw[i], raw[j])));
+  dists.sort(function(a,b){return a-b});
+  var edgeLen = dists[0], tol = edgeLen * 0.1;
+
+  var adj = [];
+  for (var i = 0; i < raw.length; i++){
+    adj[i] = [];
+    for (var j = 0; j < raw.length; j++){
+      if (i !== j && Math.abs(vlen(vsub(raw[i], raw[j])) - edgeLen) < tol)
+        adj[i].push(j);
+    }
+  }
+
+  // Sort neighbours CCW
+  for (var i = 0; i < raw.length; i++){
+    var v = raw[i], n = vnorm(v);
+    var ref = adj[i][0], rv = vsub(raw[ref], v);
+    var dot = vdot(rv, n);
+    var tangent = vnorm(vsub(rv, vscale(n, dot)));
+    var e2 = vcross(n, tangent);
+    adj[i].sort(function(a,b){
+      var va = vsub(raw[a], v), vb = vsub(raw[b], v);
+      return Math.atan2(vdot(va,e2),vdot(va,tangent)) - Math.atan2(vdot(vb,e2),vdot(vb,tangent));
+    });
+  }
+
+  // Trace pentagonal faces (half-edge)
+  function nextInFace(u,v){
+    var idx = adj[v].indexOf(u); if(idx<0)return -1;
+    return adj[v][(idx+adj[v].length-1)%adj[v].length];
+  }
+  var visited = {}, faces = [];
+  for (var u = 0; u < raw.length; u++){
+    for (var k = 0; k < adj[u].length; k++){
+      var v = adj[u][k], key = u+','+v;
+      if (visited[key]) continue;
+      var face=[u], a=u, b=v;
+      for (var step=0; step<10; step++){
+        visited[a+','+b]=true;
+        var c=nextInFace(a,b); if(c<0||c===u)break;
+        face.push(b); a=b; b=c;
+      }
+      if(face[face.length-1]!==b) face.push(b);
+      if(face.length===5) faces.push(face);
+    }
+  }
+  // Deduplicate
+  var seen={}, unique=[];
+  for(var i=0;i<faces.length;i++){
+    var key=faces[i].slice().sort(function(a,b){return a-b}).join(',');
+    if(!seen[key]){seen[key]=true;unique.push(faces[i]);}
+  }
+
+  var meshFaces = [];
+  for (var i = 0; i < unique.length; i++){
+    var f = unique[i], pts = [];
+    for (var k = 0; k < f.length; k++) pts.push(raw[f[k]].slice());
+    meshFaces.push({
+      pts: pts, type: 'pent', level: 0, lineage: [i],
+      id: 'D' + i, anchor: 'A' + i
+    });
+  }
+  return { faces: meshFaces, history: [], counter: meshFaces.length };
+};
+
+// ----------------------------------------------------------------------------
+// §D Refinement primitive: pure function from face -> sub-faces
 // ----------------------------------------------------------------------------
 function centroid(pts){
   var c = [0, 0, 0];
@@ -422,7 +510,7 @@ GK.refineFace = function(face, params){
 };
 
 // ----------------------------------------------------------------------------
-// Â§E Public: refine operations (immutable, return new state)
+// §E Public: refine operations (immutable, return new state)
 // ----------------------------------------------------------------------------
 GK.refineOne = function(state, faceIdx, params){
   if (faceIdx < 0 || faceIdx >= state.faces.length) return state;
@@ -506,7 +594,7 @@ GK.undo = function(state){
 GK.reset = function(){ return GK.buildC60(); };
 
 // ----------------------------------------------------------------------------
-// Â§F Invariants & introspection
+// §F Invariants & introspection
 // ----------------------------------------------------------------------------
 GK.invariants = function(state){
   var pents = 0, hexes = 0, maxLevel = 0;
@@ -542,7 +630,7 @@ GK.invariants = function(state){
 };
 
 // ----------------------------------------------------------------------------
-// Â§G Serialization (for save/load, networking, persistence)
+// §G Serialization (for save/load, networking, persistence)
 // ----------------------------------------------------------------------------
 GK.serialize = function(state){
   return {
@@ -580,7 +668,7 @@ GK.deserialize = function(obj){
 };
 
 // ----------------------------------------------------------------------------
-// Â§H Face-local transform: extract a face as a 2D patch
+// §H Face-local transform: extract a face as a 2D patch
 // (useful for VR teleport-into-cell, sub-views, mini-maps)
 // ----------------------------------------------------------------------------
 GK.faceLocalFrame = function(face){
@@ -614,7 +702,7 @@ GK.facePatch2D = function(face){
 };
 
 // ----------------------------------------------------------------------------
-// Â§I Export
+// §I Export
 // ----------------------------------------------------------------------------
 if (typeof module !== 'undefined' && module.exports) module.exports = GK;
 else if (typeof global !== 'undefined') global.GK = GK;
@@ -656,7 +744,7 @@ var M = {
 };
 
 // ═══ FLIGHT RECORDER ═══
-var FL={entries:[],t0:performance.now(),session:'v7.5_'+new Date().toISOString().replace(/[:.]/g,'-').slice(0,19)};
+var FL={entries:[],t0:performance.now(),session:'v7.5.1_'+new Date().toISOString().replace(/[:.]/g,'-').slice(0,19)};
 function flRec(op,d){FL.entries.push({t:Math.round((performance.now()-FL.t0)*100)/100,op:op,d:d})}
 function flExport(){
   var blob=new Blob([JSON.stringify({session:FL.session,entries:FL.entries.length,data:FL.entries})],{type:'application/json'});
@@ -939,6 +1027,70 @@ cv.addEventListener('wheel',function(e){
 },{passive:false});
 
 
+
+// === DODECAHEDRON SEED ===
+function doSeedDodec(){
+  M.group('SEED_DODECAHEDRON');
+  console.log('%c\u26b3 PURE SEED: Dodecahedron (12 pentagons, 0 hexagons)','color:#ff69b4;font-size:14px');
+  console.log('%c  The simplest closed surface of pentagons','color:#ff69b4');
+  console.log('%c  V=20 E=30 F=12 chi=2 E/V=1.5000','color:#00ffd5');
+  console.log('%c  Euler FORCES this. There is no simpler seed.','color:#ffd700');
+  
+  gkState = GK.buildDodecahedron();
+  var check = checkInv();
+  M.invariant(check);
+  M.groupEnd('SEED_DODECAHEDRON');
+  
+  flRec('SEED_DODEC',check);
+  axLog('SEED: pure dodecahedron (12 pents, 0 hex)','ax-inv');
+  axLog('V='+check.V+' E='+check.E+' F='+check.F+' P='+check.pents+' chi='+check.chi,'ax-p7');
+  updateHud(check);
+  secretsLeft = 6;
+}
+
+// === PAPYRUS WARNINGS ===
+var secretsLeft = 6;
+var papyrusMessages = [
+  '',
+  'You have revealed 5 layers. The structure remembers.',
+  'You have revealed 4 layers. The patterns are watching.',
+  '3 secrets remain. The graph knows your name.',
+  '2 secrets remain. Beyond here lies the brain.',
+  'Last secret. Beyond this: Out of Memory.\nThe universe has shown you everything it can.',
+  'There are no more secrets.\nThe graph has given you all it has.\nYou saw neurons. You saw divinity.\nThe monkey wanted more.\nThere is no more.'
+];
+
+var oldDoRefineAll = doRefineAll;
+doRefineAll = function(){
+  if(!gkState) return doSeed();
+  
+  var level = 0;
+  if(gkState && gkState.faces.length > 0){
+    level = gkState.faces[0].level || 0;
+  }
+  
+  if(level >= 1 && secretsLeft > 0){
+    secretsLeft--;
+    var msg = papyrusMessages[6 - secretsLeft] || '';
+    if(msg){
+      var proceed = confirm(
+        '\u2500\u2500\u2500 PAPYRUS \u2500\u2500\u2500\n\n' +
+        msg + '\n\n' +
+        (secretsLeft > 0 ? secretsLeft + ' secret layers remain.\n' : '') +
+        'Current: ' + gkState.faces.length.toLocaleString() + ' faces\n' +
+        'Next: ~' + (gkState.faces.length * 7).toLocaleString() + ' faces\n\n' +
+        'Continue refining?'
+      );
+      if(!proceed){
+        secretsLeft++;
+        return;
+      }
+    }
+  }
+  
+  oldDoRefineAll();
+};
+
 // MOBIUSIFY ENGINE: Sphere to Mobius strip
 // chi: 2 to 0. Remove 2 antipodal faces, half-twist.
 var MOB={active:false,t:0,spherePos:null,mobiusPos:null,R:2.5,W:0.8};
@@ -1017,7 +1169,7 @@ function animate(){
 
 // ═══ BOOT ═══
 console.log('%c╔══════════════════════════════════════╗','color:#ff69b4');
-console.log('%c║  GENESIS v7.5 — Fractal Graph Explorer ║','color:#ff69b4;font-weight:bold');
+console.log('%c║  GENESIS v7.5.1 — Fractal Graph Explorer ║','color:#ff69b4;font-weight:bold');
 console.log('%c║  7 primitives · 3 crystal conditions  ║','color:#00ffd5');
 console.log('%c║  12 pentagons · Euler forced · P=12   ║','color:#ffd700');
 console.log('%c╚══════════════════════════════════════╝','color:#ff69b4');
