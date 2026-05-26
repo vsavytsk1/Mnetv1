@@ -861,18 +861,25 @@ function draw(){
     } else if(onPath){
       cx.fillStyle='rgba(255,215,0,'+alpha*0.7+')';cx.strokeStyle='rgba(255,255,100,'+alpha+')';
         } else if(FLOW.active&&FLOW.arrival&&fIdx>=0&&FLOW.arrival[fIdx]>=0){
-      // HEATMAP by arrival time: early=RED, mid=YELLOW/GREEN, late=CYAN/BLUE
-      var maxA=Math.max(FLOW.step,1);
-      var t=Math.min(1,FLOW.arrival[fIdx]/maxA);
-      var pk=Math.min(1,(FLOW.maxP[fIdx]||0)*2);
-      var hr,hg,hb;
-      if(t<0.25){hr=255;hg=Math.round(t*4*255);hb=0;}
-      else if(t<0.5){hr=Math.round((1-(t-0.25)*4)*255);hg=255;hb=0;}
-      else if(t<0.75){hr=0;hg=255;hb=Math.round((t-0.5)*4*255);}
-      else{hr=0;hg=Math.round((1-(t-0.75)*4)*255);hb=255;}
-      cx.fillStyle='rgba('+hr+','+hg+','+hb+','+alpha*(0.3+pk*0.5)+')';
-      cx.strokeStyle='rgba('+Math.min(255,hr+60)+','+Math.min(255,hg+60)+','+Math.min(255,hb+60)+','+alpha*0.8+')';
-    } else if(isPent){
+          // WAVEFRONT: bright FLASH on arrival, then settle to heatmap
+          var age=FLOW.step-FLOW.arrival[fIdx]; // how long ago wave arrived
+          var flash=Math.max(0,1-age/8); // bright for 8 steps then fades
+          var maxA=Math.max(FLOW.step,1);
+          var t=Math.min(1,FLOW.arrival[fIdx]/maxA);
+          // Settled heatmap
+          var hr,hg,hb;
+          if(t<0.25){hr=255;hg=Math.round(t*4*255);hb=0;}
+          else if(t<0.5){hr=Math.round((1-(t-0.25)*4)*255);hg=255;hb=0;}
+          else if(t<0.75){hr=0;hg=255;hb=Math.round((t-0.5)*4*255);}
+          else{hr=0;hg=Math.round((1-(t-0.75)*4)*255);hb=255;}
+          // FLASH: mix with bright white on arrival
+          hr=Math.round(hr+(255-hr)*flash);
+          hg=Math.round(hg+(255-hg)*flash);
+          hb=Math.round(hb+(255-hb)*flash);
+          var fa=alpha*(0.3+flash*0.7);
+          cx.fillStyle='rgba('+hr+','+hg+','+hb+','+fa+')';
+          cx.strokeStyle='rgba('+Math.min(255,hr+30)+','+Math.min(255,hg+30)+','+Math.min(255,hb+30)+','+Math.min(1,alpha*(0.5+flash*0.5))+')';
+        } else if(isPent){
       cx.fillStyle='rgba(193,74,59,'+alpha*0.4+')';cx.strokeStyle='rgba(255,105,180,'+alpha+')';
     } else {
       cx.fillStyle='rgba(0,40,60,'+alpha*0.3+')';cx.strokeStyle='rgba(0,180,255,'+alpha*0.6+')';
@@ -1452,8 +1459,8 @@ function setMobiusTwist(v){
 // ═══ ANIMATE ═══
 function animate(){
   if(!dragging) cam.ry+=cam.spin;
-    // FLOW: run steps per frame (capped at 10 for smooth rendering)
-    if(FLOW.active&&!FLOW.found&&!FLOW.batching){
+    // FLOW: run steps per frame (keep running even after found for animation)
+    if(FLOW.active&&!FLOW.batching){
       var spd=Math.min(10, FLOW.speed||3);
       for(var ws=0;ws<spd;ws++) waveStep();
       document.getElementById('h-flow').textContent=FLOW.found?'FOUND '+FLOW.step:'step '+FLOW.step;
