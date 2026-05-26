@@ -32,8 +32,10 @@ body{background:#050508;color:#c8d8e8;font-family:'Courier New',monospace;overfl
 #controls button.pk{border-color:#ff69b4;color:#ff69b4}
 #controls button.pk:hover{background:#ff69b4;color:#050508}
 #footer{text-align:center;padding:8px;font-size:8px;color:#333}
+#benchLoad{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);padding:14px 30px;background:#0a0f18;color:#ff69b4;font-family:'Orbitron',monospace;font-size:13px;letter-spacing:0.15em;border:1px solid #ff69b4;border-radius:4px;z-index:999;text-align:center;min-width:350px}
 </style>
 </head><body>
+<div id="benchLoad"></div>
 
 <div id="header">
   <h1>GENESIS v9.3</h1>
@@ -964,7 +966,7 @@ function drawMini(L){
 
 // --- SEED all 3 levels ---
 function seedAll(){
-  for(var li=0;li<3;li++){
+  for(var li=0;li<LEVELS.length;li++){
     var L=LEVELS[li];
     L.state=GK.buildDodecahedron();
     for(var r=0;r<L.refines;r++){
@@ -990,47 +992,74 @@ function seedAll(){
 
 // --- FLOW all 3 ---
 function flowAll(){
-  for(var li=0;li<3;li++){
+  for(var li=0;li<LEVELS.length;li++){
     if(!LEVELS[li].state) continue;
     LEVELS[li].flow.active=true;
   }
   console.log('%c[v9] FLOW ON for all 3 levels','color:#00ffd5;font-size:14px');
 }
 
-// --- BENCHMARK: run 1M steps on each, time it ---
+// --- BENCHMARK: async with loading bar ---
 function benchAll(){
-  for(var li=0;li<3;li++){
-    if(!LEVELS[li].state) continue;
-    var L=LEVELS[li];
-    if(!L.flow.active) L.flow.active=true;
-    var t0=performance.now();
-    for(var s=0;s<1000000;s++) flowStep(L.flow);
-    var elapsed=performance.now()-t0;
-    L.flow.benchMs=elapsed;
-    document.getElementById('s'+li+'-steps').textContent=L.flow.step.toLocaleString();
-    document.getElementById('s'+li+'-rate').textContent=Math.round(elapsed)+'ms';
-    if(L.flow.path){
-      document.getElementById('s'+li+'-path').textContent=L.flow.path.length+' cells';
-    }
-    // Comparison bars
-    var ourRate=elapsed;
-    // ICON model reference: ~0.5ms per step on 5M cell grid = ~500ms/1M on 500 cells
-    // Scale: at 492 faces, ICON-class would be ~200ms/1M (optimized Fortran/MPI)
-    var bestEstimate=L.state.faces.length*0.4;
-    // LOG scale bars
-    var logO=Math.log10(Math.max(1,ourRate));
-    var logB=Math.log10(Math.max(1,bestEstimate));
-    var logM=Math.max(logO,logB,1);
-    document.getElementById('bar'+li+'-ours').style.width=Math.round(logO/logM*100)+'%';
-    document.getElementById('bar'+li+'-best').style.width=Math.round(logB/logM*100)+'%';
-    console.log('%c[v9] L'+li+': 1M steps in '+Math.round(elapsed)+'ms ('+L.state.faces.length+' faces)','color:#ffd700');
+  var queue=[];
+  for(var li=0;li<LEVELS.length;li++){
+    if(!LEVELS[li].state||!LEVELS[li].flow) continue;
+    queue.push(li);
+    if(!LEVELS[li].flow.active) LEVELS[li].flow.active=true;
   }
+  if(!queue.length) return;
+  var loadEl=document.getElementById('benchLoad');
+  loadEl.style.display='block';
+  var qi=0;
+  function benchNext(){
+    if(qi>=queue.length){
+      loadEl.textContent='ALL BENCHMARKS COMPLETE';
+      loadEl.style.background='#0a2a0a';loadEl.style.borderColor='#7fff7f';loadEl.style.color='#7fff7f';
+      setTimeout(function(){loadEl.style.display='none';loadEl.style.background='#0a0f18';loadEl.style.borderColor='#ff69b4';loadEl.style.color='#ff69b4';},2500);
+      return;
+    }
+    var li=queue[qi];
+    var L=LEVELS[li];
+    var total=1000000;
+    var done=0;
+    var t0=performance.now();
+    loadEl.textContent='BENCHMARK L'+li+': 0/1M ('+L.state.faces.length+' faces)';
+    function chunk(){
+      var c=Math.min(100000,total-done);
+      for(var s=0;s<c;s++) flowStep(L.flow);
+      done+=c;
+      var ms=Math.round(performance.now()-t0);
+      var pct=Math.round(done/total*100);
+      loadEl.style.background='linear-gradient(90deg,#ff69b4 '+pct+'%,#0a0f18 '+pct+'%)';
+      loadEl.textContent='BENCHMARK L'+li+': '+Math.round(done/1000)+'K/1M ('+ms+'ms) ['+L.state.faces.length+' faces]';
+      if(done<total){
+        setTimeout(chunk,0);
+      } else {
+        var elapsed=performance.now()-t0;
+        L.flow.benchMs=elapsed;
+        document.getElementById('s'+li+'-steps').textContent=L.flow.step.toLocaleString();
+        document.getElementById('s'+li+'-rate').textContent=Math.round(elapsed)+'ms';
+        if(L.flow.path) document.getElementById('s'+li+'-path').textContent=L.flow.path.length+' cells';
+        var bestEst=L.state.faces.length*0.4;
+        var logO=Math.log10(Math.max(1,elapsed));
+        var logB=Math.log10(Math.max(1,bestEst));
+        var logM=Math.max(logO,logB,1);
+        document.getElementById('bar'+li+'-ours').style.width=Math.round(logO/logM*100)+'%';
+        document.getElementById('bar'+li+'-best').style.width=Math.round(logB/logM*100)+'%';
+        console.log('%c[v9] L'+li+': 1M in '+Math.round(elapsed)+'ms ('+L.state.faces.length+' faces)','color:#ffd700');
+        qi++;
+        setTimeout(benchNext,100);
+      }
+    }
+    setTimeout(chunk,16);
+  }
+  benchNext();
 }
 
 // --- EXPORT ---
 function exportAll(){
   var data={session:'v9.0_'+new Date().toISOString(),levels:[]};
-  for(var li=0;li<3;li++){
+  for(var li=0;li<LEVELS.length;li++){
     var L=LEVELS[li];
     if(!L.state) continue;
     var inv=GK.invariants(L.state);
@@ -1051,7 +1080,7 @@ function exportAll(){
 
 // --- INIT canvases ---
 function initCanvases(){
-  for(var li=0;li<3;li++){
+  for(var li=0;li<LEVELS.length;li++){
     var cv=document.getElementById('cv'+li);
     var parent=cv.parentElement;
     cv.width=parent.clientWidth;
@@ -1076,7 +1105,7 @@ function initCanvases(){
 
 // --- ANIMATE ---
 function animate(){
-  for(var li=0;li<3;li++){
+  for(var li=0;li<LEVELS.length;li++){
     var L=LEVELS[li];
     L.cam.ry+=L.cam.spin||0;
     if(L.flow&&L.flow.active){
