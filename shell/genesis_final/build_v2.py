@@ -320,7 +320,8 @@ part1 = part1.replace('IMG1_B64', img1)
 part1 = part1.replace('IMG2_B64', img2)
 part1 = part1.replace('IMG3_B64', img3)
 
-# Strip double braces from module_js (not an f-string)
+# Strip double braces from BOTH parts (were originally f-strings)
+part1 = part1.replace('{{', '{').replace('}}', '}')
 module_js = module_js.replace('{{', '{').replace('}}', '}')
 
 html = part1 + v8_js + module_js
