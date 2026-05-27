@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build SpookyWarning v1.2 — FMA intro + auto-build + direct explore."""
+"""Build SpookyWarning v1.3 — FMA intro + auto-build + pinch-to-zoom (mobile)."""
 import base64, re
 from pathlib import Path
 from io import BytesIO
@@ -8,7 +8,7 @@ from PIL import Image
 ROOT = Path(__file__).parent.parent.parent
 V8 = ROOT / "shell" / "genesis_v8.0.html"
 GATE_IMG = ROOT / "shell" / "gate" / "img"
-OUT = Path(__file__).parent / "warning_v1.2.html"
+OUT = Path(__file__).parent / "warning_v1.3.html"
 
 def img_b64(name):
     for ext in ['.jpeg','.jpg','.png']:
@@ -24,7 +24,7 @@ def img_b64(name):
             return f"data:image/jpeg;base64,{base64.b64encode(buf.getvalue()).decode()}"
     return ""
 
-print("Building SpookyWarning v1.2...")
+print("Building SpookyWarning v1.3...")
 img0 = img_b64("gate_closed")
 img1 = img_b64("gate_open")
 img2 = img_b64("truth")
@@ -44,7 +44,7 @@ print(f"  v8 JS: {len(v8_js)//1024}KB")
 part1 = '''<!DOCTYPE html>
 <html><head><meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>SpookyWarning — The Gate</title>
+<title>SpookyWarning v1.3 — The Gate</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&display=swap');
@@ -255,7 +255,7 @@ cam.zoom = 571;
 cam.atom = 0.1;
 cam.maxFaces = 50000;
 animate();
-console.log('%c[SW] SpookyWarning v1.2 loaded','color:#ff69b4;font-size:14px');
+console.log('%c[SW] SpookyWarning v1.3 loaded — built by builder, pinch-zoom from engine','color:#ff69b4;font-size:14px');
 console.log('[SW] FMA auto-started. Shape builds during intro.');
 </script>
 </body></html>
@@ -266,3 +266,4 @@ part1 = part1.replace('IMG0_B64', img0).replace('IMG1_B64', img1).replace('IMG2_
 html = part1 + v8_js + module_js
 OUT.write_text(html, encoding='utf-8')
 print(f"Written: {OUT} ({len(html)//1024} KB)")
+print("  Pinch-to-zoom extracted from genesis_v8.0 engine via build.")
