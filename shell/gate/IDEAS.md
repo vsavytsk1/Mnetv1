@@ -1,5 +1,5 @@
 # The Gate — Ideas & References
-**Status:** Exploration / Future Build
+**Status:** v1.4 WORKING / v2 planned
 **Created:** 2026-05-26
 **Folder:** shell/gate/
 
@@ -156,6 +156,35 @@ VALE           →  The voice that could narrate the journey
 Genesis v9.0   →  The benchmark proving the math works
 navierCrunch   →  The GPU proof that topology holds under turbulence
 ```
+
+---
+
+## v1.4 Status (WORKING)
+
+```
+Gate v1.4 — 411 KB, fully self-contained
+  Kernel: inlined (GK, 21KB)
+  Images: 4x JPEG base64 (380KB)
+  Sequence: 6 phases, all working
+  Explorer: 1472 faces, chi=2, P=12, E/V=1.500
+  Console: full phase logging
+  Dependencies: ZERO
+```
+
+---
+
+## v2 Plan: Full Genesis UI After Intro
+
+After the FMA sequence completes, bolt on the full genesis_v9.0 control panel:
+- SEED / REFINE / UNDO / RESET buttons
+- Refinement level slider
+- Reynolds regime toggles (Stokes/Laminar/Transition/Turbulent)
+- Flow simulation (pressure diffusion on face adjacency)
+- Benchmark mode
+- Camera: drag rotate, scroll zoom, auto-spin toggle
+- HUD: full invariants, face count, memory estimate
+
+Source: copy from shell/genesis_v9.0.html, strip to essentials
 
 ---
 
