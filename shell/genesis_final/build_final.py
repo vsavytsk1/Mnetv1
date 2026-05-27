@@ -187,7 +187,7 @@ canvas{position:fixed;top:0;left:0;z-index:0}
 // GLOBALS
 // ================================================================
 var K = GK;
-var state = null, history = [], faces = [];
+var state = null, hist = [], faces = [];
 var cam = {rx:0.3, ry:0, zoom:300, spin:0.003, maxFaces:50000};
 var params = {jitter:0};
 var mods = {fma:false, eng:true, pre:false};
@@ -251,7 +251,7 @@ function updateHUD(){
 // ENGINEER ACTIONS
 // ================================================================
 function doSeed(){
-  history.push(state);
+  hist.push(state);
   state = K.buildC60();
   faces = state.faces;
   applyJitter();
@@ -262,7 +262,7 @@ function doSeed(){
 function doRefine(){
   if(!state) doSeed();
   if(faces.length > cam.maxFaces){ log('MAX FACES reached','ax-p5'); return; }
-  history.push(JSON.parse(JSON.stringify(state)));
+  hist.push(JSON.parse(JSON.stringify(state)));
   state = K.refineAll(state);
   faces = state.faces;
   applyJitter();
@@ -271,8 +271,8 @@ function doRefine(){
 }
 
 function doUndo(){
-  if(history.length === 0){ log('Nothing to undo','ax-p5'); return; }
-  state = history.pop();
+  if(hist.length === 0){ log('Nothing to undo','ax-p5'); return; }
+  state = hist.pop();
   faces = state ? state.faces : [];
   applyJitter();
   updateHUD();
@@ -280,7 +280,7 @@ function doUndo(){
 }
 
 function doReset(){
-  state = null; history = []; faces = [];
+  state = null; hist = []; faces = [];
   updateHUD();
   log('RESET', 'ax-p3');
 }
