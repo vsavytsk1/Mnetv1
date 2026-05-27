@@ -45,6 +45,7 @@ print(f"  v8 JS: {len(v8_js)//1024}KB extracted")
 # 2. Remove the initial doSeed() call
 # 3. Rename 'history' if present
 v8_js = v8_js.replace('animate();', '// animate(); — controlled by genesis_final')
+v8_js = v8_js.replace('spin: 0.005', 'spin: 0')  # start with no spin
 # The v8 uses gkState, we need to keep that
 
 # Build HTML in parts to avoid f-string brace hell
@@ -137,8 +138,8 @@ body{{background:#050508;color:#c8d8e8;font-family:'Courier New',monospace;overf
 <div class="banner" id="b2" onclick="fmaNext()">
   <img src="IMG2_B64" alt="Truth"><div class="banner-text">Oh? Hello there, explorer.</div>
   <div class="banner-sub" style="color:#667">Have you read the license?<br>
-    <a href="https://vsavytsk1.github.io/SpookyPrimes/" target="_blank" onclick="event.stopPropagation()"
-       style="color:#4466aa;text-decoration:none;letter-spacing:2px;font-size:12px">&#8599; LICENSE</a></div>
+    <a href="https://vsavytsk1.github.io/Mnetv1/shell/spooky_warning/" target="_blank" onclick="event.stopPropagation()"
+       style="color:#4466aa;text-decoration:none;letter-spacing:2px;font-size:12px">&#8599; LICENSE &amp; DEDICATION TO HUMANITY</a></div>
   <div class="banner-click">[ I understand. Show me. ]</div></div>
 <div class="banner" id="b3" onclick="fmaNext()">
   <img src="IMG3_B64" alt="Exchange"><div class="banner-text">The only price is compute.</div>
@@ -273,17 +274,23 @@ function drawCircle(){{
 // PRESENT
 var PSCRIPT = [
   {{t:0,     action:'msg',    text:'Initializing...'}},
+  {{t:500,   action:'spin',   value:0}},
+  {{t:600,   action:'atom',   value:0.1}},
+  {{t:700,   action:'maxf',   value:100}},
   {{t:1000,  action:'seed'}},
   {{t:1800,  action:'msg',    text:'Refining topology...'}},
   {{t:2500,  action:'refine'}},
   {{t:3500,  action:'refine'}},
   {{t:4500,  action:'refine'}},
-  {{t:5500,  action:'zoom',   value:400}},
-  {{t:6000,  action:'msg',    text:'The structure reveals itself.'}},
-  {{t:7500,  action:'spin',   value:0.003}},
-  {{t:8000,  action:'hideUI'}},
-  {{t:9000,  action:'msg',    text:'Explore.'}},
-  {{t:11000, action:'clearMsg'}}
+  {{t:5500,  action:'refine'}},
+  {{t:6500,  action:'refine'}},
+  {{t:7000,  action:'msg',    text:'Topology emerges...'}},
+  {{t:7500,  action:'zoom',   value:571}},
+  {{t:8000,  action:'flow',   value:0}},
+  {{t:8500,  action:'msg',    text:'The structure reveals itself.'}},
+  {{t:9500,  action:'hideUI'}},
+  {{t:10500, action:'msg',    text:'Explore.'}},
+  {{t:12500, action:'clearMsg'}}
 ];
 
 function startPresent(){{
@@ -292,8 +299,11 @@ function startPresent(){{
       switch(step.action){{
         case 'seed': doSeed(); break;
         case 'refine': doRefineAll(); break;
-        case 'zoom': cam.zoom=step.value; document.getElementById('sl-zm').value=step.value; break;
-        case 'spin': cam.spin=step.value; break;
+        case 'zoom': cam.zoom=step.value; document.getElementById('sl-zm').value=Math.round(step.value); SV('sv-zm',Math.round(step.value)); break;
+        case 'spin': cam.spin=step.value; document.getElementById('sl-spin').value=Math.round(step.value*1000); SV('sv-spin',step.value.toFixed(3)); break;
+        case 'atom': cam.atom=step.value; document.getElementById('sl-atom').value=Math.round(step.value*10); SV('sv-atom',step.value.toFixed(1)); break;
+        case 'maxf': cam.maxFaces=Math.pow(10,1+step.value/20); document.getElementById('sl-maxf').value=step.value; SV('sv-maxf',Math.round(cam.maxFaces)); break;
+        case 'flow': if(typeof flowSliderChange==='function') flowSliderChange(step.value); break;
         case 'hideUI':
           mods.eng=false; document.getElementById('mb-eng').classList.remove('on'); applyMods(); break;
         case 'msg':
@@ -306,6 +316,7 @@ function startPresent(){{
 }}
 
 // BOOT
+cam.spin = 0; // start with NO spin
 applyMods();
 doSeed();
 animate();
