@@ -47,7 +47,8 @@ print(f"  v8 JS: {len(v8_js)//1024}KB extracted")
 v8_js = v8_js.replace('animate();', '// animate(); — controlled by genesis_final')
 # The v8 uses gkState, we need to keep that
 
-html = f'''<!DOCTYPE html>
+# Build HTML in parts to avoid f-string brace hell
+part1 = '''<!DOCTYPE html>
 <html><head><meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>GENESIS FINAL v2</title>
@@ -127,20 +128,20 @@ body{{background:#050508;color:#c8d8e8;font-family:'Courier New',monospace;overf
 
 <!-- FMA BANNERS -->
 <div class="banner" id="b0" onclick="fmaNext()">
-  <img src="{img0}" alt="Gate"><div class="banner-text">Do you want to begin the journey?</div>
+  <img src="IMG0_B64" alt="Gate"><div class="banner-text">Do you want to begin the journey?</div>
   <div class="banner-sub">There is a price. There is always a price.</div><div class="banner-click">[ click anywhere ]</div></div>
 <div id="circlePhase"><canvas id="tCircle" width="600" height="600"></canvas></div>
 <div class="banner" id="b1" onclick="fmaNext()">
-  <img src="{img1}" alt="Gate Opens"><div class="banner-text">The Gate opens for those who understand equivalent exchange.</div>
+  <img src="IMG1_B64" alt="Gate Opens"><div class="banner-text">The Gate opens for those who understand equivalent exchange.</div>
   <div class="banner-click">[ click to enter ]</div></div>
 <div class="banner" id="b2" onclick="fmaNext()">
-  <img src="{img2}" alt="Truth"><div class="banner-text">Oh? Hello there, explorer.</div>
+  <img src="IMG2_B64" alt="Truth"><div class="banner-text">Oh? Hello there, explorer.</div>
   <div class="banner-sub" style="color:#667">Have you read the license?<br>
     <a href="https://vsavytsk1.github.io/SpookyPrimes/" target="_blank" onclick="event.stopPropagation()"
        style="color:#4466aa;text-decoration:none;letter-spacing:2px;font-size:12px">&#8599; LICENSE</a></div>
   <div class="banner-click">[ I understand. Show me. ]</div></div>
 <div class="banner" id="b3" onclick="fmaNext()">
-  <img src="{img3}" alt="Exchange"><div class="banner-text">The only price is compute.</div>
+  <img src="IMG3_B64" alt="Exchange"><div class="banner-text">The only price is compute.</div>
   <div class="banner-sub">V &#8722; E + F = 2 &middot; P = 12 &middot; always</div>
   <div class="banner-click">[ pay the price ]</div></div>
 
@@ -200,7 +201,9 @@ body{{background:#050508;color:#c8d8e8;font-family:'Courier New',monospace;overf
 // ================================================================
 // FULL v8.0 ENGINE (extracted)
 // ================================================================
-''' + v8_js + '''
+'''
+
+module_js = '''
 
 // ================================================================
 // MODULE SYSTEM (layered on top of v8.0)
@@ -311,5 +314,15 @@ console.log('%c[GF] GENESIS FINAL v2 loaded','color:#00ffd5;font-size:14px');
 </body></html>
 '''
 
+# Replace image placeholders
+part1 = part1.replace('IMG0_B64', img0)
+part1 = part1.replace('IMG1_B64', img1)
+part1 = part1.replace('IMG2_B64', img2)
+part1 = part1.replace('IMG3_B64', img3)
+
+# Strip double braces from module_js (not an f-string)
+module_js = module_js.replace('{{', '{').replace('}}', '}')
+
+html = part1 + v8_js + module_js
 OUT.write_text(html, encoding='utf-8')
 print(f"Written: {OUT} ({len(html)//1024} KB)")
