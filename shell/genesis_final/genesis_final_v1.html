@@ -7,7 +7,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&display=swap');
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:#050508;color:#c8d8e8;font-family:'Courier New',monospace;overflow:hidden;touch-action:none}
-canvas{position:fixed;top:0;left:0;z-index:0}
+#cv{position:fixed;top:0;left:0;z-index:0}
 
 /* MODULE SELECT */
 #modbar{position:fixed;top:0;left:0;right:0;z-index:200;background:rgba(5,5,8,0.95);
@@ -861,7 +861,7 @@ function doSeed(){
 function doRefine(){
   if(!state) doSeed();
   if(faces.length > cam.maxFaces){ log('MAX FACES reached','ax-p5'); return; }
-  hist.push(JSON.parse(JSON.stringify(state)));
+  hist.push(state);
   state = K.refineAll(state);
   faces = state.faces;
   applyJitter();
@@ -952,7 +952,9 @@ var SCRIPT = [
   {t:2500,  action:'refine'},
   {t:3500,  action:'refine'},
   {t:4500,  action:'refine'},
-  {t:5500,  action:'zoom',   value:500},
+  {t:5000,  action:'msg',    text:'Topology emerges...'},
+  {t:5500,  action:'refine'},
+  {t:6500,  action:'zoom',   value:500},
   {t:6000,  action:'msg',    text:'The structure reveals itself.'},
   {t:7500,  action:'spin',   value:0.002},
   {t:8000,  action:'hideUI'},
