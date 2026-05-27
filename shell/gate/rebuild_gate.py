@@ -157,8 +157,10 @@ function launchExplorer(){{
   state=K.refineAll(state);state=K.refineAll(state);
   faces=state.faces;
   var inv=K.invariants(state);
-  console.log('[GATE] Truth built: '+inv.faces+' faces, chi='+inv.chi+', P='+inv.pentagons);
-  document.getElementById('hud').innerHTML='<span style="color:#ff69b4">THE TRUTH</span><br>Faces: '+inv.faces+'<br>Pentagons: <span style="color:#ff69b4">'+inv.pentagons+'</span><br>chi = <span style="color:#ffd700">'+inv.chi+'</span><br>E/V = '+inv.ev.toFixed(3)+'<br><br><span style="color:#334">drag to rotate . scroll to zoom</span>';
+  var chi=inv.vertices-inv.edges+inv.faces;
+  var ev=inv.edges/Math.max(inv.vertices,1);
+  console.log('[GATE] Truth built: '+inv.faces+' faces, chi='+chi+', P='+inv.pents);
+  document.getElementById('hud').innerHTML='<span style="color:#ff69b4">THE TRUTH</span><br>Faces: '+inv.faces+'<br>Pentagons: <span style="color:#ff69b4">'+inv.pents+'</span><br>\u03C7 = V\u2212E+F = <span style="color:#ffd700">'+chi+'</span><br>E/V = '+ev.toFixed(3)+'<br><br><span style="color:#334">drag to rotate . scroll to zoom</span>';
   var c=document.getElementById('explorerCanvas');c.width=window.innerWidth;c.height=window.innerHeight;var ctx=c.getContext('2d');
   faces.forEach(function(f){{f._jpts=f.pts.map(function(p){{return[p[0]+(Math.random()-0.5)*0.06,p[1]+(Math.random()-0.5)*0.06,p[2]+(Math.random()-0.5)*0.06];}});}});
   var drag=false,lx=0,ly=0;
