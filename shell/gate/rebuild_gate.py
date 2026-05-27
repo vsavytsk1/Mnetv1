@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+
 """Rebuild gate_v1.html with proper structure, kernel fallback, and images."""
 import base64
 from pathlib import Path
@@ -7,6 +8,7 @@ from PIL import Image
 
 GATE_DIR = Path(__file__).parent
 IMG_DIR = GATE_DIR / "img"
+KERNEL = GATE_DIR.parent.parent / "kernel" / "goldberg_kernel.js"
 OUT = GATE_DIR / "gate_v1.html"
 
 def img_to_b64(name):
@@ -35,14 +37,20 @@ img2 = img_to_b64("truth")
 img3 = img_to_b64("exchange")
 print(f"  gate_closed: {len(img0)//1024}KB  gate_open: {len(img1)//1024}KB  truth: {len(img2)//1024}KB  exchange: {len(img3)//1024}KB")
 
+# Read kernel JS
+kernel_js = KERNEL.read_text(encoding='utf-8')
+print(f"  kernel: {len(kernel_js)//1024}KB inlined")
+
 html = f'''<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>The Gate</title>
-<script src="../../kernel/goldberg_kernel.js"><\/script>
-<script src="https://vsavytsk1.github.io/Mnetv1/kernel/goldberg_kernel.js"><\/script>
+<script>
+// === GOLDBERG KERNEL (inlined) ===
+{kernel_js}
+<\/script>
 <style>
 *{{margin:0;padding:0;box-sizing:border-box}}
 @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&display=swap');
@@ -140,12 +148,7 @@ function drawTransmutationCircle(){{
 }}
 
 function launchExplorer(){{
-  var K=window.GoldbergKernel;
-  if(!K||!K.buildC60){{
-    console.log('[GATE] Kernel not ready, retrying in 500ms...');
-    setTimeout(launchExplorer,500);
-    return;
-  }}
+  var K=window.GK||GK;
   console.log('[GATE] Kernel loaded. Building the Truth...');
   document.getElementById('explorer').classList.add('active');
   document.getElementById('hud').classList.add('active');
@@ -174,7 +177,7 @@ function launchExplorer(){{
 }}
 
 console.log('%c[GATE] The Gate v1.2 loaded','color:#8899bb;font-size:14px');
-console.log('[GATE] Kernel: '+(typeof GoldbergKernel!=='undefined'?'LOADED':'loading from CDN...'));
+console.log('[GATE] Kernel: '+(typeof GK!=='undefined'?'INLINED':'MISSING'));
 console.log('[GATE] Phase 0: The Gate awaits.');
 </script>
 </body>
