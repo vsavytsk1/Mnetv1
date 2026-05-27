@@ -2,7 +2,9 @@
 
 | Simulation | What it is |
 |---|---|
-| [GENESIS v9.0 — NS Dashboard](https://vsavytsk1.github.io/Mnetv1/shell/genesis_v9.0.html) | **LATEST.** Navier-Stokes benchmark. 4 shapes (12→24K faces). O(n) wave diffusion. Real-time benchmarks. Secret level. |
+| [**GENESIS FINAL**](https://vsavytsk1.github.io/Mnetv1/shell/genesis_final/genesis_final_v2.html) | **MASTERPIECE.** 3 modules: FMA intro + full v8.0 engine + scripted presentation. 448KB self-contained. |
+| [The Gate](https://vsavytsk1.github.io/Mnetv1/shell/gate/gate_v1.html) | Full Metal Alchemist intro → transmutation circle → Goldberg explorer. Cinematic. |
+| [GENESIS v9.0 — NS Dashboard](https://vsavytsk1.github.io/Mnetv1/shell/genesis_v9.0.html) | Navier-Stokes benchmark. 4 shapes (12→24K faces). O(n) wave diffusion. Real-time benchmarks. |
 | [GENESIS v8.x — Flow Explorer](https://vsavytsk1.github.io/Mnetv1/shell/genesis_v8.0.html) | Goldberg fractal + wave simulation. Möbius twist. Wavefront heatmap. 100M batch compute. |
 | [GENESIS Benchmark](https://vsavytsk1.github.io/Mnetv1/shell/genesis_bench.html) | Compute cost analyzer. Time, memory, F/ms per refinement level. CSV export. |
 | [Sacred Math Tree](https://vsavytsk1.github.io/Mnetv1/) | 10 calculus trees. Autopilot plays them all. Zoom-gated. |
@@ -299,6 +301,16 @@ kernel/
                                       Builds, refines, verifies Goldberg polyhedra.
 
 shell/
+  genesis_final/
+    genesis_final_v2.html           ← GENESIS FINAL. 448KB. 3 modules.
+                                      FMA intro + full v8.0 engine + presentation
+                                      504,212 faces tested. chi=2 ALWAYS.
+    build_v2.py                     ← Build script (images + kernel + v8 extraction)
+  gate/
+    gate_v1.html                    ← The Gate. FMA cinematic intro.
+                                      393KB. Inline kernel + 4 images.
+    rebuild_gate.py                 ← Build script
+    img_to_base64.py                ← Image pipeline
   genesis_v9.0.html                 ← NS Benchmark Dashboard (v9.6)
                                       4 levels, real-time benchmark, loading bars
   genesis_v8.0.html                 ← Flow Explorer (v8.x)
@@ -375,8 +387,11 @@ May 25, 2026  —  Sacred Math Tree: 10 trees, 76 nodes, autopilot
 May 25, 2026  —  GENESIS v7: Goldberg kernel born (634 lines)
 May 25, 2026  —  GENESIS v8: wave diffusion, Möbius twist, 100M steps
 May 26, 2026  —  GENESIS v9: NS benchmark dashboard, O(n) proven
+May 26, 2026  —  The Gate: FMA cinematic intro, transmutation circle
+May 26, 2026  —  GENESIS FINAL: 3-module system (FMA + Engineer + Present)
+                 504,212 faces. chi=2. P=12. TOPOLOGY VALID. ALWAYS.
 
-Total: 3 days. 1 kernel. 7 axioms. 3 conditions.
+Total: 4 days. 1 kernel. 7 axioms. 3 conditions.
 From a dodecahedron to half a million faces.
 From HTML circles to Navier-Stokes.
 
