@@ -30,6 +30,17 @@ body{background:#050508;color:#c8d8e8;font-family:'Courier New',monospace;overfl
 .lbl{color:#444}.val{color:#00ffd5}.vp{color:#ff69b4}.vg{color:#ffd700}
 #euler{position:fixed;top:10px;left:50%;transform:translateX(-50%);z-index:5;pointer-events:none;
   font-family:'Orbitron';font-size:16px;font-weight:900;opacity:0;transition:opacity 2s ease}
+
+/* MOBILE */
+@media(max-width:768px){
+  .banner-text{font-size:12px;letter-spacing:3px;padding:0 20px}
+  .banner-sub{font-size:9px;letter-spacing:2px;padding:0 20px}
+  .banner-click{font-size:9px;letter-spacing:3px}
+  .banner img{max-height:45vh;max-width:90vw}
+  #tCircle{width:340px!important;height:340px!important}
+  #euler{font-size:11px}
+  #hud{font-size:8px}
+}
 #euler.active{opacity:1}
 #euler .ok{color:#00ffd5}
 
@@ -1561,6 +1572,9 @@ doSeed();
 var fmaPhase = 0;
 var fmaPhases = ['b0','circle','b1','b2','b3','done'];
 var buildStep = 0;
+var isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+var maxRefines = isMobile ? 3 : 4;  // mobile: 10292F, desktop: 72032F
+console.log('[SW] Device: '+(isMobile?'MOBILE (3 refines)':'DESKTOP (4 refines)'));
 
 function fmaNext(){
   var cur = fmaPhases[fmaPhase];
@@ -1570,7 +1584,7 @@ function fmaNext(){
 
   // BUILD SHAPE IN BACKGROUND during each click
   if(buildStep === 0){ doSeed(); buildStep++; }
-  else if(buildStep <= 4){ doRefineAll(); buildStep++; }
+  else if(buildStep <= maxRefines){ doRefineAll(); buildStep++; }
 
   if(fmaPhase >= fmaPhases.length){
     // FMA DONE — reveal explorer
@@ -1622,7 +1636,7 @@ function drawCircle(){
     else setTimeout(function(){
       // Build during circle too
       if(buildStep===0){doSeed();buildStep++;}
-      else if(buildStep<=4){doRefineAll();buildStep++;}
+      else if(buildStep <= maxRefines){ doRefineAll(); buildStep++; }
       document.getElementById('circlePhase').classList.remove('active');
       fmaPhase++;
       var nxt=fmaPhases[fmaPhase];
