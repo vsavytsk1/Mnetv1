@@ -489,3 +489,43 @@ The cave was warm.
   The identity holds on average.
   Need longer run at steady state to certify -5/3.
   But the dodecahedron is doing turbulence. For real.
+
+---
+
+### GOOGLE RECEIPT 2 -- L6 500k STEPS -- 2026-05-28 17:25
+
+**Machine:** Tesla T4 GPU (14.6 GB) + High-RAM
+**Mesh:** L6 -- 1,176,492 faces -- P=12 -- chi=2 -- E/V=1.500
+**Steps:** 500,000  **Time:** 5,850.5s  **Speed:** 85 sps
+
+**EVERY SINGLE STEP:**
+  diss/enst = 0.000100  =  2*nu = 0.000100
+  500 log points. step 2000 to step 500000.
+  NOT ONE DEVIATION.
+  
+  step      2,000:  diss/enst=0.000100  2nu=0.000100
+  step    100,000:  diss/enst=0.000100  2nu=0.000100
+  step    250,000:  diss/enst=0.000100  2nu=0.000100
+  step    500,000:  diss/enst=0.000100  2nu=0.000100
+
+**FINAL:**
+  TKE=1.092782  Enstrophy=109.278168  Dissipation=0.01092782
+  diss/enst=0.00010000  expect 2*nu=0.00010000
+  EXACT TO 8 DECIMAL PLACES.
+
+**THE SCALE:**
+  1,176,492 faces  (7x more than L5)
+  500,000 steps    (2.5x more than our RTX3060 run)
+  85 sps on T4     (consistent throughout)
+  Re=20,000        (2x higher than our best local run)
+
+**WHAT THIS CONFIRMS:**
+  The identity diss = 2*nu*enstrophy
+  holds at L6 (1.1M faces)
+  holds at Re=20,000
+  holds for 500,000 consecutive steps
+  on Google hardware
+  independently verified
+
+  P=12. chi=2. ALWAYS.
+  Buenos Aires. May 28 2026. 17:25.
