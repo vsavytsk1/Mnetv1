@@ -3384,7 +3384,7 @@ else if (typeof global !== 'undefined') global.MNetNanite = MNetNanite;
 var LINKS = {
   genesis : 'https://vsavytsk1.github.io/Mnetv1/shell/genesis_v8.1.html',
   sandbox : 'https://vsavytsk1.github.io/Mnetv1/shell/graph_sandbox_v5.1.html',
-  tree    : 'https://vsavytsk1.github.io/Mnetv1/tree/math_tree_v5.0.html',
+  tree    : 'https://vsavytsk1.github.io/Mnetv1/tree/math_tree_v4.3.html',
   holly7  : 'https://vsavytsk1.github.io/Mnetv1/pack/holly7.html',
   navier  : 'https://vsavytsk1.github.io/Mnetv1/pack/navierCrunch_turbulent.html',
   warning : 'https://vsavytsk1.github.io/Mnetv1/shell/spooky_warning/warning_v2.0.html'
@@ -3403,6 +3403,12 @@ function setPanel(id, rows) {
 }
 
 function summon(key) {
+  // tree needs full viewport -- pan/zoom/autopilot breaks in iframe
+  if (key === 'tree') {
+    window.open(LINKS[key], '_blank');
+    logAdd('SUMMON', 'TREE -- new tab (needs full viewport)');
+    return;
+  }
   var fr = document.getElementById('ov-frame');
   var ov = document.getElementById('overlay');
   fr.src = LINKS[key];
