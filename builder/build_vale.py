@@ -124,7 +124,7 @@ canvas{display:block}
 """
 HTML_SHELL = """
 <div id="top-bar">
-  <span class="logo">JARVIS OS</span>
+  <span class="logo">VALE OS</span>
   <span class="info" id="top-build">H7.1473.12.60</span>
   <span class="info" id="top-ts">--</span>
   <span class="kstat" id="top-k">6/6</span>
@@ -209,10 +209,12 @@ function layoutApply(breatheR) {
   var W = window.innerWidth, H = window.innerHeight;
   var R = breatheR !== undefined ? breatheR : LAY.R;
 
-  // center canvas
+  // center canvas -- only resize when size changes (setting width clears canvas)
   var cv = document.getElementById('cv-center');
-  cv.width  = LAY.cSize;
-  cv.height = LAY.cSize;
+  if (cv.width !== Math.round(LAY.cSize) || cv.height !== Math.round(LAY.cSize)) {
+    cv.width  = Math.round(LAY.cSize);
+    cv.height = Math.round(LAY.cSize);
+  }
   cv.style.left = (LAY.cx - LAY.cSize/2) + 'px';
   cv.style.top  = (LAY.cy - LAY.cSize/2) + 'px';
 
