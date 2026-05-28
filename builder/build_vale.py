@@ -511,5 +511,7 @@ HTML = (
 
 OUT.write_text(HTML, encoding="utf-8")
 kb = len(HTML)//1024
+LIVE = "https://vsavytsk1.github.io/Mnetv1/shell/vale_v1.1.html"
 print("\n[OK] " + str(OUT.name) + "  " + str(kb) + "KB")
-print("[OK] https://vsavytsk1.github.io/Mnetv1/shell/vale_v1.1.html")
+print("[OK] " + LIVE)
+print("[OPEN] " + LIVE)

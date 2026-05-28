@@ -226,6 +226,27 @@ FIX:
 
 ---
 
+## CURSE 6 -- The File:// Curse
+We build locally. We open with file://. We see it differently than the world.
+GitHub Pages serves the REAL version. file:// is a lie.
+
+```
+FIX:
+  NEVER open with file:// to verify a build.
+  ALWAYS open the live GitHub Pages URL:
+  https://vsavytsk1.github.io/Mnetv1/shell/FILENAME.html
+
+  In every builder script the open command must be:
+  Start-Process brave "https://vsavytsk1.github.io/Mnetv1/..."
+  NOT:
+  Start-Process brave "file:///C:/Users/..."
+
+  The math_tree works because we opened its URL.
+  VALE exists at its URL. We just never looked.
+```
+
+---
+
 ## FAILURE LOG
 
 | Date | File | Curse | What happened | Fix |
