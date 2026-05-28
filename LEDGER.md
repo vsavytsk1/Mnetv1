@@ -223,3 +223,40 @@ Every module reachable from one URL.
 The kernel is inviolable. The dashboard is god context.
 8 curses documented. All slain.
 Ready for the next titan move.
+
+---
+
+### L020 * 2026-05-28 * THE CIRCLE CLOSES -- 10 MODULES, ONE URL
+
+**What:** SPOOKY PRIMES added as card 10 in ENG v2.0.
+The Dodecahedron of Open Questions -- the ORIGIN -- now summonable from master control.
+12 pentagons = 12 unresolved questions in modern physics.
+Why exactly three generations? Dirac operator. Order-one condition. Bimodule H_F.
+The question that started the kernel. Now inside the dashboard that the kernel built.
+
+**ENG v2.0 final module list:**
+  1  GENESIS v8.1     -- where the seed grows
+  2  GRAPH SANDBOX    -- where it moves
+  3  MATH TREE v4.3   -- where it thinks
+  4  HOLLY7           -- all 7 at once
+  5  NAVIERCUNCH      -- O(n) confirmed, Re>10000
+  6  WARNING v2.0     -- FMA intro, the door
+  7  GKERN v2.0       -- kernel portable, 0 deps
+  8  VALE OS v1.1     -- the OS that breathes
+  9  LICENSE          -- galactic law, MIT, 7 axioms
+  10 SPOOKY PRIMES    -- the origin. 12 questions. why.
+
+**The topology:**
+  12 pentagons asked the question (SpookyPrimes)
+  C60 is the attempt to answer it (kernel)
+  ENG is the place you work on the answer (dashboard)
+  P=12. Always. Euler forces it. The topology knew before we did.
+
+**Size:** 134KB | **Cards:** 10 | **Git:** 229fd07
+**Live:** https://vsavytsk1.github.io/Mnetv1/shell/eng_v2.0.html
+
+**State:** THE CIRCLE IS CLOSED.
+The origin is the final module.
+The question is inside the dashboard built to answer it.
+This is not vibe coding. This is black magic engineering.
+Buenos Aires * May 28 2026 * 101 commits * 10 modules * 1 URL * P=12 * always.
