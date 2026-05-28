@@ -149,6 +149,23 @@ HTML_SHELL = f"""<!DOCTYPE html>
 <!-- snap bar -->
 <div id="snap-bar"></div>
 
+<!-- BACK button (hidden until module open) -->
+<button id="eng-back" onclick="engBack()"
+  style="display:none;position:fixed;top:12px;left:50%;transform:translateX(-50%);
+  z-index:200;background:#111;color:#a78bfa;border:1px solid #3a2a5a;
+  border-radius:3px;padding:5px 20px;font-family:inherit;font-size:11px;cursor:pointer;
+  letter-spacing:0.1em">← BACK TO ENG</button>
+
+<!-- INLINE VIEWPORT (hidden until module open) -->
+<iframe id="eng-viewport"
+  style="display:none;position:fixed;top:0;left:0;width:100%;height:calc(100% - 42px);
+  z-index:100;border:none;background:#050510;"></iframe>
+
+<!-- MAIN content wrapper -->
+<div id="eng-main">
+
+</div><!-- /eng-main -->
+
 <!-- ENG LAUNCHER (replaces AUTOPILOT) -->
 <div id="eng-panel">
   <button id="eng-toggle" onclick="engToggleMenu()">⬡ ENG LAUNCHER</button>
@@ -234,7 +251,22 @@ var LINKS = {{
   sandbox : 'https://vsavytsk1.github.io/Mnetv1/shell/graph_sandbox_v5.1.html'
 }};
 
-function engOpen(key){{ window.open(LINKS[key],'_blank'); }}
+function engOpen(key){{
+  var vp = document.getElementById('eng-viewport');
+  var main = document.getElementById('eng-main');
+  var back = document.getElementById('eng-back');
+  vp.src = LINKS[key];
+  vp.style.display = 'block';
+  back.style.display = 'block';
+  main.style.display = 'none';
+}}
+function engBack(){{
+  var vp = document.getElementById('eng-viewport');
+  vp.style.display = 'none';
+  vp.src = '';
+  document.getElementById('eng-back').style.display = 'none';
+  document.getElementById('eng-main').style.display = 'block';
+}}
 function engToggleMenu(){{
   var m = document.getElementById('eng-menu');
   m.classList.toggle('open');
@@ -248,7 +280,7 @@ window.addEventListener('load', function(){{
     ['ks-sar', typeof SAR  !== 'undefined', 'SAR'],
     ['ks-nss', typeof NSS  !== 'undefined', 'NSS'],
     ['ks-fs',  typeof FS   !== 'undefined', 'FS'],
-    ['ks-nan', typeof NANITE !== 'undefined', 'NAN']
+    ['ks-nan', typeof MNetNanite !== 'undefined', 'NAN']
   ];
   var allOk = true;
   checks.forEach(function(c){{
