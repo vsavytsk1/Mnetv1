@@ -39,3 +39,16 @@ Swap any module â†’ rebuild â†’ new version. The paradigm is locked.
 - M7 (math_tree_v5.0)     â€” sacred math tree engine (in tree/)
 
 **Rule:** Touch kernel/ â†’ rebuild everything. Builder is the only path to shell/.
+
+---
+
+### L003 · 2026-05-28 · eng_v1.0.html — Engineering Dashboard v1.0
+
+**What:** uilder/build_eng_dashboard.py — graph_sandbox_v5.1 EXACT format.
+Injects M1-M6. 6-button ENG LAUNCHER (replaces autopilot). Kernel status HUD.
+CMD input. SEED/REFINE/SAR-5/NS/FRAC SEARCH buttons in bar. Log panel.
+
+**Size:** 132KB | **Modules:** GK · GA · SAR · NSS · FS · NAN
+**Live:** https://vsavytsk1.github.io/Mnetv1/shell/eng_v1.0.html
+**Why:** The engineering dashboard IS the sandbox format. Builder owns it.
+Buttons 1-6 only. More added one by one.
