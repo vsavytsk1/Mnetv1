@@ -901,9 +901,16 @@ document.addEventListener('pointermove',e=>{if(!drag)return;panX+=(e.clientX-lm.
 document.addEventListener('pointerup',()=>{drag=false});
 document.addEventListener('wheel',e=>{e.preventDefault();let oz=zm;zm*=e.deltaY>0?0.92:1.08;zm=Math.max(0.18,Math.min(2.0,zm));panX=e.clientX/zm-(e.clientX/oz-panX);panY=e.clientY/zm-(e.clientY/oz-panY);upT()},{passive:false});
 
-// ??? START EMPTY ? nothing loaded ???
+// ??? START EMPTY then AUTO-LAUNCH ???
 drawGridEmpty();center();
-clog('page empty. press autopilot to begin.','log-state');
+clog('page empty. launching autopilot...','log-state');
+// Auto-trigger autopilot after layout settles
+window.addEventListener('load', function() {
+  setTimeout(function() {
+    var btn = document.getElementById('btn-auto');
+    if (btn) btn.click();
+  }, 400);
+});
 
 function drawGridEmpty(){
   gridCv.width=4000;gridCv.height=3000;
