@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8">
+<title>Kolmogorov Turbulence Results</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#050508;color:#c8d8e8;font-family:'Consolas','Courier New',monospace;padding:20px}
+h1{color:#ff69b4;font-size:20px;letter-spacing:3px;margin-bottom:4px}
+.sub{color:#555;font-size:11px;margin-bottom:16px}
+.box{background:#0a0f18;border:1px solid #1a1f2e;padding:12px;margin:12px 0;border-radius:4px}
+.box h2{color:#ffd700;font-size:13px;margin-bottom:8px}
+.stat{display:inline-block;margin-right:20px;margin-bottom:4px}
+.stat .label{color:#555;font-size:10px}
+.stat .val{color:#00ffd5;font-size:13px;font-weight:bold}
+.hot{color:#ff6a00}.grn{color:#7fff7f}.pk{color:#ff69b4}
+table{border-collapse:collapse;width:100%;margin:10px 0;font-size:11px}
+th{color:#00ffd5;border-bottom:1px solid #1a1f2e;padding:5px 8px;text-align:left;font-size:10px}
+td{padding:4px 8px;border-bottom:1px solid #0a0f18}
+</style></head><body>
+<h1>KOLMOGOROV TURBULENCE — L5 (168,072 faces)</h1>
+<div class="sub">Vorticity formulation + Poisson solve + Jacobian advection &middot; Re=10,000 &middot; 2026-05-28 06:42:32</div>
+
+<div class="box">
+  <h2>CONFIGURATION</h2>
+  <div class="stat"><span class="label">Mode</span><br><span class="val grn">CUDA GPU (cupy)</span></div>
+  <div class="stat"><span class="label">Faces</span><br><span class="val">168,072</span></div>
+  <div class="stat"><span class="label">Re</span><br><span class="val hot">10,000</span></div>
+  <div class="stat"><span class="label">nu</span><br><span class="val">0.0001</span></div>
+  <div class="stat"><span class="label">dt</span><br><span class="val">0.005</span></div>
+  <div class="stat"><span class="label">Steps</span><br><span class="val">200,000</span></div>
+  <div class="stat"><span class="label">Time</span><br><span class="val">751.7s</span></div>
+  <div class="stat"><span class="label">Steps/sec</span><br><span class="val grn">266</span></div>
+  <div class="stat"><span class="label">chi</span><br><span class="val" style="color:#ffd700">2</span></div>
+  <div class="stat"><span class="label">P</span><br><span class="val pk">12</span></div>
+</div>
+
+<div class="box">
+  <h2
+>FINAL STATE</h2>
+  <div class="stat"><span class="label">TKE</span><br><span class="val">0.445623</span></div>
+  <div class="stat"><span class="label">Enstrophy</span><br><span class="val">44.562222</span></div>
+  <div class="stat"><span class="label">Dissipation</span><br><span class="val">0.00891244</span></div>
+  <div class="stat"><span class="label">max |omega|</span><br><span class="val hot">40.4677</span></div>
+  <div class="stat"><span class="label">Forcing</span><br><span class="val">5% of faces, Gaussian</span></div>
+</div>
+
+<div class="box">
+  <h2>ENERGY SPECTRUM E(k)</h2>
+  <div>If Kolmogorov turbulence develops, E(k) should follow k<sup>-5/3</sup> (gold dashed line).</div>
+  <div style="margin-top:8px"><svg width="700" height="300" style="background:#0a0f18;border:1px solid #1a1f2e;border-radius:4px"><text x="10" y="20" fill="#ffd700" font-size="12" font-family="monospace">Energy Spectrum E(k) — final snapshot</text><text x="10" y="35" fill="#555" font-size="10" font-family="monospace">Kolmogorov -5/3 reference in gold</text><line x1="50" y1="50" x2="50" y2="270" stroke="#333" stroke-width="1"/><line x1="50" y1="270" x2="680" y2="270" stroke="#333" stroke-width="1"/><text x="5" y="150" fill="#555" font-size="9" font-family="monospace" transform="rotate(-90,10,150)">log E(k)</text><text x="350" y="295" fill="#555" font-size="9" font-family="monospace">log k</text><polyline points="50.0,165.9 79.3,60.0 98.5,144.3 112.9,116.7 124.4,144.7 138.2,93.6 152.6,186.3 164.1,270.0 177.9,268.6 192.3,188.0 205.1,86.9 218.7,125.4 232.0,142.8 245.4,147.8 258.9,161.0 272.1,149.2 285.5,164.2 298.6,134.0 311.8,84.4 325.2,120.7 338.5,115.4 351.8,129.4 365.1,128.7 378.3,123.7 391.6,135.3 404.9,116.5 418.2,126.5 431.4,126.7 444.7,120.4 457.9,129.8 471.2,132.9 484.4,134.2 497.7,120.3 510.9,124.7 524.2,130.9 537.5,123.4 550.7,124.6 564.0,126.8 577.2,126.1 590.5,125.7 603.7,127.4 617.0,126.3 630.2,127.6 643.5,124.1 656.7,127.1 670.0,127.3" fill="none" stroke="#00ffd5" stroke-width="2"/><polyline points="50.0,60.0 79.3,121.8 98.5,162.5 112.9,193.0 124.4,217.2 138.2,246.4" fill="none" stroke="#ffd700" stroke-width="1.5" stroke-dasharray="6,3"/><text x="580" y="65" fill="#ffd700" font-size="10" font-family="monospace">k^(-5/3)</text><text x="580" y="80" fill="#00ffd5" font-size="10" font-family="monospace">E(k) measured</text></svg></div>
+</div>
+
+<div class="box">
+  <h2>TKE &amp; ENSTROPHY EVOLUTION</h2>
+  <div><svg width="700" height="200" style="background:#0a0f18;border:1px solid #1a1f2e;border-radius:4px;margin-top:8px"><text x="10" y="20" fill="#ff69b4" font-size="12" font-family="monospace">TKE & Enstrophy Timeline</text><polyline points="30.0,168.3 36.4,166.7 42.8,165.1 49.2,163.4 55.6,161.7 62.0,160.1 68.4,158.4 74.8,156.8 81.2,155.2 87.6,153.6 94.0,152.0 100.4,150.4 106.8,148.8 113.2,147.1 119.6,145.5 126.0,143.9 132.4,142.4 138.8,140.7 145.2,139.2 151.6,137.7 158.0,136.1 164.4,134.6 170.8,133.0 177.2,131.5 183.6,129.9 190.0,128.3 196.4,126.7 202.8,125.1 209.2,123.5 215.6,121.9 222.0,120.4 228.4,118.8 234.8,117.3 241.2,115.8 247.6,114.3 254.0,112.7 260.4,111.1 266.8,109.6 273.2,108.1 279.6,106.6 286.0,105.1 292.4,103.5 298.8,102.1 305.2,100.5 311.6,98.9 318.0,97.4 324.4,95.8 330.8,94.4 337.2,92.9 343.6,91.4 350.0,89.9 356.4,88.5 362.8,87.0 369.2,85.6 375.6,84.1 382.0,82.6 388.4,81.2 394.8,79.7 401.2,78.2 407.6,76.7 414.0,75.3 420.4,73.9 426.8,72.5 433.2,71.0 439.6,69.6 446.0,68.1 452.4,66.8 458.8,65.4 465.2,63.9 471.6,62.5 478.0,61.0 484.4,59.6 490.8,58.2 497.2,56.8 503.6,55.4 510.0,54.0 516.4,52.4 522.8,51.0 529.2,49.7 535.6,48.2 542.0,46.6 548.4,45.1 554.8,43.6 561.2,42.1 567.6,40.6 574.0,39.1 580.4,37.8 586.8,36.3 593.2,35.0 599.6,33.6 606.0,32.0 612.4,30.6 618.8,29.2 625.2,27.8 631.6,26.5 638.0,25.1 644.4,23.9 650.8,22.7 657.2,21.4 663.6,20.0" fill="none" stroke="#00ffd5" stroke-width="1.5"/><polyline points="30.0,168.3 36.4,166.7 42.8,165.1 49.2,163.4 55.6,161.7 62.0,160.1 68.4,158.4 74.8,156.8 81.2,155.2 87.6,153.6 94.0,152.0 100.4,150.4 106.8,148.8 113.2,147.1 119.6,145.5 126.0,143.9 132.4,142.4 138.8,140.7 145.2,139.2 151.6,137.7 158.0,136.1 164.4,134.6 170.8,133.0 177.2,131.5 183.6,129.9 190.0,128.3 196.4,126.7 202.8,125.1 209.2,123.5 215.6,121.9 222.0,120.4 228.4,118.8 234.8,117.3 241.2,115.8 247.6,114.3 254.0,112.7 260.4,111.1 266.8,109.6 273.2,108.1 279.6,106.6 286.0,105.1 292.4,103.5 298.8,102.1 305.2,100.5 311.6,98.9 318.0,97.4 324.4,95.8 330.8,94.4 337.2,92.9 343.6,91.4 350.0,89.9 356.4,88.5 362.8,87.0 369.2,85.6 375.6,84.1 382.0,82.6 388.4,81.2 394.8,79.7 401.2,78.2 407.6,76.7 414.0,75.3 420.4,73.9 426.8,72.5 433.2,71.0 439.6,69.6 446.0,68.1 452.4,66.8 458.8,65.4 465.2,63.9 471.6,62.5 478.0,61.0 484.4,59.6 490.8,58.2 497.2,56.8 503.6,55.4 510.0,54.0 516.4,52.4 522.8,51.0 529.2,49.7 535.6,48.2 542.0,46.6 548.4,45.1 554.8,43.6 561.2,42.1 567.6,40.6 574.0,39.1 580.4,37.8 586.8,36.3 593.2,35.0 599.6,33.6 606.0,32.0 612.4,30.6 618.8,29.2 625.2,27.8 631.6,26.5 638.0,25.1 644.4,23.9 650.8,22.7 657.2,21.4 663.6,20.0" fill="none" stroke="#ff69b4" stroke-width="1.5"/><text x="600" y="40" fill="#00ffd5" font-size="10" font-family="monospace">TKE</text><text x="600" y="55" fill="#ff69b4" font-size="10" font-family="monospace">Enstrophy</text></svg></div>
+</div>
+
+<div class="box">
+  <h2>TOPOLOGY (verified)</h2>
+  <table><tr><th>Invariant</th><th>Value</th><th>Status</th></tr>
+  <tr><td>chi = V-E+F</td><td style="color:#ffd700">2</td><td class="grn">LOCKED</td></tr>
+  <tr><td>Pentagons</td><td class="pk">12</td><td class="grn">LOCKED</td></tr>
+  <tr><td>E/V</td><td>1.500</td><td class="grn">LOCKED</td></tr>
+  <tr><td>Faces</td><td>168,072</td><td>L5</td></tr>
+  </table>
+</div>
+
+<div class="box">
+  <h2>THE PHYSICS</h2>
+  <div>&bull; <span class="hot">Vorticity equation</span>: d&omega;/dt + J(&psi;,&omega;) = &nu;&nabla;&sup2;&omega; + f</div>
+  <div>&bull; <span class="hot">Poisson solve</span>: &nabla;&sup2;&psi; = -&omega; (CG iterative, 50 max iter)</div>
+  <div>&bull; <span class="hot">Jacobian advection</span>: J &approx; A@(&psi;)&middot;&omega; - &psi;&middot;A@(&omega;) (Arakawa-like on graph)</div>
+  <div>&bull; <span class="hot">Graph Laplacian</span>: L = A_norm - I (sparse, trivalent)</div>
+  <div>&bull; <span class="grn">Forcing</span>: Gaussian noise on 5% of faces per step</div>
+  <div>&bull; <span class="grn">Time integration</span>: Forward Euler, dt=0.005</div>
+  <div>&bull; <span class="pk">Kolmogorov cascade</span>: Energy injected at large scale, dissipated at small scale by &nu;</div>
+</div>
+
+<div class="box">
+  <h2>WHAT THIS IS</h2>
+  <div>&bull; A 2D vorticity-streamfunction solver on a closed spherical graph</div>
+  <div>&bull; Kolmogorov forced turbulence with energy injection + viscous dissipation</div>
+  <div>&bull; Nonlinear: the Jacobian J(&psi;,&omega;) couples vorticity to velocity</div>
+  <div>&bull; The energy spectrum should approach k<sup>-5/3</sup> at statistical equilibrium</div>
+</div>
+
+<div class="box">
+  <h2>WHAT THIS IS NOT</h2>
+  <div>&bull; Not 3D turbulence (2D vorticity on a surface)</div>
+  <div>&bull; Not a DNS code (graph discretization, not finite volume/element)</div>
+  <div>&bull; Not a proof of Kolmogorov theory (it is a numerical observation)</div>
+  <div>&bull; Not a claim of discovery (all physics attributed to Kolmogorov 1941)</div>
+</div>
+
+<div style="color:#333;font-size:9px;margin-top:20px;text-align:center">
+  navierKolmogorov v1.0 &middot; Kolmogorov (1941) &middot; Euler (1758) &middot; Goldberg (1937) &middot; &phi;
+</div>
+</body></html>

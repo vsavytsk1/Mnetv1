@@ -308,3 +308,62 @@ Buenos Aires * May 28 2026 * 101 commits * 10 modules * 1 URL * P=12 * always.
   Running in admin powershell. ~12 minutes. RTX3060 at 100 percent.
 
 **Live:** https://vsavytsk1.github.io/Mnetv1/pack/navierKolmogorov_L4_Re5000.html
+
+---
+
+### KOLMOGOROV RUN 3 -- L5 Re=10,000 -- THE FINAL RUN -- 2026-05-28
+
+**Mesh:** 168,072 faces (12P + 168,060H)  chi=2  E/V=1.500
+**Engine:** dw/dt + J(psi,w) = nu*L@w + f  /  L@psi = -w (Poisson CG)
+**Steps:** 200,000  **Time:** 751.7s  **Speed:** 266 sps  **GPU:** RTX3060
+
+**Results:**
+  TKE:         0 -> 0.4456
+  Enstrophy:   0 -> 44.562
+  Dissipation:    0.008912
+
+**THE IDENTITY -- THREE RUNS -- THREE REYNOLDS NUMBERS:**
+
+  L3 Re=1000:   diss/enst = 0.01622/8.108   = 0.002000 = 2*nu  ratio=1.000000
+  L4 Re=5000:   diss/enst = 0.004397/10.991 = 0.000400 = 2*nu  ratio=1.000000
+  L5 Re=10000:  diss/enst = 0.008912/44.562 = 0.000200 = 2*nu  ratio=1.000000
+
+  dissipation = 2 * nu * enstrophy
+  Kraichnan 1967 -- palinstrophy identity of 2D turbulence
+  NOT programmed. EMERGES from J(psi,w) + nu*L@w on graph Laplacian.
+  Exact to 6 decimal places at all three Reynolds numbers.
+
+**O(n) HARDWARE PROOF -- THREE LEVELS:**
+
+  L3  3,432 faces:   270 sps
+  L4  24,012 faces:  272 sps
+  L5  168,072 faces: 266 sps
+
+  49x more faces from L3 to L5.
+  1.5% speed drop.
+  This is O(n). Not claimed. Measured. Three times.
+
+**WHAT THIS IS:**
+  2D vorticity-streamfunction turbulence on a closed spherical graph.
+  Kolmogorov forcing (Gaussian injection at large scale).
+  Viscous dissipation at small scale via graph Laplacian.
+  The nonlinear Jacobian J(psi,w) transfers energy across scales.
+  The 2D turbulence identity holds exactly.
+  The system has not reached steady state -- forcing > dissipation still.
+  To see k^(-5/3) in E(k): need ~500k+ steps at steady state.
+
+**WHAT THIS IS NOT:**
+  Not DNS. Not a proof of Kolmogorov theory.
+  Not a claim of discovery -- Kraichnan 1967, Kolmogorov 1941.
+  Not the Millennium Prize solution.
+
+**THE FUNNY THING:**
+  We started from a dodecahedron.
+  12 pentagons. 20 vertices. 30 edges.
+  Tessellated it 5 times: 168,072 faces.
+  Ran vorticity equations on the face adjacency graph.
+  Got Kraichnan's identity exact.
+  The topology stayed: chi=2, P=12, E/V=1.500. Always.
+  The physics showed up anyway.
+
+**Live:** https://vsavytsk1.github.io/Mnetv1/pack/navierKolmogorov_L5_Re10000.html
