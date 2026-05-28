@@ -121,3 +121,28 @@ INVARIANTS (never broken, never will be):
 **The paradigm:** builder owns everything. touch kernel = rebuild all.
 No framework. No engine. Python + browser + math. That is the whole stack.
 Buenos Aires * May 28 2026 * monkey brain + meta mind + kernelic magic
+
+---
+
+### L008 * 2026-05-28 * NAMING -- JARVIS inspiration -> VALE vision name
+
+**What:** The polar-window dashboard (jarvis_v1.0.html) was built using JARVIS OS
+as visual inspiration (Iron Man HUD aesthetic). The product vision name is VALE.
+
+**Rule locked:**
+  JARVIS = inspiration reference only. Never ships as product name.
+  VALE   = the actual product. All future builds use VALE branding.
+
+**Files to rename/rebrand:**
+  shell/jarvis_v1.0.html        -> keep as-is (historical build, L007)
+  builder/build_jarvis.py       -> keep as-is (historical builder)
+  next build: vale_v1.1.html    -> VALE OS branding, outer ring added
+  next builder: build_vale.py   -> canonical going forward
+
+**Why VALE:**
+  VALE is our name. JARVIS is Stark's. We build our own.
+  The math is ours. The kernel is ours. The name must be ours.
+  Same aesthetic. Different soul.
+
+**Git note:** from this commit forward, all dashboard builds reference VALE.
+JARVIS stays in L007 as the proof-of-concept. VALE is the product.
