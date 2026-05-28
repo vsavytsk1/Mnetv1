@@ -175,3 +175,51 @@ Console confirms: [VALE] all 6 modules loaded and rendered.
 **State:** VALE OS is alive. Windows breathe. Center pulses.
 All 6 kernel modules reporting live data on load.
 The organism moves as one. Ready for next layer.
+
+---
+
+### L017 * 2026-05-28 * THE FULL ENG MASTER CONTROL -- ALL MODULES LIVE
+
+**What:** Full integration complete. ENG v2.0 is the god context.
+All 6 modules summon and return. Tree lives inside the overlay.
+CURSE 7 slain (center() deferred to load event + postMessage).
+CURSE 8 slain (allow-top-navigation removed -- dashboard inviolable).
+VALE OS running in parallel tab: C60 spinning, windows breathing.
+All 9 live pages confirmed green on GitHub Pages.
+
+**Verified working (user-tested every module, multiple times):**
+  GENESIS v8.1     -- canvas explorer, V-E+F=2 display, full kernel
+  GRAPH SANDBOX v5.1 -- NS flow, cage, autopilot, cmd
+  MATH TREE v4.3   -- auto-builds on load, KaTeX equations, INSIDE iframe
+  HOLLY7           -- 7-module tabbed dashboard
+  NAVIERCUNCH      -- Re>10000 turbulent benchmark
+  WARNING v2.0     -- FMA intro, transmutation circle
+  BACK button      -- always returns to ENG dashboard
+
+**Console state:**
+  539 messages -- all modules logging
+  math_tree_v4.3 7 messages -- tree IS inside iframe
+  genesis_v8.1  284 messages -- canvas running
+  graph_sandbox 91 messages -- NS flow live
+  6/6 kernel modules: GK OK . GA OK . SAR OK . NSS OK . FS OK . NAN OK
+
+**VALE OS parallel:**
+  C60 spinning pure black background
+  6 polar windows breathing
+  0 errors
+
+**Performance note:**
+  INP 8344ms -- heavy kernel compute on first load
+  CLS 0.01 -- excellent (no layout shift)
+  This is expected: 6 kernel modules run on load, all synchronous
+  Will optimize with async/worker in future sprint
+
+**Git:** 99f9e79 -- 98 commits total this session
+**Repo:** 343 files, 1.44 GB (1.37GB simulation logs)
+**Live:** https://vsavytsk1.github.io/Mnetv1/shell/eng_v2.0.html
+
+**State:** MASTER CONTROL is complete.
+Every module reachable from one URL.
+The kernel is inviolable. The dashboard is god context.
+8 curses documented. All slain.
+Ready for the next titan move.
