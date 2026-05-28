@@ -45,7 +45,7 @@ M6 = read_js("mnet_nanite.js")
 ledger_lines = []
 lp = ROOT / "LEDGER.md"
 if lp.exists():
-    raw = lp.read_text(encoding="utf-8")
+    raw = lp.read_bytes().decode('utf-8', errors='ignore')
     entries = [l.strip() for l in raw.split("\n") if l.startswith("### L")]
     ledger_lines = entries[-5:]
 
