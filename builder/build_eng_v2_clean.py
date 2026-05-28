@@ -239,18 +239,20 @@ function setPanel(id, rows) {
 }
 
 function summon(key) {
-  // tree needs full viewport -- pan/zoom/autopilot breaks in iframe
-  if (key === 'tree') {
-    window.open(LINKS[key], '_blank');
-    logAdd('SUMMON', 'TREE -- new tab (needs full viewport)');
-    return;
-  }
   var fr = document.getElementById('ov-frame');
   var ov = document.getElementById('overlay');
-  fr.src = LINKS[key];
+  // clear src first so onload always fires
+  fr.src = '';
   document.getElementById('ov-title').textContent = key.toUpperCase();
   document.getElementById('ov-url').textContent = LINKS[key].replace('https://vsavytsk1.github.io/Mnetv1/','');
   ov.classList.add('open');
+  // postMessage after iframe loads -- fixes CURSE 7 (center() needs real width)
+  fr.onload = function() {
+    setTimeout(function() {
+      try { fr.contentWindow.postMessage('VALE_CENTER', '*'); } catch(e) {}
+    }, 200);
+  };
+  setTimeout(function() { fr.src = LINKS[key]; }, 60);
   logAdd('SUMMON', key.toUpperCase());
 }
 function overlayClose() {
