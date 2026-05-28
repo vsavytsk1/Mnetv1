@@ -30,7 +30,7 @@ canvas{display:block}
   border-radius:2px;
   padding:7px 10px 8px;
   pointer-events:auto;
-  transition:border-color 0.4s, box-shadow 0.4s, left 0.8s, top 0.8s;
+  transition:border-color 0.4s, box-shadow 0.4s;
   z-index:10;
   min-width:152px;
   box-shadow:inset 0 0 12px rgba(0,30,50,0.6);
@@ -3375,6 +3375,7 @@ function layoutCalc() {
 
 // BREATHE -- center pulses, windows pushed outward
 var _breathe = { t:0, R_base:0, amp:18, speed:0.0008 };
+var _ringDrawn = false;
 
 function layoutApply(breatheR) {
   layoutCalc();
@@ -3397,14 +3398,14 @@ function layoutApply(breatheR) {
   cl.style.left = '0px';
   cl.style.top  = '0px';
 
-  // ring svg
+  // ring svg -- only redraw on resize, not every breathe frame
   var svg = document.getElementById('ring-svg');
-  var rSize = R * 2 + 80;
+  var rSize = Math.round(LAY.R * 2 + 80);
   svg.setAttribute('width', rSize);
   svg.setAttribute('height', rSize);
   svg.style.left = (LAY.cx - rSize/2) + 'px';
   svg.style.top  = (LAY.cy - rSize/2) + 'px';
-  drawRing(svg, rSize/2, R + 20);
+  if (!_ringDrawn) { drawRing(svg, rSize/2, LAY.R + 20); _ringDrawn = true; }
 
   // windows -- pushed by R + per-window float
   LAY.wins.forEach(function(id, i) {
@@ -3427,16 +3428,33 @@ function layoutApply(breatheR) {
   drawLines();
 }
 
-// BREATHE LOOP -- runs after C60 starts
+// BREATHE LOOP -- lightweight: only moves windows + lines, never redraws ring
 function startBreathe() {
   _breathe.R_base = LAY.R;
   (function loop() {
     requestAnimationFrame(loop);
     _breathe.t += _breathe.speed * 60;
     var pulse = Math.sin(_breathe.t) * _breathe.amp;
-    layoutApply(_breathe.R_base + pulse);
+    var R = _breathe.R_base + pulse;
+    var W = window.innerWidth, H = window.innerHeight;
+    // only move windows -- no ring redraw, no canvas resize
+    LAY.wins.forEach(function(id, i) {
+      var el = document.getElementById('win-' + id);
+      if (!el) return;
+      var a = LAY.angles[i] - Math.PI / 2;
+      var floatAmt = Math.sin(_breathe.t * 0.7 + i * 1.047) * 2.5;
+      var pushR = R + floatAmt;
+      var wx = LAY.cx + pushR * Math.cos(a) - LAY.winW / 2;
+      var wy = LAY.cy + pushR * Math.sin(a) - LAY.winH / 2;
+      wx = Math.max(4, Math.min(W - LAY.winW - 4, wx));
+      wy = Math.max(32, Math.min(H - LAY.winH - 32, wy));
+      el.style.left = wx + 'px';
+      el.style.top  = wy + 'px';
+    });
+    drawLines();
   })();
 }
+window.addEventListener('resize', function() { _ringDrawn = false; layoutApply(); });
 
 function drawRing(svg, cx, r) {
   svg.innerHTML = '';
@@ -3501,7 +3519,7 @@ function drawLines() {
   ctx.setLineDash([]);
 }
 
-window.addEventListener('resize', layoutApply);
+// resize handled in startBreathe block above
 
 // CLOCK
 setInterval(function() {
