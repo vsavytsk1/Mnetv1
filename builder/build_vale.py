@@ -33,7 +33,7 @@ M6 = read_js("mnet_nanite.js")
 CSS = """
 *{margin:0;padding:0;box-sizing:border-box}
 body{
-  background:#020408;
+  background:#000000;
   font-family:ui-monospace,"SF Mono","Fira Code",monospace;
   font-size:10px;overflow:hidden;
   width:100vw;height:100vh;position:relative;
@@ -56,33 +56,36 @@ canvas{display:block}
 /* WINDOWS -- all positioned by JS polar math */
 .jwin{
   position:fixed;
-  background:rgba(2,12,20,0.92);
-  border:1px solid #0a2535;
-  border-radius:3px;
-  padding:8px 10px;
+  background:rgba(0,5,10,0.96);
+  border:1px solid #0a2030;
+  border-left:2px solid #0a3040;
+  border-radius:2px;
+  padding:7px 10px 8px;
   pointer-events:auto;
-  transition:border-color 0.3s, box-shadow 0.3s;
+  transition:border-color 0.4s, box-shadow 0.4s, left 0.8s, top 0.8s;
   z-index:10;
-  min-width:150px;
+  min-width:152px;
+  box-shadow:inset 0 0 12px rgba(0,30,50,0.6);
 }
 .jwin:hover{
-  border-color:#1a4a6a;
-  box-shadow:0 0 12px rgba(0,180,255,0.12);
+  border-color:#1a4050;
+  border-left-color:#00d4ff;
+  box-shadow:0 0 14px rgba(0,180,255,0.10), inset 0 0 12px rgba(0,30,50,0.6);
 }
 .jwin-title{
-  color:#1a4a5a;
+  color:#0d3a4a;
   font-size:8px;
-  letter-spacing:0.25em;
+  letter-spacing:0.3em;
   text-transform:uppercase;
   margin-bottom:5px;
-  border-bottom:1px solid #0a1a24;
   padding-bottom:3px;
+  border-bottom:1px solid #060e14;
 }
-.jwin-title.ok{color:#00ffd5}
+.jwin-title.ok{color:#00d4ff}
 .jwin-title.warn{color:#ff9040}
 .dp-row{display:flex;justify-content:space-between;gap:12px;padding:1px 0}
-.dp-k{color:#1a3a4a;font-size:9px}
-.dp-v{font-size:9px;font-variant-numeric:tabular-nums}
+.dp-k{color:#0d2a38;font-size:9px;letter-spacing:0.05em}
+.dp-v{font-size:9px;font-variant-numeric:tabular-nums;letter-spacing:0.03em}
 
 /* CONNECTOR LINES -- drawn by JS on canvas */
 #cv-lines{position:fixed;top:0;left:0;pointer-events:none;z-index:2}
@@ -198,9 +201,13 @@ function layoutCalc() {
   LAY.R = Math.min(W, H) * 0.38;
 }
 
-function layoutApply() {
+// BREATHE -- center pulses, windows pushed outward
+var _breathe = { t:0, R_base:0, amp:18, speed:0.0008 };
+
+function layoutApply(breatheR) {
   layoutCalc();
   var W = window.innerWidth, H = window.innerHeight;
+  var R = breatheR !== undefined ? breatheR : LAY.R;
 
   // center canvas
   var cv = document.getElementById('cv-center');
@@ -218,21 +225,23 @@ function layoutApply() {
 
   // ring svg
   var svg = document.getElementById('ring-svg');
-  var rSize = LAY.R * 2 + 60;
+  var rSize = R * 2 + 80;
   svg.setAttribute('width', rSize);
   svg.setAttribute('height', rSize);
   svg.style.left = (LAY.cx - rSize/2) + 'px';
   svg.style.top  = (LAY.cy - rSize/2) + 'px';
-  drawRing(svg, rSize/2, LAY.R + 20);
+  drawRing(svg, rSize/2, R + 20);
 
-  // windows
+  // windows -- pushed by R + per-window float
   LAY.wins.forEach(function(id, i) {
     var el = document.getElementById('win-' + id);
     if (!el) return;
     var a = LAY.angles[i] - Math.PI / 2;
-    var wx = LAY.cx + LAY.R * Math.cos(a) - LAY.winW / 2;
-    var wy = LAY.cy + LAY.R * Math.sin(a) - LAY.winH / 2;
-    // clamp to screen
+    // subtle float: each window oscillates slightly on its radial axis
+    var floatAmt = Math.sin(_breathe.t * 0.7 + i * 1.047) * 2.5;
+    var pushR = R + floatAmt;
+    var wx = LAY.cx + pushR * Math.cos(a) - LAY.winW / 2;
+    var wy = LAY.cy + pushR * Math.sin(a) - LAY.winH / 2;
     wx = Math.max(4, Math.min(W - LAY.winW - 4, wx));
     wy = Math.max(32, Math.min(H - LAY.winH - 32, wy));
     el.style.left   = wx + 'px';
@@ -242,6 +251,17 @@ function layoutApply() {
   });
 
   drawLines();
+}
+
+// BREATHE LOOP -- runs after C60 starts
+function startBreathe() {
+  _breathe.R_base = LAY.R;
+  (function loop() {
+    requestAnimationFrame(loop);
+    _breathe.t += _breathe.speed * 60;
+    var pulse = Math.sin(_breathe.t) * _breathe.amp;
+    layoutApply(_breathe.R_base + pulse);
+  })();
 }
 
 function drawRing(svg, cx, r) {
@@ -384,6 +404,7 @@ function startC60() {
 window.addEventListener('load', function() {
   layoutApply();
   startC60();
+  startBreathe();
 
   var t0, gk = GK.buildC60(), inv = GK.invariants(gk);
   var chi = inv.vertices - inv.edges + inv.faces;
