@@ -212,6 +212,20 @@ HTML side — just empty divs:
 
 ---
 
+## CURSE 5 — The File Too Long Curse
+Builder scripts get long. create_new_file times out on large files.
+
+```
+FIX: 
+  1. create_new_file with empty content first
+  2. Output the file content in chunks as code blocks in chat
+  3. Vlad pastes each chunk into the file manually
+  4. Run + verify
+  Never write >200 lines in one create_new_file call
+```
+
+---
+
 ## FAILURE LOG
 
 | Date | File | Curse | What happened | Fix |

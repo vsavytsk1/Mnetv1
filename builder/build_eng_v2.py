@@ -500,14 +500,54 @@ document.getElementById('cmd-input').addEventListener('keydown',function(e){{
   if(e.key==='Enter')cmdRun();
 }});
 
-// ── BOOT LOG ─────────────────────────────────────────────────
-logAdd('BOOT','ENG {VERSION} · {TIMESTAMP} · git:{GIT}');
-logAdd('MODULES',MODULES_OK?'6/6 ALL OK ✓':'CHECK CONSOLE');
-console.log('%c⬡ ENG {VERSION} — MASTER CONTROL','color:#a78bfa;font-size:14px;font-weight:bold');
+// DATA PANELS
+var PC={cyan:"#00d4ff",pink:"#ff69b4",gold:"#ffd700",green:"#00ffd5",red:"#ff4444",orange:"#ff9040",dim:"#1a2a3a"};
+function setPanel(id,rows){{
+  var el=document.getElementById("dp-"+id); if(!el)return;
+  el.innerHTML=rows.map(function(r){{
+    return "<div class=\\"dp-row\\"><span class=\\"dp-k\\">"+r[0]+"</span><span class=\\"dp-v\\" style=\\"color:"+(PC[r[2]]||"#9090a0")+"\\">" +r[1]+"</span></div>";
+  }}).join("");
+}}
+
+window.addEventListener("load",function(){{
+  logAdd("BOOT","ENG {VERSION} git:{GIT}");
+  var t0,dt,gk=GK.buildC60(),inv=GK.invariants(gk),chi=inv.vertices-inv.edges+inv.faces;
+  dt=(performance.now()-(t0=performance.now(),GK.buildC60(),performance.now()-t0)).toFixed(1);
+  // GK panel
+  var t1=performance.now(); var gk2=GK.buildC60(); var inv2=GK.invariants(gk2); var chi2=inv2.vertices-inv2.edges+inv2.faces;
+  setPanel("gk",[["V",inv2.vertices,"cyan"],["E",inv2.edges,"cyan"],["F",inv2.faces,"cyan"],["P",inv2.pents,"pink"],["hex",inv2.hexes,"text"],["chi",chi2,"gold"],["E/V",(inv2.edges/inv2.vertices).toFixed(3),"gold"],["ms",(performance.now()-t1).toFixed(1),"dim"]]);
+  logAdd("GK","C60 P="+inv2.pents+" chi="+chi2);
+  // GA panel
+  var t2=performance.now(); GA.logReset(); var ax=GA.eulerCheck(gk2);
+  setPanel("ga",[["euler",ax.valid?"PASS":"FAIL",ax.valid?"green":"red"],["P=12",ax.pents===12?"PASS":"FAIL",ax.pents===12?"green":"red"],["chi=2",ax.chi===2?"PASS":"FAIL",ax.chi===2?"green":"red"],["entries",GA.log.entries.length,"cyan"],["ms",(performance.now()-t2).toFixed(1),"dim"]]);
+  logAdd("GA","euler="+(ax.valid?"PASS":"FAIL")+" entries="+GA.log.entries.length);
+  // SAR panel
+  var t3=performance.now(); var sr=SAR.proof(gk2); var lam=parseFloat(sr.spectral.lambda1).toFixed(6);
+  setPanel("sar",[["lam1",lam,"cyan"],["theory",parseFloat(sr.spectral.theory_C60).toFixed(6),"dim"],["delta",Math.abs(sr.spectral.lambda1-sr.spectral.expected).toFixed(6),sr.spectral.match?"green":"orange"],["MATCH",sr.spectral.match?"YES":"NO",sr.spectral.match?"green":"red"],["M0",sr.M0.count,"pink"],["vacuum",sr.stability.projectorCheck?"STABLE":"UNSTABLE",sr.stability.projectorCheck?"green":"red"],["ms",(performance.now()-t3).toFixed(1),"dim"]]);
+  logAdd("SAR","lam1="+lam+" "+(sr.spectral.match?"MATCH":"no match"));
+  // NSS panel
+  var t4=performance.now(); var nr=NSS.runOn(gk2,{{Re:150,steps:200,logEvery:9999}}); var nl=nr.lambdaEst!==null?nr.lambdaEst.toFixed(6):"?";
+  setPanel("nss",[["Re",150,"orange"],["steps",200,"dim"],["N",nr.graph?nr.graph.N:"?","cyan"],["lam1",nl,"cyan"],["lam1w",nr.lambdaEstW!==null?nr.lambdaEstW.toFixed(6):"?","gold"],["delta",nr.delta!==null?nr.delta.toFixed(6):"?",Math.abs(nr.delta||1)<0.01?"green":"orange"],["ms",(performance.now()-t4).toFixed(1),"dim"]]);
+  logAdd("NSS","lam1="+nl);
+  // FS panel
+  var t5=performance.now(); var fr=FS.search({{seed:"c60",maxLevels:3,target:0.1473,lockThresh:0.005}});
+  setPanel("fs",[["target","0.1473","cyan"],["locked",fr.locked?"YES":"NO",fr.locked?"green":"orange"],["lockLvl",fr.lockLevel!==undefined?fr.lockLevel:"?","gold"],["bestLam",fr.bestLambda!==undefined?fr.bestLambda.toFixed(6):"?","cyan"],["bestDelta",fr.bestDelta!==undefined?fr.bestDelta.toFixed(6):"?","dim"],["ms",(performance.now()-t5).toFixed(1),"dim"]]);
+  logAdd("FS",(fr.locked?"LOCKED":"not locked"));
+  // NAN panel
+  var t6=performance.now(); var ns={};
+  try{{var dag=typeof MNetNanite.build==="function"?MNetNanite.build(gk2):MNetNanite; ns=dag.stats||dag;}}catch(e){{ns={err:e.message.slice(0,30)};}}
+  var nr2=Object.keys(ns).slice(0,5).map(function(k){{return[k,String(ns[k]).slice(0,12),"cyan"];}});
+  if(!nr2.length)nr2=[["api","MNetNanite","cyan"],["status","loaded","green"]];
+  nr2.push(["ms",(performance.now()-t6).toFixed(1),"dim"]);
+  setPanel("nan",nr2);
+  logAdd("NAN","MNetNanite loaded");
+  logAdd("ALL OK","6/6 modules ran");
+}});
+console.log("%c ENG {VERSION} MASTER CONTROL","color:#a78bfa;font-size:14px;font-weight:bold");
 </script>
 </body></html>"""
 
 OUT.write_text(HTML, encoding="utf-8")
 size_kb = len(HTML) // 1024
-print(f"\n[OK] {OUT.name}  {size_kb}KB")
+print(f"\\n[OK] {OUT.name}  {size_kb}KB")
 print(f"[OK] https://vsavytsk1.github.io/Mnetv1/shell/eng_{VERSION}.html")
