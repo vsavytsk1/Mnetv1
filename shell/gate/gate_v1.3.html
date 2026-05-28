@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -751,43 +751,14 @@ function launchExplorer(){
   var chi=inv.vertices-inv.edges+inv.faces;
   var ev=inv.edges/Math.max(inv.vertices,1);
   console.log('[GATE] Truth built: '+inv.faces+' faces, chi='+chi+', P='+inv.pents);
-  document.getElementById('hud').innerHTML='<span style="color:#ff69b4">THE TRUTH</span><br>Faces: '+inv.faces+'<br>Pentagons: <span style="color:#ff69b4">'+inv.pents+'</span><br>χ = V−E+F = <span style="color:#ffd700">'+chi+'</span><br>E/V = '+ev.toFixed(3)+'<br><br><span style="color:#334">drag · orbit  ·  scroll/pinch to zoom</span>';
+  document.getElementById('hud').innerHTML='<span style="color:#ff69b4">THE TRUTH</span><br>Faces: '+inv.faces+'<br>Pentagons: <span style="color:#ff69b4">'+inv.pents+'</span><br>χ = V−E+F = <span style="color:#ffd700">'+chi+'</span><br>E/V = '+ev.toFixed(3)+'<br><br><span style="color:#334">drag to rotate . scroll to zoom</span>';
   var c=document.getElementById('explorerCanvas');c.width=window.innerWidth;c.height=window.innerHeight;var ctx=c.getContext('2d');
   faces.forEach(function(f){f._jpts=f.pts.map(function(p){return[p[0]+(Math.random()-0.5)*0.06,p[1]+(Math.random()-0.5)*0.06,p[2]+(Math.random()-0.5)*0.06];});});
-  var drag=false,lastMouse={x:0,y:0};
-  var _apE=new Map(),_psDist=0,_psZoom=0;
-  function _pDist(){var p=[];_apE.forEach(function(v){p.push(v)});if(p.length<2)return 0;return Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y);}
-  c.addEventListener('pointerdown',function(e){
-    c.setPointerCapture(e.pointerId);
-    _apE.set(e.pointerId,{x:e.clientX,y:e.clientY});
-    if(_apE.size===1){drag=true;lastMouse={x:e.clientX,y:e.clientY};cam.spin=0;}
-    else if(_apE.size===2){drag=false;_psDist=_pDist();_psZoom=cam.zoom;}
-  });
-  c.addEventListener('pointermove',function(e){
-    if(_apE.has(e.pointerId))_apE.set(e.pointerId,{x:e.clientX,y:e.clientY});
-    if(_apE.size===2){
-      var cd=_pDist();
-      if(_psDist>0){cam.zoom=Math.max(0.5,Math.min(50000,_psZoom*(cd/_psDist)));}
-      return;
-    }
-    if(!drag)return;
-    cam.ry+=(e.clientX-lastMouse.x)*0.005;
-    cam.rx+=(e.clientY-lastMouse.y)*0.005;
-    cam.rx=Math.max(-Math.PI/2,Math.min(Math.PI/2,cam.rx));
-    lastMouse={x:e.clientX,y:e.clientY};
-  });
-  function _endPtr(e){
-    _apE.delete(e.pointerId);
-    if(_apE.size===0){drag=false;}
-    else if(_apE.size===1){var r;_apE.forEach(function(v){r=v});lastMouse={x:r.x,y:r.y};_psDist=0;}
-  }
-  c.addEventListener('pointerup',_endPtr);
-  c.addEventListener('pointercancel',_endPtr);
-  c.addEventListener('wheel',function(e){
-    e.preventDefault();
-    cam.zoom*=e.deltaY>0?0.92:1.08;
-    cam.zoom=Math.max(0.5,Math.min(50000,cam.zoom));
-  },{passive:false});
+  var drag=false,lx=0,ly=0;
+  c.addEventListener('mousedown',function(e){drag=true;lx=e.clientX;ly=e.clientY;cam.spin=0});
+  c.addEventListener('mousemove',function(e){if(!drag)return;cam.ry+=(e.clientX-lx)*0.005;cam.rx+=(e.clientY-ly)*0.005;lx=e.clientX;ly=e.clientY;});
+  c.addEventListener('mouseup',function(){drag=false});
+  c.addEventListener('wheel',function(e){cam.zoom*=e.deltaY>0?0.95:1.05},{passive:true});
   function render(){
     var W=c.width,H=c.height;ctx.fillStyle='rgba(2,2,5,0.15)';ctx.fillRect(0,0,W,H);cam.ry+=cam.spin;
     var cy2=Math.cos(cam.ry),sy2=Math.sin(cam.ry),cx2=Math.cos(cam.rx),sx2=Math.sin(cam.rx);

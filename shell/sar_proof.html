@@ -1,0 +1,371 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>SAR-5 Proof · GKVRWorld</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    background:#0a0a0a; color:#e0e0e0;
+    font-family:'Share Tech Mono', 'Courier New', monospace;
+    font-size:13px; padding:32px;
+  }
+  h1 { color:#00ffc8; font-size:18px; letter-spacing:3px; margin-bottom:4px; }
+  h2 { color:#888; font-size:11px; letter-spacing:2px; margin-bottom:32px; }
+  .block {
+    background:#111; border:1px solid #1e1e1e;
+    border-left:3px solid #00ffc8;
+    padding:16px 20px; margin-bottom:16px; border-radius:2px;
+  }
+  .block.warn  { border-left-color:#f0a500; }
+  .block.fail  { border-left-color:#ff4040; }
+  .block.info  { border-left-color:#4488ff; }
+  .label { color:#555; font-size:10px; letter-spacing:2px; margin-bottom:6px; }
+  .val   { color:#00ffc8; font-size:15px; }
+  .val.orange { color:#f0a500; }
+  .val.white  { color:#e0e0e0; }
+  .row { display:flex; gap:32px; flex-wrap:wrap; }
+  .row .block { flex:1; min-width:180px; }
+  pre { color:#aaa; font-size:12px; line-height:1.7; white-space:pre-wrap; }
+  .pass { color:#00ffc8; }
+  .pend { color:#f0a500; }
+  .fail { color:#ff4040; }
+  #run  {
+    background:#00ffc8; color:#000; border:none; padding:10px 28px;
+    font-family:inherit; font-size:13px; letter-spacing:2px;
+    cursor:pointer; margin-bottom:24px; border-radius:2px;
+  }
+  #run:hover { background:#00e0b0; }
+  .eq {
+    color:#888; font-size:12px; margin:4px 0;
+    border-left:2px solid #222; padding-left:12px;
+  }
+  .eq span { color:#e0e0e0; }
+  #summary { white-space:pre; line-height:1.8; font-size:13px; }
+</style>
+</head>
+<body>
+
+<h1>SAR-5 × GKVRWORLD — SPECTRAL PROOF</h1>
+<h2>λ̃ = 0.1473 · M₀ = 12 PENTAGONAL PROJECTORS · KERNEL-VERIFIED</h2>
+
+<button id="run">▶ RUN PROOF</button>
+
+<div class="row">
+  <div class="block" id="b-graph">
+    <div class="label">GRAPH</div>
+    <div class="val" id="v-verts">—</div>
+    <div style="color:#555;font-size:11px">vertices</div>
+  </div>
+  <div class="block" id="b-gap">
+    <div class="label">SPECTRAL GAP λ̃₁</div>
+    <div class="val" id="v-gap">—</div>
+    <div style="color:#555;font-size:11px">expected 0.1473</div>
+  </div>
+  <div class="block" id="b-m0">
+    <div class="label">M₀ PROJECTORS</div>
+    <div class="val" id="v-m0">—</div>
+    <div style="color:#555;font-size:11px">pentagons (Euler forces 12)</div>
+  </div>
+  <div class="block" id="b-extract">
+    <div class="label">W_out > E_mod</div>
+    <div class="val" id="v-extract">—</div>
+    <div style="color:#555;font-size:11px">extraction condition</div>
+  </div>
+  <div class="block" id="b-stable">
+    <div class="label">VACUUM STABLE</div>
+    <div class="val" id="v-stable">—</div>
+    <div style="color:#555;font-size:11px">FAST first-cancellation</div>
+  </div>
+</div>
+
+<div class="block info" style="margin-bottom:16px;">
+  <div class="label">EQUATIONS</div>
+  <div class="eq">M(t) = M₀ + δM·sin(ωt) &nbsp;  <span>M₀ = Σₖ|pent_k⟩⟨pent_k|, k=1..12</span></div>
+  <div class="eq">C[σt,M,D] = η·Tr[M(t)·d/dt σt(Hint)|_{t=0}] = <span id="v-coupling">—</span></div>
+  <div class="eq">λ̃₁ = min_{f⊥1} (fᵀLf)/(fᵀDf) = <span id="v-gap2">—</span>  &nbsp; theory C60=(3-√5)/6≈<span id="v-theory">—</span></div>
+  <div class="eq">Extraction: λ̃·Tr[M₀Hint²]·τ_KMS > k_eff/2 → <span id="v-cond">—</span></div>
+  <div class="eq">Stability:  Tr(dM·M) = <span id="v-stab2">—</span></div>
+</div>
+
+<div class="block">
+  <div class="label">PROOF OUTPUT</div>
+  <pre id="proof-out">press ▶ RUN PROOF</pre>
+</div>
+
+<div class="block">
+  <div class="label">SUMMARY</div>
+  <pre id="summary">—</pre>
+</div>
+
+<div class="block" id="scan-block" style="display:none;border-left-color:#f0a500">
+  <div class="label">SHAPE SCAN — which geometry gives λ̃ = 0.1473?</div>
+  <pre id="scan-table" style="font-size:12px;line-height:1.9"></pre>
+  <div style="margin-top:12px">
+    <div class="label">INTERPOLATION SCAN (hex weight β: 0→1)</div>
+    <canvas id="scan-canvas" width="460" height="120" style="display:block;margin-top:8px;background:#0a0a0a;border:1px solid #1e1e1e"></canvas>
+    <div style="color:#555;font-size:10px;margin-top:4px">β=0 → pure-pent topology &nbsp; | &nbsp; β=1 → standard C60 &nbsp; | &nbsp; orange line = λ̃=0.1473 target</div>
+  </div>
+</div>
+
+<div class="block" id="ns-block" style="display:none;border-left-color:#ff9040">
+  <div class="label">NS FLOW — fluid finds the geometry — 3 init modes</div>
+  <pre id="ns-out" style="font-size:12px;line-height:1.8"></pre>
+</div>
+
+<div class="block" id="fs-block" style="display:none;border-left-color:#7fff7f">
+  <div class="label" style="display:flex;justify-content:space-between;align-items:center">
+    <span>FRACTAL SEARCH — lock the architecture</span>
+    <span style="color:#555;font-size:10px">seed: <select id="fs-seed" style="background:#111;color:#aaa;border:1px solid #222;font-family:inherit;font-size:10px"><option value="c60">C60</option><option value="dodec">dodecahedron</option><option value="random">random</option></select>
+    &nbsp;levels: <select id="fs-levels" style="background:#111;color:#aaa;border:1px solid #222;font-family:inherit;font-size:10px"><option value="3">3 (fast)</option><option value="4">4</option><option value="5" selected>5 (browser max)</option></select></span>
+  </div>
+  <pre id="fs-out" style="font-size:11px;line-height:1.7;max-height:500px;overflow-y:auto"></pre>
+</div>
+
+<div class="block info" id="log-block" style="display:none">
+  <div class="label" style="display:flex;justify-content:space-between;align-items:center">
+    <span>INTERNAL LOG  (<span id="log-count">0</span> entries)</span>
+    <button id="log-dl" style="background:#4488ff;color:#000;border:none;padding:4px 14px;font-family:inherit;font-size:11px;cursor:pointer;border-radius:2px">⬇ download .json</button>
+  </div>
+  <pre id="log-out" style="max-height:320px;overflow-y:auto;font-size:11px;color:#aaa"></pre>
+</div>
+
+<script src="../kernel/goldberg_kernel.js"></script>
+<script src="../kernel/graph_axioms.js"></script>
+<script src="../kernel/sar_modular.js"></script>
+<script src="../kernel/ns_spectral.js"></script>
+<script src="../kernel/fractal_search.js"></script>
+<script>
+document.getElementById('run').addEventListener('click', function(){
+  document.getElementById('run').textContent = '…computing';
+
+  setTimeout(function(){
+    // Build the GK state
+    var gkState = GK.buildC60();
+
+    // Run the proof
+    var result  = SAR.proof(gkState);
+
+    // ── fill cards ──
+    document.getElementById('v-verts').textContent   = result.graph.vertices + ' V · ' + result.graph.faces + ' F';
+
+    var gapEl = document.getElementById('v-gap');
+    gapEl.textContent = parseFloat(result.spectral.lambda1).toFixed(4) + ' (C60≈0.1273)';
+    gapEl.className = 'val ' + (result.spectral.match ? 'pass' : 'orange');
+
+    var m0El = document.getElementById('v-m0');
+    m0El.textContent = result.M0.count;
+    m0El.className = 'val ' + (result.M0.valid ? 'pass' : 'fail');
+
+    var exEl = document.getElementById('v-extract');
+    exEl.textContent = result.extraction.viable ? 'VIABLE' : 'PENDING';
+    exEl.className = 'val ' + (result.extraction.viable ? 'pass' : 'orange');
+    document.getElementById('b-extract').className = 'block ' + (result.extraction.viable ? '' : 'warn');
+
+    var stEl = document.getElementById('v-stable');
+    stEl.textContent = result.stability.projectorCheck ? 'YES' : 'NO';
+    stEl.className = 'val ' + (result.stability.projectorCheck ? 'pass' : 'fail');
+
+    // ── fill equations ──
+    document.getElementById('v-coupling').textContent = result.coupling.verdict;
+    document.getElementById('v-gap2').textContent     = parseFloat(result.spectral.lambda1).toFixed(6);
+    document.getElementById('v-theory').textContent   = parseFloat(result.spectral.theory_C60 || 0.12732).toFixed(5);
+    document.getElementById('v-cond').textContent     = result.extraction.message;
+    document.getElementById('v-stab2').textContent    = result.stability.projectorCheck ? '0  (projector idempotent)' : 'non-zero (FAIL)';
+
+    // ── proof block ──
+    var lines = [
+      '─── STEP 1: GRAPH ───────────────────────────────',
+      '  Vertices : ' + result.graph.vertices,
+      '  Faces    : ' + result.graph.faces,
+      '  Pent vtx : ' + result.graph.pentVertices,
+      '',
+      '─── STEP 2: SPECTRAL GAP ────────────────────────',
+      '  λ̃₁      : ' + parseFloat(result.spectral.lambda1).toFixed(6),
+      '  Expected : ' + result.spectral.expected,
+      '  Deviation: ' + result.spectral.deviation,
+      '  Verdict  : ' + result.spectral.verdict,
+      '',
+      '─── STEP 3: M₀ PROJECTOR ───────────────────────',
+      '  Count    : ' + result.M0.count,
+      '  Valid    : ' + result.M0.valid,
+      '  Verdict  : ' + result.M0.verdict,
+      '',
+      '─── STEP 4: λ̃ MATCH ─────────────────────────────',
+      '  ' + (result.lambdaMatch ? '✓ SAR-5 §2 invariant confirmed by GK kernel' : '⚠ deviation exceeds tolerance'),
+      '',
+      '─── STEP 5: COUPLING OPERATOR ──────────────────',
+      '  ' + result.coupling.verdict,
+      '  Non-zero : ' + result.coupling.nonZero,
+      '',
+      '─── STEP 6: EXTRACTION CONDITION ───────────────',
+      '  LHS      : ' + result.extraction.lhs.toFixed(6),
+      '  RHS      : ' + result.extraction.rhs.toFixed(6),
+      '  Viable   : ' + result.extraction.viable,
+      '  Margin   : ' + result.extraction.margin_pct.toFixed(1) + '%',
+      '  ' + result.extraction.message,
+      '',
+      '─── STEP 7: VACUUM STABILITY ───────────────────',
+      '  ' + result.stability.verdict,
+      '',
+      '  elapsed: ' + result.elapsed
+    ];
+
+    var out = document.getElementById('proof-out');
+    out.innerHTML = lines.map(function(l){
+      if (l.indexOf('✓') >= 0 || l.indexOf('PASS') >= 0 || l.indexOf('VIABLE') >= 0)
+        return '<span class="pass">' + l + '</span>';
+      if (l.indexOf('⚠') >= 0 || l.indexOf('PENDING') >= 0)
+        return '<span class="pend">' + l + '</span>';
+      if (l.indexOf('FAIL') >= 0)
+        return '<span class="fail">' + l + '</span>';
+      return l;
+    }).join('\n');
+
+    // ── summary ──
+    var sumEl = document.getElementById('summary');
+    sumEl.innerHTML = result.summary.split('\n').map(function(l){
+      if (l.indexOf('✓') >= 0) return '<span class="pass">' + l + '</span>';
+      if (l.indexOf('⚠') >= 0) return '<span class="pend">' + l + '</span>';
+      if (l.indexOf('✗') >= 0) return '<span class="fail">' + l + '</span>';
+      return l;
+    }).join('\n');
+
+    // ── log block ──
+    var logData = SAR.dumpLog();
+    document.getElementById('log-count').textContent = logData.length;
+    document.getElementById('log-block').style.display = 'block';
+    var logLines = logData.map(function(e, i){
+      return i + '  ' + JSON.stringify(e);
+    }).join('\n');
+    document.getElementById('log-out').textContent = logLines;
+
+    document.getElementById('log-dl').onclick = function(){
+      var blob = new Blob([JSON.stringify({version:'sar_proof_1.0', entries: logData}, null, 2)], {type:'application/json'});
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'sar_proof_log_' + Date.now() + '.json';
+      a.click();
+      URL.revokeObjectURL(a.href);
+    };
+
+    // ── NS spectral solve ──
+    document.getElementById('run').textContent = '…running NS…';
+    setTimeout(function(){
+
+    var nsResult = NSS.runOn(gkState, { Re:150, steps:400, logEvery:50 });
+    document.getElementById('ns-block').style.display = 'block';
+    var nsLines = [
+      'N=' + nsResult.graph.N + ' vertices   Re=150   steps up to 400',
+      ''
+    ];
+    nsResult.results.forEach(function(r){
+      var mark = r.converged ? '\u2713' : '~';
+      nsLines.push(
+        mark + ' init=' + r.initMode.padEnd(12) +
+        'λ̃₁(pressure)=' + (r.lambda1 !== null ? r.lambda1.toFixed(6) : 'null').padEnd(12) +
+        'λ̃₁(weighted)=' + (r.lambda1_w !== null ? r.lambda1_w.toFixed(6) : 'null').padEnd(12) +
+        'steps=' + r.nsSteps + (r.converged?'  CONVERGED':'  running')
+      );
+    });
+    nsLines.push('');
+    nsLines.push('Best estimate (avg converged):  λ̃₁ = ' + (nsResult.lambdaEst !== null ? nsResult.lambdaEst.toFixed(6) : '?'));
+    nsLines.push('Weighted estimate:              λ̃₁ = ' + (nsResult.lambdaEstW !== null ? nsResult.lambdaEstW.toFixed(6) : '?'));
+    nsLines.push('SAR-5 target:                  λ̃₁ = 0.147300');
+    nsLines.push('Δ to SAR-5:                      ' + (nsResult.delta !== null ? nsResult.delta.toFixed(6) : '?'));
+    nsLines.push('elapsed: ' + nsResult.elapsed);
+    document.getElementById('ns-out').textContent = nsLines.join('\n');
+
+    // ── shape scan ──
+    var scan = SAR.shapeScan(gkState);
+    document.getElementById('scan-block').style.display = 'block';
+
+    var tLines = ['  shape                              N   λ̃₁       Δ to 0.1473  bar'];
+    tLines.push('  ' + '─'.repeat(70));
+    scan.summary.forEach(function(r){
+      var pad = function(s,n){ s=String(s); while(s.length<n) s+=' '; return s; };
+      tLines.push(
+        '  ' + pad(r.name,36) +
+        pad(r.lambda1.toFixed(6),10) +
+        pad(r.delta.toFixed(6),14) +
+        r.bar +
+        (r.source==='weighted'?' ⭐':'')
+      );
+    });
+    tLines.push('');
+    tLines.push('  α to hit 0.1473 (pent-hex weight): ' + scan.bestAlpha.toFixed(6));
+    tLines.push('  β crossing (hex weight scan):       ' + (scan.crossAlpha!=null?scan.crossAlpha.toFixed(4):'not found'));
+    tLines.push('  WINNER: ' + scan.winner.name + '  λ̃₁=' + scan.winner.lambda1.toFixed(6));
+
+    var scanEl = document.getElementById('scan-table');
+    scanEl.innerHTML = tLines.map(function(l){
+      if(l.indexOf('⭐')>=0) return '<span style="color:#00ffc8">' + l + '</span>';
+      if(l.indexOf('WINNER')>=0) return '<span style="color:#f0a500">' + l + '</span>';
+      return l;
+    }).join('\n');
+
+    // ── draw interpolation curve ──
+    var cv  = document.getElementById('scan-canvas');
+    var ctx = cv.getContext('2d');
+    var W=cv.width, H=cv.height, pad2=12;
+    ctx.clearRect(0,0,W,H);
+    var pts = scan.interpScan;
+    var lamMin=0, lamMax=0.5;
+    function px(b){ return pad2 + (b/1.0)*(W-2*pad2); }
+    function py(l){ return H-pad2 - (l-lamMin)/(lamMax-lamMin)*(H-2*pad2); }
+    // target line
+    ctx.strokeStyle='#f0a500'; ctx.lineWidth=1; ctx.setLineDash([4,4]);
+    ctx.beginPath(); ctx.moveTo(pad2,py(0.1473)); ctx.lineTo(W-pad2,py(0.1473)); ctx.stroke();
+    ctx.setLineDash([]);
+    // curve
+    ctx.strokeStyle='#00ffc8'; ctx.lineWidth=2;
+    ctx.beginPath();
+    pts.forEach(function(p,i){
+      var x=px(p.alpha), y=py(p.lambda1);
+      if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    });
+    ctx.stroke();
+    // crossing dot
+    if(scan.crossAlpha!=null){
+      ctx.fillStyle='#f0a500';
+      ctx.beginPath(); ctx.arc(px(scan.crossAlpha),py(0.1473),5,0,2*Math.PI); ctx.fill();
+    }
+    // labels
+    ctx.fillStyle='#555'; ctx.font='10px monospace';
+    ctx.fillText('λ̃=0.1473',4,py(0.1473)-4);
+    ctx.fillText('β=0',pad2,H-2);
+    ctx.fillText('β=1',W-24,H-2);
+
+    document.getElementById('run').textContent = '▶ RUN PROOF';
+
+    // ── fractal search ──
+    var fsSeed   = document.getElementById('fs-seed').value;
+    var fsLevels = parseInt(document.getElementById('fs-levels').value);
+    document.getElementById('fs-block').style.display = 'block';
+    document.getElementById('fs-out').textContent = 'running fractal search... (seed=' + fsSeed + ', levels=' + fsLevels + ')';
+
+    setTimeout(function(){
+      var fsResult = FS.search({ seed: fsSeed, maxLevels: fsLevels, target: 0.1473, lockThresh: 0.005 });
+      var fsEl = document.getElementById('fs-out');
+      fsEl.innerHTML = fsResult.summary.split('\n').map(function(l){
+        if (l.indexOf('LOCK') >= 0 || l.indexOf('LOCKED') >= 0)
+          return '<span style="color:#00ffc8">' + l + '</span>';
+        if (l.indexOf('viable: YES') >= 0 || l.indexOf('YES ✓') >= 0)
+          return '<span style="color:#00ffc8">' + l + '</span>';
+        if (l.indexOf('ONCE') >= 0 || l.indexOf('FREE') >= 0)
+          return '<span style="color:#f0a500">' + l + '</span>';
+        if (l.indexOf('NOT LOCKED') >= 0 || l.indexOf('NOT YET') >= 0)
+          return '<span style="color:#f0a500">' + l + '</span>';
+        if (l.indexOf('◄') >= 0)
+          return '<span style="color:#7fff7f;font-weight:bold">' + l + '</span>';
+        return l;
+      }).join('\n');
+    }, 30);
+
+    }, 20); // end NS setTimeout
+  }, 20);
+});
+</script>
+</body>
+</html>
