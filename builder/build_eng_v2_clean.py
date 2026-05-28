@@ -211,7 +211,7 @@ HTML_SHELL = """
   </div>
   <iframe id="ov-frame" src=""
     allow="fullscreen"
-    sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-top-navigation"
+    sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
   ></iframe>
 </div>
 """

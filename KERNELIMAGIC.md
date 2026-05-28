@@ -332,6 +332,39 @@ DETECTION PATTERN:
 
 ---
 
+## CURSE 8 -- The allow-top-navigation Curse
+Adding allow-top-navigation to iframe sandbox lets the iframe HIJACK the parent page.
+Any link, redirect, or window.location in the summoned module navigates the parent.
+The user loses the dashboard. No BACK button can save them. The page is gone.
+
+```
+SYMPTOM:
+  User clicks a module card in ENG.
+  Module loads in iframe overlay.
+  Something in the module triggers navigation.
+  ENG dashboard disappears. User is now on the module URL.
+  BACK button in browser goes to previous site, not ENG.
+
+ROOT CAUSE:
+  sandbox="allow-top-navigation"
+  This grants the iframe permission to set window.top.location.
+  Any link with target=_top, any window.location= in module JS,
+  any form submit = parent page hijacked.
+
+FIX:
+  Remove allow-top-navigation from sandbox. Always.
+  sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+  allow-popups is enough for any external links (they open new tab).
+  The parent page is now inviolable.
+
+RULE:
+  iframe sandbox NEVER gets allow-top-navigation.
+  If a module needs to navigate: use allow-popups (new tab).
+  The dashboard is the god context. Nothing inside can touch it.
+```
+
+---
+
 ## FAILURE LOG
 
 | Date | File | Curse | What happened | Fix |
