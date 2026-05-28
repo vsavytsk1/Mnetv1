@@ -169,7 +169,10 @@ body{background:#030308;color:#9090a0;
     <span id="ov-title">-</span>
     <span style="margin-left:auto;color:#1a2a2a;font-size:9px" id="ov-url"></span>
   </div>
-  <iframe id="ov-frame" src=""></iframe>
+  <iframe id="ov-frame" src=""
+    allow="fullscreen"
+    sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-top-navigation"
+  ></iframe>
 </div>
 <script>// ============================================================================
 //  goldberg_kernel.js
@@ -3483,7 +3486,13 @@ setInterval(function() {
 
 // auto-run all modules on load
 window.addEventListener('load', function() {
-  logAdd('BOOT', 'ENG v2.0 loaded');
+  logAdd('BOOT', 'ENG v2.0 . git:' + (typeof GIT !== 'undefined' ? GIT : 'live'));
+  logAdd('KERNEL', (typeof GK!=='undefined'?'GK OK':'GK X') + ' . ' +
+    (typeof GA!=='undefined'?'GA OK':'GA X') + ' . ' +
+    (typeof SAR!=='undefined'?'SAR OK':'SAR X') + ' . ' +
+    (typeof NSS!=='undefined'?'NSS OK':'NSS X') + ' . ' +
+    (typeof FS!=='undefined'?'FS OK':'FS X') + ' . ' +
+    (typeof MNetNanite!=='undefined'?'NAN OK':'NAN X'));
   var t0, gk = GK.buildC60(), inv = GK.invariants(gk);
   var chi = inv.vertices - inv.edges + inv.faces;
 
@@ -3571,11 +3580,16 @@ function engFS() {
   logAdd('FS', (r.locked ? 'LOCKED' : 'searching') + ' ' + (performance.now()-t0).toFixed(1) + 'ms');
 }
 
-function logAdd(op, msg) {
+function logAdd(op, msg, col) {
   var el = document.getElementById('eng-log');
   var d = document.createElement('div'); d.className = 'log-entry';
-  d.innerHTML = '<span class="op">' + op + '</span>  <span class="ok">' + msg + '</span>';
+  var ts = new Date().toTimeString().slice(0,8);
+  var c = col || 'ok';
+  d.innerHTML = '<span style="color:#1a2a3a">' + ts + '</span>  ' +
+    '<span class="op">' + op + '</span>  ' +
+    '<span class="' + c + '">' + msg + '</span>';
   el.appendChild(d); el.scrollTop = el.scrollHeight;
+  console.log('[ENG] ' + op + ' -- ' + msg);
 }
 
 function cmdRun() {
