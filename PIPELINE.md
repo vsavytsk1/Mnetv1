@@ -13,6 +13,50 @@ If it's not in `LEDGER.md` it didn't happen.
 
 ---
 
+## THE GALACTIC LAW
+
+> By galactic law, every build must satisfy all of the following.
+> No exceptions. No shortcuts. The topology enforces it.
+
+```
+LAW 1 -- P = 12
+  Every build must verify exactly 12 pentagons.
+  GK.invariants(state).pents === 12
+  If not 12 -- STOP. Do not ship. Investigate.
+
+LAW 2 -- chi = 2
+  Every build must verify V - E + F = 2.
+  If not 2 -- STOP. Do not ship. Euler is never wrong.
+
+LAW 3 -- lambda = 0.1473
+  SAR-5 spectral invariant must hold within tolerance 0.02.
+  If broken -- INVESTIGATE before next kernel change.
+
+LAW 4 -- LICENSE ships with every build
+  shell/spooky_warning/index.html is the canonical license.
+  Every ENG build links to it or embeds it.
+  The Galactic Law is on that page. It ships always.
+
+LAW 5 -- BUILDER OWNS THE SHELL
+  No HTML is hand-written in shell/ or pack/.
+  Every output file has a builder/*.py that generates it.
+  If you hand-edit shell/ -- you have broken the law.
+  The fix: write a builder. Run it. Commit both.
+
+LAW 6 -- NAMING CONVENTION
+  H7.MAJOR.MINOR.PATCH.BUILD -- Holly-7 lineage, forever.
+  MAJOR: kernel-breaking. NEVER unless invariants still hold.
+  MINOR: new module. PATCH: fix. BUILD: auto-increment.
+  Product names: VALE / ENG / GENESIS / GKERN / LEDGER.
+  Never ship with borrowed names (JARVIS stays in L007).
+
+LAW 7 -- THE LEDGER IS PERMANENT
+  Every significant build: one LEDGER.md entry. Append only.
+  Never edit existing entries. One truth. Buenos Aires 2026.
+```
+
+---
+
 ## THE STACK
 
 ```

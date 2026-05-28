@@ -181,6 +181,12 @@ HTML_SHELL = """
         <div class="card-desc">FMA intro . transmutation circle . v8 engine</div>
         <div class="card-arrow" style="color:#ff69b4">SUMMON &gt;</div>
       </div>
+      <div class="mod-card" onclick="summon('license')" style="border-color:#1a1a0a;--cc:#ffd700">
+        <div class="card-tag" style="color:#ffd700">GALACTIC LAW</div>
+        <div class="card-name" style="color:#ffd700">LICENSE</div>
+        <div class="card-desc">MIT . 7 axioms . 3 crystals . P=12 . V-E+F=2 . always</div>
+        <div class="card-arrow" style="color:#ffd700">SUMMON &gt;</div>
+      </div>
       <div class="mod-card new-module" onclick="summon('gkern')" style="border-color:#1a1a3a;--cc:#6478ff">
         <div class="card-tag" style="color:#6478ff">GOLDBERG</div>
         <div class="card-name" style="color:#6478ff">GKERN v2.0</div>
@@ -239,7 +245,8 @@ var LINKS = {
   navier  : 'https://vsavytsk1.github.io/Mnetv1/pack/navierCrunch_turbulent.html',
   warning : 'https://vsavytsk1.github.io/Mnetv1/shell/spooky_warning/warning_v2.0.html',
   gkern   : 'https://vsavytsk1.github.io/Mnetv1/pack/GKernV2.0.html',
-  vale    : 'https://vsavytsk1.github.io/Mnetv1/shell/vale_v1.1.html'
+  vale    : 'https://vsavytsk1.github.io/Mnetv1/shell/vale_v1.1.html',
+  license : 'https://vsavytsk1.github.io/Mnetv1/shell/spooky_warning/index.html'
 };
 var PC = {cyan:'#00d4ff',pink:'#ff69b4',gold:'#ffd700',green:'#00ffd5',
           red:'#ff4444',orange:'#ff9040',dim:'#1a2a3a',text:'#9090a0'};
