@@ -247,6 +247,34 @@ FIX:
 
 ---
 
+## THE DASHBOARD DEVELOPMENT RULE
+When building a new dashboard visual or theme -- TWO TABS always:
+
+```
+TAB 1 -- current FULL working dashboard (ENG v2.0 or latest)
+         https://vsavytsk1.github.io/Mnetv1/shell/eng_v2.0.html
+         This is the reference. Always alive. Always clickable.
+         You can summon any module from here while you work.
+
+TAB 2 -- the visual you are actively building
+         https://vsavytsk1.github.io/Mnetv1/shell/vale_v1.1.html
+         Only the new thing. Nothing else.
+
+WHY:
+  The new visual is incomplete until fully integrated.
+  You need the working dashboard to access modules during dev.
+  You need the new visual isolated to see it clearly.
+  Never develop blind -- always have the working version open.
+
+WHEN IS IT FULLY INTEGRATED:
+  When the new visual is added as a card in ENG dashboard.
+  When it can be summoned from ENG via the overlay.
+  When it is in the LEDGER.
+  Only then close TAB 1.
+```
+
+---
+
 ## FAILURE LOG
 
 | Date | File | Curse | What happened | Fix |
