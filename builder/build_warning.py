@@ -5,10 +5,10 @@ from pathlib import Path
 from io import BytesIO
 from PIL import Image
 
-ROOT     = Path(__file__).parent.parent          # builder/ -> MNetv1/
-V8       = ROOT / "shell" / "genesis_v8.0.html"
+ROOT = Path(__file__).parent.parent.parent
+V8 = ROOT / "shell" / "genesis_v8.0.html"
 GATE_IMG = ROOT / "shell" / "gate" / "img"
-OUT      = ROOT / "shell" / "spooky_warning" / "warning_v2.0.html"
+OUT = Path(__file__).parent / "warning_v1.3.html"
 
 def img_b64(name):
     for ext in ['.jpeg','.jpg','.png']:
@@ -24,7 +24,7 @@ def img_b64(name):
             return f"data:image/jpeg;base64,{base64.b64encode(buf.getvalue()).decode()}"
     return ""
 
-print("Building SpookyWarning v2.0...")
+print("Building SpookyWarning v1.3...")
 img0 = img_b64("gate_closed")
 img1 = img_b64("gate_open")
 img2 = img_b64("truth")
@@ -265,5 +265,5 @@ console.log('[SW] FMA auto-started. Shape builds during intro.');
 part1 = part1.replace('IMG0_B64', img0).replace('IMG1_B64', img1).replace('IMG2_B64', img2).replace('IMG3_B64', img3)
 html = part1 + v8_js + module_js
 OUT.write_text(html, encoding='utf-8')
-print(f"[OK] Written: {OUT} ({len(html)//1024} KB)")
-print(f"[OK] Live at: https://vsavytsk1.github.io/Mnetv1/shell/spooky_warning/warning_v2.0.html")
+print(f"Written: {OUT} ({len(html)//1024} KB)")
+print("  Pinch-to-zoom extracted from genesis_v8.0 engine via build.")

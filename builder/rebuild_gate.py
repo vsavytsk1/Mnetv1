@@ -6,11 +6,10 @@ from pathlib import Path
 from io import BytesIO
 from PIL import Image
 
-ROOT     = Path(__file__).parent.parent          # builder/ -> MNetv1/
-GATE_DIR = ROOT / "shell" / "gate"
-IMG_DIR  = GATE_DIR / "img"
-KERNEL   = ROOT / "kernel" / "goldberg_kernel.js"
-OUT      = GATE_DIR / "gate_v1.3.html"
+GATE_DIR = Path(__file__).parent
+IMG_DIR = GATE_DIR / "img"
+KERNEL = GATE_DIR.parent.parent / "kernel" / "goldberg_kernel.js"
+OUT = GATE_DIR / "gate_v1.html"
 
 def img_to_b64(name):
     for ext in ['.jpeg','.jpg','.png','.webp']:
