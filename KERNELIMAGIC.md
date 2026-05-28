@@ -275,6 +275,63 @@ WHEN IS IT FULLY INTEGRATED:
 
 ---
 
+## CURSE 7 -- The Black Iframe Mystery (blackMcMistry)
+When summonig a full-canvas module inside an iframe it shows BLACK.
+This is NOT a CSS issue. NOT a sandbox issue. NOT a GitHub Pages issue.
+
+```
+ROOT CAUSE:
+  The tree (math_tree_v4.3 / v5.0) calls center() INLINE at script end:
+    drawGridEmpty(); center();
+
+  center() = panX = (window.innerWidth/2/zm) - CX  where CX = 2000
+
+  When called inside an iframe at load time:
+    window.innerWidth = 0  (iframe layout not finalized yet)
+    panX = (0/2/0.6) - 2000 = -2000px
+    plane div renders at left:-2000px -- off screen -- BLACK.
+
+  The EXACT same code works fine in a full tab because
+  window.innerWidth is the real viewport width.
+
+WHAT WE TRIED (all failed):
+  1. sandbox attribute -- allow-scripts allow-same-origin etc.
+     Result: still black. Wrong diagnosis.
+  2. allow=fullscreen on iframe
+     Result: still black. Wrong diagnosis.
+  3. Loading v5.0 instead of v4.3
+     Result: same black. Version was not the issue.
+  4. Dispatching resize event to iframe contentWindow
+     Result: blocked by sandbox + CORS complexity.
+
+WHAT WORKED:
+  window.open(LINKS[key], _blank)  -- open tree in NEW TAB
+  The tree gets a real viewport. center() fires correctly.
+  The tree renders. The user sees it.
+
+THE RULE:
+  Any module that calls center() or uses window.innerWidth
+  at script-load time (not in a load/resize event) CANNOT
+  be summoned in an iframe. It MUST open in a new tab.
+
+  Modules safe for iframe:
+    -- pure data panels (no canvas pan/zoom)
+    -- modules that init canvas in window.addEventListener(load)
+    -- modules with ResizeObserver for canvas sizing
+
+  Modules that need new tab:
+    -- math_tree (center() inline)
+    -- graph_sandbox (pan/zoom canvas init inline)
+    -- any module with   drawX(); center();  at script end
+
+DETECTION PATTERN:
+  grep for these patterns at END of script (outside event listeners):
+    center()  drawGrid()  drawGridEmpty()  panX =  panY =
+  If found at top level -- new tab required.
+```
+
+---
+
 ## FAILURE LOG
 
 | Date | File | Curse | What happened | Fix |
