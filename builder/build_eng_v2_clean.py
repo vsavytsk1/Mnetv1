@@ -71,6 +71,8 @@ body{background:#030308;color:#9090a0;
 .log-entry .warn{color:#ffd700}
 #center-hdr{color:#1a2a3a;font-size:9px;letter-spacing:0.15em;margin-bottom:6px}
 .mod-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.mod-card.new-module{animation:cardpulse 2s ease-in-out infinite}
+@keyframes cardpulse{0%,100%{box-shadow:0 0 0px transparent}50%{box-shadow:0 0 12px rgba(100,120,255,0.15)}}
 .mod-card{background:#07070f;border:1px solid #0e0e1e;border-radius:3px;
   padding:10px 12px;cursor:pointer;transition:all 0.2s}
 .mod-card:hover{transform:translateY(-1px)}
@@ -179,6 +181,18 @@ HTML_SHELL = """
         <div class="card-desc">FMA intro . transmutation circle . v8 engine</div>
         <div class="card-arrow" style="color:#ff69b4">SUMMON &gt;</div>
       </div>
+      <div class="mod-card new-module" onclick="summon('gkern')" style="border-color:#1a1a3a;--cc:#6478ff">
+        <div class="card-tag" style="color:#6478ff">GOLDBERG</div>
+        <div class="card-name" style="color:#6478ff">GKERN v2.0</div>
+        <div class="card-desc">L0-L4 . 4 regimes . wave path . 1M bench . 0 deps</div>
+        <div class="card-arrow" style="color:#6478ff">SUMMON &gt;</div>
+      </div>
+      <div class="mod-card new-module" onclick="summon('vale')" style="border-color:#003a3a;--cc:#00ffd5">
+        <div class="card-tag" style="color:#00ffd5">POLAR OS</div>
+        <div class="card-name" style="color:#00ffd5">VALE OS v1.1</div>
+        <div class="card-desc">6 polar windows . C60 . breathe loop . Stark dark</div>
+        <div class="card-arrow" style="color:#00ffd5">SUMMON &gt;</div>
+      </div>
     </div>
   </div>
   <div id="right">
@@ -223,7 +237,9 @@ var LINKS = {
   tree    : 'https://vsavytsk1.github.io/Mnetv1/tree/math_tree_v4.3.html',
   holly7  : 'https://vsavytsk1.github.io/Mnetv1/pack/holly7.html',
   navier  : 'https://vsavytsk1.github.io/Mnetv1/pack/navierCrunch_turbulent.html',
-  warning : 'https://vsavytsk1.github.io/Mnetv1/shell/spooky_warning/warning_v2.0.html'
+  warning : 'https://vsavytsk1.github.io/Mnetv1/shell/spooky_warning/warning_v2.0.html',
+  gkern   : 'https://vsavytsk1.github.io/Mnetv1/pack/GKernV2.0.html',
+  vale    : 'https://vsavytsk1.github.io/Mnetv1/shell/vale_v1.1.html'
 };
 var PC = {cyan:'#00d4ff',pink:'#ff69b4',gold:'#ffd700',green:'#00ffd5',
           red:'#ff4444',orange:'#ff9040',dim:'#1a2a3a',text:'#9090a0'};
