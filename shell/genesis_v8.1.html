@@ -23,7 +23,7 @@ canvas{position:fixed;top:0;left:0;z-index:0}
 .btn{background:#0a0e18;border:1px solid #2a2a3a;color:#80d0ff;padding:4px 10px;font-family:inherit;
   font-size:9px;cursor:pointer;border-radius:3px;white-space:nowrap;transition:all 0.15s}
 .btn:hover{border-color:#4a6a8a;color:#fff}.btn.pk{color:#ff69b4;border-color:#3a1a2a}
-.btn.gn{color:#7fff7f;border-color:#1a3a1a}.btn.inside{color:#00ffd5;border-color:#00ffd5;text-shadow:0 0 8px rgba(0,255,213,0.4);background:#001a1a}.btn.gd{color:#ffd700;border-color:#332a00}
+.btn.gn{color:#7fff7f;border-color:#1a3a1a}.btn.inside{color:#00ffd5;border-color:#00ffd5;text-shadow:0 0 8px rgba(0,255,213,0.4);background:#001a1a}.btn.inside{color:#00ffd5;border-color:#00ffd5;text-shadow:0 0 8px rgba(0,255,213,0.4);background:#001a1a}.btn.gd{color:#ffd700;border-color:#332a00}
 .sep{width:1px;height:16px;background:#1a1f2e}
 .sl{display:flex;align-items:center;gap:3px}
 .sl label{font-size:7px;color:#555;letter-spacing:0.05em;min-width:30px}
@@ -62,7 +62,7 @@ canvas{position:fixed;top:0;left:0;z-index:0}
 <div class="sep"></div>
 <div class="sl"><label>ZOOM</label><input type="range" min="1" max="1500" value="200" id="sl-zm" oninput="cam.zoom=+this.value;SV('sv-zm',this.value)"><span class="sv" id="sv-zm">200</span></div>
 <div class="sl"><label>ATOM</label><input type="range" min="1" max="30" value="10" id="sl-atom" oninput="cam.atom=+this.value/10;SV('sv-atom',(this.value/10).toFixed(1))"><span class="sv" id="sv-atom">1.0</span></div>
-<div class="sl"><label>MAX-F</label><input type="range" min="0" max="100" value="50" id="sl-maxf" oninput="cam.maxFaces=Math.pow(10,1+this.value/20);SV('sv-maxf',Math.round(cam.maxFaces))"><span class="sv" id="sv-maxf">50000</span></div><div class="sep"></div><div class="sl"><label>SPIN</label><input type="range" min="0" max="50" value="0" id="sl-spin" oninput="var sv=+this.value; cam.spin=sv<1?0:sv/1000; SV('sv-spin',(sv<1?'0.000':(sv/1000).toFixed(3)))"><span class="sv" id="sv-spin">0.000</span></div>
+<div class="sl"><label>MAX-F</label><input type="range" min="0" max="100" value="50" id="sl-maxf" oninput="cam.maxFaces=Math.pow(10,1+this.value/20);SV('sv-maxf',Math.round(cam.maxFaces))"><span class="sv" id="sv-maxf">50000</span></div><div class="sep"></div><div class="sl"><label>SPIN</label><input type="range" min="0" max="50" value="0" id="sl-spin" oninput="var sv=+this.value;cam.spin=sv<1?0:sv/1000;SV('sv-spin',(sv<1?'0.000':(sv/1000).toFixed(3)))"><span class="sv" id="sv-spin">0.000</span></div>
 <div class="sep"></div>
 <div class="sep"></div>
 <button class="btn pk" id="bMob" onclick="toggleMobius()">MOBIUS <b id="mobState">off</b></button>
@@ -73,7 +73,7 @@ canvas{position:fixed;top:0;left:0;z-index:0}
 <button class="btn" onclick="doExportGraph()">GRAPH</button>
 <div class="sep"></div>
 <button class="btn gn" id="btn-enter" onclick="toggleInsideView()">ENTER</button>
-<div class="sl" id="sl-inside-wrap" style="display:none"><label>RADIUS</label><input type="range" min="0.1" max="3.0" step="0.05" value="1.2" id="sl-inside" oninput="setInsideZoom(+this.value)"><span class="sv" id="sv-inside">1.2</span></div>
+<div class="sl" id="sl-inside-wrap" style="display:none"><label>RADIUS</label><input type="range" min="0.1" max="1.5" step="0.05" value="1.2" id="sl-inside" oninput="setInsideZoom(+this.value)"><span class="sv" id="sv-inside">1.2</span></div>
 </div>
 
 <script>
@@ -3395,16 +3395,11 @@ function project(p){
     var camZ = _surfaceR;
     var z3 = z2 + camZ;  // shift world so camera is at origin
     if(z3 < 0.01) z3 = 0.01;
-    // Camera transformer: map sphere coords to screen
-    // fov controls field of view, scale controls face size
-    var SPHERE_R = 1.6;  // kernel sphere radius
-    var depth = SPHERE_R - _surfaceR;  // 0=at surface, 1.6=at center
-    var fov = 400 + depth * 200;  // wider fov deeper inside
-    var perspective = fov / (fov + Math.max(0.01, z3) * 60);
-    var scale = 350 + depth * 100;  // bigger faces deeper inside
+    var fov = 600;
+    var perspective = fov / (fov + z3 * 80);
     return {
-      x: W/2 + x1 * perspective * scale,
-      y: H/2 - y1 * perspective * scale,
+      x: W/2 + x1 * perspective * 400,
+      y: H/2 - y1 * perspective * 400,
       z: z3
     };
   }
@@ -3420,6 +3415,7 @@ function centroid3(pts){
 // ═══ DRAW ═══
 function draw(){
   cx.fillStyle='#050508';cx.fillRect(0,0,W,H);
+  if(_insideMode){drawInsideGrid();}
   // Draw reference grid when in inside mode
   if(_insideMode) { drawInsideGrid(); }
   if(!gkState)return;
@@ -3656,8 +3652,8 @@ cv.addEventListener('pointerup',function(){dragging=false});
 cv.addEventListener('wheel',function(e){
   e.preventDefault();
   if(_insideMode){
-    var newR=_surfaceR*(e.deltaY>0?0.92:1.08);
-    _surfaceR=Math.max(0.1,Math.min(3.0,newR));
+    var nr=_surfaceR*(e.deltaY>0?0.92:1.08);
+    _surfaceR=Math.max(0.1,Math.min(3.0,nr));
     document.getElementById('sl-inside').value=_surfaceR.toFixed(2);
     SV('sv-inside',_surfaceR.toFixed(2));
     setInsideZoom(_surfaceR);
@@ -3806,8 +3802,8 @@ function setMobiusTwist(v){
 // ═══ ANIMATE ═══
 function animate(){
   if(!dragging) {
-    if(Math.abs(cam.spin) > 0.00001) cam.ry += cam.spin;  // true zero snap
-    if(_insideMode) cam.rx = 0;  // lock pitch -- no corkscrew (Curse 12)
+    cam.ry += cam.spin;
+    if(_insideMode) cam.rx = 0;  // lock pitch in inside mode -- no corkscrew
   }
   draw();
   requestAnimationFrame(animate);
@@ -3902,9 +3898,7 @@ function toggleInsideView() {
     // Slight downward tilt -- faces fill naturally
     cam.rx = 0;     // look straight at equator -- only ry spins
     // Fracyclic: gentle auto-rotation
-    cam.spin = 0.001;   // fracyclic -- slow, visible on slider
-    var spinEl = document.getElementById('sl-spin');
-    if(spinEl) { spinEl.value = 1; SV('sv-spin','0.001'); }
+    cam.spin = 0.0008;
     // UI
     btn.textContent = 'EXIT';
     btn.classList.add('inside');
@@ -3937,13 +3931,97 @@ function toggleInsideView() {
 function setInsideZoom(val) {
   SV('sv-inside', val);
   if (_insideMode && _savedCam) {
-    // CAMERA TRANSFORMER: clamp to sphere interior -- cannot exit
-    _surfaceR = Math.max(0.1, Math.min(3.0, val));
-    // Zoom: scales with how deep we are
-    var zoomScale = Math.max(3, 8 - _surfaceR * 2);
-    cam.zoom = _savedCam.zoom * zoomScale;
+    _surfaceR = val;
+    // Zoom scales with radius: closer to surface = more zoom
+    var zoomScale = 5 + (1.5 - val) * 8; // radius 1.5=5x, radius 0.1=16x
+    cam.zoom = _savedCam.zoom * Math.max(5, zoomScale);
     var zmEl = document.getElementById('sl-zm');
     if (zmEl) { zmEl.value = Math.min(1500, Math.round(cam.zoom)); SV('sv-zm', Math.round(cam.zoom)); }
+  }
+}
+
+
+// ============================================================
+// INSIDE VIEW -- camera on sphere surface looking inward
+// PATTERN 3: all in one. Curse 14 prevention.
+// ============================================================
+var _insideMode = false;
+var _savedCam   = null;
+var _surfaceR   = 0;
+
+function drawInsideGrid() {
+  if(!_insideMode || _surfaceR <= 0 || !gkState) return;
+  var gridSize=2.5, gridStep=0.25, gridY=-1.5;
+  cx.save();
+  cx.strokeStyle='rgba(0,212,255,0.15)';
+  cx.lineWidth=0.5;
+  for(var gz=-gridSize;gz<=gridSize;gz+=gridStep){
+    var pts=[];
+    for(var gx=-gridSize;gx<=gridSize;gx+=gridStep*2){
+      var p=project([gx,gridY,gz]);
+      if(p.y>H/2-20) pts.push(p);
+    }
+    if(pts.length<2) continue;
+    cx.beginPath();cx.moveTo(pts[0].x,pts[0].y);
+    for(var k=1;k<pts.length;k++) cx.lineTo(pts[k].x,pts[k].y);
+    cx.stroke();
+  }
+  for(var gx2=-gridSize;gx2<=gridSize;gx2+=gridStep){
+    var pts2=[];
+    for(var gz2=-gridSize;gz2<=gridSize;gz2+=gridStep*2){
+      var p2=project([gx2,gridY,gz2]);
+      if(p2.y>H/2-20) pts2.push(p2);
+    }
+    if(pts2.length<2) continue;
+    cx.beginPath();cx.moveTo(pts2[0].x,pts2[0].y);
+    for(var k2=1;k2<pts2.length;k2++) cx.lineTo(pts2[k2].x,pts2[k2].y);
+    cx.stroke();
+  }
+  cx.restore();
+}
+
+function toggleInsideView() {
+  var btn=document.getElementById('btn-enter');
+  var wrap=document.getElementById('sl-inside-wrap');
+  if(!_insideMode){
+    // CAMERA FIRST -- independent of shape
+    _savedCam={zoom:cam.zoom,spin:cam.spin,rx:cam.rx,ry:cam.ry};
+    _surfaceR=+document.getElementById('sl-inside').value;
+    cam.zoom=_savedCam.zoom*8;
+    var zmEl=document.getElementById('sl-zm');
+    if(zmEl){zmEl.value=Math.min(1500,Math.round(cam.zoom));SV('sv-zm',Math.round(cam.zoom));}
+    cam.rx=0;
+    cam.spin=0.001;
+    var spinEl=document.getElementById('sl-spin');
+    if(spinEl){spinEl.value=1;SV('sv-spin','0.001');}
+    btn.textContent='EXIT';btn.classList.add('inside');btn.classList.remove('gn');
+    wrap.style.display='flex';
+    _insideMode=true;
+    console.log('[GF] INSIDE VIEW surfaceR='+_surfaceR);
+  } else {
+    if(_savedCam){
+      cam.zoom=_savedCam.zoom;cam.spin=_savedCam.spin;
+      cam.rx=_savedCam.rx;cam.ry=_savedCam.ry;
+      var zmEl=document.getElementById('sl-zm');
+      if(zmEl){zmEl.value=Math.min(1500,Math.round(_savedCam.zoom));SV('sv-zm',Math.round(_savedCam.zoom));}
+      var spinEl=document.getElementById('sl-spin');
+      if(spinEl){spinEl.value=Math.round(_savedCam.spin*1000);SV('sv-spin',_savedCam.spin.toFixed(3));}
+    }
+    btn.textContent='ENTER';btn.classList.remove('inside');btn.classList.add('gn');
+    wrap.style.display='none';
+    _insideMode=false;_surfaceR=0;
+    console.log('[GF] EXIT restored');
+  }
+}
+
+function setInsideZoom(val){
+  SV('sv-inside',val);
+  if(_insideMode&&_savedCam){
+    _surfaceR=Math.max(0.1,Math.min(3.0,val));
+    var zScale=Math.max(3,8-_surfaceR*2);
+    cam.zoom=_savedCam.zoom*zScale;
+    var zmEl=document.getElementById('sl-zm');
+    if(zmEl){zmEl.value=Math.min(1500,Math.round(cam.zoom));SV('sv-zm',Math.round(cam.zoom));}
   }
 }
 
