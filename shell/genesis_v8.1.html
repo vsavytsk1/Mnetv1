@@ -3383,25 +3383,20 @@ resize();addEventListener('resize',resize);
 
 function project(p){
   var x=p[0],y=p[1],z=p[2];
-  // Rotate Y then X (standard)
+  // Step 1: Rotate world (Y then X)
   var cy=Math.cos(cam.ry),sy=Math.sin(cam.ry);
   var x1=x*cy-z*sy, z1=x*sy+z*cy;
   var crx=Math.cos(cam.rx),srx=Math.sin(cam.rx);
   var y1=y*crx-z1*srx, z2=y*srx+z1*crx;
 
   if(_insideMode && _surfaceR > 0) {
-    // INSIDE MODE: perspective from inside the sphere
-    // Camera at distance _surfaceR from center looking inward
-    var camZ = _surfaceR;
-    var z3 = z2 + camZ;  // shift world so camera is at origin
-    if(z3 < 0.01) z3 = 0.01;
-    var fov = 600;
-    var perspective = fov / (fov + z3 * 80);
-    return {
-      x: W/2 + x1 * perspective * 400,
-      y: H/2 - y1 * perspective * 400,
-      z: z3
-    };
+    // ROUTER MATRIX: translate world so camera IS the origin
+    // Camera sits at (0, 0, -_surfaceR) in rotated space
+    // Subtract camPos: x1 unchanged, y1 unchanged, z2 += _surfaceR
+    var zr = z2 + _surfaceR;
+    // Now project with same zoom as outside view
+    // The sphere is GIANT because we rendered it around us
+    return {x:W/2+x1*cam.zoom, y:H/2-y1*cam.zoom, z:zr};
   }
   return {x:W/2+x1*cam.zoom, y:H/2-y1*cam.zoom, z:z2};
 }
@@ -3652,11 +3647,10 @@ cv.addEventListener('pointerup',function(){dragging=false});
 cv.addEventListener('wheel',function(e){
   e.preventDefault();
   if(_insideMode){
-    var nr=_surfaceR*(e.deltaY>0?0.92:1.08);
-    _surfaceR=Math.max(0.1,Math.min(3.0,nr));
+    // ROUTER MATRIX: wheel moves camera along z (radius)
+    _surfaceR=Math.max(0.1,Math.min(3.0,_surfaceR*(e.deltaY>0?0.92:1.08)));
     document.getElementById('sl-inside').value=_surfaceR.toFixed(2);
     SV('sv-inside',_surfaceR.toFixed(2));
-    setInsideZoom(_surfaceR);
   }else{
     cam.zoom*=e.deltaY>0?0.92:1.08;
     cam.zoom=Math.max(0.5,Math.min(50000,cam.zoom));
@@ -3987,7 +3981,9 @@ function toggleInsideView() {
     // CAMERA FIRST -- independent of shape
     _savedCam={zoom:cam.zoom,spin:cam.spin,rx:cam.rx,ry:cam.ry};
     _surfaceR=+document.getElementById('sl-inside').value;
-    cam.zoom=_savedCam.zoom*8;
+    // GIANT sphere: zoom set so sphere radius fills the screen
+    // sphere_r * zoom ~ W/2. sphere_r=1.6, W=1920 -> zoom~600
+    cam.zoom = Math.max(400, Math.min(1500, W/2 / 1.6));
     var zmEl=document.getElementById('sl-zm');
     if(zmEl){zmEl.value=Math.min(1500,Math.round(cam.zoom));SV('sv-zm',Math.round(cam.zoom));}
     cam.rx=0;
@@ -4016,12 +4012,11 @@ function toggleInsideView() {
 
 function setInsideZoom(val){
   SV('sv-inside',val);
-  if(_insideMode&&_savedCam){
-    _surfaceR=Math.max(0.1,Math.min(3.0,val));
-    var zScale=Math.max(3,8-_surfaceR*2);
-    cam.zoom=_savedCam.zoom*zScale;
-    var zmEl=document.getElementById('sl-zm');
-    if(zmEl){zmEl.value=Math.min(1500,Math.round(cam.zoom));SV('sv-zm',Math.round(cam.zoom));}
+  if(_insideMode){
+    // ROUTER MATRIX: radius moves camera along z-axis
+    // zoom stays fixed -- sphere stays GIANT
+    _surfaceR=Math.max(0.1,Math.min(3.0,+val));
+    // no zoom change -- just translate camera position
   }
 }
 
