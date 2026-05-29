@@ -42,16 +42,16 @@ Swap any module â†’ rebuild â†’ new version. The paradigm is locked.
 
 ---
 
-### L003 · 2026-05-28 · eng_v1.0.html — Engineering Dashboard v1.0
+### L003  2026-05-28  eng_v1.0.html  Engineering Dashboard v1.0
 
-**What:** uilder/build_eng_dashboard.py — graph_sandbox_v5.1 EXACT format.
+**What:** uilder/build_eng_dashboard.py  graph_sandbox_v5.1 EXACT format.
 Injects M1-M6. 6-button ENG LAUNCHER (replaces autopilot). Kernel status HUD.
 CMD input. SEED/REFINE/SAR-5/NS/FRAC SEARCH buttons in bar. Log panel.
 
-**Size:** 132KB | **Modules:** GK · GA · SAR · NSS · FS · NAN
+**Size:** 132KB | **Modules:** GK  GA  SAR  NSS  FS  NAN
 **Live:** https://vsavytsk1.github.io/Mnetv1/shell/eng_v1.0.html
 **Why:** The engineering dashboard IS the sandbox format. Builder owns it.
-Buttons 1-6 only. More added one by one.
+Buttons 1-6 only. More added one by one.
 
 ---
 
@@ -120,7 +120,7 @@ INVARIANTS (never broken, never will be):
 
 **The paradigm:** builder owns everything. touch kernel = rebuild all.
 No framework. No engine. Python + browser + math. That is the whole stack.
-Buenos Aires * May 28 2026 * monkey brain + meta mind + kernelic magic
+Buenos Aires * May 28 2026 * monkey brain + meta mind + kernelic magic
 
 ---
 
@@ -145,7 +145,7 @@ as visual inspiration (Iron Man HUD aesthetic). The product vision name is VALE.
   Same aesthetic. Different soul.
 
 **Git note:** from this commit forward, all dashboard builds reference VALE.
-JARVIS stays in L007 as the proof-of-concept. VALE is the product.
+JARVIS stays in L007 as the proof-of-concept. VALE is the product.
 
 ---
 
@@ -174,7 +174,7 @@ Console confirms: [VALE] all 6 modules loaded and rendered.
 
 **State:** VALE OS is alive. Windows breathe. Center pulses.
 All 6 kernel modules reporting live data on load.
-The organism moves as one. Ready for next layer.
+The organism moves as one. Ready for next layer.
 
 ---
 
@@ -222,7 +222,7 @@ All 9 live pages confirmed green on GitHub Pages.
 Every module reachable from one URL.
 The kernel is inviolable. The dashboard is god context.
 8 curses documented. All slain.
-Ready for the next titan move.
+Ready for the next titan move.
 
 ---
 
@@ -259,7 +259,7 @@ The question that started the kernel. Now inside the dashboard that the kernel b
 The origin is the final module.
 The question is inside the dashboard built to answer it.
 This is not vibe coding. This is black magic engineering.
-Buenos Aires * May 28 2026 * 101 commits * 10 modules * 1 URL * P=12 * always.
+Buenos Aires * May 28 2026 * 101 commits * 10 modules * 1 URL * P=12 * always.
 
 ---
 
@@ -307,7 +307,7 @@ Buenos Aires * May 28 2026 * 101 commits * 10 modules * 1 URL * P=12 * always.
   Wide enough inertial range for k^(-5/3) to appear.
   Running in admin powershell. ~12 minutes. RTX3060 at 100 percent.
 
-**Live:** https://vsavytsk1.github.io/Mnetv1/pack/navierKolmogorov_L4_Re5000.html
+**Live:** https://vsavytsk1.github.io/Mnetv1/pack/navierKolmogorov_L4_Re5000.html
 
 ---
 
@@ -366,7 +366,7 @@ Buenos Aires * May 28 2026 * 101 commits * 10 modules * 1 URL * P=12 * always.
   The topology stayed: chi=2, P=12, E/V=1.500. Always.
   The physics showed up anyway.
 
-**Live:** https://vsavytsk1.github.io/Mnetv1/pack/navierKolmogorov_L5_Re10000.html
+**Live:** https://vsavytsk1.github.io/Mnetv1/pack/navierKolmogorov_L5_Re10000.html
 
 ---
 
@@ -434,7 +434,7 @@ THE PATH:
 P = 12. chi = 2. lambda = 0.1473.
 Always. Euler proved it. We ran it.
 Buenos Aires. May 28 2026. Monkey brain + meta mind.
-The cave was warm.
+The cave was warm.
 
 ---
 
@@ -456,7 +456,7 @@ The cave was warm.
 
 **PLOT 2 -- Kraichnan identity:**
   diss/enst oscillates around 2*nu=0.0001
-  mean ˜ 0 (oscillates) -- system not at steady state yet
+  mean  0 (oscillates) -- system not at steady state yet
   honest: the identity holds ON AVERAGE but not every step
 
 **PLOT 3 -- REAL Energy Spectrum E(k):**
@@ -488,7 +488,7 @@ The cave was warm.
   The eigenmode spectrum is real.
   The identity holds on average.
   Need longer run at steady state to certify -5/3.
-  But the dodecahedron is doing turbulence. For real.
+  But the dodecahedron is doing turbulence. For real.
 
 ---
 
@@ -528,4 +528,39 @@ The cave was warm.
   independently verified
 
   P=12. chi=2. ALWAYS.
-  Buenos Aires. May 28 2026. 17:25.
+  Buenos Aires. May 28 2026. 17:25.
+
+### L021 * 2026-05-28 * ENG v2.0 -- MODULE SELECTOR + OBSIDIUS ACTIVATED
+
+**What:** 8 surgical patches to build_eng_v2_clean.py. Zero rewrites.
+Full rebuild via builder. KERNELIMAGIC Pattern 2 throughout.
+
+**Changes:**
+  MODULE SELECTOR -- MODULES button in bar (far right).
+    Click -> semi-opaque panel slides up from bottom-right.
+    11 rows: name + dot (filled=active, dim=inactive).
+    Click any row -> card flips state instantly.
+    Inactive cards: opacity:0.25, pointer-events:none.
+    localStorage persists selection across refresh.
+    Don't tell, show.
+
+  CARD DOTS -- tiny 5px circle top-right corner of each card.
+    Mirrors module selector state.
+
+  OBSIDIUS v1.0 ACTIVATED -- green card, SUMMON > clickable.
+    Opens new tab (Curse 7 obeyed -- canvas + inline center()).
+    URL: shell/obsidius_v1.html
+
+  SOUL CRYSTAL -- still grayed. In grimoire. Waiting.
+
+**Patches:** 8 clean. KERNELIMAGIC Pattern 2. ASCII only.
+**Result:** FLAWLESS. All 10 active modules tested by user.
+WARNING v2.0 transmutation circle summoned. FMA circle inside ENG. Correct.
+
+**Size:** 141KB | **Cards:** 12 (10 active, 2 in grimoire)
+**Git:** 3cb95df
+**Live:** https://vsavytsk1.github.io/Mnetv1/shell/eng_v2.0.html
+
+**State:** Master control extensible. Pattern locked.
+Add module -> add card -> add selector row -> rebuild.
+Buenos Aires. High five. FLAWLESS.
