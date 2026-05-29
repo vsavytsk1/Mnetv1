@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OBSIDIUS v1.0 -- The Algebraic Grimoire</title>
+<style>
+
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0a0a0f;color:#c8d0dc;font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:11px;overflow:hidden;height:100vh;width:100vw}
+#canvas{position:absolute;top:0;left:0;width:100%;height:100%;display:block}
+#hud{position:fixed;top:12px;left:12px;z-index:20;pointer-events:none;line-height:1.8}
+#hud .lbl{color:#2a4a5a}
+#hud .val{color:#00d4ff;font-weight:bold}
+#hud .gold{color:#ffd700;font-weight:bold}
+#hud .ok{color:#00ffd5}
+#hud .warn{color:#ff9040}
+#hud .sep{color:#1a2a3a;margin:4px 0;border-bottom:1px solid #0a1a2a;display:block}
+#drop{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+  z-index:30;text-align:center;pointer-events:none}
+#drop .title{font-size:22px;color:#00d4ff;letter-spacing:0.15em;margin-bottom:12px}
+#drop .sub{font-size:11px;color:#2a5a6a;line-height:2}
+#drop .btn{display:inline-block;margin-top:20px;padding:10px 28px;
+  border:1px solid #00d4ff;color:#00d4ff;cursor:pointer;pointer-events:auto;
+  letter-spacing:0.12em;font-family:inherit;font-size:11px;background:rgba(0,10,20,0.9);
+  transition:all 0.2s}
+#drop .btn:hover{background:rgba(0,212,255,0.08);border-color:#00ffd5;color:#00ffd5}
+#log{position:fixed;bottom:0;left:0;right:0;z-index:20;
+  background:rgba(5,5,16,0.92);border-top:1px solid #0a1a2a;
+  padding:6px 14px;font-size:9px;color:#1a4a5a;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#stats{position:fixed;top:12px;right:12px;z-index:20;text-align:right;
+  pointer-events:none;line-height:1.8}
+#stats .lbl{color:#2a4a5a}
+#stats .val{color:#00d4ff;font-weight:bold}
+#stats .gold{color:#ffd700;font-weight:bold}
+#input-wrap{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+  z-index:30;display:none}
+
+</style>
+</head>
+<body>
+
+<div id="drop">
+  <div class="title">OBSIDIUS</div>
+  <div class="sub">
+    The Algebraic Grimoire -- Chapter Two<br>
+    Load your Obsidian vault.<br>
+    Find your pentagons.<br>
+    V - E + F = chi<br>
+    <span style="color:#ffd700">P = ???</span>
+  </div>
+  <label class="btn" for="vault-input">SELECT VAULT FOLDER</label>
+</div>
+<input type="file" id="vault-input" webkitdirectory multiple style="display:none">
+<canvas id="canvas"></canvas>
+<div id="hud">
+  <div><span class="lbl">V </span><span class="val" id="h-v">--</span></div>
+  <div><span class="lbl">E </span><span class="val" id="h-e">--</span></div>
+  <div><span class="lbl">F </span><span class="val" id="h-f">--</span></div>
+  <div><span class="lbl">chi </span><span class="val" id="h-chi">--</span></div>
+  <span class="sep"></span>
+  <div><span class="lbl">P   </span><span class="gold" id="h-p">--</span></div>
+  <span class="sep"></span>
+  <div><span class="lbl">step </span><span class="val" id="h-step">--</span></div>
+  <div><span class="lbl">alpha </span><span class="val" id="h-alpha">--</span></div>
+  <div><span class="lbl">omega </span><span class="val" id="h-omega">--</span></div>
+</div>
+<div id="stats">
+  <div><span class="val" id="s-nodes">--</span><span class="lbl"> nodes</span></div>
+  <div><span class="val" id="s-edges">--</span><span class="lbl"> edges</span></div>
+  <div><span class="gold" id="s-pents">--</span><span class="lbl"> pentagons</span></div>
+  <div><span class="val" id="s-orphans">--</span><span class="lbl"> orphans</span></div>
+</div>
+<div id="log">OBSIDIUS v1.0 -- ready. select vault folder to begin.</div>
+
+<script>
+
+(function() {
+'use strict';
+
+// ============================================================
+// GLOBALS
+// ============================================================
+var canvas = document.getElementById('canvas');
+var ctx    = canvas.getContext('2d');
+var W = canvas.width  = window.innerWidth;
+var H = canvas.height = window.innerHeight;
+
+var nodes   = [];   // {id, label, x, y, vx, vy, deg, omega, psi}
+var edges   = [];   // {s, t}   (indices into nodes[])
+var adjMap  = {};   // id -> [id, ...]
+var nodeIdx = {};   // id -> index
+
+// simulation state
+var alpha   = 1.0;
+var ALPHA_MIN = 0.001;
+var ALPHA_DECAY = 1 - Math.pow(ALPHA_MIN, 1/300);
+
+// NS physics state
+var omega_arr = null;
+var psi_arr   = null;
+var ns_step   = 0;
+var NS_ACTIVE = false;
+
+// display
+var scale  = 1.0;
+var offX   = 0;
+var offY   = 0;
+var isDrag = false;
+var lastMX = 0, lastMY = 0;
+
+function log(msg) {
+  var el = document.getElementById('log');
+  if (el) el.textContent = msg;
+  console.log('[OBSIDIUS] ' + msg);
+}
+
+// ============================================================
+// STEP 1 -- VAULT PARSER
+// parse .md files -> extract [[wikilinks]]
+// ============================================================
+document.getElementById('vault-input').addEventListener('change', function(e) {
+  var files = Array.from(e.target.files).filter(function(f) {
+    return f.name.endsWith('.md');
+  });
+  log('parsing ' + files.length + ' markdown files...');
+  document.getElementById('drop').style.display = 'none';
+  parseVault(files);
+});
+
+function parseVault(files) {
+  var nodeMap = {};   // filename (no ext) -> node object
+  var linkList = [];  // [{from, to}, ...]
+  var pending = files.length;
+
+  files.forEach(function(file) {
+    var id = file.name.replace(/\.md$/, '');
+    nodeMap[id] = { id: id, label: id };
+
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      var txt = e.target.result;
+      // extract [[wikilinks]] -- handle [[link|alias]] too
+      var re = /\[\[([^\]|#]+)(?:[|#][^\]]*)?\]\]/g;
+      var m;
+      while ((m = re.exec(txt)) !== null) {
+        var target = m[1].trim();
+        // strip path prefix if any
+        target = target.split('/').pop();
+        if (target && target !== id) {
+          linkList.push({ from: id, to: target });
+        }
+      }
+      pending--;
+      if (pending === 0) buildGraph(nodeMap, linkList);
+    };
+    reader.readAsText(file);
+  });
+}
+
+// ============================================================
+// STEP 2 -- BUILD GRAPH
+// adjacency, degree, Laplacian metadata
+// ============================================================
+function buildGraph(nodeMap, linkList) {
+  // nodes
+  nodes = Object.values(nodeMap);
+  nodeIdx = {};
+  nodes.forEach(function(n, i) { nodeIdx[n.id] = i; });
+
+  // edges -- only keep links where BOTH ends exist
+  var edgeSet = {};
+  edges = [];
+  adjMap = {};
+  nodes.forEach(function(n) { adjMap[n.id] = []; });
+
+  linkList.forEach(function(lk) {
+    if (nodeIdx[lk.from] === undefined) return;
+    if (nodeIdx[lk.to]   === undefined) return;
+    var key = [lk.from, lk.to].sort().join('|||');
+    if (edgeSet[key]) return;
+    edgeSet[key] = true;
+    edges.push({ s: nodeIdx[lk.from], t: nodeIdx[lk.to] });
+    adjMap[lk.from].push(lk.to);
+    adjMap[lk.to].push(lk.from);
+  });
+
+  // degree
+  nodes.forEach(function(n) {
+    n.deg = (adjMap[n.id] || []).length;
+  });
+
+  // sort by degree to find pentagons
+  var sorted = nodes.slice().sort(function(a,b){ return b.deg - a.deg; });
+  var top12 = sorted.slice(0, 12);
+  var pentSet = {};
+  top12.forEach(function(n){ pentSet[n.id] = true; });
+  nodes.forEach(function(n){ n.isPent = !!pentSet[n.id]; });
+
+  // chi -- for a graph: V - E + F
+  // F = cycles = E - V + connected_components (approximate)
+  var V = nodes.length;
+  var E = edges.length;
+  var C = countComponents();
+  var F_approx = E - V + C;   // faces from Euler for planar graph
+  var chi = V - E + F_approx;
+
+  log('V=' + V + ' E=' + E + ' C=' + C + ' chi(approx)=' + chi + '  -- laying out...');
+
+  updateHUD(V, E, F_approx, chi, 12);
+
+  // init positions -- random around center
+  nodes.forEach(function(n) {
+    n.x  = W/2 + (Math.random()-0.5) * Math.min(W,H) * 0.4;
+    n.y  = H/2 + (Math.random()-0.5) * Math.min(W,H) * 0.4;
+    n.vx = 0; n.vy = 0;
+  });
+
+  // init NS arrays
+  omega_arr = new Float64Array(nodes.length);
+  psi_arr   = new Float64Array(nodes.length);
+
+  // inject forcing on top hubs
+  top12.forEach(function(n, i) {
+    var idx = nodeIdx[n.id];
+    omega_arr[idx] = (Math.random() - 0.5) * 0.5;
+  });
+
+  // start simulation
+  alpha = 1.0;
+  NS_ACTIVE = true;
+  requestAnimationFrame(tick);
+}
+
+function countComponents() {
+  if (nodes.length === 0) return 0;
+  var visited = {};
+  var count = 0;
+  nodes.forEach(function(n) {
+    if (!visited[n.id]) {
+      count++;
+      var q = [n.id];
+      while (q.length) {
+        var cur = q.pop();
+        if (visited[cur]) continue;
+        visited[cur] = true;
+        (adjMap[cur] || []).forEach(function(nb) {
+          if (!visited[nb]) q.push(nb);
+        });
+      }
+    }
+  });
+  return count;
+}
+
+// ============================================================
+// STEP 3 -- FORCE LAYOUT
+// Barnes-Hut style -- simplified quadtree charge
+// D3-force clone, same feel
+// ============================================================
+var CHARGE    = -120;    // repulsion strength
+var LINK_D    = 40;      // link rest distance
+var LINK_STR  = 0.4;     // link strength
+var GRAVITY   = 0.08;    // center pull
+
+function applyForces() {
+  var n = nodes.length;
+  if (n === 0) return;
+
+  // charge -- O(n^2) for now, Barnes-Hut upgrade later
+  for (var i = 0; i < n; i++) {
+    for (var j = i+1; j < n; j++) {
+      var dx = nodes[j].x - nodes[i].x;
+      var dy = nodes[j].y - nodes[i].y;
+      var d2 = dx*dx + dy*dy + 1;
+      var d  = Math.sqrt(d2);
+      var f  = alpha * CHARGE / d2;
+      var fx = f * dx / d;
+      var fy = f * dy / d;
+      nodes[i].vx -= fx;
+      nodes[i].vy -= fy;
+      nodes[j].vx += fx;
+      nodes[j].vy += fy;
+    }
+  }
+
+  // link forces
+  edges.forEach(function(e) {
+    var a = nodes[e.s], b = nodes[e.t];
+    var dx = b.x - a.x, dy = b.y - a.y;
+    var d = Math.sqrt(dx*dx + dy*dy) || 1;
+    var f = alpha * LINK_STR * (d - LINK_D) / d;
+    var fx = f * dx, fy = f * dy;
+    a.vx += fx; a.vy += fy;
+    b.vx -= fx; b.vy -= fy;
+  });
+
+  // gravity to center
+  nodes.forEach(function(nd) {
+    nd.vx += alpha * GRAVITY * (W/2 - nd.x);
+    nd.vy += alpha * GRAVITY * (H/2 - nd.y);
+  });
+
+  // integrate + damping
+  var damp = 0.6;
+  nodes.forEach(function(nd) {
+    nd.vx *= damp; nd.vy *= damp;
+    nd.x  += nd.vx;
+    nd.y  += nd.vy;
+  });
+}
+
+// ============================================================
+// STEP 4 -- NS PHYSICS (lightweight, runs every frame)
+// vorticity diffusion on graph
+// ============================================================
+var NU = 0.01;   // viscosity
+
+function nsStep() {
+  if (!NS_ACTIVE || !omega_arr) return;
+  var n = nodes.length;
+
+  // diffuse omega: omega[i] += nu * sum_j(omega[j] - omega[i]) / deg[i]
+  var new_omega = new Float64Array(n);
+  nodes.forEach(function(nd, i) {
+    var sum = 0;
+    var deg = nd.deg || 1;
+    (adjMap[nd.id] || []).forEach(function(nbId) {
+      var j = nodeIdx[nbId];
+      sum += omega_arr[j] - omega_arr[i];
+    });
+    new_omega[i] = omega_arr[i] + NU * sum / deg;
+  });
+
+  // inject forcing on pentagons every 10 steps
+  if (ns_step % 10 === 0) {
+    nodes.forEach(function(nd, i) {
+      if (nd.isPent) new_omega[i] += (Math.random()-0.5) * 0.02;
+    });
+  }
+
+  omega_arr = new_omega;
+  ns_step++;
+}
+
+// ============================================================
+// STEP 5 -- RENDER
+// Canvas 2D -- same pipeline as Obsidian
+// edges first, then nodes
+// ============================================================
+function omegaToColor(omega, isPent) {
+  if (isPent) return '#ffd700';   // gold -- the pentagons
+  // map omega to hue: 0=cyan, positive=green, negative=purple
+  var v = Math.tanh(omega * 5);   // -1 to 1
+  if (v > 0) {
+    // cyan -> green
+    var r = Math.round(0   * (1-v) + 80  * v);
+    var g = Math.round(212 * (1-v) + 255 * v);
+    var b = Math.round(255 * (1-v) + 100 * v);
+    return 'rgb(' + r + ',' + g + ',' + b + ')';
+  } else {
+    // cyan -> purple
+    v = -v;
+    var r = Math.round(0   * (1-v) + 160 * v);
+    var g = Math.round(212 * (1-v) + 60  * v);
+    var b = Math.round(255 * (1-v) + 255 * v);
+    return 'rgb(' + r + ',' + g + ',' + b + ')';
+  }
+}
+
+function render() {
+  ctx.clearRect(0, 0, W, H);
+  ctx.save();
+  ctx.translate(offX, offY);
+  ctx.scale(scale, scale);
+
+  var n = nodes.length;
+  if (n === 0) { ctx.restore(); return; }
+
+  // --- EDGES (thin, dark, Obsidian style) ---
+  ctx.lineWidth = 0.6 / scale;
+  edges.forEach(function(e) {
+    var a = nodes[e.s], b = nodes[e.t];
+    // edge color = blend of endpoint omegas
+    var avg = omega_arr ? (omega_arr[e.s] + omega_arr[e.t]) * 0.5 : 0;
+    var v = Math.tanh(avg * 3);
+    // very dim lines -- Obsidian uses #1a1a1a to #2a3a2a
+    if (v > 0) {
+      ctx.strokeStyle = 'rgba(20,' + Math.round(60+v*40) + ',30,0.35)';
+    } else {
+      ctx.strokeStyle = 'rgba(' + Math.round(30-v*20) + ',20,50,0.35)';
+    }
+    ctx.beginPath();
+    ctx.moveTo(a.x, a.y);
+    ctx.lineTo(b.x, b.y);
+    ctx.stroke();
+  });
+
+  // --- NODES ---
+  nodes.forEach(function(nd, i) {
+    var om = omega_arr ? omega_arr[i] : 0;
+    var col = omegaToColor(om, nd.isPent);
+
+    // radius: log scale on degree, same as Obsidian
+    var r = nd.isPent
+      ? 6 + Math.log1p(nd.deg) * 1.5
+      : 2 + Math.log1p(nd.deg) * 0.8;
+
+    // glow for pentagons and high-omega nodes
+    var glowR = Math.abs(om) * 30;
+    if (nd.isPent) glowR = Math.max(glowR, 15);
+
+    if (glowR > 2) {
+      var grad = ctx.createRadialGradient(nd.x, nd.y, r*0.5, nd.x, nd.y, r + glowR);
+      grad.addColorStop(0,   col.replace('rgb', 'rgba').replace(')', ',0.3)'));
+      grad.addColorStop(1,   'rgba(0,0,0,0)');
+      ctx.beginPath();
+      ctx.arc(nd.x, nd.y, r + glowR, 0, 2*Math.PI);
+      ctx.fillStyle = grad;
+      ctx.fill();
+    }
+
+    // node circle
+    ctx.beginPath();
+    ctx.arc(nd.x, nd.y, r, 0, 2*Math.PI);
+    ctx.fillStyle = col;
+    ctx.fill();
+
+    // orphan dim ring
+    if (nd.deg === 0) {
+      ctx.beginPath();
+      ctx.arc(nd.x, nd.y, r+1.5, 0, 2*Math.PI);
+      ctx.strokeStyle = 'rgba(100,50,50,0.4)';
+      ctx.lineWidth = 0.8 / scale;
+      ctx.stroke();
+    }
+  });
+
+  ctx.restore();
+}
+
+// ============================================================
+// MAIN TICK LOOP
+// ============================================================
+function tick() {
+  if (alpha > ALPHA_MIN) {
+    applyForces();
+    alpha *= (1 - ALPHA_DECAY);
+    document.getElementById('h-alpha').textContent = alpha.toFixed(4);
+  }
+
+  nsStep();
+
+  render();
+
+  // update live stats
+  if (ns_step % 30 === 0 && omega_arr) {
+    var maxOm = 0;
+    for (var i = 0; i < omega_arr.length; i++) {
+      if (Math.abs(omega_arr[i]) > maxOm) maxOm = Math.abs(omega_arr[i]);
+    }
+    document.getElementById('h-omega').textContent = maxOm.toFixed(4);
+    document.getElementById('h-step').textContent  = ns_step;
+  }
+
+  requestAnimationFrame(tick);
+}
+
+// ============================================================
+// HUD UPDATE
+// ============================================================
+function updateHUD(V, E, F, chi, P) {
+  document.getElementById('h-v').textContent    = V;
+  document.getElementById('h-e').textContent    = E;
+  document.getElementById('h-f').textContent    = F;
+
+  var chiEl = document.getElementById('h-chi');
+  chiEl.textContent = chi;
+  chiEl.className = 'val';
+
+  document.getElementById('h-p').textContent = P + ' (top by degree)';
+
+  document.getElementById('s-nodes').textContent  = V;
+  document.getElementById('s-edges').textContent  = E;
+  document.getElementById('s-pents').textContent  = P;
+
+  var orphans = nodes.filter(function(n){ return n.deg === 0; }).length;
+  document.getElementById('s-orphans').textContent = orphans;
+}
+
+// ============================================================
+// PAN + ZOOM
+// ============================================================
+window.addEventListener('resize', function() {
+  W = canvas.width  = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+});
+
+canvas.addEventListener('wheel', function(e) {
+  e.preventDefault();
+  var factor = e.deltaY > 0 ? 0.9 : 1.1;
+  var mx = e.clientX, my = e.clientY;
+  offX = mx - factor * (mx - offX);
+  offY = my - factor * (my - offY);
+  scale *= factor;
+  scale = Math.max(0.05, Math.min(10, scale));
+}, { passive: false });
+
+canvas.addEventListener('pointerdown', function(e) {
+  isDrag = true; lastMX = e.clientX; lastMY = e.clientY;
+  canvas.setPointerCapture(e.pointerId);
+});
+canvas.addEventListener('pointermove', function(e) {
+  if (!isDrag) return;
+  offX += e.clientX - lastMX;
+  offY += e.clientY - lastMY;
+  lastMX = e.clientX; lastMY = e.clientY;
+});
+canvas.addEventListener('pointerup', function() { isDrag = false; });
+
+// ============================================================
+// TOOLTIP on hover
+// ============================================================
+canvas.addEventListener('mousemove', function(e) {
+  if (isDrag || nodes.length === 0) return;
+  var mx = (e.clientX - offX) / scale;
+  var my = (e.clientY - offY) / scale;
+  var hit = null, best = 20*20;
+  nodes.forEach(function(nd) {
+    var dx = nd.x - mx, dy = nd.y - my;
+    var d2 = dx*dx + dy*dy;
+    if (d2 < best) { best = d2; hit = nd; }
+  });
+  canvas.title = hit ? hit.label + ' (deg:' + hit.deg + ')' : '';
+});
+
+log('OBSIDIUS v1.0 -- ready. select vault folder to begin.');
+
+})();
+
+</script>
+</body>
+</html>
