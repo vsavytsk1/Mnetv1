@@ -4019,33 +4019,28 @@ function doSeedPlatonic(type) {
     return {
       id: idx,
       pts: fi.map(function(i){ return pts[i]; }),
-      type: type === 'dodec' ? 'pent' : (fi.length === 5 ? 'pent' : 'hex'),
+      type: 'pent',
       level: 0,
-      anchor: false,
+      anchor: 'A' + idx,
       depth: 0
     };
   });
 
   gkState = {
     faces: builtFaces,
-    verts: pts,
-    level: 0
+    history: [],
+    counter: builtFaces.length
   };
 
-  // Log to console
-  console.log(
-    '%c' + info.name + ' V=' + info.V +
-    ' E=' + info.E + ' F=' + info.F +
-    ' chi=' + info.chi + ' P=12 always',
-    'color:' + info.color + ';font-size:13px'
-  );
+  secretsLeft = 6;
 
-  // Update HUD
-  updateHud(gkState);
-  if(typeof axLog === 'function'){
-    axLog(info.name + ' V=' + info.V + ' E=' + info.E +
-          ' F=' + info.F + ' chi=2', 'ok');
-  }
+  console.log('%c PLATONIC: ' + info.name + ' V=' + info.V + ' E=' + info.E + ' F=' + info.F + ' chi=2 all-pent', 'color:' + info.color + ';font-size:13px');
+
+  var check = checkInv();
+  flRec('SEED_PLATONIC', {name:info.name, F:info.F});
+  axLog('SEED: ' + info.name + ' V=' + info.V + ' E=' + info.E + ' F=' + info.F + ' chi=2', 'ax-inv');
+  axLog('all faces canonical pent. chi=2. Always.', 'ax-p7');
+  updateHud(check);
 }
 
 </script>
