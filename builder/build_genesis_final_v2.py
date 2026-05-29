@@ -80,7 +80,7 @@ body{{background:#050508;color:#c8d8e8;font-family:'Courier New',monospace;overf
 .btn{{background:#0a0e18;border:1px solid #2a2a3a;color:#80d0ff;padding:4px 10px;font-family:inherit;
   font-size:9px;cursor:pointer;border-radius:3px;white-space:nowrap;transition:all 0.15s}}
 .btn:hover{{border-color:#4a6a8a;color:#fff}}.btn.pk{{color:#ff69b4;border-color:#3a1a2a}}
-.btn.gn{{color:#7fff7f;border-color:#1a3a1a}}.btn.gd{{color:#ffd700;border-color:#332a00}}
+.btn.gn{{color:#7fff7f;border-color:#1a3a1a}}.btn.gd{{color:#ffd700;border-color:#332a00}}.btn.inside{{color:#00ffd5;border-color:#00ffd5;text-shadow:0 0 8px rgba(0,255,213,0.4);background:#001a1a}}
 .sep{{width:1px;height:16px;background:#1a1f2e}}
 .sl{{display:flex;align-items:center;gap:3px}}
 .sl label{{font-size:7px;color:#555;letter-spacing:0.05em;min-width:30px}}
@@ -196,6 +196,9 @@ body{{background:#050508;color:#c8d8e8;font-family:'Courier New',monospace;overf
 <div class="sep"></div>
 <button class="btn gd" onclick="doExport()">EXPORT</button>
 <button class="btn" onclick="doExportGraph()">GRAPH</button>
+<div class="sep"></div>
+<button class="btn gn" id="btn-enter" onclick="toggleInsideView()">ENTER</button>
+<div class="sl" id="sl-inside-wrap" style="display:none"><label>INSIDE</label><input type="range" min="50" max="2000" value="300" id="sl-inside" oninput="setInsideZoom(+this.value)"><span class="sv" id="sv-inside">300</span></div>
 </div>
 
 <script>
@@ -318,6 +321,72 @@ function startPresent(){{
 // BOOT
 cam.spin = 0; // start with NO spin
 applyMods();
+
+// ================================================================
+// INSIDE VIEW -- enter the sphere
+// Stop time. Transport to center. Locked slow rotation.
+// ================================================================
+var _insideMode = false;
+var _savedCam = null;
+
+function toggleInsideView() {
+  var btn = document.getElementById('btn-enter');
+  var wrap = document.getElementById('sl-inside-wrap');
+  if (!_insideMode) {
+    // ENTER: save state, fly inside
+    _savedCam = {
+      zoom: cam.zoom,
+      spin: cam.spin,
+      rx: cam.rx,
+      ry: cam.ry
+    };
+    // Stop time
+    cam.spin = 0;
+    document.getElementById('sl-spin').value = 0;
+    SV('sv-spin', '0.000');
+    // Transport inside: zoom way in
+    var targetZoom = +document.getElementById('sl-inside').value;
+    cam.zoom = targetZoom;
+    document.getElementById('sl-zm').value = Math.min(1500, targetZoom);
+    SV('sv-zm', targetZoom);
+    // Locked slow auto-rotation
+    cam.spin = 0.0008;
+    // Update UI
+    btn.textContent = 'EXIT';
+    btn.classList.add('inside');
+    btn.classList.remove('gn');
+    wrap.style.display = 'flex';
+    _insideMode = true;
+    console.log('[GF] INSIDE VIEW -- zoom=' + targetZoom + ' spin=0.0008');
+  } else {
+    // EXIT: restore saved state
+    if (_savedCam) {
+      cam.zoom = _savedCam.zoom;
+      cam.spin = _savedCam.spin;
+      cam.rx   = _savedCam.rx;
+      cam.ry   = _savedCam.ry;
+      document.getElementById('sl-zm').value = Math.min(1500, Math.round(_savedCam.zoom));
+      SV('sv-zm', Math.round(_savedCam.zoom));
+      document.getElementById('sl-spin').value = Math.round(_savedCam.spin * 1000);
+      SV('sv-spin', _savedCam.spin.toFixed(3));
+    }
+    btn.textContent = 'ENTER';
+    btn.classList.remove('inside');
+    btn.classList.add('gn');
+    wrap.style.display = 'none';
+    _insideMode = false;
+    console.log('[GF] EXIT -- restored cam');
+  }
+}
+
+function setInsideZoom(val) {
+  SV('sv-inside', val);
+  if (_insideMode) {
+    cam.zoom = val;
+    document.getElementById('sl-zm').value = Math.min(1500, val);
+    SV('sv-zm', val);
+  }
+}
 doSeed();
 animate();
 console.log('%c[GF] GENESIS FINAL v2 loaded','color:#00ffd5;font-size:14px');
