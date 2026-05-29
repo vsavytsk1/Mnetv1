@@ -3793,7 +3793,10 @@ function setMobiusTwist(v){
 
 // ═══ ANIMATE ═══
 function animate(){
-  if(!dragging) cam.ry+=cam.spin;
+  if(!dragging) {
+    cam.ry += cam.spin;
+    if(_insideMode) cam.rx = 0;  // lock pitch in inside mode -- no corkscrew
+  }
   draw();
   requestAnimationFrame(animate);
 }
@@ -3885,7 +3888,7 @@ function toggleInsideView() {
     var zmEl = document.getElementById('sl-zm');
     if (zmEl) { zmEl.value = Math.min(1500, Math.round(cam.zoom)); SV('sv-zm', Math.round(cam.zoom)); }
     // Slight downward tilt -- faces fill naturally
-    cam.rx = 0.3;
+    cam.rx = 0;     // look straight at equator -- only ry spins
     // Fracyclic: gentle auto-rotation
     cam.spin = 0.0008;
     // UI
