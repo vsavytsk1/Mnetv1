@@ -205,6 +205,18 @@ HTML_SHELL = """
         <div class="card-desc">12 pentagons . 12 open questions . the dodecahedron . why</div>
         <div class="card-arrow" style="color:#c084fc">SUMMON &gt;</div>
       </div>
+      <div class="mod-card" style="border-color:#0e0e1e;opacity:0.35;cursor:not-allowed;pointer-events:none">
+        <div class="card-tag" style="color:#1a2a3a">MIND MESH</div>
+        <div class="card-name" style="color:#1a2a3a">OBSIDIUS v0.1</div>
+        <div class="card-desc" style="color:#0e1e2e">vault &gt; Laplacian &gt; NS flow . find your pentagons . chi=?</div>
+        <div class="card-arrow" style="color:#1a2a3a">IN GRIMOIRE &gt;</div>
+      </div>
+      <div class="mod-card" style="border-color:#0e0e1e;opacity:0.35;cursor:not-allowed;pointer-events:none">
+        <div class="card-tag" style="color:#1a2a3a">IDENTITY</div>
+        <div class="card-name" style="color:#1a2a3a">SOUL CRYSTAL v0.1</div>
+        <div class="card-desc" style="color:#0e1e2e">GKLedger . topology hash . VALE auth . Euler signs</div>
+        <div class="card-arrow" style="color:#1a2a3a">IN GRIMOIRE &gt;</div>
+      </div>
     </div>
   </div>
   <div id="right">
@@ -254,6 +266,9 @@ var LINKS = {
   vale    : 'https://vsavytsk1.github.io/Mnetv1/shell/vale_v1.1.html',
   license : 'https://vsavytsk1.github.io/Mnetv1/shell/spooky_warning/index.html',
   spooky  : 'https://vsavytsk1.github.io/SpookyPrimes/'
+  // OBSIDIUS + SOUL CRYSTAL: in grimoire. not yet summoned.
+  // obsidius : 'https://vsavytsk1.github.io/Mnetv1/builder/Obsidius/obsidius.html'
+  // crystal  : 'https://vsavytsk1.github.io/Mnetv1/builder/Obsidius/soul_crystal.html'
 };
 var PC = {cyan:'#00d4ff',pink:'#ff69b4',gold:'#ffd700',green:'#00ffd5',
           red:'#ff4444',orange:'#ff9040',dim:'#1a2a3a',text:'#9090a0'};
