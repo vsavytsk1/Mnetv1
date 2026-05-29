@@ -84,8 +84,18 @@ body{background:#0a0a0f;color:#c8d0dc;font-family:ui-monospace,"SF Mono",Menlo,m
 // ============================================================
 var canvas = document.getElementById('canvas');
 var ctx    = canvas.getContext('2d');
-var W = canvas.width  = window.innerWidth;
-var H = canvas.height = window.innerHeight;
+var W = 0, H = 0;
+
+function initSize() {
+  W = canvas.width  = canvas.parentElement
+    ? canvas.parentElement.clientWidth  || window.innerWidth
+    : window.innerWidth;
+  H = canvas.height = canvas.parentElement
+    ? canvas.parentElement.clientHeight || window.innerHeight
+    : window.innerHeight;
+  if (W < 10) { W = window.innerWidth  || 800; }
+  if (H < 10) { H = window.innerHeight || 600; }
+}
 
 var nodes   = [];   // {id, label, x, y, vx, vy, deg, omega, psi}
 var edges   = [];   // {s, t}   (indices into nodes[])
@@ -493,8 +503,7 @@ function updateHUD(V, E, F, chi, P) {
 // PAN + ZOOM
 // ============================================================
 window.addEventListener('resize', function() {
-  W = canvas.width  = window.innerWidth;
-  H = canvas.height = window.innerHeight;
+  initSize();
 });
 
 canvas.addEventListener('wheel', function(e) {
@@ -535,10 +544,23 @@ canvas.addEventListener('mousemove', function(e) {
   canvas.title = hit ? hit.label + ' (deg:' + hit.deg + ')' : '';
 });
 
-log('OBSIDIUS v1.0 -- ready. select vault folder to begin.');
+// Curse 7 fix: init size on load (iframe has real dimensions by then)
+window.addEventListener('load', function() {
+  initSize();
+  // re-center drop screen if already rendered
+  log('OBSIDIUS v1.0 -- ready. select vault folder to begin.');
+});
+
+// Also init immediately in case we ARE in a full tab
+if (window.innerWidth > 10) { initSize(); }
+
+
+// postMessage from ENG dashboard (VALE_CENTER signal)
+window.addEventListener('message', function(e) {
+  if (e.data === 'VALE_CENTER') {
+    initSize();
+    log('OBSIDIUS -- resize from parent. W=' + W + ' H=' + H);
+  }
+});
 
 })();
-
-</script>
-</body>
-</html>

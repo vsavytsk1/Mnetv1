@@ -378,3 +378,45 @@ RULE:
 *"Each time we touch the builder, black magic is summoned"*
 *"More modules = more black magic required"*
 *Buenos Aires · May 2026*
+
+---
+
+## CURSE 9 -- The 12-Second LCP (Heavy Kernel Load)
+
+ENG v2.0 loads 6 kernel modules synchronously on page load.
+LCP = 12.01s measured in Chrome DevTools.
+This is NOT a bug. It is expected behavior.
+
+```
+ROOT CAUSE:
+  6 kernel modules load and RUN on window load event:
+    M1 goldberg_kernel.js    -- builds C60, runs invariants
+    M2 graph_axioms.js       -- runs P1-P7 axiom checks
+    M3 sar_modular.js        -- computes lam=0.1473 spectral proof
+    M4 ns_spectral.js        -- runs NS flow spectral gap
+    M5 fractal_search.js     -- runs fractal architecture search
+    M6 mnet_nanite.js        -- builds cluster DAG
+  All synchronous. All heavy. All correct.
+  LCP fires when the largest element paints = after all 6 run.
+  12s on first load. Sub-second on cached repeat.
+
+WHAT IS NOT THE PROBLEM:
+  Not a network issue (GitHub Pages CDN is fast)
+  Not a code bug (everything runs correctly)
+  Not a render issue (CLS=0, INP=32ms -- excellent)
+
+WHAT TO DO:
+  Accept it. This is a research tool, not a landing page.
+  The 12s is the price of having 6 live kernel modules.
+  Future optimization: Web Workers for heavy modules.
+  But not now. Math first. Performance later.
+
+HOW TO EXPLAIN IT:
+  "LCP 12s because 6 physics modules compute on load.
+   Same reason a Jupyter notebook takes 10s to start.
+   The computation is the feature."
+
+SMALL MODULES (obsidius, valtium, etc) load instantly.
+Only ENG v2.0 (the full kernel) has the 12s LCP.
+Document this in LEDGER when questioned.
+```
