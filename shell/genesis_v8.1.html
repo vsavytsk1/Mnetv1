@@ -3424,6 +3424,7 @@ function draw(){
   document.getElementById('h-mb').textContent = mbEst.toFixed(1);
   
   // Sort faces by depth (painter's algorithm) + sub-pixel cull
+  // In inside mode: reverse sort so far faces draw first (we see inside surface)
   var sorted=[];
   var culled=0;
   for(var i=0;i<gkState.faces.length;i++){
@@ -3450,7 +3451,7 @@ function draw(){
     
     sorted.push({face:f,depth:p.z,screenSize:screenSize});
   }
-  sorted.sort(function(a,b){return a.depth-b.depth});
+  sorted.sort(function(a,b){ return _insideMode ? b.depth-a.depth : a.depth-b.depth; });
   
   document.getElementById('h-drawn').textContent=sorted.length+'/'+totalF;
   
@@ -3877,15 +3878,15 @@ function toggleInsideView() {
     cam.spin = 0;
     var spinEl = document.getElementById('sl-spin');
     if (spinEl) { spinEl.value = 0; SV('sv-spin', '0.000'); }
-    // Set inside zoom
-    var targetZoom = +document.getElementById('sl-inside').value;
-    cam.zoom = targetZoom;
+    // Surface camera radius
+    _surfaceR = +document.getElementById('sl-inside').value;
+    // SCALE UP: multiply zoom x10 so sphere fills the view from inside
+    cam.zoom = _savedCam.zoom * 10;
     var zmEl = document.getElementById('sl-zm');
-    if (zmEl) { zmEl.value = Math.min(1500, targetZoom); SV('sv-zm', targetZoom); }
-    // Surface camera: place cam ON sphere, looking inward
-    _surfaceR = +document.getElementById('sl-inside').value;  // 0.1=center, 1.5=just inside surface
-    cam.rx = 0.3;   // slight tilt -- faces fill the view naturally
-    // Fracyclic: gentle auto-rotation along surface
+    if (zmEl) { zmEl.value = Math.min(1500, Math.round(cam.zoom)); SV('sv-zm', Math.round(cam.zoom)); }
+    // Slight downward tilt -- faces fill naturally
+    cam.rx = 0.3;
+    // Fracyclic: gentle auto-rotation
     cam.spin = 0.0008;
     // UI
     btn.textContent = 'EXIT';
@@ -3918,9 +3919,13 @@ function toggleInsideView() {
 
 function setInsideZoom(val) {
   SV('sv-inside', val);
-  if (_insideMode) {
-    _surfaceR = val;  // slider = distance from center = surface radius
-    // keep cam.zoom fixed for perspective scale
+  if (_insideMode && _savedCam) {
+    _surfaceR = val;
+    // Zoom scales with radius: closer to surface = more zoom
+    var zoomScale = 5 + (1.5 - val) * 8; // radius 1.5=5x, radius 0.1=16x
+    cam.zoom = _savedCam.zoom * Math.max(5, zoomScale);
+    var zmEl = document.getElementById('sl-zm');
+    if (zmEl) { zmEl.value = Math.min(1500, Math.round(cam.zoom)); SV('sv-zm', Math.round(cam.zoom)); }
   }
 }
 
