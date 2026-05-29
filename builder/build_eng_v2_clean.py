@@ -73,7 +73,7 @@ body{background:#030308;color:#9090a0;
 .mod-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
 .mod-card.new-module{animation:cardpulse 2s ease-in-out infinite}
 @keyframes cardpulse{0%,100%{box-shadow:0 0 0px transparent}50%{box-shadow:0 0 12px rgba(100,120,255,0.15)}}
-.mod-card{background:#07070f;border:1px solid #0e0e1e;border-radius:3px;
+.mod-card{position:relative;background:#07070f;border:1px solid #0e0e1e;border-radius:3px;
   padding:10px 12px;cursor:pointer;transition:all 0.2s}
 .mod-card:hover{transform:translateY(-1px)}
 .card-tag{font-size:8px;letter-spacing:0.15em;margin-bottom:3px;opacity:0.6}
@@ -81,6 +81,25 @@ body{background:#030308;color:#9090a0;
 .card-desc{color:#1a2a3a;font-size:9px;line-height:1.5;margin-bottom:6px}
 .card-arrow{font-size:9px;opacity:0;transition:opacity 0.15s}
 .mod-card:hover .card-arrow{opacity:1}
+.card-dot{position:absolute;top:6px;right:6px;width:5px;height:5px;border-radius:50%;
+  background:#00ffd5;opacity:0.5;cursor:pointer;transition:opacity 0.2s}
+.card-dot:hover{opacity:1}
+.mod-card.mod-off{opacity:0.25;pointer-events:none}
+.mod-card.mod-off .card-dot{pointer-events:auto;opacity:0.3}
+#mod-selector{position:fixed;bottom:44px;right:14px;z-index:50;
+  background:rgba(5,5,16,0.94);border:1px solid #0e1e2e;border-radius:4px;
+  padding:10px 14px;width:200px;display:none}
+#mod-selector.open{display:block}
+#mod-selector .ms-title{font-size:9px;letter-spacing:0.14em;color:#1a3a3a;
+  text-transform:uppercase;margin-bottom:8px}
+#mod-selector .ms-row{display:flex;align-items:center;justify-content:space-between;
+  padding:3px 0;border-bottom:1px solid #080818;cursor:pointer}
+#mod-selector .ms-row:hover{background:rgba(0,212,255,0.03)}
+#mod-selector .ms-name{font-size:10px;color:#9090a0}
+#mod-selector .ms-dot{width:6px;height:6px;border-radius:50%;background:#00ffd5;
+  opacity:0.15;transition:opacity 0.15s}
+#mod-selector .ms-dot.on{opacity:0.8;background:#00ffd5}
+#btn-modules{font-size:11px;padding:3px 9px;letter-spacing:0.06em}
 #bar{background:#07070f;border-top:1px solid #0e0e1e;
   padding:5px 12px;display:flex;align-items:center;gap:5px;flex-wrap:wrap;flex-shrink:0}
 .btn{background:#0a0a14;color:#2a3a4a;border:1px solid #0e0e1e;border-radius:3px;
@@ -145,71 +164,82 @@ HTML_SHELL = """
   <div id="center">
     <div id="center-hdr">MODULES -- CLICK TO SUMMON</div>
     <div class="mod-grid">
-      <div class="mod-card" onclick="summon('genesis')" style="border-color:#1a3a3a;--cc:#00ffd5">
+      <div class="mod-card" id="card-genesis" onclick="summon('genesis')" style="border-color:#1a3a3a;--cc:#00ffd5">
+        <div class="card-dot" id="dot-genesis" title="toggle module"></div>
         <div class="card-tag" style="color:#00ffd5">CANVAS</div>
         <div class="card-name" style="color:#00ffd5">GENESIS v8.1</div>
         <div class="card-desc">M1-M6 all modules . v7.5 format . full kernel build</div>
         <div class="card-arrow" style="color:#00ffd5">SUMMON &gt;</div>
       </div>
-      <div class="mod-card" onclick="summon('sandbox')" style="border-color:#1a2a3a;--cc:#80d0ff">
+      <div class="mod-card" id="card-sandbox" onclick="summon('sandbox')" style="border-color:#1a2a3a;--cc:#80d0ff">
+        <div class="card-dot" id="dot-sandbox" title="toggle module"></div>
         <div class="card-tag" style="color:#80d0ff">SANDBOX</div>
         <div class="card-name" style="color:#80d0ff">GRAPH SANDBOX v5.1</div>
         <div class="card-desc">Graph ops . NS flow . cage . autopilot . cmd . 3D</div>
         <div class="card-arrow" style="color:#80d0ff">SUMMON &gt;</div>
       </div>
-      <div class="mod-card" onclick="summon('tree')" style="border-color:#3a3a1a;--cc:#ffd700">
+      <div class="mod-card" id="card-tree" onclick="summon('tree')" style="border-color:#3a3a1a;--cc:#ffd700">
+        <div class="card-dot" id="dot-tree" title="toggle module"></div>
         <div class="card-tag" style="color:#ffd700">TREE</div>
         <div class="card-name" style="color:#ffd700">MATH TREE v5.0</div>
         <div class="card-desc">Sacred tree . gacha . forward-only . KaTeX</div>
         <div class="card-arrow" style="color:#ffd700">SUMMON &gt;</div>
       </div>
-      <div class="mod-card" onclick="summon('holly7')" style="border-color:#2a1a4a;--cc:#a78bfa">
+      <div class="mod-card" id="card-holly7" onclick="summon('holly7')" style="border-color:#2a1a4a;--cc:#a78bfa">
+        <div class="card-dot" id="dot-holly7" title="toggle module"></div>
         <div class="card-tag" style="color:#a78bfa">DASHBOARD</div>
         <div class="card-name" style="color:#a78bfa">HOLLY7</div>
         <div class="card-desc">7 modules . SAR-5 . NS flow . navierCrunch . tree</div>
         <div class="card-arrow" style="color:#a78bfa">SUMMON &gt;</div>
       </div>
-      <div class="mod-card" onclick="summon('navier')" style="border-color:#3a2a1a;--cc:#ff9040">
+      <div class="mod-card" id="card-navier" onclick="summon('navier')" style="border-color:#3a2a1a;--cc:#ff9040">
+        <div class="card-dot" id="dot-navier" title="toggle module"></div>
         <div class="card-tag" style="color:#ff9040">BENCHMARK</div>
         <div class="card-name" style="color:#ff9040">NAVIERCUNCH</div>
         <div class="card-desc">Turbulent Re&gt;10000 . RTX3060 . O(n) confirmed</div>
         <div class="card-arrow" style="color:#ff9040">SUMMON &gt;</div>
       </div>
-      <div class="mod-card" onclick="summon('warning')" style="border-color:#3a1a2a;--cc:#ff69b4">
+      <div class="mod-card" id="card-warning" onclick="summon('warning')" style="border-color:#3a1a2a;--cc:#ff69b4">
+        <div class="card-dot" id="dot-warning" title="toggle module"></div>
         <div class="card-tag" style="color:#ff69b4">FMA</div>
         <div class="card-name" style="color:#ff69b4">WARNING v2.0</div>
         <div class="card-desc">FMA intro . transmutation circle . v8 engine</div>
         <div class="card-arrow" style="color:#ff69b4">SUMMON &gt;</div>
       </div>
-      <div class="mod-card" onclick="summon('license')" style="border-color:#1a1a0a;--cc:#ffd700">
+      <div class="mod-card" id="card-license" onclick="summon('license')" style="border-color:#1a1a0a;--cc:#ffd700">
+        <div class="card-dot" id="dot-license" title="toggle module"></div>
         <div class="card-tag" style="color:#ffd700">GALACTIC LAW</div>
         <div class="card-name" style="color:#ffd700">LICENSE</div>
         <div class="card-desc">MIT . 7 axioms . 3 crystals . P=12 . V-E+F=2 . always</div>
         <div class="card-arrow" style="color:#ffd700">SUMMON &gt;</div>
       </div>
-      <div class="mod-card new-module" onclick="summon('gkern')" style="border-color:#1a1a3a;--cc:#6478ff">
+      <div class="mod-card new-module" id="card-gkern" onclick="summon('gkern')" style="border-color:#1a1a3a;--cc:#6478ff">
+        <div class="card-dot" id="dot-gkern" title="toggle module"></div>
         <div class="card-tag" style="color:#6478ff">GOLDBERG</div>
         <div class="card-name" style="color:#6478ff">GKERN v2.0</div>
         <div class="card-desc">L0-L4 . 4 regimes . wave path . 1M bench . 0 deps</div>
         <div class="card-arrow" style="color:#6478ff">SUMMON &gt;</div>
       </div>
-      <div class="mod-card new-module" onclick="summon('vale')" style="border-color:#003a3a;--cc:#00ffd5">
+      <div class="mod-card new-module" id="card-vale" onclick="summon('vale')" style="border-color:#003a3a;--cc:#00ffd5">
+        <div class="card-dot" id="dot-vale" title="toggle module"></div>
         <div class="card-tag" style="color:#00ffd5">POLAR OS</div>
         <div class="card-name" style="color:#00ffd5">VALE OS v1.1</div>
         <div class="card-desc">6 polar windows . C60 . breathe loop . Stark dark</div>
         <div class="card-arrow" style="color:#00ffd5">SUMMON &gt;</div>
       </div>
-      <div class="mod-card new-module" onclick="summon('spooky')" style="border-color:#2a1a3a;--cc:#c084fc">
+      <div class="mod-card new-module" id="card-spooky" onclick="summon('spooky')" style="border-color:#2a1a3a;--cc:#c084fc">
+        <div class="card-dot" id="dot-spooky" title="toggle module"></div>
         <div class="card-tag" style="color:#c084fc">THE ORIGIN</div>
         <div class="card-name" style="color:#c084fc">SPOOKY PRIMES</div>
         <div class="card-desc">12 pentagons . 12 open questions . the dodecahedron . why</div>
         <div class="card-arrow" style="color:#c084fc">SUMMON &gt;</div>
       </div>
-      <div class="mod-card" style="border-color:#0e0e1e;opacity:0.35;cursor:not-allowed;pointer-events:none">
-        <div class="card-tag" style="color:#1a2a3a">MIND MESH</div>
-        <div class="card-name" style="color:#1a2a3a">OBSIDIUS v0.1</div>
-        <div class="card-desc" style="color:#0e1e2e">vault &gt; Laplacian &gt; NS flow . find your pentagons . chi=?</div>
-        <div class="card-arrow" style="color:#1a2a3a">IN GRIMOIRE &gt;</div>
+      <div class="mod-card new-module" id="card-obsidius" onclick="summon('obsidius')" style="border-color:#1a3a2a;--cc:#39d98a">
+        <div class="card-dot" id="dot-obsidius" title="toggle module"></div>
+        <div class="card-tag" style="color:#39d98a">MIND MESH</div>
+        <div class="card-name" style="color:#39d98a">OBSIDIUS v1.0</div>
+        <div class="card-desc">vault . Laplacian . NS flow . find your pentagons . chi=?</div>
+        <div class="card-arrow" style="color:#39d98a">SUMMON &gt;</div>
       </div>
       <div class="mod-card" style="border-color:#0e0e1e;opacity:0.35;cursor:not-allowed;pointer-events:none">
         <div class="card-tag" style="color:#1a2a3a">IDENTITY</div>
@@ -240,6 +270,22 @@ HTML_SHELL = """
     <input id="cmd-input" type="text" placeholder="cmd + enter" spellcheck="false">
     <button id="cmd-go" onclick="cmdRun()">RUN</button>
   </div>
+  <div class="sep"></div>
+  <button class="btn" id="btn-modules" onclick="toggleModSelector()" title="select active modules">MODULES</button>
+</div>
+<div id="mod-selector">
+  <div class="ms-title">ACTIVE MODULES</div>
+  <div class="ms-row" onclick="toggleMod('genesis')"><span class="ms-name">GENESIS v8.1</span><span class="ms-dot on" id="ms-genesis"></span></div>
+  <div class="ms-row" onclick="toggleMod('sandbox')"><span class="ms-name">GRAPH SANDBOX</span><span class="ms-dot on" id="ms-sandbox"></span></div>
+  <div class="ms-row" onclick="toggleMod('tree')"><span class="ms-name">MATH TREE</span><span class="ms-dot on" id="ms-tree"></span></div>
+  <div class="ms-row" onclick="toggleMod('holly7')"><span class="ms-name">HOLLY7</span><span class="ms-dot on" id="ms-holly7"></span></div>
+  <div class="ms-row" onclick="toggleMod('navier')"><span class="ms-name">NAVIERCUNCH</span><span class="ms-dot on" id="ms-navier"></span></div>
+  <div class="ms-row" onclick="toggleMod('warning')"><span class="ms-name">WARNING v2.0</span><span class="ms-dot on" id="ms-warning"></span></div>
+  <div class="ms-row" onclick="toggleMod('license')"><span class="ms-name">LICENSE</span><span class="ms-dot on" id="ms-license"></span></div>
+  <div class="ms-row" onclick="toggleMod('gkern')"><span class="ms-name">GKERN v2.0</span><span class="ms-dot on" id="ms-gkern"></span></div>
+  <div class="ms-row" onclick="toggleMod('vale')"><span class="ms-name">VALE OS</span><span class="ms-dot on" id="ms-vale"></span></div>
+  <div class="ms-row" onclick="toggleMod('spooky')"><span class="ms-name">SPOOKY PRIMES</span><span class="ms-dot on" id="ms-spooky"></span></div>
+  <div class="ms-row" onclick="toggleMod('obsidius')"><span class="ms-name">OBSIDIUS v1.0</span><span class="ms-dot on" id="ms-obsidius"></span></div>
 </div>
 <div id="overlay">
   <div id="ov-bar">
@@ -265,10 +311,9 @@ var LINKS = {
   gkern   : 'https://vsavytsk1.github.io/Mnetv1/pack/GKernV2.0.html',
   vale    : 'https://vsavytsk1.github.io/Mnetv1/shell/vale_v1.1.html',
   license : 'https://vsavytsk1.github.io/Mnetv1/shell/spooky_warning/index.html',
-  spooky  : 'https://vsavytsk1.github.io/SpookyPrimes/'
-  // OBSIDIUS + SOUL CRYSTAL: in grimoire. not yet summoned.
-  // obsidius : 'https://vsavytsk1.github.io/Mnetv1/builder/Obsidius/obsidius.html'
-  // crystal  : 'https://vsavytsk1.github.io/Mnetv1/builder/Obsidius/soul_crystal.html'
+  spooky   : 'https://vsavytsk1.github.io/SpookyPrimes/',
+  obsidius  : 'https://vsavytsk1.github.io/Mnetv1/shell/obsidius_v1.html'
+  // crystal : 'https://vsavytsk1.github.io/Mnetv1/builder/Obsidius/soul_crystal.html'
 };
 var PC = {cyan:'#00d4ff',pink:'#ff69b4',gold:'#ffd700',green:'#00ffd5',
           red:'#ff4444',orange:'#ff9040',dim:'#1a2a3a',text:'#9090a0'};
@@ -297,6 +342,13 @@ function summon(key) {
       try { fr.contentWindow.postMessage('VALE_CENTER', '*'); } catch(e) {}
     }, 200);
   };
+  // Curse 7: canvas modules with inline center() MUST open new tab
+  var NEW_TAB_MODULES = {obsidius:1, sandbox:1, tree:1};
+  if (NEW_TAB_MODULES[key]) {
+    window.open(LINKS[key], '_blank');
+    logAdd('OPEN', key.toUpperCase() + ' (new tab)');
+    return;
+  }
   setTimeout(function() { fr.src = LINKS[key]; }, 60);
   logAdd('SUMMON', key.toUpperCase());
 }
@@ -374,6 +426,59 @@ setInterval(function() {
 })();
 
 // auto-run all modules on load
+
+// MODULE SELECTOR -- localStorage persists state
+var ALL_MODS = ['genesis','sandbox','tree','holly7','navier','warning',
+                'license','gkern','vale','spooky','obsidius'];
+var modState = {};
+
+function modLoad() {
+  var saved = localStorage.getItem('eng_mods');
+  if (saved) {
+    try { modState = JSON.parse(saved); } catch(e) { modState = {}; }
+  }
+  ALL_MODS.forEach(function(k) {
+    if (modState[k] === undefined) modState[k] = true;
+  });
+  modApply();
+}
+
+function modApply() {
+  ALL_MODS.forEach(function(k) {
+    var card = document.getElementById('card-' + k);
+    var dot  = document.getElementById('dot-' + k);
+    var msDot = document.getElementById('ms-' + k);
+    var on = modState[k] !== false;
+    if (card) {
+      if (on) { card.classList.remove('mod-off'); }
+      else    { card.classList.add('mod-off'); }
+    }
+    if (msDot) { msDot.className = 'ms-dot' + (on ? ' on' : ''); }
+  });
+}
+
+function toggleMod(key) {
+  modState[key] = modState[key] === false ? true : false;
+  localStorage.setItem('eng_mods', JSON.stringify(modState));
+  modApply();
+}
+
+function toggleModSelector() {
+  var el = document.getElementById('mod-selector');
+  el.classList.toggle('open');
+}
+
+// close selector if click outside
+document.addEventListener('click', function(e) {
+  var sel = document.getElementById('mod-selector');
+  var btn = document.getElementById('btn-modules');
+  if (sel && sel.classList.contains('open')) {
+    if (!sel.contains(e.target) && e.target !== btn) {
+      sel.classList.remove('open');
+    }
+  }
+});
+
 window.addEventListener('load', function() {
   logAdd('BOOT', 'ENG v2.0 . git:' + (typeof GIT !== 'undefined' ? GIT : 'live'));
   logAdd('KERNEL', (typeof GK!=='undefined'?'GK OK':'GK X') + ' . ' +
@@ -435,6 +540,7 @@ window.addEventListener('load', function() {
   ]);
   logAdd('FS', fr.locked ? 'LOCKED' : 'not locked');
   logAdd('ALL OK', '6/6 modules ran');
+  modLoad();
 });
 
 // kernel ops
