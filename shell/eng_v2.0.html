@@ -3511,7 +3511,6 @@ function summon(key) {
   // CURSE 10 FIX: full reset before every summon
   fr.onload = null;
   fr.src = '';
-  fr.srcdoc = '';
   _popupOpen = false;
 
   document.getElementById('ov-title').textContent = key.toUpperCase();
@@ -3524,16 +3523,9 @@ function summon(key) {
     _popupOpen = true;
     window.open(LINKS[key], '_blank');
     logAdd('OPEN', key.toUpperCase() + ' (new tab)');
+    // Curse 11 fix: use portal.html (same origin) NOT srcdoc (cross-origin freeze)
     var shortUrl = LINKS[key].replace('https://vsavytsk1.github.io/Mnetv1/','');
-    fr.srcdoc = '<html><body style="margin:0;background:#050510;display:flex;'
-      + 'align-items:center;justify-content:center;height:100vh;'
-      + 'font-family:ui-monospace,monospace;flex-direction:column;gap:16px">'
-      + '<div style="color:#00d4ff;font-size:11px;letter-spacing:0.18em;opacity:0.5">'
-      + 'LAUNCHED IN NEW TAB</div>'
-      + '<div style="color:#1a3a3a;font-size:9px;letter-spacing:0.1em">'
-      + shortUrl + '</div>'
-      + '<div style="color:#00d4ff;font-size:28px;opacity:0.2">&#8599;</div>'
-      + '</body></html>';
+    fr.src = 'https://vsavytsk1.github.io/Mnetv1/shell/portal.html?url=' + encodeURIComponent(shortUrl);
     return;
   }
 
@@ -3554,7 +3546,6 @@ function overlayClose() {
   setTimeout(function(){
     fr.onload = null;
     fr.src = '';
-    fr.srcdoc = '';
     _popupOpen = false;
   }, 200);
   logAdd('BACK', 'dashboard');
