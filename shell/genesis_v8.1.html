@@ -73,7 +73,7 @@ canvas{position:fixed;top:0;left:0;z-index:0}
 <button class="btn" onclick="doExportGraph()">GRAPH</button>
 <div class="sep"></div>
 <button class="btn gn" id="btn-enter" onclick="toggleInsideView()">ENTER</button>
-<div class="sl" id="sl-inside-wrap" style="display:none"><label>INSIDE</label><input type="range" min="50" max="2000" value="300" id="sl-inside" oninput="setInsideZoom(+this.value)"><span class="sv" id="sv-inside">300</span></div>
+<div class="sl" id="sl-inside-wrap" style="display:none"><label>INSIDE</label><input type="range" min="50" max="50000" value="800" id="sl-inside" oninput="setInsideZoom(+this.value)"><span class="sv" id="sv-inside">800</span></div>
 </div>
 
 <script>
@@ -3822,7 +3822,9 @@ function toggleInsideView() {
     cam.zoom = targetZoom;
     var zmEl = document.getElementById('sl-zm');
     if (zmEl) { zmEl.value = Math.min(1500, targetZoom); SV('sv-zm', targetZoom); }
-    // Locked gentle auto-rotation
+    // Tilt camera to look at surface from inside (not void)
+    cam.rx = 0.4;   // slight downward tilt -- faces fill the view
+    // Locked gentle auto-rotation (fracyclic feel)
     cam.spin = 0.0008;
     // UI
     btn.textContent = 'EXIT';
