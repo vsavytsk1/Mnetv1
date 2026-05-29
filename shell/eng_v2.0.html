@@ -3520,6 +3520,17 @@ function summon(key) {
   if (NEW_TAB_MODULES[key]) {
     window.open(LINKS[key], '_blank');
     logAdd('OPEN', key.toUpperCase() + ' (new tab)');
+    // Show portal placeholder in iframe instead of black void
+    var shortUrl = LINKS[key].replace('https://vsavytsk1.github.io/Mnetv1/','');
+    fr.srcdoc = '<html><body style="margin:0;background:#050510;display:flex;'
+      + 'align-items:center;justify-content:center;height:100vh;'
+      + 'font-family:ui-monospace,monospace;flex-direction:column;gap:16px">'
+      + '<div style="color:#00d4ff;font-size:11px;letter-spacing:0.18em;opacity:0.5">'
+      + 'LAUNCHED IN NEW TAB</div>'
+      + '<div style="color:#1a3a3a;font-size:9px;letter-spacing:0.1em">'
+      + shortUrl + '</div>'
+      + '<div style="color:#00d4ff;font-size:28px;opacity:0.2">&#8599;</div>'
+      + '</body></html>';
     return;
   }
   setTimeout(function() { fr.src = LINKS[key]; }, 60);
