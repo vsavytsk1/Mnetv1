@@ -73,7 +73,7 @@ canvas{position:fixed;top:0;left:0;z-index:0}
 <button class="btn" onclick="doExportGraph()">GRAPH</button>
 <div class="sep"></div>
 <button class="btn gn" id="btn-enter" onclick="toggleInsideView()">ENTER</button>
-<div class="sl" id="sl-inside-wrap" style="display:none"><label>INSIDE</label><input type="range" min="50" max="50000" value="800" id="sl-inside" oninput="setInsideZoom(+this.value)"><span class="sv" id="sv-inside">800</span></div>
+<div class="sl" id="sl-inside-wrap" style="display:none"><label>RADIUS</label><input type="range" min="0.5" max="5" step="0.1" value="1.8" id="sl-inside" oninput="setInsideZoom(+this.value)"><span class="sv" id="sv-inside">1.8</span></div>
 </div>
 
 <script>
@@ -3382,12 +3382,30 @@ function resize(){W=cv.width=innerWidth;H=cv.height=innerHeight}
 resize();addEventListener('resize',resize);
 
 function project(p){
-  // Rotate Y then X
   var x=p[0],y=p[1],z=p[2];
+  // Rotate Y then X (standard)
   var cy=Math.cos(cam.ry),sy=Math.sin(cam.ry);
   var x1=x*cy-z*sy, z1=x*sy+z*cy;
   var crx=Math.cos(cam.rx),srx=Math.sin(cam.rx);
   var y1=y*crx-z1*srx, z2=y*srx+z1*crx;
+
+  if(_insideMode && _surfaceR > 0) {
+    // SURFACE CAMERA MODE
+    // Camera sits ON sphere surface at distance _surfaceR
+    // looking toward center [0,0,0]
+    // Translate world: shift so camera is at origin
+    var camDist = _surfaceR;
+    // Camera is at (0, 0, -camDist) in rotated space
+    // Shift z so camera-relative
+    var z3 = z2 + camDist;
+    // Perspective divide: closer faces look bigger
+    var perspective = 300 / (z3 + 300);
+    return {
+      x: W/2 + x1 * perspective * cam.zoom * 0.08,
+      y: H/2 - y1 * perspective * cam.zoom * 0.08,
+      z: z3
+    };
+  }
   return {x:W/2+x1*cam.zoom, y:H/2-y1*cam.zoom, z:z2};
 }
 
@@ -3801,6 +3819,7 @@ animate();
 // ============================================================
 var _insideMode = false;
 var _savedCam = null;
+var _surfaceR = 0;  // sphere surface radius for inside-cam mode
 
 function toggleInsideView() {
   var btn = document.getElementById('btn-enter');
@@ -3822,9 +3841,10 @@ function toggleInsideView() {
     cam.zoom = targetZoom;
     var zmEl = document.getElementById('sl-zm');
     if (zmEl) { zmEl.value = Math.min(1500, targetZoom); SV('sv-zm', targetZoom); }
-    // Tilt camera to look at surface from inside (not void)
-    cam.rx = 0.4;   // slight downward tilt -- faces fill the view
-    // Locked gentle auto-rotation (fracyclic feel)
+    // Surface camera: place cam ON sphere, looking inward
+    _surfaceR = +document.getElementById('sl-inside').value;  // 0.5=deep inside, 1.6=surface, 5=just inside
+    cam.rx = 0.3;   // slight tilt -- faces fill the view naturally
+    // Fracyclic: gentle auto-rotation along surface
     cam.spin = 0.0008;
     // UI
     btn.textContent = 'EXIT';
@@ -3850,6 +3870,7 @@ function toggleInsideView() {
     btn.classList.add('gn');
     wrap.style.display = 'none';
     _insideMode = false;
+    _surfaceR = 0;
     console.log('[GF] EXIT -- cam restored');
   }
 }
@@ -3857,9 +3878,8 @@ function toggleInsideView() {
 function setInsideZoom(val) {
   SV('sv-inside', val);
   if (_insideMode) {
-    cam.zoom = val;
-    var zmEl = document.getElementById('sl-zm');
-    if (zmEl) { zmEl.value = Math.min(1500, val); SV('sv-zm', val); }
+    _surfaceR = val;  // slider = distance from center = surface radius
+    // keep cam.zoom fixed for perspective scale
   }
 }
 
