@@ -337,26 +337,29 @@ function setPanel(id, rows) {
   }).join('');
 }
 
+// Curse 10 fix: track popup state, reset ALL iframe state on each summon
+var _popupOpen = false;
+
 function summon(key) {
   var fr = document.getElementById('ov-frame');
   var ov = document.getElementById('overlay');
-  // clear src first so onload always fires
+
+  // CURSE 10 FIX: full reset before every summon
+  fr.onload = null;
   fr.src = '';
+  fr.srcdoc = '';
+  _popupOpen = false;
+
   document.getElementById('ov-title').textContent = key.toUpperCase();
   document.getElementById('ov-url').textContent = LINKS[key].replace('https://vsavytsk1.github.io/Mnetv1/','');
   ov.classList.add('open');
-  // postMessage after iframe loads -- fixes CURSE 7 (center() needs real width)
-  fr.onload = function() {
-    setTimeout(function() {
-      try { fr.contentWindow.postMessage('VALE_CENTER', '*'); } catch(e) {}
-    }, 200);
-  };
-  // Curse 7: canvas modules with inline center() MUST open new tab
+
+  // Curse 7: canvas modules MUST open new tab
   var NEW_TAB_MODULES = {obsidius:1, sandbox:1, tree:1, valtium:1};
   if (NEW_TAB_MODULES[key]) {
+    _popupOpen = true;
     window.open(LINKS[key], '_blank');
     logAdd('OPEN', key.toUpperCase() + ' (new tab)');
-    // Show portal placeholder in iframe instead of black void
     var shortUrl = LINKS[key].replace('https://vsavytsk1.github.io/Mnetv1/','');
     fr.srcdoc = '<html><body style="margin:0;background:#050510;display:flex;'
       + 'align-items:center;justify-content:center;height:100vh;'
@@ -369,12 +372,27 @@ function summon(key) {
       + '</body></html>';
     return;
   }
+
+  // Normal iframe summon
+  fr.onload = function() {
+    setTimeout(function() {
+      try { fr.contentWindow.postMessage('VALE_CENTER', '*'); } catch(e) {}
+    }, 200);
+  };
   setTimeout(function() { fr.src = LINKS[key]; }, 60);
   logAdd('SUMMON', key.toUpperCase());
 }
 function overlayClose() {
-  document.getElementById('overlay').classList.remove('open');
-  setTimeout(function(){ document.getElementById('ov-frame').src=''; }, 200);
+  var fr = document.getElementById('ov-frame');
+  var ov = document.getElementById('overlay');
+  ov.classList.remove('open');
+  // CURSE 10 FIX: reset ALL state on close
+  setTimeout(function(){
+    fr.onload = null;
+    fr.src = '';
+    fr.srcdoc = '';
+    _popupOpen = false;
+  }, 200);
   logAdd('BACK', 'dashboard');
 }
 
