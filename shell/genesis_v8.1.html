@@ -3883,21 +3883,20 @@ function toggleInsideView() {
     if (spinEl) { spinEl.value = 0; SV('sv-spin', '0.000'); }
     // Surface camera radius
     _surfaceR = +document.getElementById('sl-inside').value;
-    // SCALE UP: multiply zoom x10 so sphere fills the view from inside
-    cam.zoom = _savedCam.zoom * 10;
+    // zoom stays the same -- router matrix (z+_surfaceR) handles scale
+    // sphere appears at distance _surfaceR from camera
     var zmEl = document.getElementById('sl-zm');
     if (zmEl) { zmEl.value = Math.min(1500, Math.round(cam.zoom)); SV('sv-zm', Math.round(cam.zoom)); }
     // Slight downward tilt -- faces fill naturally
     cam.rx = 0;     // look straight at equator -- only ry spins
-    // Fracyclic: gentle auto-rotation
-    cam.spin = 0.0008;
+    // Still on enter -- user opts into spin (Curse 13: motion is opt-in)
     // UI
     btn.textContent = 'EXIT';
     btn.classList.add('inside');
     btn.classList.remove('gn');
     wrap.style.display = 'flex';
     _insideMode = true;
-    console.log('[GF] INSIDE VIEW -- zoom=' + targetZoom);
+    console.log('[GF] INSIDE VIEW radius=' + _surfaceR + ' zoom=' + cam.zoom);
   } else {
     // EXIT -- restore
     if (_savedCam) {
