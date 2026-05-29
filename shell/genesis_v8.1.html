@@ -73,7 +73,7 @@ canvas{position:fixed;top:0;left:0;z-index:0}
 <button class="btn" onclick="doExportGraph()">GRAPH</button>
 <div class="sep"></div>
 <button class="btn gn" id="btn-enter" onclick="toggleInsideView()">ENTER</button>
-<div class="sl" id="sl-inside-wrap" style="display:none"><label>RADIUS</label><input type="range" min="0.1" max="1.5" step="0.05" value="1.2" id="sl-inside" oninput="setInsideZoom(+this.value)"><span class="sv" id="sv-inside">1.2</span></div>
+<div class="sl" id="sl-inside-wrap" style="display:none"><label>RADIUS</label><input type="range" min="0.1" max="3.0" step="0.05" value="1.2" id="sl-inside" oninput="setInsideZoom(+this.value)"><span class="sv" id="sv-inside">1.2</span></div>
 </div>
 
 <script>
@@ -3395,11 +3395,16 @@ function project(p){
     var camZ = _surfaceR;
     var z3 = z2 + camZ;  // shift world so camera is at origin
     if(z3 < 0.01) z3 = 0.01;
-    var fov = 600;
-    var perspective = fov / (fov + z3 * 80);
+    // Camera transformer: map sphere coords to screen
+    // fov controls field of view, scale controls face size
+    var SPHERE_R = 1.6;  // kernel sphere radius
+    var depth = SPHERE_R - _surfaceR;  // 0=at surface, 1.6=at center
+    var fov = 400 + depth * 200;  // wider fov deeper inside
+    var perspective = fov / (fov + Math.max(0.01, z3) * 60);
+    var scale = 350 + depth * 100;  // bigger faces deeper inside
     return {
-      x: W/2 + x1 * perspective * 400,
-      y: H/2 - y1 * perspective * 400,
+      x: W/2 + x1 * perspective * scale,
+      y: H/2 - y1 * perspective * scale,
       z: z3
     };
   }
@@ -3644,17 +3649,24 @@ cv.addEventListener('pointerdown',function(e){dragging=true;lastMouse={x:e.clien
 cv.addEventListener('pointermove',function(e){
   if(!dragging)return;
   cam.ry+=(e.clientX-lastMouse.x)*0.005;
-  cam.rx+=(e.clientY-lastMouse.y)*0.005;
-  cam.rx=Math.max(-Math.PI/2,Math.min(Math.PI/2,cam.rx));
+  if(!_insideMode){cam.rx+=(e.clientY-lastMouse.y)*0.005;cam.rx=Math.max(-Math.PI/2,Math.min(Math.PI/2,cam.rx));}
   lastMouse={x:e.clientX,y:e.clientY};
 });
 cv.addEventListener('pointerup',function(){dragging=false});
 cv.addEventListener('wheel',function(e){
   e.preventDefault();
-  cam.zoom*=e.deltaY>0?0.92:1.08;
-  cam.zoom=Math.max(0.5,Math.min(50000,cam.zoom));
-  document.getElementById('sl-zm').value=Math.round(cam.zoom);
-  SV('sv-zm',Math.round(cam.zoom));
+  if(_insideMode){
+    var newR=_surfaceR*(e.deltaY>0?0.92:1.08);
+    _surfaceR=Math.max(0.1,Math.min(3.0,newR));
+    document.getElementById('sl-inside').value=_surfaceR.toFixed(2);
+    SV('sv-inside',_surfaceR.toFixed(2));
+    setInsideZoom(_surfaceR);
+  }else{
+    cam.zoom*=e.deltaY>0?0.92:1.08;
+    cam.zoom=Math.max(0.5,Math.min(50000,cam.zoom));
+    document.getElementById('sl-zm').value=Math.round(cam.zoom);
+    SV('sv-zm',Math.round(cam.zoom));
+  }
 },{passive:false});
 
 
@@ -3925,10 +3937,11 @@ function toggleInsideView() {
 function setInsideZoom(val) {
   SV('sv-inside', val);
   if (_insideMode && _savedCam) {
-    _surfaceR = val;
-    // Zoom scales with radius: closer to surface = more zoom
-    var zoomScale = 5 + (1.5 - val) * 8; // radius 1.5=5x, radius 0.1=16x
-    cam.zoom = _savedCam.zoom * Math.max(5, zoomScale);
+    // CAMERA TRANSFORMER: clamp to sphere interior -- cannot exit
+    _surfaceR = Math.max(0.1, Math.min(3.0, val));
+    // Zoom: scales with how deep we are
+    var zoomScale = Math.max(3, 8 - _surfaceR * 2);
+    cam.zoom = _savedCam.zoom * zoomScale;
     var zmEl = document.getElementById('sl-zm');
     if (zmEl) { zmEl.value = Math.min(1500, Math.round(cam.zoom)); SV('sv-zm', Math.round(cam.zoom)); }
   }
