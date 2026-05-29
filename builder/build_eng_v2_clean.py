@@ -460,7 +460,7 @@ function modLoad() {
   // Default: only valtium + obsidius active (focused build mode)
   ALL_MODS.forEach(function(k) {
     if (modState[k] === undefined) {
-      modState[k] = (k === 'valtium' || k === 'obsidius');
+      modState[k] = !(k === 'valtium' || k === 'obsidius');
     }
   });
   modApply();
