@@ -73,7 +73,7 @@ canvas{position:fixed;top:0;left:0;z-index:0}
 <button class="btn" onclick="doExportGraph()">GRAPH</button>
 <div class="sep"></div>
 <button class="btn gn" id="btn-enter" onclick="toggleInsideView()">ENTER</button>
-<div class="sl" id="sl-inside-wrap" style="display:none"><label>RADIUS</label><input type="range" min="0.5" max="5" step="0.1" value="1.8" id="sl-inside" oninput="setInsideZoom(+this.value)"><span class="sv" id="sv-inside">1.8</span></div>
+<div class="sl" id="sl-inside-wrap" style="display:none"><label>RADIUS</label><input type="range" min="0.1" max="1.5" step="0.05" value="1.2" id="sl-inside" oninput="setInsideZoom(+this.value)"><span class="sv" id="sv-inside">1.2</span></div>
 </div>
 
 <script>
@@ -3390,19 +3390,16 @@ function project(p){
   var y1=y*crx-z1*srx, z2=y*srx+z1*crx;
 
   if(_insideMode && _surfaceR > 0) {
-    // SURFACE CAMERA MODE
-    // Camera sits ON sphere surface at distance _surfaceR
-    // looking toward center [0,0,0]
-    // Translate world: shift so camera is at origin
-    var camDist = _surfaceR;
-    // Camera is at (0, 0, -camDist) in rotated space
-    // Shift z so camera-relative
-    var z3 = z2 + camDist;
-    // Perspective divide: closer faces look bigger
-    var perspective = 300 / (z3 + 300);
+    // INSIDE MODE: perspective from inside the sphere
+    // Camera at distance _surfaceR from center looking inward
+    var camZ = _surfaceR;
+    var z3 = z2 + camZ;  // shift world so camera is at origin
+    if(z3 < 0.01) z3 = 0.01;
+    var fov = 600;
+    var perspective = fov / (fov + z3 * 80);
     return {
-      x: W/2 + x1 * perspective * cam.zoom * 0.08,
-      y: H/2 - y1 * perspective * cam.zoom * 0.08,
+      x: W/2 + x1 * perspective * 400,
+      y: H/2 - y1 * perspective * 400,
       z: z3
     };
   }
@@ -3418,6 +3415,8 @@ function centroid3(pts){
 // ═══ DRAW ═══
 function draw(){
   cx.fillStyle='#050508';cx.fillRect(0,0,W,H);
+  // Draw reference grid when in inside mode
+  if(_insideMode) { drawInsideGrid(); }
   if(!gkState)return;
   
   var totalF = gkState.faces.length;
@@ -3817,6 +3816,48 @@ animate();
 // Stop time. Transport to center. Locked slow rotation.
 // Slider controls zoom depth (50-2000).
 // ============================================================
+
+// ============================================================
+// INSIDE GRID -- reference plane for inside-sphere view
+// Gives the brain a stable floor. Like a dome floor.
+// ============================================================
+function drawInsideGrid() {
+  if(!gkState) return;
+  var gridSize = 3;       // extends 3 units each side
+  var gridStep = 0.3;     // grid spacing
+  var alpha = 0.18;
+
+  cx.save();
+  cx.strokeStyle = 'rgba(0,212,255,' + alpha + ')';
+  cx.lineWidth = 0.5;
+
+  // Draw horizontal grid lines (varying z, fixed y=-1.2)
+  for(var gz = -gridSize; gz <= gridSize; gz += gridStep) {
+    var pts = [];
+    for(var gx = -gridSize; gx <= gridSize; gx += gridStep * 2) {
+      pts.push(project([gx, -1.4, gz]));
+    }
+    if(pts.length < 2) continue;
+    cx.beginPath();
+    cx.moveTo(pts[0].x, pts[0].y);
+    for(var k = 1; k < pts.length; k++) cx.lineTo(pts[k].x, pts[k].y);
+    cx.stroke();
+  }
+  // Draw vertical grid lines
+  for(var gx2 = -gridSize; gx2 <= gridSize; gx2 += gridStep) {
+    var pts2 = [];
+    for(var gz2 = -gridSize; gz2 <= gridSize; gz2 += gridStep * 2) {
+      pts2.push(project([gx2, -1.4, gz2]));
+    }
+    if(pts2.length < 2) continue;
+    cx.beginPath();
+    cx.moveTo(pts2[0].x, pts2[0].y);
+    for(var k2 = 1; k2 < pts2.length; k2++) cx.lineTo(pts2[k2].x, pts2[k2].y);
+    cx.stroke();
+  }
+  cx.restore();
+}
+
 var _insideMode = false;
 var _savedCam = null;
 var _surfaceR = 0;  // sphere surface radius for inside-cam mode
@@ -3842,7 +3883,7 @@ function toggleInsideView() {
     var zmEl = document.getElementById('sl-zm');
     if (zmEl) { zmEl.value = Math.min(1500, targetZoom); SV('sv-zm', targetZoom); }
     // Surface camera: place cam ON sphere, looking inward
-    _surfaceR = +document.getElementById('sl-inside').value;  // 0.5=deep inside, 1.6=surface, 5=just inside
+    _surfaceR = +document.getElementById('sl-inside').value;  // 0.1=center, 1.5=just inside surface
     cam.rx = 0.3;   // slight tilt -- faces fill the view naturally
     // Fracyclic: gentle auto-rotation along surface
     cam.spin = 0.0008;
