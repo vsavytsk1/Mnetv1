@@ -201,6 +201,13 @@ body{background:#030308;color:#9090a0;
         <div class="card-desc">vault . Laplacian . NS flow . find your pentagons . chi=?</div>
         <div class="card-arrow" style="color:#39d98a">SUMMON &gt;</div>
       </div>
+      <div class="mod-card new-module" id="card-valtium" onclick="summon('valtium')" style="border-color:#2a1a3a;--cc:#c084fc">
+        <div class="card-dot" id="dot-valtium" title="toggle module"></div>
+        <div class="card-tag" style="color:#c084fc">THE VAULT</div>
+        <div class="card-name" style="color:#c084fc">VALTIUM v1.0</div>
+        <div class="card-desc">THE MACHINE . P1-P12 . chi=2 . find the pentagons in the research</div>
+        <div class="card-arrow" style="color:#c084fc">SUMMON &gt;</div>
+      </div>
       <div class="mod-card" style="border-color:#0e0e1e;opacity:0.35;cursor:not-allowed;pointer-events:none">
         <div class="card-tag" style="color:#1a2a3a">IDENTITY</div>
         <div class="card-name" style="color:#1a2a3a">SOUL CRYSTAL v0.1</div>
@@ -246,6 +253,7 @@ body{background:#030308;color:#9090a0;
   <div class="ms-row" onclick="toggleMod('vale')"><span class="ms-name">VALE OS</span><span class="ms-dot on" id="ms-vale"></span></div>
   <div class="ms-row" onclick="toggleMod('spooky')"><span class="ms-name">SPOOKY PRIMES</span><span class="ms-dot on" id="ms-spooky"></span></div>
   <div class="ms-row" onclick="toggleMod('obsidius')"><span class="ms-name">OBSIDIUS v1.0</span><span class="ms-dot on" id="ms-obsidius"></span></div>
+  <div class="ms-row" onclick="toggleMod('valtium')"><span class="ms-name">VALTIUM v1.0</span><span class="ms-dot on" id="ms-valtium"></span></div>
 </div>
 <div id="overlay">
   <div id="ov-bar">
@@ -3476,7 +3484,8 @@ var LINKS = {
   vale    : 'https://vsavytsk1.github.io/Mnetv1/shell/vale_v1.1.html',
   license : 'https://vsavytsk1.github.io/Mnetv1/shell/spooky_warning/index.html',
   spooky   : 'https://vsavytsk1.github.io/SpookyPrimes/',
-  obsidius  : 'https://vsavytsk1.github.io/Mnetv1/shell/obsidius_v1.html'
+  obsidius  : 'https://vsavytsk1.github.io/Mnetv1/shell/obsidius_v1.html',
+  valtium   : 'https://vsavytsk1.github.io/Mnetv1/shell/valtium_v1.html'
   // crystal : 'https://vsavytsk1.github.io/Mnetv1/builder/Obsidius/soul_crystal.html'
 };
 var PC = {cyan:'#00d4ff',pink:'#ff69b4',gold:'#ffd700',green:'#00ffd5',
@@ -3507,7 +3516,7 @@ function summon(key) {
     }, 200);
   };
   // Curse 7: canvas modules with inline center() MUST open new tab
-  var NEW_TAB_MODULES = {obsidius:1, sandbox:1, tree:1};
+  var NEW_TAB_MODULES = {obsidius:1, sandbox:1, tree:1, valtium:1};
   if (NEW_TAB_MODULES[key]) {
     window.open(LINKS[key], '_blank');
     logAdd('OPEN', key.toUpperCase() + ' (new tab)');
@@ -3593,7 +3602,7 @@ setInterval(function() {
 
 // MODULE SELECTOR -- localStorage persists state
 var ALL_MODS = ['genesis','sandbox','tree','holly7','navier','warning',
-                'license','gkern','vale','spooky','obsidius'];
+                'license','gkern','vale','spooky','obsidius','valtium'];
 var modState = {};
 
 function modLoad() {
@@ -3601,8 +3610,11 @@ function modLoad() {
   if (saved) {
     try { modState = JSON.parse(saved); } catch(e) { modState = {}; }
   }
+  // Default: only valtium + obsidius active (focused build mode)
   ALL_MODS.forEach(function(k) {
-    if (modState[k] === undefined) modState[k] = true;
+    if (modState[k] === undefined) {
+      modState[k] = (k === 'valtium' || k === 'obsidius');
+    }
   });
   modApply();
 }
