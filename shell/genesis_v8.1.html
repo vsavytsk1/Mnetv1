@@ -62,7 +62,7 @@ canvas{position:fixed;top:0;left:0;z-index:0}
 <div class="sep"></div>
 <div class="sl"><label>ZOOM</label><input type="range" min="1" max="1500" value="200" id="sl-zm" oninput="cam.zoom=+this.value;SV('sv-zm',this.value)"><span class="sv" id="sv-zm">200</span></div>
 <div class="sl"><label>ATOM</label><input type="range" min="1" max="30" value="10" id="sl-atom" oninput="cam.atom=+this.value/10;SV('sv-atom',(this.value/10).toFixed(1))"><span class="sv" id="sv-atom">1.0</span></div>
-<div class="sl"><label>MAX-F</label><input type="range" min="0" max="100" value="50" id="sl-maxf" oninput="cam.maxFaces=Math.pow(10,1+this.value/20);SV('sv-maxf',Math.round(cam.maxFaces))"><span class="sv" id="sv-maxf">50000</span></div><div class="sep"></div><div class="sl"><label>SPIN</label><input type="range" min="0" max="50" value="5" id="sl-spin" oninput="cam.spin=+this.value/1000;SV('sv-spin',this.value/1000)"><span class="sv" id="sv-spin">0.005</span></div>
+<div class="sl"><label>MAX-F</label><input type="range" min="0" max="100" value="50" id="sl-maxf" oninput="cam.maxFaces=Math.pow(10,1+this.value/20);SV('sv-maxf',Math.round(cam.maxFaces))"><span class="sv" id="sv-maxf">50000</span></div><div class="sep"></div><div class="sl"><label>SPIN</label><input type="range" min="0" max="50" value="0" id="sl-spin" oninput="var sv=+this.value; cam.spin=sv<1?0:sv/1000; SV('sv-spin',(sv<1?'0.000':(sv/1000).toFixed(3)))"><span class="sv" id="sv-spin">0.000</span></div>
 <div class="sep"></div>
 <div class="sep"></div>
 <button class="btn pk" id="bMob" onclick="toggleMobius()">MOBIUS <b id="mobState">off</b></button>
@@ -3371,7 +3371,7 @@ function flExport(){
 // ═══ STATE ═══
 var gkState = null;
 var params = { innerScale: 0.45, midScale: 0.70, jitter: 0, surfaceMode: 'spherical', sphereR: 1.6 };
-var cam = { rx: 0.3, ry: 0, zoom: 50, atom: 0.1, spin: 0.002, maxFaces: 1000 }; // minimal compute — zoom in to unlock
+var cam = { rx: 0.3, ry: 0, zoom: 50, atom: 0.1, spin: 0, maxFaces: 1000 }; // minimal compute — zoom in to unlock
 var dragging = false, lastMouse = {x:0,y:0};
 
 function SV(id,v){document.getElementById(id).textContent=typeof v==='number'?v.toFixed(2):v}
@@ -3794,8 +3794,8 @@ function setMobiusTwist(v){
 // ═══ ANIMATE ═══
 function animate(){
   if(!dragging) {
-    cam.ry += cam.spin;
-    if(_insideMode) cam.rx = 0;  // lock pitch in inside mode -- no corkscrew
+    if(Math.abs(cam.spin) > 0.00001) cam.ry += cam.spin;  // true zero snap
+    if(_insideMode) cam.rx = 0;  // lock pitch -- no corkscrew (Curse 12)
   }
   draw();
   requestAnimationFrame(animate);
@@ -3890,7 +3890,9 @@ function toggleInsideView() {
     // Slight downward tilt -- faces fill naturally
     cam.rx = 0;     // look straight at equator -- only ry spins
     // Fracyclic: gentle auto-rotation
-    cam.spin = 0.0008;
+    cam.spin = 0.001;   // fracyclic -- slow, visible on slider
+    var spinEl = document.getElementById('sl-spin');
+    if(spinEl) { spinEl.value = 1; SV('sv-spin','0.001'); }
     // UI
     btn.textContent = 'EXIT';
     btn.classList.add('inside');
