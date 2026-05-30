@@ -55,6 +55,8 @@ canvas{position:fixed;top:0;left:0;z-index:0}
 <button class="btn" onclick="doSeedPlatonic('octa')">P3</button>
 <button class="btn" onclick="doSeedPlatonic('dodec')">P4</button>
 <button class="btn" onclick="doSeedPlatonic('icosa')">P5</button>
+<button class="btn" onclick="doSeedPlatonic('prism')">P6</button>
+<button class="btn" onclick="doSeedPlatonic('antiprism')">P7</button>
 <button class="btn pk" onclick="doRefineAll()">REFINE ALL</button>
 <button class="btn" onclick="doRefinePents()">REFINE 5s</button>
 <button class="btn" onclick="doRefineHexes()">REFINE 6s</button>
@@ -4041,6 +4043,19 @@ var PLATONIC_VERTS = {
       [ p, 0, ip],[ p, 0,-ip],[-p, 0, ip],[-p, 0,-ip]
     ];
   })(),
+  prism: [
+    [ 0, 1, 1],[ 0.866, 1,-0.5],[-0.866, 1,-0.5],
+    [ 0,-1, 1],[ 0.866,-1,-0.5],[-0.866,-1,-0.5]
+  ],
+  antiprism: (function(){
+    var a=Math.PI/4, b=Math.PI/8;
+    var r0=[],r1=[];
+    for(var i=0;i<4;i++){
+      r0.push([Math.cos(i*a),  0.5, Math.sin(i*a)]);
+      r1.push([Math.cos(i*a+b),-0.5,Math.sin(i*a+b)]);
+    }
+    return r0.concat(r1);
+  })(),
   icosa: (function(){
     var p=(1+Math.sqrt(5))/2;
     return [
@@ -4060,6 +4075,16 @@ var PLATONIC_FACES = {
     [0,12,4,8,10],[2,16,3,11,10],[1,12,0,10,9],[1,17,3,11,9],  // TODO: simplified
     [2,13,7,18,6],[5,15,6,18,7],[4,14,5,9,12],[0,12,1,17,16]
   ],
+  prism: [
+    [0,1,2],[3,4,5],
+    [0,3,4,1],[1,4,5,2],[2,5,3,0]
+  ],
+  antiprism: [
+    [0,1,2,3],
+    [4,5,6,7],
+    [0,4,5,1],[1,5,6,2],[2,6,7,3],[3,7,4,0],
+    [0,3,7,4],[1,0,4,5],[2,1,5,6],[3,2,6,7]
+  ],
   icosa: [
     [0,4,6],[0,6,10],[0,10,2],[0,2,8],[0,8,4],
     [1,6,4],[1,4,9],[1,9,3],[1,3,7],[1,7,6],
@@ -4073,6 +4098,8 @@ var PLATONIC_INFO = {
   cube:  {name:'Cube',        V:8,  E:12, F:6,  P:6,  chi:2, color:'#4ecdc4'},
   octa:  {name:'Octahedron',  V:6,  E:12, F:8,  P:8,  chi:2, color:'#45b7d1'},
   dodec: {name:'Dodecahedron',V:20, E:30, F:12, P:12, chi:2, color:'#ff69b4'},
+  prism:     {name:'Triangular Prism',  V:6,  E:9,  F:5,  P:5,  chi:2, color:'#a78bfa'},
+  antiprism: {name:'Square Antiprism',   V:8,  E:16, F:10, P:10, chi:2, color:'#00ffd5'},
   icosa: {name:'Icosahedron', V:12, E:30, F:20, P:20, chi:2, color:'#ffd700'}
 };
 
