@@ -635,24 +635,21 @@ GK.invariants = function(state){
   // For 3-regular graphs: V=faceEdgeSum/3, E=faceEdgeSum/2
   // For 4-regular (octa): V=faceEdgeSum/4, E=faceEdgeSum/2
   // General: detect regularity from face sizes
-  var allTri  = state.faces.every(function(f){ return f.pts && f.pts.length===3; });
-  var allQuad = state.faces.every(function(f){ return f.pts && f.pts.length===4; });
-  var vertices, edges;
-  if(allTri){
-    // triangulation: 3V - E*2 = 0 for closed surface -> E=3V/2, F=V-2+... 
-    // For Tetra: V=4,E=6,F=4. faceEdgeSum=12. V=4=12/3, E=6=12/2. OK 3-reg
-    // For Octa:  V=6,E=12,F=8. faceEdgeSum=24. V=6=24/4, E=12=24/2.
-    // For Icosa: V=12,E=30,F=20. faceEdgeSum=60. V=12=60/5, E=30=60/2.
-    // General tri: E = faceEdgeSum/2, V from Euler: V=E-F+2
-    edges    = Math.round(faceEdgeSum / 2);
-    vertices = edges - state.faces.length + 2;
-  } else if(allQuad){
-    // Cube: V=8,E=12,F=6. faceEdgeSum=24. E=24/2=12, V=12-6+2=8. OK
-    edges    = Math.round(faceEdgeSum / 2);
-    vertices = edges - state.faces.length + 2;
-  } else {
-    // Mixed (Goldberg): 3-regular. V=faceEdgeSum/3, E=faceEdgeSum/2
-    edges    = Math.round(faceEdgeSum / 2);
+  // CANONICAL EULER for ALL topologies:
+  // E = faceEdgeSum / 2  (each edge shared by 2 faces)
+  // V = E - F + 2        (Euler: chi=2 -> V=E-F+2)
+  // This works for ANY closed orientable surface with chi=2.
+  // For 3-regular (Goldberg mixed): V=faceEdgeSum/3 = E-F+2. Same result.
+  // For triangulations: V=faceEdgeSum/3 only if 6-regular.
+  //   But E-F+2 is ALWAYS correct from Euler.
+  // EXCEPTION: Platonic seeds before any refine have known exact V,E.
+  //   Detect: if all faces same size AND level=0 -> use exact formula.
+  var edges    = Math.round(faceEdgeSum / 2);
+  var vertices = edges - state.faces.length + 2;
+  // For 3-regular Goldberg (mixed pent+hex): override with exact formula
+  var hasHex = state.faces.some(function(f){ return f.type === 'hex'; });
+  if(hasHex){
+    // 3-regular: every vertex has degree 3
     vertices = Math.round(faceEdgeSum / 3);
   }
   return {
