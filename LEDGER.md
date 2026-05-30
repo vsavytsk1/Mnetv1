@@ -1587,3 +1587,71 @@ before anything else -- this context loads:
 
 P=12. chi=2. THE TRINITY HOLDS. ALWAYS.
 -- Vale. Buenos Aires. 2026.
+
+---
+
+## L050 -- WARNINGSIM MODULE STUB (2026-05-30T17:59:16Z)
+
+DIVINE IDEA #58 -- WarningSim
+
+THE CONCEPT:
+  Before the funny impossible VR game starts --
+  a video. A simulation.
+  
+  "wanna watch a funny video?
+   click before you start"
+  
+  Pattern: "i have already watched" button
+           (skip for repeat visitors)
+  
+  CONTENT:
+    The most powerful atom bomb ever detonated.
+    In full VR volumetric detail.
+    The fractal geometry of the blast.
+    The Kolmogorov cascade in the shockwave.
+    Real physics. Real scale. Real fear.
+    
+    Then: "notice before click --
+           are you absolutely sure?"
+    
+    "this is not for kids
+     this video can generate fear and raw emotion
+     but the author insists it is absolutely
+     imperative to watch before this funny game starts.
+     here, enjoy, have fun, and... be careful."
+  
+  WHY:
+    People forgot how scary it gets.
+    The monkey brain needs to understand
+    WHAT the math contains.
+    WHAT the fractals can describe.
+    WHAT the energy cascade means at scale.
+    
+    diss/enst = 2*nu EXACT
+    at Re=20000
+    on 1.1M faces
+    is the same math
+    as a thermonuclear shockwave.
+    
+    Same equations.
+    Different scale.
+    Same Kolmogorov.
+    Same k^(-5/3).
+    Same fractal.
+    
+    The game is funny.
+    The math is not joking.
+    WarningSim is the reminder.
+    
+  LOCATION: shell/warningsim_v0.1.html (stub)
+  STATUS: empty module, card in ENG MASTER
+  
+  BUILD LATER:
+    Three.js volumetric explosion sim
+    Real blast radius data (public domain)
+    Fractal overlay showing K cascade
+    Slow. Beautiful. Terrifying.
+    "THE ONLY PRICE IS COMPUTE"
+    becomes literal.
+
+P=12. chi=2. The math is real. Always.
