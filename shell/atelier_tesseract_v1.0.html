@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Atelier -- Tesseract 4D</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#050510;color:#e0e0e0;
+  font-family:ui-monospace,'SF Mono',monospace;
+  font-size:11px;overflow:hidden;height:100vh}
+canvas{display:block}
+#hud{position:fixed;top:12px;left:12px;z-index:10;pointer-events:none}
+#hud .title{font-size:12px;color:#00d4ff;margin-bottom:4px;
+  letter-spacing:0.15em;text-transform:uppercase}
+#hud .row{line-height:1.9;color:rgba(220,228,240,0.45)}
+#hud .val{color:#00d4ff;font-weight:bold}
+#hud .gold{color:#ffd700}
+#hud .pink{color:#ff69b4}
+#hud .dim{color:rgba(220,228,240,0.2);font-size:10px}
+#stamp{position:fixed;bottom:54px;right:14px;z-index:10;
+  pointer-events:none;text-align:right}
+#stamp .s{font-size:8px;color:rgba(0,212,255,0.2);
+  letter-spacing:0.1em;line-height:1.8}
+#bar{position:fixed;bottom:0;left:0;right:0;z-index:10;
+  background:rgba(5,5,16,0.97);border-top:1px solid #1a1f2e;
+  padding:6px 14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.btn{background:#0a0e18;color:#444;border:1px solid #1a1f2e;
+  border-radius:3px;padding:3px 10px;font-family:inherit;
+  font-size:9px;cursor:pointer;transition:all 0.15s;
+  text-transform:uppercase;letter-spacing:0.07em}
+.btn:hover{border-color:#00d4ff;color:#00d4ff}
+.btn.active{background:#00d4ff;color:#050510;border-color:#00d4ff}
+.btn.gold{color:#ffd700;border-color:#3a2a0a}
+.btn.gold.active{background:#ffd700;color:#050510}
+.btn.pink{color:#ff69b4;border-color:#3a0a1a}
+.btn.pink.active{background:#ff69b4;color:#050510}
+.sep{width:1px;height:16px;background:#1a1f2e;margin:0 2px}
+.lbl{color:rgba(220,228,240,0.25);font-size:9px;
+  text-transform:uppercase;letter-spacing:0.1em}
+.sl{display:flex;align-items:center;gap:3px}
+.sl input{width:65px;accent-color:#00d4ff}
+.sv{font-size:9px;color:#00d4ff;min-width:28px}
+</style>
+</head>
+<body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+<div id="hud">
+  <div class="title">Tesseract</div>
+  <div class="row">4D angle &nbsp;<span class="val" id="h-ang">0.00</span></div>
+  <div class="row">vertices &nbsp;<span class="gold" id="h-v">16</span></div>
+  <div class="row">edges &nbsp;<span class="val" id="h-e">32</span></div>
+  <div class="row">proj &nbsp;<span class="pink" id="h-proj">4D->3D->2D</span></div>
+  <div class="dim" id="h-hint">the shadow of 4D is the magic circle</div>
+</div>
+<div id="stamp">
+  <div class="s">tesseract</div>
+  <div class="s">4D->3D->2D</div>
+  <div class="s">P=12 . chi=2</div>
+  <div class="s">Buenos Aires . 2026</div>
+</div>
+<div id="bar">
+  <span class="lbl">rotate</span>
+  <button class="btn active" id="b-xy" onclick="togglePlane('xy')">XY</button>
+  <button class="btn active" id="b-xz" onclick="togglePlane('xz')">XZ</button>
+  <button class="btn active" id="b-xw" onclick="togglePlane('xw')">XW</button>
+  <button class="btn" id="b-yw" onclick="togglePlane('yw')">YW</button>
+  <button class="btn" id="b-zw" onclick="togglePlane('zw')">ZW</button>
+  <div class="sep"></div>
+  <span class="lbl">speed</span>
+  <div class="sl">
+    <input type="range" id="sl-spd" min="0" max="100" value="30"
+      oninput="setSpeed(+this.value)">
+    <span class="sv" id="sv-spd">0.30</span>
+  </div>
+  <div class="sep"></div>
+  <span class="lbl">w-dist</span>
+  <div class="sl">
+    <input type="range" id="sl-wd" min="10" max="50" value="25"
+      oninput="setWDist(+this.value)">
+    <span class="sv" id="sv-wd">2.5</span>
+  </div>
+  <div class="sep"></div>
+  <span class="lbl">inner</span>
+  <div class="sl">
+    <input type="range" id="sl-inn" min="1" max="20" value="8"
+      oninput="setInner(+this.value)">
+    <span class="sv" id="sv-inn">0.8</span>
+  </div>
+  <div class="sep"></div>
+  <button class="btn gold" onclick="toggleShadow()">SHADOW</button>
+  <button class="btn pink" onclick="toggleFractal()">FRACTAL</button>
+  <button class="btn" onclick="resetView()">RESET</button>
+</div>
+
+<script>
+// ATELIER TESSERACT v1.0
+// 4D hypercube. Project 4D->3D->2D.
+// The shadow IS the magic circle.
+// Built: 2026-05-30T15:23:17Z
+
+var scene, camera, renderer, controls;
+var tesGroup, shadowGroup, fracGroup;
+
+// -- 4D STATE -----------------------------------------
+var angle4D = {xy:0, xz:0, xw:0, yw:0, zw:0};
+var speed = 0.003;
+var wDist = 2.5;    // 4D perspective distance
+var innerScale = 0.8;
+var showShadow = true;
+var showFractal = false;
+var activePlanes = {xy:true, xz:true, xw:true, yw:false, zw:false};
+
+// -- TESSERACT VERTICES (4D) ----------------------------
+// 16 vertices: all combinations of (+-1, +-1, +-1, +-1)
+function getTesseractVerts() {
+  var v = [];
+  for (var x=-1;x<=1;x+=2)
+  for (var y=-1;y<=1;y+=2)
+  for (var z=-1;z<=1;z+=2)
+  for (var w=-1;w<=1;w+=2)
+    v.push([x,y,z,w]);
+  return v; // 16 vertices
+}
+
+// Tesseract edges: connect vertices that differ in exactly 1 coordinate
+function getTesseractEdges(verts) {
+  var edges = [];
+  for (var i=0;i<verts.length;i++)
+  for (var j=i+1;j<verts.length;j++) {
+    var diff = 0;
+    for (var k=0;k<4;k++) if (verts[i][k]!==verts[j][k]) diff++;
+    if (diff===1) edges.push([i,j]);
+  }
+  return edges; // 32 edges
+}
+
+// -- 4D ROTATION MATRICES -----------------------------
+function rot4D(v, planes, angles) {
+  var x=v[0],y=v[1],z=v[2],w=v[3];
+
+  // XW plane rotation (the key 4D one)
+  if (planes.xw) {
+    var c=Math.cos(angles.xw), s=Math.sin(angles.xw);
+    var nx=c*x-s*w, nw=s*x+c*w;
+    x=nx; w=nw;
+  }
+  // YW plane
+  if (planes.yw) {
+    var c=Math.cos(angles.yw), s=Math.sin(angles.yw);
+    var ny=c*y-s*w, nw=s*y+c*w;
+    y=ny; w=nw;
+  }
+  // ZW plane
+  if (planes.zw) {
+    var c=Math.cos(angles.zw), s=Math.sin(angles.zw);
+    var nz=c*z-s*w, nw=s*z+c*w;
+    z=nz; w=nw;
+  }
+  // XY plane (normal 3D rotation)
+  if (planes.xy) {
+    var c=Math.cos(angles.xy), s=Math.sin(angles.xy);
+    var nx=c*x-s*y, ny=s*x+c*y;
+    x=nx; y=ny;
+  }
+  // XZ plane
+  if (planes.xz) {
+    var c=Math.cos(angles.xz), s=Math.sin(angles.xz);
+    var nx=c*x-s*z, nz=s*x+c*z;
+    x=nx; z=nz;
+  }
+  return [x,y,z,w];
+}
+
+// -- PROJECT 4D -> 3D (perspective) --------------------
+function project4to3(v4, wDist) {
+  var w = v4[3];
+  var denom = wDist - w;
+  if (Math.abs(denom) < 0.001) denom = 0.001;
+  var scale = wDist / denom;
+  return [v4[0]*scale, v4[1]*scale, v4[2]*scale, scale];
+}
+
+// -- BUILD TESSERACT GEOMETRY --------------------------
+var tesLines = [];
+var shadowLines = [];
+var fracNodes = [];
+
+function buildTesseract() {
+  // Clear
+  while(tesGroup.children.length) tesGroup.remove(tesGroup.children[0]);
+  while(shadowGroup.children.length) shadowGroup.remove(shadowGroup.children[0]);
+  while(fracGroup.children.length) fracGroup.remove(fracGroup.children[0]);
+
+  var verts = getTesseractVerts();
+  var edges = getTesseractEdges(verts);
+
+  // Color by W coordinate: w=-1=cyan, w=+1=gold
+  // Inner cube (w=-1): cyan
+  // Outer cube (w=+1): gold
+
+  tesLines = [];
+  edges.forEach(function(e) {
+    var v0 = verts[e[0]], v1 = verts[e[1]];
+    // color: average w
+    var avgW = (v0[3] + v1[3]) / 2;
+    var col = avgW < 0 ? 0x00d4ff : 0xffd700;
+    var opacity = 0.4 + Math.abs(avgW) * 0.3;
+
+    var geo = new THREE.BufferGeometry();
+    geo.setAttribute('position',
+      new THREE.Float32BufferAttribute([0,0,0, 0,0,0], 3));
+    var mat = new THREE.LineBasicMaterial({
+      color:col, transparent:true, opacity:opacity});
+    var line = new THREE.Line(geo, mat);
+    tesGroup.add(line);
+    tesLines.push({line:line, i:e[0], j:e[1]});
+  });
+
+  // Vertex nodes
+  var geo = new THREE.SphereGeometry(0.05, 8, 6);
+  verts.forEach(function(v, i) {
+    var col = v[3] < 0 ? 0x00d4ff : 0xffd700;
+    var mat = new THREE.MeshPhongMaterial({
+      color:col, emissive:col, emissiveIntensity:0.5,
+      specular:0xffffff, shininess:200});
+    var m = new THREE.Mesh(geo.clone(), mat);
+    tesGroup.add(m);
+    tesLines.push({node:m, vi:i});
+  });
+
+  // Shadow: project onto Y=0 plane (the circle shadow)
+  if (showShadow) {
+    edges.forEach(function(e) {
+      var geo = new THREE.BufferGeometry();
+      geo.setAttribute('position',
+        new THREE.Float32BufferAttribute([0,0,0, 0,0,0], 3));
+      var mat = new THREE.LineBasicMaterial({
+        color:0xff69b4, transparent:true, opacity:0.2});
+      var line = new THREE.Line(geo, mat);
+      line.position.y = -2.5;
+      shadowGroup.add(line);
+      shadowLines.push({line:line, i:e[0], j:e[1]});
+    });
+  }
+
+  // Fractal nodes on vertices
+  if (showFractal) {
+    var fgeo = new THREE.SphereGeometry(0.03, 6, 4);
+    verts.forEach(function(v, i) {
+      // mini circle around each vertex
+      for (var k=0; k<6; k++) {
+        var a = (k/6)*Math.PI*2;
+        var fmat = new THREE.MeshPhongMaterial({
+          color:0x00ffd5, emissive:0x00ffd5,
+          emissiveIntensity:0.4});
+        var fm = new THREE.Mesh(fgeo.clone(), fmat);
+        fracGroup.add(fm);
+        fracNodes.push({mesh:fm, vi:i, angle:a, r:0.3});
+      }
+    });
+  }
+}
+
+// -- UPDATE POSITIONS ---------------------------------
+var baseVerts = getTesseractVerts();
+
+function updatePositions() {
+  var projected3D = baseVerts.map(function(v) {
+    var rot = rot4D(v, activePlanes, angle4D);
+    var p3 = project4to3(rot, wDist);
+    return {pos: p3, scale: p3[3], w: rot[3]};
+  });
+
+  var lineIdx = 0, nodeIdx = 0;
+
+  tesLines.forEach(function(item) {
+    if (item.line) {
+      var p0 = projected3D[item.i];
+      var p1 = projected3D[item.j];
+      var pos = item.line.geometry.attributes.position;
+      pos.setXYZ(0, p0.pos[0], p0.pos[1], p0.pos[2]);
+      pos.setXYZ(1, p1.pos[0], p1.pos[1], p1.pos[2]);
+      pos.needsUpdate = true;
+      // pulse opacity by w
+      var avgW = (p0.w + p1.w) / 2;
+      item.line.material.opacity = 0.3 + Math.abs(avgW) * 0.5;
+    } else if (item.node) {
+      var p = projected3D[item.vi];
+      item.node.position.set(p.pos[0], p.pos[1], p.pos[2]);
+      var s = 0.04 + Math.abs(p.w) * 0.04;
+      item.node.scale.setScalar(s);
+    }
+  });
+
+  // Shadow lines (project to y=-2.5)
+  shadowLines.forEach(function(item) {
+    var p0 = projected3D[item.i];
+    var p1 = projected3D[item.j];
+    var pos = item.line.geometry.attributes.position;
+    pos.setXYZ(0, p0.pos[0], 0, p0.pos[2]);
+    pos.setXYZ(1, p1.pos[0], 0, p1.pos[2]);
+    pos.needsUpdate = true;
+  });
+
+  // Fractal nodes orbit vertices
+  var t = performance.now() * 0.001;
+  fracNodes.forEach(function(item) {
+    var p = projected3D[item.vi];
+    var a = item.angle + t * 0.5;
+    item.mesh.position.set(
+      p.pos[0] + Math.cos(a)*item.r,
+      p.pos[1] + Math.sin(a)*item.r * 0.3,
+      p.pos[2] + Math.sin(a)*item.r
+    );
+  });
+
+  // HUD
+  document.getElementById('h-ang').textContent =
+    angle4D.xw.toFixed(2);
+}
+
+// -- CONTROLS -----------------------------------------
+function togglePlane(p) {
+  activePlanes[p] = !activePlanes[p];
+  document.getElementById('b-'+p).classList
+    .toggle('active', activePlanes[p]);
+}
+function setSpeed(v) {
+  speed = v / 10000;
+  document.getElementById('sv-spd').textContent = (v/100).toFixed(2);
+}
+function setWDist(v) {
+  wDist = v / 10;
+  document.getElementById('sv-wd').textContent = wDist.toFixed(1);
+}
+function setInner(v) {
+  innerScale = v / 10;
+  document.getElementById('sv-inn').textContent = innerScale.toFixed(1);
+}
+function toggleShadow() {
+  showShadow = !showShadow;
+  shadowGroup.visible = showShadow;
+  document.querySelector('button.gold').classList
+    .toggle('active', showShadow);
+}
+function toggleFractal() {
+  showFractal = !showFractal;
+  buildTesseract();
+  document.querySelector('button.pink').classList
+    .toggle('active', showFractal);
+}
+function resetView() {
+  angle4D = {xy:0,xz:0,xw:0,yw:0,zw:0};
+  if(controls) { camera.position.set(0,3,10); controls.reset(); }
+}
+
+// -- INIT ---------------------------------------------
+(function init() {
+  scene = new THREE.Scene();
+  scene.fog = new THREE.FogExp2(0x050510, 0.02);
+
+  camera = new THREE.PerspectiveCamera(
+    50, innerWidth/innerHeight, 0.05, 200);
+  camera.position.set(0, 3, 10);
+  camera.lookAt(0, 0, 0);
+
+  renderer = new THREE.WebGLRenderer({antialias:true});
+  renderer.setSize(innerWidth, innerHeight);
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  renderer.setClearColor(0x050510);
+  document.body.appendChild(renderer.domElement);
+
+  if (THREE.OrbitControls) {
+    controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.06;
+  }
+
+  scene.add(new THREE.AmbientLight(0x101828, 3));
+  var d1 = new THREE.DirectionalLight(0x00d4ff, 0.8);
+  d1.position.set(5,8,5); scene.add(d1);
+  var d2 = new THREE.DirectionalLight(0xffd700, 0.4);
+  d2.position.set(-6,4,-8); scene.add(d2);
+
+  // Floor grid
+  var gr = new THREE.GridHelper(20,20,0x0d1520,0x080e18);
+  gr.material.transparent=true; gr.material.opacity=0.3;
+  scene.add(gr);
+
+  // Groups
+  tesGroup    = new THREE.Group(); scene.add(tesGroup);
+  shadowGroup = new THREE.Group(); scene.add(shadowGroup);
+  fracGroup   = new THREE.Group(); scene.add(fracGroup);
+
+  buildTesseract();
+
+  window.addEventListener('resize', function() {
+    camera.aspect = innerWidth/innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(innerWidth, innerHeight);
+  });
+
+  window.addEventListener('keydown', function(e) {
+    if(e.code==='Space') { e.preventDefault(); togglePlane('xw'); }
+    if(e.code==='KeyF') toggleFractal();
+    if(e.code==='KeyS') toggleShadow();
+    if(e.code==='KeyR') resetView();
+  });
+
+  animate();
+})();
+
+// -- ANIMATE ------------------------------------------
+function animate() {
+  requestAnimationFrame(animate);
+  if(controls) controls.update();
+
+  // Advance 4D angles
+  if(activePlanes.xy)  angle4D.xy  += speed * 0.7;
+  if(activePlanes.xz)  angle4D.xz  += speed * 0.5;
+  if(activePlanes.xw)  angle4D.xw  += speed;
+  if(activePlanes.yw)  angle4D.yw  += speed * 0.8;
+  if(activePlanes.zw)  angle4D.zw  += speed * 0.6;
+
+  updatePositions();
+  renderer.render(scene, camera);
+}
+</script>
+</body>
+</html>
