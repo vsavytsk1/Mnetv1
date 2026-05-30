@@ -3777,13 +3777,20 @@ var papyrusMessages = [
 var oldDoRefineAll = doRefineAll;
 doRefineAll = function(){
   if(!gkState) return doSeed();
-  
-  var level = 0;
-  if(gkState && gkState.faces.length > 0){
-    level = gkState.faces[0].level || 0;
+
+  // CANONICAL BRAKE: face count thresholds (not level)
+  // Level is meaningless for Platonic seeds -- they start at level 0
+  // and produce level 1 children immediately. Count is the real signal.
+  var F = gkState.faces.length;
+  var THRESHOLDS = [500, 3000, 20000, 150000, 1000000];
+  var hitThresh = false;
+  for(var ti=0; ti<THRESHOLDS.length; ti++){
+    if(F >= THRESHOLDS[ti] && F < THRESHOLDS[ti]*7){
+      hitThresh = true; break;
+    }
   }
-  
-  if(level >= 1 && secretsLeft > 0){
+
+  if(hitThresh && secretsLeft > 0){
     secretsLeft--;
     var msg = papyrusMessages[6 - secretsLeft] || '';
     if(msg){
@@ -3791,8 +3798,8 @@ doRefineAll = function(){
         '\u2500\u2500\u2500 PAPYRUS \u2500\u2500\u2500\n\n' +
         msg + '\n\n' +
         (secretsLeft > 0 ? secretsLeft + ' secret layers remain.\n' : '') +
-        'Current: ' + gkState.faces.length.toLocaleString() + ' faces\n' +
-        'Next: ~' + (gkState.faces.length * 7).toLocaleString() + ' faces\n\n' +
+        'Current: ' + F.toLocaleString() + ' faces\n' +
+        'Next: ~' + (F * 7).toLocaleString() + ' faces\n\n' +
         'Continue refining?'
       );
       if(!proceed){
@@ -3801,7 +3808,7 @@ doRefineAll = function(){
       }
     }
   }
-  
+
   oldDoRefineAll();
 };
 
