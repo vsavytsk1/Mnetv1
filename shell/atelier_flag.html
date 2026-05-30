@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Atelier -- The Flag</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#050510;overflow:hidden;height:100vh}
+canvas{display:block}
+#stamp{position:fixed;bottom:14px;right:16px;z-index:10;
+  pointer-events:none;text-align:right;
+  font-family:ui-monospace,'SF Mono',monospace}
+#stamp .t{font-size:9px;color:rgba(0,212,255,0.3);
+  letter-spacing:0.12em;text-transform:uppercase;line-height:1.8}
+#stamp .s{font-size:8px;color:rgba(0,212,255,0.15);letter-spacing:0.08em}
+</style>
+</head>
+<body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+<div id="stamp">
+  <div class="t">Atelier</div>
+  <div class="s">the flag</div>
+  <div class="s">P=12 . chi=2</div>
+  <div class="s">Buenos Aires . 2026</div>
+</div>
+
+<script>
+// ATELIER FLAG -- Sacred Seed. Frozen. All 12 layers. Slow spin.
+// The first volumetric circle. The symbol. The emblem.
+// Built: 2026-05-30T02:59:15Z
+
+var LAYERS = [
+  {r:5.0, col:0x0d2040, type:'ring',   n:0},
+  {r:4.4, col:0x0d2848, type:'ring',   n:0},
+  {r:4.1, col:0x00d4ff, type:'nodes',  n:12},
+  {r:3.9, col:0x0f2a48, type:'star',   n:12},
+  {r:3.0, col:0x0d2010, type:'ring',   n:0},
+  {r:2.7, col:0xffd700, type:'nodes',  n:6},
+  {r:2.5, col:0x2a1a04, type:'star',   n:6},
+  {r:1.9, col:0x200818, type:'ring',   n:0},
+  {r:1.7, col:0xff69b4, type:'nodes',  n:3},
+  {r:1.1, col:0x180a20, type:'ring',   n:0},
+  {r:0.6, col:0xffffff, type:'spiral', n:0},
+  {r:0.0, col:0xffffff, type:'core',   n:1}
+];
+
+var DEPTH_STEP = 0.10;
+var scene, camera, renderer, controls, circleGroup;
+var layerGroups = [];
+
+function makeRing(r, col, seg) {
+  var pts = [], s = seg||128;
+  for (var i=0;i<=s;i++) {
+    var a=(i/s)*Math.PI*2;
+    pts.push(new THREE.Vector3(Math.cos(a)*r,Math.sin(a)*r,0));
+  }
+  return new THREE.Line(
+    new THREE.BufferGeometry().setFromPoints(pts),
+    new THREE.LineBasicMaterial({color:col,transparent:true,opacity:0.75}));
+}
+
+function makeNodes(n, r, col) {
+  var g=new THREE.Group();
+  var geo=new THREE.SphereGeometry(0.07,12,8);
+  for (var i=0;i<n;i++) {
+    var a=(i/n)*Math.PI*2-Math.PI/2;
+    var mat=new THREE.MeshPhongMaterial({
+      color:col,emissive:col,emissiveIntensity:0.5,
+      specular:0xffffff,shininess:200});
+    var m=new THREE.Mesh(geo.clone(),mat);
+    m.position.set(Math.cos(a)*r,Math.sin(a)*r,0);
+    g.add(m);
+    var sp=[new THREE.Vector3(0,0,0),m.position.clone()];
+    g.add(new THREE.Line(
+      new THREE.BufferGeometry().setFromPoints(sp),
+      new THREE.LineBasicMaterial({color:col,transparent:true,opacity:0.18})));
+  }
+  g.add(makeRing(r,col,96));
+  return g;
+}
+
+function makeStar(n, r, col) {
+  var pts=[];
+  for(var i=0;i<n;i++){
+    var a=(i/n)*Math.PI*2-Math.PI/2;
+    pts.push(new THREE.Vector3(Math.cos(a)*r,Math.sin(a)*r,0));
+  }
+  var skip=Math.max(2,Math.floor(n/3));
+  var lp=[],cur=0;
+  for(var s=0;s<=n;s++){lp.push(pts[cur]);cur=(cur+skip)%n;}
+  var g=new THREE.Group();
+  g.add(new THREE.Line(
+    new THREE.BufferGeometry().setFromPoints(lp),
+    new THREE.LineBasicMaterial({color:col,transparent:true,opacity:0.55})));
+  return g;
+}
+
+function makeSpiral(r, col) {
+  var pts=[],turns=3,steps=200;
+  for(var i=0;i<=steps;i++){
+    var t=i/steps,a=t*Math.PI*2*turns;
+    pts.push(new THREE.Vector3(Math.cos(a)*t*r,Math.sin(a)*t*r,0));
+  }
+  var g=new THREE.Group();
+  g.add(new THREE.Line(
+    new THREE.BufferGeometry().setFromPoints(pts),
+    new THREE.LineBasicMaterial({color:col,transparent:true,opacity:0.9})));
+  return g;
+}
+
+function makeCore(col) {
+  var g=new THREE.Group();
+  g.add(new THREE.Mesh(
+    new THREE.SphereGeometry(0.14,20,14),
+    new THREE.MeshPhongMaterial({color:col,emissive:col,
+      emissiveIntensity:1.0,specular:0xffffff,shininess:500})));
+  g.add(makeRing(0.28,col,64));
+  g.add(makeRing(0.20,col,48));
+  return g;
+}
+
+(function init(){
+  scene=new THREE.Scene();
+  scene.fog=new THREE.FogExp2(0x050510,0.022);
+
+  camera=new THREE.PerspectiveCamera(50,innerWidth/innerHeight,0.05,200);
+  camera.position.set(0,5,14);
+  camera.lookAt(0,0,0);
+
+  renderer=new THREE.WebGLRenderer({antialias:true});
+  renderer.setSize(innerWidth,innerHeight);
+  renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  renderer.setClearColor(0x050510);
+  document.body.appendChild(renderer.domElement);
+
+  if(THREE.OrbitControls){
+    controls=new THREE.OrbitControls(camera,renderer.domElement);
+    controls.enableDamping=true;
+    controls.dampingFactor=0.06;
+    controls.minDistance=2;
+    controls.maxDistance=40;
+  }
+
+  scene.add(new THREE.AmbientLight(0x101828,3.5));
+  var d1=new THREE.DirectionalLight(0x00d4ff,0.9);
+  d1.position.set(5,8,5);scene.add(d1);
+  var d2=new THREE.DirectionalLight(0xffd700,0.35);
+  d2.position.set(-6,4,-8);scene.add(d2);
+  var d3=new THREE.PointLight(0xff69b4,0.5,12);
+  d3.position.set(0,0,4);scene.add(d3);
+
+  // floor
+  var fl=new THREE.Mesh(
+    new THREE.PlaneGeometry(30,30),
+    new THREE.MeshBasicMaterial({color:0x060810,
+      side:THREE.DoubleSide,transparent:true,opacity:0.5}));
+  fl.rotation.x=-Math.PI/2;fl.position.y=-0.01;scene.add(fl);
+
+  // circle group -- tilt 28 degrees
+  circleGroup=new THREE.Group();
+  circleGroup.rotation.x=28*Math.PI/180;
+  scene.add(circleGroup);
+
+  // BUILD ALL 12 LAYERS -- fully revealed, the complete flag
+  for(var i=0;i<LAYERS.length;i++){
+    var L=LAYERS[i];
+    var grp=new THREE.Group();
+    var z=-i*DEPTH_STEP;
+    if     (L.type==='ring')   grp.add(makeRing(L.r,L.col));
+    else if(L.type==='nodes')  grp.add(makeNodes(L.n,L.r,L.col));
+    else if(L.type==='star')   grp.add(makeStar(L.n||6,L.r,L.col));
+    else if(L.type==='spiral') grp.add(makeSpiral(L.r,L.col));
+    else if(L.type==='core')   grp.add(makeCore(L.col));
+    grp.position.z=z;
+    circleGroup.add(grp);
+    layerGroups.push(grp);
+  }
+
+  window.addEventListener('resize',function(){
+    camera.aspect=innerWidth/innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(innerWidth,innerHeight);
+  });
+
+  animate();
+})();
+
+function animate(){
+  requestAnimationFrame(animate);
+  if(controls) controls.update();
+  var t=performance.now()*0.001;
+  // slow global spin
+  if(circleGroup) circleGroup.rotation.z += 0.0008;
+  // each layer breathes at its own rhythm
+  for(var i=0;i<layerGroups.length;i++){
+    var dir=(i%2===0)?1:-1;
+    layerGroups[i].rotation.z += 0.0008*dir*(0.3+i*0.04);
+  }
+  // core pulse
+  var core=layerGroups[11];
+  if(core&&core.children[0]&&core.children[0].children[0]){
+    var m=core.children[0].children[0];
+    if(m.material) m.material.emissiveIntensity=0.7+Math.sin(t*1.5)*0.3;
+  }
+  renderer.render(scene,camera);
+}
+</script>
+</body>
+</html>
