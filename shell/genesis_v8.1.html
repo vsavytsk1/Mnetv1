@@ -3482,7 +3482,11 @@ function draw(){
     // Project 3 vertices, compute cross product -> if CW, face points away
     var pa=project(f.pts[0]),pb=project(f.pts[1]),pc=project(f.pts[2]);
     var cross=(pb.x-pa.x)*(pc.y-pa.y)-(pb.y-pa.y)*(pc.x-pa.x);
-    if(cross<0){culled++;continue} // clockwise = back face = skip
+    // Scaled threshold: skip only clearly back-facing (not near-zero).
+    // Near-zero = edge-on face = valid silhouette, must draw.
+    // Platonic triangles after refine get hex children: cross near 0 at low zoom.
+    var cullThresh = -Math.max(0.5, screenSize * 0.02);
+    if(cross < cullThresh){culled++;continue} // clearly CW = back face = skip
     
     sorted.push({face:f,depth:p.z,screenSize:screenSize});
   }
@@ -4089,8 +4093,8 @@ function doSeedPlatonic(type) {
   // Kernel format: faces with pts arrays
   var builtFaces = faces.map(function(fi, idx){
     return {
-      id: idx,
-      pts: fi.map(function(i){ return pts[i]; }),
+      id: 'P' + type.charAt(0).toUpperCase() + idx,
+      pts: fi.map(function(i){ return pts[i].slice(); }),
       type: 'pent',
       level: 0,
       anchor: 'A' + idx,
