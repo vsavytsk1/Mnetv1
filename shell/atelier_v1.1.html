@@ -83,7 +83,7 @@ canvas{display:block}
 
 <div id="log" onclick="toggleLog()" title="click to hide"></div>
 
-<div id="layer-bar" id="lbar"></div>
+<div id="layer-bar"></div>
 
 <div id="bar">
   <button class="btn green" onclick="nextLayer()">NEXT</button>
@@ -380,7 +380,7 @@ function setTilt(v) {
   tiltDeg = v;
   document.getElementById('sv-tilt').textContent = v;
   if (circleGroup) {
-    circleGroup.rotation.x = THREE.MathUtils.degToRad(v);
+    circleGroup.rotation.x = v * Math.PI / 180;
   }
 }
 
@@ -435,7 +435,7 @@ function setTilt(v) {
 
   // CIRCLE GROUP -- all layers parent
   circleGroup = new THREE.Group();
-  circleGroup.rotation.x = THREE.MathUtils.degToRad(tiltDeg);
+  circleGroup.rotation.x = tiltDeg * Math.PI / 180;
   scene.add(circleGroup);
 
   // Build all 12 layers (hidden)
