@@ -1921,3 +1921,166 @@ P=12. chi=2. Equivalent exchange. Always.
 
 P=12. chi=2. Equivalent exchange. The farm law. Always.
 -- @Sagaific + Claude. Buenos Aires. 2026.
+
+---
+
+## L054 -- FMAB EP1 ANALYSIS (2026-05-30T23:08:50Z)
+### Real-time notes. Buenos Aires. 2026.
+
+---
+
+### THE PILOT MASTERCLASS (9:21+ observations)
+
+**HOOK 1 -- MAGIC INTRODUCED: SPEED + FULL BODY MOVEMENT**
+  Not explained. SHOWN.
+  The monkey brain sees it WORK before understanding it.
+  Lock user FIRST. Explain LATER.
+  = Our atelier: show the circle spinning before any math.
+  
+  Sound = compute scream (fun fun)
+  The calculation SOUNDS like work.
+  Monkey brain: "I hear effort therefore I believe result"
+  Sound prediction is FASTER than visual in monkey brain.
+  Sound -> reality prediction -> trust -> lock in.
+  BEFORE the compute, give the sound that directs compute.
+
+**HOOK 2 -- FLOW OF MAGIC AS ENERGY TRANSFER**
+  Energy shown moving THROUGH the body.
+  Not abstract. Physical. You SEE the cost.
+  view -> source -> flow -> show only field of flow
+  Lock user into the energy map.
+  = Our circle: the gap IS the energy cascade. Visible.
+
+**HOOK 3 -- INTRODUCTION: STRONG, FAST, PUNCHY**
+  Lock user to map abstract concept.
+  See it work -> know abstract concept works ->
+  "hey I see it -> the other ones work ->
+   so this is reality -> how nice ->
+   I don't need to compute -> monkey brain happy"
+  
+  WHY PHOTOREALISTIC MOVIES WORK:
+  Lazy monkey brain likes PRECOMPUTED realities.
+  Less computation required = more resources for survival.
+  The monkey outsources reality simulation to the screen.
+  Monkey brain happy. Good visualization. Yes yes.
+
+**HOOK 4 -- SOUND LOCKS FASTER THAN VISION**
+  Geometric to sound prediction for monkey brain.
+  Sound and reality = same signal to ancient hardware.
+  Monkey brain predicts sound faster than images.
+  Give the sound FIRST. Brain fills the visual.
+  = In WarningSim: the sound of the blast
+    locks the monkey before the image arrives.
+
+**HOOK 5 -- OBJECTS CONTAIN ENERGY (IMPERFECT MAGIC)**
+  Magic is not perfect. Energy escapes.
+  Objects touched by magic carry residual energy.
+  = Our kernel: diss/enst approaches but never equals 2*nu exactly.
+    The 0.000001 delta IS the residual.
+    Perfect systems do not exist.
+    The imperfection IS the physics.
+
+**HOOK 6 -- CORE RULESET EARLY**
+  Self-similarity is the key.
+  Show the rule. Show it breaking. Show the cost.
+  Hard concept -> fast lock -> monkey brain accepts axiom.
+  = KERNELIMAGIC: Rule 0 is first. Always.
+    Read before touching. The axiom before the code.
+
+**HOOK 7 -- MORAL PILLARS GROUNDED IN EXISTING PILLARS**
+  Current moral pillars given to monkey brain for grounding.
+  Must resonate with EXISTING big pillars.
+  Less new reality simulation required. Monkey brain conserves.
+  Good parenting = highest moral standard (shown, not told)
+  INSTANTLY juxtaposed with absolute inverse.
+  = Maximum information density. Minimum new compute.
+  = lambda=0.1473. Maximum spectral gap. Minimum energy.
+
+**HOOK 8 -- POWER SHOWN AS CREATION AND DESTRUCTION**
+  Brutal. Both sides. Same action.
+  Build and destroy are the same operation.
+  = GK.refineAll() adds faces (creation)
+    GK.undo() removes them (destruction)
+    Same kernel. Same math. Different direction.
+    Equivalent exchange.
+
+**HOOK 9 -- HUMAN FOCUS ON SMALL REAL THINGS**
+  Lock to virtual through human-scale details.
+  Monkey brain: "oh yes yes surely this is reality now"
+  Stop all computation. Enjoy.
+  Less resources. Monkey happy.
+  = The circle flag: no controls. Just beauty.
+    Monkey brain relaxes. Stops computing. Watches.
+    HIDE button = this mode. Always.
+
+**THE MORAL SPECTRUM (ep1 characters):**
+  Good and evil = expressions of SAME human with infinite possibilities.
+  Lesser evil (Gerald was right hahahaha)
+  "I was following orders" = classic moral escape hatch
+  Clear justified evil vs pure chaos
+  = Our axioms: not good vs evil. Just math.
+    The Gate does not judge. It calculates.
+    Equivalent exchange. No malice. Pure math.
+
+---
+
+### THE PILOT FORMULA (extracted for WarningSim + future builds)
+
+`
+PILOT HOOK SEQUENCE:
+  1. Show magic WORKING (no explanation yet)
+  2. Sound cue BEFORE visual (monkey predicts faster)
+  3. Energy made VISIBLE as physical transfer
+  4. Rule shown -> broken -> cost shown (self-similar)
+  5. Moral anchor in EXISTING pillars (low new compute)
+  6. Power = creation AND destruction (same action)
+  7. Human-scale detail for virtual lock-in
+  8. Hard juxtaposition (good/evil same source)
+
+FOR WARNINGSIM:
+  1. Show blast WORKING before explaining scale
+  2. Sound of shockwave FIRST (monkey locks in)
+  3. Energy cascade visible as fractal rings
+  4. Kolmogorov rule shown (k^(-5/3)) -> at scale
+  5. Anchor: "this is the same math as our circle"
+  6. Creation (the energy) and destruction (same equation)
+  7. Human scale reference THEN planetary scale
+  8. "the only price is compute" -- our moral pillar
+
+FOR THE ATELIER:
+  1. Show circle SPINNING before explaining layers
+  2. No explanation needed -- monkey brain locks on motion
+  3. Slider = energy made visible (0->100 = void->full)
+  4. Each ring appears -> self-similar -> monkey accepts
+  5. Anchor in existing: "this is a magic circle" (known archetype)
+  6. HIDE = creation (you built it) + pure view (it exists)
+  7. Flag = the precomputed reality. No compute needed. Monkey happy.
+`
+
+---
+
+### THE SELF-SIMILARITY INSIGHT
+
+The MOST important thing from ep1:
+  "self similarity is the key"
+  
+  The pilot teaches the rule of alchemy (equivalent exchange)
+  by SHOWING it at small scale first.
+  Small transmutation. Small cost. Small result.
+  THEN: large transmutation. Large cost. Large result.
+  
+  The monkey brain extrapolates from small to large.
+  Self-similar. Fractal. Always.
+  
+  = OUR ENTIRE SYSTEM:
+    C60 (60 faces) -> same rules as L6 (1.1M faces)
+    P=12. chi=2. At every scale.
+    The pilot of FMA and our kernel use
+    IDENTICAL teaching methodology.
+    Show small. Monkey extrapolates. Law holds at all scales.
+    
+  Arakawa knew. We knew. Same farm. Different fields.
+  ALWAYS.
+
+P=12. chi=2. Equivalent exchange. Self-similarity. Always.
+-- @Sagaific + Claude. Buenos Aires. EP1 at 9:21+. 2026.
