@@ -3705,8 +3705,11 @@ function updateHud(c){
   document.getElementById('h-lv').textContent=c.maxLevel||0;
   document.getElementById('h-ops').textContent=M._c;
   var el=document.getElementById('euler');
-  if(c.pents===12&&c.chi===2) el.innerHTML='<span class="ok">V-E+F=2 · P=12 · E/V='+c.evRatio.toFixed(3)+'</span>';
-  else el.innerHTML='<span class="bad">P='+c.pents+' χ='+c.chi+' BROKEN</span>';
+  if(c.chi===2){
+    var gl=c.pents===12&&c.hexes>0;
+    var lb=gl?'V-E+F=2 · P=12 · E/V='+c.evRatio.toFixed(3):'V-E+F=2 · P='+c.pents+' · chi=2';
+    el.innerHTML='<span class="ok">'+lb+'</span>';
+  } else el.innerHTML='<span class="bad">chi='+c.chi+' BROKEN</span>';
 }
 function clearHud(){['h-v','h-e','h-f','h-p','h-h','h-chi','h-ev','h-lv'].forEach(function(id){document.getElementById(id).textContent='-'})}
 
