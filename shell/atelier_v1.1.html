@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Atelier v1.1 -- Volumetric Circle</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#050510;color:#e0e0e0;
+  font-family:ui-monospace,'SF Mono',monospace;
+  font-size:11px;overflow:hidden;height:100vh}
+canvas{display:block}
+
+#hud{position:fixed;top:12px;left:12px;z-index:10;pointer-events:none}
+#hud .title{font-size:12px;color:#00d4ff;margin-bottom:4px;
+  letter-spacing:0.15em;text-transform:uppercase}
+#hud .row{line-height:1.9;color:rgba(220,228,240,0.45)}
+#hud .val{color:#00d4ff;font-weight:bold}
+#hud .gold{color:#ffd700}
+#hud .pink{color:#ff69b4}
+#hud .green{color:#00ffd5}
+#hud .dim{color:rgba(220,228,240,0.2)}
+
+#log{position:fixed;top:90px;left:12px;z-index:10;
+  background:rgba(5,5,16,0.88);border:1px solid #1a1f2e;
+  border-radius:4px;padding:7px 11px;max-width:280px;
+  max-height:220px;overflow-y:auto;font-size:9px;
+  line-height:1.5;color:rgba(255,180,180,0.7);
+  cursor:pointer;transition:opacity 0.3s}
+#log.hidden{opacity:0;pointer-events:none}
+#log .e{border-bottom:1px solid #1a0505;padding:1px 0}
+#log .ok{color:#7fff7f}
+#log .cyan{color:#00d4ff}
+#log .gold{color:#ffd700}
+
+#bar{position:fixed;bottom:0;left:0;right:0;z-index:10;
+  background:rgba(5,5,16,0.95);border-top:1px solid #1a1f2e;
+  padding:6px 14px;display:flex;align-items:center;
+  gap:8px;flex-wrap:wrap}
+.btn{background:#0a0e18;color:#555;border:1px solid #1a1f2e;
+  border-radius:3px;padding:4px 11px;font-family:inherit;
+  font-size:10px;cursor:pointer;transition:all 0.15s;
+  text-transform:uppercase;letter-spacing:0.06em}
+.btn:hover{border-color:#00d4ff;color:#00d4ff}
+.btn.active{background:#00d4ff;color:#050510;border-color:#00d4ff}
+.btn.gold{color:#ffd700;border-color:#3a2a1a}
+.btn.gold:hover{border-color:#ffd700}
+.btn.pink{color:#ff69b4;border-color:#3a1a2a}
+.btn.pink:hover{border-color:#ff69b4}
+.btn.green{color:#00ffd5;border-color:#1a3a2a}
+.btn.green:hover{border-color:#00ffd5}
+.sep{width:1px;height:18px;background:#1a1f2e;margin:0 2px}
+.lbl{color:rgba(220,228,240,0.3);font-size:9px;
+  text-transform:uppercase;letter-spacing:0.1em}
+.sl{display:flex;align-items:center;gap:4px}
+.sl input[type=range]{width:70px;accent-color:#00d4ff}
+.sv{font-size:9px;color:#00d4ff;min-width:28px}
+
+#layer-bar{position:fixed;bottom:48px;left:50%;
+  transform:translateX(-50%);z-index:10;
+  display:flex;gap:4px;pointer-events:none}
+.ldot{width:8px;height:8px;border-radius:50%;
+  background:#1a1f2e;border:1px solid #2a2a3a;
+  transition:all 0.4s}
+.ldot.active{background:#00d4ff;
+  box-shadow:0 0 8px rgba(0,212,255,0.6)}
+.ldot.done{background:#ffd700;
+  box-shadow:0 0 6px rgba(255,215,0,0.4)}
+</style>
+</head>
+<body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+<div id="hud">
+  <div class="title">Atelier v1.1</div>
+  <div class="row">layer &nbsp;<span class="val" id="h-layer">0</span><span class="dim"> / 12</span></div>
+  <div class="row">nodes &nbsp;<span class="gold" id="h-nodes">0</span></div>
+  <div class="row">rings &nbsp;<span class="green" id="h-rings">0</span></div>
+  <div class="row">depth &nbsp;<span class="pink" id="h-depth">0.0</span></div>
+  <div class="row dim" id="h-hint">NEXT to reveal layer 1</div>
+</div>
+
+<div id="log" onclick="toggleLog()" title="click to hide"></div>
+
+<div id="layer-bar" id="lbar"></div>
+
+<div id="bar">
+  <button class="btn green" onclick="nextLayer()">NEXT</button>
+  <button class="btn pink" onclick="prevLayer()">PREV</button>
+  <button class="btn" onclick="showAll()">ALL</button>
+  <button class="btn" onclick="resetLayers()">RESET</button>
+  <div class="sep"></div>
+  <span class="lbl">spin</span>
+  <div class="sl">
+    <input type="range" id="sl-spin" min="0" max="100" value="20"
+      oninput="setSpin(+this.value)">
+    <span class="sv" id="sv-spin">0.20</span>
+  </div>
+  <div class="sep"></div>
+  <span class="lbl">depth</span>
+  <div class="sl">
+    <input type="range" id="sl-depth" min="1" max="30" value="12"
+      oninput="setDepth(+this.value)">
+    <span class="sv" id="sv-depth">1.2</span>
+  </div>
+  <div class="sep"></div>
+  <span class="lbl">tilt</span>
+  <div class="sl">
+    <input type="range" id="sl-tilt" min="0" max="90" value="25"
+      oninput="setTilt(+this.value)">
+    <span class="sv" id="sv-tilt">25</span>
+  </div>
+  <div class="sep"></div>
+  <button class="btn gold" onclick="toggleLog()">LOG</button>
+</div>
+
+<script>
+
+// ======================================================
+// ATELIER v1.1 -- VOLUMETRIC MAGIC CIRCLE
+// 12 layers. Inward. 3D. One at a time.
+// Built: 2026-05-30T02:15:23Z
+// ======================================================
+
+// -- LAYER DEFINITIONS --------------------------------
+// Each layer = one element of the circle revealed
+// Layers stack inward (Z depth) + scale down
+// Colors: outer=cyan, mid=gold, inner=pink, core=white
+
+var LAYERS = [
+  // [name, nodes, radius, color, lineStyle, yOffset]
+  {name:'OUTER RING',    n:0,  r:5.0,  col:0x1a2a4a, type:'ring',    y:0},
+  {name:'RING 2',        n:0,  r:4.5,  col:0x1a3050, type:'ring',    y:0},
+  {name:'12 SENTINELS',  n:12, r:4.2,  col:0x00d4ff, type:'nodes',   y:0},
+  {name:'OUTER STAR',    n:12, r:4.0,  col:0x1a3a5a, type:'star',    y:0},
+  {name:'MID RING',      n:0,  r:3.0,  col:0x2a3a1a, type:'ring',    y:0},
+  {name:'6 ANCHORS',     n:6,  r:2.8,  col:0xffd700, type:'nodes',   y:0},
+  {name:'INNER STAR',    n:6,  r:2.6,  col:0x3a2a0a, type:'star',    y:0},
+  {name:'RING 3',        n:0,  r:2.0,  col:0x2a1a3a, type:'ring',    y:0},
+  {name:'3 TRIANGLES',   n:3,  r:1.8,  col:0xff69b4, type:'nodes',   y:0},
+  {name:'INNER RING',    n:0,  r:1.2,  col:0x3a1a2a, type:'ring',    y:0},
+  {name:'CORE SPIRAL',   n:0,  r:0.7,  col:0xffffff, type:'spiral',  y:0},
+  {name:'THE POINT',     n:1,  r:0.0,  col:0xffffff, type:'core',    y:0}
+];
+
+var DEPTH_STEP = 0.12;  // Z offset per layer (inward)
+var spinSpeed  = 0.002;
+var depthScale = 1.2;   // spread multiplier
+var tiltDeg    = 25;    // X axis tilt of whole circle
+
+var layerMeshes = [];   // THREE groups per layer
+var currentLayer = -1;  // revealed up to this index
+var scene, camera, renderer, controls;
+var circleGroup;        // parent group -- tilt this
+var clock;
+
+// -- LOG ----------------------------------------------
+var logHidden = false;
+function lg(msg, cls) {
+  var el = document.getElementById('log');
+  if (!el) return;
+  var d = document.createElement('div');
+  d.className = 'e' + (cls ? ' '+cls : '');
+  d.textContent = msg;
+  el.insertBefore(d, el.firstChild);
+  while (el.children.length > 50) el.removeChild(el.lastChild);
+}
+function toggleLog() {
+  logHidden = !logHidden;
+  document.getElementById('log').classList.toggle('hidden', logHidden);
+}
+
+// -- GEOMETRY BUILDERS --------------------------------
+
+function makeRing(radius, col, segments) {
+  segments = segments || 128;
+  var pts = [];
+  for (var i = 0; i <= segments; i++) {
+    var a = (i / segments) * Math.PI * 2;
+    pts.push(new THREE.Vector3(
+      Math.cos(a) * radius, Math.sin(a) * radius, 0));
+  }
+  var geo = new THREE.BufferGeometry().setFromPoints(pts);
+  var mat = new THREE.LineBasicMaterial({
+    color: col, transparent: true, opacity: 0.7});
+  return new THREE.Line(geo, mat);
+}
+
+function makeNodeCircle(n, radius, col) {
+  var group = new THREE.Group();
+  var geo = new THREE.SphereGeometry(0.06, 10, 7);
+  for (var i = 0; i < n; i++) {
+    var a = (i / n) * Math.PI * 2 - Math.PI / 2;
+    var mat = new THREE.MeshPhongMaterial({
+      color: col, emissive: col, emissiveIntensity: 0.4,
+      specular: 0xffffff, shininess: 200});
+    var mesh = new THREE.Mesh(geo, mat);
+    mesh.position.set(
+      Math.cos(a) * radius, Math.sin(a) * radius, 0);
+    group.add(mesh);
+    // small spoke line to center
+    var spts = [new THREE.Vector3(0,0,0), mesh.position.clone()];
+    var sgeo = new THREE.BufferGeometry().setFromPoints(spts);
+    var smat = new THREE.LineBasicMaterial({
+      color: col, transparent: true, opacity: 0.2});
+    group.add(new THREE.Line(sgeo, smat));
+  }
+  return group;
+}
+
+function makeStar(n, radius, col) {
+  // connect every other node (star polygon)
+  var group = new THREE.Group();
+  var pts = [];
+  for (var i = 0; i < n; i++) {
+    var a = (i / n) * Math.PI * 2 - Math.PI / 2;
+    pts.push(new THREE.Vector3(
+      Math.cos(a) * radius, Math.sin(a) * radius, 0));
+  }
+  // connect: 0->2->4->6... (skip 1)
+  var skip = Math.floor(n / 3) || 1;
+  var linePts = [];
+  var start = 0;
+  for (var s = 0; s <= n; s++) {
+    linePts.push(pts[start]);
+    start = (start + skip) % n;
+  }
+  var geo = new THREE.BufferGeometry().setFromPoints(linePts);
+  var mat = new THREE.LineBasicMaterial({
+    color: col, transparent: true, opacity: 0.5});
+  group.add(new THREE.Line(geo, mat));
+  return group;
+}
+
+function makeSpiral(radius, col) {
+  var group = new THREE.Group();
+  var pts = [];
+  var turns = 3;
+  var steps = 180;
+  for (var i = 0; i <= steps; i++) {
+    var t = i / steps;
+    var a = t * Math.PI * 2 * turns;
+    var r = t * radius;
+    pts.push(new THREE.Vector3(
+      Math.cos(a) * r, Math.sin(a) * r, 0));
+  }
+  var geo = new THREE.BufferGeometry().setFromPoints(pts);
+  var mat = new THREE.LineBasicMaterial({
+    color: col, transparent: true, opacity: 0.8});
+  group.add(new THREE.Line(geo, mat));
+  return group;
+}
+
+function makeCore(col) {
+  var group = new THREE.Group();
+  var geo = new THREE.SphereGeometry(0.12, 16, 12);
+  var mat = new THREE.MeshPhongMaterial({
+    color: col, emissive: col, emissiveIntensity: 0.8,
+    specular: 0xffffff, shininess: 400});
+  group.add(new THREE.Mesh(geo, mat));
+  // glow ring
+  group.add(makeRing(0.25, col, 64));
+  return group;
+}
+
+// -- BUILD LAYER ---------------------------------------
+function buildLayer(idx) {
+  var L = LAYERS[idx];
+  var group = new THREE.Group();
+  var z = -idx * DEPTH_STEP * depthScale;
+
+  if (L.type === 'ring') {
+    group.add(makeRing(L.r, L.col));
+  } else if (L.type === 'nodes') {
+    group.add(makeNodeCircle(L.n, L.r, L.col));
+    group.add(makeRing(L.r, L.col, 96));
+  } else if (L.type === 'star') {
+    group.add(makeStar(L.n || 6, L.r, L.col));
+  } else if (L.type === 'spiral') {
+    group.add(makeSpiral(L.r, L.col));
+  } else if (L.type === 'core') {
+    group.add(makeCore(L.col));
+  }
+
+  group.position.z = z;
+  group.visible = false;
+  circleGroup.add(group);
+  layerMeshes.push(group);
+}
+
+// -- LAYER CONTROL ------------------------------------
+function nextLayer() {
+  if (currentLayer >= LAYERS.length - 1) {
+    lg('all layers revealed', 'gold'); return;
+  }
+  currentLayer++;
+  layerMeshes[currentLayer].visible = true;
+  updateDots();
+  updateHud();
+  lg('layer ' + (currentLayer+1) + ': ' + LAYERS[currentLayer].name, 'cyan');
+}
+
+function prevLayer() {
+  if (currentLayer < 0) { lg('no layers to hide', 'gold'); return; }
+  layerMeshes[currentLayer].visible = false;
+  currentLayer--;
+  updateDots();
+  updateHud();
+  lg('layer hidden');
+}
+
+function showAll() {
+  for (var i = 0; i < LAYERS.length; i++) {
+    layerMeshes[i].visible = true;
+  }
+  currentLayer = LAYERS.length - 1;
+  updateDots(); updateHud();
+  lg('ALL layers revealed', 'gold');
+}
+
+function resetLayers() {
+  for (var i = 0; i < LAYERS.length; i++) {
+    layerMeshes[i].visible = false;
+  }
+  currentLayer = -1;
+  updateDots(); updateHud();
+  lg('reset to void');
+}
+
+function updateHud() {
+  var idx = currentLayer;
+  document.getElementById('h-layer').textContent = idx + 1;
+  var nodes = 0, rings = 0;
+  for (var i = 0; i <= idx; i++) {
+    if (LAYERS[i].n > 0) nodes += LAYERS[i].n;
+    if (LAYERS[i].type === 'ring') rings++;
+  }
+  document.getElementById('h-nodes').textContent = nodes;
+  document.getElementById('h-rings').textContent = rings;
+  document.getElementById('h-depth').textContent =
+    (Math.max(0, idx) * DEPTH_STEP * depthScale).toFixed(2);
+  var hint = idx < LAYERS.length - 1
+    ? 'NEXT -> ' + (LAYERS[idx+1] ? LAYERS[idx+1].name : '')
+    : 'circle complete';
+  document.getElementById('h-hint').textContent = hint;
+}
+
+function updateDots() {
+  var bar = document.getElementById('layer-bar');
+  if (!bar) return;
+  bar.innerHTML = '';
+  for (var i = 0; i < LAYERS.length; i++) {
+    var d = document.createElement('div');
+    d.className = 'ldot' +
+      (i < currentLayer ? ' done' : '') +
+      (i === currentLayer ? ' active' : '');
+    bar.appendChild(d);
+  }
+}
+
+// -- CONTROLS -----------------------------------------
+function setSpin(v) {
+  spinSpeed = v / 10000;
+  document.getElementById('sv-spin').textContent = (v/100).toFixed(2);
+}
+
+function setDepth(v) {
+  depthScale = v / 10;
+  document.getElementById('sv-depth').textContent = depthScale.toFixed(1);
+  // rebuild Z positions
+  for (var i = 0; i < layerMeshes.length; i++) {
+    layerMeshes[i].position.z = -i * DEPTH_STEP * depthScale;
+  }
+  document.getElementById('h-depth').textContent =
+    (Math.max(0, currentLayer) * DEPTH_STEP * depthScale).toFixed(2);
+}
+
+function setTilt(v) {
+  tiltDeg = v;
+  document.getElementById('sv-tilt').textContent = v;
+  if (circleGroup) {
+    circleGroup.rotation.x = THREE.MathUtils.degToRad(v);
+  }
+}
+
+// -- INIT ---------------------------------------------
+(function init() {
+  scene = new THREE.Scene();
+  scene.fog = new THREE.FogExp2(0x050510, 0.04);
+
+  camera = new THREE.PerspectiveCamera(
+    50, innerWidth/innerHeight, 0.05, 200);
+  camera.position.set(0, 5, 14);
+  camera.lookAt(0, 0, 0);
+
+  renderer = new THREE.WebGLRenderer({antialias: true});
+  renderer.setSize(innerWidth, innerHeight);
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  renderer.setClearColor(0x050510);
+  document.body.appendChild(renderer.domElement);
+
+  if (THREE.OrbitControls) {
+    controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.06;
+    controls.minDistance = 2;
+    controls.maxDistance = 40;
+  }
+
+  // Lights
+  scene.add(new THREE.AmbientLight(0x101828, 3));
+  var d1 = new THREE.DirectionalLight(0x00d4ff, 0.8);
+  d1.position.set(5, 8, 5); scene.add(d1);
+  var d2 = new THREE.DirectionalLight(0xffd700, 0.3);
+  d2.position.set(-6, 4, -8); scene.add(d2);
+  var d3 = new THREE.PointLight(0xff69b4, 0.4, 15);
+  d3.position.set(0, 0, 3); scene.add(d3);
+
+  // Floor plane -- very dim
+  var pGeo = new THREE.PlaneGeometry(30, 30);
+  var pMat = new THREE.MeshBasicMaterial({
+    color: 0x060810, side: THREE.DoubleSide,
+    transparent: true, opacity: 0.5});
+  var floor = new THREE.Mesh(pGeo, pMat);
+  floor.rotation.x = -Math.PI / 2;
+  floor.position.y = -0.01;
+  scene.add(floor);
+
+  // Grid -- same color as default line
+  var grid = new THREE.GridHelper(20, 20, 0x0d1520, 0x080e18);
+  grid.material.transparent = true;
+  grid.material.opacity = 0.4;
+  scene.add(grid);
+
+  // CIRCLE GROUP -- all layers parent
+  circleGroup = new THREE.Group();
+  circleGroup.rotation.x = THREE.MathUtils.degToRad(tiltDeg);
+  scene.add(circleGroup);
+
+  // Build all 12 layers (hidden)
+  for (var i = 0; i < LAYERS.length; i++) {
+    buildLayer(i);
+  }
+
+  // Init HUD + dots
+  updateDots();
+  updateHud();
+
+  window.addEventListener('resize', function() {
+    camera.aspect = innerWidth/innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(innerWidth, innerHeight);
+  });
+
+  // Keyboard: SPACE = next, BACKSPACE = prev
+  window.addEventListener('keydown', function(e) {
+    if (e.code === 'Space') { e.preventDefault(); nextLayer(); }
+    if (e.code === 'Backspace') { e.preventDefault(); prevLayer(); }
+    if (e.code === 'KeyA') showAll();
+    if (e.code === 'KeyR') resetLayers();
+  });
+
+  lg('Atelier v1.1 ready -- 12 layers', 'ok');
+  lg('SPACE = next layer', 'cyan');
+  lg('BACKSPACE = prev layer', 'cyan');
+  lg('A = all  R = reset', 'cyan');
+
+  animate();
+})();
+
+// -- ANIMATE ------------------------------------------
+var t0 = performance.now();
+function animate() {
+  requestAnimationFrame(animate);
+  if (controls) controls.update();
+
+  var t = performance.now() * 0.001;
+
+  // Spin the whole circle
+  if (circleGroup) {
+    circleGroup.rotation.z += spinSpeed;
+  }
+
+  // Pulse each visible layer differently
+  for (var i = 0; i <= currentLayer; i++) {
+    var g = layerMeshes[i];
+    if (!g || !g.visible) continue;
+    // alternate spin direction per layer
+    var dir = (i % 2 === 0) ? 1 : -1;
+    var freq = 0.3 + i * 0.05;
+    g.rotation.z += spinSpeed * dir * freq;
+  }
+
+  renderer.render(scene, camera);
+}
+
+</script>
+</body>
+</html>
