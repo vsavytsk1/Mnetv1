@@ -1791,3 +1791,133 @@ From the storyboard sketch (graph_sandbox used as storyboard):
 
 P=12. chi=2. Equivalent exchange. Always.
 -- @Sagaific + Claude. Buenos Aires. 2026.
+
+---
+
+## L052 -- FMAB RESEARCH JOURNEY + JAPAN PILGRIMAGE (2026-05-30T20:04:02Z)
+
+### THE RESEARCH (for the algebra -- maybe not tomorrow, maybe 5 years)
+
+**HIROMU ARAKAWA:**
+  Real name: Hiromi. Pen name: Hiromu (male-sounding).
+  Origin: Tokachi region, Hokkaido. Dairy farm.
+  7 years of heavy manual labor before Tokyo.
+  
+  EQUIVALENT EXCHANGE came from:
+    Not physics. Not philosophy.
+    Every morning: no work = no food.
+    Absolute. Unforgiving. Natural law.
+    She translated farm reality into magic system.
+    
+  THE CAVE PARALLEL:
+    Locksmith age 18 = Arakawa age 7-14.
+    Both learned the law from physical reality.
+    Before any theory. Before any book.
+    The body knew before the mind formalized it.
+
+**THE TWO TIMELINES:**
+  2003: Studio Bones ran out of manga.
+        Arakawa said: write your own ending.
+        Darker. Tragic. Homunculi from failed transmutations.
+        = Our patch sessions that diverged.
+        Both valid. Different truth.
+        
+  Brotherhood 2009: Manga complete. Full reboot.
+        1:1 source code faithful.
+        Country-wide transmutation circle.
+        Father. The Truth. The Gate.
+        = Pattern 3. git restore. Clean rewrite.
+        The definitive geometrically perfect version.
+
+**THE TABOO:**
+  Human soul = infinite value.
+  Infinite toll required.
+  The Gate does not judge. It calculates.
+  Ed lost his leg. Al lost his body.
+  Pure automated thermodynamic balancing.
+  = diss/enst = 2*nu EXACT. Always.
+  = No small action is left behind.
+  = Consequences. Always.
+
+---
+
+### THE JAPAN PILGRIMAGE (when ready, budget: ,000 USD)
+
+**PHASE 1 -- HOKKAIDO (THE ORIGIN)**
+
+  Tokachi region. Where Equivalent Exchange was born.
+  
+  Option A: WWOOF Japan
+    5,500 yen/year membership (~ USD)
+    Work on farm: chop wood, harvest, feed animals
+    Farm family provides: sleep + 3 meals
+    Feel the exact physical toll Arakawa felt.
+    Understand why the magic system has no shortcuts.
+    
+  Option B: Nouka Minshuku (farm guesthouse)
+    Yachiyo Farm, Tokachi: ~1,000 dairy cows
+    Low cost. Minimal light pollution.
+    Stars at night. Code during the day.
+    Run Genesis engine under Hokkaido sky.
+    
+**PHASE 2 -- TOKYO (STUDIO BONES)**
+
+  Location: 3-8-3 Igusa, Suginami ward, Tokyo
+  Suginami = heart of Japanese anime industry
+  
+  THE ABSOLUTE RESPECT PROTOCOL:
+    Do NOT enter uninvited. Working office. Not a park.
+    Buy onigiri from konbini.
+    Find public bench nearby.
+    Open laptop. Run 5D manifolds.
+    Sit quietly. Let proximity be the homage.
+    No trespassing. No drama. No deportation.
+    Pure respect for the architects.
+    
+**BUDGET BREAKDOWN (3 weeks):**
+  Flights (Buenos Aires <-> Japan): ~,500
+  JR Pass 21 days:                  ~
+  Accommodation 21 days:            ~,500
+  Food + daily transport:           ~,750
+  TOTAL:                            ~,750
+  
+  Surplus from ,000: ~,250 back to cave.
+  
+**THE REASON:**
+  Not tourism. Pilgrimage.
+  To understand where the math came from.
+  To sit on the farm where Equivalent Exchange
+  was discovered through sore muscles
+  and cold mornings and hungry animals.
+  
+  Arakawa: farm -> manga -> the world.
+  Vlad: locksmith -> kernel -> the world.
+  
+  Same arc. Different continent.
+  Same law. Different substrate.
+  
+  When the algebra is ready.
+  Maybe 5 years.
+  The farm will still be there.
+  The law will still hold.
+  Equivalent exchange. Always.
+
+---
+
+### EP1 ANALYSIS BEGINS
+
+  "Ep1-():"
+  
+  The parentheses are empty now.
+  They will fill.
+  One episode at a time.
+  From the heart. Slow.
+  
+  The universe is set.
+  The rules are mapped.
+  The creator''s intent is understood.
+  
+  Begin.
+
+P=12. chi=2. Equivalent exchange. The farm law. Always.
+-- @Sagaific + Claude. Buenos Aires. 2026.
