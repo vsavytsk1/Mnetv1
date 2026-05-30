@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Atelier v1.0 -- MachineNet</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#050510;color:#e0e0e0;font-family:ui-monospace,'SF Mono',monospace;font-size:11px;overflow:hidden;height:100vh}
+canvas{display:block}
+
+#hud{position:fixed;top:12px;left:12px;z-index:10;pointer-events:none}
+#hud .title{font-size:12px;color:#00d4ff;margin-bottom:4px;letter-spacing:0.12em;text-transform:uppercase}
+#hud .row{line-height:1.8;color:rgba(220,228,240,0.5)}
+#hud .val{color:#00d4ff;font-weight:bold}
+#hud .gold{color:#ffd700}
+#hud .pink{color:#ff69b4}
+#hud .dim{color:rgba(220,228,240,0.25)}
+
+#log{position:fixed;top:80px;left:12px;z-index:10;
+  background:rgba(5,5,16,0.88);border:1px solid #1a1f2e;border-radius:4px;
+  padding:8px 12px;max-width:300px;max-height:260px;overflow-y:auto;
+  font-size:10px;line-height:1.5;color:rgba(255,180,180,0.75);
+  cursor:pointer;transition:opacity 0.3s}
+#log.hidden{opacity:0;pointer-events:none}
+#log .e{border-bottom:1px solid #1a0505;padding:1px 0}
+#log .ok{color:#7fff7f}
+#log .warn{color:#ffd700}
+#log .cyan{color:#00d4ff}
+
+#bar{position:fixed;bottom:0;left:0;right:0;z-index:10;
+  background:rgba(5,5,16,0.95);border-top:1px solid #1a1f2e;
+  padding:6px 14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.btn{background:#0a0e18;color:#555;border:1px solid #1a1f2e;border-radius:3px;
+  padding:4px 11px;font-family:inherit;font-size:10px;cursor:pointer;transition:all 0.15s;
+  text-transform:uppercase;letter-spacing:0.06em}
+.btn:hover{border-color:#00d4ff;color:#00d4ff}
+.btn.active{background:#00d4ff;color:#050510;border-color:#00d4ff}
+.btn.pink{color:#ff69b4;border-color:#3a1a2a}
+.btn.pink:hover{border-color:#ff69b4}
+.btn.gold{color:#ffd700;border-color:#3a2a1a}
+.btn.gold:hover{border-color:#ffd700}
+.sep{width:1px;height:18px;background:#1a1f2e;margin:0 2px}
+.lbl{color:rgba(220,228,240,0.35);font-size:9px;text-transform:uppercase;letter-spacing:0.1em}
+.sl{display:flex;align-items:center;gap:4px}
+.sl input[type=range]{width:70px;accent-color:#00d4ff}
+.sv{font-size:9px;color:#00d4ff;min-width:28px}
+
+#mode{position:fixed;top:50%;right:16px;transform:translateY(-50%);
+  z-index:10;pointer-events:none;text-align:right}
+#mode .m{font-size:11px;color:rgba(220,228,240,0.3);letter-spacing:0.1em;
+  text-transform:uppercase;line-height:2}
+#mode .m.active{color:#00d4ff;text-shadow:0 0 12px rgba(0,212,255,0.4)}
+</style>
+</head>
+<body class="graph-A">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+<div id="hud">
+  <div class="title">Atelier v1.0</div>
+  <div class="row">pos &nbsp;<span class="val" id="h-pos">0, 0, 0</span></div>
+  <div class="row">grid <span class="val" id="h-snap">1.0</span></div>
+  <div class="row">grip <span class="gold" id="h-grip">1.00x</span></div>
+  <div class="row">tool <span class="pink" id="h-tool">MOVE</span></div>
+  <div class="row dim" id="h-hint">click plane to place point</div>
+</div>
+
+<div id="log" onclick="toggleLog()" title="click to hide"></div>
+
+<div id="mode">
+  <div class="m active" id="m-move">move</div>
+  <div class="m" id="m-place">place</div>
+  <div class="m" id="m-lock">lock</div>
+</div>
+
+<div id="bar">
+  <span class="lbl">tool</span>
+  <button class="btn active" id="b-move" onclick="setTool('move')">move</button>
+  <button class="btn" id="b-place" onclick="setTool('place')">place</button>
+  <div class="sep"></div>
+  <span class="lbl">grip</span>
+  <div class="sl">
+    <input type="range" id="sl-grip" min="1" max="100" value="100"
+      oninput="setGrip(+this.value)">
+    <span class="sv" id="sv-grip">1.00x</span>
+  </div>
+  <div class="sep"></div>
+  <span class="lbl">grid</span>
+  <div class="sl">
+    <input type="range" id="sl-snap" min="0" max="4" value="2" step="1"
+      oninput="setSnapLevel(+this.value)">
+    <span class="sv" id="sv-snap">1.0</span>
+  </div>
+  <div class="sep"></div>
+  <button class="btn pink" onclick="clearPoint()">clear</button>
+  <button class="btn gold" onclick="lockPoint()">lock</button>
+  <div class="sep"></div>
+  <span class="lbl">plane</span>
+  <button class="btn" id="b-grid" onclick="toggleGrid()">grid on</button>
+  <button class="btn" id="b-axes" onclick="toggleAxes()">axes on</button>
+</div>
+
+<script>
+
+// ======================================================
+// ATELIER v1.0 -- One point. Full control. Clean space.
+// Built: 2026-05-30T01:52:20Z
+// Pattern 2: CSS+HTML separate, JS plain string.
+// ======================================================
+
+var scene, camera, renderer, controls;
+var raycaster, mouse, plane, planeIntersect;
+var pointMesh = null;     // THE ONE POINT
+var pointLocked = false;
+var activeTool = 'move';
+var gridVisible = true;
+var axesVisible = true;
+var logHidden = false;
+var gripScale = 1.0;      // 0.01 to 1.0 -- fine control scalar
+var snapLevels = [0, 0.25, 0.5, 1.0, 2.0];
+var snapIdx = 2;          // default 1.0
+var snapSize = 1.0;
+var pointPos = {x:0, y:0, z:0};
+var isDragging = false;
+var dragOffset = {x:0, z:0};
+
+// -- LOG ----------------------------------------------
+function lg(msg, cls) {
+  var el = document.getElementById('log');
+  if (!el) return;
+  var d = document.createElement('div');
+  d.className = 'e' + (cls ? ' '+cls : '');
+  d.textContent = msg;
+  el.insertBefore(d, el.firstChild);
+  while (el.children.length > 40) el.removeChild(el.lastChild);
+}
+
+function toggleLog() {
+  logHidden = !logHidden;
+  document.getElementById('log').classList.toggle('hidden', logHidden);
+}
+
+// -- SNAP ---------------------------------------------
+function setSnapLevel(v) {
+  snapIdx = v;
+  snapSize = snapLevels[v] || 0;
+  var labels = ['off','0.25','0.5','1.0','2.0'];
+  document.getElementById('sv-snap').textContent = labels[v] || '?';
+  document.getElementById('h-snap').textContent  = labels[v] || '?';
+  lg('snap: ' + (labels[v] || 'off'));
+}
+
+function snapToGrid(v) {
+  if (!snapSize) return {x: v.x, y: 0, z: v.z};
+  var s = snapSize * gripScale;
+  if (s < 0.001) s = 0.001;
+  return {
+    x: Math.round(v.x / s) * s,
+    y: 0,
+    z: Math.round(v.z / s) * s
+  };
+}
+
+// -- GRIP SCALAR --------------------------------------
+function setGrip(v) {
+  // v: 1-100 -> gripScale: 0.01-1.0 (logarithmic feel)
+  gripScale = v / 100;
+  var disp = gripScale.toFixed(2) + 'x';
+  document.getElementById('sv-grip').textContent = disp;
+  document.getElementById('h-grip').textContent  = disp;
+  lg('grip: ' + disp);
+}
+
+// -- TOOL ---------------------------------------------
+function setTool(t) {
+  activeTool = t;
+  ['move','place'].forEach(function(k) {
+    document.getElementById('b-'+k).classList.toggle('active', k===t);
+    document.getElementById('m-'+k).classList.toggle('active', k===t);
+  });
+  document.getElementById('h-tool').textContent = t.toUpperCase();
+  // orbit: enabled in move, disabled in place
+  if (controls) controls.enabled = (t === 'move');
+  lg('tool: ' + t);
+  updateHint();
+}
+
+function updateHint() {
+  var hints = {
+    move:  'drag to orbit -- scroll to zoom',
+    place: 'click plane to place point -- drag point to move'
+  };
+  document.getElementById('h-hint').textContent = hints[activeTool] || '';
+}
+
+// -- POINT CONTROLS -----------------------------------
+function clearPoint() {
+  if (pointMesh) {
+    scene.remove(pointMesh);
+    pointMesh.geometry.dispose();
+    pointMesh = null;
+    pointLocked = false;
+    document.getElementById('m-lock').classList.remove('active');
+    lg('point cleared');
+    updatePos(0,0,0);
+  }
+}
+
+function lockPoint() {
+  if (!pointMesh) { lg('no point to lock','warn'); return; }
+  pointLocked = !pointLocked;
+  var btn = document.getElementById('b-lock') ||
+            document.getElementById('m-lock');
+  document.getElementById('m-lock').classList.toggle('active', pointLocked);
+  // visual: locked = gold, unlocked = cyan
+  if (pointMesh.material) {
+    pointMesh.material.color.setHex(pointLocked ? 0xffd700 : 0x00d4ff);
+    pointMesh.material.emissive.setHex(pointLocked ? 0xffd700 : 0x00d4ff);
+  }
+  lg('point ' + (pointLocked ? 'LOCKED (gold)' : 'unlocked (cyan)'),
+     pointLocked ? 'gold' : 'cyan');
+}
+
+function updatePos(x, y, z) {
+  pointPos = {x:x, y:y, z:z};
+  document.getElementById('h-pos').textContent =
+    x.toFixed(2) + ', ' + y.toFixed(2) + ', ' + z.toFixed(2);
+}
+
+// -- GRID / AXES --------------------------------------
+var gridMesh, axesMesh;
+
+function toggleGrid() {
+  gridVisible = !gridVisible;
+  if (gridMesh) gridMesh.visible = gridVisible;
+  var b = document.getElementById('b-grid');
+  b.textContent = gridVisible ? 'grid on' : 'grid off';
+  b.classList.toggle('active', gridVisible);
+}
+
+function toggleAxes() {
+  axesVisible = !axesVisible;
+  if (axesMesh) axesMesh.visible = axesVisible;
+  var b = document.getElementById('b-axes');
+  b.textContent = axesVisible ? 'axes on' : 'axes off';
+  b.classList.toggle('active', axesVisible);
+}
+
+// -- WORLD HIT ----------------------------------------
+function getWorldHit(screenX, screenY) {
+  mouse.x =  (screenX / innerWidth)  * 2 - 1;
+  mouse.y = -(screenY / innerHeight) * 2 + 1;
+  raycaster.setFromCamera(mouse, camera);
+  var hit = raycaster.ray.intersectPlane(plane, planeIntersect);
+  if (hit) return snapToGrid(planeIntersect);
+  return null;
+}
+
+// Find if click hit the point mesh (for drag)
+function hitPoint(screenX, screenY) {
+  if (!pointMesh) return false;
+  mouse.x =  (screenX / innerWidth)  * 2 - 1;
+  mouse.y = -(screenY / innerHeight) * 2 + 1;
+  raycaster.setFromCamera(mouse, camera);
+  var hits = raycaster.intersectObject(pointMesh);
+  return hits.length > 0;
+}
+
+// -- POINTER EVENTS -----------------------------------
+var pointerDown = false, pointerStart = {x:0, y:0};
+var draggingPoint = false;
+
+renderer_domElement_events = function(el) {
+  el.addEventListener('pointerdown', function(e) {
+    if (e.button !== 0) return;
+    pointerDown = true;
+    pointerStart = {x: e.clientX, y: e.clientY};
+    draggingPoint = false;
+
+    if (activeTool === 'place' && pointMesh && !pointLocked) {
+      if (hitPoint(e.clientX, e.clientY)) {
+        draggingPoint = true;
+        if (controls) controls.enabled = false;
+        lg('drag start', 'cyan');
+      }
+    }
+  });
+
+  el.addEventListener('pointermove', function(e) {
+    if (!pointerDown) return;
+    var dx = e.clientX - pointerStart.x;
+    var dy = e.clientY - pointerStart.y;
+    if (draggingPoint) {
+      var hit = getWorldHit(e.clientX, e.clientY);
+      if (hit && pointMesh) {
+        pointMesh.position.set(hit.x, 0, hit.z);
+        updatePos(hit.x, 0, hit.z);
+      }
+    }
+  });
+
+  el.addEventListener('pointerup', function(e) {
+    if (e.button !== 0) return;
+    var dx = Math.abs(e.clientX - pointerStart.x);
+    var dy = Math.abs(e.clientY - pointerStart.y);
+    var wasClick = dx < 5 && dy < 5;
+
+    if (draggingPoint) {
+      draggingPoint = false;
+      if (controls) controls.enabled = (activeTool === 'move');
+      lg('point dropped at ' + pointPos.x.toFixed(2) + ', ' + pointPos.z.toFixed(2), 'ok');
+      pointerDown = false;
+      return;
+    }
+
+    if (wasClick && activeTool === 'place') {
+      var hit = getWorldHit(e.clientX, e.clientY);
+      if (hit) {
+        if (!pointMesh) {
+          // CREATE the one point
+          var geo = new THREE.SphereGeometry(0.18, 16, 10);
+          var mat = new THREE.MeshPhongMaterial({
+            color: 0x00d4ff, emissive: 0x00d4ff, emissiveIntensity: 0.3,
+            specular: 0xffffff, shininess: 180
+          });
+          pointMesh = new THREE.Mesh(geo, mat);
+          scene.add(pointMesh);
+          lg('point created', 'ok');
+        }
+        pointMesh.position.set(hit.x, 0, hit.z);
+        updatePos(hit.x, 0, hit.z);
+        lg('placed: ' + hit.x.toFixed(2) + ', 0, ' + hit.z.toFixed(2), 'cyan');
+      }
+    }
+    pointerDown = false;
+  });
+};
+
+// -- INIT ---------------------------------------------
+(function init() {
+  // Scene
+  scene = new THREE.Scene();
+  scene.fog = new THREE.FogExp2(0x050510, 0.018);
+
+  // Camera
+  camera = new THREE.PerspectiveCamera(55, innerWidth/innerHeight, 0.05, 500);
+  camera.position.set(0, 12, 18);
+  camera.lookAt(0, 0, 0);
+
+  // Renderer
+  renderer = new THREE.WebGLRenderer({antialias: true});
+  renderer.setSize(innerWidth, innerHeight);
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  renderer.setClearColor(0x050510);
+  document.body.appendChild(renderer.domElement);
+
+  // Orbit
+  if (THREE.OrbitControls) {
+    controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.08;
+    controls.minDistance = 2;
+    controls.maxDistance = 80;
+    controls.maxPolarAngle = Math.PI * 0.48;
+    controls.enabled = true; // move mode default
+  }
+
+  // Raycaster
+  raycaster = new THREE.Raycaster();
+  mouse = new THREE.Vector2();
+  plane = new THREE.Plane(new THREE.Vector3(0,1,0), 0);
+  planeIntersect = new THREE.Vector3();
+
+  // Lights
+  var amb = new THREE.AmbientLight(0x101828, 2.5);
+  scene.add(amb);
+  var dir = new THREE.DirectionalLight(0x00d4ff, 0.6);
+  dir.position.set(5, 12, 8);
+  scene.add(dir);
+  var dir2 = new THREE.DirectionalLight(0xffd700, 0.2);
+  dir2.position.set(-8, 6, -10);
+  scene.add(dir2);
+
+  // GRID -- same color as default line (dim gray-blue)
+  // All one color as requested: the plane is the space
+  var gridSize = 20;
+  gridMesh = new THREE.GridHelper(gridSize * 2, gridSize * 2, 0x0d1828, 0x0a1018);
+  gridMesh.material.opacity = 0.6;
+  gridMesh.material.transparent = true;
+  scene.add(gridMesh);
+
+  // AXES -- minimal, just orientation
+  axesMesh = new THREE.AxesHelper(1.5);
+  axesMesh.material.opacity = 0.4;
+  axesMesh.material.transparent = true;
+  scene.add(axesMesh);
+
+  // Plane visual (the gray plane itself -- very subtle)
+  var planeGeo = new THREE.PlaneGeometry(40, 40);
+  var planeMat = new THREE.MeshBasicMaterial({
+    color: 0x080c14, side: THREE.DoubleSide,
+    transparent: true, opacity: 0.4
+  });
+  var planeMesh = new THREE.Mesh(planeGeo, planeMat);
+  planeMesh.rotation.x = -Math.PI / 2;
+  planeMesh.position.y = -0.001;
+  scene.add(planeMesh);
+
+  // Register pointer events
+  renderer_domElement_events(renderer.domElement);
+
+  // Resize
+  window.addEventListener('resize', function() {
+    camera.aspect = innerWidth/innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(innerWidth, innerHeight);
+  });
+
+  lg('Atelier v1.0 ready -- one point, full control', 'ok');
+  lg('PLACE tool: click to place, drag to move', 'cyan');
+  lg('MOVE tool: orbit + zoom', 'cyan');
+  lg('grip scalar: fine movement control');
+  lg('log: click to hide');
+  updateHint();
+
+  animate();
+})();
+
+// -- ANIMATE ------------------------------------------
+function animate() {
+  requestAnimationFrame(animate);
+  if (controls) controls.update();
+
+  // Pulse the point if not locked
+  if (pointMesh && !pointLocked) {
+    var t = performance.now() * 0.002;
+    var pulse = 0.85 + Math.sin(t) * 0.15;
+    pointMesh.material.emissiveIntensity = pulse * 0.4;
+  }
+
+  renderer.render(scene, camera);
+}
+
+</script>
+</body>
+</html>
