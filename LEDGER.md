@@ -799,3 +799,95 @@ P=12. chi=2. ALWAYS. Even at 1.1M faces. Even in a browser tab.
   Both finished clean.
   P=12. chi=2. ALWAYS.
 
+---
+
+## L035 -- MODULE CLOSE: GENESIS PLATONIC SEEDS (2026-05-29)
+
+### WHAT WAS BUILT THIS SESSION (L026-L034)
+
+**9 commits. All Pattern 3. All clean.**
+
+  L026: Platonic seeds P1-P5 buttons + working tessellation
+  L027: All faces canonical pent (red). GK state proper.
+  L028: chi uses actual edge count. HIDE button beauty mode.
+  L029: Backface cull threshold. pts.slice() copy. id format.
+  L030: chi canonical ALL topologies. E=edgeSum/2, V=E-F+2.
+  L031: Display -- chi=2=GREEN always. P=12 Goldberg-specific.
+  L032: HONEST KOLMOGOROV RECEIPT. L4 24k Re=20000 logged.
+  L033: P6 Triangular Prism + P7 Square Antiprism added.
+  L034: REFINE ALL unlocked. Face-count brake. Free clicking.
+
+**CANONICAL RULES LOCKED:**
+  - chi=2 = universal invariant (not P=12)
+  - P=12 = Goldberg-specific only
+  - All Platonic faces = pent (native canonical type)
+  - Papyrus fires on FACE COUNT not level number
+  - ONLY test in ENG MASTER dashboard (eng_v2.0.html)
+  - Pattern 3 always: normalize -> patch -> write
+
+**CURSE 18:** windowsDevour (python opened by notepad/VLC)
+**CURSE 19:** Quote Hell (inline -c with single quotes in PS)
+
+---
+
+### NEXT STEPS FOR GENESIS (ATELIER MODULE)
+
+**1. SPIN=0 ON LOAD -- cosmetic, vlad gets dizzy**
+   Default spin = 0 already set BUT something resets it.
+   Find and kill the reset. Motion is opt-in. Always.
+   The ego spin haunts us. Curse 13 wants revenge.
+
+**2. SPACE FLIGHT CONTROLS**
+   Full paradigm shift: joystick/flight-sim input model.
+   Pitch, yaw, roll. Throttle = zoom speed.
+   Inspiration: Elite Dangerous, space flight sims.
+   The mysteries are in the fine adjustments.
+   Replace current drag-only with proper flight model.
+
+**3. SYMMETRY POINT RENDER BUTTONS**
+   List of locked symmetry points from current state.
+   Click one -> re-render from THAT exact viewpoint.
+   The 12 pentagon centroids are the canonical points.
+   Cool symmetries visible from each one.
+
+**4. LOADING BAR**
+   REFINE ALL on large meshes = JS blocking.
+   Need async yield + progress bar.
+   "Computing... 45%" not a frozen browser.
+   requestAnimationFrame-based chunked refinement.
+
+**5. SPHERICAL COORDINATES**
+   Current: raw 3D Cartesian projected flat.
+   Fix: proper spherical -> screen projection.
+   Geodesic dome feel from inside. Sky dome outside.
+
+**6. POLAR CORD LINES**
+   From mnet_v7 / graph_sandbox: polar coordinate
+   line rendering. Cool behavior on sphere surface.
+   The lines follow geodesics not straight projections.
+   Import the polar line logic into genesis.
+
+---
+
+### NEW MODULE: ATELIER
+
+  Location: builder/Atelier/
+  Purpose:  Genesis visual polish + rendering quality
+  Owns:     All genesis_v*.html generation
+  First build: genesis_v9.0.html (Atelier v1)
+  
+  Atelier = the workshop where the masterpiece is made.
+  The kernel is locked. The science is proven.
+  Now we make it BEAUTIFUL.
+
+---
+
+**ACCIDENTAL DISCOVERY:**
+  The Platonic seed + REFINE ALL = infinite wallpaper generator.
+  Every seed produces unique fractal texture.
+  HIDE button = full canvas = screenshot ready.
+  Product idea logged. Not pursued today. Cave note.
+
+**P=12. chi=2. ALWAYS.**
+**Buenos Aires. May 29 2026.**
+**The cave is warm. The module is closed.**
