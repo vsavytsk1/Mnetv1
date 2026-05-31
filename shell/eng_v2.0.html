@@ -3600,26 +3600,80 @@ setInterval(function() {
   function resize() { cv.width = wrap.clientWidth; cv.height = wrap.clientHeight - 20; }
   resize();
   new ResizeObserver(resize).observe(wrap);
-  var state = GK.buildC60();
-  var faces = state.faces;
-  var cam = { rx: 0.3, ry: 0, spin: 0.004 };
+  var miniState = GK.buildC60();
+  var miniLevel = 0;
+  var MAX_LEVEL = 4;
+  var cam = { rx: 0.3, ry: 0, spin: 0.004, zoom: 0.38 };
   var ctx = cv.getContext('2d');
+  var drag = false, lastX = 0, lastY = 0;
+
+  // DRAG to rotate
+  cv.addEventListener('pointerdown', function(e) {
+    drag = true; lastX = e.clientX; lastY = e.clientY;
+    cam.spin = 0; cv.setPointerCapture(e.pointerId);
+  });
+  cv.addEventListener('pointermove', function(e) {
+    if (!drag) return;
+    cam.ry += (e.clientX - lastX) * 0.01;
+    cam.rx += (e.clientY - lastY) * 0.01;
+    cam.rx = Math.max(-1.2, Math.min(1.2, cam.rx));
+    lastX = e.clientX; lastY = e.clientY;
+  });
+  cv.addEventListener('pointerup', function() { drag = false; });
+
+  // SCROLL to zoom
+  cv.addEventListener('wheel', function(e) {
+    e.preventDefault();
+    cam.zoom *= e.deltaY > 0 ? 0.9 : 1.1;
+    cam.zoom = Math.max(0.15, Math.min(0.8, cam.zoom));
+  }, {passive: false});
+
+  // REFINE + RESET buttons injected into mini-wrap label
+  var miniLabel = wrap.querySelector('.dp-title') || wrap.firstChild;
+  var btnBar = document.createElement('div');
+  btnBar.style.cssText = 'position:absolute;top:2px;right:4px;z-index:5;display:flex;gap:3px';
+  function mkBtn(txt, fn) {
+    var b = document.createElement('button');
+    b.textContent = txt;
+    b.style.cssText = 'background:#0a0e18;color:#00d4ff;border:1px solid #1a2a3a;'+
+      'border-radius:2px;padding:1px 5px;font-size:8px;cursor:pointer;font-family:inherit';
+    b.addEventListener('click', fn);
+    return b;
+  }
+  var levelEl = document.createElement('span');
+  levelEl.style.cssText = 'color:#555;font-size:8px;line-height:16px;padding:0 3px';
+  levelEl.textContent = 'L0';
+  btnBar.appendChild(levelEl);
+  btnBar.appendChild(mkBtn('REF', function() {
+    if (miniLevel >= MAX_LEVEL) { levelEl.textContent = 'MAX'; return; }
+    miniState = GK.refineAll(miniState);
+    miniLevel++;
+    levelEl.textContent = 'L' + miniLevel + (miniLevel >= MAX_LEVEL ? ' MAX' : '');
+  }));
+  btnBar.appendChild(mkBtn('RST', function() {
+    miniState = GK.buildC60();
+    miniLevel = 0;
+    levelEl.textContent = 'L0';
+    cam.spin = 0.004;
+  }));
+  wrap.appendChild(btnBar);
+
   (function loop() {
     requestAnimationFrame(loop);
-    cam.ry += cam.spin;
+    if (!drag) cam.ry += cam.spin;
     var W = cv.width, H = cv.height;
     if (!W || !H) return;
-    ctx.fillStyle = 'rgba(3,3,8,0.18)'; ctx.fillRect(0,0,W,H);
+    ctx.fillStyle = 'rgba(3,3,8,0.25)'; ctx.fillRect(0,0,W,H);
     var cy = Math.cos(cam.ry), sy = Math.sin(cam.ry);
-    var cx = Math.cos(cam.rx), sx = Math.sin(cam.rx);
-    var zoom = Math.min(W, H) * 0.38;
+    var cx2 = Math.cos(cam.rx), sx = Math.sin(cam.rx);
+    var zoom = Math.min(W, H) * cam.zoom;
     function proj(p) {
       var x = p[0]*cy - p[2]*sy, z = p[0]*sy + p[2]*cy;
-      var y = p[1]*cx - z*sx,   z2 = p[1]*sx + z*cx;
+      var y = p[1]*cx2 - z*sx, z2 = p[1]*sx + z*cx2;
       var s = zoom / (z2 + 4);
       return { x: W/2 + x*s, y: H/2 + y*s, z: z2 };
     }
-    faces.forEach(function(f) {
+    miniState.faces.forEach(function(f) {
       var pts = f.pts, n = pts.length, isPent = f.type === 'pent';
       for (var i = 0; i < n; i++) {
         var a = proj(pts[i]), b = proj(pts[(i+1)%n]);
