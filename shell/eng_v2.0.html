@@ -236,12 +236,9 @@ body{background:#030308;color:#9090a0;
   </div>
 </div>
 <div id="bar">
-  <span class="lbl">SEED</span>
-  <button class="btn" onclick="engSeed('c60')">C60</button>
-  <button class="btn" onclick="engSeed('dodec')">DODEC</button>
   <button class="btn" onclick="engRefine()">REFINE</button>
+  <button class="btn" onclick="engReset()">RESET</button>
   <div class="sep"></div>
-  <span class="lbl">PROOF</span>
   <button class="btn op" onclick="engSAR()">SAR-5</button>
   <button class="btn op" onclick="engNS()">NS FLOW</button>
   <button class="btn op" onclick="engFS()">FRAC SEARCH</button>
@@ -3769,6 +3766,11 @@ function engRefine() {
   var t0 = performance.now(); _st = GK.refineAll(_st);
   var inv = GK.invariants(_st);
   logAdd('REFINE', inv.faces + 'F ' + (performance.now()-t0).toFixed(1) + 'ms');
+}
+function engReset() {
+  var gk = GK.buildC60();
+  logAdd('RESET', 'C60 F=32 P=12 chi=2');
+  updateDP(gk);
 }
 function engSAR() {
   if (!_st) engSeed('c60');
