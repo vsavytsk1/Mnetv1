@@ -236,9 +236,6 @@ body{background:#030308;color:#9090a0;
   </div>
 </div>
 <div id="bar">
-  <button class="btn" onclick="engRefine()">REFINE</button>
-  <button class="btn" onclick="engReset()">RESET</button>
-  <div class="sep"></div>
   <button class="btn op" onclick="engSAR()">SAR-5</button>
   <button class="btn op" onclick="engNS()">NS FLOW</button>
   <button class="btn op" onclick="engFS()">FRAC SEARCH</button>
@@ -3682,6 +3679,56 @@ setInterval(function() {
         ctx.strokeStyle = isPent ? 'rgba(0,212,255,' + br + ')' : 'rgba(0,255,213,' + (br*0.35) + ')';
         ctx.lineWidth = isPent ? 1.2 : 0.4;
         ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+      }
+    });
+
+    // ATELIER CIRCLE -- overlaid on sphere plane
+    // Locked to sphere rotation. No spiral. 2 layers.
+    // Rings sit at y=0 plane of the sphere.
+    var t = performance.now() * 0.0008;
+    var circleZ = cam.ry + t * 0.3;  // spins with shape
+    var cZoom = Math.min(W, H) * cam.zoom * 0.55;
+    var RINGS = [
+      {r: 0.85, n: 12, col: 'rgba(0,212,255,', lw: 0.7},
+      {r: 0.55, n: 6,  col: 'rgba(255,215,0,', lw: 0.5}
+    ];
+    RINGS.forEach(function(ring) {
+      // Draw ring circle
+      ctx.beginPath();
+      ctx.strokeStyle = ring.col + '0.25)';
+      ctx.lineWidth = ring.lw;
+      var first = true;
+      for (var si = 0; si <= 64; si++) {
+        var ang = (si / 64) * Math.PI * 2;
+        var rx = Math.cos(ang) * ring.r;
+        var ry = 0;
+        var rz = Math.sin(ang) * ring.r;
+        // apply same cam rotation as sphere
+        var rx2 = rx * Math.cos(circleZ) - rz * Math.sin(circleZ);
+        var rz2 = rx * Math.sin(circleZ) + rz * Math.cos(circleZ);
+        var ry2 = ry * Math.cos(cam.rx) - rz2 * Math.sin(cam.rx);
+        var rz3 = ry * Math.sin(cam.rx) + rz2 * Math.cos(cam.rx);
+        var s2 = cZoom / (rz3 + 4);
+        var px = W/2 + rx2 * s2, py = H/2 + ry2 * s2;
+        if (first) { ctx.moveTo(px, py); first = false; }
+        else ctx.lineTo(px, py);
+      }
+      ctx.closePath(); ctx.stroke();
+      // Draw nodes
+      for (var ni = 0; ni < ring.n; ni++) {
+        var ang2 = (ni / ring.n) * Math.PI * 2 + t * 0.2;
+        var nx = Math.cos(ang2) * ring.r;
+        var nz = Math.sin(ang2) * ring.r;
+        var nx2 = nx * Math.cos(circleZ) - nz * Math.sin(circleZ);
+        var nz2 = nx * Math.sin(circleZ) + nz * Math.cos(circleZ);
+        var ny2 = -nz2 * Math.sin(cam.rx);
+        var nz3 = nz2 * Math.cos(cam.rx);
+        var ns = cZoom / (nz3 + 4);
+        var npx = W/2 + nx2 * ns, npy = H/2 + ny2 * ns;
+        ctx.beginPath();
+        ctx.arc(npx, npy, ring.n === 12 ? 1.5 : 1.2, 0, Math.PI*2);
+        ctx.fillStyle = ring.col + '0.7)';
+        ctx.fill();
       }
     });
   })();
