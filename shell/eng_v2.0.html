@@ -3763,14 +3763,17 @@ function engSeed(type) {
 }
 function engRefine() {
   if (!_st) engSeed('c60');
+  var inv0 = GK.invariants(_st);
+  if (inv0.faces > 50000) { logAdd('REFINE', 'MAX FACES reached ('+inv0.faces+') -- RESET first'); return; }
   var t0 = performance.now(); _st = GK.refineAll(_st);
   var inv = GK.invariants(_st);
   logAdd('REFINE', inv.faces + 'F ' + (performance.now()-t0).toFixed(1) + 'ms');
 }
 function engReset() {
-  var gk = GK.buildC60();
-  logAdd('RESET', 'C60 F=32 P=12 chi=2');
-  updateDP(gk);
+  _st = GK.buildC60();
+  var inv = GK.invariants(_st);
+  logAdd('RESET', 'C60 F='+inv.faces+' P='+inv.pents+' chi='+(inv.vertices-inv.edges+inv.faces));
+  updateDP(_st);
 }
 function engSAR() {
   if (!_st) engSeed('c60');
