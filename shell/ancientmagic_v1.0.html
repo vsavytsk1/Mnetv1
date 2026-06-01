@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AncientMagic v1.0 -- Fourier Epicycles</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#050510;color:#e0e0e0;
+  font-family:ui-monospace,'SF Mono',monospace;
+  font-size:11px;overflow:hidden;height:100vh;
+  display:flex;flex-direction:column;align-items:center;
+  justify-content:center;padding:8px}
+.stage{background:#050510;border:1px solid #1a1f2e;
+  border-radius:6px;display:block;
+  width:min(90vw,90vh,520px);
+  aspect-ratio:1/1;margin-bottom:10px}
+.controls{width:min(90vw,520px);display:flex;
+  flex-direction:column;gap:6px}
+.row{display:flex;align-items:center;gap:8px}
+.row label{font-size:9px;color:#555;
+  text-transform:uppercase;letter-spacing:0.1em;
+  min-width:80px}
+.row input[type=range]{flex:1;accent-color:#00d4ff}
+.row output{font-size:9px;color:#00d4ff;
+  font-weight:bold;min-width:32px;text-align:right}
+.btns{display:flex;gap:6px;flex-wrap:wrap}
+.btn{background:#0a0e18;color:#444;
+  border:1px solid #1a1f2e;border-radius:3px;
+  padding:3px 10px;font-family:inherit;
+  font-size:9px;cursor:pointer;transition:all 0.15s;
+  text-transform:uppercase;letter-spacing:0.07em}
+.btn:hover{border-color:#00d4ff;color:#00d4ff}
+.btn.on{background:#00d4ff;color:#050510;border-color:#00d4ff}
+.metrics{display:flex;gap:6px;flex-wrap:wrap}
+.mc{background:#0a0e18;border:1px solid #1a1f2e;
+  border-radius:3px;padding:4px 8px;flex:1;min-width:80px}
+.mc .lab{font-size:8px;color:#555;text-transform:uppercase;
+  letter-spacing:0.08em}
+.mc .val{font-size:13px;font-weight:bold;color:#00d4ff}
+#n-circles-lbl{color:#ffd700}
+.stamp{position:fixed;bottom:8px;right:10px;
+  font-size:8px;color:rgba(0,212,255,0.2);
+  letter-spacing:0.08em;text-align:right}
+</style>
+</head>
+<body>
+
+<canvas id="cv" class="stage" width="520" height="520"></canvas>
+<div class="controls">
+  <div class="row">
+    <label>Circles <span id="n-circles-lbl">1</span>/12</label>
+    <input type="range" id="nc" min="1" max="12" step="1" value="2">
+    <output id="nco">2</output>
+  </div>
+  <div class="row">
+    <label>Speed</label>
+    <input type="range" id="spd" min="0.1" max="3" step="0.05" value="1">
+    <output id="spo">1.00x</output>
+  </div>
+  <div class="row">
+    <label>Decay</label>
+    <input type="range" id="dec" min="0.1" max="2" step="0.05" value="0.65">
+    <output id="deo">0.65</output>
+  </div>
+  <div class="btns">
+    <button class="btn on" id="dir">Counter</button>
+    <button class="btn on" id="play">Pause</button>
+    <button class="btn" id="reset">Reset</button>
+    <button class="btn" id="show-c">Circles: on</button>
+  </div>
+  <div class="metrics">
+    <div class="mc"><div class="lab">Shape</div><div class="val" id="shape">ellipse</div></div>
+    <div class="mc"><div class="lab">H axis</div><div class="val" id="sh">--</div></div>
+    <div class="mc"><div class="lab">V axis</div><div class="val" id="sv">--</div></div>
+    <div class="mc"><div class="lab">Circles</div><div class="val" id="nc-disp" style="color:#ffd700">2/12</div></div>
+  </div>
+</div>
+<div class="stamp">AncientMagic v1.0<br>P=12 . chi=2 . always</div>
+
+<script>
+// ANCIENTMAGIC v1.0
+// Fourier epicycles -- up to 12 circles (P=12)
+// Same math as the Goldberg sphere.
+// The circles were always there. Always.
+// Built: 2026-06-01T19:02:44Z
+
+(function(){
+  const cv = document.getElementById('cv');
+  const ctx = cv.getContext('2d');
+  const dpr = Math.min(window.devicePixelRatio||1, 2);
+  let size = 520;
+
+  // Colors -- MNet design language
+  const BG   = '#050510';
+  const AXIS = 'rgba(0,212,255,0.15)';
+  const TR   = '#00d4ff';   // trace cyan
+  const GOLD = '#ffd700';   // 12th circle gold
+  const PINK = '#ff69b4';   // pen dot
+
+  // Circle colors: gradient from cyan to gold (12 steps)
+  function circleColor(i, n) {
+    // i=0: cyan, i=n-1: gold
+    const t = n <= 1 ? 0 : i / (n - 1);
+    const r = Math.round(0   + t * 255);
+    const g = Math.round(212 + t * (215 - 212));
+    const b = Math.round(255 + t * (0   - 255));
+    return 'rgb(' + r + ',' + g + ',' + b + ')';
+  }
+
+  const S = {
+    n: 2,          // number of circles (1-12)
+    speed: 1,
+    decay: 0.65,   // each circle radius = prev * decay
+    counter: true,
+    running: true,
+    showCircles: true,
+    theta: 0,
+    trail: []
+  };
+  let lastT = null;
+  const TWO = Math.PI * 2;
+
+  // Build radii array: r[0]=1, r[i]=r[i-1]*decay
+  function buildRadii() {
+    const r = [1.0];
+    for (let i = 1; i < S.n; i++) r.push(r[i-1] * S.decay);
+    return r;
+  }
+
+  // Compute tip position given theta
+  function computePoints(theta) {
+    const radii = buildRadii();
+    let x = 0, y = 0;
+    const pts = [{x:0, y:0}];
+    for (let i = 0; i < S.n; i++) {
+      const dir = S.counter ? (i % 2 === 0 ? 1 : -1) : 1;
+      const freq = i + 1;
+      const angle = dir * freq * theta;
+      x += radii[i] * Math.cos(angle);
+      y += radii[i] * Math.sin(angle);
+      pts.push({x, y});
+    }
+    return pts;
+  }
+
+  function fit() {
+    const w = cv.clientWidth || cv.getBoundingClientRect().width || 520;
+    size = Math.max(220, Math.round(w));
+    cv.width  = Math.round(size * dpr);
+    cv.height = Math.round(size * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  function draw() {
+    const cw = size, ch = size, cx = cw/2, cy = ch/2;
+    const radii = buildRadii();
+    const totalR = radii.reduce((a,b) => a+b, 0);
+    const maxR = Math.max(totalR * 1.05, 0.5);
+    const scale = (Math.min(cw, ch) / 2 - 16) / maxR;
+    const PX = (x, y) => [cx + x * scale, cy - y * scale];
+
+    ctx.clearRect(0, 0, cw, ch);
+    ctx.fillStyle = BG;
+    ctx.fillRect(0, 0, cw, ch);
+
+    // Axes
+    ctx.strokeStyle = AXIS;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(8, cy); ctx.lineTo(cw-8, cy);
+    ctx.moveTo(cx, 8); ctx.lineTo(cx, ch-8);
+    ctx.stroke();
+
+    const theta = S.theta;
+    const pts = computePoints(theta);
+
+    // Trail
+    if (S.trail.length > 1) {
+      ctx.strokeStyle = TR;
+      ctx.lineWidth = 1.8;
+      ctx.lineJoin = 'round';
+      ctx.lineCap  = 'round';
+      ctx.globalAlpha = 0.85;
+      ctx.beginPath();
+      for (let i = 0; i < S.trail.length; i++) {
+        const p = PX(S.trail[i].x, S.trail[i].y);
+        i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]);
+      }
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+
+    // Circles + vectors
+    for (let i = 0; i < S.n; i++) {
+      const col = circleColor(i, S.n);
+      const o = PX(pts[i].x, pts[i].y);
+      const e = PX(pts[i+1].x, pts[i+1].y);
+
+      if (S.showCircles) {
+        ctx.strokeStyle = col;
+        ctx.lineWidth = 0.8;
+        ctx.globalAlpha = 0.3;
+        ctx.beginPath();
+        ctx.arc(o[0], o[1], radii[i] * scale, 0, TWO);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
+
+      // Vector line
+      ctx.strokeStyle = col;
+      ctx.lineWidth = i === S.n-1 ? 2 : 1.5;
+      ctx.beginPath();
+      ctx.moveTo(o[0], o[1]);
+      ctx.lineTo(e[0], e[1]);
+      ctx.stroke();
+
+      // Joint dot
+      ctx.fillStyle = col;
+      ctx.beginPath();
+      ctx.arc(o[0], o[1], i === 0 ? 2.5 : 2, 0, TWO);
+      ctx.fill();
+    }
+
+    // Pen (tip of last circle)
+    const tip = PX(pts[S.n].x, pts[S.n].y);
+    ctx.fillStyle = BG;
+    ctx.beginPath(); ctx.arc(tip[0], tip[1], 6, 0, TWO); ctx.fill();
+    ctx.fillStyle = PINK;
+    ctx.beginPath(); ctx.arc(tip[0], tip[1], 4, 0, TWO); ctx.fill();
+  }
+
+  function updateReadouts() {
+    const radii = buildRadii();
+    const totalR = radii.reduce((a,b)=>a+b,0);
+    // For counter-rotating: complex Fourier series
+    // Simple approximation: h=totalR, v depends on cancellations
+    // Just show total as h-axis approximation
+    const sh = totalR.toFixed(2);
+    const sv = S.counter ? (radii[0] - (radii[1]||0)).toFixed(2) : totalR.toFixed(2);
+    document.getElementById('sh').textContent = sh;
+    document.getElementById('sv').textContent = Math.max(0, parseFloat(sv)).toFixed(2);
+    document.getElementById('nc-disp').textContent = S.n + '/12';
+    document.getElementById('n-circles-lbl').textContent = S.n;
+
+    const h = totalR, v = Math.abs(parseFloat(sv));
+    let shape = 'ellipse';
+    if (h < 0.01) shape = 'point';
+    else if (Math.abs(h - v) < 0.05) shape = 'circle';
+    else if (v < 0.05) shape = 'line';
+    document.getElementById('shape').textContent = shape;
+  }
+
+  function frame(now) {
+    if (lastT == null) lastT = now;
+    let dt = (now - lastT) / 1000;
+    lastT = now;
+    if (dt < 0) dt = 0;
+    if (dt > 0.05) dt = 0.05;
+    const omega = S.speed * (Math.PI / 2.5);
+    if (S.running) {
+      S.theta += omega * dt;
+      const p = computePoints(S.theta);
+      const tip = p[S.n];
+      S.trail.push({th: S.theta, x: tip.x, y: tip.y});
+      // Keep trail to 2 full rotations
+      while (S.trail.length && (S.theta - S.trail[0].th) > TWO * 2) {
+        S.trail.shift();
+      }
+    }
+    draw();
+    updateReadouts();
+    requestAnimationFrame(frame);
+  }
+
+  // Controls
+  const nc  = document.getElementById('nc');
+  const spd = document.getElementById('spd');
+  const dec = document.getElementById('dec');
+  nc.addEventListener('input', () => {
+    S.n = parseInt(nc.value);
+    document.getElementById('nco').textContent = S.n;
+    S.trail.length = 0;
+  });
+  spd.addEventListener('input', () => {
+    S.speed = parseFloat(spd.value);
+    document.getElementById('spo').textContent = S.speed.toFixed(2) + 'x';
+  });
+  dec.addEventListener('input', () => {
+    S.decay = parseFloat(dec.value);
+    document.getElementById('deo').textContent = S.decay.toFixed(2);
+    S.trail.length = 0;
+  });
+  document.getElementById('dir').addEventListener('click', function() {
+    S.counter = !S.counter;
+    this.textContent = S.counter ? 'Counter' : 'Same dir';
+    this.classList.toggle('on', S.counter);
+    S.trail.length = 0;
+  });
+  document.getElementById('play').addEventListener('click', function() {
+    S.running = !S.running;
+    this.textContent = S.running ? 'Pause' : 'Play';
+    this.classList.toggle('on', S.running);
+  });
+  document.getElementById('reset').addEventListener('click', () => {
+    S.theta = 0; S.trail.length = 0;
+  });
+  document.getElementById('show-c').addEventListener('click', function() {
+    S.showCircles = !S.showCircles;
+    this.textContent = 'Circles: ' + (S.showCircles ? 'on' : 'off');
+    this.classList.toggle('on', S.showCircles);
+  });
+
+  if (window.ResizeObserver) {
+    new ResizeObserver(() => fit()).observe(cv);
+  }
+  window.addEventListener('resize', fit);
+  fit();
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

@@ -222,6 +222,13 @@ body{background:#030308;color:#9090a0;
         <div class="card-desc">the sim . the reminder . people forgot . how scary it gets</div>
         <div class="card-arrow" style="color:#ff4444">SUMMON &gt;</div>
       </div>
+      <div class="mod-card new-module" id="card-ancientmagic" onclick="summon('ancientmagic')" style="border-color:#1a2a1a;--cc:#ffd700">
+        <div class="card-dot" id="dot-ancientmagic" title="toggle module"></div>
+        <div class="card-tag" style="color:#ffd700">ANCIENT MAGIC</div>
+        <div class="card-name" style="color:#ffd700">AncientMagic v1.0</div>
+        <div class="card-desc">Fourier epicycles . 12 circles . P=12 . any shape . always</div>
+        <div class="card-arrow" style="color:#ffd700">SUMMON &gt;</div>
+      </div>
       <div class="mod-card" style="border-color:#0e0e1e;opacity:0.35;cursor:not-allowed;pointer-events:none">
         <div class="card-tag" style="color:#1a2a3a">IDENTITY</div>
         <div class="card-name" style="color:#1a2a3a">SOUL CRYSTAL v0.1</div>
@@ -264,6 +271,7 @@ body{background:#030308;color:#9090a0;
   <div class="ms-row" onclick="toggleMod('valtium')"><span class="ms-name">VALTIUM v1.0</span><span class="ms-dot on" id="ms-valtium"></span></div>
   <div class="ms-row" onclick="toggleMod('atelier')"><span class="ms-name">ATELIER v1.2</span><span class="ms-dot on" id="ms-atelier"></span></div>
   <div class="ms-row" onclick="toggleMod('warningsim')"><span class="ms-name">WARNINGSIM v0.1</span><span class="ms-dot on" id="ms-warningsim"></span></div>
+  <div class="ms-row" onclick="toggleMod('ancientmagic')"><span class="ms-name">ANCIENTMAGIC v1.0</span><span class="ms-dot on" id="ms-ancientmagic"></span></div>
 </div>
 <div id="overlay">
   <div id="ov-bar">
@@ -3497,6 +3505,7 @@ var LINKS = {
   obsidius  : 'https://vsavytsk1.github.io/Mnetv1/shell/obsidius_v1.html',
   atelier   : 'https://vsavytsk1.github.io/Mnetv1/shell/atelier_v1.2.html',
   warningsim : 'https://vsavytsk1.github.io/Mnetv1/shell/warningsim_v0.1.html',
+  ancientmagic: 'https://vsavytsk1.github.io/Mnetv1/shell/ancientmagic_v1.0.html',
   valtium   : 'https://vsavytsk1.github.io/Mnetv1/shell/valtium_v1.html'
   // crystal : 'https://vsavytsk1.github.io/Mnetv1/builder/Obsidius/soul_crystal.html'
 };
@@ -3530,7 +3539,7 @@ function summon(key) {
   ov.classList.add('open');
 
   // Curse 7: canvas modules MUST open new tab
-  var NEW_TAB_MODULES = {obsidius:1, sandbox:1, tree:1, valtium:1, atelier:1, warningsim:1};
+  var NEW_TAB_MODULES = {obsidius:1, sandbox:1, tree:1, valtium:1, atelier:1, warningsim:1, ancientmagic:1};
   if (NEW_TAB_MODULES[key]) {
     _popupOpen = true;
     window.open(LINKS[key], '_blank');
@@ -3730,7 +3739,7 @@ setInterval(function() {
 
 // MODULE SELECTOR -- localStorage persists state
 var ALL_MODS = ['genesis','sandbox','tree','holly7','navier','warning',
-                'license','gkern','vale','spooky','obsidius','valtium','atelier','warningsim'];
+                'license','gkern','vale','spooky','obsidius','valtium','atelier','warningsim','ancientmagic'];
 var modState = {};
 
 function modLoad() {
@@ -3741,7 +3750,7 @@ function modLoad() {
   // Default: only valtium + obsidius active (focused build mode)
   ALL_MODS.forEach(function(k) {
     if (modState[k] === undefined) {
-      modState[k] = !(k === 'valtium' || k === 'obsidius' || k === 'warningsim');
+      modState[k] = !(k === 'valtium' || k === 'obsidius' || k === 'warningsim' || k === 'ancientmagic');
     }
   });
   modApply();
