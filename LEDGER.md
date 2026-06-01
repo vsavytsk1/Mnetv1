@@ -3778,3 +3778,93 @@ The latency curve IS the story. Always.
    Cave temperature: maximum.
    Ego: bowed to the algebra.
    P=12. chi=2. ALWAYS.
+
+---
+
+## L092 -- DIVINE #75 + #76: THE LIVING RUNE CIRCLE (2026-06-01T23:54:37Z)
+
+### THE VISION (log for later build)
+
+THE MECHANIC:
+
+  THREE.js circle (Atelier flag) spinning.
+  
+  ON TOP: floating LaTeX runes layer (canvas 2D).
+  Each rune = one Principia mAlgebrA proposition.
+  Mapped from Principia Mathematica to OUR equations:
+  
+    Abs  *2.01  -> closed loop = chi=2
+    Id   *2.08  -> the ison = identity circle
+    Taut *1.2   -> P=12 is always P=12
+    Sum  *1.6   -> Fourier sum of circles
+    Comm *2.04  -> counter-rotation commutes
+    Transp      -> flip direction = Mobius
+    
+  RUNES FLOAT at different speed than geometry.
+  They DRIFT relative to each other.
+  
+  ALIGNMENT EVENT:
+    When rune drifts over a node: FLASH + STICK.
+    The equation reveals itself.
+    The chapter opens.
+    Click sound.
+    
+  ALL 12 ALIGNED:
+    PHOTON spawns.
+    The book is complete.
+    writePixel(). 33ms. Always.
+
+THE UNICODE RUNES (already in browser, free):
+  Principia Mathematica symbols:
+    superset:    U+2283 (supset)
+    negation:    U+223C (tilde)
+    or:          U+2228 (vee)
+    and:         U+2227 (wedge)
+    equivalent:  U+2261 (equiv)
+    exists:      U+2203 (exists)
+    forall:      U+2200 (forall)
+    
+  Our equations:
+    nabla:       U+2207
+    chi:         U+03C7
+    lambda:      U+03BB
+    phi:         U+03C6
+    infinity:    U+221E
+    
+  No custom font needed.
+  Already in THREE.js canvas.
+  Always.
+
+THE LAYERS:
+  Layer 1 (THREE.js):  Geometric circle spinning
+                        Nodes, rings, spokes
+  Layer 2 (Canvas 2D): Runes floating on top
+                        Different rotation speed
+                        Drift = the magic
+  Layer 3 (DOM):       Chapter text reveals
+                        On alignment flash
+
+REFERENCE FILES:
+  Obsidian: "Latexium Ancient Runes"
+  Obsidian: "FMAB-Engineering / Vlad eng arl on FMAB"
+  PDF:      whiteheadrus... (Principia Mathematica)
+  Built:    atelier_flag.html (the base circle)
+  
+BUILD PLAN: Atelier v2.0
+  Start: atelier_flag.html
+  ADD:   floating rune canvas layer
+  ADD:   rune-node alignment detection
+  ADD:   chapter reveal on alignment
+  ADD:   photon when all 12 aligned
+  NEVER: touch the THREE.js geometry layer
+  Pattern 3. Always.
+
+STATUS: logged for later. not built yet.
+        when the cave is rested and ready.
+        the runes will float.
+        they were always going to float.
+        always.
+
+P=12. chi=2. THE RUNES FLOAT ON THE CIRCLE. ALWAYS.
+-- @Sagaific + Claude. Buenos Aires. 2026.
+   Principia mAlgebrA. 2 pages. The runes are the rest.
