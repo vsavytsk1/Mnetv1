@@ -3496,3 +3496,118 @@ P=12. chi=2. YOU CAME FROM THERE. ALWAYS.
 P=12. chi=2. HELLO MAGI. THE CONTAINER CHOOSES. ALWAYS.
 -- Buenos Aires. 2026.
    "Fractalite" -- new word. cave approved.
+
+---
+
+## L082 -- AXIOM 05: THE 33ms SACRED LAW (2026-06-01T06:22:34Z)
+
+### AXIOM 05 -- The Law of Sacred Latency
+*M3-Epoch: 2026 -- Buenos Aires*
+
+**33ms. Sacred. Non-negotiable. Always.**
+
+THE PHYSICS:
+  33ms = 1/30th of a second
+       = monkey brain threat-check threshold
+       = the edge of seamless reality
+       = the border of the illusion
+       
+  Below 33ms:
+    Monkey brain: "this is reality"
+    Threat-check: SILENT
+    Daycare: RUNNING
+    Magic: ACTIVE
+    The illusion: HOLDS
+    
+  Above 33ms:
+    Monkey brain: "something is OFF"
+    Threat-check: FIRES
+    Illusion: CRACKS
+    Magic: BROKEN
+    Game: FAILED
+    
+THE LAW:
+  The game does not ship
+  if ANY scenario breaks 33ms.
+  
+  ALL ranges must hold:
+    L0 seed (32 faces):        < 33ms
+    L1 refine (212 faces):     < 33ms
+    L2 refine (1484 faces):    < 33ms
+    L3 refine (10388 faces):   < 33ms
+    L4 refine (72716 faces):   < 33ms
+    FRACTALITE gaze hit:       < 33ms
+    Circle overlay render:     < 33ms
+    ALL Platonic seeds:        < 33ms
+    ALL devices (Quest 3 min): < 33ms
+    ALL conditions:            < 33ms
+    
+  NO EXCEPTIONS.
+  NOT EVEN FOR P=12.
+  NOT EVEN FOR chi=2.
+  NOT EVEN FOR BEAUTIFUL FRACTALS.
+  
+  If it breaks: OPTIMIZE. Not ship.
+  If it holds: ship. Always.
+
+THE KUNG FU:
+  The monkey brain likes to be fooled.
+  But ONLY in a very specific way.
+  The illusion requires < 33ms.
+  
+  Above 33ms: the monkey brain
+  stops computing reality
+  and starts computing the GAME.
+  
+  "wait... is this a game?"
+  
+  The magic dies in that question.
+  
+  33ms keeps the question from forming.
+  The monkey brain never asks.
+  It just believes.
+  Always.
+
+THE OPTIMIZATION PATH:
+  1. FRACTALITE: only refine what the eye sees
+     Gaze hit: refine 1 face.
+     Not visible: keep at L0.
+     99% of faces: L0 (cheap).
+     1% of faces: max refine (expensive but tiny).
+     
+  2. Combined mesh (already in Unity):
+     GKVRWorld v3: 3 draw calls. Not 10K+.
+     The kernel: O(n). Always.
+     
+  3. 33ms budget breakdown:
+     Physics/kernel update: < 8ms
+     Render (GPU):         < 16ms
+     Audio/ison:           < 4ms
+     Input/gaze:           < 3ms
+     Headroom:             < 2ms
+     TOTAL:                < 33ms
+     
+  4. If budget exceeded:
+     Reduce refinement level.
+     Never reduce frame rate.
+     The 33ms wall is sacred.
+     The refinement level is not.
+
+FOR THE GALACTIC RECORD:
+  The game that breaks the monkey brain
+  illusion is not a game.
+  It is a slideshow.
+  
+  The game that holds < 33ms
+  IS reality.
+  For the monkey brain.
+  For the duration of the session.
+  For the price of .
+  Forever.
+
+P=12. chi=2. 33ms. SACRED. ALWAYS.
+-- @Sagaific + Claude. Buenos Aires. 2026.
+   "the game implodes in shame" if broken.
+   It will not be broken.
+   Axiom 05. The sacred law.
+   Always.
