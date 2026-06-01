@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Atelier v1.3 -- Cylinder + Time</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#050510;color:#e0e0e0;
+  font-family:ui-monospace,'SF Mono',monospace;
+  font-size:11px;overflow:hidden;height:100vh}
+canvas{display:block}
+#hud{position:fixed;top:12px;left:12px;z-index:10;pointer-events:none}
+#hud .title{font-size:12px;color:#00d4ff;margin-bottom:4px;
+  letter-spacing:0.15em;text-transform:uppercase}
+#hud .row{line-height:1.9;color:rgba(220,228,240,0.45)}
+#hud .val{color:#00d4ff;font-weight:bold}
+#hud .gold{color:#ffd700}
+#hud .pink{color:#ff69b4}
+#hud .dim{color:rgba(220,228,240,0.2);font-size:10px}
+#log{position:fixed;top:90px;left:12px;z-index:10;
+  background:rgba(5,5,16,0.88);border:1px solid #1a1f2e;
+  border-radius:4px;padding:7px 11px;max-width:260px;
+  max-height:160px;overflow-y:auto;font-size:9px;
+  line-height:1.5;color:rgba(255,180,180,0.7);
+  cursor:pointer;transition:opacity 0.3s}
+#log.hidden{opacity:0;pointer-events:none}
+#log .e{border-bottom:1px solid #1a0505;padding:1px 0}
+#log .ok{color:#7fff7f}
+#log .cyan{color:#00d4ff}
+#log .gold{color:#ffd700}
+#bar{position:fixed;bottom:0;left:0;right:0;z-index:10;
+  background:rgba(5,5,16,0.97);border-top:1px solid #1a1f2e;
+  padding:6px 14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.btn{background:#0a0e18;color:#444;border:1px solid #1a1f2e;
+  border-radius:3px;padding:3px 10px;font-family:inherit;
+  font-size:9px;cursor:pointer;transition:all 0.15s;
+  text-transform:uppercase;letter-spacing:0.07em}
+.btn:hover{border-color:#00d4ff;color:#00d4ff}
+.btn.active{background:#00d4ff;color:#050510;border-color:#00d4ff}
+.btn.gold{color:#ffd700;border-color:#3a2a0a}
+.btn.gold:hover,.btn.gold.active{background:#ffd700;color:#050510}
+.btn.pink{color:#ff69b4;border-color:#3a0a1a}
+.sep{width:1px;height:16px;background:#1a1f2e;margin:0 2px}
+.lbl{color:rgba(220,228,240,0.25);font-size:9px;
+  text-transform:uppercase;letter-spacing:0.1em}
+.sl{display:flex;align-items:center;gap:3px}
+.sl input{width:65px;accent-color:#00d4ff}
+.sv{font-size:9px;color:#00d4ff;min-width:28px}
+#stamp{position:fixed;bottom:54px;right:14px;z-index:10;
+  pointer-events:none;text-align:right}
+#stamp .s{font-size:8px;color:rgba(0,212,255,0.2);
+  letter-spacing:0.1em;line-height:1.8}
+</style>
+</head>
+<body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+<div id="hud">
+  <div class="title">Atelier v1.3</div>
+  <div class="row">shapes &nbsp;<span class="val" id="h-shapes">0</span></div>
+  <div class="row">stuck &nbsp;<span class="gold" id="h-stuck">0</span></div>
+  <div class="row">time &nbsp;<span class="pink" id="h-time">0.0</span></div>
+  <div class="dim" id="h-hint">same frequency = stick together</div>
+</div>
+<div id="log" onclick="this.classList.toggle('hidden')"></div>
+<div id="stamp">
+  <div class="s">Atelier v1.3</div>
+  <div class="s">cylinder + time</div>
+  <div class="s">P=12 . chi=2</div>
+</div>
+<div id="bar">
+  <button class="btn active" onclick="addShape()">+ SHAPE</button>
+  <button class="btn gold" onclick="addBurst()">BURST 12</button>
+  <button class="btn" onclick="resetAll()">RESET</button>
+  <div class="sep"></div>
+  <span class="lbl">speed</span>
+  <div class="sl">
+    <input type="range" id="sl-spd" min="0" max="100" value="30"
+      oninput="timeSpeed=+this.value/100;document.getElementById('sv-spd').textContent=(+this.value/100).toFixed(2)">
+    <span class="sv" id="sv-spd">0.30</span>
+  </div>
+  <div class="sep"></div>
+  <span class="lbl">radius</span>
+  <div class="sl">
+    <input type="range" id="sl-rad" min="10" max="60" value="28"
+      oninput="cylRadius=+this.value;document.getElementById('sv-rad').textContent=this.value">
+    <span class="sv" id="sv-rad">28</span>
+  </div>
+  <div class="sep"></div>
+  <button class="btn" onclick="toggleLog()">LOG</button>
+</div>
+
+<script>
+// ATELIER v1.3 -- CYLINDER + SHAPES IN TIME
+// Shapes orbit the cylinder. Same frequency = STICK.
+// Time = height on cylinder. Fourier self-organization.
+// Built: 2026-06-01T19:42:29Z
+
+var scene, camera, renderer, controls;
+var cylGroup, shapesGroup;
+var shapes = [];
+var timeSpeed = 0.30;
+var cylRadius = 28;
+var worldTime = 0;
+var logHidden = false;
+var stuckCount = 0;
+
+// Frequency colors -- same as AncientMagic
+var FREQ_COLORS = [
+  '#00d4ff', // 1 cyan
+  '#22d4ee', // 2
+  '#44d4cc', // 3
+  '#66d4aa', // 4
+  '#88d488', // 5
+  '#aad466', // 6
+  '#ccd444', // 7
+  '#eed422', // 8
+  '#ffc400', // 9
+  '#ffb200', // 10
+  '#ffa000', // 11
+  '#ffd700'  // 12 gold -- P=12!
+];
+
+function lg(msg, cls) {
+  var el = document.getElementById('log');
+  var d = document.createElement('div');
+  d.className = 'e' + (cls ? ' '+cls : '');
+  d.textContent = msg;
+  el.insertBefore(d, el.firstChild);
+  while (el.children.length > 30) el.removeChild(el.lastChild);
+}
+function toggleLog() {
+  logHidden = !logHidden;
+  document.getElementById('log').classList.toggle('hidden', logHidden);
+}
+
+// Build a 2D shape geometry on XZ plane
+// freq=1: ellipse, freq=2: 4-lobe, freq=3: 6-lobe...
+function makeShapeGeometry(freq, radius) {
+  var pts = [];
+  var steps = 64;
+  for (var i = 0; i <= steps; i++) {
+    var t = (i / steps) * Math.PI * 2;
+    // Fourier-inspired shape: base circle + freq-th harmonic
+    var r = radius * (0.6 + 0.4 * Math.cos(freq * t));
+    pts.push(new THREE.Vector3(
+      Math.cos(t) * r, 0, Math.sin(t) * r
+    ));
+  }
+  var geo = new THREE.BufferGeometry().setFromPoints(pts);
+  return geo;
+}
+
+// Spawn a new shape
+function addShape() {
+  var freq = Math.floor(Math.random() * 12) + 1;
+  spawnShape(freq);
+}
+
+function addBurst() {
+  for (var f = 1; f <= 12; f++) {
+    spawnShape(f);
+  }
+  lg('BURST: 12 shapes spawned (P=12)', 'gold');
+}
+
+function spawnShape(freq) {
+  var col = FREQ_COLORS[freq - 1];
+  var mat = new THREE.LineBasicMaterial({
+    color: col, transparent: true, opacity: 0.8
+  });
+  var radius = 2 + freq * 0.3;
+  var geo = makeShapeGeometry(freq, radius);
+  var line = new THREE.Line(geo, mat);
+
+  // Starting angle on cylinder
+  var angle = Math.random() * Math.PI * 2;
+  var height = -15 + Math.random() * 5;
+  var speed = 0.3 + freq * 0.1; // higher freq = faster orbit
+
+  var shape = {
+    mesh: line,
+    freq: freq,
+    angle: angle,
+    height: height,
+    speed: speed,
+    stuck: false,
+    stuckTo: null,
+    col: col
+  };
+
+  line.position.set(
+    Math.cos(angle) * cylRadius,
+    height,
+    Math.sin(angle) * cylRadius
+  );
+  line.rotation.y = -angle;
+  shapesGroup.add(line);
+  shapes.push(shape);
+  document.getElementById('h-shapes').textContent = shapes.length;
+  lg('shape f=' + freq + ' spawned', 'cyan');
+}
+
+function resetAll() {
+  shapes.forEach(function(s) { shapesGroup.remove(s.mesh); });
+  shapes = [];
+  stuckCount = 0;
+  worldTime = 0;
+  document.getElementById('h-shapes').textContent = 0;
+  document.getElementById('h-stuck').textContent = 0;
+  document.getElementById('h-time').textContent = '0.0';
+  lg('reset', 'ok');
+}
+
+// Check if two shapes should stick
+// Same frequency + close angle = STICK
+function checkSticking() {
+  for (var i = 0; i < shapes.length; i++) {
+    if (shapes[i].stuck) continue;
+    for (var j = i + 1; j < shapes.length; j++) {
+      if (shapes[j].stuck) continue;
+      if (shapes[i].freq !== shapes[j].freq) continue;
+      // Angle difference on cylinder
+      var da = Math.abs(shapes[i].angle - shapes[j].angle);
+      da = Math.min(da, Math.PI * 2 - da);
+      var dh = Math.abs(shapes[i].height - shapes[j].height);
+      if (da < 0.3 && dh < 1.5) {
+        // STICK!
+        shapes[j].stuck = true;
+        shapes[j].stuckTo = i;
+        stuckCount++;
+        document.getElementById('h-stuck').textContent = stuckCount;
+        // Visual: make it brighter
+        shapes[j].mesh.material.opacity = 1.0;
+        shapes[j].mesh.material.color.set('#ffffff');
+        lg('STICK! freq=' + shapes[i].freq, 'gold');
+      }
+    }
+  }
+}
+
+(function init() {
+  scene = new THREE.Scene();
+  scene.fog = new THREE.FogExp2(0x050510, 0.008);
+
+  camera = new THREE.PerspectiveCamera(55, innerWidth/innerHeight, 0.1, 500);
+  camera.position.set(0, 20, 80);
+  camera.lookAt(0, 0, 0);
+
+  renderer = new THREE.WebGLRenderer({antialias: true});
+  renderer.setSize(innerWidth, innerHeight);
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  renderer.setClearColor(0x050510);
+  document.body.appendChild(renderer.domElement);
+
+  if (THREE.OrbitControls) {
+    controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.06;
+  }
+
+  // Lights
+  scene.add(new THREE.AmbientLight(0x101828, 4));
+  var d1 = new THREE.DirectionalLight(0x00d4ff, 0.6);
+  d1.position.set(5, 20, 10); scene.add(d1);
+
+  // THE CYLINDER -- the time axis
+  cylGroup = new THREE.Group();
+  scene.add(cylGroup);
+
+  // Cylinder wireframe
+  var cylGeo = new THREE.CylinderGeometry(cylRadius, cylRadius, 60, 32, 10, true);
+  var cylMat = new THREE.MeshBasicMaterial({
+    color: 0x1a2a3a, wireframe: true,
+    transparent: true, opacity: 0.2
+  });
+  cylGroup.add(new THREE.Mesh(cylGeo, cylMat));
+
+  // Cylinder edges (top/bottom circles)
+  for (var y of [-30, 30]) {
+    var pts = [];
+    for (var i = 0; i <= 64; i++) {
+      var a = (i/64) * Math.PI * 2;
+      pts.push(new THREE.Vector3(
+        Math.cos(a)*cylRadius, y, Math.sin(a)*cylRadius));
+    }
+    var eg = new THREE.BufferGeometry().setFromPoints(pts);
+    var em = new THREE.LineBasicMaterial({color:0x00d4ff, transparent:true, opacity:0.3});
+    cylGroup.add(new THREE.Line(eg, em));
+  }
+
+  // Vertical time lines on cylinder
+  for (var vi = 0; vi < 12; vi++) {
+    var va = (vi/12) * Math.PI * 2;
+    var vp = [
+      new THREE.Vector3(Math.cos(va)*cylRadius, -30, Math.sin(va)*cylRadius),
+      new THREE.Vector3(Math.cos(va)*cylRadius,  30, Math.sin(va)*cylRadius)
+    ];
+    var vg = new THREE.BufferGeometry().setFromPoints(vp);
+    var vc2 = FREQ_COLORS[vi];
+    var vm = new THREE.LineBasicMaterial({color: vc2, transparent:true, opacity:0.15});
+    cylGroup.add(new THREE.Line(vg, vm));
+  }
+
+  // Time marker (horizontal ring that moves up)
+  var tmGeo = new THREE.BufferGeometry();
+  var tmPts = [];
+  for (var ti = 0; ti <= 64; ti++) {
+    var ta = (ti/64)*Math.PI*2;
+    tmPts.push(new THREE.Vector3(Math.cos(ta)*(cylRadius+0.5), 0, Math.sin(ta)*(cylRadius+0.5)));
+  }
+  tmGeo.setFromPoints(tmPts);
+  var tmMat = new THREE.LineBasicMaterial({color:0xff69b4, transparent:true, opacity:0.6});
+  var timeLine = new THREE.Line(tmGeo, tmMat);
+  cylGroup.add(timeLine);
+  window._timeLine = timeLine;
+
+  // Shapes group
+  shapesGroup = new THREE.Group();
+  scene.add(shapesGroup);
+
+  // Floor grid
+  var grid = new THREE.GridHelper(200, 20, 0x0d1520, 0x080e18);
+  grid.position.y = -30;
+  grid.material.transparent = true;
+  grid.material.opacity = 0.3;
+  scene.add(grid);
+
+  window.addEventListener('resize', function() {
+    camera.aspect = innerWidth/innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(innerWidth, innerHeight);
+  });
+
+  lg('v1.3 ready -- cylinder + time', 'ok');
+  lg('same freq = STICK together', 'cyan');
+  lg('BURST 12 = all frequencies', 'gold');
+
+  animate();
+})();
+
+var lastT = performance.now();
+function animate() {
+  requestAnimationFrame(animate);
+  if (controls) controls.update();
+
+  var now = performance.now();
+  var dt = Math.min((now - lastT) / 1000, 0.05);
+  lastT = now;
+
+  worldTime += dt * timeSpeed;
+  document.getElementById('h-time').textContent = worldTime.toFixed(1);
+
+  // Time marker moves up and loops
+  var ty = -30 + (worldTime * 15) % 60;
+  if (window._timeLine) window._timeLine.position.y = ty;
+
+  // Update shapes
+  shapes.forEach(function(s, idx) {
+    if (s.stuck) return;
+
+    // Orbit around cylinder
+    s.angle += s.speed * dt * timeSpeed;
+    // Rise with time
+    s.height += dt * timeSpeed * (1 + s.freq * 0.05);
+
+    // Loop: if too high, wrap back down
+    if (s.height > 30) {
+      s.height = -30;
+      s.angle = Math.random() * Math.PI * 2;
+    }
+
+    // Position on cylinder surface
+    s.mesh.position.set(
+      Math.cos(s.angle) * cylRadius,
+      s.height,
+      Math.sin(s.angle) * cylRadius
+    );
+    s.mesh.rotation.y = -s.angle;
+
+    // Pulse opacity
+    var pulse = 0.5 + 0.3 * Math.sin(worldTime * s.freq * 2);
+    s.mesh.material.opacity = pulse;
+  });
+
+  // Check sticking every ~0.5s of world time
+  if (Math.floor(worldTime * 2) !== Math.floor((worldTime - dt * timeSpeed) * 2)) {
+    checkSticking();
+  }
+
+  // Slow cylinder rotation
+  cylGroup.rotation.y += 0.001;
+
+  renderer.render(scene, camera);
+}
+</script>
+</body>
+</html>
