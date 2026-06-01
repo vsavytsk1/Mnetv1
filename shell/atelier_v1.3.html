@@ -75,6 +75,12 @@ canvas{display:block}
   <button class="btn gold" onclick="addBurst()">BURST 12</button>
   <button class="btn" onclick="resetAll()">RESET</button>
   <div class="sep"></div>
+  <span class="lbl">Maxwell</span>
+  <button class="btn" style="color:#ff4444;border-color:#3a0a0a" onclick="spawnMaxwell(1)" title="nabla.E = rho -- diverging field">E1</button>
+  <button class="btn" style="color:#00d4ff;border-color:#0a1a3a" onclick="spawnMaxwell(2)" title="nabla.B = 0 -- closed loop chi=2">B0</button>
+  <button class="btn" style="color:#ffd700;border-color:#3a2a0a" onclick="spawnMaxwell(3)" title="curl E = -dB/dt -- rotation">cE</button>
+  <button class="btn" style="color:#ff69b4;border-color:#3a0a1a" onclick="spawnMaxwell(4)" title="curl B = full Maxwell -- photon">cB</button>
+  <div class="sep"></div>
   <span class="lbl">speed</span>
   <div class="sl">
     <input type="range" id="sl-spd" min="0" max="100" value="30"
@@ -201,6 +207,98 @@ function spawnShape(freq) {
   shapes.push(shape);
   document.getElementById('h-shapes').textContent = shapes.length;
   lg('shape f=' + freq + ' spawned', 'cyan');
+}
+
+function spawnMaxwell(eq) {
+  // eq 1: nabla.E=rho  -- diverging (red, freq=1, high decay)
+  // eq 2: nabla.B=0    -- closed loop (cyan, freq=2, NO decay = perfect circle)
+  // eq 3: curl E       -- rotating vortex (gold, freq=5)
+  // eq 4: curl B       -- full EM (pink, freq=8, grows)
+  var configs = {
+    1: {freq:1,  col:'#ff4444', r:3.5, label:'nabla.E',  decay:0.3},
+    2: {freq:2,  col:'#00d4ff', r:3.0, label:'nabla.B=0',decay:1.0}, // decay=1 = perfect circle!
+    3: {freq:5,  col:'#ffd700', r:2.5, label:'curl.E',   decay:0.6},
+    4: {freq:8,  col:'#ff69b4', r:2.0, label:'curl.B',   decay:0.75}
+  };
+  var cfg = configs[eq];
+  if (!cfg) return;
+
+  var mat = new THREE.LineBasicMaterial({
+    color: cfg.col, transparent: true, opacity: 0.9
+  });
+
+  // Build shape with specific decay for this equation
+  var pts = [];
+  var steps = 96;
+  for (var i = 0; i <= steps; i++) {
+    var t = (i/steps)*Math.PI*2;
+    // nabla.B=0: perfect circle (decay=1, no harmonic distortion)
+    // others: Fourier-shaped with harmonics
+    var dist = eq === 2
+      ? cfg.r  // perfect closed loop -- chi=2!
+      : cfg.r * (cfg.decay + (1-cfg.decay)*Math.cos(cfg.freq*t));
+    pts.push(new THREE.Vector3(Math.cos(t)*dist, 0, Math.sin(t)*dist));
+  }
+  // For eq4 (curl B): add concentric rings (up to 4)
+  var geo = new THREE.BufferGeometry().setFromPoints(pts);
+  var line = new THREE.Line(geo, mat);
+
+  var angle = Math.random()*Math.PI*2;
+  var height = -12 + (eq-1)*4; // each eq starts at different height
+
+  var shape = {
+    mesh: line,
+    freq: cfg.freq,
+    angle: angle,
+    height: height,
+    speed: 0.2 + cfg.freq*0.08,
+    stuck: false,
+    stuckTo: null,
+    col: cfg.col,
+    eq: eq,
+    label: cfg.label
+  };
+
+  line.position.set(Math.cos(angle)*cylRadius, height, Math.sin(angle)*cylRadius);
+  line.rotation.y = -angle;
+  shapesGroup.add(line);
+  shapes.push(shape);
+  document.getElementById('h-shapes').textContent = shapes.length;
+  lg(cfg.label + ' spawned (eq' + eq + ')', eq===2?'cyan':'ok');
+
+  // Auto-check: if all 4 equations present -> photon!
+  var eqs = shapes.map(function(s){return s.eq;}).filter(Boolean);
+  var has1=eqs.indexOf(1)>=0, has2=eqs.indexOf(2)>=0;
+  var has3=eqs.indexOf(3)>=0, has4=eqs.indexOf(4)>=0;
+  if (has1 && has2 && has3 && has4) {
+    lg('ALL 4 EQUATIONS -- PHOTON EMERGING!', 'gold');
+    spawnPhoton();
+  }
+}
+
+function spawnPhoton() {
+  // Photon = white propagating wave shape
+  var pts = [];
+  var steps = 128;
+  for (var i = 0; i <= steps; i++) {
+    var t = (i/steps)*Math.PI*2;
+    var r = 2.5 + 0.8*Math.cos(3*t);
+    pts.push(new THREE.Vector3(Math.cos(t)*r, Math.sin(t)*0.5, Math.sin(t)*r));
+  }
+  var geo = new THREE.BufferGeometry().setFromPoints(pts);
+  var mat = new THREE.LineBasicMaterial({color:'#ffffff', transparent:true, opacity:1.0});
+  var line = new THREE.Line(geo, mat);
+  var angle = 0;
+  var shape = {
+    mesh: line, freq:12, angle:angle, height:-30,
+    speed:0.5, stuck:false, stuckTo:null,
+    col:'#ffffff', eq:0, label:'PHOTON',
+    isPhoton: true
+  };
+  line.position.set(Math.cos(angle)*cylRadius, -30, Math.sin(angle)*cylRadius);
+  shapesGroup.add(line);
+  shapes.push(shape);
+  document.getElementById('h-shapes').textContent = shapes.length;
 }
 
 function resetAll() {
@@ -366,8 +464,11 @@ function animate() {
     // Rise with time
     s.height += dt * timeSpeed * (1 + s.freq * 0.05);
 
-    // Loop: if too high, wrap back down
-    if (s.height > 30) {
+    // Photon: escape upward
+    if (s.isPhoton) {
+      s.height += dt * timeSpeed * 8;
+      if (s.height > 35) { shapesGroup.remove(s.mesh); shapes.splice(idx,1); return; }
+    } else if (s.height > 30) {
       s.height = -30;
       s.angle = Math.random() * Math.PI * 2;
     }
