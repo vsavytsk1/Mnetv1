@@ -264,6 +264,13 @@ body{background:#030308;color:#9090a0;
         <div class="card-desc">3D Lissajous . tilt to reveal depth . exact shapes . CW+CCW=purple . always</div>
         <div class="card-arrow" style="color:#cc44ff">SUMMON &gt;</div>
       </div>
+      <div class="mod-card new-module" id="card-baudin3" onclick="summon('baudin3')" style="border-color:#1a0a2a;--cc:#cc44ff">
+        <div class="card-dot" id="dot-baudin3" title="toggle module"></div>
+        <div class="card-tag" style="color:#cc44ff">BAUDIN PLANES</div>
+        <div class="card-name" style="color:#cc44ff">Baudin v3.0</div>
+        <div class="card-desc">two planes . drift . interference . pure canvas 2D . the secret . always</div>
+        <div class="card-arrow" style="color:#cc44ff">SUMMON &gt;</div>
+      </div>
       <div class="mod-card" style="border-color:#0e0e1e;opacity:0.35;cursor:not-allowed;pointer-events:none">
         <div class="card-tag" style="color:#1a2a3a">IDENTITY</div>
         <div class="card-name" style="color:#1a2a3a">SOUL CRYSTAL v0.1</div>
@@ -312,6 +319,7 @@ body{background:#030308;color:#9090a0;
   <div class="ms-row" onclick="toggleMod('arcanium')"><span class="ms-name">ARCANIUMEMORIUM v1.0</span><span class="ms-dot on" id="ms-arcanium"></span></div>
   <div class="ms-row" onclick="toggleMod('baudin')"><span class="ms-name">BAUDIN MATRIX v1.0</span><span class="ms-dot on" id="ms-baudin"></span></div>
   <div class="ms-row" onclick="toggleMod('baudin2')"><span class="ms-name">BAUDIN 3D v2.0</span><span class="ms-dot on" id="ms-baudin2"></span></div>
+  <div class="ms-row" onclick="toggleMod('baudin3')"><span class="ms-name">BAUDIN PLANES v3.0</span><span class="ms-dot on" id="ms-baudin3"></span></div>
 </div>
 <div id="overlay">
   <div id="ov-bar">
@@ -3551,6 +3559,7 @@ var LINKS = {
   arcanium    : 'https://vsavytsk1.github.io/Mnetv1/shell/arcaniumemorium_v1.0.html',
   baudin      : 'https://vsavytsk1.github.io/Mnetv1/shell/baudin_matrix_v1.0.html',
   baudin2     : 'https://vsavytsk1.github.io/Mnetv1/shell/baudin_matrix_v2.0.html',
+  baudin3     : 'https://vsavytsk1.github.io/Mnetv1/shell/baudin_matrix_v3.0.html',
   valtium   : 'https://vsavytsk1.github.io/Mnetv1/shell/valtium_v1.html'
   // crystal : 'https://vsavytsk1.github.io/Mnetv1/builder/Obsidius/soul_crystal.html'
 };
@@ -3584,7 +3593,7 @@ function summon(key) {
   ov.classList.add('open');
 
   // Curse 7: canvas modules MUST open new tab
-  var NEW_TAB_MODULES = {obsidius:1, sandbox:1, tree:1, valtium:1, atelier:1, warningsim:1, ancientmagic:1, atelier13:1, maxwellium:1, arcanium:1, baudin:1, baudin2:1};
+  var NEW_TAB_MODULES = {obsidius:1, sandbox:1, tree:1, valtium:1, atelier:1, warningsim:1, ancientmagic:1, atelier13:1, maxwellium:1, arcanium:1, baudin:1, baudin2:1, baudin3:1};
   if (NEW_TAB_MODULES[key]) {
     _popupOpen = true;
     window.open(LINKS[key], '_blank');
@@ -3784,7 +3793,7 @@ setInterval(function() {
 
 // MODULE SELECTOR -- localStorage persists state
 var ALL_MODS = ['genesis','sandbox','tree','holly7','navier','warning',
-                'license','gkern','vale','spooky','obsidius','valtium','atelier','warningsim','ancientmagic','atelier13','maxwellium','arcanium','baudin','baudin2'];
+                'license','gkern','vale','spooky','obsidius','valtium','atelier','warningsim','ancientmagic','atelier13','maxwellium','arcanium','baudin','baudin2','baudin3'];
 var modState = {};
 
 function modLoad() {
@@ -3795,7 +3804,7 @@ function modLoad() {
   // Default: only valtium + obsidius active (focused build mode)
   ALL_MODS.forEach(function(k) {
     if (modState[k] === undefined) {
-      modState[k] = !(k === 'valtium' || k === 'obsidius' || k === 'warningsim' || k === 'ancientmagic' || k === 'atelier13' || k === 'maxwellium' || k === 'arcanium' || k === 'baudin' || k === 'baudin2');
+      modState[k] = !(k === 'valtium' || k === 'obsidius' || k === 'warningsim' || k === 'ancientmagic' || k === 'atelier13' || k === 'maxwellium' || k === 'arcanium' || k === 'baudin' || k === 'baudin2' || k === 'baudin3');
     }
   });
   modApply();
