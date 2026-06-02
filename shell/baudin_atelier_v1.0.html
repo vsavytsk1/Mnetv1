@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Baudin Atelier v1.0</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#050510;color:#e0e0e0;
+  font-family:ui-monospace,monospace;font-size:11px;
+  overflow:hidden;height:100vh;display:flex;flex-direction:column}
+canvas{display:block}
+#hud{position:fixed;top:12px;left:12px;z-index:10;pointer-events:none}
+#hud .title{font-size:12px;color:#cc44ff;margin-bottom:4px;
+  letter-spacing:0.15em;text-transform:uppercase}
+#hud .row{line-height:1.9;color:rgba(220,228,240,0.45)}
+#hud .val{color:#cc44ff;font-weight:bold}
+#hud .gold{color:#ffd700}
+#hud .dim{color:rgba(220,228,240,0.2);font-size:10px}
+#log{position:fixed;top:90px;left:12px;z-index:10;
+  background:rgba(5,5,16,0.88);border:1px solid #1a1f2e;
+  border-radius:4px;padding:7px 11px;max-width:240px;
+  max-height:140px;overflow-y:auto;font-size:9px;
+  line-height:1.5;color:rgba(255,180,180,0.7);
+  cursor:pointer;transition:opacity 0.3s}
+#log.hidden{opacity:0;pointer-events:none}
+#log .e{border-bottom:1px solid #1a0505;padding:1px 0}
+#log .ok{color:#7fff7f}
+#log .pur{color:#cc44ff}
+#master-wrap{position:fixed;bottom:54px;left:50%;
+  transform:translateX(-50%);z-index:10;
+  display:flex;flex-direction:column;align-items:center;gap:4px}
+#master-wrap .ml{font-size:9px;color:rgba(204,68,255,0.4);
+  text-transform:uppercase;letter-spacing:0.15em}
+#sl-master{width:300px;height:6px;accent-color:#cc44ff;cursor:pointer}
+#master-val{font-size:10px;color:#cc44ff;font-weight:bold;
+  letter-spacing:0.1em}
+#ldots{display:flex;gap:4px;margin-top:2px}
+.ldot{width:6px;height:6px;border-radius:50%;
+  background:#0d1520;border:1px solid #1a2a3a;
+  transition:all 0.3s}
+.ldot.done{background:#cc44ff;border-color:#cc44ff;
+  box-shadow:0 0 5px rgba(204,68,255,0.5)}
+.ldot.active{background:#ffffff;border-color:#ffffff;
+  box-shadow:0 0 8px rgba(255,255,255,0.7)}
+#bar{position:fixed;bottom:0;left:0;right:0;z-index:10;
+  background:rgba(5,5,16,0.97);border-top:1px solid #1a1f2e;
+  padding:5px 12px;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.btn{background:#0a0e18;color:#444;border:1px solid #1a1f2e;
+  border-radius:3px;padding:3px 9px;font-family:inherit;
+  font-size:9px;cursor:pointer;transition:all 0.15s;
+  text-transform:uppercase;letter-spacing:0.07em}
+.btn:hover{border-color:#cc44ff;color:#cc44ff}
+.btn.active{background:#cc44ff;color:#050510;border-color:#cc44ff}
+.btn.gold{color:#ffd700;border-color:#3a2a0a}
+.btn.gold:hover,.btn.gold.active{background:#ffd700;color:#050510}
+.sep{width:1px;height:16px;background:#1a1f2e}
+.lbl{color:rgba(220,228,240,0.25);font-size:9px;
+  text-transform:uppercase;letter-spacing:0.1em}
+.sl{display:flex;align-items:center;gap:3px}
+.sl input{width:60px;accent-color:#cc44ff}
+.sv{font-size:9px;color:#cc44ff;min-width:26px}
+#stamp{position:fixed;bottom:54px;right:12px;z-index:10;
+  pointer-events:none;text-align:right}
+#stamp .s{font-size:8px;color:rgba(204,68,255,0.2);
+  letter-spacing:0.08em;line-height:1.8}
+</style>
+</head>
+<body>
+
+<canvas id="cv"></canvas>
+<div id="hud">
+  <div class="title">Baudin Atelier</div>
+  <div class="row">layer &nbsp;<span class="val" id="h-layer">0</span><span class="dim"> / 12</span></div>
+  <div class="row">shape &nbsp;<span class="gold" id="h-shape">void</span></div>
+  <div class="row">phi &nbsp;<span class="val" id="h-phi">0.50</span></div>
+  <div class="dim" id="h-hint">drag slider to reveal</div>
+</div>
+<div id="log" onclick="this.classList.toggle('hidden')"></div>
+<div id="master-wrap">
+  <div class="ml">reveal the shapes</div>
+  <input type="range" id="sl-master" min="0" max="100" value="0"
+    oninput="onMaster(+this.value)">
+  <div id="master-val">VOID</div>
+  <div id="ldots"></div>
+</div>
+<div id="stamp">
+  <div class="s">Baudin Atelier v1.0</div>
+  <div class="s">P=12 . chi=2</div>
+  <div class="s">always</div>
+</div>
+<div id="bar">
+  <button class="btn gold" onclick="setPreset(0)">VOID</button>
+  <button class="btn" onclick="setPreset(50)">HALF</button>
+  <button class="btn active" onclick="setPreset(100)">FULL</button>
+  <div class="sep"></div>
+  <span class="lbl">phi</span>
+  <div class="sl">
+    <input type="range" id="sl-phi" min="0" max="314" value="50"
+      oninput="PHI=+this.value/100;document.getElementById('sv-phi').textContent=(+this.value/100).toFixed(2);document.getElementById('h-phi').textContent=(+this.value/100).toFixed(2)">
+    <span class="sv" id="sv-phi">0.50</span>
+  </div>
+  <div class="sep"></div>
+  <span class="lbl">speed</span>
+  <div class="sl">
+    <input type="range" id="sl-spd" min="0" max="80" value="20"
+      oninput="SPD=+this.value/1000;document.getElementById('sv-spd').textContent=(+this.value/1000).toFixed(3)">
+    <span class="sv" id="sv-spd">0.020</span>
+  </div>
+  <div class="sep"></div>
+  <button class="btn" onclick="toggleLog()">LOG</button>
+</div>
+<script>// BAUDIN ATELIER v1.0
+// Atelier circle BUT layers = Lissajous shapes.
+// Each layer: one (row,col) ratio from Baudin matrix.
+// Two planes drifting. Screen blend. THE PURPLE.
+// Bow to the math. Let it reveal. Always.
+// Built: 2026-06-02T17:52:07Z
+
+
+var cv = document.getElementById("cv");
+var ctx = cv.getContext("2d");
+var W, H;
+var T = 0;
+var SPD = 0.020;
+var PHI = 0.50;
+var currentLayer = -1;
+var logHidden = false;
+
+// The 12 Baudin shapes in order -- Atelier layers
+// Each: {r, c, color, name, scale}
+var LAYERS = [
+  {r:1, c:1,  col:"#4488ff", name:"s-orbital . circle",        sc:0.42},
+  {r:1, c:2,  col:"#ff4488", name:"p-orbital . figure-8",       sc:0.42},
+  {r:2, c:3,  col:"#cc44ff", name:"d-orbital . clover",         sc:0.38},
+  {r:1, c:3,  col:"#ff8844", name:"p-orbital . 3-lobe",         sc:0.38},
+  {r:3, c:4,  col:"#44ffcc", name:"f-orbital",                  sc:0.35},
+  {r:2, c:5,  col:"#ff44cc", name:"higher orbital 2:5",         sc:0.35},
+  {r:3, c:5,  col:"#8844ff", name:"higher orbital 3:5",         sc:0.32},
+  {r:4, c:5,  col:"#ffcc44", name:"higher orbital 4:5",         sc:0.32},
+  {r:5, c:6,  col:"#44ccff", name:"higher orbital 5:6",         sc:0.30},
+  {r:3, c:7,  col:"#ff6644", name:"higher orbital 3:7",         sc:0.30},
+  {r:5, c:8,  col:"#cc44ff", name:"higher orbital 5:8",         sc:0.28},
+  {r:7, c:12, col:"#ffffff", name:"the outermost . always",     sc:0.28}
+];
+
+var STEPS = 400;
+
+function resize() {
+  W = cv.width  = window.innerWidth;
+  H = cv.height = window.innerHeight;
+}
+
+function drawLissajous(cx2, cy2, radius, r, c, T2, phi, col, alpha) {
+  ctx.beginPath();
+  ctx.strokeStyle = col;
+  ctx.globalAlpha = alpha;
+  ctx.lineWidth = 0.8;
+  var total = Math.PI * 2 * Math.max(r, c);
+  for (var i = 0; i <= STEPS; i++) {
+    var t = (i / STEPS) * total;
+    var x = cx2 + radius * Math.sin(c * t / Math.max(r,c) * c + T2);
+    var y = cy2 + radius * Math.sin(r * t / Math.max(r,c) * r + phi);
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+}
+
+function draw() {
+  ctx.fillStyle = "rgba(5,5,16,0.25)";
+  ctx.fillRect(0, 0, W, H);
+
+  var cx2 = W / 2;
+  var cy2 = H / 2;
+  var base = Math.min(W, H) * 0.44;
+
+  for (var i = 0; i <= currentLayer; i++) {
+    var L = LAYERS[i];
+    var radius = base * L.sc;
+    var isCurrent = (i === currentLayer);
+    var alpha = isCurrent ? 0.8 : 0.4;
+
+    // Plane A
+    ctx.globalCompositeOperation = "screen";
+    drawLissajous(cx2, cy2, radius, L.r, L.c, T, 0, L.col, alpha * 0.7);
+    // Plane B -- drifting
+    var bCol = i % 2 === 0 ? "#4488ff" : "#ff4488";
+    drawLissajous(cx2, cy2, radius, L.r, L.c, -T, PHI, bCol, alpha * 0.7);
+    ctx.globalCompositeOperation = "source-over";
+
+    // Pulse the current layer
+    if (isCurrent) {
+      var pulse = 0.6 + 0.4 * Math.sin(T * 3);
+      ctx.beginPath();
+      ctx.arc(cx2, cy2, radius * 0.04, 0, Math.PI * 2);
+      ctx.fillStyle = L.col;
+      ctx.globalAlpha = pulse;
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+  }
+}
+
+function onMaster(v) {
+  var target = Math.round((v / 100) * LAYERS.length) - 1;
+  target = Math.max(-1, Math.min(LAYERS.length - 1, target));
+  currentLayer = target;
+  updateUI(v);
+  updateDots();
+}
+
+function setPreset(v) {
+  document.getElementById("sl-master").value = v;
+  onMaster(v);
+}
+
+function updateUI(pct) {
+  document.getElementById("h-layer").textContent = currentLayer + 1;
+  var name = currentLayer >= 0 ? LAYERS[currentLayer].name : "void";
+  document.getElementById("h-shape").textContent = name;
+  document.getElementById("master-val").textContent =
+    currentLayer < 0 ? "VOID" :
+    currentLayer === LAYERS.length - 1 ? "FULL" :
+    Math.round(pct) + "%";
+  document.getElementById("h-hint").textContent =
+    currentLayer >= 0 && currentLayer < LAYERS.length - 1
+    ? "next: " + LAYERS[currentLayer + 1].name
+    : currentLayer < 0 ? "drag slider to reveal" : "complete";
+}
+
+function updateDots() {
+  var bar = document.getElementById("ldots");
+  bar.innerHTML = "";
+  for (var i = 0; i < LAYERS.length; i++) {
+    var d = document.createElement("div");
+    d.className = "ldot" +
+      (i < currentLayer ? " done" : "") +
+      (i === currentLayer ? " active" : "");
+    bar.appendChild(d);
+  }
+}
+
+function toggleLog() {
+  logHidden = !logHidden;
+  document.getElementById("log").classList.toggle("hidden", logHidden);
+}
+
+function lg(msg, cls) {
+  var el = document.getElementById("log");
+  var d = document.createElement("div");
+  d.className = "e" + (cls ? " " + cls : "");
+  d.textContent = msg;
+  el.insertBefore(d, el.firstChild);
+  while (el.children.length > 20) el.removeChild(el.lastChild);
+}
+
+window.addEventListener("resize", resize);
+window.addEventListener("keydown", function(e) {
+  var v = +document.getElementById("sl-master").value;
+  if (e.code === "ArrowRight" || e.code === "Space") {
+    e.preventDefault();
+    v = Math.min(100, v + Math.round(100 / LAYERS.length));
+    document.getElementById("sl-master").value = v;
+    onMaster(v);
+    lg("layer " + (currentLayer + 1) + ": " + (currentLayer >= 0 ? LAYERS[currentLayer].name : "void"), "pur");
+  }
+  if (e.code === "ArrowLeft") {
+    e.preventDefault();
+    v = Math.max(0, v - Math.round(100 / LAYERS.length));
+    document.getElementById("sl-master").value = v;
+    onMaster(v);
+  }
+  if (e.code === "KeyA") setPreset(100);
+  if (e.code === "KeyR") setPreset(0);
+});
+
+function animate() {
+  requestAnimationFrame(animate);
+  T += SPD;
+  draw();
+}
+
+resize();
+updateDots();
+updateUI(0);
+lg("Baudin Atelier v1.0 ready", "ok");
+lg("SPACE=next layer  A=all  R=void", "pur");
+animate();
+</script>
+</body>
+</html>
