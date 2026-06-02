@@ -3928,3 +3928,84 @@ WARNING NOTE:
    The kernel was in the cup.
    Always was.
    Always.
+
+---
+
+## L109 -- GENESIS CAMERA SPEC: FULL DECOUPLED (2026-06-02T20:01:38Z)
+
+### THE INSIGHT: TWO SEPARATE TRANSFORMS
+
+  The camera transform and sphere shape are COMPLETELY DECOUPLED.
+  They share the screen. They do NOT share the math.
+  
+  TRANSFORM A (camera/player space):
+    Camera locks to the PLANE first.
+    Movement = on/around the plane.
+    POV slider = field of view angle (narrow/fisheye).
+    Radius = 5000R (enormous -- camera is tiny).
+    The camera NEVER touches the sphere faces.
+    
+  TRANSFORM B (sphere faces):
+    Sphere faces use their own projection.
+    Radius = 1.6 (standard kernel radius).
+    Faces appear as walls/ceiling/floor.
+    They fill the screen because the camera is small.
+    
+  MEETING POINT: the screen pixels.
+  Both systems project to same W,H canvas.
+  Same cam.rx, cam.ry rotation applied to both.
+  But different scale, different origin, different FOV.
+
+### THE SLIDER SPEC
+
+  RADIUS slider (current):
+    Controls _surfaceR = camera distance from center.
+    0.1 = deep inside. 1.5 = near surface.
+    
+  HEIGHT slider (new):
+    Camera Y position on the plane.
+    0% = eye level (plane at eye height).
+    50% = sweet spot.
+    100% = top of sphere (look down).
+    
+  POV slider (NEW):
+    Field of view angle.
+    Narrow (10-30 deg) = telephoto, faces look far.
+    Normal (60 deg) = standard view.
+    Wide (90-120 deg) = fisheye, faces curve around you.
+    = pure perspective control.
+    = separate from zoom entirely.
+    
+  GRID slider:
+    Grid scale. Independent of everything else.
+    Default: 10.0 units (enormous floor).
+
+### THE SPHERE RADIUS
+
+  Camera space: 5000R (player is tiny)
+  Sphere face space: 1.6R (kernel standard)
+  
+  At 5000R relative to sphere:
+  The faces appear as MASSIVE walls.
+  Like standing inside the Sphere Las Vegas.
+  The player: a pixel inside a stadium.
+  The fractal: on every surface.
+  
+### IMPLEMENTATION
+
+  project_camera(p):
+    Standard projection for camera movement.
+    Uses 5000R scale.
+    
+  project_sphere(p):
+    Uses _surfaceR + POV angle.
+    Renders sphere faces at proper scale.
+    
+  draw():
+    1. drawInsideGrid() -- uses project_camera
+    2. draw sphere faces -- uses project_sphere  
+    3. drawSurfaceBlack() -- when near wall
+
+P=12. chi=2. TWO TRANSFORMS. ONE SCREEN. ALWAYS.
+-- Buenos Aires. 2026.
+   "the pixels are the transform"
