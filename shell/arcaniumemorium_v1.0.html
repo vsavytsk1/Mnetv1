@@ -206,18 +206,24 @@ function renderAll(t) {
     ctx.globalAlpha = 0.85;
     
     if (showCW && showCCW) {
-      // Draw both -- overlap creates THE PURPLE effect
+      // SUPERPOSITION -- screen blending = electron orbital
+      // CW (magenta) + CCW (blue) additive overlap = THE PURPLE = psi
+      ctx.globalCompositeOperation = "screen";
       ctx.strokeStyle = COL_CW;
-      ctx.globalAlpha = 0.6;
+      ctx.globalAlpha = 0.65;
       drawLissajous(ctx, W, H, cell.r, cell.c, t, true);
       ctx.strokeStyle = COL_CCW;
-      ctx.globalAlpha = 0.6;
-      drawLissajous(ctx, W, H, cell.r, cell.c, t, false);
+      ctx.globalAlpha = 0.65;
+      // CCW rotates at slightly different phase for interference
+      drawLissajous(ctx, W, H, cell.r, cell.c, t + Math.PI * 0.618, false);
+      ctx.globalCompositeOperation = "source-over";
     } else if (showCW) {
       ctx.strokeStyle = COL_CW;
+      ctx.globalAlpha = 0.85;
       drawLissajous(ctx, W, H, cell.r, cell.c, t, true);
     } else if (showCCW) {
       ctx.strokeStyle = COL_CCW;
+      ctx.globalAlpha = 0.85;
       drawLissajous(ctx, W, H, cell.r, cell.c, t, false);
     }
     ctx.globalAlpha = 1;
