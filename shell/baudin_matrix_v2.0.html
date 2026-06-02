@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Baudin Matrix v2.0 -- 3D Lissajous</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#050510;color:#e0e0e0;
+  font-family:ui-monospace,monospace;font-size:10px;
+  overflow-x:hidden;min-height:100vh;display:flex;flex-direction:column}
+#hdr{padding:8px 14px;border-bottom:1px solid #1a1f2e;
+  display:flex;align-items:center;gap:10px;flex-shrink:0;flex-wrap:wrap}
+#hdr .t{font-size:12px;color:#cc44ff;letter-spacing:0.2em;text-transform:uppercase}
+#hdr .s{font-size:8px;color:#444}
+#matrix-wrap{flex:1;overflow:auto;padding:6px}
+table{border-collapse:collapse;margin:0 auto}
+th{font-size:7px;color:#333;padding:2px 3px;text-align:center}
+.row-hdr{font-size:7px;color:#333;padding-right:3px;text-align:right}
+.cell{position:relative;cursor:pointer;border:1px solid #0a0a20;border-radius:1px}
+.cell:hover{border-color:#cc44ff}
+.cell canvas{display:block}
+.clbl{position:absolute;bottom:0;left:1px;font-size:5px;
+  color:rgba(204,68,255,0.35);pointer-events:none}
+#popup{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+  z-index:30;background:rgba(5,5,16,0.98);border:1px solid #cc44ff;
+  border-radius:6px;padding:16px 20px;min-width:260px;display:none}
+#popup h3{color:#cc44ff;font-size:11px;letter-spacing:0.15em;margin-bottom:8px}
+#popup .eq{font-size:12px;color:#00d4ff;margin:4px 0;font-family:serif}
+#popup .orb{font-size:10px;color:#ffd700;margin:3px 0}
+#popup .d{font-size:9px;color:#888;line-height:1.7;margin:5px 0}
+#popup button{background:#cc44ff;color:#050510;border:none;
+  padding:3px 12px;border-radius:2px;cursor:pointer;font-size:9px;
+  text-transform:uppercase;margin-top:5px;font-family:monospace}
+#bar{padding:5px 14px;border-top:1px solid #1a1f2e;
+  display:flex;align-items:center;gap:7px;flex-wrap:wrap;flex-shrink:0;
+  position:sticky;bottom:0;background:rgba(5,5,16,0.97);z-index:10}
+.btn{background:#0a0e18;color:#444;border:1px solid #1a1f2e;
+  border-radius:2px;padding:2px 8px;font-family:monospace;
+  font-size:9px;cursor:pointer;text-transform:uppercase}
+.btn:hover{border-color:#cc44ff;color:#cc44ff}
+.btn.on{background:#cc44ff;color:#050510;border-color:#cc44ff}
+.sep{width:1px;height:14px;background:#1a1f2e}
+.sl{display:flex;align-items:center;gap:3px}
+.sl input{width:55px;accent-color:#cc44ff}
+.sv{font-size:9px;color:#cc44ff;min-width:22px}
+#stamp{font-size:7px;color:rgba(204,68,255,0.15);margin-left:auto}
+</style>
+</head>
+<body>
+
+<div id="hdr">
+  <span class="t">Baudin Matrix v2.0</span>
+  <span class="s">3D Lissajous . exact shapes . tilt to reveal depth</span>
+  <span class="s" style="color:#ff4488">CW</span>
+  <span class="s">+</span>
+  <span class="s" style="color:#4488ff">CCW</span>
+  <span class="s">=</span>
+  <span class="s" style="color:#cc44ff">THE PURPLE</span>
+  <span class="s" style="color:#555">After Pierre Baudin . kernelic magic</span>
+</div>
+<div id="matrix-wrap">
+  <table id="mtbl"></table>
+</div>
+<div id="popup">
+  <h3 id="pt"></h3>
+  <div class="eq" id="peq"></div>
+  <div class="orb" id="porb"></div>
+  <div class="d" id="pd"></div>
+  <button onclick="document.getElementById('popup').style.display='none'">CLOSE</button>
+</div>
+<div id="bar">
+  <span style="font-size:9px;color:#444">size</span>
+  <button class="btn" onclick="setCS(20)">XS</button>
+  <button class="btn" onclick="setCS(30)">S</button>
+  <button class="btn on" id="bm" onclick="setCS(40)">M</button>
+  <button class="btn" onclick="setCS(55)">L</button>
+  <div class="sep"></div>
+  <span style="font-size:9px;color:#444">tilt</span>
+  <div class="sl">
+    <input type="range" id="sl-tilt" min="0" max="89" value="0"
+      oninput="setTilt(+this.value)">
+    <span class="sv" id="sv-tilt">0deg</span>
+  </div>
+  <div class="sep"></div>
+  <button class="btn on" id="bcw" onclick="toggleCW()">CW</button>
+  <button class="btn on" id="bccw" onclick="toggleCCW()">CCW</button>
+  <div class="sep"></div>
+  <span style="font-size:9px;color:#444">speed</span>
+  <div class="sl">
+    <input type="range" id="sl-spd" min="1" max="150" value="40"
+      oninput="spd=+this.value/100;document.getElementById('sv-spd').textContent=(+this.value/100).toFixed(2)">
+    <span class="sv" id="sv-spd">0.40</span>
+  </div>
+  <div class="sep"></div>
+  <button class="btn on" id="bblend" onclick="toggleBlend()">SCREEN</button>
+  <span id="stamp">P=12 . chi=2 . always</span>
+</div>
+<script>// BAUDIN MATRIX v2.0 -- 3D Lissajous
+// Exact shapes after Pierre Baudin.
+// TILT slider reveals the 3D depth.
+// The 2D is just the shadow. Always.
+// Built: 2026-06-02T17:16:38Z
+
+
+var spd = 0.40;
+var showCW = true;
+var showCCW = true;
+var CS = 40;
+var tiltDeg = 0;
+var blendMode = "screen";
+var cells = [];
+var T = 0;
+var lastMs = performance.now();
+var STEPS = 500;
+
+var BG   = "#050510";
+var COL_CW  = "#ff4488";
+var COL_CCW = "#4488ff";
+
+// EXACT Baudin parametric:
+// x(t) = sin(col * t + delta_x)
+// y(t) = sin(row * t + delta_y)
+// Standard Lissajous with phase PI/2 for clean shapes
+
+function lissajous(ctx, W, H, fr, fc, T, cw, tilt) {
+  var pts = [];
+  var delta = cw ? Math.PI/2 : -Math.PI/2;
+  var cosT = Math.cos(tilt * Math.PI / 180);
+  var sinT = Math.sin(tilt * Math.PI / 180);
+  var m = Math.min(W,H) * 0.45;
+  
+  for (var i = 0; i <= STEPS; i++) {
+    var t = (i / STEPS) * Math.PI * 2 * Math.max(fr, fc);
+    var px = Math.sin(fc * t / Math.max(fr,fc) * fc + T * (cw?1:-1));
+    var py = Math.sin(fr * t / Math.max(fr,fc) * fr + delta);
+    // 3D tilt: rotate around x-axis
+    var py3d = py * cosT;
+    // project
+    pts.push([W/2 + px * m, H/2 + py3d * m]);
+  }
+  
+  ctx.beginPath();
+  for (var j = 0; j < pts.length; j++) {
+    j === 0 ? ctx.moveTo(pts[j][0], pts[j][1])
+             : ctx.lineTo(pts[j][0], pts[j][1]);
+  }
+  ctx.stroke();
+}
+
+function renderAll() {
+  var tilt = tiltDeg;
+  cells.forEach(function(c) {
+    var ctx = c.cv.getContext("2d");
+    var W = c.s, H = c.s;
+    ctx.fillStyle = BG;
+    ctx.fillRect(0, 0, W, H);
+    ctx.lineWidth = 0.75;
+    
+    if (showCW && showCCW) {
+      ctx.globalCompositeOperation = blendMode;
+      ctx.strokeStyle = COL_CW;
+      ctx.globalAlpha = 0.7;
+      lissajous(ctx, W, H, c.r, c.c, T, true, tilt);
+      ctx.strokeStyle = COL_CCW;
+      ctx.globalAlpha = 0.7;
+      lissajous(ctx, W, H, c.r, c.c, T, false, tilt);
+      ctx.globalCompositeOperation = "source-over";
+      ctx.globalAlpha = 1;
+    } else if (showCW) {
+      ctx.strokeStyle = COL_CW;
+      ctx.globalAlpha = 0.85;
+      lissajous(ctx, W, H, c.r, c.c, T, true, tilt);
+      ctx.globalAlpha = 1;
+    } else {
+      ctx.strokeStyle = COL_CCW;
+      ctx.globalAlpha = 0.85;
+      lissajous(ctx, W, H, c.r, c.c, T, false, tilt);
+      ctx.globalAlpha = 1;
+    }
+  });
+}
+
+var ORBS = {
+  "1,1":"s-orbital . sphere . chi=2",
+  "1,2":"p-orbital . figure-8 . THE ELECTRON",
+  "1,3":"p-orbital . 3-lobe",
+  "2,3":"d-orbital . clover",
+  "3,4":"f-orbital",
+  "4,5":"g-orbital",
+  "1,4":"d-orbital . 4-lobe",
+  "1,5":"f-orbital . 5-lobe"
+};
+
+function popup(r,c) {
+  var k = Math.min(r,c)+","+Math.max(r,c);
+  document.getElementById("pt").textContent = "Lissajous " + r + ":" + c;
+  document.getElementById("peq").textContent =
+    "x = sin(" + c + "t),  y = sin(" + r + "t + \u03c0/2)";
+  document.getElementById("porb").textContent =
+    "Orbital: " + (ORBS[k] || "higher orbital " + r + ":" + c);
+  document.getElementById("pd").textContent =
+    "Frequency ratio " + r + ":" + c + ". " +
+    "Drag TILT to 0=flat (Baudin tribute) / 45=3D ribbon / 90=edge. " +
+    "CW(magenta)+CCW(blue)=psi=THE PURPLE. Always.";
+  document.getElementById("popup").style.display="block";
+}
+
+function build() {
+  var tbl = document.getElementById("mtbl");
+  tbl.innerHTML = ""; cells = [];
+  var N = 12;
+  var hr = document.createElement("tr");
+  var th0 = document.createElement("th"); th0.textContent=""; hr.appendChild(th0);
+  for (var c=1;c<=N;c++) {
+    var th=document.createElement("th"); th.textContent=c; hr.appendChild(th);
+  }
+  tbl.appendChild(hr);
+  
+  for (var r=1;r<=N;r++) {
+    var row=document.createElement("tr");
+    var rh=document.createElement("td");
+    rh.className="row-hdr"; rh.textContent=r; row.appendChild(rh);
+    for (var c=1;c<=N;c++) {
+      var td=document.createElement("td");
+      var div=document.createElement("div");
+      div.className="cell";
+      div.style.width=CS+"px"; div.style.height=CS+"px";
+      var cv=document.createElement("canvas");
+      cv.width=CS; cv.height=CS; div.appendChild(cv);
+      var lb=document.createElement("div");
+      lb.className="clbl"; lb.textContent=r+":"+c; div.appendChild(lb);
+      (function(rr,cc){
+        div.addEventListener("click",function(){popup(rr,cc);});
+      })(r,c);
+      td.appendChild(div); row.appendChild(td);
+      cells.push({cv:cv,r:r,c:c,s:CS});
+    }
+    tbl.appendChild(row);
+  }
+}
+
+function setCS(s){
+  CS=s;
+  ["XS","S","M","L"].forEach(function(n,i){
+    var sizes=[20,30,40,55];
+    var b=document.getElementById("b"+n.toLowerCase());
+    if(b)b.classList.toggle("on",sizes[i]===s);
+  });
+  document.getElementById("bm").classList.toggle("on",s===40);
+  build();
+}
+function setTilt(v){
+  tiltDeg=v;
+  document.getElementById("sv-tilt").textContent=v+"deg";
+}
+function toggleCW(){showCW=!showCW;document.getElementById("bcw").classList.toggle("on",showCW);}
+function toggleCCW(){showCCW=!showCCW;document.getElementById("bccw").classList.toggle("on",showCCW);}
+function toggleBlend(){
+  blendMode=blendMode==="screen"?"source-over":"screen";
+  document.getElementById("bblend").textContent=blendMode==="screen"?"SCREEN":"NORMAL";
+}
+
+document.addEventListener("click",function(e){
+  var p=document.getElementById("popup");
+  if(p.style.display==="block"&&!p.contains(e.target))p.style.display="none";
+});
+
+function animate(now){
+  var dt=Math.min((now-lastMs)/1000,0.05); lastMs=now;
+  T+=dt*spd*0.4;
+  renderAll();
+  requestAnimationFrame(animate);
+}
+
+build();
+requestAnimationFrame(animate);
+</script>
+</body>
+</html>
