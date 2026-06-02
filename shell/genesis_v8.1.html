@@ -81,7 +81,7 @@ canvas{position:fixed;top:0;left:0;z-index:0}
 <button class="btn" onclick="doExportGraph()">GRAPH</button>
 <div class="sep"></div>
 <button class="btn gn" id="btn-enter" onclick="toggleInsideView()">ENTER</button>
-<div class="sl" id="sl-inside-wrap" style="display:none"><label>RADIUS</label><input type="range" min="0.1" max="1.5" step="0.05" value="1.2" id="sl-inside" oninput="setInsideZoom(+this.value)"><span class="sv" id="sv-inside">1.2</span></div>
+<div class="sl" id="sl-pov-wrap" style="display:none"><label>POV</label><input type="range" min="10" max="120" step="1" value="60" id="sl-pov" oninput="setPOV(+this.value)"><span class="sv" id="sv-pov">60</span></div><div class="sl" id="sl-inside-wrap" style="display:none"><label>RADIUS</label><input type="range" min="0.1" max="1.5" step="0.05" value="1.2" id="sl-inside" oninput="setInsideZoom(+this.value)"><span class="sv" id="sv-inside">1.2</span></div>
 </div>
 
 <script>
@@ -3923,6 +3923,20 @@ animate();
 // INSIDE GRID -- reference plane for inside-sphere view
 // Gives the brain a stable floor. Like a dome floor.
 // ============================================================
+var _pov=60;
+function setPOV(v){_pov=v;var e=document.getElementById("sv-pov");if(e)e.textContent=v;}
+function projectCamera(p){
+  var x=p[0],y=p[1],z=p[2];
+  var cy2=Math.cos(cam.ry),sy2=Math.sin(cam.ry);
+  var x1=x*cy2-z*sy2,z1=x*sy2+z*cy2;
+  var crx=Math.cos(cam.rx),srx=Math.sin(cam.rx);
+  var y1=y*crx-z1*srx,z2c=y*srx+z1*crx;
+  var fovRad=_pov*Math.PI/180;
+  var fovS=Math.min(W,H)/(2*Math.tan(fovRad/2));
+  var z3=z2c+5.0;if(z3<0.01)z3=0.01;
+  var persp=fovS/(fovS+z3*30);
+  return{x:W/2+x1*persp*fovS*0.8,y:H/2-y1*persp*fovS*0.8,z:z3};
+}
 var _gridScale = 1.2;
 function setGridScale(v){_gridScale=v/10;var el=document.getElementById('sv-grid');if(el)el.textContent=_gridScale.toFixed(1);}
 
@@ -3938,7 +3952,7 @@ function drawInsideGrid() {
   cx.lineWidth = 0.4;
   for(var gz=-gridSize;gz<=gridSize;gz+=gridStep){
     var pts=[];
-    for(var gx=-gridSize;gx<=gridSize;gx+=gridStep){pts.push(project([gx,planeY,gz]));}
+    for(var gx=-gridSize;gx<=gridSize;gx+=gridStep){pts.push(projectCamera([gx,planeY,gz]));}
     if(pts.length<2)continue;
     cx.beginPath();cx.moveTo(pts[0].x,pts[0].y);
     for(var k=1;k<pts.length;k++)cx.lineTo(pts[k].x,pts[k].y);
@@ -3946,7 +3960,7 @@ function drawInsideGrid() {
   }
   for(var gx2=-gridSize;gx2<=gridSize;gx2+=gridStep){
     var pts2=[];
-    for(var gz2=-gridSize;gz2<=gridSize;gz2+=gridStep){pts2.push(project([gx2,planeY,gz2]));}
+    for(var gz2=-gridSize;gz2<=gridSize;gz2+=gridStep){pts2.push(projectCamera([gx2,planeY,gz2]));}
     if(pts2.length<2)continue;
     cx.beginPath();cx.moveTo(pts2[0].x,pts2[0].y);
     for(var k2=1;k2<pts2.length;k2++)cx.lineTo(pts2[k2].x,pts2[k2].y);
@@ -4031,7 +4045,7 @@ function toggleInsideView() {
     btn.classList.add('inside');
     btn.classList.remove('gn');
     wrap.style.display = 'flex';
-    var hw=document.getElementById('sl-height-wrap');if(hw)hw.style.display='flex';
+    var hw=document.getElementById('sl-height-wrap');if(hw)hw.style.display='flex';var pw=document.getElementById('sl-pov-wrap');if(pw)pw.style.display='flex';
     _insideMode = true;
     console.log('[GF] INSIDE VIEW radius=' + _surfaceR + ' zoom=' + cam.zoom);
   } else {
@@ -4050,7 +4064,7 @@ function toggleInsideView() {
     btn.classList.remove('inside');
     btn.classList.add('gn');
     wrap.style.display = 'none';
-    var hw2=document.getElementById('sl-height-wrap');if(hw2)hw2.style.display='none';
+    var hw2=document.getElementById('sl-height-wrap');if(hw2)hw2.style.display='none';var pw2=document.getElementById('sl-pov-wrap');if(pw2)pw2.style.display='none';
     _insideMode = false;
     _surfaceR = 0;
     console.log('[GF] EXIT -- cam restored');
