@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Baudin Matrix v1.0 -- 162 Live Shapes</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#050510;color:#e0e0e0;
+  font-family:ui-monospace,monospace;font-size:10px;
+  overflow-x:hidden;min-height:100vh}
+#hdr{padding:10px 14px;border-bottom:1px solid #1a1f2e;
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+#hdr .t{font-size:13px;color:#cc44ff;letter-spacing:0.2em;
+  text-transform:uppercase;font-weight:bold}
+#hdr .s{font-size:9px;color:#555}
+#hdr .cr{font-size:8px;color:#333;margin-left:auto}
+#matrix-wrap{padding:8px;overflow:auto}
+table{border-collapse:collapse;margin:0 auto}
+th,td{padding:1px;text-align:center;vertical-align:middle}
+th{font-size:7px;color:#444;letter-spacing:0.05em;
+  padding:2px 3px;white-space:nowrap}
+.row-hdr{font-size:7px;color:#444;padding-right:4px;
+  text-align:right;white-space:nowrap}
+.cell-wrap{position:relative;cursor:pointer}
+.cell-wrap:hover canvas{outline:1px solid #cc44ff}
+.diag{opacity:0.5}
+.cell-lbl{position:absolute;bottom:0;left:1px;
+  font-size:5px;color:rgba(204,68,255,0.4);
+  pointer-events:none;line-height:1}
+#popup{position:fixed;top:50%;left:50%;
+  transform:translate(-50%,-50%);z-index:30;
+  background:rgba(5,5,16,0.98);
+  border:1px solid #cc44ff;border-radius:6px;
+  padding:16px 20px;min-width:260px;display:none}
+#popup h3{color:#cc44ff;font-size:12px;
+  letter-spacing:0.15em;margin-bottom:10px}
+#popup .eq{font-size:13px;color:#00d4ff;
+  margin:5px 0;font-family:serif}
+#popup .orb{font-size:10px;color:#ffd700;margin:4px 0}
+#popup .desc{font-size:9px;color:#888;
+  line-height:1.7;margin:6px 0}
+#popup button{background:#cc44ff;color:#050510;
+  border:none;padding:3px 14px;border-radius:2px;
+  cursor:pointer;font-size:9px;text-transform:uppercase;
+  margin-top:6px;font-family:monospace}
+#bar{position:sticky;bottom:0;background:rgba(5,5,16,0.97);
+  border-top:1px solid #1a1f2e;
+  padding:5px 14px;display:flex;
+  align-items:center;gap:8px;flex-wrap:wrap;z-index:10}
+.btn{background:#0a0e18;color:#444;border:1px solid #1a1f2e;
+  border-radius:2px;padding:2px 9px;font-family:monospace;
+  font-size:9px;cursor:pointer;text-transform:uppercase}
+.btn:hover{border-color:#cc44ff;color:#cc44ff}
+.btn.on{background:#cc44ff;color:#050510;border-color:#cc44ff}
+.btn.cw-btn.on{background:#ff4488;border-color:#ff4488;color:#050510}
+.btn.ccw-btn.on{background:#4488ff;border-color:#4488ff;color:#050510}
+.sl{display:flex;align-items:center;gap:3px}
+.sl input{width:60px;accent-color:#cc44ff}
+.sv{font-size:9px;color:#cc44ff;min-width:22px}
+.sep{width:1px;height:14px;background:#1a1f2e}
+#stamp{font-size:7px;color:rgba(204,68,255,0.15);
+  margin-left:auto;letter-spacing:0.05em}
+</style>
+</head>
+<body>
+
+<div id="hdr">
+  <span class="t">Baudin Matrix</span>
+  <span class="s">162 Shape Hybrid Matrix -- Live</span>
+  <span class="s" style="color:#ff4488">CW</span>
+  <span class="s">+</span>
+  <span class="s" style="color:#4488ff">CCW</span>
+  <span class="s">=</span>
+  <span class="s" style="color:#cc44ff">superposition</span>
+  <span class="cr">After Pierre Baudin . kernelic magic . always</span>
+</div>
+<div id="matrix-wrap">
+  <table id="matrix-table"></table>
+</div>
+<div id="popup">
+  <h3 id="p-title">Shape</h3>
+  <div class="eq" id="p-eq"></div>
+  <div class="orb" id="p-orb"></div>
+  <div class="desc" id="p-desc"></div>
+  <button onclick="document.getElementById('popup').style.display='none'">CLOSE</button>
+</div>
+<div id="bar">
+  <span style="font-size:9px;color:#555">size</span>
+  <button class="btn" onclick="setCellSize(24)">S</button>
+  <button class="btn on" onclick="setCellSize(36)">M</button>
+  <button class="btn" onclick="setCellSize(50)">L</button>
+  <div class="sep"></div>
+  <button class="btn cw-btn on" id="btn-cw" onclick="toggleCW()">CW</button>
+  <button class="btn ccw-btn on" id="btn-ccw" onclick="toggleCCW()">CCW</button>
+  <div class="sep"></div>
+  <span style="font-size:9px;color:#555">speed</span>
+  <div class="sl">
+    <input type="range" id="sl-spd" min="1" max="200" value="50"
+      oninput="animSpeed=+this.value/100;document.getElementById('sv-spd').textContent=(+this.value/100).toFixed(2)">
+    <span class="sv" id="sv-spd">0.50</span>
+  </div>
+  <div class="sep"></div>
+  <button class="btn" onclick="toggleBlend()" id="btn-blend">BLEND: SCREEN</button>
+  <span id="stamp">P=12 . chi=2 . always</span>
+</div>
+<script>// BAUDIN MATRIX v1.0
+// 162 Shape Hybrid Matrix -- LIVE
+// After Pierre Baudin. Kernelic magic.
+// CW=magenta + CCW=blue + overlap=THE PURPLE
+// Built: 2026-06-02T16:49:31Z
+
+
+var animSpeed = 0.50;
+var showCW = true;
+var showCCW = true;
+var cellSize = 36;
+var blendMode = "screen";
+var animT = 0;
+var cells = [];
+
+// Frequency rows and columns -- match Baudin's matrix
+// Rows (y-freq): 1,1,1,1,2,2,3,3,4,4,5,6 (approximate)
+// Cols (x-freq): same
+// Full N x N grid where N = max freq
+
+var MAX_N = 13; // 1..12 + half-integer column
+var FREQS = [1, 1, 1, 1, 2, 2, 3, 3, 4, 4, 5, 6, 7];
+// Simpler: just integer freqs 1..12
+
+// Color palette
+var COL_BG  = "#050510";
+var COL_CW  = "#ff4488";
+var COL_CCW = "#4488ff";
+
+// Orbital names
+var ORBITAL_NAMES = {
+  "1,1": "s-orbital (sphere)",
+  "1,2": "p-orbital (figure-8)",
+  "1,3": "p-orbital (3-lobe)",
+  "2,1": "p-orbital (figure-8 rotated)",
+  "2,3": "d-orbital (clover)",
+  "3,3": "d-orbital (symmetric)",
+  "2,2": "d-orbital (rings)",
+  "3,4": "f-orbital",
+  "4,4": "g-orbital"
+};
+
+function getOrbital(r, c) {
+  var key = Math.min(r,c) + "," + Math.max(r,c);
+  return ORBITAL_NAMES[key] || "higher orbital " + r + ":" + c;
+}
+
+function drawShape(ctx, W, H, fr, fc, t, cw) {
+  var steps = 400;
+  var delta = cw ? Math.PI * 0.25 : Math.PI * (0.25 + 0.618);
+  ctx.beginPath();
+  var m = Math.min(W, H) * 0.44;
+  for (var i = 0; i <= steps; i++) {
+    var a = (i / steps) * Math.PI * 2;
+    var x = W/2 + m * Math.sin(fr * a + t * (cw ? 1 : -1));
+    var y = H/2 + m * Math.sin(fc * a + delta);
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+}
+
+function buildMatrix() {
+  var tbl = document.getElementById("matrix-table");
+  tbl.innerHTML = "";
+  cells = [];
+  
+  var N = 12;
+  
+  // Header row
+  var hrow = document.createElement("tr");
+  var th0 = document.createElement("th");
+  th0.textContent = "";
+  hrow.appendChild(th0);
+  for (var c = 1; c <= N; c++) {
+    var th = document.createElement("th");
+    th.textContent = c;
+    hrow.appendChild(th);
+  }
+  tbl.appendChild(hrow);
+  
+  for (var r = 1; r <= N; r++) {
+    var row = document.createElement("tr");
+    
+    // Row header
+    var rh = document.createElement("td");
+    rh.className = "row-hdr";
+    rh.textContent = r;
+    row.appendChild(rh);
+    
+    for (var c = 1; c <= N; c++) {
+      var td = document.createElement("td");
+      
+      var div = document.createElement("div");
+      div.className = "cell-wrap" + (r === c ? " diag" : "");
+      div.style.width = cellSize + "px";
+      div.style.height = cellSize + "px";
+      
+      var cv = document.createElement("canvas");
+      cv.width = cellSize;
+      cv.height = cellSize;
+      div.appendChild(cv);
+      
+      var lbl = document.createElement("div");
+      lbl.className = "cell-lbl";
+      lbl.textContent = r + ":" + c;
+      div.appendChild(lbl);
+      
+      (function(row2, col2, canvas2) {
+        div.addEventListener("click", function() {
+          showPopup(row2, col2);
+        });
+      })(r, c, cv);
+      
+      td.appendChild(div);
+      row.appendChild(td);
+      cells.push({cv: cv, r: r, c: c, size: cellSize});
+    }
+    tbl.appendChild(row);
+  }
+}
+
+function showPopup(r, c) {
+  var orb = getOrbital(r, c);
+  document.getElementById("p-title").textContent = "Lissajous " + r + ":" + c;
+  document.getElementById("p-eq").textContent =
+    "x = sin(" + r + "t),  y = sin(" + c + "t + delta)";
+  document.getElementById("p-orb").textContent = "Orbital: " + orb;
+  document.getElementById("p-desc").textContent =
+    "Frequency ratio " + r + ":" + c + ". " +
+    "CW (magenta) + CCW (blue, phi-offset) = superposition. " +
+    "Overlap = THE PURPLE = psi. " +
+    "Kernel: AncientMagic N=" + Math.max(r,c) + ".";
+  document.getElementById("popup").style.display = "block";
+}
+
+function renderAll(t) {
+  cells.forEach(function(cell) {
+    var ctx = cell.cv.getContext("2d");
+    var W = cell.size, H = cell.size;
+    
+    ctx.fillStyle = COL_BG;
+    ctx.fillRect(0, 0, W, H);
+    ctx.lineWidth = 0.7;
+    
+    if (showCW && showCCW) {
+      ctx.globalCompositeOperation = blendMode;
+      if (showCW) {
+        ctx.strokeStyle = COL_CW;
+        ctx.globalAlpha = 0.7;
+        drawShape(ctx, W, H, cell.r, cell.c, t, true);
+      }
+      if (showCCW) {
+        ctx.strokeStyle = COL_CCW;
+        ctx.globalAlpha = 0.7;
+        drawShape(ctx, W, H, cell.r, cell.c, t, false);
+      }
+      ctx.globalCompositeOperation = "source-over";
+      ctx.globalAlpha = 1;
+    } else if (showCW) {
+      ctx.strokeStyle = COL_CW;
+      ctx.globalAlpha = 0.85;
+      drawShape(ctx, W, H, cell.r, cell.c, t, true);
+      ctx.globalAlpha = 1;
+    } else if (showCCW) {
+      ctx.strokeStyle = COL_CCW;
+      ctx.globalAlpha = 0.85;
+      drawShape(ctx, W, H, cell.r, cell.c, t, false);
+      ctx.globalAlpha = 1;
+    }
+  });
+}
+
+function setCellSize(s) {
+  cellSize = s;
+  buildMatrix();
+}
+
+function toggleCW() {
+  showCW = !showCW;
+  document.getElementById("btn-cw").classList.toggle("on", showCW);
+}
+function toggleCCW() {
+  showCCW = !showCCW;
+  document.getElementById("btn-ccw").classList.toggle("on", showCCW);
+}
+function toggleBlend() {
+  blendMode = blendMode === "screen" ? "source-over" : "screen";
+  document.getElementById("btn-blend").textContent =
+    "BLEND: " + (blendMode === "screen" ? "SCREEN" : "NORMAL");
+}
+
+document.addEventListener("click", function(e) {
+  var p = document.getElementById("popup");
+  if (p.style.display === "block" && !p.contains(e.target)) {
+    p.style.display = "none";
+  }
+});
+
+var lastT = performance.now();
+function animate(now) {
+  var dt = Math.min((now - lastT) / 1000, 0.05);
+  lastT = now;
+  animT += dt * animSpeed * 0.5;
+  renderAll(animT);
+  requestAnimationFrame(animate);
+}
+
+buildMatrix();
+requestAnimationFrame(animate);
+</script>
+</body>
+</html>
