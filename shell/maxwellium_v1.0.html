@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Maxwellium v1.0 -- What IS a Magnet?</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#050510;color:#e0e0e0;
+  font-family:ui-monospace,'SF Mono',monospace;
+  font-size:11px;overflow:hidden;height:100vh}
+canvas{display:block}
+#hud{position:fixed;top:12px;left:12px;z-index:10;pointer-events:none}
+#hud .title{font-size:12px;color:#00d4ff;margin-bottom:4px;
+  letter-spacing:0.15em;text-transform:uppercase}
+#hud .row{line-height:1.9;color:rgba(220,228,240,0.45)}
+#hud .val{color:#00d4ff;font-weight:bold}
+#hud .red{color:#ff4444}
+#hud .blue{color:#4488ff}
+#hud .gold{color:#ffd700}
+#hud .dim{color:rgba(220,228,240,0.2);font-size:10px}
+#reveal{position:fixed;top:50%;left:50%;
+  transform:translate(-50%,-50%);
+  z-index:20;background:rgba(5,5,16,0.96);
+  border:1px solid #00d4ff;border-radius:8px;
+  padding:24px 32px;text-align:center;
+  display:none;max-width:360px}
+#reveal h2{color:#ffd700;font-size:16px;
+  letter-spacing:0.2em;margin-bottom:16px}
+#reveal .eq{font-size:18px;color:#00d4ff;
+  margin:8px 0;font-family:serif}
+#reveal .desc{font-size:10px;color:#888;
+  line-height:1.8;margin:12px 0}
+#reveal button{background:#00d4ff;color:#050510;
+  border:none;padding:6px 20px;border-radius:3px;
+  cursor:pointer;font-family:inherit;font-size:10px;
+  text-transform:uppercase;letter-spacing:0.1em;
+  margin-top:8px}
+#bar{position:fixed;bottom:0;left:0;right:0;z-index:10;
+  background:rgba(5,5,16,0.97);border-top:1px solid #1a1f2e;
+  padding:6px 14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.btn{background:#0a0e18;color:#444;border:1px solid #1a1f2e;
+  border-radius:3px;padding:3px 10px;font-family:inherit;
+  font-size:9px;cursor:pointer;transition:all 0.15s;
+  text-transform:uppercase;letter-spacing:0.07em}
+.btn:hover{border-color:#00d4ff;color:#00d4ff}
+.btn.active{background:#00d4ff;color:#050510;border-color:#00d4ff}
+.btn.red{color:#ff4444;border-color:#3a0a0a}
+.btn.red:hover{background:#ff4444;color:#050510}
+.btn.gold{color:#ffd700;border-color:#3a2a0a}
+.sep{width:1px;height:16px;background:#1a1f2e;margin:0 2px}
+.lbl{color:rgba(220,228,240,0.25);font-size:9px;
+  text-transform:uppercase;letter-spacing:0.1em}
+.sl{display:flex;align-items:center;gap:3px}
+.sl input{width:65px;accent-color:#00d4ff}
+.sv{font-size:9px;color:#00d4ff;min-width:28px}
+#stamp{position:fixed;bottom:54px;right:14px;
+  pointer-events:none;text-align:right}
+#stamp .s{font-size:8px;color:rgba(0,212,255,0.2);
+  letter-spacing:0.08em;line-height:1.8}
+</style>
+</head>
+<body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+<div id="hud">
+  <div class="title">Maxwellium v1.0</div>
+  <div class="row">N pole &nbsp;<span class="red">+</span> &nbsp;
+    S pole &nbsp;<span class="blue">-</span></div>
+  <div class="row">lines &nbsp;<span class="val" id="h-lines">12</span></div>
+  <div class="row">closed &nbsp;<span class="gold" id="h-closed">0</span></div>
+  <div class="row dim">nabla.B = 0 . always</div>
+</div>
+
+<div id="reveal">
+  <h2>WHAT IS A MAGNET?</h2>
+  <div class="eq">&#x2207;&#x00B7;B = 0</div>
+  <div class="eq">&#x03C7; = 2</div>
+  <div class="eq">P = 12</div>
+  <div class="desc">
+    There are no magnetic monopoles.<br>
+    Every field line that leaves North<br>
+    must return to South.<br>
+    The loop IS the magnet.<br>
+    The field IS the space.<br>
+    nabla.B = 0 is not a consequence.<br>
+    It is the DEFINITION.<br><br>
+    The funny points and lines<br>
+    ARE the truth.<br>
+    Always.
+  </div>
+  <button onclick="document.getElementById('reveal').style.display='none'">
+    I SEE IT
+  </button>
+</div>
+
+<div id="stamp">
+  <div class="s">Maxwellium v1.0</div>
+  <div class="s">nabla.B = 0</div>
+  <div class="s">chi=2 . P=12 . always</div>
+</div>
+
+<div id="bar">
+  <span class="lbl">poles</span>
+  <div class="sl">
+    <input type="range" id="sl-poles" min="1" max="8" step="0.1" value="4"
+      oninput="polesDist=+this.value;rebuild()">
+    <span class="sv" id="sv-poles">4.0</span>
+  </div>
+  <div class="sep"></div>
+  <span class="lbl">lines</span>
+  <div class="sl">
+    <input type="range" id="sl-lines" min="1" max="24" step="1" value="12"
+      oninput="nLines=+this.value;document.getElementById('sv-lines').textContent=this.value;document.getElementById('h-lines').textContent=this.value;rebuild()">
+    <span class="sv" id="sv-lines">12</span>
+  </div>
+  <div class="sep"></div>
+  <span class="lbl">spin</span>
+  <div class="sl">
+    <input type="range" id="sl-spin" min="0" max="50" value="10"
+      oninput="spinSpeed=+this.value/10000">
+    <span class="sv" id="sv-spin">0.10</span>
+  </div>
+  <div class="sep"></div>
+  <button class="btn gold" onclick="showReveal()">REVEAL</button>
+  <button class="btn" onclick="resetView()">RESET</button>
+  <button class="btn" onclick="togglePoles()">POLES</button>
+</div>
+
+<script>
+// MAXWELLIUM v1.0
+// What IS a magnet? Show it. Pure graph math.
+// nabla.B = 0. chi=2. The loop IS the magnet.
+// Built: 2026-06-02T02:53:01Z
+
+var scene, camera, renderer, controls;
+var magnetGroup;
+var spinSpeed = 0.001;
+var polesDist = 4.0;
+var nLines = 12;
+var showPoles = true;
+var closedCount = 0;
+
+// -- FIELD LINE MATH -------------------------------
+// Generate a magnetic dipole field line
+// theta: angle around the dipole axis (0 to 2pi)
+// phi_start: starting polar angle from north pole
+
+function dipoleFieldLine(poleD, phi0, theta, segments) {
+  // Classic dipole field line: r = r0 * sin^2(phi)
+  // phi goes from phi0 to pi-phi0 (north to south)
+  var pts = [];
+  var r0 = poleD * 1.5 / (Math.sin(phi0) * Math.sin(phi0));
+  var steps = segments || 80;
+  
+  for (var i = 0; i <= steps; i++) {
+    var phi = phi0 + (Math.PI - 2*phi0) * (i/steps);
+    var r = r0 * Math.sin(phi) * Math.sin(phi);
+    
+    // Clamp radius
+    r = Math.min(r, poleD * 8);
+    
+    // 3D position: rotate around z-axis by theta
+    var x = r * Math.sin(phi) * Math.cos(theta);
+    var y = r * Math.cos(phi);  // y = pole axis
+    var z = r * Math.sin(phi) * Math.sin(theta);
+    
+    pts.push(new THREE.Vector3(x, y, z));
+  }
+  return pts;
+}
+
+// -- BUILD THE MAGNET -----------------------------
+function rebuild() {
+  // Clear
+  while(magnetGroup.children.length) {
+    magnetGroup.remove(magnetGroup.children[0]);
+  }
+  closedCount = 0;
+
+  document.getElementById('sv-poles').textContent = polesDist.toFixed(1);
+
+  // North pole (red) at (0, polesDist/2, 0)
+  // South pole (blue) at (0, -polesDist/2, 0)
+  
+  if (showPoles) {
+    // North pole sphere
+    var ngeo = new THREE.SphereGeometry(0.25, 16, 12);
+    var nmat = new THREE.MeshPhongMaterial({
+      color:0xff2222, emissive:0xff2222,
+      emissiveIntensity:0.5, specular:0xffffff, shininess:200});
+    var nsph = new THREE.Mesh(ngeo, nmat);
+    nsph.position.set(0, polesDist/2, 0);
+    magnetGroup.add(nsph);
+    
+    // South pole sphere
+    var sgeo = new THREE.SphereGeometry(0.25, 16, 12);
+    var smat = new THREE.MeshPhongMaterial({
+      color:0x2244ff, emissive:0x2244ff,
+      emissiveIntensity:0.5, specular:0xffffff, shininess:200});
+    var ssph = new THREE.Mesh(sgeo, smat);
+    ssph.position.set(0, -polesDist/2, 0);
+    magnetGroup.add(ssph);
+    
+    // The bar (gray)
+    var bgeo = new THREE.CylinderGeometry(0.08, 0.08, polesDist, 8);
+    var bmat = new THREE.MeshPhongMaterial({color:0x334455,
+      transparent:true, opacity:0.4});
+    magnetGroup.add(new THREE.Mesh(bgeo, bmat));
+    
+    // N / S labels as small rings
+    var ringGeo = new THREE.TorusGeometry(0.35, 0.03, 8, 32);
+    magnetGroup.add(new THREE.Mesh(ringGeo,
+      new THREE.MeshBasicMaterial({color:0xff4444})))
+      .position.set(0, polesDist/2, 0);
+    var ringS = new THREE.Mesh(ringGeo.clone(),
+      new THREE.MeshBasicMaterial({color:0x4488ff}));
+    ringS.position.set(0, -polesDist/2, 0);
+    magnetGroup.add(ringS);
+  }
+
+  // FIELD LINES -- the magic
+  // Distribute phi_start values: more dense near poles
+  var phi_values = [];
+  for (var i = 0; i < nLines; i++) {
+    // phi from 15 to 85 degrees (avoid exact pole)
+    var t = (i+1) / (nLines+1);
+    phi_values.push((15 + t*70) * Math.PI/180);
+  }
+
+  // Each phi gets a full ring of theta values (just 1 for now, rotated by symmetry)
+  // For beautiful 3D: show 8 theta slices
+  var nTheta = Math.min(8, Math.ceil(nLines/2));
+  
+  phi_values.forEach(function(phi0, pi) {
+    for (var ti = 0; ti < nTheta; ti++) {
+      var theta = (ti/nTheta) * Math.PI * 2;
+      var pts = dipoleFieldLine(polesDist/2, phi0, theta, 80);
+      
+      if (pts.length < 2) return;
+      
+      // Color: interpolate red->cyan->blue based on phi
+      var t2 = pi / nLines;
+      // Near poles: bright. Mid: dim cyan.
+      var r = Math.round(255 * (1-t2*0.7));
+      var g = Math.round(100 * Math.sin(t2*Math.PI));
+      var b = Math.round(255 * t2 * 0.8);
+      var col = (r << 16) | (g << 8) | b;
+      
+      var geo = new THREE.BufferGeometry().setFromPoints(pts);
+      var mat = new THREE.LineBasicMaterial({
+        color: col,
+        transparent: true,
+        opacity: 0.6 + 0.3*(1-t2)
+      });
+      magnetGroup.add(new THREE.Line(geo, mat));
+      
+      // Arrow head at midpoint (direction indicator)
+      var mid = Math.floor(pts.length/2);
+      if (mid > 0 && mid < pts.length-1) {
+        var dir = pts[mid+1].clone().sub(pts[mid]).normalize();
+        var arrowGeo = new THREE.ConeGeometry(0.06, 0.2, 6);
+        var arrowMat = new THREE.MeshBasicMaterial({color:col});
+        var arrow = new THREE.Mesh(arrowGeo, arrowMat);
+        arrow.position.copy(pts[mid]);
+        arrow.quaternion.setFromUnitVectors(
+          new THREE.Vector3(0,1,0), dir);
+        magnetGroup.add(arrow);
+      }
+      
+      closedCount++;
+    }
+  });
+
+  document.getElementById('h-closed').textContent = closedCount;
+}
+
+function showReveal() {
+  document.getElementById('reveal').style.display = 'block';
+}
+
+function resetView() {
+  camera.position.set(0, 3, 14);
+  camera.lookAt(0, 0, 0);
+  if(controls) controls.reset();
+}
+
+function togglePoles() {
+  showPoles = !showPoles;
+  rebuild();
+}
+
+// -- INIT -----------------------------------------
+(function init() {
+  scene = new THREE.Scene();
+  scene.fog = new THREE.FogExp2(0x050510, 0.015);
+  
+  camera = new THREE.PerspectiveCamera(55, innerWidth/innerHeight, 0.05, 200);
+  camera.position.set(0, 3, 14);
+  camera.lookAt(0, 0, 0);
+  
+  renderer = new THREE.WebGLRenderer({antialias:true});
+  renderer.setSize(innerWidth, innerHeight);
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  renderer.setClearColor(0x050510);
+  document.body.appendChild(renderer.domElement);
+  
+  if (THREE.OrbitControls) {
+    controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.06;
+  }
+  
+  // Lights
+  scene.add(new THREE.AmbientLight(0x101828, 4));
+  var d1 = new THREE.DirectionalLight(0xff4444, 0.6);
+  d1.position.set(5,10,5); scene.add(d1);
+  var d2 = new THREE.DirectionalLight(0x4488ff, 0.6);
+  d2.position.set(-5,10,-5); scene.add(d2);
+  var d3 = new THREE.DirectionalLight(0x00d4ff, 0.3);
+  d3.position.set(0,-10,0); scene.add(d3);
+  
+  // Grid floor
+  var grid = new THREE.GridHelper(30, 30, 0x0d1520, 0x080e18);
+  grid.position.y = -6;
+  grid.material.transparent = true;
+  grid.material.opacity = 0.3;
+  scene.add(grid);
+  
+  // Magnet group
+  magnetGroup = new THREE.Group();
+  scene.add(magnetGroup);
+  
+  // Build initial
+  rebuild();
+  
+  window.addEventListener('resize', function() {
+    camera.aspect = innerWidth/innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(innerWidth, innerHeight);
+  });
+  
+  animate();
+})();
+
+function animate() {
+  requestAnimationFrame(animate);
+  if(controls) controls.update();
+  magnetGroup.rotation.y += spinSpeed;
+  renderer.render(scene, camera);
+}
+</script>
+</body>
+</html>
