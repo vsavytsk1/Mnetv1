@@ -3424,16 +3424,19 @@ function project(p){
   var y1=y*crx-z1*srx, z2=y*srx+z1*crx;
 
   if(_insideMode && _surfaceR > 0) {
-    // INSIDE MODE: perspective from inside the sphere
-    // Camera at distance _surfaceR from center looking inward
-    var camZ = _surfaceR;
-    var z3 = z2 + camZ;  // shift world so camera is at origin
-    if(z3 < 0.01) z3 = 0.01;
-    var fov = 600;
-    var perspective = fov / (fov + z3 * 80);
+    // INSIDE MODE -- MachineNet v6 feel
+    // Camera sits at _surfaceR from center, looking INWARD
+    // z3 = distance from camera to face (camera is at +_surfaceR on z-axis)
+    var z3 = _surfaceR - z2;
+    if(z3 < 0.05) z3 = 0.05;
+    // Responsive FOV -- fills the screen naturally
+    var fov = Math.min(W, H) * 0.45;
+    // Scale factor: smaller _surfaceR = more immersive fisheye
+    var scale = 1.2 / _surfaceR;
+    var perspective = fov / (fov + z3 * scale * fov);
     return {
-      x: W/2 + x1 * perspective * 400,
-      y: H/2 - y1 * perspective * 400,
+      x: W/2 + x1 * perspective * fov * 1.8,
+      y: H/2 - y1 * perspective * fov * 1.8,
       z: z3
     };
   }
@@ -3485,7 +3488,12 @@ function draw(){
     // Near-zero = edge-on face = valid silhouette, must draw.
     // Platonic triangles after refine get hex children: cross near 0 at low zoom.
     var cullThresh = -Math.max(0.5, screenSize * 0.02);
-    if(cross < cullThresh){culled++;continue} // clearly CW = back face = skip
+    // Inside mode: flip cull (we see faces from behind)
+    if(_insideMode) {
+      if(cross > -cullThresh){culled++;continue}
+    } else {
+      if(cross < cullThresh){culled++;continue}
+    }
     
     sorted.push({face:f,depth:p.z,screenSize:screenSize});
   }
