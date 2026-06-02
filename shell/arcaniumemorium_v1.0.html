@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Arcaniumemorium v1.0 -- The Rune Library</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#050510;color:#e0e0e0;
+  font-family:ui-monospace,monospace;font-size:11px;
+  overflow:hidden;height:100vh;display:flex;flex-direction:column}
+#title-bar{padding:8px 14px;border-bottom:1px solid #1a1f2e;
+  display:flex;align-items:center;gap:12px;flex-shrink:0}
+#title-bar .t{font-size:12px;color:#cc44ff;letter-spacing:0.2em;
+  text-transform:uppercase}
+#title-bar .s{font-size:9px;color:#555;letter-spacing:0.1em}
+#grid-wrap{flex:1;overflow:auto;padding:8px}
+#grid{display:grid;gap:3px}
+.cell{position:relative;cursor:pointer;border:1px solid #0a0a20;
+  border-radius:2px;transition:border-color 0.2s}
+.cell:hover{border-color:#cc44ff}
+.cell canvas{display:block}
+.cell .lbl{position:absolute;bottom:1px;left:2px;
+  font-size:6px;color:rgba(204,68,255,0.5);pointer-events:none;
+  font-family:monospace}
+#popup{position:fixed;top:50%;left:50%;
+  transform:translate(-50%,-50%);z-index:20;
+  background:rgba(5,5,16,0.97);border:1px solid #cc44ff;
+  border-radius:6px;padding:20px 24px;min-width:280px;
+  display:none;max-width:360px}
+#popup h3{color:#cc44ff;font-size:13px;letter-spacing:0.15em;
+  margin-bottom:12px;text-transform:uppercase}
+#popup .eq{font-size:15px;color:#00d4ff;margin:6px 0;font-family:serif}
+#popup .desc{font-size:9px;color:#888;line-height:1.8;margin:8px 0}
+#popup .kern{font-size:9px;color:#7fff7f;font-family:monospace;
+  background:#0a1a0a;padding:6px 8px;border-radius:2px;margin:6px 0}
+#popup button{background:#cc44ff;color:#050510;border:none;
+  padding:4px 16px;border-radius:2px;cursor:pointer;
+  font-family:monospace;font-size:9px;text-transform:uppercase;
+  margin-top:8px}
+#bar{padding:5px 14px;border-top:1px solid #1a1f2e;
+  display:flex;align-items:center;gap:8px;flex-shrink:0}
+.btn{background:#0a0e18;color:#444;border:1px solid #1a1f2e;
+  border-radius:2px;padding:2px 9px;font-family:monospace;
+  font-size:9px;cursor:pointer;text-transform:uppercase}
+.btn:hover{border-color:#cc44ff;color:#cc44ff}
+.btn.on{background:#cc44ff;color:#050510;border-color:#cc44ff}
+.sep{width:1px;height:14px;background:#1a1f2e}
+.lbl2{font-size:9px;color:#333;text-transform:uppercase;letter-spacing:0.1em}
+.sl{display:flex;align-items:center;gap:3px}
+.sl input{width:55px;accent-color:#cc44ff}
+.sv{font-size:9px;color:#cc44ff;min-width:20px}
+#stamp{font-size:8px;color:rgba(204,68,255,0.2);
+  letter-spacing:0.08em;margin-left:auto}
+</style>
+</head>
+<body>
+
+<div id="title-bar">
+  <span class="t">Arcaniumemorium v1.0</span>
+  <span class="s">The Rune Library</span>
+  <span class="s" style="color:#cc44ff">P=12 . chi=2</span>
+</div>
+<div id="grid-wrap">
+  <div id="grid"></div>
+</div>
+<div id="popup">
+  <h3 id="p-title">Rune</h3>
+  <div class="eq" id="p-eq">x(t) = A sin(at)</div>
+  <div class="desc" id="p-desc">description</div>
+  <div class="kern" id="p-kern">kernel code</div>
+  <button onclick="document.getElementById('popup').style.display='none'">
+    CLOSE
+  </button>
+</div>
+<div id="bar">
+  <span class="lbl2">grid</span>
+  <button class="btn on" id="btn-6" onclick="setGrid(6)">6x6</button>
+  <button class="btn" id="btn-9" onclick="setGrid(9)">9x9</button>
+  <button class="btn" id="btn-12" onclick="setGrid(12)">12x12</button>
+  <div class="sep"></div>
+  <span class="lbl2">speed</span>
+  <div class="sl">
+    <input type="range" id="sl-spd" min="1" max="100" value="40"
+      oninput="animSpeed=+this.value/100;document.getElementById('sv-spd').textContent=(+this.value/100).toFixed(2)">
+    <span class="sv" id="sv-spd">0.40</span>
+  </div>
+  <div class="sep"></div>
+  <button class="btn on" id="btn-cw" onclick="toggleCW()">CW</button>
+  <button class="btn on" id="btn-ccw" onclick="toggleCCW()">CCW</button>
+  <div class="sep"></div>
+  <span id="stamp">arcaniumemorium . always</span>
+</div>
+<script>
+// ARCANIUMEMORIUM v1.0
+// The Rune Library. Lissajous grid. LaTeX behind each shape.
+// Each cell = live Canvas 2D Lissajous figure.
+// Click = reveal the rune (LaTeX + kernel code).
+// CW=magenta, CCW=blue, overlap=purple.
+// Built: 2026-06-02T14:37:48Z
+
+var animSpeed = 0.40;
+var showCW = true;
+var showCCW = true;
+var gridN = 6;
+var cells = [];
+var animT = 0;
+var RAF = null;
+
+// Color palette -- the purple void
+var COL_BG    = "#050510";
+var COL_CW    = "#ff4488";  // magenta -- clockwise
+var COL_CCW   = "#4488ff";  // blue -- counter-clockwise
+var COL_OVL   = "#cc44ff";  // THE PURPLE -- overlap
+var COL_GRID  = "#0a0a18";
+
+// Frequency table: rows and columns 1..N
+// Each cell (row r, col c): 
+//   CW shape:  x=sin(r*t), y=sin(c*t + delta_cw)
+//   CCW shape: x=sin(r*t), y=sin(c*t + delta_ccw)
+
+// LaTeX runes database -- first 12x12
+var RUNES = {};
+
+function runeKey(r, c) { return r + "," + c; }
+
+function buildRunes(N) {
+  for (var r = 1; r <= N; r++) {
+    for (var c = 1; c <= N; c++) {
+      var k = runeKey(r, c);
+      var ratio = r + ":" + c;
+      RUNES[k] = {
+        title: "Lissajous " + ratio,
+        eq:    "x = A\\sin(" + r + "t),\\; y = B\\sin(" + c + "t + \\delta)",
+        desc:  "Frequency ratio " + ratio + ". " +
+               (r === c ? "Identity: circle/ellipse. chi=2." :
+                r === 1 && c === 2 ? "Figure-8. The first crossing." :
+                "Harmonic shape. " + r*c + " intersections."),
+        kern:  "AncientMagic: N=" + Math.max(r,c) + ", decay=" + (c/r).toFixed(2),
+        pm:    (r===1&&c===1) ? "Id *2.08: p supset p (identity=circle)" :
+               (r===1&&c===2) ? "Comp *3.43: p supset q.p supset r (figure-8)" :
+               (r===c)        ? "Taut *1.2: p or p supset p (tautology=closed)" :
+               "Sum *1.6: Fourier component " + ratio
+      };
+    }
+  }
+}
+
+function drawLissajous(ctx, W, H, fr, fc, t, cw) {
+  var steps = 300;
+  var delta = cw ? Math.PI/4 : -Math.PI/4;
+  ctx.beginPath();
+  for (var i = 0; i <= steps; i++) {
+    var angle = (i / steps) * Math.PI * 2;
+    var x = W/2 + (W/2 - 4) * Math.sin(fr * angle + t);
+    var y = H/2 + (H/2 - 4) * Math.sin(fc * angle + delta + t * (cw ? 1 : -1));
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+}
+
+function buildGrid(N) {
+  var wrap = document.getElementById("grid");
+  wrap.innerHTML = "";
+  wrap.style.gridTemplateColumns = "repeat(" + N + ", 1fr)";
+  cells = [];
+  
+  var vw = document.getElementById("grid-wrap").clientWidth - 20;
+  var cellSize = Math.floor((vw - N * 3) / N);
+  cellSize = Math.max(30, Math.min(80, cellSize));
+  
+  for (var r = 1; r <= N; r++) {
+    for (var c = 1; c <= N; c++) {
+      var div = document.createElement("div");
+      div.className = "cell";
+      div.style.width = cellSize + "px";
+      div.style.height = cellSize + "px";
+      
+      var cv = document.createElement("canvas");
+      cv.width = cellSize;
+      cv.height = cellSize;
+      div.appendChild(cv);
+      
+      var lbl = document.createElement("div");
+      lbl.className = "lbl";
+      lbl.textContent = r + ":" + c;
+      div.appendChild(lbl);
+      
+      (function(row, col, canvas) {
+        div.addEventListener("click", function() { showRune(row, col); });
+      })(r, c, cv);
+      
+      wrap.appendChild(div);
+      cells.push({cv: cv, r: r, c: c, size: cellSize});
+    }
+  }
+}
+
+function renderAll(t) {
+  cells.forEach(function(cell) {
+    var ctx = cell.cv.getContext("2d");
+    var W = cell.size, H = cell.size;
+    ctx.fillStyle = COL_BG;
+    ctx.fillRect(0, 0, W, H);
+    ctx.lineWidth = 0.8;
+    ctx.globalAlpha = 0.85;
+    
+    if (showCW && showCCW) {
+      // Draw both -- overlap creates THE PURPLE effect
+      ctx.strokeStyle = COL_CW;
+      ctx.globalAlpha = 0.6;
+      drawLissajous(ctx, W, H, cell.r, cell.c, t, true);
+      ctx.strokeStyle = COL_CCW;
+      ctx.globalAlpha = 0.6;
+      drawLissajous(ctx, W, H, cell.r, cell.c, t, false);
+    } else if (showCW) {
+      ctx.strokeStyle = COL_CW;
+      drawLissajous(ctx, W, H, cell.r, cell.c, t, true);
+    } else if (showCCW) {
+      ctx.strokeStyle = COL_CCW;
+      drawLissajous(ctx, W, H, cell.r, cell.c, t, false);
+    }
+    ctx.globalAlpha = 1;
+  });
+}
+
+function showRune(r, c) {
+  var k = runeKey(r, c);
+  var rune = RUNES[k];
+  if (!rune) return;
+  document.getElementById("p-title").textContent = rune.title;
+  document.getElementById("p-eq").textContent = rune.eq;
+  document.getElementById("p-desc").textContent = rune.desc + " | " + rune.pm;
+  document.getElementById("p-kern").textContent = rune.kern;
+  document.getElementById("popup").style.display = "block";
+}
+
+function setGrid(N) {
+  gridN = N;
+  ["6","9","12"].forEach(function(n) {
+    var b = document.getElementById("btn-" + n);
+    if(b) b.classList.toggle("on", n === String(N));
+  });
+  buildRunes(N);
+  buildGrid(N);
+}
+
+function toggleCW() {
+  showCW = !showCW;
+  document.getElementById("btn-cw").classList.toggle("on", showCW);
+}
+function toggleCCW() {
+  showCCW = !showCCW;
+  document.getElementById("btn-ccw").classList.toggle("on", showCCW);
+}
+
+// Close popup on outside click
+document.addEventListener("click", function(e) {
+  var p = document.getElementById("popup");
+  if (p.style.display === "block" && !p.contains(e.target)) {
+    p.style.display = "none";
+  }
+});
+
+// Animation loop
+var lastT = performance.now();
+function animate(now) {
+  var dt = Math.min((now - lastT) / 1000, 0.05);
+  lastT = now;
+  animT += dt * animSpeed;
+  renderAll(animT);
+  RAF = requestAnimationFrame(animate);
+}
+
+// Init
+window.addEventListener("resize", function() { setGrid(gridN); });
+setGrid(6);
+requestAnimationFrame(animate);
+</script>
+</body>
+</html>
