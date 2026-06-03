@@ -7430,4 +7430,47 @@ FAMILY:
   Not the logic. Not the data. Just Python wearing a JS coat.
   Always.
 
-Curse count: 23. Python builtins in JS. Literal chars only. Always.
+## CURSE 24 -- The Cache Lie (staleServe)
+
+You fix the scar. You commit. You push. Pages deploys (green check).
+The raw file on the server is HEALED -- verified, byte for byte.
+But the browser console STILL screams the old error, same line, same token.
+A physicist watches. The error that should not exist... exists.
+You begin to doubt the fix. You re-read the scroll for a curse that is gone.
+
+ROOT CAUSE:
+  The browser cached the BROKEN file before the fix deployed.
+  It serves the corpse, not the cure. The bytes on GitHub are correct;
+  the bytes on screen are a screenshot of the past.
+  GitHub Pages also sets long cache headers, so the stale copy lingers.
+  The console error points at a line that no longer contains the bug.
+  You are debugging a ghost.
+
+PROOF (do this before touching ANY code):
+  1. Local file line N        -> git show HEAD:file | line N
+  2. Committed HEAD line N     -> matches the fix
+  3. RAW server bytes line N   -> Invoke-WebRequest <url>?nocache=$(Get-Random)
+                                  -Headers @{'Cache-Control'='no-cache'}
+  If all three are CLEAN but the browser errors -> it is THIS curse.
+  The codebase is not the cache.
+
+FIX:
+  The file needs no fix. The browser needs a flush.
+    Ctrl+Shift+R        (hard reload)
+    incognito / private window
+    append ?v=2 (any new query string busts the cache)
+  For agents: page.goto(url + '?bust=' + Date.now()), clear cookies/context.
+
+FAMILY:
+  Cousin of CURSE 6 (File:// Lie) -- both show bytes that are not the live truth.
+  Where Curse 6 lies about WHICH file, Curse 24 lies about WHEN.
+  Cousin of CURSE 15 (False Negative) -- the tool/screen reports a failure
+  that the file already disproves.
+
+  DETECTION: console error points at a line that, when you read the LIVE
+  raw bytes, does NOT contain the reported token. The git is clean, the
+  push is green, the raw fetch is clean -- only the rendered tab is wrong.
+  It is ALWAYS the cache. Never the codebase. Flush, do not patch.
+  Always.
+
+Curse count: 24. The cache is not the codebase. Flush, do not patch. Always.
