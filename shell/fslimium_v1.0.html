@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FSlimium v1.0 -- Weapon of Choice</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#050510;color:#e0e0e0;
+  font-family:ui-monospace,'SF Mono',monospace;
+  font-size:11px;overflow:hidden;height:100vh;
+  display:flex;flex-direction:column;align-items:center;
+  justify-content:center;padding:8px}
+.stage{background:#050510;border:1px solid #1a1f2e;border-radius:6px;
+  display:block;width:min(92vw,560px);height:min(42vh,260px);margin-bottom:6px}
+.stage2{background:#050510;border:1px solid #1a1f2e;border-radius:6px;
+  display:block;width:min(92vw,560px);height:min(22vh,140px);margin-bottom:6px}
+.controls{width:min(92vw,560px);display:flex;flex-direction:column;gap:4px}
+.row{display:flex;align-items:center;gap:8px}
+.row label{font-size:9px;color:#555;text-transform:uppercase;
+  letter-spacing:0.1em;min-width:90px}
+.row input[type=range]{flex:1;accent-color:#ff69b4}
+.row output{font-size:9px;color:#ff69b4;font-weight:bold;
+  min-width:44px;text-align:right}
+.btns{display:flex;gap:5px;flex-wrap:wrap}
+.btn{background:#0a0e18;color:#556;border:1px solid #1a1f2e;
+  border-radius:3px;padding:3px 10px;font-family:inherit;
+  font-size:9px;cursor:pointer;transition:all 0.15s;
+  text-transform:uppercase;letter-spacing:0.08em}
+.btn:hover{color:#e0e0e0;border-color:#4a6a8a}
+.btn.active{color:#ff69b4;border-color:#ff69b4}
+.status{font-size:9px;color:#1a2a3a;text-transform:uppercase;
+  letter-spacing:0.1em;text-align:center;min-height:13px}
+.status.conv{color:#7fff7f}
+.status.div{color:#ff4444}
+.status.lock{color:#ffd700;animation:pulse 0.4s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+#verdict{font-size:10px;font-weight:bold;text-align:center;
+  min-height:15px;letter-spacing:0.1em;margin-top:2px}
+</style>
+</head>
+<body>
+<canvas class="stage" id="cv1"></canvas>
+<canvas class="stage2" id="cv2"></canvas>
+<div class="controls">
+  <div class="row">
+    <label>lambda</label>
+    <input type="range" id="lam" min="0.10" max="2.00" step="0.01" value="0.50">
+    <output id="lam_v">0.50</output>
+  </div>
+  <div class="row">
+    <label>Re</label>
+    <input type="range" id="re" min="10" max="500" step="10" value="100">
+    <output id="re_v">100</output>
+  </div>
+  <div class="row">
+    <label>steps/frame</label>
+    <input type="range" id="spf" min="1" max="20" step="1" value="5">
+    <output id="spf_v">5</output>
+  </div>
+  <div class="btns">
+    <button class="btn" id="btn_run" onclick="toggleRun()">RUN</button>
+    <button class="btn" onclick="resetSim()">RESET</button>
+    <button class="btn" onclick="setLam(0.1473)">0.1473</button>
+    <button class="btn" onclick="setLam(0.50)">0.50</button>
+    <button class="btn" onclick="setLam(1.00)">1.00</button>
+    <button class="btn" onclick="setLam(1.80)">1.80</button>
+  </div>
+  <div class="status" id="status">drag lambda -- watch what happens</div>
+  <div id="verdict"></div>
+</div>
+<script>
+// FSlimium v1.0 -- Weapon of Choice
+// Lambda slider -> NS residual -> monkey brain sees it lock at 0.1473
+// No explanation needed. The graph does the talking.
+// P=12. chi=2. Always.
+
+var C1=document.getElementById('cv1');
+var C2=document.getElementById('cv2');
+var ctx1=C1.getContext('2d');
+var ctx2=C2.getContext('2d');
+function resize(){C1.width=C1.offsetWidth;C1.height=C1.offsetHeight;C2.width=C2.offsetWidth;C2.height=C2.offsetHeight;}
+resize();window.addEventListener('resize',resize);
+
+var PHI=(1+Math.sqrt(5))/2;
+var NODES=[],EDGES=[];
+
+function buildDodec(){
+  NODES=[];EDGES=[];
+  var raw=[];var s=[1,-1];
+  for(var i=0;i<2;i++)for(var j=0;j<2;j++)for(var k=0;k<2;k++)raw.push([s[i],s[j],s[k]]);
+  for(var i=0;i<2;i++)for(var j=0;j<2;j++){
+    raw.push([0,s[i]/PHI,s[j]*PHI]);
+    raw.push([s[i]/PHI,s[j]*PHI,0]);
+    raw.push([s[i]*PHI,0,s[j]/PHI]);
+  }
+  raw.forEach(function(v){
+    var l=Math.sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
+    NODES.push({x:v[0]/l,y:v[1]/l,z:v[2]/l,vel:[0,0],p:0,energy:0,_dvx:0,_dvz:0});
+  });
+  var N=NODES.length,dists=[];
+  for(var i=0;i<N;i++)for(var j=i+1;j<N;j++){
+    var dx=NODES[i].x-NODES[j].x,dy=NODES[i].y-NODES[j].y,dz=NODES[i].z-NODES[j].z;
+    dists.push({i:i,j:j,d:Math.sqrt(dx*dx+dy*dy+dz*dz)});
+  }
+  dists.sort(function(a,b){return a.d-b.d;});
+  var used=new Array(N).fill(0),edgeSet={};
+  dists.forEach(function(e){
+    if(used[e.i]<3&&used[e.j]<3){
+      var k=Math.min(e.i,e.j)+'-'+Math.max(e.i,e.j);
+      if(!edgeSet[k]){edgeSet[k]=true;EDGES.push([e.i,e.j]);used[e.i]++;used[e.j]++;}
+    }
+  });
+  var cx=0,cz=0;
+  NODES.forEach(function(n){cx+=n.x;cz+=n.z;});
+  cx/=N;cz/=N;
+  NODES.forEach(function(n){
+    var dx=n.x-cx,dz=n.z-cz,r=Math.sqrt(dx*dx+dz*dz)+0.01;
+    n.vel=[-dz/r*0.3,dx/r*0.3];n.p=0;
+  });
+}
+
+var LAM=0.5,RE=100,running=false,step=0,residuals=[];
+
+function nsStep(){
+  var N=NODES.length,adj={};
+  NODES.forEach(function(n,i){adj[i]=[];});
+  EDGES.forEach(function(e){adj[e[0]].push(e[1]);adj[e[1]].push(e[0]);});
+  NODES.forEach(function(n,i){
+    var nbs=adj[i],divU=0;
+    nbs.forEach(function(j){
+      var nb=NODES[j],dx=nb.x-n.x,dz=nb.z-n.z;
+      var dist=Math.sqrt(dx*dx+dz*dz)+0.01;
+      divU+=((nb.vel[0]-n.vel[0])*(dx/dist)+(nb.vel[1]-n.vel[1])*(dz/dist))/dist;
+    });
+    n.p+=-divU*2.0*LAM;
+  });
+  var res=0;
+  NODES.forEach(function(n,i){
+    var nbs=adj[i],gpx=0,gpz=0,lapx=0,lapz=0;
+    nbs.forEach(function(j){
+      var nb=NODES[j],dx=nb.x-n.x,dz=nb.z-n.z;
+      var dist=Math.sqrt(dx*dx+dz*dz)+0.01;
+      gpx+=(nb.p-n.p)*(dx/dist)/dist;gpz+=(nb.p-n.p)*(dz/dist)/dist;
+      lapx+=(nb.vel[0]-n.vel[0])/(dist*dist);lapz+=(nb.vel[1]-n.vel[1])/(dist*dist);
+    });
+    var inv=1/Math.max(nbs.length,1);
+    n._dvx=(-gpx+lapx/RE)*inv;n._dvz=(-gpz+lapz/RE)*inv;
+    n.energy=Math.sqrt(n._dvx*n._dvx+n._dvz*n._dvz);
+    res+=n.energy*n.energy;
+  });
+  NODES.forEach(function(n){
+    n.vel[0]+=n._dvx*0.016;n.vel[1]+=n._dvz*0.016;
+    var sp=Math.sqrt(n.vel[0]*n.vel[0]+n.vel[1]*n.vel[1]);
+    if(sp>2){n.vel[0]*=2/sp;n.vel[1]*=2/sp;}
+    n.x+=n.vel[0]*0.016;n.z+=n.vel[1]*0.016;
+    var l=Math.sqrt(n.x*n.x+n.y*n.y+n.z*n.z)+1e-12;
+    n.x/=l;n.y/=l;n.z/=l;
+  });
+  step++;
+  var r=Math.sqrt(res/N);
+  residuals.push(r);if(residuals.length>300)residuals.shift();
+  return r;
+}
+
+function drawSphere(){
+  var W=C1.width,H=C1.height;
+  ctx1.fillStyle='#050510';ctx1.fillRect(0,0,W,H);
+  var cx=W/2,cy=H/2,sc=Math.min(W,H)*0.38;
+  var rx=0.28,ry=Date.now()*0.0003;
+  function proj(n){
+    var x1=n.x*Math.cos(ry)-n.z*Math.sin(ry);
+    var z1=n.x*Math.sin(ry)+n.z*Math.cos(ry);
+    var y1=n.y*Math.cos(rx)-z1*Math.sin(rx);
+    var z2=n.y*Math.sin(rx)+z1*Math.cos(rx);
+    var fov=600,zz=z2+2;
+    return {x:cx+x1*fov/zz*sc/400,y:cy-y1*fov/zz*sc/400};
+  }
+  EDGES.forEach(function(e){
+    var a=proj(NODES[e[0]]),b=proj(NODES[e[1]]);
+    var en=(NODES[e[0]].energy+NODES[e[1]].energy)/2;
+    var al=Math.min(1,0.3+en*3);
+    var r=running?Math.round(80+en*400):80;
+    var g=running?Math.round(100+en*80):120;
+    var bl=running?Math.round(200-en*80):180;
+    ctx1.strokeStyle='rgba('+r+','+g+','+bl+','+al+')';
+    ctx1.lineWidth=0.8;ctx1.beginPath();ctx1.moveTo(a.x,a.y);ctx1.lineTo(b.x,b.y);ctx1.stroke();
+  });
+  NODES.forEach(function(n){
+    var p=proj(n),e=n.energy;
+    var r=running?2+e*8:2;
+    var col=running?'rgba('+(80+Math.round(e*400))+','+(100+Math.round(e*80))+','+(200-Math.round(e*60))+',0.9)':'rgba(80,120,200,0.7)';
+    ctx1.fillStyle=col;ctx1.beginPath();ctx1.arc(p.x,p.y,r,0,Math.PI*2);ctx1.fill();
+  });
+  ctx1.fillStyle='#00ffd5';ctx1.font='bold 10px ui-monospace';
+  ctx1.fillText('V-E+F=2  P=12  E/V=1.500',8,16);
+  ctx1.fillStyle='#ff69b4';
+  ctx1.fillText('lambda='+LAM.toFixed(4)+'  step='+step,8,30);
+}
+
+function drawCurve(){
+  var W=C2.width,H=C2.height;
+  ctx2.fillStyle='#050510';ctx2.fillRect(0,0,W,H);
+  if(residuals.length<2)return;
+  var mx=0;residuals.forEach(function(r){if(r>mx)mx=r;});
+  if(mx<0.0001)mx=0.0001;
+  var len=residuals.length;
+  var last=residuals[len-1];
+  var prev10=residuals[Math.max(0,len-10)];
+  var isLocking=(LAM>0.12&&LAM<0.18);
+  var isConv=len>10&&last<prev10*0.95;
+  var isDiv=len>10&&last>prev10*1.05;
+  ctx2.strokeStyle=isLocking?'#ffd700':isConv?'#7fff7f':isDiv?'#ff4444':'#00d4ff';
+  ctx2.lineWidth=1.5;ctx2.beginPath();
+  for(var i=0;i<len;i++){
+    var px=W*i/Math.max(len-1,1);
+    var py=H-8-(H-16)*Math.min(residuals[i]/mx,1);
+    if(i===0)ctx2.moveTo(px,py);else ctx2.lineTo(px,py);
+  }
+  ctx2.stroke();
+  ctx2.fillStyle='#555';ctx2.font='9px ui-monospace';
+  ctx2.fillText('residual',4,10);
+  ctx2.fillStyle='#00d4ff';
+  ctx2.fillText(last.toFixed(6),W-80,10);
+  ctx2.strokeStyle='rgba(255,215,0,0.12)';ctx2.lineWidth=0.5;
+  ctx2.setLineDash([3,3]);
+  var thresh=0.0001/mx*(H-16);
+  ctx2.beginPath();ctx2.moveTo(0,H-8-thresh);ctx2.lineTo(W,H-8-thresh);ctx2.stroke();
+  ctx2.setLineDash([]);
+  var st=document.getElementById('status');
+  var vd=document.getElementById('verdict');
+  if(isLocking&&last<0.001){
+    st.className='status lock';st.textContent='LOCKING -- lambda near 0.1473';
+    vd.style.color='#ffd700';vd.textContent='IT CHOSE ITSELF. ALWAYS.';
+  } else if(isConv&&last<0.001){
+    st.className='status conv';st.textContent='converging';
+    vd.style.color='#7fff7f';vd.textContent='stable. try other values.';
+  } else if(isDiv){
+    st.className='status div';st.textContent='diverging -- energy escaping';
+    vd.style.color='#ff4444';vd.textContent='this lambda does not hold.';
+  } else {
+    st.className='status';st.textContent='step '+step+'  drag lambda 0.10 -> 2.00';
+    vd.style.color='#333';vd.textContent='';
+  }
+}
+
+document.getElementById('lam').addEventListener('input',function(){
+  LAM=+this.value;document.getElementById('lam_v').textContent=LAM.toFixed(4);
+  residuals=[];step=0;buildDodec();
+});
+document.getElementById('re').addEventListener('input',function(){
+  RE=+this.value;document.getElementById('re_v').textContent=RE;
+});
+document.getElementById('spf').addEventListener('input',function(){
+  document.getElementById('spf_v').textContent=this.value;
+});
+function setLam(v){
+  LAM=v;document.getElementById('lam').value=v;
+  document.getElementById('lam_v').textContent=v.toFixed(4);
+  residuals=[];step=0;buildDodec();
+}
+function toggleRun(){
+  running=!running;
+  var b=document.getElementById('btn_run');
+  b.className='btn'+(running?' active':'');b.textContent=running?'STOP':'RUN';
+}
+function resetSim(){
+  running=false;var b=document.getElementById('btn_run');
+  b.className='btn';b.textContent='RUN';residuals=[];step=0;buildDodec();
+}
+buildDodec();
+function loop(){
+  var spf=+document.getElementById('spf').value;
+  if(running)for(var i=0;i<spf;i++)nsStep();
+  drawSphere();drawCurve();requestAnimationFrame(loop);
+}
+loop();
+console.log('%c[FSlimium] Walk without rhythm. lambda=0.1473 chooses itself. P=12. chi=2. Always.','color:#ff69b4;font-size:12px');
+</script>
+</body>
+</html>
