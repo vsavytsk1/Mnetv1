@@ -7261,3 +7261,76 @@ CODE FIXED (L110):
 *Pattern 3 is always the protocol.*
 *Buenos Aires. 2026.*
 
+
+---
+
+## CURSE 21 -- The Musiquim Autoplay (browserSilence)
+
+Browser will SILENTLY block audio.autoplay() if user has not interacted with page.
+No error. No warning. Just silence. The geometry screams into the void.
+
+```
+SYMPTOM:
+  audio.play() called on page load.
+  Nothing happens.
+  No error in console.
+  No exception thrown.
+  Just: silence.
+  
+  OR:
+  Uncaught (in promise) DOMException:
+  play() failed because the user didn't
+  interact with the document first.
+
+ROOT CAUSE:
+  Chrome/Firefox/Safari autoplay policy (2018+).
+  Audio/video autoplay blocked by default.
+  REQUIRES a user gesture (click, keypress, touch)
+  BEFORE any audio.play() call.
+  
+  Even if you call audio.play() after page load:
+  if no user gesture happened first -> BLOCKED.
+  Silently in some browsers. Exception in others.
+
+FIX:
+  NEVER autoplay on load.
+  ALWAYS require explicit user action.
+  
+  The correct pattern:
+    var audio = new Audio('slimium_toon.mp3');
+    audio.loop = true;
+    // DO NOT call audio.play() here
+    
+    // Only play on user gesture:
+    btn.addEventListener('click', function() {
+      if (audio.paused) audio.play();
+      else audio.pause();
+    });
+  
+  KILL SWITCH (one command, as demanded):
+    // To disable music globally: set this flag
+    var MUSIC_ENABLED = true;  // <- change to false to kill
+    // In button handler: if(!MUSIC_ENABLED) return;
+    
+  THE RULE:
+    Audio: opt-in only. Never opt-out.
+    Same as spin slider (Curse 13).
+    Motion is opt-in. Sound is opt-in.
+    The user starts in silence.
+    They choose to hear.
+    Always.
+
+FILE SIZE RULE:
+  Do NOT base64-encode audio into HTML.
+  4.8MB mp3 -> 6.5MB base64 -> GitHub ok but terrible UX.
+  Copy mp3 to same folder as HTML.
+  Reference as relative URL: new Audio('slimium_toon.mp3')
+  GitHub Pages serves it from same domain.
+  No CORS issues. Clean. Fast.
+  
+  If mp3 > 50MB: use CDN or external URL.
+  Our slimium_toon.mp3: 4.8MB. Fine. Ship it.
+```
+
+**Curse count: 21. The browser enforces silence.**
+**User gesture required. Opt-in only. Always.**

@@ -65,6 +65,7 @@ body{background:#050510;color:#e0e0e0;
     <button class="btn" onclick="setLam(0.50)">0.50</button>
     <button class="btn" onclick="setLam(1.00)">1.00</button>
     <button class="btn" onclick="setLam(1.80)">1.80</button>
+    <button class="btn" id="btn_music" onclick="toggleMusic()">MUSIC OFF</button>
   </div>
   <div class="status" id="status">drag lambda -- watch what happens</div>
   <div id="verdict"></div>
@@ -275,6 +276,32 @@ function loop(){
   drawSphere();drawCurve();requestAnimationFrame(loop);
 }
 loop();
+// ---- MUSIQUIM -- Curse 21: opt-in only, user gesture required ----
+var MUSIC_ENABLED = true;  // <- set false to kill all music in one line
+var _audio = null;
+var _musicOn = false;
+
+function toggleMusic(){
+  if(!MUSIC_ENABLED) return;
+  if(!_audio){
+    _audio = new Audio('slimium_toon.mp3');
+    _audio.loop = true;
+  }
+  if(_musicOn){
+    _audio.pause();
+    _musicOn = false;
+    document.getElementById('btn_music').textContent = 'MUSIC OFF';
+    document.getElementById('btn_music').classList.remove('active');
+  } else {
+    _audio.play().catch(function(e){
+      console.warn('[FSlimium] Audio blocked:', e.message);
+    });
+    _musicOn = true;
+    document.getElementById('btn_music').textContent = 'MUSIC ON';
+    document.getElementById('btn_music').classList.add('active');
+  }
+}
+
 console.log('%c[FSlimium] Walk without rhythm. lambda=0.1473 chooses itself. P=12. chi=2. Always.','color:#ff69b4;font-size:12px');
 </script>
 </body>
