@@ -7474,3 +7474,32 @@ FAMILY:
   Always.
 
 Curse count: 24. The cache is not the codebase. Flush, do not patch. Always.
+
+
+---
+
+## GLAMOUR 01 -- The Growing Bar (chipBloom)
+
+  Not a curse -- a glamour. A bug so pretty it could be a feature.
+
+  WHAT HAPPENED: the word-by-word stepper appended a kanji-chip per match.
+  The chip row was flex-wrap:wrap with no height cap inside a fixed-height
+  panel. Each click that added a word added chips; the chips wrapped to new
+  lines; the row grew UPWARD and shoved the typed sentence out of view.
+  So the bar "ate" your text and "grew" as you clicked -- like a magic
+  scroll that gives you more words but hides the ones you wrote.
+
+  WHY IT IS COOL: it accidentally felt like a living, breathing input that
+  rewards you with more meaning the more you feed it. Keep this idea on ice:
+  a deliberate "meaning bloom" panel that expands (with intent + animation)
+  as the sentence graph grows, then settles -- could be a real feature later.
+
+  THE FIX (for now): lock the bar. input-row flex:0 0 auto, match-row
+  single-line with horizontal scroll (thin gold bar), panel clips overflow.
+  Height stays 110px no matter how many chips. Typed text never hidden.
+
+  FAMILY: cousin of any unbounded flex-wrap inside a fixed-height flex
+  parent -- the child wraps and overflows its sibling instead of itself.
+  Cap the child or let it scroll; never let it push the bar.
+
+  Glamour count: 1. Some bugs are seeds. Log them, do not just kill them.
