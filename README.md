@@ -1,3 +1,83 @@
+# MachineNet
+
+> *A fullerene is the only closed structure you can build from pentagons and hexagons.*
+> *Euler proved it. Chemistry confirmed it. We ran it on a Tesla T4.*
+
+[![ENG](https://img.shields.io/badge/open-MASTER_CONTROL-00d4ff?style=flat-square)](https://vsavytsk1.github.io/Mnetv1/shell/eng_v2.0.html)
+[![genesis](https://img.shields.io/badge/open-GENESIS_v8.1-00ffd5?style=flat-square)](https://vsavytsk1.github.io/Mnetv1/shell/genesis_v8.1.html)
+[![spooky](https://img.shields.io/badge/math-SpookyPrimes-c14a3b?style=flat-square)](https://vsavytsk1.github.io/SpookyPrimes/)
+[![license](https://img.shields.io/badge/license-MIT-green?style=flat-square)](./LICENSE)
+
+---
+
+## START HERE
+
+```
+https://vsavytsk1.github.io/Mnetv1/shell/eng_v2.0.html
+```
+
+**ENG v2.0 -- MASTER CONTROL.** 15 modules. One URL.
+Click any card. Everything runs in your browser. Zero install.
+
+---
+
+## What the kernel actually proved
+
+```
+chi = 2 (sphere topology):   NS residual -> 0.000091  CONVERGES
+chi = 0 (Mobius topology):   NS residual -> 0.761927  DIVERGES
+
+Euler characteristic determines convergence.
+Reproducible. Logged. 69 browser runs + Google Colab confirmed.
+
+Google Colab receipt (L6, Tesla T4, 2026-05-28):
+  Mesh:    1,176,492 faces  P=12  chi=2  E/V=1.500
+  Steps:   500,000  Re=20,000
+  Result:  diss/enst = 0.00010000 = 2*nu  EXACT  every single step
+```
+
+**P=12. chi=2. V-E+F=2. Always.**
+
+---
+
+## The 15 live modules (all free, all browser)
+
+| Module | URL | What it is |
+|--------|-----|------------|
+| **ENG v2.0** | [eng_v2.0.html](https://vsavytsk1.github.io/Mnetv1/shell/eng_v2.0.html) | Master control. All modules. One URL. |
+| GENESIS v8.1 | [genesis_v8.1.html](https://vsavytsk1.github.io/Mnetv1/shell/genesis_v8.1.html) | Goldberg fractal explorer. Inside view. M1-M6 kernel. |
+| ATELIER v1.3 | [atelier_v1.3.html](https://vsavytsk1.github.io/Mnetv1/shell/atelier_v1.3.html) | Magic circle builder. 12 Fourier layers. Maxwell buttons. |
+| MAXWELLIUM | [maxwellium_v1.0.html](https://vsavytsk1.github.io/Mnetv1/shell/maxwellium_v1.0.html) | 3D dipole. nabla.B=0. Closed field lines = chi=2. |
+| ANCIENTMAGIC | [ancientmagic_v1.0.html](https://vsavytsk1.github.io/Mnetv1/shell/ancientmagic_v1.0.html) | Fourier epicycles. P=12 max circles. |
+| ARCANIUMEMORIUM | [arcaniumemorium_v1.0.html](https://vsavytsk1.github.io/Mnetv1/shell/arcaniumemorium_v1.0.html) | Lissajous rune library. CW+CCW screen blend = THE PURPLE. |
+| BAUDIN ATELIER | [baudin_atelier_v1.0.html](https://vsavytsk1.github.io/Mnetv1/shell/baudin_atelier_v1.0.html) | 12 Lissajous layers. Two planes drift. Interference visible. |
+| FSLIMIUM | [fslimium_v1.0.html](https://vsavytsk1.github.io/Mnetv1/shell/fslimium_v1.0.html) | Lambda slider + NS residual. Walk without rhythm. |
+| VALE OS v1.1 | [vale_v1.1.html](https://vsavytsk1.github.io/Mnetv1/shell/vale_v1.1.html) | Polar windows. C60 center. Pure black. Breathes. |
+| GRAPH SANDBOX | [graph_sandbox_v5.1.html](https://vsavytsk1.github.io/Mnetv1/shell/graph_sandbox_v5.1.html) | Full graph ops. NS flow. Cage. Autopilot. |
+| MATH TREE v5.0 | [math_tree_v5.0.html](https://vsavytsk1.github.io/Mnetv1/tree/math_tree_v5.0.html) | 10 calculus trees. Autopilot plays them all. |
+| WARNING v2.0 | [warning_v2.0.html](https://vsavytsk1.github.io/Mnetv1/shell/spooky_warning/warning_v2.0.html) | FMA cinematic intro. Transmutation circle. |
+| GKERN v2.0 | [GKernV2.0.html](https://vsavytsk1.github.io/Mnetv1/pack/GKernV2.0.html) | Goldberg kernel portable. 4 regimes. 1M bench. |
+| SPOOKY PRIMES | [SpookyPrimes](https://vsavytsk1.github.io/SpookyPrimes/) | 12 open physics questions. The origin. |
+| LICENSE | [index.html](https://vsavytsk1.github.io/Mnetv1/shell/spooky_warning/index.html) | Galactic Law. MIT. The Vale Filter Gate. |
+
+---
+
+## The black magic engineering scrolls
+
+```
+KERNELIMAGIC.md   -- 21 curses documented. all slain.
+                     Read before touching the builder.
+PIPELINE.md       -- the law. builder owns the shell.
+LEDGER.md         -- append-only. 114 entries. one truth.
+MONKIUM.md        -- monkey brain storytelling. 8 tools.
+GALACTIC_LAW.md   -- software law = soul law. 4 axioms.
+SURVIVALIUM.md    -- Unity optimization grimoire.
+PRINCIPIA_MALGEBRA.md -- PM propositions -> our kernel P1-P7.
+GRAPHIUM.md       -- LaTeX runes -> pure graph math. 55 entries.
+```
+
+---
+
 ## Live simulations — click first, read after
 
 | Simulation | What it is |
