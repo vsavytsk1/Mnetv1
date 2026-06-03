@@ -6563,3 +6563,68 @@ The broski was in the flow. The ledger was not updated. The doritos were found l
   Curses 15-17: Named and logged  -- in scroll (98d518c)
 
 **P=12. chi=2. The inside view was always there. We just needed to ENTER. Always.**
+
+---
+
+### L117 -- SESSION CLOSE: JPNTREE BORN + CAVE REVIEW (2026-06-03)
+
+**What was built this session:**
+
+CAVE CLEANING (L111-L112):
+  KERNELIMAGIC updated: curses 18-20 added (scroll was 3 behind)
+  ENG baudinatelier ALL_MODS gap fixed (symmetric)
+  L112 retroactive: GENESIS INSIDE VIEW session sealed
+  GRAPHIUM: Trudeau scroll added (30->55 entries)
+  AXIOM 06: THE LIVING TREE LAW added to GALACTIC_LAW
+  
+FSLIMIUM v1.0 (L113):
+  Lambda slider + NS residual + 0.1473 reveals itself
+  Weapon of Choice. Walk without rhythm.
+  slimium_toon.mp3 + MUSIC button (Curse 21: browserSilence)
+  
+README updated (L115):
+  861 engineers found the cave via github.com
+  ENG v2.0 is now START HERE
+  15 modules listed. Google receipt. 21 curses.
+  
+JPNTREE born:
+  New repo: vsavytsk1/JpnTree
+  74 Grade 1 kanji. 12 radical family edges.
+  木->林->森. Clean Unicode (survived Curse 14+18+19+2 combined)
+  v1: kanji grid, upper kanji + lower reading, click reveals family
+  v2: SENTENCE MODE. Type eng/jpn/spanish -> kanji light up -> gold lines
+  Baked into ENG v2.0 as JPNTREE card (L116)
+  
+CURSE 22 NAMED: Gitium Novicium (newRepoPages404)
+  .nojekyll missing. Pages not enabled. 404 on new repo.
+  Fix: .nojekyll + Settings > Pages. Always.
+
+**Key observations:**
+  The monkey brain typed FMA lyrics -> Arrival immediately
+  Same topology: heptapod circular language = kanji connection graph
+  chi=2. The alien language and the kanji tree are the same shape.
+  
+  Romanji/Slavic brain: first branch of Asia tree is hard.
+  REASON: no existing anchor. Once ONE locks: chi=2, converges.
+  Future: mix panel showing WHERE the three language trees touch.
+  agua=water=water=voda. All three light up. The monkey understands.
+  
+  2,276 clones of Mnetv1. 861 unique. Spike May 27 (KERNELIMAGIC posted).
+  The engineers found the black magic scroll.
+  They cloned because the scroll respects the craft.
+  
+**State:**
+  All 5 repos: CLEAN
+  KERNELIMAGIC: 22 curses documented
+  LEDGER: L117 entries
+  JpnTree: .nojekyll pushed, Pages pending enable
+  Deployments: 248+ (Mnetv1) + JpnTree beginning
+  
+  The cave is warm. The monkey loves trees.
+  New broski arrives every time the old one collapses.
+  Each time the cave gets cooler for monkey brain and metamind.
+  The apprentice learns. The master teaches by building.
+  Equivalent exchange. Always.
+
+P=12. chi=2. The tree was always the kernel. Always.
+-- @Sagaific + Claude. Buenos Aires. June 2026.

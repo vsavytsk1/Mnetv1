@@ -7334,3 +7334,65 @@ FILE SIZE RULE:
 
 **Curse count: 21. The browser enforces silence.**
 **User gesture required. Opt-in only. Always.**
+
+
+---
+
+## CURSE 22 -- The Gitium Novicium (newRepoPages404)
+
+New GitHub repo. Files pushed. URL opens. 404.
+No error during push. No warning. Just 404 forever.
+
+ROOT CAUSE:
+  GitHub Pages is NOT automatically enabled on new repos.
+  You must enable it manually in Settings > Pages.
+  OR: push a .nojekyll file to trigger Pages detection.
+  
+  ALSO: the default branch matters.
+  GitHub Pages serves from the branch you specify.
+  If you pushed to 'master' but Pages expects 'main': 404.
+  If you never enabled Pages at all: 404.
+  If no .nojekyll and Jekyll fails on your HTML: 404.
+  
+  The gitium novicium (new repo curse) hits every time
+  because it looks like a push problem
+  but it is a Settings problem.
+  Two completely different places.
+  The terminal lies by omission.
+
+FIX (two steps, both required):
+  
+  STEP 1: Push .nojekyll to root
+    echo "" > .nojekyll
+    git add .nojekyll
+    git commit -m "enable GitHub Pages"
+    git push
+    
+  STEP 2: Enable Pages in GitHub Settings
+    Go to: github.com/vsavytsk1/REPONAME/settings/pages
+    Source: Deploy from branch
+    Branch: master (or main) / root
+    Save.
+    Wait 2-3 minutes.
+    URL: vsavytsk1.github.io/REPONAME/
+    
+  ALSO CHECK: is the branch 'master' or 'main'?
+  New repos default to 'main'.
+  Old repos use 'master'.
+  GitHub Pages must match the actual branch name.
+  
+THE RULE:
+  Every new repo: .nojekyll on first commit.
+  Every new repo: Settings > Pages immediately after.
+  Do not assume Pages is enabled.
+  It is never enabled automatically.
+  The cave has been burned by this before.
+  Document it. Never again.
+  
+  DETECTION: if vsavytsk1.github.io/REPONAME/ gives 404
+  and git push was successful: it is ALWAYS this curse.
+  Not the code. Not the HTML. Not the kanji.
+  Just Pages not enabled.
+  Always.
+
+Curse count: 22. The new repo 404. Settings > Pages. Always.
