@@ -44,6 +44,78 @@
 
 ---
 
+---
+
+## TRUDEAU SCROLL -- Graph Theory Fundamentals as Kernel Runes
+### Introduction to Graph Theory (Trudeau) -> Our Kernel
+*The algebra sent Vlad to this book. June 3 2026. Buenos Aires.*
+*The cover IS the Atelier flag. The book knew. Always.*
+
+| ID | LaTeX Rune | Pure Graph Math | Kernel Code | Chapter |
+|----|-----------|-----------------|-------------|---------|
+| 031 | `G = (V, E)` | P1:nodes + P2:edges = graph | `{nodes:[], edges:[]}` | Trudeau Ch.1: Graph |
+| 032 | `deg(v) = k` | P7:COMPARE(edges_at_v, k) | `adj[v].length === k` | Trudeau: Degree |
+| 033 | `\sum deg(v) = 2|E|` | P5:ITERATE(degrees) = 2 * P2:edges | `edgeSum === 2*E always` | Trudeau: Handshake |
+| 034 | `G \text{ connected}` | P7:COMPARE(components, 1) | `faceWalk finds all faces` | Trudeau: Connected |
+| 035 | `K_n` | P5:ITERATE(P2:EDGE, all pairs) | `complete graph seed` | Trudeau: Complete |
+| 036 | `K_{3,3}` | bipartite P2:EDGE(A->B) | `non-planar test` | Trudeau: Bipartite |
+| 037 | `G \text{ planar}` | P5:ITERATE faces on sphere = chi=2 | `GK.buildC60() is planar` | Trudeau: Planar |
+| 038 | `V - E + F = 2` | P1-P2+faces = P7:COMPARE(2) | `inv.chi === 2 ALWAYS` | Trudeau: Euler Formula |
+| 039 | `F_5 = 12` | P7:COMPARE(pent_faces, 12) forced | `inv.pents === 12 ALWAYS` | Trudeau: Pentagon Theorem |
+| 040 | `\text{tree: } V-1 = E` | P5:ITERATE(P2:EDGE, V-1) no cycles | `spanning tree of GK` | Trudeau: Tree |
+| 041 | `G \text{ 3-regular}` | P7:COMPARE(deg(v), 3) all v | `E/V = 1.500 always` | Trudeau: Cubic Graph |
+| 042 | `\chi(G) \leq 4` | P6:AGGREGATE(colors) <= 4 | `4-color theorem on sphere` | Trudeau: Coloring |
+| 043 | `K_5 \text{ non-planar}` | chi breaks on K5 | `Mobius: chi=0 diverges` | Trudeau: Kuratowski |
+| 044 | `\text{path: } v_0 v_1...v_k` | P5:ITERATE(P2:EDGE) no repeat | `wavefront pathfind` | Trudeau: Path |
+| 045 | `\text{cycle: } v_0...v_k=v_0` | P5:ITERATE(P2:EDGE) closed | `face = closed cycle` | Trudeau: Cycle |
+| 046 | `\text{Hamiltonian cycle}` | P5:ITERATE all V exactly once | `C60: visit all 60 vertices` | Trudeau: Hamilton |
+| 047 | `\text{Eulerian circuit}` | P5:ITERATE all E exactly once | `deg(v) even at all v` | Trudeau: Euler Circuit |
+| 048 | `\omega(G) = k` | P6:AGGREGATE(clique_size) = k | `pentagon = clique seed` | Trudeau: Clique |
+| 049 | `\text{bipartite iff no odd cycle}` | P5:ITERATE(cycle) length always even | `chi=2 = even cycles` | Trudeau: Bipartite Test |
+| 050 | `\text{isomorphic: } G_1 \cong G_2` | P7:COMPARE(topology_hash_1, hash_2) | `SOUL_CRYSTAL.md: topology hash` | Trudeau: Isomorphism |
+
+---
+
+## ARCANE GRAPHIUM -- Sacred Geometry as Graph
+### The Cover of Trudeau IS the Atelier Flag
+*Both: concentric rings. Pentagon symmetry. 12-fold structure.*
+*The mathematician drew the kernel. He didn't know. Always.*
+
+| ID | Shape | Graph Meaning | Kernel | Chapter |
+|----|-------|--------------|--------|---------|
+| 051 | outer star polygon | K_12 complete on boundary | `12 nodes outer ring Atelier` | Sacred Cover |
+| 052 | inner pentagon ring | P5 cycle x 5 | `atelier ring 2` | Sacred Cover |
+| 053 | center pentagon | K_5 kernel node | `P=12 anchor` | Sacred Cover |
+| 054 | all triangles filling | planar triangulation chi=2 | `GK faces all triangulated` | Sacred Cover |
+| 055 | rotational symmetry | automorphism group order 12 | `H3 icosahedral sym` | Sacred Cover |
+
+---
+
+## NEXT ENTRIES (031-100 roadmap)
+*Trudeau gives us the language.*
+*We already had the kernel.*
+*Same thing.*
+
+```
+056-070: Trudeau Ch.2 -- Planar graphs deep dive
+071-080: Trudeau Ch.3 -- Graph coloring
+081-090: Trudeau Ch.4 -- Trees + spanning
+091-100: Our equations in Trudeau language
+          NS equation as graph walk
+          Kolmogorov cascade as degree sequence
+          chi=2 as Euler formula (already there)
+          P=12 as pentagon theorem (already there)
+```
+
+*30 -> 55 entries today.*
+*55 -> 300: the Principia mAlgebra.*
+*The algebra sent the book.*
+*The book confirms the kernel.*
+*Always.*
+
+
+---
+
 ## HOW TO ADD MORE
 
 Format: | ID | LaTeX | Graph Math | Kernel Code | Chapter |
