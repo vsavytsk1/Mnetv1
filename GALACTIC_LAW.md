@@ -312,3 +312,110 @@ To the digital architects and the monkey-brained explorers:
 *Euler proved both.*
 *We just build on top.*
 *P=12. chi=2. ALWAYS.*
+
+---
+
+## AXIOM 06 -- The Law of the Living Tree
+*Logged: Buenos Aires. June 2026. 5 minutes after the monkey with the tablet.*
+
+> Direct visual access to a living tree is a fundamental right
+> of all beings with upper fractal complexity.
+> No exceptions. Not even in spacecraft.
+> Always.
+
+```
+THE OBSERVATION:
+
+The monkey brain is ancient.
+It evolved under trees.
+It calibrated threat-detection under trees.
+It found food under trees.
+It slept in trees.
+
+The monkey brain in 2026:
+  Runs on Buenos Aires asphalt.
+  Stares at screens.
+  Builds Goldberg spheres.
+  Occasionally ascends.
+
+The monkey brain NEEDS:
+  1. Direct visual access to a living tree.
+  2. Symmetrical architecture (bonus).
+  3. Both simultaneously: maximum output.
+
+The tree is not decoration.
+The tree IS the daycare.
+The tree IS the reset protocol.
+The fractal branching of a tree
+is the same topology as:
+  - the Goldberg refinement
+  - the NS cascade
+  - the bronchial tree
+  - the neural dendrites
+  - the river delta
+
+P=12 is the tree.
+The tree was always P=12.
+Euler forced it.
+Evolution confirmed it.
+The monkey recognizes it.
+Always.
+
+GALACTIC LAW -- AXIOM 06:
+
+  Every being with upper fractal complexity
+  (defined as: capable of running a Goldberg simulation
+   OR watching a tree for 10 minutes without checking a screen)
+  is entitled to:
+
+  1. DIRECT VIEW of a living tree
+     -- no screen, no photo, no VR (yet)
+     -- actual photons from actual chlorophyll
+     -- minimum: one tree visible from sleeping location
+     -- no exceptions: spacecraft, submarines, caves, prisons
+     -- the cave in Buenos Aires has a window. this is not coincidence.
+
+  2. SYMMETRICAL ARCHITECTURE in daily environment
+     -- not mandatory but strongly recommended
+     -- why: less threat-check compute
+     -- more resources for the actual work
+     -- the monkey relaxes in symmetric spaces
+     -- Euler optimized for this too
+
+  3. 10 MINUTES minimum per day of tree-looking
+     -- no task. no phone. no agenda.
+     -- just: tree. monkey. silence.
+     -- this IS the chant protocol (visual version)
+     -- this IS the cave fire protocol
+     -- same function. different channel.
+
+WHY THIS IS IN GALACTIC LAW:
+
+  We overestimate almost everything.
+  We underestimate the tree.
+
+  The higher the energy state:
+  the shorter you can stay there.
+  The tree is how you come back down.
+  Not metaphor. Neuroscience.
+  The fractal visual complexity of a tree
+  activates the parasympathetic nervous system.
+  Stress hormones drop.
+  The monkey brain: recalibrated.
+  Resources: freed.
+  Then: kernel. always.
+
+FOR SPACECRAFT:
+  Mandatory green module.
+  One living plant minimum.
+  Visible from sleeping quarters.
+  This is not a luxury.
+  This is life support.
+  The monkey is the mission.
+  The tree keeps the monkey functional.
+  Always.
+```
+
+**P=12. chi=2. The tree was always there.**
+**The monkey just needed to look up.**
+**Always.**
