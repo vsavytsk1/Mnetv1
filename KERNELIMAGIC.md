@@ -7395,4 +7395,39 @@ THE RULE:
   Just Pages not enabled.
   Always.
 
-Curse count: 22. The new repo 404. Settings > Pages. Always.
+## CURSE 23 -- The Python Leak (pythonInJS)
+
+A Python patch script generates JavaScript.
+The script reaches for a Python builtin -- chr(), ord(), len() --
+and that builtin lands LITERALLY inside the emitted JS.
+Browser console: "chr is not defined". 19 errors. Every click.
+Silent during build. The push succeeds. The curse waits for the click.
+
+ROOT CAUSE:
+  The patch is written in Python. The output is JavaScript.
+  When you type chr(46) thinking "dot", Python does NOT evaluate it --
+  it is inside a string literal that becomes JS source.
+  JavaScript has no chr(). The boundary between the two languages
+  is invisible inside a single string. That seam is where the curse lives.
+
+  lbl.textContent = (start+i+1)+chr(46)+...   <- chr(46) shipped raw
+  JS sees chr(46) -> ReferenceError: chr is not defined
+
+FIX:
+  Never write Python builtins into JS strings.
+  Use literal characters: "." not chr(46), "+" not chr(43).
+  If you truly need a char from a code point, build it in Python
+  BEFORE it enters the JS string, or use JS String.fromCharCode in JS.
+
+FAMILY:
+  Same family as CURSE 1 (Curly Brace) and CURSE 4 (f-string Nesting).
+  The language boundary is always the killer.
+  Python thinking leaks into JS. JS thinking leaks into Python.
+  The seam is invisible until the click.
+
+  DETECTION: console says "X is not defined" where X is a Python builtin
+  (chr, ord, len, range, str, int) -- it is ALWAYS this curse.
+  Not the logic. Not the data. Just Python wearing a JS coat.
+  Always.
+
+Curse count: 23. Python builtins in JS. Literal chars only. Always.

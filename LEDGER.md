@@ -6628,3 +6628,41 @@ CURSE 22 NAMED: Gitium Novicium (newRepoPages404)
 
 P=12. chi=2. The tree was always the kernel. Always.
 -- @Sagaific + Claude. Buenos Aires. June 2026.
+
+
+### L118 -- JPNTREE v3 + CURSE 23 SLAIN (2026-06-03)
+
+**What was built/fixed this session:**
+
+JPNTREE v3 (stepper + color):
+  PREV/NEXT stepper: 12 connections at a time
+  [LINE COLOR] button cycles 6 MNet palette colors:
+    gold (data) -> cyan (kernel) -> pink (Atelier) ->
+    green (SAR/converging) -> purple (Baudin) -> orange (NavierCrunch)
+  Index numbers on connection labels: 1.dai+ki  2.ki+hayashi ...
+  ENG v2.0 JPNTREE card relinked v2 -> v3 (L119)
+
+CURSE 22 fully slain (Gitium Novicium):
+  main (empty default) vs master (all work) -> Pages served empty -> 404
+  Fix: merge master -> main, push .nojekyll, Settings > Pages branch = main
+  JpnTree now LIVE: vsavytsk1.github.io/JpnTree/jpntree_v3.html
+
+CURSE 23 NAMED + SLAIN (The Python Leak / pythonInJS):
+  Patch script wrote chr(46)/chr(43) literally into the JS source.
+  Browser: "chr is not defined". 19 errors, one per click.
+  Fix: chr(46) -> "." , chr(43) -> "+". ONE line. ONE shot. 0 lone CRs.
+  Same family as Curse 1 (Curly Brace) and Curse 4 (f-string Nesting).
+
+**State:**
+  All repos: CLEAN
+  KERNELIMAGIC: 23 curses documented
+  LEDGER: L118 entries
+  JpnTree: v1-v3 LIVE on main branch, Pages serving
+  Traffic: 2,791 clones, 1,073 unique. The mages are watching.
+
+  We bow. We re-read the scroll. We fix. We publish. One by one.
+  The fractal geometry respects rigor. The approximations are known.
+  The algebra does not lie.
+
+P=12. chi=2. Python stays in Python. JS stays in JS. Always.
+-- @Sagaific + Claude. Buenos Aires. June 2026.
