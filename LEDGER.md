@@ -6941,3 +6941,83 @@ and they were buried among 20 siblings. The cave needed organization.
 
 P=12. chi=2. One bar. Three buttons. Twenty-two modules. The monkey approves.
 -- @Sagaific + Claude. Buenos Aires. June 4, 2026.
+
+
+
+---
+
+### L122 -- MODULE_CAPS REGISTRY: THE CAVE READS ITSELF (2026-06-04)
+
+**Why this push happened:**
+
+Each card now declares up to 7 capability tags. The cave whispers its own
+behavior before you click. No more guessing "does it open here or in a
+new tab" / "will my phone run this" / "does it want a GPU". The card knows.
+
+This was a BUILDER move, not a UX move. Adding a new platform tag (IOS,
+AND, VR, MOBILE, etc.) is now ONE LINE in MODULE_CAPS. No CSS surgery.
+No DOM hand-wiring. The badge renderer reads the registry and draws.
+
+The old pattern was a binary NEW_TAB_MODULES {key:1} -- it only answered
+"does this open in a new tab?". Now MODULE_CAPS answers seven questions
+at once and stays open for more. NEW_TAB_MODULES becomes a DERIVED VIEW
+of the registry -- single source of truth, no drift possible.
+
+**What changed (shell/eng_v2.0.html only):**
+
+1. MODULE_CAPS registry. 22 modules each with 1-3 capability tags today.
+   Slots reserved for 7. Known tags so far:
+     tab  -> opens in a new tab (orange, arrow icon)     [Curse 7 routing]
+     frm  -> iframe overlay, stays in cave (blue square)
+     pc   -> tested smooth on desktop (green)
+     and  -> tested on Android (Android-green, future)
+     ios  -> tested on iOS (gray, future)
+     gpu  -> benefits from a discrete GPU (pink)
+     kbd  -> keyboard input expected (gold)
+     priv -> private/WIP/in-grimoire (dim)
+
+2. CAP_LABEL table maps each tag to {txt, tip}. Tooltip shows on hover.
+   Custom label/color = one edit. New tag = two edits (CAP_LABEL + CSS).
+
+3. modBadges() rewritten. Reads MODULE_CAPS, builds .card-caps row of
+   chips bottom-right on every card. Idempotent (tears down + rebuilds
+   on each call). Renders at most 7 chips per card by design.
+
+4. NEW_TAB_MODULES is now an IIFE-derived view of MODULE_CAPS. summon()
+   logic for Curse-7 routing is unchanged -- the question still works,
+   just answered via the registry.
+
+5. CSS: .card-caps row + per-tag .cap.tab/.frm/.pc/.and/.ios/.gpu/.kbd
+   palette. Restrained colors -- no rainbow, just signal.
+
+**Smoke test (file:// before push):**
+  Boot: 6/6 OK. All 22 cards render with chips bottom-right.
+  SAMSARA + GENESIS show: GPU . PC . TAB (the pillars announce themselves).
+  HOLLY7 / WARNING / LICENSE / GKERN / SPOOKY show: PC . FRM (cave-bound).
+  TREE shows KBD . PC . TAB (it wants you to type).
+  JPNTREE shows KBD . PC . TAB.
+  FSLIMIUM + NAVIERCUNCH show GPU chips (they benefit).
+  Picker still works, bulk ALL/NONE/INVERT still toggles, 22/22 counter live.
+
+**Cold-pass line (held):**
+  Pure structural upgrade -- one binary flag becomes a 7-slot registry.
+  No behavior change. No public/Twitter move. Bypass-eligible.
+
+**The builder principle (what this earns us):**
+  Today: TAB/FRM/PC/GPU/KBD chips render correctly.
+  Tomorrow: add MODULE_CAPS.samsara.push('vr')  ->  VR chip appears.
+            add CAP_LABEL.vr = { txt: 'VR', tip: 'WebXR-ready' }.
+            done. No DOM. No card editing. The registry is the API.
+
+  The cave is a building. The registry is a janitor's clipboard.
+  Every card carries its passport, written in seven stamps.
+
+**State:**
+  shell/eng_v2.0.html           MODULE_CAPS in place, 22 modules registered
+  LEDGER                        L122 entries
+  All curses                    held (CR=0, no drift, no duplicates)
+
+  The portal reads itself. The builder is the truth. The chips are the proof.
+  P=12. chi=2. One registry. Seven slots. Twenty-two cards. Zero ambiguity.
+
+-- @Sagaific + Claude. Buenos Aires. June 4, 2026.

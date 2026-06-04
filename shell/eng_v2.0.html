@@ -57,6 +57,23 @@ body{background:#030308;color:#9090a0;
 .card-dot{position:absolute;top:6px;right:6px;width:5px;height:5px;border-radius:50%;
   background:#00ffd5;opacity:0.5;cursor:pointer;transition:opacity 0.2s}
 .card-dot:hover{opacity:1}
+/* CAPABILITY CHIPS -- up to 7 per card, built from MODULE_CAPS registry */
+.card-caps{position:absolute;bottom:5px;right:6px;display:flex;gap:3px;
+  pointer-events:none;flex-direction:row-reverse;flex-wrap:wrap;max-width:60%;
+  justify-content:flex-start}
+.card-caps .cap{font-size:7px;letter-spacing:0.12em;font-family:'Courier New',monospace;
+  padding:1px 4px;border-radius:2px;opacity:0.55;pointer-events:auto;
+  border:1px solid transparent;line-height:1.2;cursor:help}
+.mod-card:hover .card-caps .cap{opacity:0.9}
+/* Each capability gets its own color palette. Restrained -- no rainbow. */
+.cap.tab{color:#ff9040;border-color:rgba(255,144,64,0.18)}  /* new tab */
+.cap.frm{color:#80d0ff;border-color:rgba(128,208,255,0.18)} /* iframe / stays */
+.cap.pc {color:#7fff7f;border-color:rgba(127,255,127,0.18)} /* desktop OK */
+.cap.and{color:#a4c639;border-color:rgba(164,198,57,0.18)}  /* Android */
+.cap.ios{color:#c8c8c8;border-color:rgba(200,200,200,0.18)} /* iOS */
+.cap.gpu{color:#ff69b4;border-color:rgba(255,105,180,0.18)} /* GPU helps */
+.cap.kbd{color:#ffd700;border-color:rgba(255,215,0,0.18)}   /* keyboard input */
+.cap.priv{color:#888;border-color:rgba(136,136,136,0.18)}   /* private / WIP */
 .mod-card.mod-off{opacity:0.25;pointer-events:none}
 .mod-card.mod-off .card-dot{pointer-events:auto;opacity:0.3}
 #mod-selector{position:fixed;bottom:44px;right:14px;z-index:50;
@@ -3637,6 +3654,70 @@ function setPanel(id, rows) {
 // Curse 10 fix: track popup state, reset ALL iframe state on each summon
 var _popupOpen = false;
 
+// SINGLE SOURCE OF TRUTH: which modules open in a new tab (canvas heavy).
+// Used by summon() (Curse 7 routing) AND by modBadges() (UI hint).
+// Hoisted to global so the badge stamper can read it before summon runs.
+// =====================================================================
+//  MODULE_CAPS  --  THE BUILDER REGISTRY (single source of truth)
+// ---------------------------------------------------------------------
+//  Each module declares up to 7 capability tags. The card renders them
+//  as tiny chips bottom-right. Adding a tag = ONE line edit here, no
+//  CSS or DOM surgery. The cave reads itself.
+//
+//  Known capability tags (extend any time):
+//    'tab'  -> opens in a new tab (Curse 7: canvas-heavy modules)
+//    'frm'  -> opens in iframe overlay (stays in the cave)
+//    'pc'   -> tested & smooth on desktop
+//    'and'  -> tested on Android
+//    'ios'  -> tested on iOS
+//    'gpu'  -> GPU helps a lot (Re>1000 / 100k faces / etc.)
+//    'kbd'  -> keyboard input expected (e.g. JPNTREE)
+//    'priv' -> private / WIP / in-grimoire (dim)
+//
+//  Rule: keep 'tab' XOR 'frm' (mutually exclusive routing tag) first.
+//  After that, 5 more slots for platform/capability hints.
+// =====================================================================
+var MODULE_CAPS = {
+  // === TWIN PILLARS ===
+  samsara      : ['tab', 'pc', 'gpu'],            // VR floor -- canvas, GPU friendly
+  genesis      : ['tab', 'pc', 'gpu'],            // flight explorer -- heavy canvas
+  // === KERNEL / CORE ===
+  sandbox      : ['tab', 'pc', 'gpu'],            // graph sandbox -- canvas
+  tree         : ['tab', 'pc', 'kbd'],            // math tree -- KaTeX + click steps
+  holly7       : ['frm', 'pc'],                   // dashboard -- iframe-safe
+  navier       : ['frm', 'pc', 'gpu'],            // naviercrunch viewer
+  warning      : ['frm', 'pc'],                   // FMA intro
+  license      : ['frm', 'pc'],                   // license / galactic law
+  gkern        : ['frm', 'pc'],                   // goldberg kernel bench
+  // === OS / VAULT / ORIGIN ===
+  vale         : ['frm', 'pc'],                   // VALE OS shell
+  spooky       : ['frm', 'pc'],                   // SpookyPrimes origin
+  obsidius     : ['tab', 'pc'],                   // mind mesh -- canvas
+  valtium      : ['tab', 'pc'],                   // the vault
+  // === ATELIER / FOURIER ===
+  atelier      : ['tab', 'pc'],                   // atelier v1.2
+  atelier13    : ['tab', 'pc'],                   // atelier v1.3
+  arcanium     : ['tab', 'pc'],                   // arcaniumemorium
+  baudinatelier: ['tab', 'pc'],                   // baudin atelier
+  ancientmagic : ['tab', 'pc'],                   // fourier epicycles
+  // === WARNINGS / PHYSICS ===
+  warningsim   : ['tab', 'pc'],                   // warning sim
+  maxwellium   : ['tab', 'pc'],                   // what is a magnet
+  fslimium     : ['tab', 'pc', 'gpu'],            // lambda slider + NS
+  // === LANGUAGE ===
+  jpntree      : ['tab', 'pc', 'kbd']             // sentence mode = type
+};
+
+// Derived view -- summon() still asks this question for Curse 7 routing.
+// Single source of truth = MODULE_CAPS; this is just a fast lookup.
+var NEW_TAB_MODULES = (function() {
+  var out = {};
+  for (var k in MODULE_CAPS) {
+    if (MODULE_CAPS[k].indexOf('tab') !== -1) out[k] = 1;
+  }
+  return out;
+})();
+
 function summon(key) {
   var fr = document.getElementById('ov-frame');
   var ov = document.getElementById('overlay');
@@ -3650,8 +3731,7 @@ function summon(key) {
   document.getElementById('ov-url').textContent = LINKS[key].replace('https://vsavytsk1.github.io/Mnetv1/','');
   ov.classList.add('open');
 
-  // Curse 7: canvas modules MUST open new tab
-  var NEW_TAB_MODULES = {obsidius:1, sandbox:1, tree:1, valtium:1, atelier:1, warningsim:1, ancientmagic:1, atelier13:1, maxwellium:1, arcanium:1, baudinatelier:1, fslimium:1, jpntree:1, samsara:1};
+  // Curse 7: canvas modules MUST open new tab (NEW_TAB_MODULES = global, see above)
   if (NEW_TAB_MODULES[key]) {
     _popupOpen = true;
     window.open(LINKS[key], '_blank');
@@ -3866,7 +3946,47 @@ function modLoad() {
       modState[k] = !(k === 'valtium' || k === 'obsidius' || k === 'warningsim' || k === 'ancientmagic' || k === 'atelier13' || k === 'maxwellium' || k === 'arcanium' || k === 'baudinatelier' || k === 'fslimium' || k === 'jpntree');
     }
   });
+  modBadges();
   modApply();
+}
+
+// CAPABILITY CHIPS: render up to 7 small badges per card from MODULE_CAPS.
+// One source of truth -> one render pass -> idempotent. No drift possible.
+var CAP_LABEL = {
+  tab : { txt: 'TAB \u2197', tip: 'opens in a new tab' },
+  frm : { txt: 'FRM \u25A1', tip: 'opens in this cave (iframe overlay)' },
+  pc  : { txt: 'PC',         tip: 'tested on desktop' },
+  and : { txt: 'AND',        tip: 'tested on Android' },
+  ios : { txt: 'IOS',        tip: 'tested on iOS' },
+  gpu : { txt: 'GPU',        tip: 'benefits from a discrete GPU' },
+  kbd : { txt: 'KBD',        tip: 'keyboard input expected' },
+  priv: { txt: 'WIP',        tip: 'private / work in progress' }
+};
+
+function modBadges() {
+  ALL_MODS.forEach(function(k) {
+    var card = document.getElementById('card-' + k);
+    if (!card) return;
+    var caps = MODULE_CAPS[k];
+    if (!caps || !caps.length) return;
+    // Idempotent: tear down old chip row before re-rendering.
+    var old = card.querySelector('.card-caps');
+    if (old) old.remove();
+    var row = document.createElement('div');
+    row.className = 'card-caps';
+    // Render up to 7 chips. Anything beyond is ignored (design cap).
+    var n = Math.min(caps.length, 7);
+    for (var i = 0; i < n; i++) {
+      var tag  = caps[i];
+      var meta = CAP_LABEL[tag] || { txt: tag.toUpperCase(), tip: tag };
+      var chip = document.createElement('span');
+      chip.className   = 'cap ' + tag;
+      chip.textContent = meta.txt;
+      chip.title       = meta.tip;
+      row.appendChild(chip);
+    }
+    card.appendChild(row);
+  });
 }
 
 function modApply() {
