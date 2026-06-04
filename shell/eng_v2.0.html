@@ -32,6 +32,18 @@ body{background:#030308;color:#9090a0;
 .log-entry .warn{color:#ffd700}
 #center-hdr{color:#1a2a3a;font-size:9px;letter-spacing:0.15em;margin-bottom:6px}
 .mod-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+/* SECTION HEADERS in the module grid (full-width row) */
+.mod-section{grid-column:1/-1;display:flex;align-items:center;gap:8px;
+  font-size:8px;letter-spacing:0.25em;color:#1a3a3a;
+  margin:8px 0 -2px 0;padding-top:6px;border-top:1px solid #0a1a1a;text-transform:uppercase}
+.mod-section:first-child{border-top:none;margin-top:0;padding-top:0}
+.mod-section .ms-line{flex:1;height:1px;background:linear-gradient(90deg,#0a3a3a,transparent)}
+/* PILLAR cards (the featured pair) get an outer glow + thicker border */
+.mod-card.pillar{border-width:1px;border-style:solid;
+  background:linear-gradient(180deg,#080814 0%,#050510 100%);
+  box-shadow:0 0 18px rgba(0,255,213,0.07), inset 0 0 24px rgba(0,255,213,0.03)}
+.mod-card.pillar .card-tag{opacity:1;letter-spacing:0.2em}
+.mod-card.pillar .card-name{font-size:13px;letter-spacing:0.02em}
 .mod-card.new-module{animation:cardpulse 2s ease-in-out infinite}
 @keyframes cardpulse{0%,100%{box-shadow:0 0 0px transparent}50%{box-shadow:0 0 12px rgba(100,120,255,0.15)}}
 .mod-card{position:relative;background:#07070f;border:1px solid #0e0e1e;border-radius:3px;
@@ -53,6 +65,18 @@ body{background:#030308;color:#9090a0;
 #mod-selector.open{display:block}
 #mod-selector .ms-title{font-size:9px;letter-spacing:0.14em;color:#1a3a3a;
   text-transform:uppercase;margin-bottom:8px}
+#mod-selector .ms-bulk{display:flex;gap:4px;margin:0 0 8px 0;
+  padding-bottom:8px;border-bottom:1px solid #0a1a1a}
+#mod-selector .ms-bulk button{flex:1;background:#080814;color:#80d0ff;
+  border:1px solid #0a1a2a;border-radius:3px;font-family:inherit;font-size:8px;
+  letter-spacing:0.12em;padding:4px 6px;cursor:pointer;transition:all 0.15s}
+#mod-selector .ms-bulk button:hover{border-color:#00ffd5;color:#00ffd5}
+#mod-selector .ms-bulk button.invert{color:#ffd700;border-color:#1a1a0a}
+#mod-selector .ms-bulk button.invert:hover{border-color:#ffd700}
+#mod-selector .ms-count{font-size:8px;color:#3a4a5a;
+  letter-spacing:0.12em;text-align:right;margin-top:6px;padding-top:6px;
+  border-top:1px solid #0a1a1a}
+#mod-selector .ms-count b{color:#00ffd5}
 #mod-selector .ms-row{display:flex;align-items:center;justify-content:space-between;
   padding:3px 0;border-bottom:1px solid #080818;cursor:pointer}
 #mod-selector .ms-row:hover{background:rgba(0,212,255,0.03)}
@@ -124,13 +148,26 @@ body{background:#030308;color:#9090a0;
   <div id="center">
     <div id="center-hdr">MODULES -- CLICK TO SUMMON</div>
     <div class="mod-grid">
-      <div class="mod-card" id="card-genesis" onclick="summon('genesis')" style="border-color:#1a3a3a;--cc:#00ffd5">
-        <div class="card-dot" id="dot-genesis" title="toggle module"></div>
-        <div class="card-tag" style="color:#00ffd5">CANVAS</div>
-        <div class="card-name" style="color:#00ffd5">GENESIS v8.1</div>
-        <div class="card-desc">M1-M6 all modules . v7.5 format . full kernel build</div>
+
+      <div class="mod-section"><span>TWIN PILLARS . THE ALGEBRA FLOOR</span><span class="ms-line"></span></div>
+
+      <div class="mod-card pillar" id="card-samsara" onclick="summon('samsara')" style="border-color:#00ffd5;--cc:#00ffd5">
+        <div class="card-dot" id="dot-samsara" title="toggle module"></div>
+        <div class="card-tag" style="color:#00ffd5">VR ALGEBRA FLOOR</div>
+        <div class="card-name" style="color:#00ffd5">SAMSARA v1.0</div>
+        <div class="card-desc">you are inside . again . 1 plane . 1 locked cam . 1 sphere . LOOP LAW live . eye+nanite hooks</div>
         <div class="card-arrow" style="color:#00ffd5">SUMMON &gt;</div>
       </div>
+      <div class="mod-card pillar" id="card-genesis" onclick="summon('genesis')" style="border-color:#00ffd5;--cc:#00ffd5">
+        <div class="card-dot" id="dot-genesis" title="toggle module"></div>
+        <div class="card-tag" style="color:#00ffd5">FLIGHT EXPLORER</div>
+        <div class="card-name" style="color:#00ffd5">GENESIS v8.1</div>
+        <div class="card-desc">flight . impossible space . M1-M6 kernel . fractal graph . V-E+F=2 . P=12</div>
+        <div class="card-arrow" style="color:#00ffd5">SUMMON &gt;</div>
+      </div>
+
+      <div class="mod-section"><span>KERNEL . CORE TOOLS</span><span class="ms-line"></span></div>
+
       <div class="mod-card" id="card-sandbox" onclick="summon('sandbox')" style="border-color:#1a2a3a;--cc:#80d0ff">
         <div class="card-dot" id="dot-sandbox" title="toggle module"></div>
         <div class="card-tag" style="color:#80d0ff">SANDBOX</div>
@@ -180,6 +217,9 @@ body{background:#030308;color:#9090a0;
         <div class="card-desc">L0-L4 . 4 regimes . wave path . 1M bench . 0 deps</div>
         <div class="card-arrow" style="color:#6478ff">SUMMON &gt;</div>
       </div>
+
+      <div class="mod-section"><span>OS . VAULT . ORIGIN</span><span class="ms-line"></span></div>
+
       <div class="mod-card new-module" id="card-vale" onclick="summon('vale')" style="border-color:#003a3a;--cc:#00ffd5">
         <div class="card-dot" id="dot-vale" title="toggle module"></div>
         <div class="card-tag" style="color:#00ffd5">POLAR OS</div>
@@ -208,6 +248,9 @@ body{background:#030308;color:#9090a0;
         <div class="card-desc">THE MACHINE . P1-P12 . chi=2 . find the pentagons in the research</div>
         <div class="card-arrow" style="color:#c084fc">SUMMON &gt;</div>
       </div>
+
+      <div class="mod-section"><span>ATELIER . THE PURPLE . FOURIER</span><span class="ms-line"></span></div>
+
       <div class="mod-card new-module" id="card-atelier" onclick="summon('atelier')" style="border-color:#1a2a3a;--cc:#00d4ff">
         <div class="card-dot" id="dot-atelier" title="toggle module"></div>
         <div class="card-tag" style="color:#00d4ff">ATELIER</div>
@@ -215,6 +258,8 @@ body{background:#030308;color:#9090a0;
         <div class="card-desc">one slider . builds the circle . 12 layers . presets . spin . depth . tilt</div>
         <div class="card-arrow" style="color:#00d4ff">SUMMON &gt;</div>
       </div>
+      <div class="mod-section"><span>WARNINGS . ANCIENT . PHYSICS</span><span class="ms-line"></span></div>
+
       <div class="mod-card new-module" id="card-warningsim" onclick="summon('warningsim')" style="border-color:#2a0a0a;--cc:#ff4444">
         <div class="card-dot" id="dot-warningsim" title="toggle module"></div>
         <div class="card-tag" style="color:#ff4444">WARNING SIM</div>
@@ -250,6 +295,8 @@ body{background:#030308;color:#9090a0;
         <div class="card-desc">rune library . 162 shapes . Lissajous grid . click=LaTeX . CW+CCW=purple</div>
         <div class="card-arrow" style="color:#cc44ff">SUMMON &gt;</div>
       </div>
+      <div class="mod-section"><span>LANGUAGE . WEAPON</span><span class="ms-line"></span></div>
+
       <div class="mod-card new-module" id="card-jpntree" onclick="summon('jpntree')" style="border-color:#1a2a1a;--cc:#00ffd5">
         <div class="card-dot" id="dot-jpntree" title="toggle module"></div>
         <div class="card-tag" style="color:#00ffd5">LANGUAGE</div>
@@ -271,13 +318,9 @@ body{background:#030308;color:#9090a0;
         <div class="card-desc">12 Lissajous layers . slider reveals . two planes drift . THE PURPLE . always</div>
         <div class="card-arrow" style="color:#cc44ff">SUMMON &gt;</div>
       </div>
-      <div class="mod-card new-module" id="card-samsara" onclick="summon('samsara')" style="border-color:#003a3a;--cc:#00ffd5">
-        <div class="card-dot" id="dot-samsara" title="toggle module"></div>
-        <div class="card-tag" style="color:#00ffd5">VR ALGEBRA FLOOR</div>
-        <div class="card-name" style="color:#00ffd5">SAMSARA v1.0</div>
-        <div class="card-desc">1 plane . 1 locked camera . 1 sphere . LOOP LAW live . eye+nanite hooks ready</div>
-        <div class="card-arrow" style="color:#00ffd5">SUMMON &gt;</div>
-      </div>
+
+      <div class="mod-section"><span>WAITING . IN THE GRIMOIRE</span><span class="ms-line"></span></div>
+
       <div class="mod-card" style="border-color:#0e0e1e;opacity:0.35;cursor:not-allowed;pointer-events:none">
         <div class="card-tag" style="color:#1a2a3a">IDENTITY</div>
         <div class="card-name" style="color:#1a2a3a">SOUL CRYSTAL v0.1</div>
@@ -306,6 +349,12 @@ body{background:#030308;color:#9090a0;
 </div>
 <div id="mod-selector">
   <div class="ms-title">ACTIVE MODULES</div>
+  <div class="ms-bulk">
+    <button onclick="modAll(true)" title="enable every module">ALL</button>
+    <button onclick="modAll(false)" title="disable every module">NONE</button>
+    <button class="invert" onclick="modInvert()" title="flip every module">INVERT</button>
+  </div>
+  <div class="ms-row" onclick="toggleMod('samsara')"><span class="ms-name">SAMSARA v1.0</span><span class="ms-dot on" id="ms-samsara"></span></div>
   <div class="ms-row" onclick="toggleMod('genesis')"><span class="ms-name">GENESIS v8.1</span><span class="ms-dot on" id="ms-genesis"></span></div>
   <div class="ms-row" onclick="toggleMod('sandbox')"><span class="ms-name">GRAPH SANDBOX</span><span class="ms-dot on" id="ms-sandbox"></span></div>
   <div class="ms-row" onclick="toggleMod('tree')"><span class="ms-name">MATH TREE</span><span class="ms-dot on" id="ms-tree"></span></div>
@@ -327,7 +376,7 @@ body{background:#030308;color:#9090a0;
   <div class="ms-row" onclick="toggleMod('jpntree')"><span class="ms-name">JPNTREE v2.0</span><span class="ms-dot on" id="ms-jpntree"></span></div>
 <div class="ms-row" onclick="toggleMod('fslimium')"><span class="ms-name">FSLIMIUM v1.0</span><span class="ms-dot on" id="ms-fslimium"></span></div>
 <div class="ms-row" onclick="toggleMod('baudinatelier')"><span class="ms-name">BAUDIN ATELIER v1.0</span><span class="ms-dot on" id="ms-baudinatelier"></span></div>
-<div class="ms-row" onclick="toggleMod('samsara')"><span class="ms-name">SAMSARA v1.0</span><span class="ms-dot on" id="ms-samsara"></span></div>
+  <div class="ms-count"><b id="ms-on-count">0</b> / <span id="ms-total-count">0</span> active</div>
 </div>
 <div id="overlay">
   <div id="ov-bar">
@@ -3813,30 +3862,54 @@ function modLoad() {
   // Default: only valtium + obsidius active (focused build mode)
   ALL_MODS.forEach(function(k) {
     if (modState[k] === undefined) {
-      modState[k] = !(k === 'valtium' || k === 'obsidius' || k === 'warningsim' || k === 'ancientmagic' || k === 'atelier13' || k === 'maxwellium' || k === 'arcanium' || k === 'baudinatelier' || k === 'fslimium' || k === 'jpntree' || k === 'samsara');
+      // Defaults: pillars ON (samsara + genesis), rest off by default except core few
+      modState[k] = !(k === 'valtium' || k === 'obsidius' || k === 'warningsim' || k === 'ancientmagic' || k === 'atelier13' || k === 'maxwellium' || k === 'arcanium' || k === 'baudinatelier' || k === 'fslimium' || k === 'jpntree');
     }
   });
   modApply();
 }
 
 function modApply() {
+  var onCount = 0;
   ALL_MODS.forEach(function(k) {
     var card = document.getElementById('card-' + k);
     var dot  = document.getElementById('dot-' + k);
     var msDot = document.getElementById('ms-' + k);
     var on = modState[k] !== false;
+    if (on) onCount++;
     if (card) {
       if (on) { card.classList.remove('mod-off'); }
       else    { card.classList.add('mod-off'); }
     }
     if (msDot) { msDot.className = 'ms-dot' + (on ? ' on' : ''); }
   });
+  // Update the active-modules count in the picker footer
+  var onEl = document.getElementById('ms-on-count');
+  var totEl = document.getElementById('ms-total-count');
+  if (onEl)  onEl.textContent  = onCount;
+  if (totEl) totEl.textContent = ALL_MODS.length;
 }
 
 function toggleMod(key) {
   modState[key] = modState[key] === false ? true : false;
   localStorage.setItem('eng_mods', JSON.stringify(modState));
   modApply();
+}
+
+// BULK: enable or disable every module at once (the famous button)
+function modAll(on) {
+  ALL_MODS.forEach(function(k) { modState[k] = !!on; });
+  localStorage.setItem('eng_mods', JSON.stringify(modState));
+  modApply();
+  logAdd('MODS', on ? 'ALL ON (' + ALL_MODS.length + ')' : 'ALL OFF');
+}
+
+// BULK: flip every module's state
+function modInvert() {
+  ALL_MODS.forEach(function(k) { modState[k] = modState[k] === false; });
+  localStorage.setItem('eng_mods', JSON.stringify(modState));
+  modApply();
+  logAdd('MODS', 'INVERTED');
 }
 
 function toggleModSelector() {

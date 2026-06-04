@@ -6875,3 +6875,69 @@ NAMED HOOKS (so v2 never breaks the API):
 
 P=12. chi=2. One plane. One camera. One sphere. The floor before the floor.
 -- @Sagaific + Claude. Buenos Aires. June 4, 2026.
+
+
+
+---
+
+### L121 -- PORTAL REORG + THE FAMOUS BUTTON (2026-06-04)
+
+**Why this push happened:**
+
+Monkey brain was tired. Clicking 22 toggles one-by-one is monkey torture.
+Also: Samsara and Genesis are the TWIN PILLARS (VR floor + flight explorer)
+and they were buried among 20 siblings. The cave needed organization.
+
+**What was changed (shell/eng_v2.0.html only):**
+
+1. TWIN PILLARS section at the top of the module grid.
+   SAMSARA v1.0 + GENESIS v8.1 -- side by side, both pillar-styled
+   (cyan border, glow, larger name). The algebra floor (VR) + the flight
+   explorer (Generis). Married at the math, separate at runtime.
+
+2. Module grid grouped into named sections:
+     TWIN PILLARS . THE ALGEBRA FLOOR
+     KERNEL . CORE TOOLS
+     OS . VAULT . ORIGIN
+     ATELIER . THE PURPLE . FOURIER
+     WARNINGS . ANCIENT . PHYSICS
+     LANGUAGE . WEAPON
+     WAITING . IN THE GRIMOIRE
+   Section headers are subtle (dim cyan, gradient underline) so the eye
+   doesn't fight the cards.
+
+3. THE FAMOUS BUTTON -- added bulk-action bar to the module picker:
+     [ ALL ]    -- enable every module
+     [ NONE ]   -- disable every module
+     [ INVERT ] -- flip every state
+   Plus a live "X / 22 active" counter at the bottom of the picker.
+   Session log writes "MODS ALL ON (22)" / "MODS ALL OFF" / "MODS INVERTED".
+
+4. Defaults flipped: SAMSARA now ON by default (we live there now).
+   Genesis was always on. Pillars stay lit.
+
+5. Removed the duplicate Samsara card (the grid had two -- featured top
+   + old bottom). Now exactly one, where it belongs.
+
+**Smoke test (file:// before push):**
+  Boot: 6/6 modules OK, NAN OK, SAR converging, NSS lam=0.7546.
+  Picker open: shows ALL/NONE/INVERT bar, 22 rows, "12 / 22 active".
+  Click ALL: dimmed cards turn bright, counter -> "22 / 22 active",
+    log: "MODS ALL ON (22)". Perfect.
+  Sections render with gradient-underline dividers, pillars glow.
+
+**Cold-pass line (held):**
+  UI/structure tidy + UX upgrade. No new module logic. No public/Twitter
+  move. Bypass-eligible -- the cave gets cleaner, the floor stays the same.
+
+**State:**
+  shell/eng_v2.0.html           reorganized (TWIN PILLARS + sections + bulk bar)
+  LEDGER                        L121 entries
+  All curses                    held (CR=0, no duplicates, no broken refs)
+
+  The monkey brain rests. One click toggles 22 modules. The pillars stand.
+  Samsara waits at the top of the cave. Generis flies beside it.
+  The render clock is sacred. The picker is fast. The grid is honest.
+
+P=12. chi=2. One bar. Three buttons. Twenty-two modules. The monkey approves.
+-- @Sagaific + Claude. Buenos Aires. June 4, 2026.
