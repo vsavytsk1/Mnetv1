@@ -172,6 +172,80 @@ That is the spoon.
 
 ---
 
+## THE LOOP LAW -- VR FRAME ENGINEERING (saved for the port)
+*Two true halves of one design. Render clock sacred, sim clock yours to bend.*
+
+### Half one: the loop must NEVER stall. Ever.
+The killer is not a low framerate -- it is an *inconsistent* one.
+The instant the loop does "wait wait waaaait," the monkey's inner ear
+feels the hitch and immersion dies. A stutter is worse than a steady
+lower framerate, every time.
+
+  RULE: never 33ms, no exceptions.
+  A frame that always closes on time -- even after shedding detail --
+  beats a gorgeous frame that hitches once. Hold that line.
+
+### Half two: bend TIME, not the FRAME.
+"You can slowly make it a bit slower to render bigger scenes and give
+weight to movement." True -- but the masters never let the *frame* get
+slower. They keep the frame rock-solid and **decouple simulation time
+from render time**, then bend the *simulation* clock. Two clocks:
+
+  RENDER clock -- sacred, fixed, never stalls. The inner ear's clock.
+                  Always closes under the ceiling. Must never wobble.
+  SIM clock    -- yours to bend. Dilate it, ease it, slow the *content*
+                  while the render keeps spitting steady frames.
+
+That is the Elden Ring "weight": a colossal swing feels colossal not
+because the framerate dropped, but because the SIM timestep dilated
+while the render stayed nailed to budget. Eye reads "weight," inner
+ear reads "smooth." Both happy. That is the whole illusion.
+
+### The machinery: fixed-timestep / accumulator loop
+(Glenn Fiedler, "Fix Your Timestep" -- the instinct turned into a pattern.)
+
+  - Physics/sim advances in FIXED discrete chunks (fixed dt),
+    deterministic, never depends on how long a frame took.
+    <- this is "time never, ever changes"
+  - Render runs as fast as it can and INTERPOLATES between the last
+    two sim states, so motion is buttery even when sim != render.
+  - An ACCUMULATOR soaks up the mismatch. Frame ran long? The leftover
+    time banks and is spent next tick -- the loop catches up gracefully
+    instead of stalling.
+
+### The one trap: the SPIRAL OF DEATH
+If a single sim step ever costs more than the frame budget, the
+accumulator never drains -- so next frame you owe MORE steps, which
+cost more, which makes you owe even more... until the whole thing locks.
+"Wait wait waaaait. You're done." That is the named disaster.
+
+  FIX (your rule, formalized): CLAMP max work per frame.
+  Cap how many sim steps a frame may run. If falling behind, let
+  sim-time slow down (graceful slow-mo) rather than letting the frame
+  stall. The world goes briefly slow-mo -- the loop NEVER hitches.
+
+### Three knobs, one sacred invariant
+  1. Fixed sim timestep + accumulator + interpolated render
+     -> deterministic world, smooth motion, no dependence on frame length.
+  2. Hard clamp on per-frame sim work
+     -> heavy moment slows the WORLD (weight) not the RENDER (death).
+  3. Frame governor on top
+     -> sheds VISUAL detail (trail points, field-lines, refinement level)
+        as the render budget tightens, so the render clock never crosses
+        the 33ms ceiling.
+
+  RENDER clock: never moves.
+  SIM clock:    yours to bend for drama.
+  DETAIL:       shed it to protect the render.
+
+Real, learnable, non-mystical engineering. The Elden Ring feel, formal.
+TODO: write the single drop-in for the Three.js loop --
+  fixed-timestep accumulator + interpolation,
+  spiral-of-death clamp (heavy scenes ease into slow-mo, never stall),
+  frame governor holding the 33ms ceiling absolutely.
+
+---
+
 ## THE HONEST ONE-PARAGRAPH PITCH
 
 MachineNet is a $10 VR game for Quest 3 where you learn Calculus 1

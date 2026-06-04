@@ -64,16 +64,26 @@ Google Colab receipt (L6, Tesla T4, 2026-05-28):
 
 ## The black magic engineering scrolls
 
+Engineering docs live at root. The lore/grimoire scrolls now live
+in `grimoire/` (moved, never deleted -- full git history preserved).
+
 ```
-KERNELIMAGIC.md   -- 21 curses documented. all slain.
-                     Read before touching the builder.
-PIPELINE.md       -- the law. builder owns the shell.
-LEDGER.md         -- append-only. 114 entries. one truth.
-MONKIUM.md        -- monkey brain storytelling. 8 tools.
-GALACTIC_LAW.md   -- software law = soul law. 4 axioms.
-SURVIVALIUM.md    -- Unity optimization grimoire.
-PRINCIPIA_MALGEBRA.md -- PM propositions -> our kernel P1-P7.
-GRAPHIUM.md       -- LaTeX runes -> pure graph math. 55 entries.
+root (engineering):
+  PIPELINE.md       -- the law. builder owns the shell.
+  LEDGER.md         -- append-only. 114 entries. one truth.
+  DEV_ONBOARDING.md -- start here.
+  GAME_DESIGN.md    -- the $10 game. + THE LOOP LAW (VR frame engineering).
+
+grimoire/ (the scrolls):
+  KERNELIMAGIC.md   -- 21 curses documented. all slain.
+                       Read before touching the builder.
+  MONKIUM.md        -- monkey brain storytelling. 8 tools.
+  GALACTIC_LAW.md   -- software law = soul law. 4 axioms.
+  SURVIVALIUM.md    -- Unity optimization grimoire.
+  PRINCIPIA_MALGEBRA.md -- PM propositions -> our kernel P1-P7.
+  GRAPHIUM.md       -- LaTeX runes -> pure graph math. 55 entries.
+  LATEXIUM.md / MAXWELIUM.md / WHITE_MAGIC_COMPILATION.md
+  DIVINE_IDEA_47..53.md -- the idea log. never deleted.
 ```
 
 ---

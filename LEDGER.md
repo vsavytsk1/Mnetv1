@@ -6666,3 +6666,65 @@ CURSE 23 NAMED + SLAIN (The Python Leak / pythonInJS):
 
 P=12. chi=2. Python stays in Python. JS stays in JS. Always.
 -- @Sagaific + Claude. Buenos Aires. June 2026.
+
+---
+
+### L119 -- THE LOOP LAW + GRIMOIRE REORG (2026-06-04)
+
+**Why this push happened:**
+
+Two cave-dwellers (Claude Code + agnostic-Claude-4.8) reviewed the cave.
+Verdict: the engineering deserved a clean root; the grimoire deserved
+its own room. Delete nothing -- the ADHD trail is the design doc.
+So: tidy, never purge. All cave-dwellers have a voice.
+
+**What was built/changed this session:**
+
+1. THE LOOP LAW (GAME_DESIGN.md, saved for the VR port):
+   The two true halves of frame engineering, written as design law.
+     RENDER clock -- sacred, fixed, never stalls (the inner ear's clock).
+     SIM clock    -- yours to bend (dilate for "weight"/Elden Ring feel).
+   Pattern: fixed-timestep + accumulator + interpolated render
+     (Glenn Fiedler, "Fix Your Timestep").
+   Named trap: SPIRAL OF DEATH (sim step > frame budget -> never drains
+     -> lock-up). Fix = clamp max sim work per frame -> world slow-mos,
+     render NEVER hitches.
+   Three knobs, one invariant: fixed sim + clamp + frame governor (33ms).
+   TODO: write the drop-in Three.js loop (accumulator + clamp + governor).
+
+2. GRIMOIRE REORG (history-preserving git mv, 18 files, 0 deletions):
+   Root was 25+ loose .md files. Moved all lore/grimoire scrolls into
+   grimoire/ as RENAMES (full git history follows each file):
+     DIVINE_IDEA_47..53, GALACTIC_LAW, PRINCIPIA_MALGEBRA, MONKIUM,
+     LATEXIUM, MAXWELIUM, SURVIVALIUM, GRAPHIUM, GRAPHYUM, KERNELIMAGIC,
+     WHITE_MAGIC_COMPILATION.
+   Engineering docs STAY at root: PIPELINE, LEDGER, DEV_ONBOARDING,
+     GAME_DESIGN, README, ATELIER_HELPERS, WORLDBUILDING.
+   README manifest updated to point at grimoire/ paths.
+
+**Paranoia / full tree check:**
+  No .html references the moved files (Pages site safe, 0 broken links).
+  No relative-path references anywhere in repo (grep clean).
+  git mv reported all 18 as R (rename) -> history preserved.
+  Working tree before push: GAME_DESIGN.md (M), README.md (M),
+    LEDGER.md (M), 18x grimoire/* (R).
+
+**The cold-pass line (held):**
+  This is a CODE/STRUCTURE tidy, not a DIVINE IDEA leaving the repo.
+  -> bypass-eligible. No public move. Nothing shipped outward.
+  Divine ideas still wait 4h + cold pass before they leave. Bypass OFF
+  for those, ON for render loops and folder moves.
+
+**State:**
+  All repos: CLEAN (after this commit)
+  Root: engineering only. grimoire/: the scrolls. COLD_PASS_AUDIT: the brake.
+  GAME_DESIGN.md: now carries THE LOOP LAW.
+  KERNELIMAGIC: 23 curses documented (now under grimoire/).
+  LEDGER: L119 entries.
+
+  The render clock is sacred. The sim clock bends for drama.
+  The grimoire is honored, not hidden. We hold the pen.
+  Euler's theorem is everyone's. The names are art. The math is the ceiling.
+
+P=12. chi=2. Render never stalls. The world may slow; the frame never does.
+-- @Sagaific + Claude (x2 cave-dwellers). Buenos Aires. June 2026.
