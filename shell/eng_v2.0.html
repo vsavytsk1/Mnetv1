@@ -271,6 +271,13 @@ body{background:#030308;color:#9090a0;
         <div class="card-desc">12 Lissajous layers . slider reveals . two planes drift . THE PURPLE . always</div>
         <div class="card-arrow" style="color:#cc44ff">SUMMON &gt;</div>
       </div>
+      <div class="mod-card new-module" id="card-samsara" onclick="summon('samsara')" style="border-color:#003a3a;--cc:#00ffd5">
+        <div class="card-dot" id="dot-samsara" title="toggle module"></div>
+        <div class="card-tag" style="color:#00ffd5">VR ALGEBRA FLOOR</div>
+        <div class="card-name" style="color:#00ffd5">SAMSARA v1.0</div>
+        <div class="card-desc">1 plane . 1 locked camera . 1 sphere . LOOP LAW live . eye+nanite hooks ready</div>
+        <div class="card-arrow" style="color:#00ffd5">SUMMON &gt;</div>
+      </div>
       <div class="mod-card" style="border-color:#0e0e1e;opacity:0.35;cursor:not-allowed;pointer-events:none">
         <div class="card-tag" style="color:#1a2a3a">IDENTITY</div>
         <div class="card-name" style="color:#1a2a3a">SOUL CRYSTAL v0.1</div>
@@ -320,6 +327,7 @@ body{background:#030308;color:#9090a0;
   <div class="ms-row" onclick="toggleMod('jpntree')"><span class="ms-name">JPNTREE v2.0</span><span class="ms-dot on" id="ms-jpntree"></span></div>
 <div class="ms-row" onclick="toggleMod('fslimium')"><span class="ms-name">FSLIMIUM v1.0</span><span class="ms-dot on" id="ms-fslimium"></span></div>
 <div class="ms-row" onclick="toggleMod('baudinatelier')"><span class="ms-name">BAUDIN ATELIER v1.0</span><span class="ms-dot on" id="ms-baudinatelier"></span></div>
+<div class="ms-row" onclick="toggleMod('samsara')"><span class="ms-name">SAMSARA v1.0</span><span class="ms-dot on" id="ms-samsara"></span></div>
 </div>
 <div id="overlay">
   <div id="ov-bar">
@@ -3560,7 +3568,8 @@ var LINKS = {
   baudinatelier: 'https://vsavytsk1.github.io/Mnetv1/shell/baudin_atelier_v1.0.html',
   fslimium  : 'https://vsavytsk1.github.io/Mnetv1/shell/fslimium_v1.0.html',
   jpntree   : 'https://vsavytsk1.github.io/JpnTree/jpntree_v3.html',
-  valtium   : 'https://vsavytsk1.github.io/Mnetv1/shell/valtium_v1.html'
+  valtium   : 'https://vsavytsk1.github.io/Mnetv1/shell/valtium_v1.html',
+  samsara   : 'https://vsavytsk1.github.io/Mnetv1/shell/samsara_v1.0.html'
   // crystal : 'https://vsavytsk1.github.io/Mnetv1/builder/Obsidius/soul_crystal.html'
 };
 var PC = {cyan:'#00d4ff',pink:'#ff69b4',gold:'#ffd700',green:'#00ffd5',
@@ -3593,7 +3602,7 @@ function summon(key) {
   ov.classList.add('open');
 
   // Curse 7: canvas modules MUST open new tab
-  var NEW_TAB_MODULES = {obsidius:1, sandbox:1, tree:1, valtium:1, atelier:1, warningsim:1, ancientmagic:1, atelier13:1, maxwellium:1, arcanium:1, baudinatelier:1, fslimium:1, jpntree:1};
+  var NEW_TAB_MODULES = {obsidius:1, sandbox:1, tree:1, valtium:1, atelier:1, warningsim:1, ancientmagic:1, atelier13:1, maxwellium:1, arcanium:1, baudinatelier:1, fslimium:1, jpntree:1, samsara:1};
   if (NEW_TAB_MODULES[key]) {
     _popupOpen = true;
     window.open(LINKS[key], '_blank');
@@ -3793,7 +3802,7 @@ setInterval(function() {
 
 // MODULE SELECTOR -- localStorage persists state
 var ALL_MODS = ['genesis','sandbox','tree','holly7','navier','warning',
-                'license','gkern','vale','spooky','obsidius','valtium','atelier','warningsim','ancientmagic','atelier13','maxwellium','arcanium','baudinatelier','fslimium','jpntree'];
+                'license','gkern','vale','spooky','obsidius','valtium','atelier','warningsim','ancientmagic','atelier13','maxwellium','arcanium','baudinatelier','fslimium','jpntree','samsara'];
 var modState = {};
 
 function modLoad() {
@@ -3804,7 +3813,7 @@ function modLoad() {
   // Default: only valtium + obsidius active (focused build mode)
   ALL_MODS.forEach(function(k) {
     if (modState[k] === undefined) {
-      modState[k] = !(k === 'valtium' || k === 'obsidius' || k === 'warningsim' || k === 'ancientmagic' || k === 'atelier13' || k === 'maxwellium' || k === 'arcanium' || k === 'baudinatelier' || k === 'fslimium' || k === 'jpntree');
+      modState[k] = !(k === 'valtium' || k === 'obsidius' || k === 'warningsim' || k === 'ancientmagic' || k === 'atelier13' || k === 'maxwellium' || k === 'arcanium' || k === 'baudinatelier' || k === 'fslimium' || k === 'jpntree' || k === 'samsara');
     }
   });
   modApply();

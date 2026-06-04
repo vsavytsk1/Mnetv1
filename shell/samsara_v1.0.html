@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SAMSARA v1.0 -- VR Algebra Floor</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#050508;color:#c8d8e8;font-family:'Courier New',monospace;overflow:hidden;touch-action:none}
+canvas{position:fixed;top:0;left:0;z-index:0}
+
+#title{position:fixed;top:8px;left:50%;transform:translateX(-50%);z-index:5;pointer-events:none;
+  font-family:'Orbitron';font-size:11px;letter-spacing:0.3em;color:rgba(0,255,213,0.35)}
+#subt{position:fixed;top:24px;left:50%;transform:translateX(-50%);z-index:5;pointer-events:none;
+  font-family:'Orbitron';font-size:18px;font-weight:900;color:#00ffd5}
+#subt .dim{color:#1a3a3a}
+
+#hud{position:fixed;top:10px;left:10px;z-index:5;pointer-events:none;font-size:10px;line-height:1.7}
+.lbl{color:#444}.val{color:#00ffd5}.vp{color:#ff69b4}.vg{color:#ffd700}.vc{color:#80d0ff}
+
+#alg{position:fixed;top:10px;right:10px;width:300px;max-height:60%;overflow-y:auto;font-size:9px;
+  background:rgba(5,5,8,0.88);border:1px solid #0a3a3a;border-radius:4px;padding:6px;z-index:5}
+#alg .ah{color:#00ffd5;font-family:'Orbitron';letter-spacing:0.15em;font-size:10px;
+  border-bottom:1px solid #0a3a3a;padding-bottom:3px;margin-bottom:4px}
+#alg .row{display:flex;justify-content:space-between;padding:1px 0;border-bottom:1px dotted #0e1e2e}
+#alg .k{color:#446a6a}#alg .v{color:#80d0ff}
+#alg .hk{color:#446a6a;font-style:italic}#alg .hv{color:#3a3a4a;font-style:italic}
+
+#bar{position:fixed;bottom:0;left:0;right:0;z-index:10;background:rgba(5,5,8,0.95);
+  border-top:1px solid #0a3a3a;padding:5px 8px;display:flex;gap:6px;align-items:center;
+  flex-wrap:wrap;justify-content:center}
+.btn{background:#0a0e18;border:1px solid #2a2a3a;color:#80d0ff;padding:4px 10px;font-family:inherit;
+  font-size:9px;cursor:pointer;border-radius:3px;white-space:nowrap;transition:all 0.15s}
+.btn:hover{border-color:#4a6a8a;color:#fff}
+.btn.cy{color:#00ffd5;border-color:#003a3a}
+.btn.gd{color:#ffd700;border-color:#332a00}
+.btn.pk{color:#ff69b4;border-color:#3a1a2a}
+.sep{width:1px;height:16px;background:#1a1f2e}
+.sl{display:flex;align-items:center;gap:4px}
+.sl label{font-size:7px;color:#555;letter-spacing:0.05em;min-width:36px}
+.sl input[type=range]{width:80px;accent-color:#00ffd5}
+.sl .sv{font-size:8px;color:#00ffd5;min-width:30px;text-align:right}
+</style></head><body>
+<canvas id="cv"></canvas>
+
+<div id="title">SAMSARA v1.0</div>
+<div id="subt"><span>YOU ARE INSIDE</span> <span class="dim">.</span> <span>AGAIN</span></div>
+
+<div id="hud">
+  <div><span class="lbl">eye      </span><span class="val" id="h-eye">center</span></div>
+  <div><span class="lbl">distance </span><span class="vc" id="h-dist">5.00</span></div>
+  <div><span class="lbl">fov      </span><span class="vc" id="h-fov">60.0</span>&deg;</div>
+  <div><span class="lbl">grid     </span><span class="val" id="h-grid">40x40</span></div>
+  <div><span class="lbl">faces    </span><span class="val" id="h-faces">0</span></div>
+  <div><span class="lbl">drawn    </span><span class="vg" id="h-drawn">0</span></div>
+  <div><span class="lbl">culled   </span><span class="vp" id="h-culled">0</span></div>
+  <div style="margin-top:6px"><span class="lbl">render   </span><span class="val" id="h-fps">0</span> fps</div>
+  <div><span class="lbl">frame    </span><span class="vg" id="h-ms">0.0</span> ms</div>
+  <div><span class="lbl">sim/frm  </span><span class="val" id="h-sim">0</span></div>
+  <div><span class="lbl">acc      </span><span class="vc" id="h-acc">0.000</span></div>
+</div>
+
+<div id="alg">
+  <div class="ah">SAMSARA TRANSFORMS</div>
+  <div class="row"><span class="k">P_world</span><span class="v" id="a-pw">(x,y,z)</span></div>
+  <div class="row"><span class="k">P_view</span><span class="v" id="a-pv">P - C_eye</span></div>
+  <div class="row"><span class="k">P_proj</span><span class="v" id="a-pp">fov*P_v / -z</span></div>
+  <div class="row"><span class="k">P_screen</span><span class="v" id="a-ps">center+P_p*s</span></div>
+
+  <div class="ah" style="margin-top:8px">LOOP LAW (LIVE)</div>
+  <div class="row"><span class="k">fixed dt</span><span class="v" id="a-fdt">1/120 s</span></div>
+  <div class="row"><span class="k">governor</span><span class="v" id="a-gov">33 ms cap</span></div>
+  <div class="row"><span class="k">spiral clamp</span><span class="v" id="a-clamp">4 sims/frm</span></div>
+  <div class="row"><span class="k">render clock</span><span class="v">sacred</span></div>
+  <div class="row"><span class="k">sim clock</span><span class="v">bendable</span></div>
+
+  <div class="ah" style="margin-top:8px">STEREO HOOK (v2 stub)</div>
+  <div class="row"><span class="hk">eye.left.offsetX</span><span class="hv" id="a-eL">-0.032 m</span></div>
+  <div class="row"><span class="hk">eye.right.offsetX</span><span class="hv" id="a-eR">+0.032 m</span></div>
+  <div class="row"><span class="hk">ipd</span><span class="hv" id="a-ipd">0.064 m</span></div>
+
+  <div class="ah" style="margin-top:8px">NANITE HOOK (v2 stub)</div>
+  <div class="row"><span class="hk">enabled</span><span class="hv">false</span></div>
+  <div class="row"><span class="hk">lod levels</span><span class="hv">5</span></div>
+  <div class="row"><span class="hk">fovea radius</span><span class="hv">0.15 view</span></div>
+</div>
+
+<div id="bar">
+  <button class="btn cy" onclick="recenter()">RECENTER</button>
+  <button class="btn" onclick="cycleEye()">EYE: <b id="bEye">CENTER</b></button>
+  <button class="btn" onclick="togglePlane()">PLANE: <b id="bPlane">ON</b></button>
+  <button class="btn" onclick="toggleSphere()">SPHERE: <b id="bSphere">ON</b></button>
+  <button class="btn" onclick="togglePause()"><b id="bPause">PAUSE</b></button>
+  <div class="sep"></div>
+  <div class="sl"><label>DISTANCE</label><input type="range" min="0.5" max="20" step="0.1" value="5"
+    id="sl-dist" oninput="setDist(+this.value)"><span class="sv" id="sv-dist">5.00</span></div>
+  <div class="sl"><label>HEIGHT</label><input type="range" min="0.1" max="10" step="0.1" value="1.6"
+    id="sl-h" oninput="setHeight(+this.value)"><span class="sv" id="sv-h">1.60</span></div>
+  <div class="sl"><label>FOV</label><input type="range" min="30" max="120" step="1" value="60"
+    id="sl-fov" oninput="setFov(+this.value)"><span class="sv" id="sv-fov">60</span></div>
+  <div class="sl"><label>GRID</label><input type="range" min="10" max="80" step="2" value="40"
+    id="sl-grid" oninput="setGrid(+this.value)"><span class="sv" id="sv-grid">40</span></div>
+  <div class="sep"></div>
+  <button class="btn gd" onclick="window.open('https://vsavytsk1.github.io/Mnetv1/','_blank')">MNET</button>
+</div>
+
+<script>
+// ============================================================================
+//  SAMSARA v1.0  --  VR ALGEBRA FLOOR
+// ----------------------------------------------------------------------------
+//  Day 1: plane + locked camera + far sphere. The algebra base.
+//  Generis port: same hand-rolled canvas 3D math (no Three.js).
+//  All future VR (stereo, nanite) lives on top of THIS file's hooks.
+//  THE LOOP LAW is baked in from byte zero -- render clock never stalls.
+//
+//  Architecture:
+//    SAMSARA.eyes   -- per-eye state. v1 renders eye.center only.
+//                      eye.left + eye.right are wired but unused.
+//    SAMSARA.nanite -- per-eye LOD stub. fovea-sharp / periphery-cheap.
+//    SAMSARA.loop   -- fixed-timestep accumulator + spiral clamp + governor.
+//
+//  References:
+//    LOOP LAW   -> /GAME_DESIGN.md (LEDGER L119)
+//    PROJECTION -> /shell/genesis_v8.1.html  (lines 3418-3445)
+//    WHITEBOARD -> "Outer Tr -> Set boundary -> Inner Tr"  (June 4 2026)
+// ============================================================================
+
+var SAMSARA = {
+  // --- EYES -----------------------------------------------------------------
+  // v1: render eye.center only.  v2: render left+right to half-canvases.
+  eyes: {
+    left:   { offsetX: -0.032, fov: Math.PI/3, lodBias: 0 },  // 32mm L of center
+    right:  { offsetX: +0.032, fov: Math.PI/3, lodBias: 0 },  // 32mm R of center
+    center: { offsetX:  0.000, fov: Math.PI/3, lodBias: 0 }   // mono (v1 default)
+  },
+  activeEye: 'center',   // 'center' (v1) | 'left' | 'right' (v2)
+
+  // --- CAMERA (locked at coordinate) ----------------------------------------
+  cam: {
+    pos:    [0, 1.6, 5],   // (x, y, z) -- y = head height, z = distance
+    dist:   5,             // slider: distance from origin (along +z)
+    height: 1.6,           // slider: head height above floor
+    fov:    Math.PI/3,     // 60 degrees
+    yaw:    0,             // locked at 0 (v1: no look-around)
+    pitch:  0              // locked at 0 (v1: horizon-level gaze)
+  },
+
+  // --- WORLD ----------------------------------------------------------------
+  world: {
+    plane: {
+      enabled: true,
+      half:    20,    // plane spans (-half, +half) in X and Z
+      cells:   40,    // grid resolution (cells per side)
+      y:       0      // plane is the floor at y=0
+    },
+    sphere: {
+      enabled: true,
+      pos:    [3, 1, -15],  // far away, off to the side
+      radius: 1,
+      color:  '#ff69b4'
+    }
+  },
+
+  // --- NANITE HOOK (v2 stub) ------------------------------------------------
+  // Reality only renders the fovea sharp.  We will mirror that per-eye.
+  nanite: {
+    enabled:     false,   // v1: off
+    levels:      5,       // max LOD steps
+    foveaRadius: 0.15,    // fovea = sharp center 15% of view radius
+    perEyeBias:  true     // each eye gets its own LOD field
+  },
+
+  // --- LOOP LAW (baked in day 1) --------------------------------------------
+  // RENDER clock = sacred.  SIM clock = bendable.  Spiral-of-death = trapped.
+  loop: {
+    fixedDt:        1/120,   // sim runs at 120Hz (fixed)
+    maxFrameMs:     33,      // governor: never exceed 33ms (the inner-ear cap)
+    maxSimPerFrame: 4,       // clamp: at most 4 sim steps per frame
+    accumulator:    0,
+    lastTime:       0,
+    paused:         false,
+    simSteps:       0        // sims run this frame (HUD)
+  },
+
+  // --- STATS ----------------------------------------------------------------
+  stats: { fps: 0, ms: 0, frames: 0, lastFpsT: 0, drawn: 0, culled: 0, faces: 0 }
+};
+
+// ============================================================================
+//  CANVAS + RESIZE
+// ============================================================================
+var cv = document.getElementById('cv');
+var cx = cv.getContext('2d');
+var W = 0, H = 0;
+function resize() {
+  W = cv.width  = innerWidth;
+  H = cv.height = innerHeight;
+}
+resize();
+addEventListener('resize', resize);
+
+// ============================================================================
+//  PROJECTION (Generis port -- pure functions, no Three.js)
+// ----------------------------------------------------------------------------
+//  P_world  = (x, y, z)                  -- a point in the world
+//  P_view   = P_world - C_eye            -- subtract eye position (locked v1)
+//  P_proj   = (P_v.x * f / -z, P_v.y * f / -z)   -- pinhole perspective
+//  P_screen = (W/2 + P_p.x * s,  H/2 - P_p.y * s)
+//
+//  f = focal = 1 / tan(fov/2)
+//  s = scale = min(W, H) * 0.5   (responsive pixel scale)
+//
+//  Returns null if point is behind the camera (clipping).
+// ============================================================================
+function eyePos(eyeName) {
+  // v1: all eyes share cam.pos. offsetX is wired but applied additively.
+  // v2: left/right will use this offset for stereo.
+  var e   = SAMSARA.eyes[eyeName];
+  var cam = SAMSARA.cam;
+  return [cam.pos[0] + e.offsetX, cam.pos[1], cam.pos[2]];
+}
+
+function project(P, eyeName) {
+  var Ce = eyePos(eyeName);
+  // P_view = P_world - C_eye
+  var vx = P[0] - Ce[0];
+  var vy = P[1] - Ce[1];
+  var vz = P[2] - Ce[2];
+  // CLIP: z must be in front of camera (in our convention, -z is forward)
+  if (vz >= -0.05) return null;
+  var f = 1 / Math.tan(SAMSARA.eyes[eyeName].fov / 2);
+  var s = Math.min(W, H) * 0.5;
+  // Pinhole perspective: divide by depth.  -vz because forward is -Z.
+  var px = (vx * f) / (-vz);
+  var py = (vy * f) / (-vz);
+  // To pixel coords: y flips (screen +y is down, world +y is up)
+  return {
+    x: W/2 + px * s,
+    y: H/2 - py * s,
+    z: -vz,                  // positive depth from camera
+    onscreen: true
+  };
+}
+
+// ============================================================================
+//  GEOMETRY GENERATORS  (the world is just lists of points + faces)
+// ============================================================================
+function makePlaneGrid() {
+  // Returns a list of {a,b} 3D line segments forming the floor grid.
+  var pl    = SAMSARA.world.plane;
+  var h     = pl.half;
+  var n     = pl.cells;
+  var step  = (2 * h) / n;
+  var lines = [];
+  // Lines parallel to Z (constant X)
+  for (var i = 0; i <= n; i++) {
+    var x = -h + i * step;
+    lines.push({ a: [x, pl.y, -h], b: [x, pl.y, h], grid: i });
+  }
+  // Lines parallel to X (constant Z)
+  for (var j = 0; j <= n; j++) {
+    var z = -h + j * step;
+    lines.push({ a: [-h, pl.y, z], b: [h, pl.y, z], grid: j });
+  }
+  return lines;
+}
+
+// ============================================================================
+//  DRAW  (Generis house style: painter's sort, sub-pixel cull, viewport cull)
+// ============================================================================
+function drawSky() {
+  // Subtle vertical gradient: horizon-glow to deep void.
+  var g = cx.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0,    '#050508');
+  g.addColorStop(0.55, '#080a14');
+  g.addColorStop(1,    '#0a0e20');
+  cx.fillStyle = g;
+  cx.fillRect(0, 0, W, H);
+}
+
+function drawHorizon(eyeName) {
+  // Project the y=0 line at z=-infinity:  py = (0 - cam.y) / (huge) -> 0 from
+  // camera-relative.  We approximate by projecting a point far away.
+  var p = project([0, 0, SAMSARA.cam.pos[2] - 9999], eyeName);
+  if (!p) return;
+  cx.strokeStyle = 'rgba(0,255,213,0.08)';
+  cx.lineWidth = 1;
+  cx.beginPath();
+  cx.moveTo(0, p.y);
+  cx.lineTo(W, p.y);
+  cx.stroke();
+}
+
+function drawPlane(eyeName) {
+  if (!SAMSARA.world.plane.enabled) return 0;
+  var lines = SAMSARA.cachedPlane;
+  var drawn = 0, culled = 0;
+  cx.lineWidth = 1;
+  for (var i = 0; i < lines.length; i++) {
+    var L = lines[i];
+    var pa = project(L.a, eyeName);
+    var pb = project(L.b, eyeName);
+    if (!pa || !pb) { culled++; continue; }
+    // sub-pixel cull
+    var dx = pb.x - pa.x, dy = pb.y - pa.y;
+    var len = Math.sqrt(dx*dx + dy*dy);
+    if (len < 0.5) { culled++; continue; }
+    // viewport cull
+    if ((pa.x < -100 && pb.x < -100) || (pa.x > W+100 && pb.x > W+100)) { culled++; continue; }
+    if ((pa.y < -100 && pb.y < -100) || (pa.y > H+100 && pb.y > H+100)) { culled++; continue; }
+    // depth-based brightness (far = dim)
+    var depth = (pa.z + pb.z) * 0.5;
+    var bright = Math.max(0.05, Math.min(0.55, 12 / (depth + 2)));
+    cx.strokeStyle = 'rgba(0,255,213,' + bright.toFixed(3) + ')';
+    cx.beginPath();
+    cx.moveTo(pa.x, pa.y);
+    cx.lineTo(pb.x, pb.y);
+    cx.stroke();
+    drawn++;
+  }
+  SAMSARA.stats.culled += culled;
+  return drawn;
+}
+
+function drawSphere(eyeName) {
+  if (!SAMSARA.world.sphere.enabled) return 0;
+  var s  = SAMSARA.world.sphere;
+  var pc = project(s.pos, eyeName);
+  if (!pc) return 0;
+  // Apparent radius in pixels: r * f * s / depth
+  var f = 1 / Math.tan(SAMSARA.eyes[eyeName].fov / 2);
+  var sc = Math.min(W, H) * 0.5;
+  var rPix = (s.radius * f * sc) / pc.z;
+  if (rPix < 0.5) return 0;
+  // Filled disc with radial gradient -> reads as a sphere.
+  var grd = cx.createRadialGradient(
+    pc.x - rPix * 0.3, pc.y - rPix * 0.3, rPix * 0.1,
+    pc.x, pc.y, rPix
+  );
+  grd.addColorStop(0,    'rgba(255,180,220,0.95)');
+  grd.addColorStop(0.5,  'rgba(255,105,180,0.80)');
+  grd.addColorStop(0.92, 'rgba(120,30,80,0.55)');
+  grd.addColorStop(1,    'rgba(40,5,20,0.00)');
+  cx.fillStyle = grd;
+  cx.beginPath();
+  cx.arc(pc.x, pc.y, rPix, 0, Math.PI * 2);
+  cx.fill();
+  // outline
+  cx.strokeStyle = 'rgba(255,105,180,0.35)';
+  cx.lineWidth = 1;
+  cx.beginPath();
+  cx.arc(pc.x, pc.y, rPix, 0, Math.PI * 2);
+  cx.stroke();
+  return 1;
+}
+
+// ============================================================================
+//  RENDER (per-frame; consumes alpha for future interpolation)
+// ============================================================================
+function render(alpha) {
+  SAMSARA.stats.culled = 0;
+  drawSky();
+  drawHorizon(SAMSARA.activeEye);
+  var drawnPlane  = drawPlane(SAMSARA.activeEye);
+  var drawnSphere = drawSphere(SAMSARA.activeEye);
+  SAMSARA.stats.drawn = drawnPlane + drawnSphere;
+  SAMSARA.stats.faces = (SAMSARA.cachedPlane ? SAMSARA.cachedPlane.length : 0) +
+                        (SAMSARA.world.sphere.enabled ? 1 : 0);
+}
+
+// ============================================================================
+//  SIM (per-fixed-step; v1 has nothing dynamic yet -- the camera is locked)
+// ============================================================================
+function sim(dt) {
+  // v1: world is static.  Future: spheres drift, plane wobbles, particles.
+  // This function MUST stay cheap -- the spiral-clamp protects render but
+  // sim cost still adds up.  Keep O(world) at most.
+}
+
+// ============================================================================
+//  THE LOOP LAW  (Glenn Fiedler accumulator + spiral clamp + 33ms governor)
+// ----------------------------------------------------------------------------
+//  Half 1: render clock NEVER stalls. Capped at maxFrameMs (33ms = 30fps floor)
+//  Half 2: sim clock can bend, but is clamped so a stuck frame doesn't cascade
+//          into a death spiral (the named trap).
+// ============================================================================
+function tick(now) {
+  if (!SAMSARA.loop.lastTime) SAMSARA.loop.lastTime = now;
+  var frameMs = now - SAMSARA.loop.lastTime;
+  // GOVERNOR: never let a single frame report more than 33ms.
+  // This is what prevents the spiral-of-death from feeding itself.
+  if (frameMs > SAMSARA.loop.maxFrameMs) frameMs = SAMSARA.loop.maxFrameMs;
+  SAMSARA.loop.lastTime = now;
+  SAMSARA.stats.ms = frameMs;
+
+  if (!SAMSARA.loop.paused) {
+    SAMSARA.loop.accumulator += frameMs / 1000;
+    var steps = 0;
+    while (SAMSARA.loop.accumulator >= SAMSARA.loop.fixedDt &&
+           steps < SAMSARA.loop.maxSimPerFrame) {
+      sim(SAMSARA.loop.fixedDt);
+      SAMSARA.loop.accumulator -= SAMSARA.loop.fixedDt;
+      steps++;
+    }
+    // SPIRAL CLAMP: if we hit the cap, drain the rest.
+    // The world goes slow-mo instead of locking up.  RENDER stays smooth.
+    if (steps >= SAMSARA.loop.maxSimPerFrame) {
+      SAMSARA.loop.accumulator = 0;
+    }
+    SAMSARA.loop.simSteps = steps;
+  }
+
+  // Interpolation alpha for future use (smoothing between sim ticks).
+  var alpha = SAMSARA.loop.accumulator / SAMSARA.loop.fixedDt;
+  render(alpha);
+
+  // FPS counter (windowed)
+  SAMSARA.stats.frames++;
+  if (now - SAMSARA.stats.lastFpsT > 500) {
+    SAMSARA.stats.fps = Math.round(SAMSARA.stats.frames * 1000 / (now - SAMSARA.stats.lastFpsT));
+    SAMSARA.stats.frames = 0;
+    SAMSARA.stats.lastFpsT = now;
+  }
+  updateHud();
+  requestAnimationFrame(tick);
+}
+
+// ============================================================================
+//  HUD
+// ============================================================================
+function updateHud() {
+  document.getElementById('h-eye').textContent    = SAMSARA.activeEye;
+  document.getElementById('h-dist').textContent   = SAMSARA.cam.dist.toFixed(2);
+  document.getElementById('h-fov').textContent    = (SAMSARA.cam.fov * 180 / Math.PI).toFixed(1);
+  document.getElementById('h-grid').textContent   = SAMSARA.world.plane.cells + 'x' + SAMSARA.world.plane.cells;
+  document.getElementById('h-faces').textContent  = SAMSARA.stats.faces;
+  document.getElementById('h-drawn').textContent  = SAMSARA.stats.drawn;
+  document.getElementById('h-culled').textContent = SAMSARA.stats.culled;
+  document.getElementById('h-fps').textContent    = SAMSARA.stats.fps;
+  document.getElementById('h-ms').textContent     = SAMSARA.stats.ms.toFixed(1);
+  document.getElementById('h-sim').textContent    = SAMSARA.loop.simSteps;
+  document.getElementById('h-acc').textContent    = SAMSARA.loop.accumulator.toFixed(3);
+}
+
+// ============================================================================
+//  CONTROLS  (sliders + buttons)
+// ============================================================================
+function setDist(v) {
+  SAMSARA.cam.dist = v;
+  SAMSARA.cam.pos[2] = v;
+  document.getElementById('sv-dist').textContent = v.toFixed(2);
+}
+function setHeight(v) {
+  SAMSARA.cam.height = v;
+  SAMSARA.cam.pos[1] = v;
+  document.getElementById('sv-h').textContent = v.toFixed(2);
+}
+function setFov(v) {
+  var rad = v * Math.PI / 180;
+  SAMSARA.cam.fov = rad;
+  SAMSARA.eyes.left.fov = SAMSARA.eyes.right.fov = SAMSARA.eyes.center.fov = rad;
+  document.getElementById('sv-fov').textContent = v;
+}
+function setGrid(v) {
+  SAMSARA.world.plane.cells = v;
+  SAMSARA.cachedPlane = makePlaneGrid();
+  document.getElementById('sv-grid').textContent = v;
+}
+function recenter() {
+  setDist(5); document.getElementById('sl-dist').value = 5;
+  setHeight(1.6); document.getElementById('sl-h').value = 1.6;
+  setFov(60); document.getElementById('sl-fov').value = 60;
+  setGrid(40); document.getElementById('sl-grid').value = 40;
+}
+function cycleEye() {
+  var order = ['center', 'left', 'right'];
+  var i = order.indexOf(SAMSARA.activeEye);
+  SAMSARA.activeEye = order[(i + 1) % order.length];
+  document.getElementById('bEye').textContent = SAMSARA.activeEye.toUpperCase();
+}
+function togglePlane() {
+  SAMSARA.world.plane.enabled = !SAMSARA.world.plane.enabled;
+  document.getElementById('bPlane').textContent = SAMSARA.world.plane.enabled ? 'ON' : 'OFF';
+}
+function toggleSphere() {
+  SAMSARA.world.sphere.enabled = !SAMSARA.world.sphere.enabled;
+  document.getElementById('bSphere').textContent = SAMSARA.world.sphere.enabled ? 'ON' : 'OFF';
+}
+function togglePause() {
+  SAMSARA.loop.paused = !SAMSARA.loop.paused;
+  document.getElementById('bPause').textContent = SAMSARA.loop.paused ? 'RESUME' : 'PAUSE';
+}
+
+// ============================================================================
+//  BOOT
+// ============================================================================
+SAMSARA.cachedPlane = makePlaneGrid();
+console.log('%c+----------------------------------------+', 'color:#00ffd5');
+console.log('%c|  SAMSARA v1.0 -- VR ALGEBRA FLOOR     |', 'color:#00ffd5;font-weight:bold');
+console.log('%c|  1 plane . 1 camera . 1 sphere        |', 'color:#80d0ff');
+console.log('%c|  LOOP LAW baked in . render is sacred |', 'color:#ffd700');
+console.log('%c|  eye/nanite hooks ready . v2 = stereo |', 'color:#ff69b4');
+console.log('%c+----------------------------------------+', 'color:#00ffd5');
+console.log('SAMSARA state:', SAMSARA);
+requestAnimationFrame(tick);
+</script>
+</body></html>

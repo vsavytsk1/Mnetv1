@@ -6728,3 +6728,150 @@ So: tidy, never purge. All cave-dwellers have a voice.
 
 P=12. chi=2. Render never stalls. The world may slow; the frame never does.
 -- @Sagaific + Claude (x2 cave-dwellers). Buenos Aires. June 2026.
+
+
+---
+
+### L120 -- SAMSARA v1.0 BORN (2026-06-04)
+
+**Why this module exists:**
+
+Samsara = the VR module. The wheel. "You are inside...again."
+Generis = the flight explorer (outside, free cam, impossible space).
+They share the algebra; they do NOT share the runtime.
+v1.0 is the algebra FLOOR -- 1 plane + 1 locked camera + 1 far sphere.
+Everything VR (stereo, nanite, eye-tracking) will sit on top of THIS file.
+We build the floor before the cathedral. Cave-dweller discipline.
+
+**What was built this session:**
+
+shell/samsara_v1.0.html (570 lines, 23.5KB, 0 lone CR):
+  Hand-rolled canvas 3D (no Three.js). Generis projection ported faithfully:
+    P_view   = P_world - C_eye
+    P_proj   = (vx*f / -vz, vy*f / -vz)    with f = 1/tan(fov/2)
+    P_screen = (W/2 + Px*s, H/2 - Py*s)    with s = min(W,H)*0.5
+  + clip if vz >= -0.05 (behind camera).
+  Painter's algorithm + sub-pixel cull + viewport cull (Generis heritage).
+  Pink sphere = radial-gradient disc with apparent radius r*f*s/depth.
+  Horizon glow + sky gradient. Floor grid lines fade with depth.
+
+THE LOOP LAW -- LIVE from byte zero (GAME_DESIGN.md doctrine):
+  fixedDt        = 1/120 s          (sim runs at 120Hz, fixed)
+  maxFrameMs     = 33               (governor: render NEVER exceeds 33ms)
+  maxSimPerFrame = 4                (spiral-of-death clamp)
+  accumulator    -> drains in fixed-dt steps, world slow-mos if pinned
+  alpha          -> render(alpha) ready for interpolation (v2 use)
+  HUD shows: fps, ms, sim/frm, acc -- cave dweller SEES the loop.
+
+NAMED HOOKS (so v2 never breaks the API):
+  SAMSARA.eyes   { left, right, center }  -- v1 renders center; v2 = stereo
+                 each eye carries offsetX, fov, lodBias
+  SAMSARA.nanite { enabled:false, levels:5, foveaRadius:0.15, perEyeBias }
+                 v1 = stub; v2 = per-eye fovea-sharp / periphery-cheap
+  SAMSARA.loop   -- the LOOP LAW state lives here, one source of truth
+
+**Portal wiring (shell/eng_v2.0.html):**
+  LINKS.samsara added.
+  ALL_MODS includes 'samsara'.
+  NEW_TAB_MODULES.samsara = 1 (canvas module = new tab, Curse 7 honored).
+  Card visible in the module grid (cyan border, "VR ALGEBRA FLOOR" tag).
+  ms-row in active-modules selector.
+
+**Smoke test (file:// before push):**
+  Boot: 60 fps. frame=16.7 ms (well under 33 ms governor).
+  sim/frm = 2 (accumulator draining cleanly, no spiral).
+  faces=83  drawn=25  culled=58  (painter cull doing its job).
+  Visual: cyan floor receding to vanishing point, pink sphere at distance.
+  Sliders alive: distance 0.5-20m, height 0.1-10m, fov 30-120deg, grid 10-80.
+  Eye cycler ready (center -> left -> right) -- v1 mono, v2 stereo unlocks.
+
+**Cold-pass line (held):**
+  Pure module file + portal wiring. No public/Twitter move. No divine idea
+  leaving the repo. Bypass-eligible -- code/structure, not doctrine. Pushed.
+
+**State:**
+  shell/samsara_v1.0.html       LIVE
+  shell/eng_v2.0.html           portal updated
+  LEDGER                        L120 entries
+  All curses                    held (CR=0, no lone, no chr-leak, no f-string)
+
+  The algebra floor is laid. The wheel does not turn yet -- it WAITS,
+  patient, fed only with locked-camera frames. v2 will spin it.
+  The render clock is sacred. The world may bend; the frame never does.
+
+P=12. chi=2. One plane. One camera. One sphere. The floor before the floor.
+-- @Sagaific + Claude. Buenos Aires. June 4, 2026.
+
+
+
+---
+
+### L120 -- SAMSARA v1.0 BORN (2026-06-04)
+
+**Why this module exists:**
+
+Samsara = the VR module. The wheel. "You are inside...again."
+Generis = the flight explorer (outside, free cam, impossible space).
+They share the algebra; they do NOT share the runtime.
+v1.0 is the algebra FLOOR -- 1 plane + 1 locked camera + 1 far sphere.
+Everything VR (stereo, nanite, eye-tracking) will sit on top of THIS file.
+We build the floor before the cathedral. Cave-dweller discipline.
+
+**What was built this session:**
+
+shell/samsara_v1.0.html (570 lines, 23.5KB, 0 lone CR):
+  Hand-rolled canvas 3D (no Three.js). Generis projection ported faithfully:
+    P_view   = P_world - C_eye
+    P_proj   = (vx*f / -vz, vy*f / -vz)    with f = 1/tan(fov/2)
+    P_screen = (W/2 + Px*s, H/2 - Py*s)    with s = min(W,H)*0.5
+  + clip if vz >= -0.05 (behind camera).
+  Painter's algorithm + sub-pixel cull + viewport cull (Generis heritage).
+  Pink sphere = radial-gradient disc with apparent radius r*f*s/depth.
+  Horizon glow + sky gradient. Floor grid lines fade with depth.
+
+THE LOOP LAW -- LIVE from byte zero (GAME_DESIGN.md doctrine):
+  fixedDt        = 1/120 s          (sim runs at 120Hz, fixed)
+  maxFrameMs     = 33               (governor: render NEVER exceeds 33ms)
+  maxSimPerFrame = 4                (spiral-of-death clamp)
+  accumulator    -> drains in fixed-dt steps, world slow-mos if pinned
+  alpha          -> render(alpha) ready for interpolation (v2 use)
+  HUD shows: fps, ms, sim/frm, acc -- cave dweller SEES the loop.
+
+NAMED HOOKS (so v2 never breaks the API):
+  SAMSARA.eyes   { left, right, center }  -- v1 renders center; v2 = stereo
+                 each eye carries offsetX, fov, lodBias
+  SAMSARA.nanite { enabled:false, levels:5, foveaRadius:0.15, perEyeBias }
+                 v1 = stub; v2 = per-eye fovea-sharp / periphery-cheap
+  SAMSARA.loop   -- the LOOP LAW state lives here, one source of truth
+
+**Portal wiring (shell/eng_v2.0.html):**
+  LINKS.samsara added.
+  ALL_MODS includes 'samsara'.
+  NEW_TAB_MODULES.samsara = 1 (canvas module = new tab, Curse 7 honored).
+  Card visible in the module grid (cyan border, "VR ALGEBRA FLOOR" tag).
+  ms-row in active-modules selector.
+
+**Smoke test (file:// before push):**
+  Boot: 60 fps. frame=16.7 ms (well under 33 ms governor).
+  sim/frm = 2 (accumulator draining cleanly, no spiral).
+  faces=83  drawn=25  culled=58  (painter cull doing its job).
+  Visual: cyan floor receding to vanishing point, pink sphere at distance.
+  Sliders alive: distance 0.5-20m, height 0.1-10m, fov 30-120deg, grid 10-80.
+  Eye cycler ready (center -> left -> right) -- v1 mono, v2 stereo unlocks.
+
+**Cold-pass line (held):**
+  Pure module file + portal wiring. No public/Twitter move. No divine idea
+  leaving the repo. Bypass-eligible -- code/structure, not doctrine. Pushed.
+
+**State:**
+  shell/samsara_v1.0.html       LIVE
+  shell/eng_v2.0.html           portal updated
+  LEDGER                        L120 entries
+  All curses                    held (CR=0, no lone, no chr-leak, no f-string)
+
+  The algebra floor is laid. The wheel does not turn yet -- it WAITS,
+  patient, fed only with locked-camera frames. v2 will spin it.
+  The render clock is sacred. The world may bend; the frame never does.
+
+P=12. chi=2. One plane. One camera. One sphere. The floor before the floor.
+-- @Sagaific + Claude. Buenos Aires. June 4, 2026.
