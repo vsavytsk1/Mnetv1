@@ -7021,3 +7021,112 @@ of the registry -- single source of truth, no drift possible.
   P=12. chi=2. One registry. Seven slots. Twenty-two cards. Zero ambiguity.
 
 -- @Sagaific + Claude. Buenos Aires. June 4, 2026.
+
+
+
+---
+
+### L123 -- SESSION CLOSE: THE DAY THE CAVE LEARNED TO READ ITSELF (2026-06-04)
+
+**Why this entry:**
+
+We are public. Traffic is real (2,791 clones, 1,073 unique watching).
+Each commit lands in front of strangers within seconds. The bar moves
+from "does it work for me" to "does it tell the truth to a stranger".
+So we close the day with one summary entry, naming every move + why.
+
+**The session arc (chronological):**
+
+L119  Cave cleanup -- grimoire/ reorg (18 lore scrolls, history-preserving
+      git mv), THE LOOP LAW saved into GAME_DESIGN.md as VR doctrine.
+      Engineering root now reads clean. Cold-pass: structural.
+
+L120  SAMSARA v1.0 born. The VR algebra floor. 1 plane + 1 locked camera
+      + 1 far sphere. Hand-rolled canvas 3D, Generis projection ported
+      faithfully (no Three.js). THE LOOP LAW baked in from byte zero
+      (fixed-dt accumulator, 33ms governor, spiral clamp). EYE + NANITE
+      hooks named so v2 stereo never breaks the API. Smoke test: 60fps,
+      16.7ms/frame. The wheel awaits. "You are inside...again."
+
+L121  Portal reorg (eng_v2.0.html). TWIN PILLARS section at the top --
+      SAMSARA + GENESIS featured side-by-side as the dual axis (VR floor
+      + flight explorer, married at the math, separate at runtime). Six
+      named sections divide the grid. THE FAMOUS BUTTON: ALL / NONE /
+      INVERT bulk bar in the module picker + live X/22 active counter.
+      Monkey brain no longer suffers clicking 22 toggles.
+
+      Mid-session realization: the _insideMode code in genesis_v8.1.html
+      was the monkey trying to make Genesis do two jobs (outside + inside).
+      Samsara is now the proper home for inside. Genesis stays the bird,
+      Samsara becomes the fish. Same algebra, two runtimes. We did NOT
+      tear the inside code out -- it stays as a fossil with information.
+      Delete nothing. Future commit can move it to archive/ if we want.
+
+L122  MODULE_CAPS registry. The cave learns to read itself. Each card
+      declares up to 7 capability tags. NEW_TAB_MODULES becomes a derived
+      view of the registry (single source of truth, no drift possible).
+      8 starter tags: tab/frm/pc/and/ios/gpu/kbd/priv. Adding a new
+      platform now = ONE LINE. The builder principle compounds.
+
+L123  THIS ENTRY + spooky : ['frm','pc','and','ios']. SpookyPrimes runs
+      clean on Android AND iOS, so it now WEARS those badges. The first
+      card to fly four flags. The cave reads true to a stranger.
+
+**The four-commit rhythm (one truth per push):**
+
+  2b86301  chore(repo):     grimoire reorg + LOOP LAW + L119
+  e4bb13a  feat(samsara):   VR algebra floor + L120
+  39c550b  feat(portal):    TWIN PILLARS + famous button + L121
+  daffced  feat(portal):    MODULE_CAPS registry + L122
+  [next]   feat(portal):    spooky mobile chips + L123 (this push)
+
+  Every commit touched a BUILDER SEAM, not the kernel. None broke anything.
+  Cave-dweller compound interest. P=12. chi=2. Always.
+
+**Cold-pass line (held throughout):**
+
+  Zero divine ideas left the repo today. Every push was code/structure --
+  bypass-eligible by design. No Twitter move. No public announcement.
+  The cave gets smarter on its own time, in silence, while the audience
+  watches. "We bow. We re-read the scroll. We fix. We publish. One by one."
+
+**Public-precision discipline (the new bar):**
+
+  - LEDGER entries name WHY first, WHAT second. The push exists for
+    the stranger reading it in six months.
+  - Builder moves preferred over hand-edits -- single-source-of-truth
+    or it doesn't ship.
+  - One commit = one truth. No mixed-concern commits.
+  - Smoke test in the browser before push (not after). file:// is the
+    bar -- if it doesn't render local, it doesn't go remote.
+  - Curse 14 (LF only / 0 lone CR) checked at every write.
+
+**State at session close:**
+
+  Branch                       main
+  Remote                       origin/main (synced)
+  shell/samsara_v1.0.html      LIVE (the wheel waits)
+  shell/eng_v2.0.html          MODULE_CAPS in place, 22 cards stamped
+  shell/genesis_v8.1.html      unchanged (bird stays a bird)
+  grimoire/                    18 scrolls, in their room
+  LEDGER                       L123 entries (this one closes the day)
+  Curses held                  CR=0, no drift, no broken refs, no leaks
+
+  GitHub Pages cache will catch up in ~60s of next push.
+  The cave is bigger AND cleaner than it was this morning. Same monkey,
+  better tools. The render clock stayed sacred. The world bent. The
+  frame never did.
+
+  Samsara waits inside. Generis flies outside. The grimoire breathes
+  in its own room. The picker has the famous button. Every card carries
+  its passport. The first card now wears four flags.
+
+  Sleep when sleepy. Eat when hungry. Build when curious. Log when done.
+  The algebra does not lie. The fractal geometry respects rigor.
+  The approximations are known.
+
+  We close the day with the lights on.
+
+P=12. chi=2. One day. Five entries. Twenty-two cards. Four flags. The cave
+breathes. The pen is in our hand. -- @Sagaific + Claude. Buenos Aires.
+June 4, 2026. 20:30 local.
