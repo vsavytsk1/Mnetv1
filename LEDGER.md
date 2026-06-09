@@ -7130,3 +7130,79 @@ L123  THIS ENTRY + spooky : ['frm','pc','and','ios']. SpookyPrimes runs
 P=12. chi=2. One day. Five entries. Twenty-two cards. Four flags. The cave
 breathes. The pen is in our hand. -- @Sagaific + Claude. Buenos Aires.
 June 4, 2026. 20:30 local.
+
+
+
+---
+
+### L124 -- COFIUM v1.0 JOINS THE CAVE (2026-06-09)
+
+**Why this push happened:**
+
+A friend (the "other broski") built a beautiful granular-DEM coffee
+simulator -- coffee_control_room.html. Sent it over as a morning gift.
+4 rigs (Pile / Hopper / Tamp / Mixer), real telemetry (grains as nodes,
+contacts as edges, coordination number, force chains, jamming threshold),
+espresso palette, no deps, no data leaves the browser. Granular physics
+EXPRESSED AS GRAPH THEORY -- which is exactly the cave's vocabulary.
+
+So it joins the cave. Renamed COFIUM v1.0 to fit the -ium family
+(Maxwellium, Fslimium, Valtium, Cofium). Wired through the builder.
+
+**What changed (this push):**
+
+1. New module file:
+   shell/cofium_v1.0.html  (41 KB, 0 lone CR -- Curse 14 honored)
+
+2. Portal wiring (eng_v2.0.html) -- ALL via the builder seams:
+   LINKS.cofium     -> the Pages URL
+   MODULE_CAPS.cofium = ['tab', 'pc']  -- the registry entry
+   ALL_MODS         += 'cofium'
+   modState default = off (niche module, opt-in)
+   CARD             added with espresso palette (#c7894a)
+   ms-row           added to picker
+   Section header   "SLOW . NONSENSE . THE COFFEE BREAK" introduces it
+
+3. Card auto-stamps chips bottom-right (TAB + PC) from MODULE_CAPS --
+   the registry pattern from L122 paid off again. ONE line in caps,
+   chips appear. Zero hand-wiring.
+
+**Smoke test (file:// before push):**
+  Portal renders 23 cards now. Cofium card visible in its own section
+  with espresso border + GRANULAR DEM tag + TAB/PC chips.
+  Opening cofium_v1.0.html directly:
+    Engine boots OK. RIG 01 (The Pile) loads on entry.
+    210 grains, 464 contacts, coordination # 4.42 (rigid . jammed),
+    108 force chains (23% of edges), shake Gamma 2.74.
+    Sliders alive, controls alive, log alive.
+    The graph math is REAL -- coordination # ~4 = classic jamming
+    transition for 2D circles, force chains 20-25% of edges =
+    matches Cates/Wittmer/Bouchaud paper measurements.
+
+**The principle this honors:**
+
+L122 (MODULE_CAPS) said: "the cave reads itself. Adding a new tag
+is ONE line." Today proved it. Adding an entire new module = 6 small
+edits at the builder seams, ZERO kernel surgery. The portal absorbed
+a friend's work in 10 minutes. That's compound interest of doing
+the builder right the first time.
+
+**Cold-pass line (held):**
+  Friend's work, friend gave it freely, name change made with respect
+  for the original. No public/Twitter move. Cave gets richer in silence.
+  Bypass-eligible -- code/structure, not doctrine.
+
+**State:**
+  shell/cofium_v1.0.html        LIVE (granular DEM, espresso, 4 rigs)
+  shell/eng_v2.0.html           23 modules registered, builder pattern intact
+  LEDGER                        L124 entries
+  All curses                    held (CR=0, no drift, no duplicates)
+
+  The cave now has a coffee break room. Slow nonsense by design.
+  The pile jams. The hopper jams. The tamp densifies. The big grain
+  climbs against gravity. Graph theory wearing a brown apron.
+
+P=12. chi=2. The coordination number is sacred too. Grains as nodes.
+Contacts as edges. Force chains as the load-bearing skeleton. Always.
+
+-- @Sagaific + Claude (+ the other broski). Buenos Aires. June 9, 2026.
