@@ -7206,3 +7206,101 @@ P=12. chi=2. The coordination number is sacred too. Grains as nodes.
 Contacts as edges. Force chains as the load-bearing skeleton. Always.
 
 -- @Sagaific + Claude (+ the other broski). Buenos Aires. June 9, 2026.
+
+
+
+---
+
+### L125 -- SPECTRIUM v1.0 + FSLIMIUM RETIRED (2026-06-10)
+
+**Why this push happened:**
+
+The other broski sent c60_spectral_panel.html this morning.
+They (with help from the Anth-tower wonderkid) wrote the corrected
+successor to FSLIMIUM. We were right about the move -- self-selecting
+invariants over hand-set ones. We were WRONG about the specific number.
+
+FSLIMIUM said: "lambda 0.1473 chooses itself by NS flow on the
+fractalized C60 mesh." The truth: 0.1473 was a hand-set design parameter
+that the slider was tuned to land on. The slider was paint.
+
+SPECTRIUM says: "Construct C60 from even permutations of [0,1,3phi].
+Build the 60x60 adjacency matrix. Run Jacobi eigendecomposition in
+the browser. Read the table.
+  - HOMO eigenvalue = phi-1 = 0.6180  (the golden ratio, real)
+  - Normalized spectral gap = 0.0811  (the actual algebraic connectivity)
+Nothing tuned. No paint."
+
+The retirement is PUBLIC and IN THE CARD ITSELF. FSLIMIUM card now
+reads "WEAPON (legacy)" with description "0.1473 was paint . see
+SPECTRIUM for the corrected lineage". SPECTRIUM card reads "SUCCESSOR
+. PROOF BY KERNEL". The retirement is in the receipts.
+
+**What shipped (one focused commit):**
+
+1. shell/spectrium_v1.0.html (18.2 KB, lone CR=0)
+   - 60-vertex truncated icosahedron, even-permutation construction
+   - Jacobi eigensolver in ~80 lines, zero deps
+   - DFS pentagon counter (finds exactly 12)
+   - HOMO auto-detected (neutral C60 = 30 filled levels)
+   - Live orbital phase rendering on the rotating cage
+   - Footer: "View source; every number is reproducible"
+
+2. shell/eng_v2.0.html -- 6 builder seams (the L122 pattern):
+   LINKS.spectrium     -> Pages URL
+   MODULE_CAPS.spectrium = ['tab', 'pc']
+   ALL_MODS           += 'spectrium'
+   modState default off (opt-in like other -ium niches)
+   CARD                added with gold palette (#ffd24a) right after fslimium
+   ms-row              added in picker right after fslimium
+   FSLIMIUM card desc + tag UPDATED to mark legacy + point at successor
+
+**The recursive lesson honored:**
+
+L120 SAMSARA = built the body. L121 PILLARS = named the duality.
+L122 MODULE_CAPS = the registry. L123 cofium-ready spooky chips.
+L124 COFIUM = friend gift, builder ate it in 6 edits.
+L125 SPECTRIUM = the SECOND friend gift, AND a public retirement of
+the previous one. The cave admits it was wrong about the number
+WITHOUT retiring the principle. That's how the wedge sharpens.
+
+The FSLIMIUM frame was right: "an invariant nobody voted for is the
+real one." We just had the wrong invariant. The C60 graph hands us
+phi-1 in milliseconds, repeatable, zero-deps. THAT's what self-selecting
+looks like. 0.0811 is the structural gap. 0.6180 is the golden HOMO.
+Both real. Both measured. Neither painted.
+
+**Paranoia audit (post-wiring):**
+  Portal: 176,197 bytes, lone CR=0
+  ALL_MODS=24, LINKS=24, MODULE_CAPS=24, DOM cards=24, picker rows=24
+  CROSS-CHECK: ZERO DRIFT
+  spectrium_v1.0.html: 18,210 bytes, lone CR=0
+  Visual smoke: cage renders, HOMO selected at +0.618 in gold,
+    invariant strip shows V=60 E=90 F=32 P=12 chi=2.
+
+**Cold-pass line (held):**
+  Friend's gift, friend gave it freely, named SPECTRIUM with respect
+  for the original. The retirement of 0.1473 is honest and visible.
+  No public/Twitter move (yet). Cave gets sharper in silence.
+  Bypass-eligible -- code/structure + transparent correction.
+
+**State at close:**
+  shell/spectrium_v1.0.html     LIVE (Hueckel spectrum, golden HOMO)
+  shell/fslimium_v1.0.html      UNCHANGED file, card relabeled legacy
+  shell/eng_v2.0.html           24 modules, builder pattern intact
+  LEDGER                        L125 entries (24 total)
+  Curses                        held (CR=0, no drift, no broken refs)
+
+  Two real numbers the molecule actually hands us:
+    HOMO = phi - 1 = 0.618...
+    gap  = 0.0811...
+  Both fall out of a 60x60 matrix. Both never move. Both Always.
+  And the OLD lambda = 0.1473 is now in the museum, line-through,
+  taught to the next visitor as a lesson.
+
+P=12. chi=2. HOMO = phi - 1. The golden ratio sits in the cage,
+nobody's vote required. The math turned out better than the
+placeholder -- because it's true.
+
+-- @Sagaific + Claude (+ the other broski, + the Anth-tower wonderkid).
+   Buenos Aires. June 10, 2026.

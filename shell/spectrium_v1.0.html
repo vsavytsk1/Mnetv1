@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>C60 — The Spectrum That Chooses Itself</title>
+<style>
+  :root{
+    --bg:#070a11;
+    --panel:#0e1421;
+    --panel-edge:#1d2636;
+    --text:#e2e8f2;
+    --dim:#6c7889;
+    --faint:#3a4456;
+    --gold:#ffd24a;      /* reserved: the golden eigenvalue only */
+    --pos:#ff8c42;       /* orbital phase + */
+    --neg:#2fa6d6;       /* orbital phase − */
+    --edge:#27313f;
+    --gap:#5fd0a6;       /* the real invariant */
+    --strike:#7a4a4a;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--bg);color:var(--text);
+    font-family:"Segoe UI",system-ui,-apple-system,sans-serif;
+    -webkit-font-smoothing:antialiased;min-height:100%}
+  .mono{font-family:ui-monospace,"SF Mono","Cascadia Code","Roboto Mono",monospace;
+    font-variant-numeric:tabular-nums}
+
+  .wrap{max-width:1180px;margin:0 auto;padding:34px 24px 48px}
+
+  /* ── masthead ── */
+  .eyebrow{font-size:11px;letter-spacing:.42em;color:var(--dim);
+    text-transform:uppercase;font-weight:600}
+  .eyebrow .sup{color:var(--faint)}
+  h1{font-size:clamp(30px,5.4vw,52px);font-weight:700;line-height:1.02;
+    letter-spacing:-.022em;margin:14px 0 0}
+  h1 .gr{color:var(--gold)}
+  .lede{margin-top:14px;max-width:60ch;color:var(--dim);font-size:15px;line-height:1.6}
+  .lede b{color:var(--text);font-weight:600}
+
+  /* ── stage ── */
+  .stage{display:grid;grid-template-columns:1.32fr .9fr;gap:18px;margin-top:30px}
+  .card{background:var(--panel);border:1px solid var(--panel-edge);border-radius:14px}
+  .viz{position:relative;min-height:430px;overflow:hidden}
+  canvas{display:block;width:100%;height:100%;touch-action:none;cursor:grab}
+  canvas:active{cursor:grabbing}
+  .viz-tag{position:absolute;left:16px;top:14px;font-size:10.5px;letter-spacing:.24em;
+    color:var(--dim);text-transform:uppercase;pointer-events:none}
+  .nowshow{position:absolute;left:16px;bottom:14px;font-size:12.5px;color:var(--text);
+    pointer-events:none}
+  .nowshow .lab{color:var(--dim)}
+  .nowshow .val{color:var(--gold)}
+  .legend{position:absolute;right:16px;bottom:14px;font-size:11px;color:var(--dim);
+    pointer-events:none;text-align:right;line-height:1.7}
+  .dot{display:inline-block;width:9px;height:9px;border-radius:50%;
+    vertical-align:baseline;margin-left:7px}
+
+  /* ── ladder ── */
+  .ladder{padding:18px 18px 8px}
+  .ladder h2{font-size:11px;letter-spacing:.26em;color:var(--dim);
+    text-transform:uppercase;font-weight:600}
+  .ladder .sub{font-size:11.5px;color:var(--faint);margin-top:3px}
+  .rungs{margin-top:14px;display:flex;flex-direction:column;gap:3px}
+  .rung{display:grid;grid-template-columns:62px 1fr 30px;align-items:center;gap:10px;
+    width:100%;text-align:left;background:none;border:0;color:var(--text);
+    padding:5px 6px;border-radius:7px;cursor:pointer;font:inherit}
+  .rung:hover{background:#141b2a}
+  .rung:focus-visible{outline:2px solid var(--neg);outline-offset:1px}
+  .rung[aria-pressed="true"]{background:#17202f}
+  .rung .ev{font-family:ui-monospace,monospace;font-variant-numeric:tabular-nums;
+    font-size:13.5px;color:var(--dim);text-align:right}
+  .rung[aria-pressed="true"] .ev{color:var(--text)}
+  .rung .bar{height:13px;border-radius:3px;background:linear-gradient(90deg,var(--neg),var(--pos));
+    opacity:.34;min-width:3px}
+  .rung[aria-pressed="true"] .bar{opacity:.9}
+  .rung .mult{font-family:ui-monospace,monospace;font-size:11px;color:var(--faint);text-align:right}
+  .rung.is-homo .ev{color:var(--gold)}
+  .rung.is-homo .bar{background:var(--gold);opacity:.5}
+  .rung.is-homo[aria-pressed="true"] .bar{opacity:1}
+  .tag{font-size:9px;letter-spacing:.12em;text-transform:uppercase;
+    padding:1px 5px;border-radius:4px;margin-left:7px;vertical-align:middle;font-weight:700}
+  .tag.homo{background:rgba(255,210,74,.16);color:var(--gold)}
+  .tag.gap{background:rgba(95,208,166,.15);color:var(--gap)}
+
+  /* ── invariants strip ── */
+  .strip{margin-top:18px;display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
+  .inv{background:var(--panel);border:1px solid var(--panel-edge);border-radius:11px;
+    padding:14px 12px;text-align:center}
+  .inv .k{font-family:ui-monospace,monospace;font-size:25px;font-weight:600;color:var(--text)}
+  .inv .l{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim);margin-top:5px}
+
+  /* ── truth + retraction ── */
+  .truth{margin-top:18px;display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .note{background:var(--panel);border:1px solid var(--panel-edge);border-radius:12px;padding:16px 18px}
+  .note h3{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--dim);font-weight:600}
+  .note p{margin-top:9px;font-size:13.5px;line-height:1.62;color:var(--text)}
+  .note p.s{color:var(--dim);font-size:12.5px;margin-top:8px}
+  .keep .k{font-family:ui-monospace,monospace;color:var(--gap)}
+  .keep .g{font-family:ui-monospace,monospace;color:var(--gold)}
+  .retire .old{font-family:ui-monospace,monospace;color:var(--strike);text-decoration:line-through}
+
+  footer{margin-top:26px;font-size:11.5px;color:var(--faint);line-height:1.7}
+  footer b{color:var(--dim);font-weight:600}
+
+  @media (max-width:820px){
+    .stage{grid-template-columns:1fr}
+    .viz{min-height:340px}
+    .strip{grid-template-columns:repeat(3,1fr)}
+    .truth{grid-template-columns:1fr}
+  }
+  @media (prefers-reduced-motion:reduce){ canvas{cursor:default} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="eyebrow">C&#8320;&#8320; &nbsp;&middot;&nbsp; Truncated icosahedron &nbsp;<span class="sup">/ spectral panel, supersedes SAR&#8209;5</span></div>
+  <h1>The spectrum that<br>chooses <span class="gr">itself</span>.</h1>
+  <p class="lede">Buckminsterfullerene&#8217;s graph fixes its own numbers. <b>Euler</b> sets the shape &mdash; exactly twelve pentagons, always. The <b>golden ratio</b> sets the spectrum &mdash; it sits in the energy ladder as a real eigenvalue, nobody&#8217;s vote required. Nothing on this page is tuned. Click a level to paint its orbital onto the cage.</p>
+
+  <div class="stage">
+    <div class="card viz">
+      <div class="viz-tag">drag to rotate</div>
+      <canvas id="cv"></canvas>
+      <div class="nowshow mono">painting <span class="lab">&#955; =</span> <span class="val" id="showEv">0.6180</span></div>
+      <div class="legend">orbital phase<span class="dot" style="background:var(--pos)"></span>+<span class="dot" style="background:var(--neg)"></span>&minus;</div>
+    </div>
+
+    <div class="card ladder">
+      <h2>&pi;&#8209;orbital energy levels</h2>
+      <div class="sub mono">H&uuml;ckel adjacency spectrum &middot; units of &beta;</div>
+      <div class="rungs" id="rungs" role="group" aria-label="energy levels"></div>
+    </div>
+  </div>
+
+  <div class="strip" id="strip"></div>
+
+  <div class="truth">
+    <div class="note keep">
+      <h3>What the graph forces</h3>
+      <p>Normalized spectral gap <span class="k">&lambda;&#8321; = 0.0811</span> &mdash; the algebraic connectivity, the smallest nonzero eigenvalue of the normalized Laplacian. This is the real invariant.</p>
+      <p>The golden eigenvalue <span class="g">&phi;&minus;1 = 0.6180</span> &mdash; the HOMO level, five&#8209;fold degenerate. The golden ratio, hiding in plain sight in molecular orbital theory.</p>
+      <p class="s">Both fall out of a 60&times;60 matrix in milliseconds and never move. That&#8217;s what self&#8209;selecting looks like.</p>
+    </div>
+    <div class="note retire">
+      <h3>Retired</h3>
+      <p><span class="old">&lambda;&#771; = 0.1473</span> was a hand&#8209;set design parameter, not a property of C&#8320;&#8320;. The true gap is 0.0811; matching 0.1473 required reweighting the graph until it hit a number chosen in advance.</p>
+      <p class="s">We kept the constants the molecule actually hands us. The math turned out better than the placeholder &mdash; because it&#8217;s true.</p>
+    </div>
+  </div>
+
+  <footer>
+    Vertices, adjacency, and the full spectrum are computed <b>live in your browser</b> &mdash; even&#8209;permutation construction of the truncated icosahedron, nearest&#8209;neighbour edges, a Jacobi eigensolver. <b>Zero dependencies.</b> View source; every number is reproducible.
+  </footer>
+
+</div>
+
+<script>
+"use strict";
+// ─────────────────────────────────────────────────────────────────────────
+//  C60 spectral panel — everything computed, nothing hardcoded as "truth"
+// ─────────────────────────────────────────────────────────────────────────
+const PHI = (1 + Math.sqrt(5)) / 2;
+
+// §1  Vertices: even permutations of the three base triples, all signs.
+function buildVertices(){
+  const bases = [[0,1,3*PHI],[1,2+PHI,2*PHI],[PHI,2,2*PHI+1]];
+  const ev = t => { const [a,b,c]=t; return [[a,b,c],[b,c,a],[c,a,b]]; };
+  const seen = new Map();
+  for (const base of bases)
+    for (const p of ev(base))
+      for (const sx of [1,-1]) for (const sy of [1,-1]) for (const sz of [1,-1]){
+        const v = [sx*p[0], sy*p[1], sz*p[2]].map(x => Math.abs(x)<1e-9 ? 0 : +x.toFixed(6));
+        seen.set(v.join(','), v);
+      }
+  return [...seen.values()];
+}
+
+// §2  Edges: connect at the minimum nonzero distance.
+function buildEdges(V){
+  const N = V.length, d2 = (a,b)=>{let s=0;for(let k=0;k<3;k++){const t=a[k]-b[k];s+=t*t;}return s;};
+  let dmin = Infinity;
+  for (let i=0;i<N;i++) for (let j=i+1;j<N;j++){ const d=d2(V[i],V[j]); if(d<dmin) dmin=d; }
+  const adj = Array.from({length:N},()=>[]), edges=[];
+  for (let i=0;i<N;i++) for (let j=i+1;j<N;j++)
+    if (Math.abs(Math.sqrt(d2(V[i],V[j])) - Math.sqrt(dmin)) < 1e-3){
+      adj[i].push(j); adj[j].push(i); edges.push([i,j]);
+    }
+  return {adj, edges};
+}
+
+// §3  Pentagons = the 5-cycles (girth 5). Euler guarantees exactly 12.
+function findPentagons(adj, N){
+  const found = new Map(), path = [];
+  function dfs(u, depth){
+    path.push(u);
+    if (depth === 5){
+      if (adj[u].includes(path[0])){
+        const key = [...path].sort((a,b)=>a-b).join(',');
+        if (!found.has(key)) found.set(key, path.slice());
+      }
+    } else {
+      for (const w of adj[u]) if (!path.includes(w)) dfs(w, depth+1);
+    }
+    path.pop();
+  }
+  for (let s=0;s<N;s++) dfs(s,1);
+  return [...found.values()];
+}
+
+// §4  Jacobi eigensolver for symmetric A → {vals, vecs(columns)} sorted desc.
+function jacobi(Ain){
+  const n = Ain.length;
+  const a = Ain.map(r=>r.slice());
+  const v = Array.from({length:n},(_,i)=>Array.from({length:n},(_,j)=>i===j?1:0));
+  for (let sweep=0; sweep<120; sweep++){
+    let off=0; for(let p=0;p<n;p++) for(let q=p+1;q<n;q++) off+=a[p][q]*a[p][q];
+    if (Math.sqrt(off) < 1e-11) break;
+    for (let p=0;p<n;p++) for (let q=p+1;q<n;q++){
+      if (Math.abs(a[p][q]) < 1e-18) continue;
+      const theta = (a[q][q]-a[p][p])/(2*a[p][q]);
+      const t = Math.sign(theta || 1)/(Math.abs(theta)+Math.sqrt(theta*theta+1));
+      const c = 1/Math.sqrt(t*t+1), s = t*c;
+      for (let k=0;k<n;k++){
+        const akp=a[k][p], akq=a[k][q];
+        a[k][p]=c*akp - s*akq; a[k][q]=s*akp + c*akq;
+      }
+      for (let k=0;k<n;k++){
+        const apk=a[p][k], aqk=a[q][k];
+        a[p][k]=c*apk - s*aqk; a[q][k]=s*apk + c*aqk;
+      }
+      for (let k=0;k<n;k++){
+        const vkp=v[k][p], vkq=v[k][q];
+        v[k][p]=c*vkp - s*vkq; v[k][q]=s*vkp + c*vkq;
+      }
+    }
+  }
+  const idx=[...Array(n).keys()].sort((i,j)=>a[j][j]-a[i][i]);
+  return {
+    vals: idx.map(i=>a[i][i]),
+    vecs: idx.map(i=>v.map(row=>row[i]))   // vecs[k] = k-th eigenvector (length n)
+  };
+}
+
+// ── assemble ────────────────────────────────────────────────────────────
+const V = buildVertices();
+const N = V.length;
+const {adj, edges} = buildEdges(V);
+const pentagons = findPentagons(adj, N);
+const A = Array.from({length:N},()=>new Array(N).fill(0));
+for (const [i,j] of edges){ A[i][j]=1; A[j][i]=1; }
+const {vals, vecs} = jacobi(A);
+
+// group near-equal eigenvalues into degenerate levels
+const levels = [];
+for (let i=0;i<vals.length;i++){
+  const last = levels[levels.length-1];
+  if (last && Math.abs(last.val - vals[i]) < 1e-3){ last.mult++; last.idx.push(i); }
+  else levels.push({ val: vals[i], mult: 1, idx: [i] });
+}
+// HOMO for neutral C60: 60 electrons fill the 30 highest eigenvalues → 30th from top
+let cum=0, homoLevel=null;
+for (const lv of levels){ const next=cum+lv.mult; if(cum<30 && next>=30) homoLevel=lv; cum=next; }
+// spectral gap level = 2nd-largest eigenvalue (→ smallest nonzero normalized-Laplacian eig)
+const gapLevel = levels[1];
+const maxAbs = vals[0]; // = 3
+
+let activeLevel = homoLevel;   // start on the golden HOMO
+
+// ── render ────────────────────────────────────────────────────────────────
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+let ry = 0.6, rx = -0.35, dragging=false, lastX=0, lastY=0;
+let auto = !window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+
+function size(){
+  const r = cv.getBoundingClientRect(), dpr = Math.min(window.devicePixelRatio||1, 2);
+  cv.width = r.width*dpr; cv.height = r.height*dpr;
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+}
+window.addEventListener('resize', size);
+
+function lerp(a,b,t){return a+(b-a)*t;}
+function hex(h){return [parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)];}
+const NEG = hex('#2fa6d6'), POS = hex('#ff8c42');
+
+function colorFor(val, scale){           // val: eigenvector component, scale: max|.|
+  const t = Math.max(-1, Math.min(1, val/scale));
+  const m = Math.abs(t);
+  const base = t>=0 ? POS : NEG;
+  const c = base.map(ch => Math.round(lerp(28, ch, 0.25+0.75*m)));
+  return `rgb(${c[0]},${c[1]},${c[2]})`;
+}
+
+function draw(){
+  const W = cv.clientWidth, H = cv.clientHeight;
+  ctx.clearRect(0,0,W,H);
+  const cyaw=Math.cos(ry), syaw=Math.sin(ry), cpit=Math.cos(rx), spit=Math.sin(rx);
+  const S = Math.min(W,H)*0.084, cx=W/2, cy=H/2, f=620;
+
+  const vec = vecs[activeLevel.idx[0]];
+  let scale=1e-6; for(const x of vec) scale=Math.max(scale, Math.abs(x));
+
+  // project
+  const P = V.map(p=>{
+    let x=p[0]*cyaw - p[2]*syaw, z=p[0]*syaw + p[2]*cyaw, y=p[1];
+    const y2=y*cpit - z*spit, z2=y*spit + z*cpit;
+    const persp = f/(f - z2*S*0.6);
+    return { x:cx + x*S*persp, y:cy - y2*S*persp, z:z2, s:persp };
+  });
+
+  // pentagon faces (depth-sorted, behind)
+  const faces = pentagons.map(pg=>({pg, z: pg.reduce((a,i)=>a+P[i].z,0)/5}))
+                         .sort((a,b)=>a.z-b.z);
+  for (const {pg} of faces){
+    ctx.beginPath();
+    pg.forEach((i,k)=> k? ctx.lineTo(P[i].x,P[i].y) : ctx.moveTo(P[i].x,P[i].y));
+    ctx.closePath();
+    const a = 0.05 + 0.05*((faces.indexOf(faces.find(ff=>ff.pg===pg))/12));
+    ctx.fillStyle = `rgba(255,210,74,${0.06})`;
+    ctx.fill();
+  }
+
+  // edges
+  ctx.lineWidth = 1;
+  for (const [i,j] of edges){
+    const za = (P[i].z+P[j].z)/2;
+    ctx.strokeStyle = `rgba(120,140,165,${0.16 + 0.2*Math.max(0,(za+1.6)/3.2)})`;
+    ctx.beginPath(); ctx.moveTo(P[i].x,P[i].y); ctx.lineTo(P[j].x,P[j].y); ctx.stroke();
+  }
+
+  // vertices (depth-sorted, painted by the active eigenmode)
+  const order=[...Array(N).keys()].sort((i,j)=>P[i].z-P[j].z);
+  for (const i of order){
+    const r = 4.6*P[i].s;
+    ctx.beginPath(); ctx.arc(P[i].x,P[i].y,r,0,7); ctx.fillStyle=colorFor(vec[i],scale); ctx.fill();
+    ctx.lineWidth=1; ctx.strokeStyle='rgba(5,8,14,0.7)'; ctx.stroke();
+  }
+}
+
+function loop(){
+  if (auto && !dragging) ry += 0.0022;
+  draw();
+  requestAnimationFrame(loop);
+}
+
+// interaction
+cv.addEventListener('pointerdown', e=>{dragging=true;auto=false;lastX=e.clientX;lastY=e.clientY;cv.setPointerCapture(e.pointerId);});
+cv.addEventListener('pointermove', e=>{ if(!dragging)return; ry+=(e.clientX-lastX)*0.008; rx+=(e.clientY-lastY)*0.008; rx=Math.max(-1.45,Math.min(1.45,rx)); lastX=e.clientX; lastY=e.clientY; });
+cv.addEventListener('pointerup', ()=>dragging=false);
+cv.addEventListener('pointercancel', ()=>dragging=false);
+
+// ── build ladder + strip ──────────────────────────────────────────────────
+const rungsEl = document.getElementById('rungs');
+const showEv = document.getElementById('showEv');
+function refreshRungs(){
+  [...rungsEl.children].forEach((el,k)=>el.setAttribute('aria-pressed', levels[k]===activeLevel ? 'true':'false'));
+  showEv.textContent = activeLevel.val.toFixed(4);
+}
+levels.forEach(lv=>{
+  const b=document.createElement('button');
+  b.className='rung'+(lv===homoLevel?' is-homo':'');
+  b.setAttribute('aria-pressed', lv===activeLevel?'true':'false');
+  const barW = Math.max(4, Math.round(72*(lv.val+0.5)/(maxAbs+0.5)));
+  let tags='';
+  if (lv===homoLevel) tags+='<span class="tag homo">&phi;&minus;1 &middot; HOMO</span>';
+  if (lv===gapLevel)  tags+='<span class="tag gap">spectral gap</span>';
+  b.innerHTML =
+    `<span class="ev">${lv.val>=0?'+':''}${lv.val.toFixed(3)}</span>`+
+    `<span><span class="bar" style="width:${barW}px"></span>${tags}</span>`+
+    `<span class="mult">&times;${lv.mult}</span>`;
+  b.addEventListener('click', ()=>{ activeLevel=lv; refreshRungs(); });
+  rungsEl.appendChild(b);
+});
+
+const strip = [
+  {k:N, l:'vertices'}, {k:edges.length, l:'edges'},
+  {k:2 - N + edges.length, l:'faces (V−E+F=2)'},
+  {k:pentagons.length, l:'pentagons'}, {k:2, l:'χ Euler'}
+];
+const stripEl = document.getElementById('strip');
+strip.forEach(s=>{
+  const d=document.createElement('div'); d.className='inv';
+  d.innerHTML=`<div class="k mono">${s.k}</div><div class="l">${s.l}</div>`;
+  stripEl.appendChild(d);
+});
+
+size(); refreshRungs(); loop();
+</script>
+</body>
+</html>

@@ -323,10 +323,17 @@ body{background:#030308;color:#9090a0;
       </div>
       <div class="mod-card new-module" id="card-fslimium" onclick="summon('fslimium')" style="border-color:#3a0a1a;--cc:#ff69b4">
         <div class="card-dot" id="dot-fslimium" title="toggle module"></div>
-        <div class="card-tag" style="color:#ff69b4">WEAPON</div>
+        <div class="card-tag" style="color:#ff69b4">WEAPON (legacy)</div>
         <div class="card-name" style="color:#ff69b4">FSLIMIUM v1.0</div>
-        <div class="card-desc">lambda slider . NS flow . 0.1473 chooses itself . proof by kernel</div>
+        <div class="card-desc">lambda slider . the original gold band . 0.1473 was paint . see SPECTRIUM for the corrected lineage</div>
         <div class="card-arrow" style="color:#ff69b4">SUMMON &gt;</div>
+      </div>
+      <div class="mod-card new-module" id="card-spectrium" onclick="summon('spectrium')" style="border-color:#3a2e0a;--cc:#ffd24a">
+        <div class="card-dot" id="dot-spectrium" title="toggle module"></div>
+        <div class="card-tag" style="color:#ffd24a">SUCCESSOR . PROOF BY KERNEL</div>
+        <div class="card-name" style="color:#ffd24a">SPECTRIUM v1.0</div>
+        <div class="card-desc">live C60 spectrum . Jacobi in browser . HOMO = phi-1 chooses itself . gap = 0.0811 . the real invariant</div>
+        <div class="card-arrow" style="color:#ffd24a">SUMMON &gt;</div>
       </div>
       <div class="mod-card new-module" id="card-baudinatelier" onclick="summon('baudinatelier')" style="border-color:#1a0a2a;--cc:#cc44ff">
         <div class="card-dot" id="dot-baudinatelier" title="toggle module"></div>
@@ -402,6 +409,7 @@ body{background:#030308;color:#9090a0;
   <div class="ms-row" onclick="toggleMod('arcanium')"><span class="ms-name">ARCANIUMEMORIUM v1.0</span><span class="ms-dot on" id="ms-arcanium"></span></div>
   <div class="ms-row" onclick="toggleMod('jpntree')"><span class="ms-name">JPNTREE v2.0</span><span class="ms-dot on" id="ms-jpntree"></span></div>
 <div class="ms-row" onclick="toggleMod('fslimium')"><span class="ms-name">FSLIMIUM v1.0</span><span class="ms-dot on" id="ms-fslimium"></span></div>
+<div class="ms-row" onclick="toggleMod('spectrium')"><span class="ms-name">SPECTRIUM v1.0</span><span class="ms-dot on" id="ms-spectrium"></span></div>
 <div class="ms-row" onclick="toggleMod('baudinatelier')"><span class="ms-name">BAUDIN ATELIER v1.0</span><span class="ms-dot on" id="ms-baudinatelier"></span></div>
 <div class="ms-row" onclick="toggleMod('cofium')"><span class="ms-name">COFIUM v1.0</span><span class="ms-dot on" id="ms-cofium"></span></div>
   <div class="ms-count"><b id="ms-on-count">0</b> / <span id="ms-total-count">0</span> active</div>
@@ -3647,7 +3655,8 @@ var LINKS = {
   jpntree   : 'https://vsavytsk1.github.io/JpnTree/jpntree_v3.html',
   valtium   : 'https://vsavytsk1.github.io/Mnetv1/shell/valtium_v1.html',
   samsara   : 'https://vsavytsk1.github.io/Mnetv1/shell/samsara_v1.0.html',
-  cofium    : 'https://vsavytsk1.github.io/Mnetv1/shell/cofium_v1.0.html'
+  cofium    : 'https://vsavytsk1.github.io/Mnetv1/shell/cofium_v1.0.html',
+  spectrium : 'https://vsavytsk1.github.io/Mnetv1/shell/spectrium_v1.0.html'
   // crystal : 'https://vsavytsk1.github.io/Mnetv1/builder/Obsidius/soul_crystal.html'
 };
 var PC = {cyan:'#00d4ff',pink:'#ff69b4',gold:'#ffd700',green:'#00ffd5',
@@ -3715,7 +3724,8 @@ var MODULE_CAPS = {
   // === WARNINGS / PHYSICS ===
   warningsim   : ['tab', 'pc'],                   // warning sim
   maxwellium   : ['tab', 'pc'],                   // what is a magnet
-  fslimium     : ['tab', 'pc', 'gpu'],            // lambda slider + NS
+  fslimium     : ['tab', 'pc', 'gpu'],            // lambda slider + NS (legacy: 0.1473 was paint)
+  spectrium    : ['tab', 'pc'],                   // live C60 spectrum: HOMO=phi-1 chooses itself
   // === LANGUAGE ===
   jpntree      : ['tab', 'pc', 'kbd'],            // sentence mode = type
   // === COFFEE BREAK ===
@@ -3945,7 +3955,7 @@ setInterval(function() {
 
 // MODULE SELECTOR -- localStorage persists state
 var ALL_MODS = ['genesis','sandbox','tree','holly7','navier','warning',
-                'license','gkern','vale','spooky','obsidius','valtium','atelier','warningsim','ancientmagic','atelier13','maxwellium','arcanium','baudinatelier','fslimium','jpntree','samsara','cofium'];
+                'license','gkern','vale','spooky','obsidius','valtium','atelier','warningsim','ancientmagic','atelier13','maxwellium','arcanium','baudinatelier','fslimium','jpntree','samsara','cofium','spectrium'];
 var modState = {};
 
 function modLoad() {
@@ -3957,7 +3967,7 @@ function modLoad() {
   ALL_MODS.forEach(function(k) {
     if (modState[k] === undefined) {
       // Defaults: pillars ON (samsara + genesis), rest off by default except core few
-      modState[k] = !(k === 'valtium' || k === 'obsidius' || k === 'warningsim' || k === 'ancientmagic' || k === 'atelier13' || k === 'maxwellium' || k === 'arcanium' || k === 'baudinatelier' || k === 'fslimium' || k === 'jpntree' || k === 'cofium');
+      modState[k] = !(k === 'valtium' || k === 'obsidius' || k === 'warningsim' || k === 'ancientmagic' || k === 'atelier13' || k === 'maxwellium' || k === 'arcanium' || k === 'baudinatelier' || k === 'fslimium' || k === 'jpntree' || k === 'cofium' || k === 'spectrium');
     }
   });
   modBadges();
