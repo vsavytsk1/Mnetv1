@@ -353,6 +353,16 @@ body{background:#030308;color:#9090a0;
         <div class="card-arrow" style="color:#c7894a">SUMMON &gt;</div>
       </div>
 
+      <div class="mod-section"><span>RECEIPTS . THE LIVING STONES</span><span class="ms-line"></span></div>
+
+      <div class="mod-card new-module" id="card-apollonium" onclick="summon('apollonium')" style="border-color:#3a1a2a;--cc:#ff8aa0">
+        <div class="card-dot" id="dot-apollonium" title="toggle module"></div>
+        <div class="card-tag" style="color:#ff8aa0">RECEIPT . PINCH OF SALT</div>
+        <div class="card-name" style="color:#ff8aa0">APOLLONIUM v1.0</div>
+        <div class="card-desc">Temple of Apollo, Korinthos . the 7 standing columns . rose light . Stillwell 1932 . sempai-web kernel . work in progress -- take with a pinch of salt</div>
+        <div class="card-arrow" style="color:#ff8aa0">SUMMON &gt;</div>
+      </div>
+
       <div class="mod-section"><span>WAITING . IN THE GRIMOIRE</span><span class="ms-line"></span></div>
 
       <div class="mod-card" style="border-color:#0e0e1e;opacity:0.35;cursor:not-allowed;pointer-events:none">
@@ -412,6 +422,7 @@ body{background:#030308;color:#9090a0;
 <div class="ms-row" onclick="toggleMod('spectrium')"><span class="ms-name">SPECTRIUM v1.0</span><span class="ms-dot on" id="ms-spectrium"></span></div>
 <div class="ms-row" onclick="toggleMod('baudinatelier')"><span class="ms-name">BAUDIN ATELIER v1.0</span><span class="ms-dot on" id="ms-baudinatelier"></span></div>
 <div class="ms-row" onclick="toggleMod('cofium')"><span class="ms-name">COFIUM v1.0</span><span class="ms-dot on" id="ms-cofium"></span></div>
+<div class="ms-row" onclick="toggleMod('apollonium')"><span class="ms-name">APOLLONIUM v1.0</span><span class="ms-dot on" id="ms-apollonium"></span></div>
   <div class="ms-count"><b id="ms-on-count">0</b> / <span id="ms-total-count">0</span> active</div>
 </div>
 <div id="overlay">
@@ -3656,7 +3667,8 @@ var LINKS = {
   valtium   : 'https://vsavytsk1.github.io/Mnetv1/shell/valtium_v1.html',
   samsara   : 'https://vsavytsk1.github.io/Mnetv1/shell/samsara_v1.0.html',
   cofium    : 'https://vsavytsk1.github.io/Mnetv1/shell/cofium_v1.0.html',
-  spectrium : 'https://vsavytsk1.github.io/Mnetv1/shell/spectrium_v1.0.html'
+  spectrium : 'https://vsavytsk1.github.io/Mnetv1/shell/spectrium_v1.0.html',
+  apollonium: 'https://vsavytsk1.github.io/Mnetv1/shell/apollonium_v1.0.html'
   // crystal : 'https://vsavytsk1.github.io/Mnetv1/builder/Obsidius/soul_crystal.html'
 };
 var PC = {cyan:'#00d4ff',pink:'#ff69b4',gold:'#ffd700',green:'#00ffd5',
@@ -3729,7 +3741,9 @@ var MODULE_CAPS = {
   // === LANGUAGE ===
   jpntree      : ['tab', 'pc', 'kbd'],            // sentence mode = type
   // === COFFEE BREAK ===
-  cofium       : ['tab', 'pc']                    // granular DEM coffee sim -- slow nonsense
+  cofium       : ['tab', 'pc'],                   // granular DEM coffee sim -- slow nonsense
+  // === RECEIPTS / LIVING STONES ===
+  apollonium   : ['tab', 'pc', 'priv']            // Temple of Apollo, Korinthos -- live but WIP, pinch of salt
 };
 
 // Derived view -- summon() still asks this question for Curse 7 routing.
@@ -3955,7 +3969,7 @@ setInterval(function() {
 
 // MODULE SELECTOR -- localStorage persists state
 var ALL_MODS = ['genesis','sandbox','tree','holly7','navier','warning',
-                'license','gkern','vale','spooky','obsidius','valtium','atelier','warningsim','ancientmagic','atelier13','maxwellium','arcanium','baudinatelier','fslimium','jpntree','samsara','cofium','spectrium'];
+                'license','gkern','vale','spooky','obsidius','valtium','atelier','warningsim','ancientmagic','atelier13','maxwellium','arcanium','baudinatelier','fslimium','jpntree','samsara','cofium','spectrium','apollonium'];
 var modState = {};
 
 function modLoad() {
@@ -3967,7 +3981,7 @@ function modLoad() {
   ALL_MODS.forEach(function(k) {
     if (modState[k] === undefined) {
       // Defaults: pillars ON (samsara + genesis), rest off by default except core few
-      modState[k] = !(k === 'valtium' || k === 'obsidius' || k === 'warningsim' || k === 'ancientmagic' || k === 'atelier13' || k === 'maxwellium' || k === 'arcanium' || k === 'baudinatelier' || k === 'fslimium' || k === 'jpntree' || k === 'cofium' || k === 'spectrium');
+      modState[k] = !(k === 'valtium' || k === 'obsidius' || k === 'warningsim' || k === 'ancientmagic' || k === 'atelier13' || k === 'maxwellium' || k === 'arcanium' || k === 'baudinatelier' || k === 'fslimium' || k === 'jpntree' || k === 'cofium' || k === 'spectrium' || k === 'apollonium');
     }
   });
   modBadges();
@@ -3984,7 +3998,7 @@ var CAP_LABEL = {
   ios : { txt: 'IOS',        tip: 'tested on iOS' },
   gpu : { txt: 'GPU',        tip: 'benefits from a discrete GPU' },
   kbd : { txt: 'KBD',        tip: 'keyboard input expected' },
-  priv: { txt: 'WIP',        tip: 'private / work in progress' }
+  priv: { txt: 'WIP',        tip: 'live but work-in-progress -- take with a pinch of salt' }
 };
 
 function modBadges() {
