@@ -7304,3 +7304,141 @@ placeholder -- because it's true.
 
 -- @Sagaific + Claude (+ the other broski, + the Anth-tower wonderkid).
    Buenos Aires. June 10, 2026.
+### L126 -- APOLLONIUM v1.0 + WIP DISCIPLINE LANDS (2026-06-14)
+
+**The day Korinthos taught the cave to ship with honesty.**
+
+Vlad woke up day 3 of 30 in Korinthos, Greece. The night before, he
+attended the **Pavleia 2026 opening cultural event** at the Temple of
+Apollo (Saturday 13 June, 20:00, the rose-lit columns). Three photos
+he took anchor the entire intake:
+  - 7 standing columns + corner architrave (matches APOLLONIUM v1.1)
+  - Rose lighting at night (matches v1.1's pink palette)
+  - Acrocorinth rising behind the temple in daylight (matches geometry)
+
+In the morning, sempai-web (web Claude in research mode, paid by Vlad)
+delivered a 5-file APOLLONIUM bundle: doctrine + scholars essay + two
+HTML kernels + cost spreadsheet. Verified citations: Hooke 1675 anagram,
+Heyman 1995, Masic 2023 *Science Advances*, Long Now, Ise Jingu, NTUA
+Andrikou, ASCSA Pfaff. All real.
+
+**What got built (one module, two disciplines):**
+
+1. **APOLLONIUM v1.0 = module #25.** Temple of Apollo, Korinthos.
+   Doric peripteral, c. 560 BC, 7 standing columns reconstructed from
+   Stillwell 1932 + Robinson Hesperia 45 (1976). Six builder seams,
+   same recipe as Cofium/Spectrium. Card section "RECEIPTS . THE
+   LIVING STONES" (new home for receipt-anchored modules).
+
+2. **WIP discipline locked.** New chip 'priv' renders as **WIP** on
+   any module card carrying it. Tooltip sharpened:
+     "live but work-in-progress -- take with a pinch of salt"
+   so anyone hovering knows the discipline. APOLLONIUM is the first
+   WIP module, default-off, ships honestly. The chip + tooltip + the
+   "PINCH OF SALT" tag in the card description = the brake visible
+   from outside. The cave can now ship live without lying.
+
+**The math the day handed us (for ourselves):**
+
+Lambda fingerprint family widened: Wang 2003 (Shazam ISMIR paper) ->
+FAST seismology Yoon/Beroza 2015 -> Astrometry.net star quads ->
+MinHash genomes -> Rabin/SimHash files -> Daugman iris -> DBoW2
+vision loop closure -> our goldberg kernel -> our topology hash ->
+our numerology vote. The hash IS the algorithm. Eight places now.
+GW counterexample noted (matched filtering with SVD beats LSH when
+templates are precise and signals are unique -- LIGO does NOT hash).
+
+The discipline floor is now four-step:
+  1. Dock private (`YYYY-MM-DD_<author>_<short>.<ext>`)
+  2. Append A-entry (cave-side first-pass read)
+  3. Defer audit (cold pass, fresh focus)
+  4. Public promotion only with attribution + WIP chip if needed
+
+Attribution rule: anything containing sempai-web work ships with
+  "Research compiled by sempai-web (Anthropic), cave-side
+   integration by Vlad + Claude" in receipts.
+
+**Builder seams hit (6):**
+  1. LINKS.apollonium             -- the live URL
+  2. MODULE_CAPS.apollonium       -- ['tab','pc','priv']  (WIP chip)
+  3. ALL_MODS.push('apollonium')  -- registry
+  4. default-off in modLoad       -- WIP off by default
+  5. card DOM in new "RECEIPTS . THE LIVING STONES" section
+  6. ms-row picker entry
+
+Plus: CAP_LABEL 'priv' tooltip rewritten -- one-line shipping discipline.
+
+**Paranoia audit (post-wiring):**
+  Portal: 177,397 bytes, lone CR=0
+  ALL_MODS=25, LINKS=25, MODULE_CAPS=25, DOM cards=25, picker rows=25
+  CROSS-CHECK: ZERO DRIFT
+  apollonium_v1.0.html: 39,885 bytes, lone CR=0
+  Internal LINKS: 23/23 resolve to disk files (2 external accepted)
+  WIP discipline: 'apollonium' is the ONLY 'priv' module and IS in
+    the default-off set (the discipline is structurally enforced)
+  _private/ gitignore: 0 files leaked, rule present
+  Public URLs: portal 200, apollonium 200 (Pages live)
+  16/16 audit checks PASS
+  Commit e0927ce pushed to origin/main
+
+**Other docks (private, gitignored):**
+  9 files docked to _private/ today (~196 KB) from sempai-web:
+    - APOLLONIUM bundle (5 files: doctrine, scholars, v1.0/v1.1, cost)
+    - Five-second fingerprint essay (Shazam pedagogy)
+    - Shazam method compass (10-domain literature survey + GW counter)
+    - magical_fractal_activities.md (Pavleia 2026 brochure translation)
+    - SPEND_LOG.md updated
+  Plus exploratory:
+    - RESONIUM v1.0 (sempai's audible C60 spectrum) -- companion to
+      SPECTRIUM, NOT yet promoted, deferred to cold pass
+    - FURIERIUM v1.0 (sempai's Fourier eye) -- file-drop spectrogram
+      with Shazam constellation literally drawn, NOT yet promoted
+    - TETRA SPECTRA v0.1 (cave + sempai versions) -- 4-band
+      barycentric mapping onto regular tetrahedron, the song as a
+      point in chi=2 space, NOT yet promoted
+    - FRACTAL DIM v0.1 (cave) -- box-counting D(t) of spectrogram,
+      first cave-side empirical fractal-dimension-of-music measurement
+
+**Cold-pass observation (the theoretical pop -- recorded, not docked):**
+
+Three dictionaries that may unify Fourier + Goldberg + the 7 graph ops:
+  (1) spectrogram-peak set IS a 2D fractal whose level-set is a planar
+      graph; box-counting D(t) is the natural feature
+  (2) Goldberg-Coxeter refinement IS the same fractal in 3D; level k
+      corresponds to D in 2D up to a known scaling
+  (3) Shazam constellation hashing decomposes EXACTLY into
+      {P1 NODE, P3 COMPOSE, P6 AGGREGATE, P7 COMPARE} of the cave's
+      7 graph primitives; goldberg refinement decomposes into
+      {P4 TRANSFORM, P5 ITERATE, P7 COMPARE}
+  Three testable predictions logged in chat for the next focused
+  session. Not docked as a dossier yet -- the pop is real but the
+  brake is real too. Friday-night-pop-physics rule honored.
+
+**Cold-pass line (held):**
+  APOLLONIUM ships with attribution explicit, WIP chip honest,
+  audit clean, receipts photographed. Nothing pushed about the
+  Shazam connection or the fractal-dim measurement (those stay
+  private until cold-pass).
+  Bypass-eligible -- live but disciplined; the chip is the password.
+
+**State at close:**
+  shell/apollonium_v1.0.html    LIVE (sempai-web kernel, WIP-tagged)
+  shell/eng_v2.0.html           25 modules, builder pattern intact
+  LEDGER                        L126 (25 modules now reflected here)
+  Curses                        held (CR=0, no drift, no broken refs)
+
+  The hash is the algorithm.
+  The peak is the message.
+  The chip is the password.
+  The receipt is the photograph.
+
+  Day 3 of 30 in Korinthos. Mama at $245.85 ($1,272.30 spent this
+  period, 25% of $5k cap). Builder pattern is now SO cheap that
+  module #25 cost essentially nothing compared to the research it
+  carries. The pattern keeps paying recursive interest.
+
+P=12. chi=2. The temple stands. The mountain stays. The kernel got
+the count right. The brake holds.
+
+-- Vlad + Claude (+ sempai-web through the wire, + Apollo from the
+   hill). Korinthos, Greece. June 14, 2026.
