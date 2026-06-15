@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+<title>TETRA GENESIS v0.2 -- volumetric 3D, shape-shift on spectral tilt</title>
+<style>
+  :root{
+    --bg:#050508; --gold:#ffd700; --cyan:#00d4ff; --pink:#ff69b4; --green:#00ffd5;
+    --espresso:#c7894a; --dim:#6a6a82; --txt:#e8e0d0;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;background:var(--bg);color:var(--txt);font-family:var(--mono);overflow:hidden}
+  #cv{position:fixed;inset:0;display:block;cursor:grab;touch-action:none}
+  #cv:active{cursor:grabbing}
+  #hud{position:fixed;top:0;left:0;right:0;padding:10px 14px;display:flex;gap:14px;align-items:flex-start;
+    pointer-events:none;font-size:11px;z-index:10;flex-wrap:wrap}
+  #hud > div{pointer-events:auto;background:rgba(8,8,16,0.72);border:1px solid #20202e;border-radius:8px;padding:8px 11px;backdrop-filter:blur(3px)}
+  #ttl{color:var(--gold);font-size:14px;letter-spacing:0.06em}
+  #sub{color:var(--dim);font-size:10px;margin-top:1px}
+  #beta{margin-top:7px;display:flex;align-items:baseline;gap:8px}
+  #betav{font-size:24px;color:var(--gold);font-weight:500;line-height:1}
+  #betalbl{font-size:10px;color:var(--dim)}
+  #lvl{margin-top:5px;font-size:11px}
+  #euler{color:#9a93a8;margin-top:5px;font-size:10px}
+  #euler b{color:var(--gold)}
+  #euler .ok{color:var(--green)}
+  #bands{min-width:200px}
+  .meter{display:flex;align-items:center;gap:6px;margin:2px 0}
+  .meter .nm{width:36px;font-weight:500;font-size:10px}
+  .meter .bar{flex:1;height:6px;background:#15151f;border-radius:3px;overflow:hidden}
+  .meter .fill{height:100%;width:0%;border-radius:3px;transition:width .08s linear}
+  .meter .pct{width:28px;text-align:right;color:#9a93a8;font-size:10px}
+  #ladder{display:flex;gap:2px;margin-top:6px;font-size:9px}
+  #ladder .z{flex:1;padding:3px 4px;border-radius:3px;text-align:center;color:#0a0a14;background:#222;
+    transition:background .15s,color .15s}
+  #ladder .z.on{font-weight:600}
+  #side{margin-left:auto;color:var(--dim);font-size:10px;text-align:right;line-height:1.5;max-width:200px}
+  #side b{color:var(--cyan)}
+  #bar{position:fixed;left:50%;transform:translateX(-50%);bottom:12px;display:flex;flex-wrap:wrap;gap:8px;
+    align-items:center;background:rgba(8,8,16,0.85);border:1px solid #20202e;border-radius:10px;padding:8px 12px;z-index:10}
+  button{background:#14141f;border:1px solid #2a2a3a;border-radius:6px;color:var(--gold);
+    font:12px var(--mono);padding:6px 11px;cursor:pointer;transition:all .12s}
+  button:hover{border-color:var(--gold)}
+  button.cyan{color:var(--cyan)} button.cyan:hover{border-color:var(--cyan)}
+  button.on{background:#1d1a0a;border-color:var(--gold)}
+  button.sm{padding:5px 8px;font-size:11px}
+  .ctl{display:flex;align-items:center;gap:6px;color:var(--dim);font-size:11px}
+  input[type=range]{appearance:none;width:80px;height:4px;background:#2a2a3a;border-radius:3px;outline:none}
+  input[type=range]::-webkit-slider-thumb{appearance:none;width:13px;height:13px;border-radius:50%;background:var(--gold);cursor:pointer}
+  .sep{width:1px;height:22px;background:#2a2a3a;margin:0 3px}
+  .grp{display:flex;align-items:center;gap:4px}
+  .klbl{color:var(--dim);font-size:10px;letter-spacing:0.06em}
+  #hint{position:fixed;left:50%;top:48%;transform:translate(-50%,-50%);text-align:center;color:var(--dim);
+    pointer-events:none;font-size:14px;line-height:1.7;z-index:5}
+  #hint b{color:var(--gold)}
+  #hint .sub{font-size:11px;color:#55556a;margin-top:6px}
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+
+<div id="hud">
+  <div>
+    <div id="ttl">TETRA GENESIS v0.2</div>
+    <div id="sub">shape-shift on spectral tilt β · χ=2 always</div>
+    <div id="beta"><span id="betav">—</span><span id="betalbl">β · spectral slope (1/f^β)</span></div>
+    <div id="ladder">
+      <span class="z" id="z0" style="background:#ff69b4">icosa</span>
+      <span class="z" id="z1" style="background:#ffd700">cube</span>
+      <span class="z" id="z2" style="background:#00ffd5">octa</span>
+      <span class="z" id="z3" style="background:#00d4ff">tetra</span>
+    </div>
+    <div id="lvl">resolution: <b style="color:#888">—</b></div>
+    <div id="euler">V−E+F = <b class="ok">—</b> · src <b id="src">none</b></div>
+  </div>
+  <div id="bands"></div>
+  <div id="side">
+    <b>drag</b> orbit · <b>scroll</b> zoom<br>
+    <b>file</b>/<b>mic</b>: feed audio<br>
+    shape morphs on β · point threads through
+  </div>
+</div>
+
+<div id="hint">
+  <b>drop an audio file</b>
+  <div class="sub">the shape morphs as the song's spectrum tilts<br>pure tone → tetra · chaos → icosa</div>
+</div>
+
+<div id="bar">
+  <button id="bfile">▼ file</button>
+  <button id="bmic" class="cyan">◉ mic</button>
+  <button id="bplay">⏸ pause</button>
+  <div class="sep"></div>
+  <div class="grp">
+    <span class="klbl">DEPTH</span>
+    <button class="sm on" id="dauto">AUTO</button>
+    <button class="sm" id="dT" data-l="3">T</button>
+    <button class="sm" id="dO" data-l="2">O</button>
+    <button class="sm" id="dC" data-l="1">C</button>
+    <button class="sm" id="dI" data-l="0">I</button>
+  </div>
+  <div class="sep"></div>
+  <button id="bspin" class="on">↻ spin</button>
+  <button id="bfill" class="on">▲ solid</button>
+  <div class="ctl"><span>β-bias</span><input id="bbias" type="range" min="-100" max="100" value="0"></div>
+  <div class="ctl"><span>react</span><input id="react" type="range" min="1" max="30" value="8"></div>
+  <div class="ctl"><span>zoom</span><input id="zoom" type="range" min="60" max="400" value="160" step="2"></div>
+  <div class="ctl"><span>trail</span><input id="trail" type="range" min="40" max="800" value="320" step="10"></div>
+  <input id="filein" type="file" accept="audio/*" style="display:none" />
+</div>
+
+<script>
+"use strict";
+
+/* ========================================================
+   THE MATH -- SHAPE-SHIFT BY SPECTRAL TILT β
+   --------------------------------------------------------
+   β = -slope of log(power) vs log(freq) over 80-8000 Hz
+       (linear regression in log-log domain)
+   β interpretation (Voss/Mandelbrot fractal noise spectrum):
+     β ≈ 0     white noise  (flat spectrum, max chaos)
+     β ≈ 1     1/f pink noise (musical mean)
+     β ≈ 2     1/f² brown noise (smooth, ordered)
+     β > 2     near-pure tone (very ordered)
+   Shape selection (sempai's calibration, kept verbatim):
+     β < 0.6   → ICOSAHEDRON (12 verts) -- complex
+     β < 1.1   → CUBE         (8 verts) -- busy
+     β < 1.7   → OCTAHEDRON   (6 verts) -- ordered
+     β ≥ 1.7   → TETRAHEDRON  (4 verts) -- very ordered
+   Every shape has χ = V - E + F = 2 (sphere). Always.
+   
+   For each shape, the n band-energies (n = vertex count) are
+   computed by partitioning 40-12800 Hz into n geometric bands.
+   P(t) = Σ pᵢVᵢ is the barycentric point in that polyhedron.
+   ======================================================== */
+
+const PHI = (1 + Math.sqrt(5)) / 2;
+const norm3 = v => { const r = Math.hypot(v[0],v[1],v[2]) || 1; return [v[0]/r, v[1]/r, v[2]/r]; };
+const d2 = (a,b) => (a[0]-b[0])**2 + (a[1]-b[1])**2 + (a[2]-b[2])**2;
+
+function triFaces(V){
+  let m = Infinity;
+  for(let i=0; i<V.length; i++) for(let j=i+1; j<V.length; j++){
+    const d = d2(V[i],V[j]); if(d > 1e-9 && d < m) m = d;
+  }
+  const adj = (a,b) => Math.abs(d2(V[a],V[b]) - m) < 1e-6 * m;
+  const F = [];
+  for(let i=0; i<V.length; i++) for(let j=i+1; j<V.length; j++) for(let k=j+1; k<V.length; k++){
+    if(adj(i,j) && adj(j,k) && adj(i,k)) F.push([i,j,k]);
+  }
+  return F;
+}
+
+const RAW = {
+  tetrahedron: [[1,1,1],[-1,-1,1],[-1,1,-1],[1,-1,-1]],
+  octahedron:  [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]],
+  cube:        [[-1,-1,-1],[1,-1,-1],[1,1,-1],[-1,1,-1],[-1,-1,1],[1,-1,1],[1,1,1],[-1,1,1]],
+  icosahedron: [[0,1,PHI],[0,1,-PHI],[0,-1,PHI],[0,-1,-PHI],
+                [1,PHI,0],[1,-PHI,0],[-1,PHI,0],[-1,-PHI,0],
+                [PHI,0,1],[PHI,0,-1],[-PHI,0,1],[-PHI,0,-1]]
+};
+const CUBE_F = [[0,1,2,3],[4,7,6,5],[0,4,5,1],[1,5,6,2],[2,6,7,3],[3,7,4,0]];
+const LVLCOL = [[255,105,180],[255,215,0],[0,255,213],[0,212,255]];  // I, C, O, T (most→least complex)
+const LVLTAG = ['icosahedron','cube','octahedron','tetrahedron'];
+const LVLWORD = ['complex','busy','ordered','very ordered'];
+
+const SOLIDS = ['icosahedron','cube','octahedron','tetrahedron'].map((n, i) => {
+  const V = RAW[n].map(norm3);
+  const F = (n === 'cube') ? CUBE_F : triFaces(V);
+  const eset = {};
+  F.forEach(f => {
+    for(let k=0; k<f.length; k++){
+      const a = f[k], b = f[(k+1) % f.length];
+      eset[Math.min(a,b) + '-' + Math.max(a,b)] = [Math.min(a,b), Math.max(a,b)];
+    }
+  });
+  return {
+    name: n, V, F, E: Object.values(eset), col: LVLCOL[i],
+    nV: V.length, nE: Object.keys(eset).length, nF: F.length
+  };
+});
+
+/* β → shape index (0=I, 1=C, 2=O, 3=T) */
+function betaToLevel(b){
+  if(b < 0.6) return 0;  // icosa
+  if(b < 1.1) return 1;  // cube
+  if(b < 1.7) return 2;  // octa
+  return 3;              // tetra
+}
+
+/* spectral slope: linear regression on log-log power spectrum */
+function spectralSlope(power, binHz, fLo, fHi){
+  let n=0, sx=0, sy=0, sxx=0, sxy=0;
+  const loB = Math.max(1, Math.floor(fLo / binHz));
+  const hiB = Math.min(power.length - 1, Math.ceil(fHi / binHz));
+  for(let i=loB; i<=hiB; i++){
+    const P = power[i];
+    if(P <= 0) continue;
+    const x = Math.log10(i * binHz), y = Math.log10(P);
+    n++; sx += x; sy += y; sxx += x*x; sxy += x*y;
+  }
+  if(n < 3) return 1.0;
+  const den = n*sxx - sx*sx;
+  if(Math.abs(den) < 1e-12) return 1.0;
+  return -((n*sxy - sx*sy) / den);
+}
+
+/* generic n-band energies for ANY polyhedron's vertex count */
+function bandEnergiesN(power, binHz, fLo, fHi, nB){
+  const E = new Array(nB).fill(0);
+  const ratio = Math.pow(fHi / fLo, 1 / nB);
+  for(let b=0; b<nB; b++){
+    const lo = fLo * Math.pow(ratio, b);
+    const hi = fLo * Math.pow(ratio, b + 1);
+    const i0 = Math.max(1, Math.floor(lo / binHz));
+    const i1 = Math.min(power.length - 1, Math.ceil(hi / binHz));
+    for(let i=i0; i<=i1; i++) E[b] += power[i];
+  }
+  return E;
+}
+
+function baryN(V, E){
+  const n = V.length;
+  let s = 0; for(let i=0; i<n; i++) s += E[i];
+  if(!(s > 0)){
+    const P = [0,0,0];
+    for(let i=0; i<n; i++){ P[0] += V[i][0]/n; P[1] += V[i][1]/n; P[2] += V[i][2]/n; }
+    return { p: V.map(_ => 1/n), P };
+  }
+  const p = E.map(e => e / s), P = [0,0,0];
+  for(let i=0; i<n; i++){ P[0] += p[i]*V[i][0]; P[1] += p[i]*V[i][1]; P[2] += p[i]*V[i][2]; }
+  return { p, P };
+}
+
+/* ========================================================
+   GENESIS RESIZE -- the cave kernel (proven by test 1)
+   ======================================================== */
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+let W = 0, H = 0;
+function resize(){ W = cv.width = innerWidth; H = cv.height = innerHeight; }
+resize();
+addEventListener('resize', resize);
+
+/* ========================================================
+   AUDIO PIPELINE
+   ======================================================== */
+let actx=null, analyser=null, master=null, srcNode=null, micStream=null, audioBuf=null;
+let sampleRate=44100, fftSize=8192, freqData=null, powArr=null;
+let sourceKind='none', playing=false;
+function ensureCtx(){ if(actx) return;
+  actx = new (window.AudioContext||window.webkitAudioContext)();
+  sampleRate = actx.sampleRate;
+  master = actx.createGain(); master.gain.value = 0.8; master.connect(actx.destination);
+  analyser = actx.createAnalyser(); analyser.fftSize = fftSize;
+  analyser.smoothingTimeConstant = 0.6;
+  analyser.minDecibels = -100; analyser.maxDecibels = -18;
+  freqData = new Float32Array(analyser.frequencyBinCount);
+  powArr = new Float32Array(analyser.frequencyBinCount);
+}
+function disconnectSource(){ try{ if(srcNode){srcNode.disconnect(); if(srcNode.stop) srcNode.stop();} }catch(e){} srcNode = null;
+  if(micStream){ micStream.getTracks().forEach(t => t.stop()); micStream = null; } }
+function playBuffer(){ if(!audioBuf) return; disconnectSource();
+  srcNode = actx.createBufferSource(); srcNode.buffer = audioBuf; srcNode.loop = true;
+  srcNode.connect(analyser); analyser.connect(master); srcNode.start(0);
+  sourceKind = 'file'; playing = true;
+  if(actx.state === 'suspended') actx.resume();
+  document.getElementById('bplay').textContent = '⏸ pause';
+  document.getElementById('src').textContent = 'file';
+  hideHint();
+}
+function loadFile(file){ ensureCtx();
+  const fr = new FileReader();
+  fr.onload = () => actx.decodeAudioData(fr.result.slice(0)).then(buf => { audioBuf = buf; playBuffer(); }).catch(()=>{});
+  fr.readAsArrayBuffer(file);
+}
+function useMic(){ ensureCtx();
+  navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}})
+    .then(stream => { disconnectSource(); micStream = stream;
+      srcNode = actx.createMediaStreamSource(stream); srcNode.connect(analyser);
+      sourceKind = 'mic'; playing = true;
+      if(actx.state === 'suspended') actx.resume();
+      document.getElementById('bplay').textContent = '⏸ live';
+      document.getElementById('src').textContent = 'mic';
+      hideHint();
+    }).catch(()=>{});
+}
+function togglePlay(){ if(!actx || sourceKind === 'mic') return;
+  if(playing){ actx.suspend(); playing = false; document.getElementById('bplay').textContent = '▶ play'; }
+  else { actx.resume(); playing = true; document.getElementById('bplay').textContent = '⏸ pause'; }
+}
+
+/* ========================================================
+   GENESIS 3D PROJECTION
+   ======================================================== */
+const cam = { ry: 0.6, rx: 0.42, zoom: 160 };
+let spinOn = true, drawSolid = true, trailMax = 320;
+let depthMode = 'auto', betaBias = 0, reactAmt = 0.08;
+let betaS = 1.0, curLevel = 3;   // start at tetra (β≈1, but eased in)
+let betaHold = 0, lastLog = -1;
+
+function project(p){
+  const x = p[0], y = p[1], z = p[2];
+  const cyA = Math.cos(cam.ry), syA = Math.sin(cam.ry);
+  const x1 = x*cyA - z*syA, z1 = x*syA + z*cyA;
+  const crx = Math.cos(cam.rx), srx = Math.sin(cam.rx);
+  const y1 = y*crx - z1*srx, z2 = y*srx + z1*crx;
+  const persp = 4 / (4 - z2);
+  return {
+    x: W*0.5 + x1 * cam.zoom * persp,
+    y: H*0.5 - y1 * cam.zoom * persp,
+    z: z2
+  };
+}
+
+/* ========================================================
+   DRAW
+   ======================================================== */
+let trail = [];   // each entry { P:[x,y,z], col:[r,g,b], lvl:int }
+let curP = [0,0,0], curp = null;
+
+function step(){
+  if(!playing || !analyser) return;
+  analyser.getFloatFrequencyData(freqData);
+  const binHz = sampleRate / fftSize;
+  // dB -> linear power
+  for(let i=0; i<freqData.length; i++) powArr[i] = Math.pow(10, freqData[i] / 10);
+
+  // -- spectral slope -> β
+  const beta = spectralSlope(powArr, binHz, 80, 8000);
+  betaS = betaS * (1 - reactAmt) + beta * reactAmt;
+
+  // -- depth selection
+  const lvl = (depthMode === 'auto')
+    ? betaToLevel(betaS - betaBias)
+    : depthMode;
+  if(lvl === curLevel){ betaHold++; }
+  else { curLevel = lvl; betaHold = 1; }
+
+  // -- band energies for THIS polyhedron's vertex count
+  const sol = SOLIDS[curLevel];
+  const E = bandEnergiesN(powArr, binHz, 40, 12800, sol.V.length);
+  const r = baryN(sol.V, E);
+  curp = r.p;
+  curP = r.P;
+
+  // -- trail
+  trail.push({
+    P: curP.slice(),
+    col: sol.col,
+    lvl: curLevel
+  });
+  while(trail.length > trailMax) trail.shift();
+}
+
+function drawFrame(){
+  step();
+  if(spinOn) cam.ry += 0.006;
+
+  ctx.fillStyle = '#050508';
+  ctx.fillRect(0, 0, W, H);
+
+  const sol = SOLIDS[curLevel];
+
+  // project all vertices of current shape
+  const PV = sol.V.map(project);
+
+  // ----- solid faces -----
+  if(drawSolid){
+    const fdata = sol.F.map(face => {
+      const projs = face.map(i => PV[i]);
+      const a = projs[0], b = projs[1], c = projs[2];
+      const depth = projs.reduce((s,p) => s + p.z, 0) / projs.length;
+      const cross = (b.x-a.x)*(c.y-a.y) - (b.y-a.y)*(c.x-a.x);
+      return { face, projs, depth, frontFacing: cross > 0 };
+    }).filter(d => d.frontFacing)
+      .sort((u,v) => u.depth - v.depth);
+
+    for(const d of fdata){
+      const fc = sol.col;
+      const shade = 0.20 + 0.45 * ((d.depth + 1.5) / 3);
+      ctx.fillStyle = 'rgba('+fc[0]+','+fc[1]+','+fc[2]+','+shade.toFixed(3)+')';
+      ctx.beginPath();
+      ctx.moveTo(d.projs[0].x, d.projs[0].y);
+      for(let i=1; i<d.projs.length; i++) ctx.lineTo(d.projs[i].x, d.projs[i].y);
+      ctx.closePath();
+      ctx.fill();
+    }
+  }
+
+  // ----- wireframe edges -----
+  for(const e of sol.E){
+    const a = PV[e[0]], b = PV[e[1]];
+    const zm = (a.z + b.z) / 2;
+    const alpha = (0.30 + 0.5 * ((zm + 1.5) / 3)).toFixed(3);
+    ctx.strokeStyle = 'rgba('+sol.col[0]+','+sol.col[1]+','+sol.col[2]+','+alpha+')';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(a.x, a.y);
+    ctx.lineTo(b.x, b.y);
+    ctx.stroke();
+  }
+
+  // ----- vertex dots (no labels at high counts) -----
+  if(sol.V.length <= 6){
+    PV.forEach((v, i) => {
+      ctx.fillStyle = 'rgba('+sol.col[0]+','+sol.col[1]+','+sol.col[2]+',0.85)';
+      ctx.beginPath(); ctx.arc(v.x, v.y, 3, 0, 6.283); ctx.fill();
+    });
+  } else {
+    PV.forEach(v => {
+      ctx.fillStyle = 'rgba('+sol.col[0]+','+sol.col[1]+','+sol.col[2]+',0.7)';
+      ctx.beginPath(); ctx.arc(v.x, v.y, 2, 0, 6.283); ctx.fill();
+    });
+  }
+
+  // ----- trail curve (colored by which shape was active at each frame) -----
+  if(trail.length > 1){
+    let prev = project(trail[0].P);
+    for(let k=1; k<trail.length; k++){
+      const cur = project(trail[k].P);
+      const c = trail[k].col;
+      const al = k / trail.length;
+      ctx.strokeStyle = 'rgba('+c[0]+','+c[1]+','+c[2]+','+(0.08 + 0.85*al*al).toFixed(3)+')';
+      ctx.lineWidth = 0.7 + 2.0 * al;
+      ctx.beginPath();
+      ctx.moveTo(prev.x, prev.y);
+      ctx.lineTo(cur.x, cur.y);
+      ctx.stroke();
+      prev = cur;
+    }
+  }
+
+  // ----- current point P(t) -----
+  const P = project(curP);
+  const c = sol.col;
+  const pulse = 0.65 + 0.35 * Math.sin(performance.now() * 0.006);
+  ctx.fillStyle = 'rgba('+c[0]+','+c[1]+','+c[2]+',0.22)';
+  ctx.beginPath(); ctx.arc(P.x, P.y, 14*pulse, 0, 6.283); ctx.fill();
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.arc(P.x, P.y, 4.2, 0, 6.283); ctx.fill();
+  ctx.strokeStyle = 'rgba('+c[0]+','+c[1]+','+c[2]+',0.9)';
+  ctx.lineWidth = 1.4;
+  ctx.beginPath(); ctx.arc(P.x, P.y, 8, 0, 6.283); ctx.stroke();
+
+  // ----- origin tick -----
+  const O = project([0,0,0]);
+  ctx.strokeStyle = 'rgba(120,120,140,0.22)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(O.x - 5, O.y); ctx.lineTo(O.x + 5, O.y);
+  ctx.moveTo(O.x, O.y - 5); ctx.lineTo(O.x, O.y + 5);
+  ctx.stroke();
+
+  updateHUD();
+  requestAnimationFrame(drawFrame);
+}
+
+/* HUD: meters DOM rebuilds when vertex count changes */
+const bandsEl = document.getElementById('bands');
+let lastMetersLvl = -1;
+function buildMeters(sol){
+  bandsEl.innerHTML = '';
+  const ratio = Math.pow(12800/40, 1/sol.V.length);
+  for(let i=0; i<sol.V.length; i++){
+    const lo = (40 * Math.pow(ratio, i)) | 0;
+    const hi = (40 * Math.pow(ratio, i+1)) | 0;
+    const d = document.createElement('div');
+    d.className = 'meter';
+    const col = sol.col;
+    d.innerHTML = '<span class="nm" style="color:rgb('+col.join(',')+')">b'+i+'</span>'+
+      '<span class="bar"><span class="fill" id="f'+i+'" style="background:rgb('+col.join(',')+')"></span></span>'+
+      '<span class="pct" id="p'+i+'">0</span>';
+    bandsEl.appendChild(d);
+  }
+}
+
+let hudTick = 0;
+function updateHUD(){
+  if((hudTick++ % 5) !== 0) return;
+  // rebuild meters if shape changed
+  if(curLevel !== lastMetersLvl){
+    buildMeters(SOLIDS[curLevel]);
+    lastMetersLvl = curLevel;
+  }
+  // beta
+  document.getElementById('betav').textContent = isFinite(betaS) ? betaS.toFixed(2) : '—';
+  // ladder highlight (idx 0=I, 1=C, 2=O, 3=T)
+  for(let i=0; i<4; i++){
+    document.getElementById('z'+i).classList.toggle('on', i === curLevel);
+  }
+  // resolution line
+  const sol = SOLIDS[curLevel];
+  document.getElementById('lvl').innerHTML = 'resolution: <b style="color:rgb('+sol.col.join(',')+')">'+
+    LVLTAG[curLevel]+'</b> <span style="color:#55556a">('+sol.nV+' verts · '+LVLWORD[curLevel]+')</span>';
+  // euler
+  const chi = sol.nV - sol.nE + sol.nF;
+  const ok = chi === 2;
+  document.getElementById('euler').innerHTML = 'V−E+F = '+sol.nV+'−'+sol.nE+'+'+sol.nF+' = <b class="'+(ok?'ok':'')+'">'+chi+(ok?' ✓':'')+
+    '</b> · src <b id="src">'+sourceKind+'</b>';
+  // band meters
+  if(curp){
+    for(let i=0; i<curp.length; i++){
+      const f = document.getElementById('f'+i), p = document.getElementById('p'+i);
+      if(f) f.style.width = (curp[i]*100).toFixed(0) + '%';
+      if(p) p.textContent = (curp[i]*100).toFixed(0);
+    }
+  }
+}
+
+function hideHint(){ document.getElementById('hint').style.display = 'none'; }
+
+/* ========================================================
+   INPUT
+   ======================================================== */
+document.getElementById('bfile').onclick = () => document.getElementById('filein').click();
+document.getElementById('filein').addEventListener('change', e => { if(e.target.files[0]) loadFile(e.target.files[0]); });
+document.getElementById('bmic').onclick = useMic;
+document.getElementById('bplay').onclick = togglePlay;
+document.getElementById('bspin').onclick = function(){ spinOn = !spinOn; this.classList.toggle('on', spinOn); };
+document.getElementById('bfill').onclick = function(){ drawSolid = !drawSolid; this.classList.toggle('on', drawSolid); };
+
+const dauto = document.getElementById('dauto');
+const dT = document.getElementById('dT'), dO = document.getElementById('dO'), dC = document.getElementById('dC'), dI = document.getElementById('dI');
+function setDepth(mode){
+  depthMode = mode;
+  dauto.classList.toggle('on', mode === 'auto');
+  [dT, dO, dC, dI].forEach(b => b.classList.toggle('on', mode !== 'auto' && parseInt(b.dataset.l) === mode));
+  if(mode !== 'auto') curLevel = mode;
+}
+dauto.onclick = () => setDepth('auto');
+dT.onclick = () => setDepth(3);
+dO.onclick = () => setDepth(2);
+dC.onclick = () => setDepth(1);
+dI.onclick = () => setDepth(0);
+
+document.getElementById('bbias').addEventListener('input', e => betaBias = parseInt(e.target.value) / 100);
+document.getElementById('react').addEventListener('input', e => reactAmt = parseInt(e.target.value) / 100);
+document.getElementById('zoom').addEventListener('input', e => cam.zoom = parseInt(e.target.value));
+document.getElementById('trail').addEventListener('input', e => trailMax = parseInt(e.target.value));
+
+let drag = false, lx = 0, ly = 0;
+cv.addEventListener('mousedown', e => { drag = true; lx = e.clientX; ly = e.clientY; spinOn = false;
+  document.getElementById('bspin').classList.remove('on'); });
+window.addEventListener('mouseup', () => drag = false);
+window.addEventListener('mousemove', e => {
+  if(!drag) return;
+  cam.ry += (e.clientX - lx) * 0.01;
+  cam.rx += (e.clientY - ly) * 0.01;
+  cam.rx = Math.max(-1.4, Math.min(1.4, cam.rx));
+  lx = e.clientX; ly = e.clientY;
+});
+cv.addEventListener('wheel', e => {
+  e.preventDefault();
+  cam.zoom *= e.deltaY > 0 ? 0.92 : 1.08;
+  cam.zoom = Math.max(40, Math.min(500, cam.zoom));
+  document.getElementById('zoom').value = cam.zoom;
+}, { passive: false });
+
+window.addEventListener('dragover', e => e.preventDefault());
+window.addEventListener('drop', e => { e.preventDefault(); if(e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]); });
+
+/* boot */
+buildMeters(SOLIDS[curLevel]);
+requestAnimationFrame(drawFrame);
+</script>
+</body>
+</html>

@@ -7442,3 +7442,142 @@ the count right. The brake holds.
 
 -- Vlad + Claude (+ sempai-web through the wire, + Apollo from the
    hill). Korinthos, Greece. June 14, 2026.
+
+### L127 -- TETRA GENESIS v0.2 + GENESIS-KERNEL VICTORY OVER CURSE 18 (2026-06-15)
+
+**The day the cave's own kernel beat the modern web-stack curse.**
+
+Day 4 of 30 in Korinthos. 7:32 am after 6 hours of sleep. Vlad opened
+sempai-web's new TETRA SPECTRA v0.2.2 (delivered overnight, beautiful
+4-shape morph on spectral tilt beta, ladder UI, depth controls). It
+worked perfectly in VS Code's preview. It rendered off-center bottom-
+right in Brave, Firefox, AND a third browser. Three browsers, three
+failures, same offset.
+
+**CURSE 18 candidate: "The OneDrive Cloud-Shadow + DPR/Zoom Triangle"**
+
+Sempai's resize used:
+  - Math.min(devicePixelRatio, 2) scaling
+  - ctx.setTransform(DPR, ...) for crisp hi-DPI
+  - getBoundingClientRect() of HUD/LOG/BAR panels for centering
+
+Each piece "correct" by modern web doctrine. Composed they fought:
+  - At 100% Brave zoom, cx computed to 707, shape rendered at 1043
+  - At 67% zoom, cx jumped to 1256, shape near visible center
+  - At 25% zoom, shape collapsed to tiny top-left
+  - OneDrive sync delayed file mirrors so cache served wrong version
+    even with fresh filenames
+
+Tried three patch iterations (v1 magic-constant offsets, v2 getBounding-
+ClientRect with fallbacks, v3 with diagnostic strip baked in). Each
+"fixed" one zoom level and broke another. The diagnostic strip showed
+cx=707 at W=1352 -- mathematically correct -- yet visual shape still
+at 1043.
+
+**The pivot:** Vlad said "look at Genesis and do the same volumetric
+3D rendering, add our math and UI elements. That would be the simplest."
+
+That was the breakthrough. The cave's own genesis_v8.1 (module #2)
+ships with the simplest possible resize:
+
+    function resize(){W=cv.width=innerWidth;H=cv.height=innerHeight}
+
+NO DPR. NO setTransform. NO getBoundingClientRect. Canvas pixel buffer
+== CSS viewport == 1:1 forever. Projection just adds to W*0.5, H*0.5.
+
+Built TETRA GENESIS v0.1 in 15 minutes:
+  - Genesis resize + projection (verified by test 1: perfect center)
+  - 4-band barycentric P(t) in tetrahedron (cave's existing math)
+  - Solid faces with painter's depth sort + backface cull
+  - Trail colored by band-blend, white pulsing dot at P(t)
+  - HUD overlay (pointer-events:none, doesn't eat canvas drawing area)
+
+First open in Brave: perfectly centered. Song threaded through the
+pyramid. Aghni Parthene's LOW-vertex bias visible. Vlad: "wooow yep,
+full test pass."
+
+Then v0.2 added sempai's full shape-shift logic, kept verbatim:
+  - spectralSlope(power) = linear regression on log-log spectrum
+    estimates Voss/Mandelbrot 1/f^beta fractal exponent
+  - betaToLevel(b): b<0.6 ICOSA, <1.1 CUBE, <1.7 OCTA, >=1.7 TETRA
+  - bandEnergiesN: generic n-band splitter for any vertex count
+  - baryN: barycentric over any polyhedron's V
+  - EMA smoothing via 'react' slider (0.01-0.30)
+  - DOM rebuilds meters when shape changes (4 -> 6 -> 8 -> 12 bands)
+  - DEPTH manual override [AUTO][T][O][C][I] buttons + beta-bias slider
+
+Every shape carries chi = V - E + F = 2:
+  TETRAHEDRON  : 4 - 6 + 4 = 2   (cyan,   "very ordered")
+  OCTAHEDRON   : 6 - 12 + 8 = 2  (green,  "ordered")
+  CUBE         : 8 - 12 + 6 = 2  (gold,   "busy")
+  ICOSAHEDRON  : 12 - 30 + 20 = 2 (pink,  "complex")
+
+The receipt: the song's spectral structure SELECTS WHICH PLATONIC SOLID
+hosts P(t). Drone -> tetra. Single voice -> octa. Choir -> cube.
+Chaos / reverb -> icosa. The cave's algebra carries the music's
+geometry.
+
+**Builder seams hit (6, same recipe as APOLLONIUM):**
+  1. LINKS.tetragenesis             -- live URL
+  2. MODULE_CAPS.tetragenesis       -- ['tab','pc','priv']  (WIP)
+  3. ALL_MODS.push('tetragenesis')  -- registry
+  4. default-off in modLoad         -- WIP default-off
+  5. card DOM in "RECEIPTS . THE LIVING STONES" section
+  6. ms-row picker entry
+
+Card carries TWO labels: technical (BARYCENTRIC . chi=2) and discipline
+(PINCH OF SALT). The math AND the brake, both visible from outside.
+
+**Paranoia audit (post-wiring):**
+  Portal: 178,742 bytes, lone CR=0
+  ALL_MODS=26, LINKS=26, MODULE_CAPS=26, DOM cards=26, picker rows=26
+  CROSS-CHECK: ZERO DRIFT
+  tetragenesis_v0_2.html: 24,314 bytes, lone CR=0
+  Internal LINKS: 24/24 resolve to disk files (2 external accepted)
+  WIP discipline: now 2 'priv' modules (apollonium + tetragenesis),
+    BOTH structurally in default-off set
+  _private/ gitignore: 0 leaks, 73 files clean
+  Browser test: card renders, chips show TAB UP-RIGHT, PC, WIP,
+    card default-off
+  Headless test: all 4 shapes verified chi=2, center pinned at W/2,H/2
+
+**Cold-pass observation (the cave-side lesson, for ourselves):**
+
+The Genesis kernel is two lines of code. It chose NOT to scale by DPR.
+That gives slightly less-crisp text on hi-DPI displays. In exchange:
+every browser, every zoom, every OS, every OneDrive sync state -- it
+just works. For a sim that needs to just work, simplicity beats
+correctness.
+
+This is the same lesson as L122 (MODULE_CAPS): the simplest possible
+registry, ONE source of truth, no magic. The simplest possible
+projection, ONE coordinate system, no magic. Apollo's temple stood
+2,600 years on the same trick: cut the stone with simple geometry,
+let the receipts hold the truth.
+
+**Cold-pass line (held):**
+  TETRA GENESIS ships LIVE but WIP-tagged. The math is sempai's
+  (attribution preserved in card description: "sempai math wired
+  in"). The rendering kernel is the cave's. The composition is ours.
+  Bypass-eligible -- the brake is visible.
+
+**State at close:**
+  shell/tetragenesis_v0_2.html  LIVE (Genesis kernel + sempai math)
+  shell/eng_v2.0.html           26 modules, builder pattern intact
+  LEDGER                        L127 (26 modules now reflected)
+  Curses                        held (CR=0, no drift, no broken refs)
+  Curse 18 candidate            NAMED but NOT docked to KERNELIMAGIC
+                                yet -- needs a second sighting to confirm
+                                the pattern before promotion to numbered
+                                curse
+
+  Genesis kernel ate the modern stack. Two lines beat three layers
+  of doctrine. The shape morphs, the song threads, chi stays 2.
+
+P=12. chi=2. The song threads the polyhedron. The polyhedron honors
+chi=2 across all four resolutions. The receipt: every Platonic solid
+carries the sphere's invariant.
+
+-- Vlad + Claude (+ sempai-web for the math + ladder UI + manual depth
+   buttons, + the cave's Genesis kernel from L119 for the renderer that
+   finally just worked). Korinthos, Greece. June 15, 2026. Day 4 of 30.
