@@ -7808,3 +7808,167 @@ of 30. Twenty-four to go.
    _private/grimoires/, + Apollo from the hill). Korinthos, Greece.
    June 17, 2026. Day 6 of 30.
 
+
+### L129 -- BRAINIUM SEED + LENS v0.4: HIERARCHICAL-DEPTH MADE VISIBLE (2026-06-17)
+
+THE NEXT MORNING POP (technically same day -- two days of compounding,
+9 hours of sleep, fresh brain, monkey-pop number two of the cycle):
+
+  Vlad woke and the Fractal Engineering keystone from the night before
+  had finished landing. The pop arrived clean:
+
+    "sim of a spini human brain ... the diff part is just minimal
+     complex fractality for different functions ... I NEED TO SEE
+     the jumping spider brain vs human."
+
+  Structurally identical to sempai-web's tier (a) classification,
+  transposed onto neuroscience. Same hierarchical motif, different
+  number of tuned scales per function. NOT fractal-as-brand
+  (tier c, the Best-2003 antenna debunk warning). NOT a neural sim
+  (no spikes, no plasticity, no firing rates). Qualitative HIERARCHY
+  lens only -- exactly what the keystone authorized.
+
+### THE DISCIPLINE THAT HELD
+
+  The morning brake was not the same as the evening brake:
+    - evening brake = two pops in one hot day, seed both
+    - morning brake = one pop on a fresh brain, build the stress sim
+  
+  The seed dossier was written FIRST (lone CR=0, K1/K2/K3 named),
+  README updated SECOND, lens stress sim built THIRD, all
+  gitignored. Portal untouched at 29. Only this LEDGER entry
+  becomes public.
+  
+  No promotion. No module #30. No MODULE_CAPS edit. No card. The
+  lens lives in lens/ until cold-pass earns it the portal.
+
+### THE LENS (lens/v0_4_brainium.html, gitignored)
+
+  Single HTML file. 13.5 KB. 328 lines. Genesis kernel discipline
+  enforced (L127): no DPR, no setTransform call, no
+  getBoundingClientRect call. Two side-by-side hierarchies:
+  
+    LEFT  PORTIA  depth 4  (4 levels of circuit motifs)
+    RIGHT HUMAN   depth 7  (7 levels of circuit motifs)
+    branching b = 3 default, sliders for both depths + b
+  
+  Each ring = one hierarchical level. Each dot = one circuit motif
+  (NOT a neuron -- the lens does NOT pretend to model biology).
+  Pulse ripple expanding from center = signal traversal. The
+  human ripple is visibly slower per cycle because it has MORE
+  LEVELS. That is the whole point.
+  
+  Motif count at default (b=3):
+    PORTIA depth 4  ->  sum b^L  =  40 motifs
+    HUMAN  depth 7  ->  sum b^L  =  1,093 motifs
+    motif ratio = 27.3x
+  
+  Real-biology ratio (Portia ~600k neurons vs human ~86B):
+    143,000x
+  
+  Gap (143,000 / 27.3 = ~5,200x) is what would still need to come
+  from somewhere else: branching factor variation per level, denser
+  connectivity at certain depths, specialization per region. The
+  sliders let you test those. The lens does NOT pretend to answer
+  the gap. The lens asks the gap as a visual question.
+
+### THE KEYSTONE LINEAGE (why the lens is honest tier a)
+
+  Sempai-web's Fractal Engineering audit (docked previous evening,
+  _private/grimoires/2026-06-17_sempai_web_fractal_engineering.md,
+  26.2 KB) classified all "fractal/hierarchical" claims into
+  three tiers:
+  
+    (a) GENUINELY CAUSAL: hierarchical lattices, power-law
+        multi-scale where each level has a discrete tuned scale.
+        Gibson-Ashby, Maxwell connectivity, Rayneau-Kirkhope 2018,
+        Loh nacre 3000x, Sato bamboo, Nova/Buehler spider silk,
+        Murray's PNAS 1926 cube law, Bejan constructal (engineering
+        use only). REAL ENGINEERING. 28-75% mass savings, 30x
+        energy density.
+    (b) USEFUL FRAMING: descriptive shorthand, specific tools are
+        causal but the cosmology is not.
+    (c) OVERREACH: fractal-as-brand. Steven Best IEEE AWPL 2002 +
+        IEEE TAP 51(6):1292 (2003) on fractal antennas: NO unique
+        advantage, meander/helix shapes do the same work, obey Chu
+        limit like everything else. The canonical case of marketing
+        sold as physics.
+  
+  BRAINIUM v0.4 deliberately sits in tier (a):
+    - it visualizes the discrete tuned scales (rings)
+    - it never invokes "fractal" in the title (only "hierarchy")
+    - it explicitly prints the keystone's central line on screen:
+        "principle = HIERARCHY not 'fractal'"
+    - its claim under test is specifically named and citable:
+        "the diff is minimal complex fractality for different
+         functions"  (= per-function discrete scale tuning)
+    - its K2 kill-criterion in the dossier directly forbids drifting
+      into tier (c) brand territory
+
+### WHY THIS DOES NOT NEED A SUPERCOMPUTER
+
+  The keystone says it directly: a few tuned levels do most of the
+  work in tier (a) systems. The QUALITATIVE jump from Portia-style
+  ~4 levels to human-style ~7 levels can be visualized in a
+  single 13.5 KB HTML file on a modest browser. The Genesis kernel
+  (L127) carries the rendering. The cave's existing palette carries
+  the level coding. No GPU, no WebGL, no workers, no shaders.
+  
+  Vlad's instinct in the pop ("we need a supercomputer ... BULSHIT
+  our kenelic magic is absolute") was correct in the strong sense:
+  the cave's existing tools can carry the QUALITATIVE claim. They
+  cannot and should not carry a QUANTITATIVE simulation (K1
+  kill-criterion). The discipline holds the line between the two.
+
+### WHAT IS IN THE GRIMOIRES NOW (eight inhabitants)
+
+  As of L129 close, _private/grimoires/ contains:
+  
+    MASTER  Patreon Atelier (2026-06-15, 663 KB, still UNREAD
+            from day 4, an honest gap on day 6)
+    KEYSTONE 2026-06-17 sempai-web Fractal Engineering audit
+             (26.2 KB, intake-skimmed only, cold-pass pending)
+    TRILOGY  three Aphrodite/KUKA-spider/swarm-limits papers
+             (54.5 KB combined, intake-skimmed only)
+    SEEDS    two cave-native pop dossiers from day 6:
+             - QRCAVE   monkey-pop morning   (10.4 KB)
+             - BRAINIUM monkey-pop evening+morning  (9.3 KB)
+  
+  The shelf grows. The discipline holds. Nothing has been published.
+  Nothing has been claimed beyond what the sources say.
+
+### CLOSE OF THE DAY (DAY 6 OF 30, KORINTHOS, AFTERNOON)
+
+  shell/                         98 files, lone CR=0
+  shell/eng_v2.0.html            29 modules, ZERO drift
+  lens/                          5 sims now (v0.1 .. v0.4),
+                                 gitignored, zero leaks
+  _private/grimoires/            8 inhabitants, 772 KB,
+                                 attribution discipline held
+  _private/                      110+ files, lone CR=0
+  LEDGER                         L129 ALL_MODS=29 matches portal=29
+  Curses                         held (CR=0, no drift, no leaks)
+  Mama                           untouched -- the lens runs free
+                                 in the cave, no API spent on render
+
+Five-and-a-half days of compounding discipline:
+  L124 COFIUM:        the builder pattern named  (6 seams)
+  L125 SPECTRIUM:     honest retirement of FSLIMIUM 0.1473
+  L126 APOLLONIUM:    WIP discipline born        (priv chip)
+  L127 TETRA GENESIS: Genesis kernel wins        (simplicity)
+  L128 LENS+ATELIER x3 + sempai-web forclaudyboy gift cycle
+  L129 BRAINIUM seed + lens v0.4 + keystone-grounded tier (a)
+       hierarchical-depth claim made visible without a supercomputer
+
+P=12. chi=2. The pyramid breathes. The cardioid weaves. The
+nephroid morphs. The moire interferes. The lens looks through.
+The brain motif scales by levels, not by neurons. The
+keystone authorized the claim. The seed sleeps. Apollo's
+temple stands. Acrocorinth watches. Day 6 of 30. Twenty-four
+to go.
+
+-- Vlad + Claude (+ sempai-web's keystone laid the floor under the
+   morning's pop, + the un-read Patreon master's PDF still patient,
+   + Galizion picks incoming next, + Apollo from the hill).
+   Korinthos, Greece. June 17, 2026. Day 6 of 30. The lens lives
+   under the hand, the portal stands still at 29.
