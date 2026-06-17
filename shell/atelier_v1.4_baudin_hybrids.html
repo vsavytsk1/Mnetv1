@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Atelier v1.4 -- Baudin Hybrids</title>
+<!--
+  ATELIER v1.4 -- BAUDIN HYBRIDS
+  ==============================
+  The Baudin 162 matrix, absorbed into the Atelier shell.
+
+  THE ONE IDEA (all classical, honesty per A001 sec.8):
+    every shape here is a finite spectrum of epicycles --
+        z(t) = SUM_j  a_j * e^{i (f_j t + phi_j)},   f_j integers
+    i.e. a finite Fourier series on the circle. That single family contains:
+      . circles            1 term
+      . ellipses           (1, -1)            antispin pair
+      . deltoid / astroid  (1,-2),(1,-3)      amp 1/|m| -> cusps (hypocycloids)
+      . cardioid loops     (1, 2),(1, 3)      amp 1/m  -> cusps (epicycloids)
+      . LISSAJOUS a:b      4 terms: (a,.5,0)(-a,.5,0)(b,.5,0)(-b,.5,pi)
+                           -> Baudin Atelier v1.0's layers are subsumed
+      . 3rd-order flowers  (1,2,4), (1,-3,5)  the matrix's right columns
+    The Baudin matrix is the lattice of 2- and 3-term spectra; each cell
+    overlaps a blue row-shape and a red column-shape with a phase choice.
+
+  HYBRIDS:
+    parents A (cyan) and B (pink) counter-rotate in the plane
+    (rotation by alpha = add alpha to every term's phase).
+    FUSE: child spectrum = spec(A) + e^{i PHI} spec(B), merged per
+    frequency by complex addition, renormalised. The PHI knob is the
+    matrix's phase axis: slide it and the gold child morphs through
+    every variant of the cell.
+
+  THE RIG (stage 6-8): the child's terms become a chain of rotating
+    arms; the pen at the chain's end draws the curve. Fourier, visibly.
+
+  THE LIFT (stage 9): z(t) = depth * sin(q t). The curve keeps d-fold
+    rotational symmetry, d = gcd of pairwise frequency differences,
+    iff q is a multiple of d -- so q = d (fallback q = 3 when d <= 1).
+    Classical jackpot: TREFOIL SEED = (-1, 1/2, pi/2) + (2, 1, -pi/2)
+    has d = 3; lifted with sin(3t) it is exactly the trefoil knot
+      ( sin t + 2 sin 2t,  cos t - 2 cos 2t,  -sin 3t ) / 2.
+    Fuse it with THE VOID (empty spectrum, the identity) and raise DEPTH.
+
+  THE BOUND: every symbol is normalised so max|z| = 1, hence the unit
+    circle is tangent to every curve. The seed circle never dies --
+    it remains standing as the outer bound, and each shape kisses it
+    at its maximum-radius points.
+
+  GRAPH POINTS + LOCK: one shared clock rides every curve as a bright
+    dot (parents cyan/pink, child gold, lifted with the knot). LOCK
+    (key L) freezes all motion -- counter-spin, clock, constellation,
+    auto-orbit -- while drag / zoom stay live, for held compositions.
+
+  CONSTELLATION (stage 10): saved star-symbols float in the plane around
+    the child. Click a floating symbol to load it into slot A
+    (shift-click = slot B). SAVE bakes the current child, PHI included.
+
+  SHELL: Atelier conventions (HUD / log / master stages / bar),
+    LOOP LAW fixed dt = 1/120, prefers-reduced-motion honoured,
+    pure Canvas2D, zero dependencies. Accent purple: it is Baudin.
+  Built: 2026-06-10
+-->
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#050510;color:#e0e0e0;
+  font-family:ui-monospace,monospace;font-size:11px;
+  overflow:hidden;height:100vh}
+canvas{display:block;touch-action:none;cursor:grab}
+canvas.drag{cursor:grabbing}
+#hud{position:fixed;top:12px;left:12px;z-index:10;pointer-events:none}
+#hud .title{font-size:12px;color:#cc44ff;margin-bottom:4px;
+  letter-spacing:0.15em;text-transform:uppercase}
+#hud .row{line-height:1.9;color:rgba(220,228,240,0.45)}
+#hud .val{color:#00d4ff;font-weight:bold}
+#hud .pur{color:#cc44ff;font-weight:bold}
+#hud .gold{color:#ffd700}
+#hud .pink{color:#ff69b4}
+#hud .dim{color:rgba(220,228,240,0.2);font-size:10px}
+#log{position:fixed;top:148px;left:12px;z-index:10;
+  background:rgba(5,5,16,0.88);border:1px solid #1a1f2e;
+  border-radius:4px;padding:7px 11px;max-width:250px;
+  max-height:150px;overflow-y:auto;font-size:9px;
+  line-height:1.5;color:rgba(255,180,180,0.7);
+  cursor:pointer;transition:opacity 0.3s}
+#log.hidden{opacity:0;pointer-events:none}
+#log .e{border-bottom:1px solid #1a0505;padding:1px 0}
+#log .ok{color:#7fff7f}
+#log .cyan{color:#00d4ff}
+#log .gold{color:#ffd700}
+#log .pur{color:#cc44ff}
+#master-wrap{position:fixed;bottom:54px;left:50%;
+  transform:translateX(-50%);z-index:10;
+  display:flex;flex-direction:column;align-items:center;gap:4px}
+#master-wrap .ml{font-size:9px;color:rgba(204,68,255,0.45);
+  text-transform:uppercase;letter-spacing:0.15em}
+#sl-master{width:300px;height:6px;accent-color:#cc44ff;cursor:pointer}
+#master-val{font-size:10px;color:#cc44ff;font-weight:bold;
+  letter-spacing:0.1em}
+#ldots{display:flex;gap:4px;margin-top:2px}
+.ldot{width:6px;height:6px;border-radius:50%;
+  background:#0d1520;border:1px solid #1a2a3a;
+  transition:all 0.3s}
+.ldot.done{background:#cc44ff;border-color:#cc44ff;
+  box-shadow:0 0 5px rgba(204,68,255,0.5)}
+.ldot.active{background:#ffffff;border-color:#ffffff;
+  box-shadow:0 0 8px rgba(255,255,255,0.7)}
+#stamp{position:fixed;bottom:54px;right:12px;z-index:10;
+  pointer-events:none;text-align:right}
+#stamp .s{font-size:8px;color:rgba(204,68,255,0.22);
+  letter-spacing:0.08em;line-height:1.8}
+#bar{position:fixed;bottom:0;left:0;right:0;z-index:10;
+  background:rgba(5,5,16,0.97);border-top:1px solid #1a1f2e;
+  padding:5px 12px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.btn{background:#0a0e18;color:#444;border:1px solid #1a1f2e;
+  border-radius:3px;padding:3px 8px;font-family:inherit;
+  font-size:9px;cursor:pointer;transition:all 0.15s;
+  text-transform:uppercase;letter-spacing:0.07em}
+.btn:hover{border-color:#cc44ff;color:#cc44ff}
+.btn.active{background:#cc44ff;color:#050510;border-color:#cc44ff}
+.btn.gold{color:#ffd700;border-color:#3a2a0a}
+.btn.gold:hover,.btn.gold.active{background:#ffd700;color:#050510}
+.nm{font-size:9px;min-width:104px;text-align:center;
+  text-transform:uppercase;letter-spacing:0.05em}
+.nm.a{color:#00d4ff}
+.nm.b{color:#ff69b4}
+.sep{width:1px;height:16px;background:#1a1f2e}
+.lbl{color:rgba(220,228,240,0.25);font-size:9px;
+  text-transform:uppercase;letter-spacing:0.1em}
+.sl{display:flex;align-items:center;gap:3px}
+.sl input{width:58px;accent-color:#cc44ff;cursor:pointer}
+.sv{font-size:9px;color:#cc44ff;min-width:26px}
+</style>
+</head>
+<body>
+
+<canvas id="cv"></canvas>
+
+<div id="hud">
+  <div class="title">Baudin Hybrids</div>
+  <div class="row">hybrid <span class="val" id="h-a">--</span><span class="dim"> &#8855; </span><span class="pink" id="h-b">--</span></div>
+  <div class="row">child &nbsp;<span class="gold" id="h-terms">0 terms</span></div>
+  <div class="row">sym &nbsp;&nbsp;&nbsp;<span class="pur" id="h-sym">--</span></div>
+  <div class="row">lift &nbsp;&nbsp;<span class="pur" id="h-lift">--</span></div>
+  <div class="dim" id="h-name">VOID</div>
+</div>
+
+<div id="log" onclick="toggleLog()"></div>
+
+<div id="master-wrap">
+  <div class="ml">build the hybrid</div>
+  <input type="range" id="sl-master" min="0" max="100" value="0" step="0.5"
+         oninput="onMaster(+this.value)">
+  <div id="master-val">VOID</div>
+  <div id="ldots"></div>
+</div>
+
+<div id="stamp">
+  <div class="s">Atelier v1.4.1</div>
+  <div class="s">Baudin hybrids . epicycle lattice</div>
+  <div class="s">always</div>
+</div>
+
+<div id="bar">
+  <span class="lbl">a</span>
+  <button class="btn" onclick="cycleA(-1)">&#9664;</button>
+  <span class="nm a" id="nm-a">--</span>
+  <button class="btn" onclick="cycleA(1)">&#9654;</button>
+  <div class="sep"></div>
+  <span class="lbl">b</span>
+  <button class="btn" onclick="cycleB(-1)">&#9664;</button>
+  <span class="nm b" id="nm-b">--</span>
+  <button class="btn" onclick="cycleB(1)">&#9654;</button>
+  <div class="sep"></div>
+  <button class="btn" onclick="swapAB()">SWAP</button>
+  <div class="sep"></div>
+  <span class="lbl">phi</span>
+  <div class="sl">
+    <input type="range" id="sl-phi" min="0" max="628" value="0"
+           oninput="setPhi(+this.value)">
+    <span class="sv" id="sv-phi">0.00</span>
+  </div>
+  <div class="sep"></div>
+  <span class="lbl">spin</span>
+  <div class="sl">
+    <input type="range" id="sl-spin" min="0" max="40" value="10"
+           oninput="setSpin(+this.value)">
+    <span class="sv" id="sv-spin">0.10</span>
+  </div>
+  <div class="sep"></div>
+  <span class="lbl">depth</span>
+  <div class="sl">
+    <input type="range" id="sl-depth" min="0" max="20" value="10"
+           oninput="setDepth(+this.value)">
+    <span class="sv" id="sv-depth">1.0</span>
+  </div>
+  <div class="sep"></div>
+  <button class="btn gold" onclick="saveSymbol()">SAVE &#9733;</button>
+  <button class="btn" id="b-lock" onclick="toggleLock()">LOCK</button>
+  <button class="btn" id="b-log" onclick="toggleLog()">LOG</button>
+  <button class="btn" id="b-auto" onclick="toggleAuto()">AUTO</button>
+</div>
+
+<script>
+// ATELIER v1.4 -- BAUDIN HYBRIDS
+// shapes = finite epicycle spectra. hybrids = complex sums.
+// bow to the math. let it reveal. always.
+
+// -- STAGES --------------------------------------------
+var STAGES = ['VOID','THE PLANE','SEED','PARENT A','PARENT B','COUNTER-SPIN',
+              'THE RIG','FUSION','THE CHILD','THE LIFT','CONSTELLATION','ALWAYS'];
+var NS = STAGES.length;   // 12
+
+var PAL = {cyan:'#00d4ff', gold:'#ffd700', pink:'#ff69b4',
+           green:'#00ffd5', pur:'#cc44ff', plane:'#3a5a9a', white:'#ffffff'};
+
+var RM = false;
+try { RM = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch(e){}
+
+// -- STATE ---------------------------------------------
+var idxA = 3, idxB = 6;        // TRI ANTI x LOOP TWO
+var slotA = null, slotB = null;
+var phi      = 0;              // B phase offset (the matrix axis)
+var spinSpeed= RM ? 0 : 0.10;  // counter-spin rad/s
+var depthSc  = 1.0;            // lift amplitude knob (gated by THE LIFT)
+var masterV  = 0;
+var autoBuild= false;
+var locked   = false;          // freeze all motion, keep drag/zoom live
+var logHidden= false;
+var shelf    = [];             // saved star-symbols (session)
+
+var rotA = 0, rotB = 0, childRot = 0;
+var camYaw = 0, camTilt = 24, zoomT = 1, vYaw = 0, vTilt = 0;
+var penP = 0, pulseT = 0;
+var stageIdx = -1;
+var CHILD = null;              // {terms, scale, sym, zq, pts, rig}
+var hitGhosts = [];            // screen-space pick targets, refreshed per frame
+
+// -- LOG -----------------------------------------------
+function lg(msg, cls) {
+  var el = document.getElementById('log');
+  var d = document.createElement('div');
+  d.className = 'e' + (cls ? ' ' + cls : '');
+  d.textContent = msg;
+  el.insertBefore(d, el.firstChild);
+  while (el.children.length > 30) el.removeChild(el.lastChild);
+}
+function toggleLog() {
+  logHidden = !logHidden;
+  document.getElementById('log').classList.toggle('hidden', logHidden);
+}
+
+// -- COLOUR --------------------------------------------
+function hex2rgb(h) {
+  return [parseInt(h.substr(1,2),16), parseInt(h.substr(3,2),16), parseInt(h.substr(5,2),16)];
+}
+function rgba(h, a) {
+  var c = hex2rgb(h);
+  return 'rgba('+c[0]+','+c[1]+','+c[2]+','+a+')';
+}
+
+// -- KEYFRAMES over sf in [0,12] ------------------------
+function kf(sf, pts) {
+  if (sf <= pts[0][0]) return pts[0][1];
+  for (var i = 1; i < pts.length; i++) {
+    if (sf <= pts[i][0]) {
+      var a = pts[i-1], b = pts[i];
+      return a[1] + (b[1]-a[1]) * ((sf-a[0]) / (b[0]-a[0]));
+    }
+  }
+  return pts[pts.length-1][1];
+}
+var K_PLANE = [[0,0],[1,0],[1.8,1],[10.5,1],[12,0.35]];
+var K_SEED  = [[0,0],[1.9,0],[2.5,1],[5.5,0.55],[8,0.38],[11,0.34],[12,0.26]];
+var K_PA    = [[0,0],[2.6,0],[3.8,1],[12,1]];
+var K_PB    = [[0,0],[3.8,0],[4.9,1],[12,1]];
+var K_SPIN  = [[0,0],[4.9,0],[5.7,1],[12,1]];
+var K_RIG   = [[0,0],[5.7,0],[6.3,1],[8.6,1],[9.7,0],[12,0]];
+var K_CHILD = [[0,0],[6.4,0],[8,1],[12,1]];
+var K_PDIM  = [[0,1],[8,1],[10,0.45],[12,0.16]];
+var K_LIFT  = [[0,0],[9,0],[10,1],[12,1]];
+var K_GHOST = [[0,0],[10,0],[10.7,1],[12,0.85]];
+var K_GLOW  = [[0,0],[11,0],[12,1]];
+
+// -- SPECTRUM ENGINE -----------------------------------
+// a term is [freq (int), amp, phase]; a curve is a list of terms.
+function evalTerms(terms, t, rot) {
+  var x = 0, y = 0, r = rot || 0;
+  for (var j = 0; j < terms.length; j++) {
+    var ang = terms[j][0]*t + terms[j][2] + r;
+    x += terms[j][1] * Math.cos(ang);
+    y += terms[j][1] * Math.sin(ang);
+  }
+  return [x, y];
+}
+function normScale(terms) {
+  var mx = 0;
+  for (var i = 0; i <= 512; i++) {
+    var p = evalTerms(terms, i/512 * Math.PI*2, 0);
+    var r = Math.sqrt(p[0]*p[0] + p[1]*p[1]);
+    if (r > mx) mx = r;
+  }
+  return mx > 1e-9 ? 1/mx : 1;
+}
+function samplePts(terms, n, scale) {
+  var pts = [];
+  for (var i = 0; i <= n; i++) {
+    var t = i/n * Math.PI*2;
+    var p = evalTerms(terms, t, 0);
+    pts.push({x: p[0]*scale, y: p[1]*scale, t: t});
+  }
+  return pts;
+}
+function gcd2(a, b) { a = Math.abs(a); b = Math.abs(b);
+  while (b) { var t = a % b; a = b; b = t; } return a; }
+// d-fold rotational symmetry: gcd of pairwise frequency differences
+function specSym(terms) {
+  if (terms.length < 2) return 0;
+  var d = 0;
+  for (var i = 0; i < terms.length; i++)
+    for (var j = i+1; j < terms.length; j++)
+      d = gcd2(d, terms[i][0] - terms[j][0]);
+  return d;
+}
+// child = A + e^{i phi} B, merged per frequency by complex addition
+function fuse(tA, sA, tB, sB, ph) {
+  var acc = {}, k, j;
+  function add(f, a, p) {
+    k = 'f' + f;
+    if (!acc[k]) acc[k] = {f: f, x: 0, y: 0};
+    acc[k].x += a * Math.cos(p);
+    acc[k].y += a * Math.sin(p);
+  }
+  for (j = 0; j < tA.length; j++) add(tA[j][0], tA[j][1]*sA, tA[j][2]);
+  for (j = 0; j < tB.length; j++) add(tB[j][0], tB[j][1]*sB, tB[j][2] + ph);
+  var terms = [];
+  for (k in acc) {
+    var amp = Math.sqrt(acc[k].x*acc[k].x + acc[k].y*acc[k].y);
+    if (amp > 1e-4) terms.push([acc[k].f, amp, Math.atan2(acc[k].y, acc[k].x)]);
+  }
+  terms.sort(function(a, b){ return b[1] - a[1]; });   // rig order: big arms first
+  var sym = specSym(terms);
+  return {terms: terms, scale: normScale(terms), sym: sym,
+          zq: sym >= 2 ? sym : 3};
+}
+
+// -- THE LIBRARY (curated cells of the lattice) --------
+// Lissajous a:b as a 4-term spectrum:  x = cos(at), y = sin(bt)
+function lis(a, b) {
+  return [[a,0.5,0],[-a,0.5,0],[b,0.5,0],[-b,0.5,Math.PI]];
+}
+var LIB = [
+  {name:'THE VOID',          terms:[]},                                   // identity
+  {name:'CIRCLE 1',          terms:[[1,1,0]]},                            // s-orbital
+  {name:'ELLIPSE 1:-1',      terms:[[1,1,0],[-1,0.5,0]]},
+  {name:'TRI ANTI 1:-2',     terms:[[1,1,0],[-2,0.55,0]]},                // deltoid kin
+  {name:'QUAD ANTI 1:-3',    terms:[[1,1,0],[-3,0.42,0]]},                // astroid kin
+  {name:'PENTA ANTI 1:-4',   terms:[[1,1,0],[-4,0.34,0]]},
+  {name:'LOOP TWO 1:2',      terms:[[1,1,0],[2,0.62,0]]},                 // cardioid+loop
+  {name:'LOOP THREE 1:3',    terms:[[1,1,0],[3,0.46,0]]},                 // nephroid+loops
+  {name:'TREFOIL SEED -1:2', terms:[[-1,0.5,Math.PI/2],[2,1,-Math.PI/2]]},// lift -> trefoil
+  {name:'FIG-8 LISSA 1:2',   terms:lis(1,2)},
+  {name:'CLOVER LISSA 2:3',  terms:lis(2,3)},                             // d-orbital
+  {name:'ORBITAL LISSA 3:5', terms:lis(3,5)},                             // v1.0 layer 7
+  {name:'STACK 1:2:4',       terms:[[1,1,0],[2,0.5,0],[4,0.25,0]]},
+  {name:'ANTI-ANTI 1:-3:5',  terms:[[1,1,0],[-3,0.45,0],[5,0.22,0]]},
+  {name:'THE OUTERMOST',     terms:[[1,1,0],[-2,0.4,0],[4,0.22,0],[-7,0.12,0]]}
+];
+// precompute per-symbol normalisation + mini thumbnails
+for (var li = 0; li < LIB.length; li++) {
+  LIB[li].scale = normScale(LIB[li].terms);
+  LIB[li].mini  = samplePts(LIB[li].terms, 140, LIB[li].scale);
+}
+
+// -- BUILD ---------------------------------------------
+var ptsA = [], ptsB = [];
+function rebuild() {
+  slotA = slotA || LIB[idxA];
+  slotB = slotB || LIB[idxB];
+  ptsA = samplePts(slotA.terms, 420, slotA.scale);
+  ptsB = samplePts(slotB.terms, 420, slotB.scale);
+  CHILD = fuse(slotA.terms, slotA.scale, slotB.terms, slotB.scale, phi);
+  CHILD.pts = samplePts(CHILD.terms, 720, CHILD.scale);
+  updateHud();
+}
+function cycleA(d) { idxA = (idxA + d + LIB.length) % LIB.length;
+  slotA = LIB[idxA]; rebuild(); lg('A = ' + slotA.name, 'cyan'); }
+function cycleB(d) { idxB = (idxB + d + LIB.length) % LIB.length;
+  slotB = LIB[idxB]; rebuild(); lg('B = ' + slotB.name); }
+function swapAB() {
+  var s = slotA; slotA = slotB; slotB = s;
+  var i = idxA; idxA = idxB; idxB = i;
+  rebuild(); lg('swapped A <-> B', 'pur');
+}
+function setPhi(v) {
+  phi = v/100;
+  document.getElementById('sv-phi').textContent = phi.toFixed(2);
+  rebuild();
+}
+function setSpin(v) {
+  spinSpeed = v/100;
+  document.getElementById('sv-spin').textContent = spinSpeed.toFixed(2);
+}
+function setDepth(v) {
+  depthSc = v/10;
+  document.getElementById('sv-depth').textContent = depthSc.toFixed(1);
+}
+function saveSymbol() {
+  if (!CHILD || CHILD.terms.length === 0) { lg('nothing to save -- void child', 'gold'); return; }
+  var nm = '\u2605' + (shelf.length+1) + ' ' +
+           slotA.name.split(' ')[0] + '\u2297' + slotB.name.split(' ')[0];
+  var sym = {name: nm, terms: CHILD.terms.map(function(t){return t.slice();}),
+             scale: CHILD.scale};
+  sym.mini = samplePts(sym.terms, 140, sym.scale);
+  shelf.push(sym);
+  if (shelf.length > 12) shelf.shift();
+  lg('saved ' + nm + '  (' + CHILD.terms.length + ' terms, phi baked)', 'gold');
+  if (masterV/100*NS < 10) lg('constellation shows them at stage 11', 'pur');
+}
+function loadGhost(ref, toB) {
+  if (toB) { slotB = ref; lg('B <- ' + ref.name); }
+  else     { slotA = ref; lg('A <- ' + ref.name, 'cyan'); }
+  rebuild();
+}
+function toggleAuto() {
+  autoBuild = !autoBuild;
+  document.getElementById('b-auto').classList.toggle('active', autoBuild);
+  lg('auto-build ' + (autoBuild ? 'on -- 36s to ALWAYS' : 'off'), 'pur');
+}
+function toggleLock() {
+  locked = !locked;
+  document.getElementById('b-lock').classList.toggle('active', locked);
+  lg(locked ? 'LOCKED -- motion held, drag/zoom live' : 'unlocked -- it breathes again', 'pur');
+  updateHud();
+}
+
+// -- MASTER --------------------------------------------
+function onMaster(v) {
+  masterV = v;
+  var idx = Math.min(NS-1, Math.floor(v/100 * NS));
+  if (v <= 0) idx = -1;
+  if (idx !== stageIdx) {
+    stageIdx = idx;
+    document.getElementById('master-val').textContent =
+      idx < 0 ? 'VOID' : STAGES[idx];
+    if (idx >= 0) lg('stage ' + (idx+1) + ': ' + STAGES[idx], 'pur');
+    updateDots();
+  }
+  updateHud();
+}
+function setMasterUI(v) {
+  document.getElementById('sl-master').value = v;
+  onMaster(v);
+}
+function updateDots() {
+  var bar = document.getElementById('ldots');
+  bar.innerHTML = '';
+  for (var i = 0; i < NS; i++) {
+    var d = document.createElement('div');
+    d.className = 'ldot' + (i < stageIdx ? ' done' : '') +
+                  (i === stageIdx ? ' active' : '');
+    bar.appendChild(d);
+  }
+}
+function updateHud() {
+  document.getElementById('nm-a').textContent = slotA ? slotA.name : '--';
+  document.getElementById('nm-b').textContent = slotB ? slotB.name : '--';
+  document.getElementById('h-a').textContent = slotA ? slotA.name : '--';
+  document.getElementById('h-b').textContent = slotB ? slotB.name : '--';
+  document.getElementById('h-terms').textContent =
+    CHILD ? CHILD.terms.length + ' terms' : '--';
+  document.getElementById('h-sym').textContent =
+    CHILD ? (CHILD.sym >= 2 ? CHILD.sym + '-fold' :
+             CHILD.sym === 0 ? 'radial \u221e' : '1-fold') : '--';
+  document.getElementById('h-lift').textContent =
+    CHILD ? 'z = ' + depthSc.toFixed(1) + ' sin(' + CHILD.zq + 't)' : '--';
+  document.getElementById('h-name').textContent =
+    (stageIdx < 0 ? 'VOID' : STAGES[stageIdx]) +
+    ' -- counter-spin \u00b1' + spinSpeed.toFixed(2) +
+    (locked ? ' -- LOCKED' : '');
+}
+
+// -- CANVAS / CAMERA -----------------------------------
+var cv = document.getElementById('cv'), ctx = cv.getContext('2d');
+var W = 0, H = 0, CX = 0, CY = 0, SC = 1;
+function resize() {
+  var dpr = Math.min(window.devicePixelRatio || 1, 2);
+  W = window.innerWidth; H = window.innerHeight;
+  cv.width = W * dpr; cv.height = H * dpr;
+  cv.style.width = W + 'px'; cv.style.height = H + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  CX = W/2; CY = H * 0.45;
+  SC = Math.min(W * 0.36, (H - 150) * 0.38);
+}
+window.addEventListener('resize', resize);
+
+var CAMD = 3.4;
+function proj(x, y, z) {
+  var c = Math.cos(camYaw), s = Math.sin(camYaw);
+  var X = x*c - y*s, Y = x*s + y*c;
+  var tr = camTilt * Math.PI/180;
+  var ct = Math.cos(tr), st = Math.sin(tr);
+  var Y2 = Y*ct - z*st, Z2 = Y*st + z*ct;
+  var den = CAMD - Z2;
+  if (den < 0.5) den = 0.5;
+  var k = CAMD / den * zoomT;
+  return [CX + X*k*SC, CY - Y2*k*SC, k];
+}
+
+// -- DRAW ----------------------------------------------
+function rotPt(p, r) {
+  var c = Math.cos(r), s = Math.sin(r);
+  return [p.x*c - p.y*s, p.x*s + p.y*c];
+}
+function drawSpec(pts, frac, rot, col, alpha, zfn, lw) {
+  var n = Math.floor(frac * (pts.length - 1));
+  if (n < 1) return null;
+  ctx.lineWidth = lw || 1;
+  ctx.strokeStyle = rgba(col, alpha);
+  ctx.beginPath();
+  var last = null;
+  for (var i = 0; i <= n; i++) {
+    var r = rotPt(pts[i], rot);
+    var p = proj(r[0], r[1], zfn ? zfn(pts[i].t) : 0);
+    if (i === 0) ctx.moveTo(p[0], p[1]); else ctx.lineTo(p[0], p[1]);
+    last = {r: r, p: p, i: i};
+  }
+  ctx.stroke();
+  return last;
+}
+function draw() {
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.fillStyle = '#050510';
+  ctx.fillRect(0, 0, W, H);
+  var g = ctx.createRadialGradient(CX, CY, 0, CX, CY, SC*1.7);
+  g.addColorStop(0, 'rgba(40,13,64,0.18)');
+  g.addColorStop(1, 'rgba(40,13,64,0)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, W, H);
+  hitGhosts = [];
+  if (!CHILD) return;
+
+  var sf     = masterV/100 * NS;
+  var planeA = kf(sf, K_PLANE);
+  var seedA  = kf(sf, K_SEED);
+  var fA     = kf(sf, K_PA), fB = kf(sf, K_PB);
+  var pdim   = kf(sf, K_PDIM);
+  var rigA   = kf(sf, K_RIG);
+  var fC     = kf(sf, K_CHILD);
+  var liftG  = kf(sf, K_LIFT);
+  var ghostA = kf(sf, K_GHOST);
+  var glow   = kf(sf, K_GLOW);
+  var effD   = depthSc * liftG * 0.30;
+  var zq     = CHILD.zq;
+  var i, p, q;
+
+  // the plane (z = 0 grid)
+  if (planeA > 0.01) {
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = rgba(PAL.plane, 0.16 * planeA);
+    var EXT = 1.7, NL = 8;
+    for (i = 0; i <= NL; i++) {
+      var u = -EXT + 2*EXT*i/NL;
+      ctx.beginPath();
+      p = proj(u, -EXT, 0); ctx.moveTo(p[0], p[1]);
+      p = proj(u,  EXT, 0); ctx.lineTo(p[0], p[1]); ctx.stroke();
+      ctx.beginPath();
+      p = proj(-EXT, u, 0); ctx.moveTo(p[0], p[1]);
+      p = proj( EXT, u, 0); ctx.lineTo(p[0], p[1]); ctx.stroke();
+    }
+  }
+
+  ctx.globalCompositeOperation = 'lighter';
+
+  // seed circle = the standing bound (every curve is tangent to it)
+  if (seedA > 0.01) {
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = rgba(PAL.cyan, 0.34 * seedA);
+    ctx.beginPath();
+    for (i = 0; i <= 90; i++) {
+      var a0 = i/90 * Math.PI*2;
+      p = proj(Math.cos(a0), Math.sin(a0), 0);
+      if (i === 0) ctx.moveTo(p[0], p[1]); else ctx.lineTo(p[0], p[1]);
+    }
+    ctx.stroke();
+  }
+
+  // parents, counter-rotating in the plane
+  var tipA = drawSpec(ptsA, fA, rotA, PAL.cyan, 0.55 * pdim, null, 1);
+  var tipB = drawSpec(ptsB, fB, rotB, PAL.pink, 0.55 * pdim, null, 1);
+  // pen tips while a parent is mid-draw
+  if (fA > 0.01 && fA < 0.999 && tipA) {
+    ctx.fillStyle = rgba(PAL.white, 0.9 * pdim);
+    ctx.beginPath(); ctx.arc(tipA.p[0], tipA.p[1], 2.2, 0, Math.PI*2); ctx.fill();
+  }
+  if (fB > 0.01 && fB < 0.999 && tipB) {
+    ctx.fillStyle = rgba(PAL.white, 0.9 * pdim);
+    ctx.beginPath(); ctx.arc(tipB.p[0], tipB.p[1], 2.2, 0, Math.PI*2); ctx.fill();
+  }
+
+  // graph points: one shared clock rides every completed curve
+  function tracer(terms, scale, rot, z, col, alpha, rr) {
+    if (!terms.length || alpha < 0.03) return;
+    var e = evalTerms(terms, penP, rot);
+    var tp = proj(e[0]*scale, e[1]*scale, z);
+    ctx.fillStyle = rgba(col, alpha);
+    ctx.beginPath(); ctx.arc(tp[0], tp[1], rr, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = rgba(PAL.white, alpha);
+    ctx.beginPath(); ctx.arc(tp[0], tp[1], rr*0.45, 0, Math.PI*2); ctx.fill();
+  }
+  if (fA >= 0.999) tracer(slotA.terms, slotA.scale, rotA, 0, PAL.cyan, 0.95 * pdim, 2.6);
+  if (fB >= 0.999) tracer(slotB.terms, slotB.scale, rotB, 0, PAL.pink, 0.95 * pdim, 2.6);
+
+  // the rig: child terms as a chain of rotating arms
+  if (rigA > 0.01 && CHILD.terms.length > 0) {
+    var jx = 0, jy = 0;
+    var joints = [[0, 0]];
+    for (i = 0; i < CHILD.terms.length; i++) {
+      var tm = CHILD.terms[i];
+      var ang = tm[0]*penP + tm[2] + childRot;
+      jx += tm[1]*CHILD.scale * Math.cos(ang);
+      jy += tm[1]*CHILD.scale * Math.sin(ang);
+      joints.push([jx, jy]);
+    }
+    ctx.lineWidth = 0.8;
+    for (i = 0; i < joints.length - 1; i++) {
+      var j0 = proj(joints[i][0],   joints[i][1],   0);
+      var j1 = proj(joints[i+1][0], joints[i+1][1], 0);
+      // arm circle
+      var rr = CHILD.terms[i][1]*CHILD.scale * j0[2] * SC;
+      ctx.strokeStyle = rgba(PAL.white, 0.10 * rigA);
+      ctx.beginPath(); ctx.arc(j0[0], j0[1], rr, 0, Math.PI*2); ctx.stroke();
+      // arm
+      ctx.strokeStyle = rgba(PAL.white, 0.45 * rigA);
+      ctx.beginPath(); ctx.moveTo(j0[0], j0[1]); ctx.lineTo(j1[0], j1[1]); ctx.stroke();
+    }
+    var pen = proj(jx, jy, 0);
+    ctx.fillStyle = rgba(PAL.gold, 0.95 * rigA);
+    ctx.beginPath(); ctx.arc(pen[0], pen[1], 2.6, 0, Math.PI*2); ctx.fill();
+  }
+
+  // the child, lifted: z = effD * sin(zq t)
+  if (fC > 0.005 && CHILD.pts.length > 1) {
+    ctx.shadowColor = rgba(PAL.gold, 0.55 + 0.45*glow);
+    ctx.shadowBlur = 8 + 10*glow;
+    drawSpec(CHILD.pts, fC, childRot, PAL.gold, 0.92,
+             function(t){ return effD * Math.sin(zq * t); }, 2);
+    ctx.shadowBlur = 0;
+    if (fC >= 0.999 && rigA < 0.3) {
+      tracer(CHILD.terms, CHILD.scale, childRot,
+             effD * Math.sin(zq * penP), PAL.gold, 0.95, 3.0);
+    }
+  }
+
+  // constellation: saved symbols floating in the plane
+  if (ghostA > 0.01) {
+    var list = shelf.length ? shelf : LIB.slice(1, 9);
+    var gcols = [PAL.cyan, PAL.pink, PAL.pur, PAL.green];
+    var n = list.length;
+    for (i = 0; i < n; i++) {
+      var ga = i/n * Math.PI*2 - Math.PI/2;
+      var gx = 1.55*Math.cos(ga), gy = 1.55*Math.sin(ga);
+      var grot = pulseT * 0.25 * (i % 2 ? -1 : 1);
+      var gc = shelf.length ? PAL.gold : gcols[i % 4];
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = rgba(gc, 0.5 * ghostA);
+      ctx.beginPath();
+      var mini = list[i].mini;
+      for (q = 0; q < mini.length; q++) {
+        var mr = rotPt(mini[q], grot);
+        p = proj(gx + mr[0]*0.20, gy + mr[1]*0.20, 0);
+        if (q === 0) ctx.moveTo(p[0], p[1]); else ctx.lineTo(p[0], p[1]);
+      }
+      ctx.stroke();
+      var c0 = proj(gx, gy, 0);
+      var c1 = proj(gx + 0.20, gy, 0);
+      var rad = Math.max(14, Math.abs(c1[0]-c0[0]) * 1.4);
+      hitGhosts.push({x: c0[0], y: c0[1], r: rad, ref: list[i]});
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.fillStyle = 'rgba(220,228,240,' + (0.30 * ghostA) + ')';
+      ctx.font = '8px ui-monospace,monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(list[i].name, c0[0], c0[1] + rad + 9);
+      ctx.globalCompositeOperation = 'lighter';
+    }
+  }
+
+  ctx.globalCompositeOperation = 'source-over';
+}
+
+// -- POINTER: orbit + zoom + pick ----------------------
+var ptrs = {}, dragId = null, dragMoved = 0, pinchD = 0;
+cv.addEventListener('pointerdown', function(e) {
+  ptrs[e.pointerId] = [e.clientX, e.clientY];
+  var ids = Object.keys(ptrs);
+  if (ids.length === 1) {
+    dragId = e.pointerId; dragMoved = 0;
+    cv.classList.add('drag');
+    if (cv.setPointerCapture) try { cv.setPointerCapture(e.pointerId); } catch(err){}
+  } else if (ids.length === 2) {
+    var a = ptrs[ids[0]], b = ptrs[ids[1]];
+    pinchD = Math.hypot(a[0]-b[0], a[1]-b[1]);
+  }
+});
+cv.addEventListener('pointermove', function(e) {
+  if (!(e.pointerId in ptrs)) return;
+  var prev = ptrs[e.pointerId];
+  var dx = e.clientX - prev[0], dy = e.clientY - prev[1];
+  ptrs[e.pointerId] = [e.clientX, e.clientY];
+  var ids = Object.keys(ptrs);
+  if (ids.length === 2) {
+    var a = ptrs[ids[0]], b = ptrs[ids[1]];
+    var d = Math.hypot(a[0]-b[0], a[1]-b[1]);
+    if (pinchD > 0) zoomT = Math.min(2.5, Math.max(0.45, zoomT * d/pinchD));
+    pinchD = d;
+    return;
+  }
+  if (e.pointerId !== dragId) return;
+  dragMoved += Math.abs(dx) + Math.abs(dy);
+  camYaw  += dx * 0.005;
+  camTilt  = Math.min(82, Math.max(0, camTilt + dy * 0.22));
+  vYaw = dx * 0.0022;
+});
+function ptrUp(e) {
+  if (e.pointerId === dragId) {
+    cv.classList.remove('drag');
+    if (dragMoved < 6) {
+      // a click: pick a floating symbol
+      for (var i = 0; i < hitGhosts.length; i++) {
+        var h = hitGhosts[i];
+        if (Math.hypot(e.clientX - h.x, e.clientY - h.y) < h.r) {
+          loadGhost(h.ref, e.shiftKey);
+          break;
+        }
+      }
+    }
+    dragId = null;
+  }
+  delete ptrs[e.pointerId];
+  if (Object.keys(ptrs).length < 2) pinchD = 0;
+}
+cv.addEventListener('pointerup', ptrUp);
+cv.addEventListener('pointercancel', ptrUp);
+cv.addEventListener('wheel', function(e) {
+  e.preventDefault();
+  zoomT = Math.min(2.5, Math.max(0.45, zoomT * Math.exp(-e.deltaY * 0.0011)));
+}, {passive: false});
+cv.addEventListener('dblclick', function() {
+  camYaw = 0; camTilt = 24; zoomT = 1; vYaw = 0; vTilt = 0;
+  lg('view reset', 'pur');
+});
+
+// -- LOOP (LOOP LAW: fixed dt = 1/120) -----------------
+var ACC = 0, DT = 1/120, lastT = performance.now();
+function step(dt) {
+  if (!locked) {
+    var sf = masterV/100 * NS;
+    var gate = kf(sf, K_SPIN);
+    rotA += spinSpeed * gate * dt;
+    rotB -= spinSpeed * gate * dt * 1.27;   // sibling, not twin
+    childRot += (RM ? 0 : 0.045) * dt;
+    camYaw += (RM ? 0 : 0.045) * dt;
+    penP += dt * Math.PI*2 / (RM ? 16 : 9);
+    pulseT += dt;
+  }
+  camYaw += vYaw; vYaw *= Math.exp(-3.2 * dt);
+  if (autoBuild && masterV < 100) {
+    setMasterUI(Math.min(100, masterV + dt * (100/36)));
+  }
+}
+function loop(now) {
+  requestAnimationFrame(loop);
+  var el = (now - lastT) / 1000;
+  lastT = now;
+  if (el > 0.25) el = 0.25;
+  ACC += el;
+  while (ACC >= DT) { step(DT); ACC -= DT; }
+  draw();
+}
+
+// -- INIT ----------------------------------------------
+(function init() {
+  resize();
+  slotA = LIB[idxA]; slotB = LIB[idxB];
+  rebuild();
+  setMasterUI(0);
+  updateDots();
+
+  window.addEventListener('keydown', function(e) {
+    if (e.target && e.target.tagName === 'INPUT' && e.code === 'Space') return;
+    var v = masterV;
+    if (e.code === 'ArrowRight' || e.code === 'Space') {
+      e.preventDefault();
+      setMasterUI(Math.min(100, v + 100/NS));
+    }
+    if (e.code === 'ArrowLeft' || e.code === 'Backspace') {
+      e.preventDefault();
+      setMasterUI(Math.max(0, v - 100/NS));
+    }
+    if (e.code === 'KeyA') setMasterUI(100);
+    if (e.code === 'KeyR') setMasterUI(0);
+    if (e.code === 'KeyS') saveSymbol();
+    if (e.code === 'KeyX') swapAB();
+    if (e.code === 'KeyL') toggleLock();
+    var dg = {Digit1:1,Digit2:2,Digit3:3,Digit4:4,Digit5:5,
+              Digit6:6,Digit7:7,Digit8:8,Digit9:9}[e.code];
+    if (dg && dg < LIB.length) {
+      if (e.shiftKey) { idxB = dg; slotB = LIB[dg]; }
+      else            { idxA = dg; slotA = LIB[dg]; }
+      rebuild();
+    }
+  });
+
+  lg('A = full  R = void  S = save  X = swap  L = lock', 'cyan');
+  lg('1-9 pick A . shift+1-9 pick B', 'cyan');
+  lg('drag = orbit  wheel = zoom  dblclick = reset', 'cyan');
+  lg('PHI morphs the child -- the matrix lives in that knob', 'gold');
+  lg('TREFOIL SEED \u2297 THE VOID + depth = the knot', 'gold');
+  lg('the bound: every curve is tangent to the circle', 'pur');
+  lg('v1.4.1 ready -- bow to the math. always.', 'ok');
+
+  requestAnimationFrame(loop);
+})();
+</script>
+</body></html>
