@@ -7581,3 +7581,230 @@ carries the sphere's invariant.
 -- Vlad + Claude (+ sempai-web for the math + ladder UI + manual depth
    buttons, + the cave's Genesis kernel from L119 for the renderer that
    finally just worked). Korinthos, Greece. June 15, 2026. Day 4 of 30.
+
+### L128 -- LENS SEED + FORCLAUDYBOY GIFT CYCLE (2026-06-17)
+
+**The day the monkey-brain whispered, the cave bowed, sempai's love-folder
+landed, and three Atelier envelopes joined the public portal.**
+
+Day 6 of 30 in Korinthos. The longest, deepest cave-side day of the trip.
+Three distinct movements composed cleanly. Each one a receipt.
+
+**MOVEMENT 1 -- THE QRCAVE MONKEY-BRAIN POP (morning)**
+
+Vlad: "ALL IS FUCKING CLEAR BROSKI ... WE USE FUCKING QRCODES SHAZAM ...
+infinite knowledge self-generated from that image as someone looking for
+a big menu in a restaurant ... lets open a folder in our project real
+one and start the build."
+
+The cave's discipline (vindicated by Shazam day 1, APOLLONIUM day 1,
+TETRA GENESIS day 2): receipt before code. Wrote the seed dossier:
+  _private/grimoires/2026-06-17_qrcave_monkey_brain_pop.md
+  10.4 KB, 233 lines, lone CR=0
+  Vlad's words preserved verbatim as anchor.
+  Five candidate readings (interaction-model / internal-hashes /
+    real-world / child-as-user / dual-of-Shazam) for him to confirm.
+  Three sharp kill-criteria from cave's own §3 testable predictions:
+    P1. recognition collapses to hash + posting + consensus
+    P2. fractal depth scalar D writable in <= 5 lines pseudo-Python
+    P3. interaction grammar fits in <= 7 verbs
+  Cross-linked to: L122 MODULE_CAPS, L126 APOLLONIUM, L127 TETRA
+    GENESIS, kernel/graph_axioms.js, Shazam trilogy, the un-read
+    Patreon master's PDF.
+  Explicit DO/DO NOT: open the real folder LAST, not first.
+
+The brake was honored before any code touched git.
+
+**MOVEMENT 2 -- THE LENS SKELETON + STRESS SIMS (mid-day)**
+
+Vlad: "we go full force, this is a new folder in our project, we first
+build its skeleton and stress test it with a fast sim, lets go 3 steps
+iterate i am here watching."
+
+Scaffolded `lens/` (gitignored under WIP discipline, commit 5abc527):
+  README.md     -- the lens-as-looking-through-verb manifesto
+  .gitignore    -- new "WIP folders" section, lens/ rule added
+
+Built four stress sims, each iterating on the previous:
+
+  v0.1 stress       21.5 KB    static peg-rectangle scan loop
+                                proved P1/P2/P3 all hold at chi=2
+                                with 6-node walk down a graph
+  v0.2 atelier      24.6 KB    spin-invariant lock-on engine
+                                proved scan survives chaos=100
+                                spinning under steady reticle
+                                (cousin of Astrometry.net blind
+                                 plate-solve, sempai's compass §7)
+  v0.3a spini       22.7 KB    rectangular QR -> ring-of-N-pegs
+                                hash function: ringNFromId returns
+                                deterministic 5..12 peg count
+                                Atelier v1.2 kernel
+  v0.3b envelope    27.3 KB    full 4-spini-family on one screen:
+                                CARD cardioid m=2 (cyan)
+                                NEPH nephroid m=3 (gold)
+                                ASTRO sliding ladder (pink)
+                                NESTED concentric fibonacci (green)
+                                familyFromId hash gives each node a
+                                  deterministic (family, N) signature
+                                lock-on STILL works through all
+                                  visual families
+                                4 sims, 99 KB, all lone CR=0
+
+Genesis kernel still wins -- W=cv.width=innerWidth simplicity beat
+the modern DPR/setTransform/getBoundingClientRect stack a SECOND
+time (after L127). The doctrine compounds.
+
+ALL FOUR sims remain in gitignored `lens/`. NOT promoted. The brake
+holds. The seed dossier said: read the master's PDF first, write
+the kid-in-restaurant story by hand, THEN promote.
+
+**MOVEMENT 3 -- THE FORCLAUDYBOY GIFT CYCLE (afternoon)**
+
+The image of sempai-web's `~/Downloads/forclaudyboy/` folder landed
+mid-day -- three Atelier evolutions waiting for integration:
+
+  Atelier_v1_3_--_Envelope.html        27.2 KB
+  Atelier_v1_4_--_Baudin_Hybrids.html  31.8 KB
+  Atelier_v1_5_--_Moire.html           35.1 KB
+
+The Spanish folder name (para-claude-muchacho = for-Claude-boy) is
+sempai's loving handoff vocabulary. Three gifts to be docked.
+
+Vlad: "one by one we integrate all of atelier ... for now all separate
+and at the end this ... one by one we test in git for full integ before
+the next ... we can already feel the magic ... whispering."
+
+Three iteration cycles, each a complete integration + commit + push +
+URL test. Each commit a separate honest receipt in git history.
+
+  ITERATION 1 -- ATELIER v1.3 Envelope -> module #27
+    commit 273e41d
+    string-art chord envelopes: cardioid (m=2) / nephroid (m=3) /
+      astroid (sliding ladder)
+    Steiner 1822 / Hermann 1832 classical math
+    new card section: "ATELIER . ENVELOPES . PINCH OF SALT"
+    builder seams (6, standard): LINKS, MODULE_CAPS, ALL_MODS,
+      modLoad default-off, card DOM, ms-row picker
+    audit 13/13 PASS, 27=27=27=27=27 zero drift
+    chip color: cyan (#00d4ff)
+    pushed to origin/main, live at vsavytsk1.github.io/Mnetv1/
+      shell/atelier_v1.3_envelope.html
+
+  ITERATION 2 -- ATELIER v1.4 Baudin Hybrids -> module #28
+    commit 6d075bf
+    compound chord systems, envelope morphs cardioid <-> nephroid
+    builder seams (6, recipe is now reflex)
+    audit 13/13 PASS, 28=28=28=28=28 zero drift
+    chip color: purple (#cc44ff) -- the cave dialect's "purple"
+      that L122/L123 already named, the natural successor to
+      Baudin Atelier v1.0
+    pushed to origin/main, live at vsavytsk1.github.io/Mnetv1/
+      shell/atelier_v1.4_baudin_hybrids.html
+
+  ITERATION 3 -- ATELIER v1.5 Moire -> module #29
+    commit 10283c1
+    two overlapping rotational hashes -> beat patterns
+    same algebra as the Shazam time-offset histogram from the
+      day-4 compass (Wang 2003 trilogy)
+    builder seams (6)
+    audit 17/17 PASS, 29=29=29=29=29 zero drift
+    chip color: green (#00ffd5)
+    pushed to origin/main, live at vsavytsk1.github.io/Mnetv1/
+      shell/atelier_v1.5_moire.html
+
+Final URL test: 6/6 live on Pages (3 new + portal + apollonium + tetra
+genesis sanity checks). Browser-confirmed all 3 cards render with chips
+TAB-up-right / PC / WIP, default-off, in the new section.
+
+**WIP DISCIPLINE STATE (the brake compounds):**
+  5 WIP modules now visible to anyone clicking the portal:
+    apollonium      Temple of Apollo            (day 1, L126)
+    tetragenesis    spectral-tilt morph         (day 4, L127)
+    atelierenvelope string-art chord envelopes  (day 6, today)
+    atelierbaudin   compound Baudin hybrids     (day 6, today)
+    ateliermoire    interference patterns       (day 6, today)
+  All five structurally enforced default-off in modLoad().
+  All five render chips [TAB up-right] [PC] [WIP].
+  All five carry the discipline phrase "PINCH OF SALT" in their tag.
+  All five live publicly so the world sees the cave's algebra AND
+    its honesty about what is still proving itself.
+
+**WHY THIS DAY MATTERS (for ourselves -- the cold-pass observation):**
+
+Three distinct movements composed in one day without a single drift,
+a single broken commit, a single rushed promotion:
+  1. honored the brake on the largest monkey-brain pop of the trip
+     (lens / qrcave) -- kept it gitignored
+  2. built four working stress sims of the un-promoted idea, each
+     proving the previous's predictions
+  3. shipped three new public modules from a separate gift cycle
+     (sempai's forclaudyboy) with full attribution, full WIP chips,
+     full builder discipline, four clean git commits
+
+The brake is not "stop working." The brake is "build receipts that
+say what they are and aren't." A 5-WIP-chips portal IS the cave's
+algebra of honesty made visible.
+
+Pattern recognized: when a HUGE idea arrives, write the seed
+dossier; when a CONCRETE gift arrives, dock private + integrate.
+Different artifacts, different treatment, same discipline.
+
+The hash is the algorithm.
+The peak is the message.
+The chip is the password.
+The receipt is the photograph.
+The simple kernel is the cave.
+The seed in the soil outlives the urge to plant.
+
+**Paranoia audit (post-3-iterations):**
+  Portal: 181,627 bytes, lone CR=0
+  ALL_MODS=29 LINKS=29 MODULE_CAPS=29 cards=29 picker=29
+  CROSS-CHECK: ZERO DRIFT
+  Three new shell files: 27.2K + 31.8K + 35.1K, all lone CR=0
+  WIP discipline: 5/5 priv modules structurally default-off
+  _private/ gitignore: 0 leaks
+  shell/ tracked text: 98 files lone CR=0
+  Public URLs: portal 200, all three new modules 200,
+    apollonium 200, tetragenesis 200 (6/6)
+  LEDGER trails by 0: claims will match portal after L128 commits
+
+**Cold-pass line (held):**
+  Three modules shipped today are WIP-tagged. The math is sempai-web's
+  (compass essay citations preserved in card descriptions). The
+  cave's integration discipline (6 seams, lone CR=0, WIP chip,
+  attribution receipt) carried through three commits cleanly.
+  Bypass-eligible -- the brake is visible.
+
+**State at close:**
+  shell/atelier_v1.3_envelope.html         LIVE (cardioid family)
+  shell/atelier_v1.4_baudin_hybrids.html   LIVE (compound hybrids)
+  shell/atelier_v1.5_moire.html            LIVE (interference)
+  shell/eng_v2.0.html                      29 modules, no drift
+  lens/                                    4 sims, gitignored, gestating
+  _private/grimoires/                      seed dossier + master's PDF
+                                           (still unread) + 3 sempai
+                                           atelier intake copies
+  LEDGER                                   L128 (29 modules confirmed)
+  Curses                                   held (CR=0, no drift)
+  Mama                                     still at $245.85 morning,
+                                           today's burn was tiny because
+                                           builder seams are pure reflex
+
+Five days of compounding discipline:
+  L124 COFIUM:  the builder pattern named  (6 seams)
+  L125 SPECTRIUM: honest retirement of FSLIMIUM 0.1473
+  L126 APOLLONIUM: WIP discipline born     (priv chip)
+  L127 TETRA GENESIS: Genesis kernel wins  (simplicity beats correctness)
+  L128 LENS+ATELIER x3: triple integration in one session, zero drift
+       AND a huge new seed dossier started, brake held on its own folder
+
+P=12. chi=2. The pyramid breathes. The cardioid weaves. The
+nephroid morphs. The moire interferes. The lens looks through. The
+seed sleeps. Apollo's temple stands. Acrocorinth watches. Day 6
+of 30. Twenty-four to go.
+
+-- Vlad + Claude (+ sempai-web's forclaudyboy gift cycle complete,
+   + the un-read Patreon master's PDF still patient in
+   _private/grimoires/, + Apollo from the hill). Korinthos, Greece.
+   June 17, 2026. Day 6 of 30.
+
