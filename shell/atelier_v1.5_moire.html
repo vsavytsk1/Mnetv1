@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Atelier v1.5 -- Moire</title>
+<!--
+  ATELIER v1.5 -- MOIRE
+  =====================
+  The interference the screen gives you for free, made into an instrument.
+
+  THE ONE LAW (all classical, honesty per A001 sec.8):
+    superpose two periodic fields with local wavevectors k1, k2.
+    cos(p1)cos(p2) = 1/2[cos(p1-p2) + cos(p1+p2)] -- the difference
+    term is the moire. Fringes are level sets of Dphi = phi1 - phi2,
+    normal to Dk = k1 - k2, with period
+        LAMBDA = 2pi / |k1 - k2|,
+        |Dk|^2 = k1^2 + k2^2 - 2 k1 k2 cos(theta)   (law of cosines).
+    Special cases carved on the bar:
+      VERNIER (theta=0):  LAMBDA = a1 a2 / |a2 - a1|
+      TWIST  (a1=a2=a):   LAMBDA = a / (2 sin(theta/2))
+        -- the twisted-bilayer-graphene moire cell (magic angle ~1.1 deg
+           lives at the steep end of this curve).
+    refs: dM = d1 d2 / sqrt(d1^2 + d2^2 - 2 d1 d2 cos t)  [arXiv:1811.09830]
+          A_m = a / (2 sin(theta/2))                       [arXiv:1503.02540]
+
+  SAMPLING IS THE THIRD LATTICE: this module point-samples its own
+    field at cell centres (PX = cell size) with smoothing OFF. Any
+    local frequency past Nyquist (f_s/2, f_s = 1/pitch) FOLDS:
+        f_alias = | f - round(f/f_s) f_s |.
+    ZONE family: a Fresnel plate cos(alpha r^2) has local frequency
+    f(r) = alpha r / pi, so alias rings sit at  r_m = pi m / (alpha p),
+    p = sample pitch. The dashed gold circles are that prediction.
+
+  CAUSTIC: the corner fan as a continuous field. A point (X,Y) in fan
+    coordinates lies on string s iff  s^2 + (Y - X - 1)s + X = 0;
+    two real roots in [0,1] = two strings, discriminant zero
+    (1 + X - Y)^2 = 4X  <=>  sqrt(X) + sqrt(Y) = 1 = the envelope.
+    Summing cos^2(pi N s_i) gives the exact string field of the
+    #WhiteRatMagic video; its beat against PX is the fringe weather
+    that hugs the parabola.
+
+  GRAPH POINTS + BOUND: probe (gold) rides a fringe by Newton steps on
+    Dphi = const while everything drifts -- proof the fringe is a level
+    curve, not an illusion; cyan/pink dots ride each lattice; fringe
+    velocity = (dphi1-dphi2)/|Dk| amplifies lattice drift by |k1|/|Dk|
+    (moire metrology). Unit bounding circle masks the field; the
+    k-compass draws the law-of-cosines triangle live at the probe.
+
+  SHELL: Atelier conventions (HUD/log/master stages/bar), LOOP LAW
+    fixed dt = 1/120, prefers-reduced-motion honoured, pure Canvas2D,
+    zero dependencies. The alias always collects.
+  Built: 2026-06-10
+-->
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#050510;color:#e0e0e0;
+  font-family:ui-monospace,monospace;font-size:11px;
+  overflow:hidden;height:100vh}
+canvas{display:block}
+#hud{position:fixed;top:12px;left:12px;z-index:10;pointer-events:none}
+#hud .title{font-size:12px;color:#00d4ff;margin-bottom:4px;
+  letter-spacing:0.15em;text-transform:uppercase}
+#hud .row{line-height:1.9;color:rgba(220,228,240,0.45)}
+#hud .val{color:#00d4ff;font-weight:bold}
+#hud .gold{color:#ffd700;font-weight:bold}
+#hud .pink{color:#ff69b4}
+#hud .green{color:#00ffd5}
+#hud .dim{color:rgba(220,228,240,0.2);font-size:10px}
+#log{position:fixed;top:152px;left:12px;z-index:10;
+  background:rgba(5,5,16,0.88);border:1px solid #1a1f2e;
+  border-radius:4px;padding:7px 11px;max-width:250px;
+  max-height:150px;overflow-y:auto;font-size:9px;
+  line-height:1.5;color:rgba(255,180,180,0.7);
+  cursor:pointer;transition:opacity 0.3s}
+#log.hidden{opacity:0;pointer-events:none}
+#log .e{border-bottom:1px solid #1a0505;padding:1px 0}
+#log .ok{color:#7fff7f}
+#log .cyan{color:#00d4ff}
+#log .gold{color:#ffd700}
+#log .pink{color:#ff69b4}
+#master-wrap{position:fixed;bottom:54px;left:50%;
+  transform:translateX(-50%);z-index:10;
+  display:flex;flex-direction:column;align-items:center;gap:4px}
+#master-wrap .ml{font-size:9px;color:rgba(0,212,255,0.4);
+  text-transform:uppercase;letter-spacing:0.15em}
+#sl-master{width:300px;height:6px;accent-color:#00d4ff;cursor:pointer}
+#master-val{font-size:10px;color:#00d4ff;font-weight:bold;
+  letter-spacing:0.1em}
+#ldots{display:flex;gap:4px;margin-top:2px}
+.ldot{width:6px;height:6px;border-radius:50%;
+  background:#0d1520;border:1px solid #1a2a3a;transition:all 0.3s}
+.ldot.done{background:#00d4ff;border-color:#00d4ff;
+  box-shadow:0 0 5px rgba(0,212,255,0.5)}
+.ldot.active{background:#ffffff;border-color:#ffffff;
+  box-shadow:0 0 8px rgba(255,255,255,0.7)}
+#stamp{position:fixed;bottom:54px;right:12px;z-index:10;
+  pointer-events:none;text-align:right}
+#stamp .s{font-size:8px;color:rgba(0,212,255,0.2);
+  letter-spacing:0.08em;line-height:1.8}
+#bar{position:fixed;bottom:0;left:0;right:0;z-index:10;
+  background:rgba(5,5,16,0.97);border-top:1px solid #1a1f2e;
+  padding:5px 12px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.btn{background:#0a0e18;color:#444;border:1px solid #1a1f2e;
+  border-radius:3px;padding:3px 8px;font-family:inherit;
+  font-size:9px;cursor:pointer;transition:all 0.15s;
+  text-transform:uppercase;letter-spacing:0.07em}
+.btn:hover{border-color:#00d4ff;color:#00d4ff}
+.btn.active{background:#00d4ff;color:#050510;border-color:#00d4ff}
+.btn.gold{color:#ffd700;border-color:#3a2a0a}
+.btn.gold:hover,.btn.gold.active{background:#ffd700;color:#050510}
+.btn.pink{color:#ff69b4;border-color:#3a1525}
+.btn.pink:hover,.btn.pink.active{background:#ff69b4;color:#050510}
+.btn.green{color:#00ffd5;border-color:#0a3a30}
+.btn.green:hover,.btn.green.active{background:#00ffd5;color:#050510}
+.sep{width:1px;height:16px;background:#1a1f2e}
+.lbl{color:rgba(220,228,240,0.25);font-size:9px;
+  text-transform:uppercase;letter-spacing:0.1em;min-width:34px;text-align:right}
+.sl{display:flex;align-items:center;gap:3px}
+.sl input{width:56px;accent-color:#00d4ff;cursor:pointer}
+.sv{font-size:9px;color:#00d4ff;min-width:32px}
+</style>
+</head>
+<body>
+
+<canvas id="cv"></canvas>
+
+<div id="hud">
+  <div class="title">Atelier v1.5 -- Moire</div>
+  <div class="row">law &nbsp;&nbsp;&nbsp;<span class="gold" id="h-law">--</span></div>
+  <div class="row">gain &nbsp;&nbsp;<span class="val" id="h-gain">--</span><span class="dim"> = |k|/|&Delta;k|</span></div>
+  <div class="row">drift &nbsp;<span class="pink" id="h-drift">--</span></div>
+  <div class="row">sample <span class="green" id="h-samp">--</span></div>
+  <div class="dim" id="h-name">VOID</div>
+</div>
+
+<div id="log" onclick="toggleLog()"></div>
+
+<div id="master-wrap">
+  <div class="ml">raise the beat</div>
+  <input type="range" id="sl-master" min="0" max="100" value="0" step="0.5"
+         oninput="onMaster(+this.value)">
+  <div id="master-val">VOID</div>
+  <div id="ldots"></div>
+</div>
+
+<div id="stamp">
+  <div class="s">Atelier v1.5</div>
+  <div class="s">two lattices . one beat . &Lambda;=2&pi;/|&Delta;k|</div>
+  <div class="s">the alias always collects</div>
+</div>
+
+<div id="bar">
+  <span class="lbl">family</span>
+  <button class="btn" id="bf-VERN" onclick="setFamily('VERN')">VERN</button>
+  <button class="btn" id="bf-TWIST" onclick="setFamily('TWIST')">TWIST</button>
+  <button class="btn" id="bf-RINGS" onclick="setFamily('RINGS')">RINGS</button>
+  <button class="btn green" id="bf-LATT" onclick="setFamily('LATT')">LATT</button>
+  <button class="btn gold" id="bf-ZONE" onclick="setFamily('ZONE')">ZONE</button>
+  <button class="btn pink" id="bf-CAUS" onclick="setFamily('CAUS')">CAUS</button>
+  <div class="sep"></div>
+  <span class="lbl" id="lb1">ratio</span>
+  <div class="sl">
+    <input type="range" id="sl-1" min="100" max="140" value="100" oninput="setS1(+this.value)">
+    <span class="sv" id="sv-1">1.00</span>
+  </div>
+  <div class="sep"></div>
+  <span class="lbl" id="lb2">twist</span>
+  <div class="sl">
+    <input type="range" id="sl-2" min="5" max="300" value="80" oninput="setS2(+this.value)">
+    <span class="sv" id="sv-2">8.0&deg;</span>
+  </div>
+  <div class="sep"></div>
+  <span class="lbl">drift</span>
+  <div class="sl">
+    <input type="range" id="sl-3" min="0" max="40" value="15" oninput="setS3(+this.value)">
+    <span class="sv" id="sv-3">0.15</span>
+  </div>
+  <div class="sep"></div>
+  <span class="lbl">px</span>
+  <div class="sl">
+    <input type="range" id="sl-4" min="1" max="8" value="3" oninput="setS4(+this.value)">
+    <span class="sv" id="sv-4">3</span>
+  </div>
+  <div class="sep"></div>
+  <button class="btn" id="b-lock" onclick="toggleLock()">LOCK</button>
+  <button class="btn" id="b-log" onclick="toggleLog()">LOG</button>
+  <button class="btn" id="b-auto" onclick="toggleAuto()">AUTO</button>
+</div>
+
+<script>
+// ATELIER v1.5 -- MOIRE
+// the screen's free interference, instrumented. the alias collects.
+
+// -- STAGES --------------------------------------------
+var STAGES = ['VOID','THE FIELD','LATTICE A','LATTICE B','SUPERPOSE','THE LAW',
+              'THE PROBE','THE DRIFT','THE FOLD','MAGIC ANGLE','GALLERY','ALWAYS'];
+var NS = STAGES.length;   // 12
+
+var PAL = {cyan:'#00d4ff', gold:'#ffd700', pink:'#ff69b4',
+           green:'#00ffd5', pur:'#cc44ff', white:'#ffffff', plane:'#3a5a9a'};
+
+var RM = false;
+try { RM = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch(e){}
+
+// -- STATE ---------------------------------------------
+var FAM = 'TWIST';
+var ratio = 1.00;          // pitch ratio aB/aA   (CAUS: strings N)
+var theta = 8.0;           // twist deg           (RINGS: separation)
+var drift = RM ? 0 : 0.15;
+var pxCell = 3;            // sampling cell (the third lattice)
+var masterV = 0, stageIdx = -1;
+var autoBuild = false, locked = false, logHidden = false;
+var phA = 0, phB = 0, pulseT = 0, wob = 0;
+var probe = {x: 0.31, y: 0.12, c: null};   // fringe rider
+var hitGhosts = [];
+var A0 = 0.05;             // base pitch, world units (R = 1)
+var ALPHA = 400;           // zone plate: phi = ALPHA r^2
+var FAN = {cx:-0.78, cy:-0.78, L:1.56};   // caustic fan placement
+
+// -- LOG -----------------------------------------------
+function lg(msg, cls) {
+  var el = document.getElementById('log');
+  var d = document.createElement('div');
+  d.className = 'e' + (cls ? ' ' + cls : '');
+  d.textContent = msg;
+  el.insertBefore(d, el.firstChild);
+  while (el.children.length > 30) el.removeChild(el.lastChild);
+}
+function toggleLog() {
+  logHidden = !logHidden;
+  document.getElementById('log').classList.toggle('hidden', logHidden);
+}
+
+// -- KEYFRAMES over sf in [0,12] ------------------------
+function kf(sf, pts) {
+  if (sf <= pts[0][0]) return pts[0][1];
+  for (var i = 1; i < pts.length; i++) {
+    if (sf <= pts[i][0]) {
+      var a = pts[i-1], b = pts[i];
+      return a[1] + (b[1]-a[1]) * ((sf-a[0]) / (b[0]-a[0]));
+    }
+  }
+  return pts[pts.length-1][1];
+}
+var K_FIELD = [[0,0],[1,0],[1.8,1],[12,1]];
+var K_A     = [[0,0],[1.9,0],[3,1],[12,1]];
+var K_B     = [[0,0],[3,0],[4,1],[12,1]];
+var K_PROD  = [[0,0],[4,0],[4.9,1],[12,1]];
+var K_LAWG  = [[0,0],[4.9,0],[5.6,1],[12,1]];     // compass + ruler
+var K_PROBE = [[0,0],[5.9,0],[6.5,1],[12,1]];
+var K_DRIFT = [[0,0],[6.9,0],[7.6,1],[12,1]];     // gates the clock
+var K_FOLD  = [[0,1],[7.9,1],[8.7,0],[12,0]];     // 1 = fine sampling, 0 = slider cell
+var K_WOB   = [[0,0],[9,0],[9.4,1],[10,1],[10.6,0],[12,0]]; // theta wobble
+var K_GALL  = [[0,0],[10,0],[10.7,1],[11.6,1],[12,0.8]];
+var K_GLOW  = [[0,0],[11,0],[12,1]];
+
+// -- FIELDS --------------------------------------------
+// each family supplies phiA(x,y), phiB(x,y) and gradients (analytic).
+function rot(x, y, deg) {
+  var r = deg * Math.PI/180, c = Math.cos(r), s = Math.sin(r);
+  return [x*c - y*s, x*s + y*c];
+}
+// caustic roots: s^2 + (Y-X-1)s + X = 0 in fan coords
+function causRoots(x, y) {
+  var X = (x - FAN.cx) / FAN.L, Y = (y - FAN.cy) / FAN.L;
+  if (X < 0 || Y < 0 || X > 1 || Y > 1) return null;
+  var b = (Y - X - 1), D = b*b - 4*X;
+  if (D < 0) return null;
+  var sq = Math.sqrt(D);
+  var s1 = (-b - sq) / 2, s2 = (-b + sq) / 2;
+  return {s1: s1, s2: s2, X: X, Y: Y, D: D};
+}
+function phiA(x, y) {
+  if (FAM === 'RINGS') return 2*Math.PI * Math.hypot(x + theta/600, y) / A0 + phA;
+  if (FAM === 'ZONE')  return ALPHA * (x*x + y*y) + phA;
+  if (FAM === 'CAUS')  { var r = causRoots(x, y); return r ? Math.PI * ratio * r.s1 + phA : null; }
+  return 2*Math.PI * x / A0 + phA;                  // VERN, TWIST, LATT
+}
+function phiB(x, y) {
+  if (FAM === 'RINGS') return 2*Math.PI * Math.hypot(x - theta/600, y) / (A0*ratio) + phB;
+  if (FAM === 'ZONE')  return null;                  // partner = the pixel grid
+  if (FAM === 'CAUS')  { var r = causRoots(x, y); return r ? Math.PI * ratio * r.s2 + phB : null; }
+  var v = rot(x, y, -theta);
+  return 2*Math.PI * v[0] / (A0*ratio) + phB;
+}
+function gradA(x, y) {
+  if (FAM === 'RINGS') { var dx=x+theta/600, r=Math.hypot(dx,y)||1e-9;
+    return [2*Math.PI*dx/(A0*r), 2*Math.PI*y/(A0*r)]; }
+  if (FAM === 'ZONE')  return [2*ALPHA*x, 2*ALPHA*y];
+  if (FAM === 'CAUS')  { var h=1e-4, p=phiA(x,y);
+    if (p===null) return [0,0];
+    var px=phiA(x+h,y), py=phiA(x,y+h);
+    return [px===null?0:(px-p)/h, py===null?0:(py-p)/h]; }
+  return [2*Math.PI/A0, 0];
+}
+function gradB(x, y) {
+  if (FAM === 'RINGS') { var dx=x-theta/600, r=Math.hypot(dx,y)||1e-9, aB=A0*ratio;
+    return [2*Math.PI*dx/(aB*r), 2*Math.PI*y/(aB*r)]; }
+  if (FAM === 'ZONE')  return null;
+  if (FAM === 'CAUS')  { var h=1e-4, p=phiB(x,y);
+    if (p===null) return [0,0];
+    var px=phiB(x+h,y), py=phiB(x,y+h);
+    return [px===null?0:(px-p)/h, py===null?0:(py-p)/h]; }
+  var r = theta*Math.PI/180, aB = A0*ratio;
+  return [2*Math.PI*Math.cos(r)/aB, 2*Math.PI*Math.sin(r)/aB];
+}
+// transmissions in [0,1]; LATT crosses two gratings into dots
+function transA(x, y) {
+  if (FAM === 'LATT') {
+    var u = 0.5+0.5*Math.cos(2*Math.PI*x/A0 + phA);
+    var v = 0.5+0.5*Math.cos(2*Math.PI*y/A0 + phA);
+    return u*u*v*v;
+  }
+  var p = phiA(x, y);
+  if (p === null) return 0;
+  if (FAM === 'CAUS') {
+    var r = causRoots(x, y), t = 0;
+    if (!r) return 0;
+    if (r.s1 >= 0 && r.s1 <= 1) { var c1=Math.cos(Math.PI*ratio*r.s1+phA); t += c1*c1; }
+    if (r.s2 >= 0 && r.s2 <= 1) { var c2=Math.cos(Math.PI*ratio*r.s2+phA); t += c2*c2; }
+    return Math.min(1, t);
+  }
+  var c = Math.cos(p);
+  return 0.5 + 0.5*c;
+}
+function transB(x, y) {
+  if (FAM === 'ZONE' || FAM === 'CAUS') return 0;
+  if (FAM === 'LATT') {
+    var v = rot(x, y, -theta), aB = A0*ratio;
+    var u1 = 0.5+0.5*Math.cos(2*Math.PI*v[0]/aB + phB);
+    var v1 = 0.5+0.5*Math.cos(2*Math.PI*v[1]/aB + phB);
+    return u1*u1*v1*v1;
+  }
+  var p = phiB(x, y);
+  if (p === null) return 0;
+  return 0.5 + 0.5*Math.cos(p);
+}
+
+// -- THE LAW -------------------------------------------
+// LAMBDA = 2pi/|k1-k2|; |Dk|^2 = k1^2+k2^2-2 k1 k2 cos(theta)
+function lawInfo() {
+  if (FAM === 'ZONE') {
+    var p = samplePitch();
+    var r1 = Math.PI / (ALPHA * p);
+    return {kind:'zone', txt:'r_m = pi m/(alpha p)  r1 = ' + r1.toFixed(3) + ' R', r1: r1};
+  }
+  if (FAM === 'CAUS') {
+    return {kind:'caus', txt:'envelope: sqrt(X)+sqrt(Y) = 1 (D = 0)'};
+  }
+  var gA = gradA(probe.x, probe.y), gB = gradB(probe.x, probe.y);
+  var dkx = gA[0]-gB[0], dky = gA[1]-gB[1];
+  var dk = Math.hypot(dkx, dky), kA = Math.hypot(gA[0], gA[1]);
+  var lam = dk > 1e-9 ? 2*Math.PI/dk : Infinity;
+  var txt;
+  if (FAM === 'TWIST' && Math.abs(ratio-1) < 1e-9) {
+    txt = 'L = a/2sin(t/2) = ' + (isFinite(lam)?lam.toFixed(3):'inf') + ' R';
+  } else if (Math.abs(theta) < 1e-9 && FAM === 'VERN') {
+    txt = 'L = a1a2/|a2-a1| = ' + (isFinite(lam)?lam.toFixed(3):'inf') + ' R';
+  } else {
+    txt = 'L = 2pi/|Dk| = ' + (isFinite(lam)?lam.toFixed(3):'inf') + ' R';
+  }
+  return {kind:'lin', txt:txt, lam:lam, dkx:dkx, dky:dky, dk:dk, kA:kA,
+          gain: dk > 1e-9 ? kA/dk : Infinity};
+}
+function samplePitch() {
+  return pxCellEff() * WORLD / IB;
+}
+function pxCellEff() {
+  var g = kf(masterV/100*NS, K_FOLD);     // 1 -> fine, 0 -> slider
+  return Math.max(1, Math.round(1 + (pxCell-1)*(1-g)));
+}
+
+// -- BUFFER RENDER (point sampling, the honest kind) ----
+var cv = document.getElementById('cv'), ctx = cv.getContext('2d');
+var W = 0, H = 0, CX = 0, CY = 0, SC = 1;
+var IB = 440, WORLD = 2.3;
+var buf = document.createElement('canvas'), bctx = buf.getContext('2d');
+buf.width = IB; buf.height = IB;
+var img = null;
+function resize() {
+  var dpr = Math.min(window.devicePixelRatio || 1, 2);
+  W = window.innerWidth; H = window.innerHeight;
+  cv.width = W*dpr; cv.height = H*dpr;
+  cv.style.width = W+'px'; cv.style.height = H+'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.imageSmoothingEnabled = false;
+  CX = W/2; CY = H*0.45;
+  SC = Math.min(W*0.40, (H-150)*0.42);
+  img = bctx.createImageData(IB, IB);
+}
+window.addEventListener('resize', resize);
+
+var bgR = 5, bgG = 5, bgB2 = 16;
+function renderBuffer(gA, gB, gP) {
+  var cell = pxCellEff();
+  var d = img.data;
+  var cells = Math.ceil(IB / cell);
+  var half = WORLD/2;
+  for (var cj = 0; cj < cells; cj++) {
+    var py = (cj + 0.5) * cell;
+    var y = half - py * WORLD / IB;            // world y at cell centre
+    for (var ci = 0; ci < cells; ci++) {
+      var px = (ci + 0.5) * cell;
+      var x = px * WORLD / IB - half;
+      var r = bgR, g = bgG, b = bgB2;
+      if (x*x + y*y <= 1.045) {                 // bounding disk
+        var tA = gA > 0.004 ? transA(x, y) : 0;
+        var tB = gB > 0.004 ? transB(x, y) : 0;
+        var P  = gP > 0.004 ? tA * tB : 0;
+        // additive atelier light: A cyan, B pink, beat white-gold
+        r += tA*gA*14  + tB*gB*112 + P*gP*168;
+        g += tA*gA*125 + tB*gB*48  + P*gP*150;
+        b += tA*gA*150 + tB*gB*92  + P*gP*96;
+      }
+      if (r > 255) r = 255; if (g > 255) g = 255; if (b > 255) b = 255;
+      // fill the cell block
+      var x0 = ci*cell, y0 = cj*cell;
+      var xm = Math.min(IB, x0+cell), ym = Math.min(IB, y0+cell);
+      for (var yy = y0; yy < ym; yy++) {
+        var row = (yy*IB + x0) * 4;
+        for (var xx = x0; xx < xm; xx++) {
+          d[row] = r; d[row+1] = g; d[row+2] = b; d[row+3] = 255;
+          row += 4;
+        }
+      }
+    }
+  }
+  bctx.putImageData(img, 0, 0);
+}
+
+// -- WORLD->SCREEN for vector overlays ------------------
+function ws(x, y) { return [CX + x*SC, CY - y*SC]; }
+function hex2rgb(h){return [parseInt(h.substr(1,2),16),parseInt(h.substr(3,2),16),parseInt(h.substr(5,2),16)];}
+function rgba(h,a){var c=hex2rgb(h);return 'rgba('+c[0]+','+c[1]+','+c[2]+','+a+')';}
+
+// -- DRAW ----------------------------------------------
+function draw() {
+  ctx.fillStyle = '#050510';
+  ctx.fillRect(0, 0, W, H);
+  hitGhosts = [];
+
+  var sf     = masterV/100 * NS;
+  var fieldA = kf(sf, K_FIELD);
+  var gA     = kf(sf, K_A), gB = kf(sf, K_B), gP = kf(sf, K_PROD);
+  var lawG   = kf(sf, K_LAWG);
+  var probeG = kf(sf, K_PROBE);
+  var gallG  = kf(sf, K_GALL);
+  var glow   = kf(sf, K_GLOW);
+
+  // the field (sampled buffer), blitted crisp
+  if (fieldA > 0.01) {
+    renderBuffer(gA, gB, gP);
+    var side = 2*SC*1.15;
+    ctx.globalAlpha = Math.min(1, fieldA);
+    ctx.drawImage(buf, CX - side/2, CY - side/2, side, side);
+    ctx.globalAlpha = 1;
+  }
+
+  // bounding circle (the field's edge)
+  if (fieldA > 0.01) {
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = rgba(PAL.cyan, 0.35*fieldA);
+    ctx.beginPath();
+    var p0 = ws(1, 0); ctx.moveTo(p0[0], p0[1]);
+    for (var i = 1; i <= 96; i++) {
+      var a0 = i/96*Math.PI*2, p = ws(Math.cos(a0), Math.sin(a0));
+      ctx.lineTo(p[0], p[1]);
+    }
+    ctx.stroke();
+  }
+
+  // family-specific gold overlays
+  if (lawG > 0.01) {
+    if (FAM === 'ZONE') {
+      // predicted alias rings r_m (dashed gold)
+      var p = samplePitch();
+      ctx.setLineDash([5, 5]);
+      for (var m = 1; m <= 3; m++) {
+        var rm = Math.PI*m / (ALPHA*p);
+        if (rm > 1.0) break;
+        ctx.lineWidth = 1.2;
+        ctx.strokeStyle = rgba(PAL.gold, 0.7*lawG);
+        ctx.beginPath();
+        var q0 = ws(rm, 0); ctx.moveTo(q0[0], q0[1]);
+        for (var j = 1; j <= 80; j++) {
+          var aa = j/80*Math.PI*2, q = ws(rm*Math.cos(aa), rm*Math.sin(aa));
+          ctx.lineTo(q[0], q[1]);
+        }
+        ctx.stroke();
+      }
+      ctx.setLineDash([]);
+    }
+    if (FAM === 'CAUS') {
+      // analytic envelope: (X,Y) = (t^2, (1-t)^2), gold
+      ctx.lineWidth = 1.6;
+      ctx.shadowColor = rgba(PAL.gold, 0.7); ctx.shadowBlur = 8;
+      ctx.strokeStyle = rgba(PAL.gold, 0.85*lawG);
+      ctx.beginPath();
+      for (var t = 0; t <= 60; t++) {
+        var tt = t/60, X = tt*tt, Y = (1-tt)*(1-tt);
+        var q = ws(FAN.cx + X*FAN.L, FAN.cy + Y*FAN.L);
+        if (t === 0) ctx.moveTo(q[0], q[1]); else ctx.lineTo(q[0], q[1]);
+      }
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+    }
+  }
+
+  // the law: Lambda ruler + k-compass
+  var L = lawInfo();
+  if (lawG > 0.01 && L.kind === 'lin' && isFinite(L.lam) && L.lam < 1.4) {
+    // ruler: gold segment of predicted length along Dk-hat, near probe
+    var ux = L.dkx/L.dk, uy = L.dky/L.dk;
+    var rx = probe.x + 0.16*(-uy), ry = probe.y + 0.16*(ux);
+    var a1 = ws(rx - ux*L.lam/2, ry - uy*L.lam/2);
+    var a2 = ws(rx + ux*L.lam/2, ry + uy*L.lam/2);
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = rgba(PAL.gold, 0.9*lawG);
+    ctx.beginPath(); ctx.moveTo(a1[0],a1[1]); ctx.lineTo(a2[0],a2[1]); ctx.stroke();
+    for (var e = 0; e < 2; e++) {
+      var pt = e ? a2 : a1;
+      ctx.beginPath(); ctx.arc(pt[0], pt[1], 2.4, 0, Math.PI*2);
+      ctx.fillStyle = rgba(PAL.gold, 0.9*lawG); ctx.fill();
+    }
+  }
+  if (lawG > 0.01) drawCompass(lawG);
+
+  // graph points
+  if (probeG > 0.01) {
+    // lattice riders: cyan along kA-hat at phase speed, pink along kB-hat
+    var gAv = gradA(0.0, -0.55), gBv = gradB(0.0, -0.55);
+    if (gAv) {
+      var kAm = Math.hypot(gAv[0], gAv[1]) || 1;
+      var sA = ((phA % (2*Math.PI)) + 2*Math.PI) % (2*Math.PI) / kAm;
+      var pA = ws(-0.55*0 + sA*gAv[0]/kAm - 0.0, -0.55 + sA*gAv[1]/kAm);
+      dot(pA, PAL.cyan, 2.6, probeG);
+    }
+    if (gBv && FAM !== 'ZONE' && FAM !== 'CAUS') {
+      var kBm = Math.hypot(gBv[0], gBv[1]) || 1;
+      var sB = ((phB % (2*Math.PI)) + 2*Math.PI) % (2*Math.PI) / kBm;
+      var pB = ws(sB*gBv[0]/kBm, -0.62 + sB*gBv[1]/kBm);
+      dot(pB, PAL.pink, 2.6, probeG);
+    }
+    // the fringe rider (gold): proof the fringe is a level set
+    var pp = ws(probe.x, probe.y);
+    ctx.shadowColor = rgba(PAL.gold, 0.8); ctx.shadowBlur = 9;
+    dot(pp, PAL.gold, 3.2, probeG);
+    ctx.shadowBlur = 0;
+  }
+
+  // gallery: family minis floating on the rim
+  if (gallG > 0.01) drawGallery(gallG);
+
+  ctx.globalCompositeOperation = 'source-over';
+
+  if (glow > 0.01) {
+    var g2 = ctx.createRadialGradient(CX, CY, SC*0.9, CX, CY, SC*1.5);
+    g2.addColorStop(0, 'rgba(0,0,0,0)');
+    g2.addColorStop(1, 'rgba(0,18,28,' + (0.25*glow) + ')');
+    ctx.fillStyle = g2; ctx.fillRect(0, 0, W, H);
+  }
+}
+function dot(p, col, r, a) {
+  ctx.fillStyle = rgba(col, 0.95*a);
+  ctx.beginPath(); ctx.arc(p[0], p[1], r, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = rgba(PAL.white, 0.9*a);
+  ctx.beginPath(); ctx.arc(p[0], p[1], r*0.45, 0, Math.PI*2); ctx.fill();
+}
+
+// k-compass: the law-of-cosines triangle, live at the probe
+function drawCompass(a) {
+  var cx = W - 96, cy = CY + SC*0.55, R = 44;
+  ctx.strokeStyle = rgba(PAL.plane, 0.5*a);
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI*2); ctx.stroke();
+  var gA = gradA(probe.x, probe.y), gB = gradB(probe.x, probe.y);
+  var ks = 2*Math.PI / samplePitch();
+  var kmax = ks;
+  if (gA) kmax = Math.max(kmax, Math.hypot(gA[0], gA[1]));
+  if (gB) kmax = Math.max(kmax, Math.hypot(gB[0], gB[1]));
+  function arrow(vx, vy, col, w) {
+    var L2 = Math.hypot(vx, vy);
+    if (L2 < 1e-9) return;
+    var s = (R-5) * Math.min(1, L2/kmax) / L2;
+    var ex = cx + vx*s, ey = cy - vy*s;
+    ctx.strokeStyle = rgba(col, 0.9*a); ctx.lineWidth = w;
+    ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(ex, ey); ctx.stroke();
+    ctx.fillStyle = rgba(col, 0.9*a);
+    ctx.beginPath(); ctx.arc(ex, ey, 2.2, 0, Math.PI*2); ctx.fill();
+  }
+  if (FAM === 'ZONE' && gA) {
+    // show the FOLD: k, sampling k_s, and the alias k - m k_s
+    arrow(gA[0], gA[1], PAL.cyan, 1.4);
+    arrow(ks, 0, PAL.green, 1);
+    var mx = Math.round(gA[0]/ks), my = Math.round(gA[1]/ks);
+    arrow(gA[0]-mx*ks, gA[1]-my*ks, PAL.gold, 2);
+  } else if (gA && gB) {
+    arrow(gA[0], gA[1], PAL.cyan, 1.4);
+    arrow(gB[0], gB[1], PAL.pink, 1.4);
+    arrow(gA[0]-gB[0], gA[1]-gB[1], PAL.gold, 2);
+    // fringe direction: dashed chord perpendicular to Dk
+    var dx = gA[0]-gB[0], dy = gA[1]-gB[1], dn = Math.hypot(dx,dy)||1;
+    ctx.setLineDash([3,4]);
+    ctx.strokeStyle = rgba(PAL.gold, 0.45*a); ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(cx - (-dy/dn)*(R-4), cy - (dx/dn)*(R-4));
+    ctx.lineTo(cx + (-dy/dn)*(R-4), cy + (dx/dn)*(R-4));
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+  ctx.fillStyle = rgba(PAL.cyan, 0.35*a);
+  ctx.font = '8px ui-monospace,monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('k-compass', cx, cy + R + 11);
+}
+
+// gallery minis: tiny pre-rendered fields, click to load
+var FAMS = ['VERN','TWIST','RINGS','LATT','ZONE','CAUS'];
+var MINIS = {};
+function bakeMini(fam) {
+  var save = {FAM:FAM, ratio:ratio, theta:theta, phA:phA, phB:phB};
+  FAM = fam;
+  ratio = fam==='VERN'?1.12 : fam==='CAUS'?60 : 1.0;
+  theta = fam==='TWIST'?8 : fam==='LATT'?6 : fam==='RINGS'?180 : 8;
+  phA = 0; phB = 0;
+  var n = 56, c2 = document.createElement('canvas');
+  c2.width = n; c2.height = n;
+  var x2 = c2.getContext('2d'), im = x2.createImageData(n, n);
+  for (var j = 0; j < n; j++) for (var i = 0; i < n; i++) {
+    var x = (i+0.5)/n*WORLD - WORLD/2, y = WORLD/2 - (j+0.5)/n*WORLD;
+    var k = (j*n+i)*4, r=bgR, g=bgG, b=bgB2;
+    if (x*x+y*y <= 1) {
+      var tA = transA(x,y), tB = transB(x,y), P = tA*tB;
+      r += tA*14+tB*112+P*168; g += tA*125+tB*48+P*150; b += tA*150+tB*92+P*96;
+    }
+    im.data[k]=Math.min(255,r); im.data[k+1]=Math.min(255,g);
+    im.data[k+2]=Math.min(255,b); im.data[k+3]=255;
+  }
+  x2.putImageData(im, 0, 0);
+  MINIS[fam] = c2;
+  FAM=save.FAM; ratio=save.ratio; theta=save.theta; phA=save.phA; phB=save.phB;
+}
+function drawGallery(a) {
+  for (var i = 0; i < FAMS.length; i++) {
+    var ang = i/FAMS.length*Math.PI*2 - Math.PI/2;
+    var gx = 1.42*Math.cos(ang), gy = 1.42*Math.sin(ang);
+    var p = ws(gx, gy), s = 52;
+    if (!MINIS[FAMS[i]]) bakeMini(FAMS[i]);
+    ctx.globalAlpha = 0.85*a;
+    ctx.drawImage(MINIS[FAMS[i]], p[0]-s/2, p[1]-s/2, s, s);
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = rgba(FAMS[i]===FAM?PAL.gold:PAL.plane, 0.7*a);
+    ctx.lineWidth = 1;
+    ctx.strokeRect(p[0]-s/2, p[1]-s/2, s, s);
+    ctx.fillStyle = 'rgba(220,228,240,'+(0.35*a)+')';
+    ctx.font = '8px ui-monospace,monospace'; ctx.textAlign='center';
+    ctx.fillText(FAMS[i], p[0], p[1]+s/2+9);
+    hitGhosts.push({x:p[0], y:p[1], r:s*0.7, fam:FAMS[i]});
+  }
+}
+
+// -- PROBE: ride the fringe ----------------------------
+function dPhi(x, y) {
+  if (FAM === 'ZONE') {
+    // beat vs sampling: fold phiA against the cell lattice
+    var p = samplePitch(), ks = 2*Math.PI/p;
+    var gA = gradA(x, y);
+    var mx = Math.round(gA[0]/ks), my = Math.round(gA[1]/ks);
+    return phiA(x,y) - ks*(mx*x + my*y);
+  }
+  var a = phiA(x, y), b = phiB(x, y);
+  if (a === null || b === null) return null;
+  return a - b;
+}
+function stepProbe(dt) {
+  if (FAM === 'CAUS') {
+    // ride the envelope: tangency sweep
+    var t = (pulseT*0.10) % 1;
+    probe.x = FAN.cx + t*t*FAN.L;
+    probe.y = FAN.cy + (1-t)*(1-t)*FAN.L;
+    probe.c = null;
+    return;
+  }
+  var v = dPhi(probe.x, probe.y);
+  if (v === null) { probe.x = 0.31; probe.y = 0.12; probe.c = null; return; }
+  if (probe.c === null) probe.c = v;
+  // tangential glide + Newton correction back onto the level set
+  var h = 1e-4;
+  var gx = (dPhi(probe.x+h, probe.y) - v)/h;
+  var gy = (dPhi(probe.x, probe.y+h) - v)/h;
+  var gn = Math.hypot(gx, gy);
+  if (gn > 1e-7) {
+    var sp = 0.10 * dt * SCALE_TANG();
+    probe.x += (-gy/gn) * sp;
+    probe.y += ( gx/gn) * sp;
+    // re-evaluate and correct (the fringe drifts: c follows phA-phB clock)
+    var v2 = dPhi(probe.x, probe.y);
+    var err = v2 - probe.c;
+    probe.x -= err * gx / (gn*gn);
+    probe.y -= err * gy / (gn*gn);
+  }
+  if (probe.x*probe.x + probe.y*probe.y > 0.92) {  // keep inside the bound
+    probe.x *= 0.84; probe.y *= 0.84;
+    var v3 = dPhi(probe.x, probe.y);
+    probe.c = v3 === null ? null : v3;
+  }
+}
+function SCALE_TANG(){ return FAM==='ZONE'?0.6:1; }
+
+// -- UI ------------------------------------------------
+function setFamily(f) {
+  FAM = f;
+  for (var i = 0; i < FAMS.length; i++)
+    document.getElementById('bf-'+FAMS[i]).classList.toggle('active', FAMS[i]===f);
+  var l1 = document.getElementById('lb1'), l2 = document.getElementById('lb2');
+  var s1 = document.getElementById('sl-1'), s2 = document.getElementById('sl-2');
+  if (f === 'CAUS') {
+    l1.textContent = 'N'; s1.min = 8; s1.max = 220; s1.value = Math.round(ratio = 60);
+    l2.textContent = 'twist'; s2.min = 0; s2.max = 300; s2.value = Math.round((theta=0)*10);
+  } else if (f === 'RINGS') {
+    l1.textContent = 'ratio'; s1.min = 100; s1.max = 140; s1.value = Math.round((ratio=1.0)*100);
+    l2.textContent = 'sep'; s2.min = 5; s2.max = 300; s2.value = Math.round((theta=180));
+  } else {
+    l1.textContent = 'ratio'; s1.min = 100; s1.max = 140;
+    ratio = f==='VERN' ? 1.10 : 1.00;
+    s1.value = Math.round(ratio*100);
+    l2.textContent = 'twist';
+    s2.min = 0; s2.max = 300;
+    theta = f==='VERN' ? 0 : f==='LATT' ? 6 : 8;
+    s2.value = Math.round(theta*10);
+  }
+  syncSliderLabels();
+  probe.c = null;
+  var laws = {VERN:'L = a1a2/|a2-a1| -- the vernier',
+              TWIST:'L = a/2sin(t/2) -- twisted bilayer law',
+              RINGS:'fringes = level sets of r1-r2 (two sources)',
+              LATT:'superlattice cell x 1/(2sin t/2) -- graphene',
+              ZONE:'alias rings at r_m = pi m/(alpha p)',
+              CAUS:'string field vs pixels -- WhiteRatMagic'};
+  lg(f + ': ' + laws[f], 'gold');
+  updateHud();
+}
+function setS1(v) {
+  ratio = FAM==='CAUS' ? v : v/100;
+  syncSliderLabels(); probe.c = null; updateHud();
+}
+function setS2(v) {
+  theta = FAM==='RINGS' ? v : v/10;
+  syncSliderLabels(); probe.c = null; updateHud();
+}
+function setS3(v) {
+  drift = v/100;
+  document.getElementById('sv-3').textContent = drift.toFixed(2);
+  updateHud();
+}
+function setS4(v) {
+  pxCell = v;
+  document.getElementById('sv-4').textContent = v;
+  probe.c = null; updateHud();
+}
+function syncSliderLabels() {
+  document.getElementById('sv-1').textContent =
+    FAM==='CAUS' ? Math.round(ratio) : ratio.toFixed(2);
+  document.getElementById('sv-2').textContent =
+    FAM==='RINGS' ? (theta/600).toFixed(2)+'R' : theta.toFixed(1)+'\u00b0';
+}
+function toggleLock() {
+  locked = !locked;
+  document.getElementById('b-lock').classList.toggle('active', locked);
+  lg(locked ? 'LOCKED -- the beat holds' : 'unlocked -- it breathes', 'cyan');
+  updateHud();
+}
+function toggleAuto() {
+  autoBuild = !autoBuild;
+  document.getElementById('b-auto').classList.toggle('active', autoBuild);
+  lg('auto-build ' + (autoBuild ? 'on -- 36s to ALWAYS' : 'off'), 'cyan');
+}
+
+// -- MASTER --------------------------------------------
+function onMaster(v) {
+  masterV = v;
+  var idx = Math.min(NS-1, Math.floor(v/100*NS));
+  if (v <= 0) idx = -1;
+  if (idx !== stageIdx) {
+    stageIdx = idx;
+    document.getElementById('master-val').textContent = idx < 0 ? 'VOID' : STAGES[idx];
+    if (idx >= 0) lg('stage ' + (idx+1) + ': ' + STAGES[idx], 'cyan');
+    updateDots();
+  }
+  updateHud();
+}
+function setMasterUI(v) {
+  document.getElementById('sl-master').value = v;
+  onMaster(v);
+}
+function updateDots() {
+  var bar = document.getElementById('ldots');
+  bar.innerHTML = '';
+  for (var i = 0; i < NS; i++) {
+    var d = document.createElement('div');
+    d.className = 'ldot' + (i < stageIdx ? ' done' : '') +
+                  (i === stageIdx ? ' active' : '');
+    bar.appendChild(d);
+  }
+}
+function updateHud() {
+  var L = lawInfo();
+  document.getElementById('h-law').textContent = L.txt;
+  document.getElementById('h-gain').textContent =
+    (L.kind === 'lin' && isFinite(L.gain)) ? '\u00d7' + L.gain.toFixed(1) : '--';
+  var amp = (L.kind === 'lin' && isFinite(L.gain)) ? (drift*L.gain).toFixed(2) : '--';
+  document.getElementById('h-drift').textContent =
+    drift.toFixed(2) + ' -> fringe ' + amp;
+  var p = samplePitch(), fs = 1/p;
+  var fmax = (FAM==='ZONE' ? ALPHA*1/Math.PI : 1/(A0*Math.min(1,ratio||1)));
+  document.getElementById('h-samp').textContent =
+    'cell ' + pxCellEff() + ' . f_s ' + fs.toFixed(0) +
+    (fmax > fs/2 ? ' . FOLDED' : ' . nyquist ok');
+  document.getElementById('h-name').textContent =
+    (stageIdx < 0 ? 'VOID' : STAGES[stageIdx]) + ' -- ' + FAM +
+    (locked ? ' -- LOCKED' : '');
+}
+
+// -- POINTER: click gallery minis -----------------------
+cv.addEventListener('pointerdown', function(e) {
+  for (var i = 0; i < hitGhosts.length; i++) {
+    var h = hitGhosts[i];
+    if (Math.hypot(e.clientX-h.x, e.clientY-h.y) < h.r) { setFamily(h.fam); return; }
+  }
+});
+
+// -- LOOP (LOOP LAW: fixed dt = 1/120) -------------------
+var ACC = 0, DT = 1/120, lastT = performance.now();
+function step(dt) {
+  var sf = masterV/100*NS;
+  if (!locked) {
+    var g = kf(sf, K_DRIFT);
+    phA += drift * g * dt * 2*Math.PI;
+    phB += drift * g * dt * 2*Math.PI * 1.31;
+    pulseT += dt;
+    var wA = kf(sf, K_WOB);
+    if (wA > 0 && !RM) {                 // magic-angle wobble: feel dL/dt
+      wob += dt;
+      var base = +document.getElementById('sl-2').value /
+                 (FAM==='RINGS' ? 1 : 10);
+      theta = base * (1 + 0.18*wA*Math.sin(wob*0.8));
+    }
+    if (kf(sf, K_PROBE) > 0.5) stepProbe(dt);
+  }
+  if (autoBuild && masterV < 100) setMasterUI(Math.min(100, masterV + dt*(100/36)));
+}
+function loop(now) {
+  requestAnimationFrame(loop);
+  var el = (now - lastT)/1000; lastT = now;
+  if (el > 0.25) el = 0.25;
+  ACC += el;
+  while (ACC >= DT) { step(DT); ACC -= DT; }
+  draw();
+}
+
+// -- INIT ----------------------------------------------
+(function init() {
+  resize();
+  setFamily('TWIST');
+  setMasterUI(0);
+  updateDots();
+
+  window.addEventListener('keydown', function(e) {
+    if (e.target && e.target.tagName === 'INPUT' && e.code === 'Space') return;
+    var v = masterV;
+    if (e.code === 'ArrowRight' || e.code === 'Space') {
+      e.preventDefault(); setMasterUI(Math.min(100, v + 100/NS));
+    }
+    if (e.code === 'ArrowLeft' || e.code === 'Backspace') {
+      e.preventDefault(); setMasterUI(Math.max(0, v - 100/NS));
+    }
+    if (e.code === 'KeyA') setMasterUI(100);
+    if (e.code === 'KeyR') setMasterUI(0);
+    if (e.code === 'KeyL') toggleLock();
+    var dg = {Digit1:0,Digit2:1,Digit3:2,Digit4:3,Digit5:4,Digit6:5}[e.code];
+    if (dg !== undefined) setFamily(FAMS[dg]);
+  });
+
+  lg('A = full  R = void  L = lock  1-6 = family', 'cyan');
+  lg('PX is the third lattice -- the screen itself', 'gold');
+  lg('the gold dot rides a level set of Dphi', 'gold');
+  lg('L = 2pi/|k1-k2| -- law of cosines, always', 'gold');
+  lg('v1.5 ready -- the alias always collects.', 'ok');
+
+  requestAnimationFrame(loop);
+})();
+</script>
+</body></html>
