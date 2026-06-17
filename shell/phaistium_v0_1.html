@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+<title>PHAISTIUM v0.1 -- the Phaistos Disc as the cave's spiral-hierarchy lens</title>
+<style>
+  :root{
+    --bg:#050508; --gold:#ffd700; --cyan:#00d4ff; --pink:#ff69b4; --green:#00ffd5;
+    --espresso:#c7894a; --purple:#cc44ff; --dim:#6a6a82; --txt:#e8e0d0;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;background:var(--bg);color:var(--txt);font-family:var(--mono);overflow:hidden}
+  #cv{position:fixed;inset:0;display:block;cursor:crosshair}
+  #hud{position:fixed;top:0;left:0;right:0;padding:10px 14px;display:flex;gap:14px;align-items:flex-start;
+    pointer-events:none;font-size:11px;z-index:10;flex-wrap:wrap}
+  #hud > div{pointer-events:auto;background:rgba(8,8,16,0.78);border:1px solid #20202e;
+    border-radius:8px;padding:8px 11px;backdrop-filter:blur(3px)}
+  #ttl{color:var(--gold);font-size:14px;letter-spacing:0.06em}
+  #sub{color:var(--dim);font-size:10px;margin-top:1px;max-width:540px}
+  #note{color:var(--espresso);font-size:10px;margin-top:5px;max-width:540px;line-height:1.4}
+  #note b{color:var(--gold)}
+  #side{margin-left:auto;max-width:280px;color:var(--dim);font-size:10px;line-height:1.55}
+  #side b{color:var(--cyan)} #side .l{color:var(--gold)}
+  #side .row{display:flex;align-items:center;gap:6px;margin:1px 0}
+  #side .sw{width:14px;height:8px;border-radius:2px;display:inline-block}
+  #bar{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;display:flex;flex-wrap:wrap;gap:10px;
+    align-items:center;background:rgba(8,8,16,0.88);border:1px solid #20202e;border-radius:10px;padding:8px 14px;z-index:10}
+  button{background:#14141f;border:1px solid #2a2a3a;border-radius:6px;color:var(--gold);
+    font:12px var(--mono);padding:6px 11px;cursor:pointer;transition:all .12s}
+  button:hover{border-color:var(--gold)}
+  button.cyan{color:var(--cyan)} button.cyan:hover{border-color:var(--cyan)}
+  button.espresso{color:var(--espresso)} button.espresso:hover{border-color:var(--espresso)}
+  button.pink{color:var(--pink)} button.pink:hover{border-color:var(--pink)}
+  button.green{color:var(--green)} button.green:hover{border-color:var(--green)}
+  .ctl{display:flex;align-items:center;gap:6px;color:var(--dim);font-size:11px}
+  input[type=range]{appearance:none;width:90px;height:4px;background:#2a2a3a;border-radius:3px;outline:none}
+  input[type=range]::-webkit-slider-thumb{appearance:none;width:13px;height:13px;border-radius:50%;background:var(--gold);cursor:pointer}
+  .sep{width:1px;height:22px;background:#2a2a3a;margin:0 3px}
+  .klbl{color:var(--dim);font-size:10px;letter-spacing:0.06em}
+  .val{color:var(--gold);font-size:11px;min-width:22px;text-align:right}
+  .wip{position:fixed;left:14px;bottom:14px;background:rgba(8,8,16,0.85);border:1px solid #c7894a;
+    border-radius:8px;padding:6px 10px;font-size:10px;color:var(--espresso);z-index:10;max-width:360px;line-height:1.4}
+  .wip b{color:var(--gold)}
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+
+<div id="hud">
+  <div>
+    <div id="ttl">PHAISTIUM v0.1 -- spiral-hierarchy lens</div>
+    <div id="sub">the cave reading the Phaistos Disc (~1700 BCE, Crete) as a <b style="color:var(--cyan)">hierarchical motif renderer</b>: 241 stamps from rim to center, 45 unique glyphs, spiral depth = N tuned scales, color-coded by ring.</div>
+    <div id="note">claim under test: <b>the Disc is a spiral-rendered tier-(a) hierarchy of stamped primitives</b> -- per sempai-web Fractal Engineering keystone. NOT a decipherment, NOT a translation. Qualitative motif lens only.</div>
+  </div>
+  <div id="side">
+    each <span class="l">ring</span> = one hierarchical level<br>
+    each <span class="l">stamp</span> = one motif primitive<br>
+    spiral walks rim &rarr; center<br>
+    <div class="row"><span class="sw" style="background:#c7894a"></span>L0 outer rim</div>
+    <div class="row"><span class="sw" style="background:#00d4ff"></span>L1 mid ring</div>
+    <div class="row"><span class="sw" style="background:#ffd700"></span>L2 inner ring</div>
+    <div class="row"><span class="sw" style="background:#00ffd5"></span>L3 sub-core</div>
+    <div class="row"><span class="sw" style="background:#ff69b4"></span>L4 deep core</div>
+    <div class="row"><span class="sw" style="background:#cc44ff"></span>L5+ center seed</div>
+    <br>
+    walker bead = the read-pointer<br>
+    <b>traverse direction matters</b>
+  </div>
+</div>
+
+<div id="bar">
+  <span class="klbl">stamps N</span>
+  <input id="N" type="range" min="60" max="500" step="1" value="241"/>
+  <span class="val" id="Nv">241</span>
+  <span class="sep"></span>
+  <span class="klbl">levels</span>
+  <input id="L" type="range" min="3" max="9" step="1" value="6"/>
+  <span class="val" id="Lv">6</span>
+  <span class="sep"></span>
+  <span class="klbl">alphabet</span>
+  <input id="A" type="range" min="6" max="80" step="1" value="45"/>
+  <span class="val" id="Av">45</span>
+  <span class="sep"></span>
+  <span class="klbl">pitch</span>
+  <input id="P" type="range" min="20" max="120" step="1" value="55"/>
+  <span class="val" id="Pv">55</span>
+  <span class="sep"></span>
+  <button id="play" class="cyan">pause</button>
+  <button id="dir" class="green">reverse</button>
+  <button id="reset" class="pink">reset</button>
+</div>
+
+<div class="wip">
+  <b>WIP -- PHAISTIUM v0.1.</b> Phaistos Disc as hierarchical lens. Not decipherment.<br>
+  <b>K1</b> no linguistic claim &middot; <b>K2</b> no fractal-as-brand &middot; <b>K3</b> single HTML, Genesis kernel
+</div>
+
+<script>
+  // ====== GENESIS KERNEL (L127) -- no DPR, no setTransform, no getBoundingClientRect ======
+  const cv = document.getElementById('cv');
+  const ctx = cv.getContext('2d');
+  let W=0, H=0;
+  function resize(){ W = cv.width = innerWidth; H = cv.height = innerHeight; }
+  resize();
+  addEventListener('resize', resize);
+
+  // ====== CAVE PALETTE per ring level ======
+  const LEVEL_COLORS = [
+    '#c7894a', // L0 espresso
+    '#00d4ff', // L1 cyan
+    '#ffd700', // L2 gold
+    '#00ffd5', // L3 green
+    '#ff69b4', // L4 pink
+    '#cc44ff', // L5 purple
+    '#9966ff',
+    '#aa77ff',
+    '#bb88ff'
+  ];
+
+  // ====== STATE ======
+  let N = 241;   // number of stamps along the spiral (Phaistos original = 241)
+  let L = 6;     // hierarchical levels (rings)
+  let A = 45;    // unique glyphs in the alphabet (Phaistos original = 45)
+  let P = 55;    // spiral pitch (px per turn)
+  let playing = true;
+  let dir = 1;   // +1 = rim→center (canonical), -1 = center→rim
+  let t = 0;
+  let walker = 0;
+
+  // ====== ALPHABET SHAPES ======
+  // Deterministic per-glyph-id shape drawer. Glyphs are the
+  // "stamped primitives" -- each id renders as a small distinctive
+  // marker. We use circles, triangles, squares, crosses, asterisks,
+  // diamonds, ticks, etc, varied by id.
+  function drawGlyph(x, y, r, gid, col){
+    const kind = gid % 8;
+    ctx.strokeStyle = col;
+    ctx.fillStyle = col;
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    switch(kind){
+      case 0: // dot
+        ctx.arc(x, y, r*0.55, 0, Math.PI*2);
+        ctx.fill();
+        break;
+      case 1: // ring
+        ctx.arc(x, y, r*0.7, 0, Math.PI*2);
+        ctx.stroke();
+        break;
+      case 2: { // triangle up
+        const h = r*0.95;
+        ctx.moveTo(x, y - h*0.6);
+        ctx.lineTo(x - h*0.55, y + h*0.45);
+        ctx.lineTo(x + h*0.55, y + h*0.45);
+        ctx.closePath();
+        ctx.stroke();
+        break;
+      }
+      case 3: // square
+        ctx.rect(x - r*0.55, y - r*0.55, r*1.1, r*1.1);
+        ctx.stroke();
+        break;
+      case 4: { // diamond
+        ctx.moveTo(x, y - r*0.7);
+        ctx.lineTo(x + r*0.7, y);
+        ctx.lineTo(x, y + r*0.7);
+        ctx.lineTo(x - r*0.7, y);
+        ctx.closePath();
+        ctx.stroke();
+        break;
+      }
+      case 5: // cross +
+        ctx.moveTo(x - r*0.7, y); ctx.lineTo(x + r*0.7, y);
+        ctx.moveTo(x, y - r*0.7); ctx.lineTo(x, y + r*0.7);
+        ctx.stroke();
+        break;
+      case 6: { // asterisk
+        for (let k=0; k<6; k++){
+          const a = k * Math.PI/3;
+          ctx.moveTo(x, y);
+          ctx.lineTo(x + Math.cos(a)*r*0.7, y + Math.sin(a)*r*0.7);
+        }
+        ctx.stroke();
+        break;
+      }
+      case 7: // tick (diagonal segment with a foot)
+        ctx.moveTo(x - r*0.6, y + r*0.4);
+        ctx.lineTo(x, y - r*0.5);
+        ctx.lineTo(x + r*0.5, y + r*0.2);
+        ctx.stroke();
+        break;
+    }
+    // sub-variant: small tail above for half the alphabet
+    if (gid % 3 === 1){
+      ctx.beginPath();
+      ctx.moveTo(x - r*0.2, y - r*0.85);
+      ctx.lineTo(x + r*0.2, y - r*0.85);
+      ctx.stroke();
+    }
+  }
+
+  // ====== SPIRAL GEOMETRY ======
+  // Archimedean spiral r = a + b * theta, walked at constant
+  // arc-length so stamps are evenly spaced rim-to-center.
+  // Stamps are then sorted into hierarchical rings: outer
+  // third = L0, next third = L1, etc, so depth L partitions
+  // the spiral into L bands.
+  let stamps = [];
+  function build(){
+    stamps = [];
+    const cx = W / 2;
+    const cy = H / 2;
+    const maxR = Math.min(W, H) * 0.42;
+
+    // total angular sweep: enough turns to fit N stamps at given pitch
+    // b in r = a + b*theta. Choose so that radial step per turn = pitch.
+    const b = P / (Math.PI * 2);
+    const innerR = Math.max(8, maxR * 0.07);
+    const sweepRadii = maxR - innerR;
+    const turns = sweepRadii / P;
+    const thetaMax = turns * Math.PI * 2;
+
+    // arc-length param: integrate r d-theta? simple approx -- equal-theta
+    // spacing works visually for Phaistos-like spirals. Stamps are
+    // distributed along theta from outer (theta=0, r=maxR) to inner.
+    for (let i = 0; i < N; i++){
+      const u = i / (N - 1);                    // 0..1, 0 = rim
+      const theta = u * thetaMax;
+      const r = maxR - u * sweepRadii;          // monotone rim→center
+      const a = theta;                          // angle on the disc
+      const x = cx + Math.cos(a) * r;
+      const y = cy + Math.sin(a) * r;
+      // ring level: partition by radial fraction
+      const ringFrac = 1 - (r - innerR) / sweepRadii; // 0 at rim, 1 at center
+      const level = Math.min(L - 1, Math.floor(ringFrac * L));
+      // glyph id: deterministic from index, mod alphabet
+      const gid = (i * 7 + Math.floor(i / 7)) % A;
+      stamps.push({ x, y, level, gid, theta, r });
+    }
+  }
+
+  // ====== DRAW ======
+  function frame(){
+    if (!stamps.length) build();
+    // black with subtle radial vignette (kept minimal -- Genesis discipline)
+    ctx.fillStyle = '#050508';
+    ctx.fillRect(0, 0, W, H);
+
+    const cx = W / 2;
+    const cy = H / 2;
+
+    // soft ring guides (faint)
+    ctx.strokeStyle = '#10101a';
+    ctx.lineWidth = 1;
+    const maxR = Math.min(W, H) * 0.42;
+    for (let l = 0; l <= L; l++){
+      const r = maxR * (1 - l / L) + 4;
+      if (r > 4){
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI*2);
+        ctx.stroke();
+      }
+    }
+
+    // spiral connector (cardioid-faint), drawn as line through stamps in order
+    ctx.strokeStyle = '#1a1a26';
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    for (let i = 0; i < stamps.length; i++){
+      const s = stamps[i];
+      if (i === 0) ctx.moveTo(s.x, s.y); else ctx.lineTo(s.x, s.y);
+    }
+    ctx.stroke();
+
+    // stamps colored by level
+    for (let i = 0; i < stamps.length; i++){
+      const s = stamps[i];
+      const col = LEVEL_COLORS[s.level % LEVEL_COLORS.length];
+      // size shrinks as we go in (deeper level = smaller stamp)
+      const rad = 9 - s.level * 0.9;
+      drawGlyph(s.x, s.y, Math.max(3, rad), s.gid, col);
+    }
+
+    // walker bead -- the read pointer, traverses the spiral
+    const walkerIdx = Math.floor(walker) % stamps.length;
+    const w = stamps[walkerIdx];
+    if (w){
+      // ring of acquisition around the walker
+      ctx.strokeStyle = '#ffd700';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(w.x, w.y, 14, 0, Math.PI*2);
+      ctx.stroke();
+      // bead
+      ctx.fillStyle = '#ffd700';
+      ctx.beginPath();
+      ctx.arc(w.x, w.y, 4, 0, Math.PI*2);
+      ctx.fill();
+
+      // current readout
+      ctx.fillStyle = '#9a93a8';
+      ctx.font = '10px ui-monospace,Consolas,monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('stamp ' + (walkerIdx + 1) + ' / ' + N +
+                   '   level L' + w.level +
+                   '   glyph #' + w.gid,
+                   cx, H - 70);
+    }
+
+    // alphabet histogram (small, bottom-left)
+    if (stamps.length){
+      const hx = 24;
+      const hy = H - 30;
+      const bw = Math.max(2, Math.min(4, (W * 0.22) / A));
+      const counts = new Array(A).fill(0);
+      for (const s of stamps) counts[s.gid]++;
+      const maxc = Math.max(...counts);
+      for (let g = 0; g < A; g++){
+        const h = (counts[g] / maxc) * 22;
+        const col = LEVEL_COLORS[g % LEVEL_COLORS.length];
+        ctx.fillStyle = col;
+        ctx.globalAlpha = 0.7;
+        ctx.fillRect(hx + g * bw, hy - h, bw - 0.5, h);
+      }
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = '#6a6a82';
+      ctx.font = '9px ui-monospace,Consolas,monospace';
+      ctx.textAlign = 'left';
+      ctx.fillText('glyph histogram (' + A + ' unique)', hx, hy - 26);
+    }
+
+    // banner: rim->center direction
+    ctx.fillStyle = '#c7894a';
+    ctx.font = '11px ui-monospace,Consolas,monospace';
+    ctx.textAlign = 'center';
+    const dirStr = dir > 0 ? 'rim &rarr; center  (Phaistos canonical)'
+                           : 'center &rarr; rim  (reversed walk)';
+    ctx.fillText(dir > 0 ? 'rim -> center  (Phaistos canonical)'
+                         : 'center -> rim  (reversed walk)', cx, 30);
+
+    // bottom label
+    ctx.fillStyle = '#6a6a82';
+    ctx.font = '10px ui-monospace,Consolas,monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('principle = HIERARCHY not "fractal". Phaistos = spiral-stamped tier (a). P=12 chi=2. NOT decipherment.',
+                 cx, H - 50);
+
+    if (playing) walker += dir * 0.6;
+    while (walker < 0) walker += stamps.length;
+    requestAnimationFrame(frame);
+  }
+
+  // ====== CONTROLS ======
+  const NS = document.getElementById('N');
+  const LS = document.getElementById('L');
+  const AS = document.getElementById('A');
+  const PS = document.getElementById('P');
+  const Nv = document.getElementById('Nv');
+  const Lv = document.getElementById('Lv');
+  const Av = document.getElementById('Av');
+  const Pv = document.getElementById('Pv');
+  const playBtn = document.getElementById('play');
+  const dirBtn = document.getElementById('dir');
+  const resetBtn = document.getElementById('reset');
+
+  function apply(){
+    N = +NS.value; L = +LS.value; A = +AS.value; P = +PS.value;
+    Nv.textContent = N; Lv.textContent = L; Av.textContent = A; Pv.textContent = P;
+    walker = walker % Math.max(1, N);
+    build();
+  }
+  NS.addEventListener('input', apply);
+  LS.addEventListener('input', apply);
+  AS.addEventListener('input', apply);
+  PS.addEventListener('input', apply);
+
+  playBtn.addEventListener('click', () => {
+    playing = !playing;
+    playBtn.textContent = playing ? 'pause' : 'play';
+  });
+  dirBtn.addEventListener('click', () => {
+    dir = -dir;
+    dirBtn.textContent = dir > 0 ? 'reverse' : 'reverse';
+  });
+  resetBtn.addEventListener('click', () => {
+    NS.value = 241; LS.value = 6; AS.value = 45; PS.value = 55;
+    walker = 0; t = 0; playing = true; dir = 1;
+    playBtn.textContent = 'pause';
+    apply();
+  });
+
+  addEventListener('resize', () => { build(); });
+  apply();
+  frame();
+</script>
+</body>
+</html>
