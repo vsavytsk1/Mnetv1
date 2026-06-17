@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Atelier v1.3 -- Envelope</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#050510;color:#e0e0e0;
+  font-family:ui-monospace,'SF Mono',monospace;
+  font-size:11px;overflow:hidden;height:100vh}
+canvas{display:block}
+
+#hud{position:fixed;top:12px;left:12px;z-index:10;pointer-events:none}
+#hud .title{font-size:12px;color:#00d4ff;margin-bottom:4px;
+  letter-spacing:0.15em;text-transform:uppercase}
+#hud .row{line-height:1.9;color:rgba(220,228,240,0.45)}
+#hud .val{color:#00d4ff;font-weight:bold}
+#hud .gold{color:#ffd700}
+#hud .pink{color:#ff69b4}
+#hud .green{color:#00ffd5}
+#hud .dim{color:rgba(220,228,240,0.2);font-size:10px}
+
+#log{position:fixed;top:122px;left:12px;z-index:10;
+  background:rgba(5,5,16,0.88);border:1px solid #1a1f2e;
+  border-radius:4px;padding:7px 11px;max-width:280px;
+  max-height:180px;overflow-y:auto;font-size:9px;
+  line-height:1.5;color:rgba(255,180,180,0.7);
+  cursor:pointer;transition:opacity 0.3s}
+#log.hidden{opacity:0;pointer-events:none}
+#log .e{border-bottom:1px solid #1a0505;padding:1px 0}
+#log .ok{color:#7fff7f}
+#log .cyan{color:#00d4ff}
+#log .gold{color:#ffd700}
+
+/* MASTER SLIDER */
+#master-wrap{position:fixed;bottom:54px;left:50%;
+  transform:translateX(-50%);z-index:10;
+  display:flex;flex-direction:column;align-items:center;gap:4px}
+#master-wrap .ml{font-size:9px;color:rgba(220,228,240,0.35);
+  text-transform:uppercase;letter-spacing:0.15em}
+#sl-master{width:320px;height:6px;accent-color:#00d4ff;cursor:pointer}
+#master-val{font-size:10px;color:#00d4ff;font-weight:bold;
+  letter-spacing:0.1em}
+
+/* STAGE DOTS */
+#ldots{display:flex;gap:5px;margin-top:2px}
+.ldot{width:7px;height:7px;border-radius:50%;
+  background:#0d1520;border:1px solid #1a2a3a;
+  transition:all 0.3s}
+.ldot.done{background:#ffd700;border-color:#ffd700;
+  box-shadow:0 0 6px rgba(255,215,0,0.5)}
+.ldot.active{background:#00d4ff;border-color:#00d4ff;
+  box-shadow:0 0 10px rgba(0,212,255,0.7)}
+
+/* BOTTOM BAR */
+#bar{position:fixed;bottom:0;left:0;right:0;z-index:10;
+  background:rgba(5,5,16,0.97);border-top:1px solid #1a1f2e;
+  padding:5px 12px;display:flex;align-items:center;
+  gap:6px;flex-wrap:wrap}
+.btn{background:#0a0e18;color:#444;border:1px solid #1a1f2e;
+  border-radius:3px;padding:3px 10px;font-family:inherit;
+  font-size:9px;cursor:pointer;transition:all 0.15s;
+  text-transform:uppercase;letter-spacing:0.07em}
+.btn:hover{border-color:#00d4ff;color:#00d4ff}
+.btn.active{background:#00d4ff;color:#050510;border-color:#00d4ff}
+.btn.gold{color:#ffd700;border-color:#3a2a0a}
+.btn.gold:hover,.btn.gold.active{background:#ffd700;color:#050510;border-color:#ffd700}
+.btn.pink{color:#ff69b4;border-color:#3a0a1a}
+.btn.pink:hover,.btn.pink.active{background:#ff69b4;color:#050510;border-color:#ff69b4}
+.btn.green{color:#00ffd5;border-color:#0a3a2a}
+.btn.green:hover,.btn.green.active{background:#00ffd5;color:#050510;border-color:#00ffd5}
+.sep{width:1px;height:16px;background:#1a1f2e;margin:0 2px}
+.lbl{color:rgba(220,228,240,0.25);font-size:9px;
+  text-transform:uppercase;letter-spacing:0.1em}
+.sl{display:flex;align-items:center;gap:3px}
+.sl input[type=range]{width:55px;accent-color:#00d4ff}
+.sv{font-size:9px;color:#00d4ff;min-width:24px}
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+
+<div id="hud">
+  <div class="title">Atelier v1.3</div>
+  <div class="row">curve &nbsp;&nbsp;<span class="val" id="h-pct">0%</span></div>
+  <div class="row">strings <span class="gold" id="h-str">0 / 0</span></div>
+  <div class="row">pegs &nbsp;&nbsp;&nbsp;<span class="green" id="h-pegs">0</span></div>
+  <div class="row">gap &nbsp;&nbsp;&nbsp;&nbsp;<span class="pink" id="h-gap">--</span></div>
+  <div class="dim" id="h-name">VOID</div>
+</div>
+
+<div id="log" onclick="toggleLog()"></div>
+
+<div id="master-wrap">
+  <div class="ml">build the curve</div>
+  <input type="range" id="sl-master" min="0" max="100" value="0" step="0.1" oninput="onMaster(+this.value)">
+  <div id="master-val">VOID</div>
+  <div id="ldots"></div>
+</div>
+
+<div id="bar">
+  <span class="lbl">family</span>
+  <button class="btn" id="bf-FAN" onclick="setFamily('FAN')">FAN</button>
+  <button class="btn" id="bf-TRI" onclick="setFamily('TRI')">TRI</button>
+  <button class="btn" id="bf-QUAD" onclick="setFamily('QUAD')">QUAD</button>
+  <button class="btn green" id="bf-ASTRO" onclick="setFamily('ASTRO')">ASTRO</button>
+  <button class="btn gold" id="bf-CARD" onclick="setFamily('CARD')">CARD</button>
+  <button class="btn pink" id="bf-NEPH" onclick="setFamily('NEPH')">NEPH</button>
+  <div class="sep"></div>
+  <span class="lbl">spin</span>
+  <div class="sl">
+    <input type="range" id="sl-spin" min="0" max="100" value="10" oninput="setSpin(+this.value)">
+    <span class="sv" id="sv-spin">0.10</span>
+  </div>
+  <div class="sep"></div>
+  <span class="lbl">n</span>
+  <div class="sl">
+    <input type="range" id="sl-n" min="6" max="180" value="36" oninput="setN(+this.value)">
+    <span class="sv" id="sv-n">36</span>
+  </div>
+  <div class="sep"></div>
+  <span class="lbl">depth</span>
+  <div class="sl">
+    <input type="range" id="sl-depth" min="0" max="40" value="0" oninput="setDepth(+this.value)">
+    <span class="sv" id="sv-depth">0.0</span>
+  </div>
+  <div class="sep"></div>
+  <span class="lbl">tilt</span>
+  <div class="sl">
+    <input type="range" id="sl-tilt" min="0" max="90" value="0" oninput="setTilt(+this.value)">
+    <span class="sv" id="sv-tilt">0</span>
+  </div>
+  <div class="sep"></div>
+  <button class="btn green" id="b-env" onclick="toggleEnv()">ENV</button>
+  <button class="btn" onclick="toggleLog()">LOG</button>
+  <button class="btn" id="b-auto" onclick="toggleAuto()">AUTO</button>
+</div>
+
+<script>
+// ATELIER v1.3 -- ENVELOPE / "what if I told you there are no curves here"
+// Companion module to research note A001 (envelopes, string art, the
+// discrete -> continuous pattern). One slider builds the curve.
+// Built: 2026-06-10
+//
+// THE MATH (all classical; references in A001):
+//
+//   A one-parameter family of lines F(x,y,t)=0 has an envelope E:
+//   the set of points with F = 0 and dF/dt = 0 simultaneously, i.e.
+//   where infinitely close members of the family intersect. Each
+//   member is TANGENT to E (Theorem 1, A001 section 2). The strings
+//   are a finite sample of the family; the curve the eye sees is E.
+//
+//   The four families used here, with exact envelopes:
+//
+//   CORNER FAN (FAN / TRI / QUAD). Corner V, neighbours U and W.
+//     Member s joins a(s)=V+s(U-V) to b(s)=V+(1-s)(W-V), s in [0,1].
+//     Envelope = the quadratic Bezier  E(s)=(1-s)^2 W + 2s(1-s) V + s^2 U
+//     (a parabola arc, tangent to side VW at W and side VU at U).
+//     Verified identity:  E(s) = s*a(s) + (1-s)*b(s)  -- the tangency
+//     point divides the string in ratio s : 1-s. Affine-invariant, so
+//     it holds for any triangle / square corner (A001 section 3 is the
+//     coordinate computation for A=(0,0), B=(1,0), C=(0,1)).
+//
+//   SLIDING LADDER (ASTRO). Member th joins (cos th, 0) to (0, sin th).
+//     Envelope = astroid x^(2/3)+y^(2/3)=1, point (cos^3 th, sin^3 th).
+//     Check: F = x sin th + y cos th - sin th cos th, and both F and
+//     F_th vanish at that point. Identity: E = cos^2*a + sin^2*b.
+//
+//   CHORD MAP x m on the circle (CARD m=2, NEPH m=3). Member t joins
+//     u=e^{2pi i t} to v=e^{2pi i m t}. Envelope = the epicycloid
+//        E(t) = ( m u + v ) / ( m + 1 )
+//     with m-1 cusps (cardioid, nephroid). Both envelope equations
+//     verified directly for m=2 by substitution. Identity again:
+//     E = (m*a + b)/(m+1), a convex combination of the chord ends.
+//
+//   In every family the tangency point is a convex combination of the
+//   string's endpoints -- the curve literally lives ON the strings.
+//
+//   DEPTH knob: lifts member t to height z = t - 1/2, i.e. draws the
+//   family inside (x,y,t)-space. Flattening DEPTH back to 0 projects
+//   the lifted surface down; the envelope is the fold (critical-value
+//   set) of that projection. Classical (Whitney fold / discriminant).
+//
+//   GAP readout: one-sided Hausdorff-style distance
+//        gap = max over p in E of  min over drawn strings of d(p, string)
+//   measured in units of the figure radius R. It falls like ~1/N^2 as
+//   the peg count N grows: the convergence of A001 section 5B, live.
+//
+// HONESTY (A001 section 8 discipline): nothing here is a new theorem.
+// This module is the monkey-brain test from the Korinthos agenda,
+// item 3: can you SEE the discrete-to-continuous bridge by sliding
+// one knob. That is all it claims.
+
+// -- STATE --------------------------------------------
+var FAMS = {
+  FAN:  {longname:'CORNER FAN / PARABOLA'},
+  TRI:  {longname:'THREE FANS / TRI-PARABOLA'},
+  QUAD: {longname:'FOUR FANS / QUAD-PARABOLA'},
+  ASTRO:{longname:'SLIDING LADDER / ASTROID'},
+  CARD: {longname:'CHORDS x2 / CARDIOID'},
+  NEPH: {longname:'CHORDS x3 / NEPHROID'}
+};
+var STAGES = ['VOID','FRAME','ANCHORS','FIRST STRINGS','STRINGS','WEAVE',
+  'DENSE WEAVE','FULL WEAVE','ENVELOPE GHOST','TANGENT SWEEP','THE LIMIT','CONTINUUM'];
+var NS = STAGES.length;  // 12
+
+var PAL = {cyan:'#00d4ff', gold:'#ffd700', pink:'#ff69b4',
+           green:'#00ffd5', frame:'#16335c', peg:'#9fd8ff'};
+
+var RM = false;
+try { RM = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch(e){}
+
+var famKey   = 'TRI';
+var pegN     = 36;
+var masterV  = 0;
+var spinSpeed= RM ? 0 : 0.06;   // rad / s
+var depthSc  = 0;               // 0..4
+var tiltDeg  = 0;
+var envForce = false;
+var autoBuild= false;
+var logHidden= false;
+
+var spinPhase = 0;
+var sweepU    = 0;
+var pulseT    = 0;
+var stageIdx  = -1;
+var MODEL     = null;
+var gapVal    = -1, gapDirty = true, gapLast = 0;
+
+// -- LOG ----------------------------------------------
+function lg(msg, cls) {
+  var el = document.getElementById('log');
+  if (!el) return;
+  var d = document.createElement('div');
+  d.className = 'e' + (cls ? ' '+cls : '');
+  d.textContent = msg;
+  el.insertBefore(d, el.firstChild);
+  while (el.children.length > 30) el.removeChild(el.lastChild);
+}
+function toggleLog() {
+  logHidden = !logHidden;
+  document.getElementById('log').classList.toggle('hidden', logHidden);
+}
+
+// -- SMALL HELPERS ------------------------------------
+function hex2rgb(h) {
+  return [parseInt(h.substr(1,2),16), parseInt(h.substr(3,2),16), parseInt(h.substr(5,2),16)];
+}
+function rgba(h, a) {
+  var c = hex2rgb(h);
+  return 'rgba('+c[0]+','+c[1]+','+c[2]+','+a+')';
+}
+function lerpHex(h1, h2, t) {
+  var a = hex2rgb(h1), b = hex2rgb(h2);
+  var r = Math.round(a[0]+(b[0]-a[0])*t),
+      g = Math.round(a[1]+(b[1]-a[1])*t),
+      bl= Math.round(a[2]+(b[2]-a[2])*t);
+  return 'rgb('+r+','+g+','+bl+')';
+}
+// colour string (hex or rgb(...)) with alpha
+function colA(col, a) {
+  if (col.charAt(0) === '#') return rgba(col, a);
+  return col.replace('rgb(', 'rgba(').replace(')', ',' + a + ')');
+}
+// piecewise-linear keyframes over sf in [0, 12]
+function kf(sf, pts) {
+  if (sf <= pts[0][0]) return pts[0][1];
+  for (var i = 1; i < pts.length; i++) {
+    if (sf <= pts[i][0]) {
+      var a = pts[i-1], b = pts[i];
+      return a[1] + (b[1]-a[1]) * ((sf-a[0]) / (b[0]-a[0]));
+    }
+  }
+  return pts[pts.length-1][1];
+}
+var K_STR   = [[0,0],[3,0],[4,0.045],[5,0.16],[6,0.38],[7,0.68],[8,1],[12,1]];
+var K_ENV   = [[0,0],[8,0],[9,0.55],[10,0.9],[12,1]];
+var K_DIM   = [[0,1],[10,1],[11,0.42],[12,0.10]];
+var K_FRAME = [[0,0],[1,0],[2,1],[10,1],[12,0.5]];
+var K_PEG   = [[0,0],[2,0],[3,1],[10,1],[11,0.5],[12,0.18]];
+var K_SWEEP = [[0,0],[9,0],[9.5,1],[12,1]];
+
+// -- MODEL: families ----------------------------------
+// memberAt(piece, s) -> {ax,ay,bx,by,px,py,col}
+//   a,b = string endpoints at parameter s; p = exact tangency point
+//   (always a convex combination of a and b -- see header).
+
+function polyVerts(n, r, a0) {
+  var v = [];
+  for (var i = 0; i < n; i++) {
+    var a = a0 + i * Math.PI*2/n;
+    v.push({x: Math.cos(a)*r, y: Math.sin(a)*r});
+  }
+  return v;
+}
+
+function buildModel(key, N) {
+  var m = {key:key, longname:FAMS[key].longname,
+           frame:[], strings:[], pegs:[], env:[], pieces:1, memberAt:null};
+  var cols, i, k, s, piece;
+
+  if (key === 'FAN' || key === 'TRI' || key === 'QUAD') {
+    var nv = (key === 'QUAD') ? 4 : 3;
+    var V  = polyVerts(nv, 1.04, Math.PI/2);
+    // frame = polygon edges
+    var fr = [];
+    for (i = 0; i <= nv; i++) fr.push(V[i % nv]);
+    m.frame.push(fr);
+    // fans: at corner V[i], neighbours U = next, W = prev
+    var fans = [];
+    var nf = (key === 'FAN') ? 1 : nv;
+    cols = [PAL.cyan, PAL.gold, PAL.pink, PAL.green];
+    for (i = 0; i < nf; i++) {
+      fans.push({V: V[i], U: V[(i+1)%nv], W: V[(i+nv-1)%nv],
+                 col: (key==='FAN') ? PAL.cyan : cols[i]});
+    }
+    m.pieces = nf;
+    m.memberAt = function(pi, t) {
+      var f = fans[pi];
+      var ax = f.V.x + t*(f.U.x-f.V.x), ay = f.V.y + t*(f.U.y-f.V.y);
+      var bx = f.V.x + (1-t)*(f.W.x-f.V.x), by = f.V.y + (1-t)*(f.W.y-f.V.y);
+      // E(t) = t*a + (1-t)*b  (= the quadratic Bezier, see header)
+      return {ax:ax, ay:ay, bx:bx, by:by,
+              px: t*ax + (1-t)*bx, py: t*ay + (1-t)*by, col: f.col};
+    };
+    // strings, round-robin across fans so the build grows them together
+    for (k = 0; k <= N; k++) {
+      for (i = 0; i < nf; i++) {
+        var mm = m.memberAt(i, k/N);
+        m.strings.push({ax:mm.ax, ay:mm.ay, bx:mm.bx, by:mm.by,
+                        t:k/N, col: (key==='FAN') ? PAL.cyan : fans[i].col});
+      }
+    }
+    // envelope colour: gold over the single cyan fan; fan colour otherwise
+    for (i = 0; i < nf; i++) {
+      m.env.push({col: (key==='FAN') ? PAL.gold : fans[i].col, piece:i});
+    }
+  }
+
+  else if (key === 'ASTRO') {
+    var R = 1.02, ext = 1.14;
+    m.frame.push([{x:-ext,y:0},{x:ext,y:0}]);
+    m.frame.push([{x:0,y:-ext},{x:0,y:ext}]);
+    var sgn = [[1,1],[-1,1],[-1,-1],[1,-1]];
+    cols = [PAL.cyan, PAL.gold, PAL.pink, PAL.green];
+    m.pieces = 4;
+    m.memberAt = function(pi, t) {
+      var th = t * Math.PI/2, c = Math.cos(th), sn = Math.sin(th);
+      var sx = sgn[pi][0], sy = sgn[pi][1];
+      var ax = sx*R*c, ay = 0, bx = 0, by = sy*R*sn;
+      // E = cos^2 * a + sin^2 * b  -> astroid (R cos^3, R sin^3)
+      return {ax:ax, ay:ay, bx:bx, by:by,
+              px: c*c*ax + sn*sn*bx, py: c*c*ay + sn*sn*by, col: cols[pi]};
+    };
+    for (k = 0; k <= N; k++) {
+      for (i = 0; i < 4; i++) {
+        var ma = m.memberAt(i, k/N);
+        m.strings.push({ax:ma.ax, ay:ma.ay, bx:ma.bx, by:ma.by, t:k/N, col:cols[i]});
+      }
+    }
+    for (i = 0; i < 4; i++) m.env.push({col: cols[i], piece:i});
+  }
+
+  else { // CARD (m=2) / NEPH (m=3): chords k -> mk mod N on the circle
+    var mul = (key === 'CARD') ? 2 : 3;
+    var a0 = -Math.PI/2;
+    var cir = [];
+    for (i = 0; i <= 140; i++) {
+      var aa = i/140 * Math.PI*2;
+      cir.push({x:Math.cos(aa), y:Math.sin(aa)});
+    }
+    m.frame.push(cir);
+    var c1 = (key==='CARD') ? PAL.cyan : PAL.gold;
+    var c2 = (key==='CARD') ? PAL.pink : PAL.green;
+    var ce = (key==='CARD') ? PAL.gold : PAL.pink;
+    m.pieces = 1;
+    m.memberAt = function(pi, t) {
+      var u = a0 + t*Math.PI*2, v = a0 + mul*t*Math.PI*2;
+      var ax = Math.cos(u), ay = Math.sin(u);
+      var bx = Math.cos(v), by = Math.sin(v);
+      // E = (m a + b)/(m+1)  -> epicycloid with m-1 cusps
+      return {ax:ax, ay:ay, bx:bx, by:by,
+              px:(mul*ax+bx)/(mul+1), py:(mul*ay+by)/(mul+1),
+              col: lerpHex(c1, c2, t)};
+    };
+    for (k = 0; k < N; k++) {
+      var mc = m.memberAt(0, k/N);
+      var dx = mc.bx-mc.ax, dy = mc.by-mc.ay;
+      if (dx*dx + dy*dy < 1e-9) continue;       // skip zero chords (k=0 etc)
+      m.strings.push({ax:mc.ax, ay:mc.ay, bx:mc.bx, by:mc.by, t:k/N, col:mc.col});
+    }
+    m.env.push({col: ce, piece:0});
+  }
+
+  // sample envelopes through memberAt (one code path for all families)
+  for (i = 0; i < m.env.length; i++) {
+    var pts = [], SAMP = 140;
+    for (s = 0; s <= SAMP; s++) {
+      var t = s/SAMP;
+      var e = m.memberAt(m.env[i].piece, t);
+      pts.push({x:e.px, y:e.py, t:t});
+    }
+    m.env[i].pts = pts;
+  }
+  // pegs = deduped string endpoints
+  var seen = {};
+  function addPeg(x, y) {
+    var kk = Math.round(x*2000) + '_' + Math.round(y*2000);
+    if (!seen[kk]) { seen[kk] = 1; m.pegs.push({x:x, y:y}); }
+  }
+  for (i = 0; i < m.strings.length; i++) {
+    addPeg(m.strings[i].ax, m.strings[i].ay);
+    addPeg(m.strings[i].bx, m.strings[i].by);
+  }
+  return m;
+}
+
+// -- GAP (one-sided Hausdorff: envelope -> drawn strings) ----
+function segDist(px, py, ax, ay, bx, by) {
+  var vx = bx-ax, vy = by-ay;
+  var L2 = vx*vx + vy*vy;
+  var t = L2 > 1e-12 ? ((px-ax)*vx + (py-ay)*vy) / L2 : 0;
+  t = Math.max(0, Math.min(1, t));
+  var dx = px - (ax + t*vx), dy = py - (ay + t*vy);
+  return Math.sqrt(dx*dx + dy*dy);
+}
+function computeGap(M) {
+  if (!MODEL || M < 1) return -1;
+  var worst = 0, i, j, e, p;
+  for (i = 0; i < MODEL.env.length; i++) {
+    e = MODEL.env[i].pts;
+    for (j = 0; j < e.length; j += 2) {
+      p = e[j];
+      var best = 1e9;
+      for (var s = 0; s < M; s++) {
+        var st = MODEL.strings[s];
+        var d = segDist(p.x, p.y, st.ax, st.ay, st.bx, st.by);
+        if (d < best) best = d;
+        if (best < 1e-4) break;
+      }
+      if (best > worst) worst = best;
+    }
+  }
+  return worst;
+}
+
+// -- MASTER SLIDER -------------------------------------
+function onMaster(v) {
+  masterV = Math.max(0, Math.min(100, v));
+  var sf = masterV/100 * NS;
+  var idx = Math.min(NS-1, Math.floor(sf));
+  if (idx !== stageIdx) {
+    stageIdx = idx;
+    document.getElementById('master-val').textContent = STAGES[idx];
+    updateDots();
+  }
+  gapDirty = true;
+  updateHud();
+}
+function setMasterUI(v) {
+  document.getElementById('sl-master').value = v;
+  onMaster(v);
+}
+function updateDots() {
+  var bar = document.getElementById('ldots');
+  if (!bar) return;
+  bar.innerHTML = '';
+  for (var i = 0; i < NS; i++) {
+    var d = document.createElement('div');
+    d.className = 'ldot' +
+      (i < stageIdx ? ' done' : '') +
+      (i === stageIdx ? ' active' : '');
+    bar.appendChild(d);
+  }
+}
+function updateHud() {
+  var sf = masterV/100 * NS;
+  var total = MODEL ? MODEL.strings.length : 0;
+  var M = Math.min(total, Math.floor(kf(sf, K_STR) * total));
+  document.getElementById('h-pct').textContent = Math.round(masterV) + '%';
+  document.getElementById('h-str').textContent = M + ' / ' + total;
+  document.getElementById('h-pegs').textContent = MODEL ? MODEL.pegs.length : 0;
+  document.getElementById('h-gap').textContent =
+    (gapVal >= 0) ? gapVal.toFixed(4) + ' R' : '--';
+  document.getElementById('h-name').textContent =
+    STAGES[Math.min(NS-1, Math.floor(sf))] + ' -- ' + (MODEL ? MODEL.longname : '');
+}
+
+// -- CONTROLS ------------------------------------------
+function setFamily(key) {
+  famKey = key;
+  MODEL = buildModel(key, pegN);
+  gapDirty = true;
+  var keys = ['FAN','TRI','QUAD','ASTRO','CARD','NEPH'];
+  for (var i = 0; i < keys.length; i++) {
+    var b = document.getElementById('bf-'+keys[i]);
+    if (b) b.classList.toggle('active', keys[i] === key);
+  }
+  var note = {
+    FAN:  'family: FAN -- one corner, envelope = parabola (Bezier)',
+    TRI:  'family: TRI -- 3 corner fans, 3 parabola arcs',
+    QUAD: 'family: QUAD -- 4 corner fans, 4 parabola arcs',
+    ASTRO:'family: ASTROID -- ladder x/cos + y/sin = 1',
+    CARD: 'family: CARDIOID -- chords k -> 2k, E = (2u+v)/3',
+    NEPH: 'family: NEPHROID -- chords k -> 3k, E = (3u+v)/4'
+  };
+  lg(note[key], 'gold');
+  updateHud();
+}
+function setSpin(v) {
+  spinSpeed = v/100 * 0.6;
+  document.getElementById('sv-spin').textContent = (v/100).toFixed(2);
+}
+function setN(v) {
+  pegN = v;
+  document.getElementById('sv-n').textContent = v;
+  MODEL = buildModel(famKey, pegN);
+  gapDirty = true;
+  updateHud();
+}
+function setDepth(v) {
+  depthSc = v/10;
+  document.getElementById('sv-depth').textContent = depthSc.toFixed(1);
+}
+function setTilt(v) {
+  tiltDeg = v;
+  document.getElementById('sv-tilt').textContent = v;
+}
+function toggleEnv() {
+  envForce = !envForce;
+  document.getElementById('b-env').classList.toggle('active', envForce);
+  lg('envelope ghost: ' + (envForce ? 'ON  (F = 0, dF/dt = 0)' : 'OFF'), 'cyan');
+}
+function toggleAuto() {
+  autoBuild = !autoBuild;
+  document.getElementById('b-auto').classList.toggle('active', autoBuild);
+  lg('auto build: ' + (autoBuild ? 'ON' : 'OFF'));
+}
+
+// -- CANVAS / PROJECTION -------------------------------
+var cv = document.getElementById('cv'), ctx = cv.getContext('2d');
+var W = 0, H = 0, CX = 0, CY = 0, SC = 1;
+function resize() {
+  var dpr = Math.min(window.devicePixelRatio || 1, 2);
+  W = window.innerWidth; H = window.innerHeight;
+  cv.width  = W * dpr;  cv.height = H * dpr;
+  cv.style.width = W + 'px'; cv.style.height = H + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  CX = W/2; CY = H * 0.45;
+  SC = Math.min(W * 0.40, (H - 150) * 0.42);
+}
+window.addEventListener('resize', resize);
+
+var CAMD = 3.4;
+function proj(x, y, t) {
+  var z = (t - 0.5) * depthSc * 0.6;
+  var c = Math.cos(spinPhase), s = Math.sin(spinPhase);
+  var X = x*c - y*s, Y = x*s + y*c;
+  var tr = tiltDeg * Math.PI/180;
+  var ct = Math.cos(tr), st = Math.sin(tr);
+  var Y2 = Y*ct - z*st, Z2 = Y*st + z*ct;
+  var den = CAMD - Z2;
+  if (den < 0.5) den = 0.5;
+  var k = CAMD / den;
+  return [CX + X*k*SC, CY - Y2*k*SC];
+}
+function strokePoly(pts, useT) {
+  ctx.beginPath();
+  for (var i = 0; i < pts.length; i++) {
+    var p = proj(pts[i].x, pts[i].y, useT ? pts[i].t : 0.5);
+    if (i === 0) ctx.moveTo(p[0], p[1]); else ctx.lineTo(p[0], p[1]);
+  }
+  ctx.stroke();
+}
+
+// -- DRAW ----------------------------------------------
+function draw() {
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.fillStyle = '#050510';
+  ctx.fillRect(0, 0, W, H);
+  var g = ctx.createRadialGradient(CX, CY, 0, CX, CY, SC*1.6);
+  g.addColorStop(0, 'rgba(13,32,64,0.16)');
+  g.addColorStop(1, 'rgba(13,32,64,0)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, W, H);
+  if (!MODEL) return;
+
+  var sf = masterV/100 * NS;
+  var frameA = kf(sf, K_FRAME);
+  var pegA   = kf(sf, K_PEG);
+  var dim    = kf(sf, K_DIM);
+  var envA   = Math.max(kf(sf, K_ENV), envForce ? 0.85 : 0);
+  var swA    = kf(sf, K_SWEEP);
+  var mF     = kf(sf, K_STR) * MODEL.strings.length;
+  var M      = Math.min(MODEL.strings.length, Math.floor(mF));
+  var partial= mF - M;
+
+  // frame
+  if (frameA > 0.01) {
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = rgba(PAL.frame, 0.9 * frameA);
+    for (var f = 0; f < MODEL.frame.length; f++) strokePoly(MODEL.frame[f], false);
+  }
+
+  ctx.globalCompositeOperation = 'lighter';
+
+  // pegs
+  if (pegA > 0.01) {
+    ctx.fillStyle = rgba(PAL.peg, 0.55 * pegA);
+    for (var p = 0; p < MODEL.pegs.length; p++) {
+      var pp = proj(MODEL.pegs[p].x, MODEL.pegs[p].y, 0.5);
+      ctx.beginPath();
+      ctx.arc(pp[0], pp[1], 1.7, 0, Math.PI*2);
+      ctx.fill();
+    }
+  }
+
+  // strings (the discrete family)
+  ctx.lineWidth = 1;
+  for (var i = 0; i < M; i++) {
+    var st = MODEL.strings[i];
+    var a = (i >= M-2 ? 0.85 : 0.40) * dim;
+    ctx.strokeStyle = colA(st.col, a);
+    var p1 = proj(st.ax, st.ay, st.t), p2 = proj(st.bx, st.by, st.t);
+    ctx.beginPath(); ctx.moveTo(p1[0], p1[1]); ctx.lineTo(p2[0], p2[1]); ctx.stroke();
+  }
+  // the pen tip: next string being drawn in
+  if (M < MODEL.strings.length && partial > 0.02 && dim > 0.05) {
+    var sn = MODEL.strings[M];
+    var q1 = proj(sn.ax, sn.ay, sn.t);
+    var q2 = proj(sn.ax + (sn.bx-sn.ax)*partial, sn.ay + (sn.by-sn.ay)*partial, sn.t);
+    ctx.lineWidth = 1.4;
+    ctx.strokeStyle = 'rgba(255,255,255,' + (0.9*dim) + ')';
+    ctx.beginPath(); ctx.moveTo(q1[0], q1[1]); ctx.lineTo(q2[0], q2[1]); ctx.stroke();
+    ctx.lineWidth = 1;
+  }
+
+  // envelope (the limit object)
+  if (envA > 0.01) {
+    ctx.lineWidth = 2;
+    for (var e = 0; e < MODEL.env.length; e++) {
+      var col = MODEL.env[e].col;
+      ctx.strokeStyle = rgba(col, envA);
+      ctx.shadowColor = rgba(col, 0.8 * envA);
+      ctx.shadowBlur = 10;
+      strokePoly(MODEL.env[e].pts, true);
+    }
+    ctx.shadowBlur = 0;
+    ctx.lineWidth = 1;
+  }
+
+  // tangent sweep (Theorem 1 in motion: each member kisses the curve)
+  if (swA > 0.01) {
+    var gph = (sweepU % 1 + 1) % 1;
+    var gg = gph * MODEL.pieces;
+    var pi = Math.min(MODEL.pieces-1, Math.floor(gg));
+    var tt = gg - pi;
+    var mm = MODEL.memberAt(pi, tt);
+    var dx = mm.bx - mm.ax, dy = mm.by - mm.ay;
+    var L = Math.sqrt(dx*dx + dy*dy);
+    if (L > 0.015) {
+      dx /= L; dy /= L;
+      var EXT = 0.55;
+      var e1 = proj(mm.ax - dx*EXT, mm.ay - dy*EXT, tt);
+      var e2 = proj(mm.bx + dx*EXT, mm.by + dy*EXT, tt);
+      ctx.lineWidth = 1.4;
+      ctx.strokeStyle = 'rgba(255,255,255,' + (0.85*swA) + ')';
+      ctx.beginPath(); ctx.moveTo(e1[0], e1[1]); ctx.lineTo(e2[0], e2[1]); ctx.stroke();
+      ctx.lineWidth = 1;
+    }
+    var tp = proj(mm.px, mm.py, tt);
+    var halo = 0.6 + 0.4 * Math.sin(pulseT * 4);
+    ctx.shadowColor = rgba(PAL.cyan, swA);
+    ctx.shadowBlur = 14 * halo;
+    ctx.fillStyle = 'rgba(255,255,255,' + swA + ')';
+    ctx.beginPath(); ctx.arc(tp[0], tp[1], 3.2, 0, Math.PI*2); ctx.fill();
+    ctx.shadowBlur = 0;
+  }
+
+  ctx.globalCompositeOperation = 'source-over';
+
+  // gap, throttled (the convergence number)
+  var now = performance.now();
+  if (gapDirty && now - gapLast > 150) {
+    gapVal = computeGap(M);
+    gapDirty = false; gapLast = now;
+    document.getElementById('h-gap').textContent =
+      (gapVal >= 0) ? gapVal.toFixed(4) + ' R' : '--';
+    document.getElementById('h-str').textContent = M + ' / ' + MODEL.strings.length;
+  }
+}
+
+// -- LOOP (LOOP LAW: fixed dt = 1/120) -----------------
+var ACC = 0, DT = 1/120, lastT = performance.now();
+function step(dt) {
+  spinPhase += spinSpeed * dt;
+  pulseT += dt;
+  sweepU += dt / (RM ? 14 : 8);
+  if (autoBuild && masterV < 100) {
+    setMasterUI(Math.min(100, masterV + dt * (100/36)));
+  }
+}
+function loop(now) {
+  requestAnimationFrame(loop);
+  var el = (now - lastT) / 1000;
+  lastT = now;
+  if (el > 0.25) el = 0.25;
+  ACC += el;
+  while (ACC >= DT) { step(DT); ACC -= DT; }
+  draw();
+}
+
+// -- INIT ---------------------------------------------
+(function init() {
+  resize();
+  setFamily('TRI');
+  setMasterUI(0);
+
+  window.addEventListener('keydown', function(e) {
+    var v = masterV;
+    if (e.code === 'ArrowRight' || e.code === 'Space') {
+      e.preventDefault();
+      setMasterUI(Math.min(100, v + 100/NS));
+    }
+    if (e.code === 'ArrowLeft' || e.code === 'Backspace') {
+      e.preventDefault();
+      setMasterUI(Math.max(0, v - 100/NS));
+    }
+    if (e.code === 'KeyA') setMasterUI(100);
+    if (e.code === 'KeyR') setMasterUI(0);
+    if (e.code === 'KeyE') toggleEnv();
+    var fk = {Digit1:'FAN',Digit2:'TRI',Digit3:'QUAD',
+              Digit4:'ASTRO',Digit5:'CARD',Digit6:'NEPH'}[e.code];
+    if (fk) setFamily(fk);
+  });
+
+  lg('A = full  R = void  E = envelope', 'cyan');
+  lg('LEFT/RIGHT arrow = step stages', 'cyan');
+  lg('depth knob = lift family into (x,y,t)', 'gold');
+  lg('v1.3 ready -- drag slider to build', 'ok');
+
+  requestAnimationFrame(loop);
+})();
+</script>
+</body></html>
