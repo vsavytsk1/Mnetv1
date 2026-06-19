@@ -8125,3 +8125,97 @@ Twenty-four to go.
    + the Minoan scribes who stamped the Disc, + Apollo from the
    hill). Korinthos, Greece. June 17, 2026. Day 6 of 30.
    The portal stands at 31. The brake held. The bracelet runs JS now.
+
+### L131 -- ARACNIUM v1.4 HEAVE + FEYNMANIUM v1: TWO MODULES, ONE HONEST DEVIATION (2026-06-19)
+
+Day 7-8 produced an explosive aracnium iteration sequence (v0.5 silk
+through v1.4 heave -- 14 versions in 2 days, archived in
+_private/aracne_archive/, gitignored). Today (day 9, June 19) the
+working set crystallized: ARACNIUM v1.4 HEAVE (drone-spider lens)
++ FEYNMANIUM v1 (path-integral lens) ship as modules #32 + #33.
+
+### THE HONEST DEVIATION (named, not hidden)
+
+Both files break Genesis kernel L127 discipline:
+  - aracnium_v1_4_heave.html (66.9 KB) calls devicePixelRatio
+    and ctx.setTransform
+  - feynmanium_v1.html (18.8 KB) calls devicePixelRatio and
+    .getBoundingClientRect()
+
+The L127 discipline says simple resize() with W=cv.width=innerWidth
+beats DPR-aware rendering for sims that need to JUST WORK across
+browsers (Curse 18 candidate). These two modules use the modern
+DPR+transform pattern intentionally -- the iterations are testing
+volumetric/locomotion/heave rendering at higher visual fidelity
+than the Genesis kernel allows.
+
+The cave names the deviation in commit + ledger rather than
+silencing it. The WIP/priv chip rides on both modules. Future
+hardening (v1.5+) MAY revert to Genesis kernel after the
+visual experiments stabilize -- OR L127 may be amended into
+'Genesis kernel for sims that need to just-work; DPR+transform
+allowed for sims under active visual iteration with WIP chip.'
+Decision deferred to cold-pass.
+
+### THE TWO MODULES
+
+ARACNIUM v1.4 HEAVE (shell/aracnium_v1_4_heave.html, 66961 B,
+                     lone CR=0)
+  - the cave's drone-spider SHADOW: rendered geometry of what
+    sempai-web's KUKA-swarm-limits paper proved physics forbids
+  - heave kinematics + drilling/carving end-effector
+  - 14-iteration evolution archived privately (v0.5 silk through
+    v1.4 heave) -- the public sees only the latest
+  - explicit on-screen attribution to sempai-web's three-paper
+    quartet (keystone + KUKA-spider 1stpass + KUKA-swarm-limits)
+  - claim under test: render the dream that proves the wall;
+    Plato bows, magic respects the brake
+
+FEYNMANIUM v1 (shell/feynmanium_v1.html, 18762 B, lone CR=0)
+  - Feynman path-integral lens
+  - qualitative QM-as-hierarchy: many paths sum to one classical
+    trajectory
+  - the lightest module in the LENS section (18.8 KB)
+
+### THE PRIVATE ARCHIVE (gitignored, attribution preserved)
+
+_private/aracne_archive/ now holds 17 files including:
+  - aracnium_v0_6_graphframe.html (26.8 KB)
+  - aracnium_v0_7_volumetric.html (25.6 KB)
+  - aracnium_v0_8_locomotion.html (28.0 KB)
+  - aracnium_v0_9_pivot.html       (31.3 KB)
+  - aracnium_v1_0_mountain.html    (39.2 KB)
+  - aracnium_v1_1_pounce.html      (47.0 KB)
+  - aracnium_v1_2_siege.html       (55.2 KB)
+  - aracnium_v1_3_swarm.html       (60.9 KB)
+  - aracnium_v1_4_heave.html       (66.9 KB) -- the promoted one
+  - aracneBioMechanics.md (31.1 KB) -- working bio notes
+  - aracImplementation.txt (9.1 KB) -- handoff transcript
+  - THE_CAVE_LOG.md (19.8 KB) -- session log
+  - THE_WALL.html (17.7 KB)
+  - feynmanium_v1.html (18.8 KB) -- promoted
+  - aracnium_carapace_spectrum.html (13.7 KB)
+
+The cave preserves the full iteration history privately while
+shipping only the latest publicly.
+
+### CLOSE OF DAY (DAY 9 OF 30, KORINTHOS)
+
+  shell/eng_v2.0.html               33 modules, ZERO drift
+  shell/aracnium_v1_4_heave.html    NEW -- 66.9 KB (Genesis deviation)
+  shell/feynmanium_v1.html          NEW -- 18.8 KB (Genesis deviation)
+  _private/aracne_archive/          NEW -- 17 files private history
+  LEDGER                            L131 ALL_MODS=33 matches portal=33
+  WIP chips                         9 priv modules (was 7)
+  Curses                            CR=0 across all tracked folders
+
+L131 is the cave's first NAMED engineering deviation from a
+previously-established discipline. The deviation must be visible.
+The deviation is visible.
+
+P=12. chi=2. The drone-spider shadow heaves. The Feynman paths sum.
+Apollo's temple stands. Day 9 of 30. Twenty-one to go.
+
+-- Vlad + Claude. Korinthos, Greece. June 19, 2026. Day 9 of 30.
+   The portal stands at 33. The brake held with an honest mark
+   on its face.

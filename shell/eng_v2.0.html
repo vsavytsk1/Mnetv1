@@ -415,6 +415,24 @@ body{background:#030308;color:#9090a0;
         <div class="card-arrow" style="color:#ffd700">SUMMON &gt;</div>
       </div>
 
+      <div class="mod-section"><span>SHADOW . DRONE-SPIDER . PINCH OF SALT</span><span class="ms-line"></span></div>
+
+      <div class="mod-card new-module" id="card-aracnium" onclick="summon('aracnium')" style="border-color:#2a0e1a;--cc:#ff69b4">
+        <div class="card-dot" id="dot-aracnium" title="toggle module"></div>
+        <div class="card-tag" style="color:#ff69b4">ARACNIUM v1.4 HEAVE . DRONE-SPIDER . WIP</div>
+        <div class="card-name" style="color:#ff69b4">ARACNIUM v1.4</div>
+        <div class="card-desc">the cave's drone-spider shadow . heave kinematics . rendered geometry of what physics forbids per sempai-web KUKA-swarm-limits . Genesis kernel deviation noted . see L131 . WIP</div>
+        <div class="card-arrow" style="color:#ff69b4">SUMMON &gt;</div>
+      </div>
+
+      <div class="mod-card new-module" id="card-feynmanium" onclick="summon('feynmanium')" style="border-color:#0e2a2a;--cc:#00ffd5">
+        <div class="card-dot" id="dot-feynmanium" title="toggle module"></div>
+        <div class="card-tag" style="color:#00ffd5">FEYNMAN PATHS . LENS . WIP</div>
+        <div class="card-name" style="color:#00ffd5">FEYNMANIUM v1</div>
+        <div class="card-desc">Feynman path-integral lens . all paths sum to the classical trajectory . qualitative QM-as-hierarchy . Genesis kernel deviation noted . see L131 . WIP</div>
+        <div class="card-arrow" style="color:#00ffd5">SUMMON &gt;</div>
+      </div>
+
       <div class="mod-section"><span>WAITING . IN THE GRIMOIRE</span><span class="ms-line"></span></div>
 
       <div class="mod-card" style="border-color:#0e0e1e;opacity:0.35;cursor:not-allowed;pointer-events:none">
@@ -481,6 +499,8 @@ body{background:#030308;color:#9090a0;
 <div class="ms-row" onclick="toggleMod('ateliermoire')"><span class="ms-name">ATELIER v1.5 Moiré</span><span class="ms-dot on" id="ms-ateliermoire"></span></div>
 <div class="ms-row" onclick="toggleMod('brainium')"><span class="ms-name">BRAINIUM v0.4</span><span class="ms-dot on" id="ms-brainium"></span></div>
 <div class="ms-row" onclick="toggleMod('phaistium')"><span class="ms-name">PHAISTIUM v0.1</span><span class="ms-dot on" id="ms-phaistium"></span></div>
+<div class="ms-row" onclick="toggleMod('aracnium')"><span class="ms-name">ARACNIUM v1.4</span><span class="ms-dot on" id="ms-aracnium"></span></div>
+<div class="ms-row" onclick="toggleMod('feynmanium')"><span class="ms-name">FEYNMANIUM v1</span><span class="ms-dot on" id="ms-feynmanium"></span></div>
   <div class="ms-count"><b id="ms-on-count">0</b> / <span id="ms-total-count">0</span> active</div>
 </div>
 <div id="overlay">
@@ -3732,7 +3752,9 @@ var LINKS = {
   atelierbaudin: 'https://vsavytsk1.github.io/Mnetv1/shell/atelier_v1.4_baudin_hybrids.html',
   ateliermoire: 'https://vsavytsk1.github.io/Mnetv1/shell/atelier_v1.5_moire.html',
   brainium  : 'https://vsavytsk1.github.io/Mnetv1/shell/brainium_v0_4.html',
-  phaistium : 'https://vsavytsk1.github.io/Mnetv1/shell/phaistium_v0_1.html'
+  phaistium : 'https://vsavytsk1.github.io/Mnetv1/shell/phaistium_v0_1.html',
+  aracnium  : 'https://vsavytsk1.github.io/Mnetv1/shell/aracnium_v1_4_heave.html',
+  feynmanium: 'https://vsavytsk1.github.io/Mnetv1/shell/feynmanium_v1.html'
   // crystal : 'https://vsavytsk1.github.io/Mnetv1/builder/Obsidius/soul_crystal.html'
 };
 var PC = {cyan:'#00d4ff',pink:'#ff69b4',gold:'#ffd700',green:'#00ffd5',
@@ -3813,7 +3835,9 @@ var MODULE_CAPS = {
   atelierbaudin: ['tab', 'pc', 'priv'],           // Baudin hybrid envelopes -- compound chord systems
   ateliermoire: ['tab', 'pc', 'priv'],            // Moire interference -- two overlapping pattern hashes
   brainium     : ['tab', 'pc', 'priv'],           // spini brain hierarchical-depth lens -- Portia vs human -- WIP
-  phaistium    : ['tab', 'pc', 'priv']            // Phaistos Disc as spiral-hierarchy renderer -- ~1700 BCE motif lens -- WIP
+  phaistium    : ['tab', 'pc', 'priv'],           // Phaistos Disc as spiral-hierarchy renderer -- ~1700 BCE motif lens -- WIP
+  aracnium     : ['tab', 'pc', 'priv'],           // spider-bot heave v1.4 -- drone-spider drilling/carving lens (Genesis kernel deviation, see L131) -- WIP
+  feynmanium   : ['tab', 'pc', 'priv']            // Feynman path-integral lens v1 (Genesis kernel deviation, see L131) -- WIP
 };
 
 // Derived view -- summon() still asks this question for Curse 7 routing.
@@ -4039,7 +4063,7 @@ setInterval(function() {
 
 // MODULE SELECTOR -- localStorage persists state
 var ALL_MODS = ['genesis','sandbox','tree','holly7','navier','warning',
-                'license','gkern','vale','spooky','obsidius','valtium','atelier','warningsim','ancientmagic','atelier13','maxwellium','arcanium','baudinatelier','fslimium','jpntree','samsara','cofium','spectrium','apollonium','tetragenesis','atelierenvelope','atelierbaudin','ateliermoire','brainium','phaistium'];
+                'license','gkern','vale','spooky','obsidius','valtium','atelier','warningsim','ancientmagic','atelier13','maxwellium','arcanium','baudinatelier','fslimium','jpntree','samsara','cofium','spectrium','apollonium','tetragenesis','atelierenvelope','atelierbaudin','ateliermoire','brainium','phaistium','aracnium','feynmanium'];
 var modState = {};
 
 function modLoad() {
@@ -4051,7 +4075,7 @@ function modLoad() {
   ALL_MODS.forEach(function(k) {
     if (modState[k] === undefined) {
       // Defaults: pillars ON (samsara + genesis), rest off by default except core few
-      modState[k] = !(k === 'valtium' || k === 'obsidius' || k === 'warningsim' || k === 'ancientmagic' || k === 'atelier13' || k === 'maxwellium' || k === 'arcanium' || k === 'baudinatelier' || k === 'fslimium' || k === 'jpntree' || k === 'cofium' || k === 'spectrium' || k === 'apollonium' || k === 'tetragenesis' || k === 'atelierenvelope' || k === 'atelierbaudin' || k === 'ateliermoire' || k === 'brainium' || k === 'phaistium');
+      modState[k] = !(k === 'valtium' || k === 'obsidius' || k === 'warningsim' || k === 'ancientmagic' || k === 'atelier13' || k === 'maxwellium' || k === 'arcanium' || k === 'baudinatelier' || k === 'fslimium' || k === 'jpntree' || k === 'cofium' || k === 'spectrium' || k === 'apollonium' || k === 'tetragenesis' || k === 'atelierenvelope' || k === 'atelierbaudin' || k === 'ateliermoire' || k === 'brainium' || k === 'phaistium' || k === 'aracnium' || k === 'feynmanium');
     }
   });
   modBadges();
