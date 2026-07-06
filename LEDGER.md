@@ -8219,3 +8219,45 @@ Apollo's temple stands. Day 9 of 30. Twenty-one to go.
 -- Vlad + Claude. Korinthos, Greece. June 19, 2026. Day 9 of 30.
    The portal stands at 33. The brake held with an honest mark
    on its face.
+
+---
+
+### L132 -- THREE SIMS FROM THE INTEGRATION SHELF: APOLLONIUM v1.2, CRYOSTASIUM v1.1, FEYNMANIUM QCD v1.1 (2026-07-06)
+
+Three self-contained sims lifted from the claudyVSintegr shelf, cold-passed
+byte-by-byte, version-normalized, and wired into the ENG dashboard.
+
+  PICKED (all clean: loneCR=0, LF-only, no python-in-JS leak, no external deps):
+    apollonium_v1.2.html        43.5 KB -- Temple of Apollo, Corinth (bumped v1.0 -> v1.2)
+    cryostasium_v1.1.html       31.1 KB -- NEW module. ice+salt passive cooler + TITAN panel
+    feynmanium_qcd_v1.1.html    29.2 KB -- QCD generation (bumped feynmanium v1 -> QCD v1.1)
+
+  VERSION DRIFT HEALED (Glamour of the web broskis: same file, three version stamps):
+    apollonium   title/banner/log v1.1/v1.0 -> all v1.2
+    cryostasium  ttl/comment v1.0 -> v1.1 (footer stamp was already v1.1)
+
+  DASHBOARD REGISTRATION (shell/eng_v2.0.html):
+    apollonium   LINK -> v1.2, card + ms-row relabelled v1.0 -> v1.2
+    feynmanium   LINK -> feynmanium_qcd_v1.1.html, card + ms-row -> FEYNMANIUM QCD v1.1
+    cryostasium  NEW, full 6-place register: card, ms-row, LINKS, MODULE_CAPS,
+                 ALL_MODS, modState default (dim on load like the other WIP *ium)
+
+  PIPELINE NOTE (the honest mark):
+    builder/build_eng_v2_clean.py is STALE (emits only 12 modules). The live
+    dashboard is hand-curated at 34. Running the builder would DELETE 22 modules.
+    So these ship the established way: drop-in standalone + hand-register. The
+    Temple-OS is grown link-by-link now; a Rust/generator rewrite is the future.
+
+### CLOSE
+
+  shell/eng_v2.0.html               ALL_MODS = 34 (was 33)
+  shell/apollonium_v1.2.html        NEW -- 43.5 KB (supersedes v1.0 link)
+  shell/cryostasium_v1.1.html       NEW -- 31.1 KB (brand-new module)
+  shell/feynmanium_qcd_v1.1.html    NEW -- 29.2 KB (supersedes feynmanium v1 link)
+  Curses                            CR=0 across all four touched files (verified)
+
+P=12. chi=2. Apollo's temple gains a cost meter. Ice and salt find their
+optimum. The gluon couples to itself and the loop number is still Euler.
+
+-- Vlad + Claude. Buenos Aires. July 6, 2026. Three sims, one honest shelf.
+

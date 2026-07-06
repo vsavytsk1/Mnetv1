@@ -1,0 +1,552 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>Cryostasium v1.1 -- Ice+Salt Cooler + TITAN panel, no electricity</title>
+<style>
+  :root{
+    --bg:#050508; --gold:#ffd700; --cyan:#00d4ff; --pink:#ff69b4; --green:#00ffd5;
+    --esp:#c7894a; --pur:#cc44ff; --red:#ff5470; --dim:#6a6a82; --txt:#e8e0d0;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;background:var(--bg);color:var(--txt);font-family:var(--mono);overflow:hidden}
+  #cv{position:fixed;inset:0;display:block}
+  #hud{position:fixed;top:0;left:0;right:0;padding:10px 14px;display:flex;gap:14px;align-items:flex-start;
+    pointer-events:none;font-size:11px;z-index:10;flex-wrap:wrap}
+  #hud > div{pointer-events:auto;background:rgba(8,8,16,0.80);border:1px solid #20202e;
+    border-radius:8px;padding:8px 11px;backdrop-filter:blur(3px)}
+  #ttl{color:var(--gold);font-size:14px;letter-spacing:0.06em}
+  #sub{color:var(--dim);font-size:10px;margin-top:1px;max-width:540px}
+  #note{color:var(--esp);font-size:10px;margin-top:5px;max-width:540px;line-height:1.4}
+  #note b{color:var(--gold)}
+  #side{margin-left:auto;max-width:300px;color:var(--dim);font-size:10px;line-height:1.5}
+  #side b{color:var(--cyan)} #side .l{color:var(--gold)}
+  #metrics{position:fixed;top:96px;left:14px;display:flex;gap:6px;flex-wrap:wrap;z-index:10;max-width:300px}
+  .mc{background:rgba(8,8,16,0.85);border:1px solid #20202e;border-radius:6px;padding:5px 10px;min-width:88px}
+  .mc .lab{font-size:8px;color:var(--dim);text-transform:uppercase;letter-spacing:0.07em}
+  .mc .val{font-size:15px;font-weight:bold;color:var(--gold)}
+  .mc .val.cyan{color:var(--cyan)} .mc .val.green{color:var(--green)} .mc .val.pink{color:var(--pink)}
+  #bar{position:fixed;left:50%;transform:translateX(-50%);bottom:12px;display:grid;
+    grid-template-columns:auto 110px 48px auto 110px 48px;gap:7px 10px;align-items:center;
+    background:rgba(8,8,16,0.90);border:1px solid #20202e;border-radius:10px;padding:10px 16px;z-index:10}
+  .klbl{color:var(--dim);font-size:10px;letter-spacing:0.04em;text-align:right}
+  input[type=range]{appearance:none;-webkit-appearance:none;width:110px;height:4px;background:#2a2a3a;border-radius:3px;outline:none}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;border-radius:50%;background:var(--gold);cursor:pointer}
+  input[type=range]::-moz-range-thumb{width:13px;height:13px;border:none;border-radius:50%;background:var(--gold);cursor:pointer}
+  .val2{color:var(--gold);font-size:11px;text-align:right}
+  #btns{position:fixed;right:14px;bottom:96px;display:flex;flex-direction:column;gap:6px;z-index:10}
+  button{background:#14141f;border:1px solid #2a2a3a;border-radius:6px;color:var(--gold);
+    font:12px var(--mono);padding:6px 11px;cursor:pointer;transition:all .12s}
+  button:hover{border-color:var(--gold)}
+  button.cyan{color:var(--cyan)} button.cyan:hover{border-color:var(--cyan)}
+  button.pink{color:var(--pink)} button.pink:hover{border-color:var(--pink)}
+  .wip{position:fixed;left:14px;bottom:96px;background:rgba(8,8,16,0.85);border:1px solid #c7894a;
+    border-radius:8px;padding:6px 10px;font-size:9.5px;color:var(--esp);z-index:10;max-width:360px;line-height:1.45}
+  .wip b{color:var(--gold)}
+  #warn{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(40,8,16,0.94);
+    border:1px solid var(--red);border-radius:10px;padding:14px 20px;font-size:13px;color:var(--red);
+    z-index:30;display:none;text-align:center;max-width:420px;line-height:1.5}
+  #warn b{color:var(--gold)}
+  .stamp{position:fixed;bottom:14px;right:14px;font-size:8px;color:rgba(0,212,255,0.25);
+    letter-spacing:0.08em;text-align:right;line-height:1.7;z-index:10}
+  /* ---- TITAN dossier panel (apollonium idiom) ---- */
+  #panel{position:fixed;top:12px;right:12px;z-index:20;width:330px;max-height:82vh;
+    background:rgba(8,8,16,0.95);border:1px solid #2a2a3a;border-radius:8px;
+    display:none;flex-direction:column;overflow:hidden;box-shadow:0 8px 34px rgba(0,0,0,0.6)}
+  #panel.open{display:flex}
+  #panel .tabs{display:flex;border-bottom:1px solid #2a2a3a;flex:0 0 auto}
+  #panel .tab{flex:1;text-align:center;padding:8px 2px;cursor:pointer;color:#6a6a82;
+    text-transform:uppercase;letter-spacing:0.05em;font-size:9px;
+    border-right:1px solid #2a2a3a;transition:all .15s}
+  #panel .tab:last-child{border-right:none}
+  #panel .tab.active{background:var(--gold);color:#06060f;font-weight:bold}
+  #panel .tab:hover{color:var(--gold)}
+  #panel .body{padding:11px 13px;overflow-y:auto;line-height:1.55;color:rgba(232,224,208,0.82);font-size:10px}
+  #panel .tabc{display:none} #panel .tabc.active{display:block}
+  #panel h4{color:var(--gold);font-size:10px;margin:11px 0 4px;letter-spacing:0.04em;text-transform:uppercase}
+  #panel h4:first-child{margin-top:0}
+  #panel .li{padding:4px 0;border-bottom:1px solid #16161f}
+  #panel .nm{color:#f0e8d4;font-weight:bold}
+  #panel .num{color:var(--cyan);font-weight:bold}
+  #panel .s{color:rgba(232,224,208,0.45);font-size:9px;line-height:1.5}
+  .flag{display:inline-block;font-size:8px;padding:1px 5px;border-radius:3px;letter-spacing:0.05em;
+    text-transform:uppercase;vertical-align:middle;margin-left:3px}
+  .flag.any{color:#06120c;background:var(--green)}
+  .flag.dry{color:#1a1206;background:var(--gold)}
+  .flag.nov{color:#1a0a12;background:var(--esp)}
+  #ev-verdict{font-size:11px;line-height:1.6}
+  .ok{color:var(--green)} .meh{color:var(--gold)} .no{color:var(--red)}
+</style>
+</head>
+<body>
+<canvas id="cv" width="1440" height="900"></canvas>
+
+<div id="hud">
+  <div>
+    <div id="ttl">CRYOSTASIUM v1.1 -- ice + salt cooler · zero electricity</div>
+    <div id="sub">a dead chest freezer as an insulated box · ice + salt brine chills the cans · find the salt that the business actually wants</div>
+    <div id="note">claim under test: <b>salt makes ice colder (freezing-point depression) -- but colder-faster trades against longer-hold. there is an optimum, and mama thermo sets it.</b> every term textbook: L_f=334 kJ/kg, K_f=1.86, eutectic −21.1°C @ 23.3 wt%.</div>
+  </div>
+  <div id="side">
+    <span class="l">the balance</span><br>
+    salt ↓ → bath colder → chills faster<br>
+    but lower T_f → ice burns faster → <b>shorter hold</b><br>
+    <br>
+    <span class="l">chromium limit</span> = eutectic<br>
+    −21.1°C at 23.3 wt% salt.<br>
+    past it: salt just piles up, wasted →<br>
+    slider snaps back + error<br>
+    <br>
+    pick: <b>coldest</b> · <b>fastest</b> · <b>longest hold</b>
+  </div>
+</div>
+
+<div id="metrics">
+  <div class="mc"><div class="lab">bath temp</div><div class="val cyan" id="m-bath">−</div></div>
+  <div class="mc"><div class="lab">salt conc</div><div class="val" id="m-conc">−</div></div>
+  <div class="mc"><div class="lab">time → 4°C</div><div class="val green" id="m-t4">−</div></div>
+  <div class="mc"><div class="lab">hold &lt; 4°C</div><div class="val green" id="m-hold">−</div></div>
+  <div class="mc"><div class="lab">ice budget</div><div class="val" id="m-ice">−</div></div>
+  <div class="mc"><div class="lab">wall leak</div><div class="val pink" id="m-leak">−</div></div>
+  <div class="mc"><div class="lab">wet-bulb (evap floor)</div><div class="val cyan" id="m-wb">−</div></div>
+</div>
+
+<div id="bar">
+  <span class="klbl">box L (m)</span><input id="L" type="range" min="0.4" max="1.6" step="0.05" value="1.0"><span class="val2" id="Lv">1.00</span>
+  <span class="klbl">box W (m)</span><input id="Wd" type="range" min="0.3" max="0.9" step="0.05" value="0.50"><span class="val2" id="Wdv">0.50</span>
+
+  <span class="klbl">box depth (m)</span><input id="Hd" type="range" min="0.4" max="1.1" step="0.05" value="0.85"><span class="val2" id="Hdv">0.85</span>
+  <span class="klbl">wall U (W/m²K)</span><input id="U" type="range" min="0.2" max="2.0" step="0.05" value="0.40"><span class="val2" id="Uv">0.40</span>
+
+  <span class="klbl">ice (kg)</span><input id="ice" type="range" min="1" max="200" step="1" value="12"><span class="val2" id="icev">12.0</span>
+  <span class="klbl">salt (wt%)</span><input id="salt" type="range" min="0" max="30" step="0.5" value="10"><span class="val2" id="saltv">10.0</span>
+
+  <span class="klbl">cans</span><input id="cans" type="range" min="0" max="500" step="2" value="24"><span class="val2" id="cansv">24</span>
+  <span class="klbl">can size (ml)</span><input id="cml" type="range" min="200" max="660" step="10" value="330"><span class="val2" id="cmlv">330</span>
+
+  <span class="klbl">ambient (°C)</span><input id="amb" type="range" min="5" max="45" step="1" value="30"><span class="val2" id="ambv">30</span>
+  <span class="klbl">humidity (%RH)</span><input id="rh" type="range" min="5" max="95" step="1" value="60"><span class="val2" id="rhv">60</span>
+
+  <span class="klbl">time speed</span><input id="spd" type="range" min="1" max="120" step="1" value="40"><span class="val2" id="spdv">40×</span>
+</div>
+
+<div id="btns">
+  <div style="font-size:9px;color:#6a6a82;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:-2px">ice type</div>
+  <button id="ice-block">block</button>
+  <button id="ice-cubed" class="cyan">cubed</button>
+  <button id="ice-crushed">crushed</button>
+  <div style="height:6px"></div>
+  <button id="b-titan" class="cyan">▸ titan panel</button>
+  <button id="play" class="cyan">pause</button>
+  <button id="restart">restart batch</button>
+  <button id="reset" class="pink">reset all</button>
+</div>
+
+<div class="wip">
+  <b>honesty (K1-K5) -- mama thermo's receipts:</b><br>
+  <b>K1</b> well-mixed bath: ice+brine+cans one lumped node, Newton cooling to cans (h·A). NOT a CFD/3D field.<br>
+  <b>K2</b> T_f from ideal van't Hoff (K_f·i·molality), CLAMPED at eutectic −21.1°C. Ideal over-predicts high-conc; clamp is honest.<br>
+  <b>K3</b> latent L_f=334 kJ/kg dominates; meltwater sensible warmup included, supercooling ignored.<br>
+  <b>K4</b> wall leak Q=U·A·ΔT, lid-open losses NOT modelled. Real stall = sun + opening lid.<br>
+  <b>K5</b> past eutectic → error + slider snaps back. Salt beyond 23.3 wt% does nothing but cost money.<br>
+  <b>K6</b> evap floor = wet-bulb (Stull 2011) from ambient+RH. Verdict in TITAN ▸ "this event". Honest: humid air kills evaporative cooling.
+</div>
+
+<div id="warn"></div>
+
+<div id="panel">
+  <div class="tabs">
+    <div class="tab active" data-t="methods" onclick="setTitanTab('methods')">methods</div>
+    <div class="tab" data-t="event" onclick="setTitanTab('event')">this event</div>
+    <div class="tab" data-t="src" onclick="setTitanTab('src')">honesty</div>
+  </div>
+  <div class="body">
+    <div class="tabc active" id="tt-methods">
+      <h4>off-grid cooling — the measured numbers</h4>
+      <div class="s">real practitioner + lab figures. each tagged by where it actually works. all metric.</div>
+
+      <div class="li"><span class="nm">salt-brine pull-down</span> <span class="flag any">works anywhere</span><br>
+        warm 0.33 L can → drinkable in <span class="num">~2 min</span> (vs ~15 in plain ice-water). <span class="s">SINTEF 2025. the fast lane — but burns ice quicker. keep a small salted bucket separate from the hold cooler.</span></div>
+
+      <div class="li"><span class="nm">block vs cubed ice</span> <span class="flag any">works anywhere</span><br>
+        same mass: block holds <span class="num">~3.5 d</span> vs cubes ~3 d. <span class="s">block core for longevity + cubes in the gaps for fast chill = the pro move.</span></div>
+
+      <div class="li"><span class="nm">dead chest freezer = the box</span> <span class="flag any">works anywhere</span><br>
+        insulation <span class="num">R ≈ 14–20</span>, beats most coolers, free. <span class="s">stand it up, working drain. do NOT run a frost-free unit wrapped in insulation — overheats. dead-box-with-ice only.</span></div>
+
+      <div class="li"><span class="nm">ice budget</span> <span class="flag any">works anywhere</span><br>
+        plan <span class="num">~0.7 kg/guest</span> baseline, <span class="num">~1 kg</span> on a hot day. <span class="s">~0.1 kg just to pull one warm can down. pre-chill stock the night before. 2:1 ice:contents, fill the air gaps.</span></div>
+
+      <div class="li"><span class="nm">jockey box (draft)</span> <span class="flag any">works anywhere</span><br>
+        keg beer <span class="num">21 → 3 °C</span> at the tap, ice-bath coil + CO₂. <span class="s">coil type for volume; keep the keg itself on ice to avoid foam.</span></div>
+
+      <div class="li"><span class="nm">propane absorption fridge</span> <span class="flag any">works anywhere</span><br>
+        genuine <span class="num">~4 °C</span>, ~0.45 kg gas/day, no moving parts. <span class="s">must be level; slow pull-down (12–24 h); loses capacity in extreme heat. the one true off-grid "fridge".</span></div>
+
+      <div class="li"><span class="nm">evaporative (zeer / wet burlap)</span> <span class="flag dry">dry only</span><br>
+        <span class="num">8–15 °C</span> below ambient in DRY air; <span class="num">&lt;4 °C</span> if humid. floor ≈ wet-bulb. <span class="s">cools PRODUCE, never beer to cold. useless in a humid coastal town — see "this event".</span></div>
+
+      <div class="li"><span class="nm">night-sky radiative</span> <span class="flag nov">novelty</span><br>
+        ~5 °C below ambient, clear dry nights. <span class="s">ancient yakhchāl ice-making. real physics, poor day-of-event tool.</span></div>
+    </div>
+
+    <div class="tabc" id="tt-event">
+      <h4>your conditions, right now</h4>
+      <div id="ev-verdict" class="s">drag the ambient + humidity sliders…</div>
+      <h4 style="margin-top:12px">the call</h4>
+      <div class="s" id="ev-call">—</div>
+    </div>
+
+    <div class="tabc" id="tt-src">
+      <h4>honesty — what's real, what's flagged</h4>
+      <div class="s">
+        <b style="color:#ffd700">flags:</b><br>
+        <span class="flag any">works anywhere</span> physics holds in any climate.<br>
+        <span class="flag dry">dry only</span> dies as humidity rises — the wet-bulb is a hard floor.<br>
+        <span class="flag nov">novelty</span> real but not a practical vendor tool.<br><br>
+        <b style="color:#ffd700">the wet-bulb floor:</b> evaporative cooling can never beat the wet-bulb temperature. Stull (2011) approximation, computed live from your ambient + RH. In humid air the wet-bulb sits near the air temp, so evaporative does almost nothing.<br><br>
+        <b style="color:#ffd700">latent heat:</b> ice absorbs L_f = 334 kJ/kg melting — the whole cooling budget, countable. Salt brine reaches the eutectic −21.1 °C @ 23.3 wt% (and the salt slider is clamped there).<br><br>
+        <b style="color:#ffd700">sources:</b> SINTEF salt-chill test 2025 · America's Test Kitchen brine ≈ −8 °C · Engel/YETI ice-retention · Homebrewtalk chest-freezer R-value · FAO/MIT D-Lab zeer limits · Stull, J.Appl.Meteor.Climatol. 2011.<br><br>
+        <span style="color:#6a6a82">numbers are typical ranges, not promises. measure your own box with a thermometer before betting stock on it.</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="stamp">CRYOSTASIUM v1.1<br>genesis kernel · MNet palette<br>P=12 · χ=2 · always</div>
+
+<script>
+// CRYOSTASIUM v1.1 -- ice + salt passive cooler optimizer
+// Bow to the boskis: Genesis kernel (brainium L127), MNet palette, honesty-caveat idiom.
+// All thermodynamics textbook and verified by computation before ship. No P=12 claim -- stamp is signature.
+(function(){
+  const cv=document.getElementById('cv'); const ctx=cv.getContext('2d');
+  let W=0,H=0;
+  function resize(){ W=cv.width=innerWidth; H=cv.height=innerHeight; }
+  resize(); addEventListener('resize', resize);
+
+  const BG='#050508', CYAN='#00d4ff', GOLD='#ffd700', PINK='#ff69b4', GREEN='#00ffd5', RED='#ff5470', DIM='#6a6a82';
+  const TWO=Math.PI*2;
+
+  // ---- physical constants (textbook) ----
+  const Lf=334.0, c_w=4.18, c_ice=2.09, c_alu=0.90, c_brine=3.9; // kJ
+  const Kf=1.86, ivant=2.0, M=58.44;                              // colligative
+  const EUT_T=-21.1, EUT_W=23.3;                                  // eutectic floor
+  const can_alu=0.013;                                            // kg alu per 330ml-ish can (scales with size)
+
+  // ---- params (all live) ----
+  const P={ L:1.0, Wd:0.5, Hd:0.85, U:0.4, ice:12, salt:10, cans:24, cml:330, amb:30, rh:60, spd:40, iceType:'cubed', running:true };
+
+  // ---- dynamic state of the batch ----
+  let St={ t:0, Tbath:0, Tbeer:0, iceLeft:0, t4:null, done:false, eutFlag:false };
+
+  function Tf_of_salt(wtpct){
+    if(wtpct<=0) return 0;
+    const wf=wtpct/100, ms=wf, mwater=1-wf;
+    const molal=(ms/(M/1000))/Math.max(mwater,1e-6);
+    let T=-Kf*ivant*molal;
+    if(T<EUT_T) T=EUT_T; // clamp at eutectic -- honest floor
+    return T;
+  }
+  function area(){ return 2*(P.L*P.Wd + P.L*P.Hd + P.Wd*P.Hd); }
+  function beerMass(){ return P.cans*P.cml/1000.0; } // kg (~water density)
+  function canMetal(){ return P.cans*can_alu*(P.cml/330); }
+  function iceBudgetKJ(){ return P.ice*Lf; } // latent only
+  function leakW(Tb){ return P.U*area()*Math.max(0,(P.amb-Tb)); }
+
+  // ---- evaporative lane (TITAN panel): wet-bulb floor, Stull 2011 ----
+  function wetBulb(T,RH){
+    RH=Math.max(1,Math.min(99,RH));
+    return T*Math.atan(0.151977*Math.sqrt(RH+8.313659))
+      + Math.atan(T+RH) - Math.atan(RH-1.676331)
+      + 0.00391838*Math.pow(RH,1.5)*Math.atan(0.023101*RH)
+      - 4.686035;
+  }
+  function evapInterior(T,RH){ const tw=wetBulb(T,RH); return T - 0.70*(T-tw); } // good wet device ~70% effective
+
+  function restart(){
+    St.t=0; St.t4=null; St.done=false;
+    St.Tbeer=P.amb;
+    St.iceLeft=P.ice;
+    St.Tbath=Tf_of_salt(P.salt); // bath drops to brine freezing point while ice remains
+  }
+
+  // one physics step, dt in SECONDS of real cooler time
+  function physStep(dt){
+    if(St.iceLeft<=0){
+      // no ice: bath = beer, both drift to ambient via leak
+      const m=beerMass()+canMetal()*0.0;
+      const Q=leakW(St.Tbath)*dt/1000; // kJ in
+      const cap=Math.max(m*c_w,0.1);
+      St.Tbath += Q/cap; St.Tbeer=St.Tbath;
+      if(St.Tbath>P.amb) St.Tbath=P.amb;
+      return;
+    }
+    const Tf=Tf_of_salt(P.salt);
+    St.Tbath=Tf; // brine bath sits at its freezing point as long as ice remains
+
+    // heat the beer must give to the bath: Newton cooling
+    const mB=beerMass(), mC=canMetal();
+    const capBeer=Math.max(mB*c_w + mC*c_alu, 0.05);
+    // lumped conductance can<->bath (W/K): scales with can count AND ice surface area.
+    // crushed ice = more wetted surface = faster heat exchange (block 0.4x, cubed 1.0x, crushed 2.5x)
+    const iceMult = P.iceType==='crushed' ? 2.5 : P.iceType==='block' ? 0.4 : 1.0;
+    const hA = (2.0 + 0.9*P.cans) * iceMult; // W/K
+    const Qbeer = hA*(St.Tbeer - St.Tbath)*dt/1000; // kJ pulled from beer
+    St.Tbeer -= Qbeer/capBeer;
+    if(St.Tbeer < St.Tbath) St.Tbeer=St.Tbath;
+
+    // that heat + wall leak melts ice. colder bath => bigger leak (bigger dT to ambient)
+    const Qleak = leakW(St.Tbath)*dt/1000;
+    const Qinto_ice = Math.max(0,Qbeer) + Qleak;
+    // melting: also must sensible-cool incoming meltwater from 0 to Tf (extra burn when very cold)
+    const burnPerKg = Lf + c_w*Math.abs(Tf); // kJ/kg effective
+    const melted = Qinto_ice / burnPerKg;
+    St.iceLeft -= melted;
+    if(St.iceLeft<0) St.iceLeft=0;
+
+    if(St.t4==null && St.Tbeer<=4.0) St.t4=St.t;
+  }
+
+  function fmtTime(s){
+    if(s==null) return '—';
+    if(s<0) return '—';
+    const h=Math.floor(s/3600), m=Math.floor((s%3600)/60);
+    if(h>0) return h+'h '+m+'m';
+    const sec=Math.floor(s%60);
+    return m+'m '+sec+'s';
+  }
+
+  // ---- DRAW: cross-section of the freezer box ----
+  function draw(){
+    ctx.fillStyle=BG; ctx.fillRect(0,0,W,H);
+    const cx=W*0.52, cy=H*0.50;
+    const boxW=Math.min(W*0.5, 720), boxH=Math.min(H*0.5, 420);
+    const x0=cx-boxW/2, y0=cy-boxH/2;
+
+    // insulation shell
+    ctx.strokeStyle='#2a2a3a'; ctx.lineWidth=10; ctx.strokeRect(x0,y0,boxW,boxH);
+    ctx.strokeStyle='#15151f'; ctx.lineWidth=1; ctx.strokeRect(x0,y0,boxW,boxH);
+
+    // brine fill level ~ ice fraction
+    const frac=Math.max(0.08, St.iceLeft/Math.max(P.ice,0.1));
+    const fillH=boxH*Math.min(1,0.25+0.6*frac);
+    // brine colour shifts colder->bluer as Tbath drops
+    const tb=St.Tbath;
+    const cold=Math.max(0,Math.min(1,(-tb)/21));
+    const br = Math.round(20+cold*0), bg=Math.round(120-cold*40), bb=Math.round(180+cold*60);
+    ctx.fillStyle='rgba('+br+','+bg+','+bb+',0.35)';
+    ctx.fillRect(x0+6, y0+boxH-fillH-6, boxW-12, fillH);
+
+    // ice chunks floating (count ~ iceLeft)
+    const nChunks=Math.round(6+18*frac);
+    ctx.fillStyle='rgba(200,235,255,0.55)';
+    for(let i=0;i<nChunks;i++){
+      const rng=(i*9301+49297)%233280/233280;
+      const rng2=(i*4021+7919)%233280/233280;
+      const cxk=x0+12+rng*(boxW-30);
+      const cyk=y0+boxH-fillH+6+rng2*(fillH*0.5);
+      const s=4+rng2*7;
+      ctx.fillRect(cxk,cyk,s,s);
+    }
+
+    // beer cans -- colour by their temperature (warm pink -> cold cyan)
+    const ncan=Math.min(P.cans,40);
+    const perRow=Math.min(ncan,10);
+    const tBeer=St.Tbeer;
+    const warm=Math.max(0,Math.min(1,(tBeer-4)/(P.amb-4+1e-6)));
+    // lerp cyan(cold) -> pink(warm)
+    const cr=Math.round(0+warm*255), cg=Math.round(212-warm*107), cb=Math.round(255-warm*75);
+    const canCol='rgb('+cr+','+cg+','+cb+')';
+    if(ncan>0){
+      const cw=26, ch=46, gap=8;
+      const rows=Math.ceil(ncan/perRow);
+      for(let i=0;i<ncan;i++){
+        const r=Math.floor(i/perRow), c=i%perRow;
+        const rowCount=Math.min(perRow, ncan-r*perRow);
+        const totalW=rowCount*cw+(rowCount-1)*gap;
+        const bx=cx-totalW/2+c*(cw+gap);
+        const by=y0+boxH-fillH*0.5 - r*(ch+6) - ch/2;
+        ctx.fillStyle=canCol; ctx.globalAlpha=0.92;
+        ctx.fillRect(bx,by,cw,ch);
+        ctx.globalAlpha=1;
+        ctx.strokeStyle='rgba(255,255,255,0.25)'; ctx.lineWidth=1; ctx.strokeRect(bx,by,cw,ch);
+      }
+    }
+
+    // temperature labels
+    ctx.fillStyle=GOLD; ctx.font='bold 13px ui-monospace,Consolas,monospace'; ctx.textAlign='center';
+    const canTxt = P.cans>40 ? 'beer '+St.Tbeer.toFixed(1)+'°C  ('+P.cans+' cans, showing 40)' : 'beer '+St.Tbeer.toFixed(1)+'°C';
+    ctx.fillText(canTxt, cx, y0-14);
+    ctx.fillStyle=DIM; ctx.font='10px ui-monospace,Consolas,monospace';
+    ctx.fillText(P.iceType+' ice', cx, y0-30);
+    ctx.fillStyle=CYAN; ctx.font='12px ui-monospace,Consolas,monospace';
+    ctx.fillText('brine bath '+St.Tbath.toFixed(1)+'°C', cx, y0+boxH+24);
+
+    // ambient marker
+    ctx.fillStyle=DIM; ctx.font='10px ui-monospace,Consolas,monospace'; ctx.textAlign='left';
+    ctx.fillText('ambient '+P.amb.toFixed(0)+'°C  ☀', x0+boxW+18, y0+20);
+
+    // ice-left bar
+    const barx=x0+boxW+18, bary=y0+50, barh=boxH-60;
+    ctx.strokeStyle='#2a2a3a'; ctx.lineWidth=1; ctx.strokeRect(barx,bary,16,barh);
+    ctx.fillStyle='rgba(0,212,255,0.5)';
+    ctx.fillRect(barx, bary+barh*(1-frac), 16, barh*frac);
+    ctx.fillStyle=DIM; ctx.fillText('ice', barx-2, bary-6);
+    ctx.fillText(St.iceLeft.toFixed(1)+'kg', barx-2, bary+barh+14);
+
+    // elapsed
+    ctx.fillStyle=GREEN; ctx.font='12px ui-monospace,Consolas,monospace'; ctx.textAlign='center';
+    ctx.fillText('elapsed '+fmtTime(St.t), cx, y0+boxH+46);
+  }
+
+  function updateMetrics(){
+    document.getElementById('m-bath').textContent=St.Tbath.toFixed(1)+'°C';
+    document.getElementById('m-conc').textContent=P.salt.toFixed(1)+' wt%';
+    document.getElementById('m-t4').textContent=fmtTime(St.t4);
+    // estimate hold: remaining ice budget vs current leak, after beer chilled
+    const leak=leakW(St.Tbath);
+    const holdS = leak>0 ? (St.iceLeft*(Lf+c_w*Math.abs(St.Tbath)))/(leak/1000) : Infinity;
+    document.getElementById('m-hold').textContent = St.iceLeft<=0 ? 'spent' : fmtTime(holdS);
+    document.getElementById('m-ice').textContent=iceBudgetKJ().toFixed(0)+' kJ';
+    document.getElementById('m-leak').textContent=leak.toFixed(0)+' W';
+    document.getElementById('m-wb').textContent=wetBulb(P.amb,P.rh).toFixed(1)+'°C';
+  }
+
+  // ---- eutectic guard: snap salt slider back + flash error ----
+  const warn=document.getElementById('warn');
+  let warnTimer=null;
+  function flashWarn(msg){
+    warn.innerHTML=msg; warn.style.display='block';
+    if(warnTimer) clearTimeout(warnTimer);
+    warnTimer=setTimeout(()=>{ warn.style.display='none'; }, 2600);
+  }
+
+  let last=null;
+  function frame(now){
+    if(last==null) last=now;
+    let dt=(now-last)/1000; last=now; if(dt<0)dt=0; if(dt>0.05)dt=0.05;
+    if(P.running){
+      const simDt=dt*P.spd*60; // accelerate: spd minutes-per-second feel
+      // sub-step for stability
+      const steps=6; for(let k=0;k<steps;k++) physStep(simDt/steps);
+      St.t+=simDt;
+    }
+    draw(); updateMetrics();
+    requestAnimationFrame(frame);
+  }
+
+  // ---- wire controls ----
+  function bind(id, key, fmt, after){
+    const el=document.getElementById(id), out=document.getElementById(id+'v');
+    el.addEventListener('input',()=>{ P[key]=+el.value; out.textContent=fmt(P[key]); if(after)after(); });
+  }
+  bind('L','L',v=>v.toFixed(2),restart);
+  bind('Wd','Wd',v=>v.toFixed(2),restart);
+  bind('Hd','Hd',v=>v.toFixed(2),restart);
+  bind('U','U',v=>v.toFixed(2));
+  bind('ice','ice',v=>v.toFixed(1),restart);
+  bind('cans','cans',v=>String(v|0),()=>{restart();updateEvent();});
+  bind('cml','cml',v=>String(v|0),restart);
+  bind('amb','amb',v=>String(v|0),updateEvent);
+  bind('rh','rh',v=>String(v|0),updateEvent);
+  bind('spd','spd',v=>v+'×');
+
+  // salt slider has the eutectic guard
+  const saltEl=document.getElementById('salt'), saltOut=document.getElementById('saltv');
+  saltEl.addEventListener('input',()=>{
+    let v=+saltEl.value;
+    if(v>EUT_W){
+      v=EUT_W; saltEl.value=EUT_W; // snap back
+      flashWarn('<b>EUTECTIC FLOOR — '+EUT_W+' wt%</b><br>past this, salt stops working.<br>bath cannot go below −21.1°C.<br>extra salt just sinks, undissolved, wasting money.<br><span style="color:#6a6a82">slider snapped back. mama thermo says no.</span>');
+    }
+    P.salt=v; saltOut.textContent=v.toFixed(1); restart();
+  });
+
+  // ice-type toggle: updates conductance + highlights active button
+  function setIce(type){
+    P.iceType=type;
+    for(const t of ['block','cubed','crushed']){
+      const b=document.getElementById('ice-'+t);
+      b.classList.toggle('cyan', t===type);
+    }
+    restart();
+  }
+  document.getElementById('ice-block').addEventListener('click',()=>setIce('block'));
+  document.getElementById('ice-cubed').addEventListener('click',()=>setIce('cubed'));
+  document.getElementById('ice-crushed').addEventListener('click',()=>setIce('crushed'));
+
+  document.getElementById('play').addEventListener('click',function(){ P.running=!P.running; this.textContent=P.running?'pause':'play'; });
+  document.getElementById('restart').addEventListener('click', restart);
+  document.getElementById('reset').addEventListener('click',()=>{
+    Object.assign(P,{L:1.0,Wd:0.5,Hd:0.85,U:0.4,ice:12,salt:10,cans:24,cml:330,amb:30,rh:60,spd:40,iceType:'cubed',running:true});
+    for(const t of ['block','cubed','crushed']){ document.getElementById('ice-'+t).classList.toggle('cyan', t==='cubed'); }
+    for(const [id,k] of [['L','L'],['Wd','Wd'],['Hd','Hd'],['U','U'],['ice','ice'],['salt','salt'],['cans','cans'],['cml','cml'],['amb','amb'],['rh','rh'],['spd','spd']]){
+      const el=document.getElementById(id); el.value=P[k];
+      const out=document.getElementById(id+'v');
+      out.textContent = (k==='cans'||k==='cml'||k==='amb'||k==='rh')?String(P[k]|0):(k==='spd')?P[k]+'×':P[k].toFixed( (k==='U'||k==='L'||k==='Wd'||k==='Hd')?2:1 );
+    }
+    document.getElementById('play').textContent='pause';
+    restart(); updateEvent();
+  });
+
+  // ---- TITAN panel: toggle, tabs, live event verdict ----
+  let panelOpen=false;
+  function togglePanel(){
+    panelOpen=!panelOpen;
+    document.getElementById('panel').classList.toggle('open',panelOpen);
+    const b=document.getElementById('b-titan');
+    b.classList.toggle('cyan',!panelOpen);
+    b.textContent = panelOpen ? '▾ titan panel' : '▸ titan panel';
+    if(panelOpen) updateEvent();
+  }
+  document.getElementById('b-titan').addEventListener('click',togglePanel);
+
+  window.setTitanTab=function(t){
+    const tabs=document.querySelectorAll('#panel .tab');
+    tabs.forEach(x=>x.classList.toggle('active',x.getAttribute('data-t')===t));
+    for(const n of ['methods','event','src']){
+      const e=document.getElementById('tt-'+n);
+      if(e) e.classList.toggle('active',n===t);
+    }
+    if(t==='event') updateEvent();
+  };
+
+  function updateEvent(){
+    const T=P.amb, RH=P.rh;
+    const tw=wetBulb(T,RH), te=evapInterior(T,RH), drop=T-te;
+    let cls, head;
+    if(drop>=8){ cls='meh'; head='evaporative could drop ~'+drop.toFixed(0)+'°C — but only to ~'+te.toFixed(0)+'°C interior'; }
+    else if(drop>=4){ cls='meh'; head='evaporative gives only ~'+drop.toFixed(0)+'°C here — produce-cool at best'; }
+    else { cls='no'; head='evaporative ≈ '+drop.toFixed(1)+'°C here — humid air kills it'; }
+    const vEl=document.getElementById('ev-verdict');
+    if(vEl){
+      vEl.innerHTML =
+        'ambient <span class="num">'+T.toFixed(0)+'°C</span> · humidity <span class="num">'+RH.toFixed(0)+'%</span><br>'+
+        'wet-bulb floor <span class="num">'+tw.toFixed(1)+'°C</span> · evap interior ~<span class="num">'+te.toFixed(1)+'°C</span><br>'+
+        '<span class="'+cls+'">'+head+'</span><br>'+
+        '<span class="s">'+(te>12 ? 'that is nowhere near cold beer. evaporative is for produce/garnish only.' : 'cellar-cool, still not cold beer.')+'</span>';
+    }
+    // ice budget for the current can count
+    const cans=P.cans;
+    const pull = (cans*0.1).toFixed(1);            // ~0.1 kg ice to pull one warm can down
+    const guests = Math.max(1,Math.round(cans/2)); // ~2 cans/guest
+    const day = T>=30 ? (guests*1.0) : (guests*0.7);
+    const cEl=document.getElementById('ev-call');
+    if(cEl){
+      cEl.innerHTML =
+        '<b style="color:#ffd700">ice is your only real cold source here.</b><br>'+
+        '• block-ice core + cubes in the gaps, in the insulated box.<br>'+
+        '• keep a <b>separate salted bucket</b> as the fast pull-down lane (warm can → drinkable ~2 min).<br>'+
+        '• to chill your <span class="num">'+cans+'</span> cans now: ~<span class="num">'+pull+' kg</span> ice; for the day plan ~<span class="num">'+day.toFixed(0)+' kg</span> (≈'+guests+' guests'+(T>=30?', hot-day rate':'')+').<br>'+
+        (drop>=8 ? '<span class="s">a wet-burlap rack could keep garnish/produce ~'+drop.toFixed(0)+'°C cooler on the side — not the beer.</span>'
+                 : '<span class="s">skip evaporative tricks today — too humid to help.</span>');
+    }
+  }
+
+  restart();
+  updateEvent();
+  requestAnimationFrame(frame);
+})();
+</script>
+</body></html>
