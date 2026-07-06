@@ -1,0 +1,375 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>Tavlium v1.1 -- Portes hit-probability trainer</title>
+<style>
+  :root{
+    --bg:#050508; --gold:#ffd700; --cyan:#00d4ff; --pink:#ff69b4; --green:#00ffd5;
+    --esp:#c7894a; --red:#ff5470; --amber:#ffb454; --dim:#6a6a82; --txt:#e8e0d0;
+    --white:#e8e2d0; --wbord:#b8a878; --black:#2a2622;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{background:var(--bg);color:var(--txt);font-family:var(--mono);width:100%;min-height:100%;overflow-x:hidden}
+  body{padding:10px 10px 24px;max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:10px}
+  .card{background:rgba(8,8,16,0.85);border:1px solid #20202e;border-radius:10px;padding:10px 12px}
+  #ttl{color:var(--gold);font-size:14px;letter-spacing:0.04em}
+  #sub{color:var(--dim);font-size:10px;margin-top:2px;line-height:1.4}
+  #note{color:var(--esp);font-size:10px;margin-top:5px;line-height:1.4}
+  #note b{color:var(--gold)}
+  #stats{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+  .mc{background:rgba(8,8,16,0.9);border:1px solid #20202e;border-radius:8px;padding:7px 9px}
+  .mc .lab{font-size:8px;color:var(--dim);text-transform:uppercase;letter-spacing:0.06em}
+  .mc .val{font-size:16px;font-weight:bold;color:var(--gold);margin-top:1px}
+  #boardwrap{width:100%;background:rgba(8,8,16,0.6);border:1px solid #20202e;border-radius:10px;overflow:hidden}
+  #cv{display:block;width:100%;height:auto;touch-action:manipulation}
+  .btns{display:flex;gap:8px;flex-wrap:wrap}
+  button{flex:1;min-width:84px;background:#14141f;border:1px solid #2a2a3a;border-radius:8px;color:var(--gold);
+    font:13px var(--mono);padding:11px 8px;cursor:pointer;transition:all .12s}
+  button:hover{border-color:var(--gold)} button:active{transform:scale(0.98)}
+  button.cyan{color:var(--cyan);border-color:#1e4a55} button.pink{color:var(--pink);border-color:#5a2030}
+  button:disabled{opacity:0.4;cursor:default}
+  #msg{font-size:11px;color:var(--cyan);text-align:center;min-height:16px;line-height:1.4}
+  .odds-card{background:rgba(8,8,16,0.85);border:1px solid #20202e;border-radius:10px;padding:10px 12px}
+  .odds-title{font-size:11px;color:var(--dim);margin-bottom:8px}
+  #oddsbar{display:flex;align-items:flex-end;gap:3px;height:64px}
+  .obar{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%}
+  .obar .b{width:100%;border-radius:3px 3px 0 0}
+  .obar .l{font-size:9px;color:var(--dim);margin-top:2px}
+  .odds-foot{display:flex;justify-content:space-between;font-size:9px;color:var(--dim);margin-top:3px}
+  .wip{background:rgba(8,8,16,0.85);border:1px solid #c7894a;border-radius:10px;padding:8px 11px;font-size:10px;color:var(--esp);line-height:1.5}
+  .wip b{color:var(--gold)}
+  .stamp{text-align:center;font-size:8px;color:rgba(0,212,255,0.3);letter-spacing:0.08em;line-height:1.7}
+</style>
+</head>
+<body>
+
+<div class="card">
+  <div id="ttl">TAVLIUM v1.1 — Πόρτες · hit-probability trainer</div>
+  <div id="sub">the board is a graph · dice = the edges you may travel · a lone checker is a hittable node · learn to price your risk</div>
+  <div id="note">claim under test: <b>tavli looks like luck, but it's the dice probability table underneath</b>. roll, pick your move, and the meter scores how exposed you left yourself — real odds (11/36, 17/36…), nothing faked.</div>
+</div>
+
+<div id="stats">
+  <div class="mc"><div class="lab">dice</div><div class="val" id="s-dice">– –</div></div>
+  <div class="mc"><div class="lab">worst blot risk</div><div class="val" id="s-risk">–</div></div>
+  <div class="mc"><div class="lab">moves left</div><div class="val cyan" id="s-moves" style="color:var(--cyan)">0</div></div>
+</div>
+
+<div id="boardwrap"><canvas id="cv" width="760" height="660"></canvas></div>
+<div id="msg">roll the dice to begin</div>
+
+<div class="btns">
+  <button id="roll" class="cyan">roll dice</button>
+  <button id="undo">undo</button>
+  <button id="reset" class="pink">reset</button>
+</div>
+
+<div class="odds-card">
+  <div class="odds-title">direct-hit odds by distance — the whole secret in 12 bars</div>
+  <div id="oddsbar"></div>
+  <div class="odds-foot"><span>1 pip</span><span>6 = the danger peak</span><span>12</span></div>
+</div>
+
+<div class="wip">
+  <b>honesty (K1–K4):</b><br>
+  <b>K1</b> hit odds are EXACT: ways out of 36 ordered dice rolls that reach distance d (incl. combos + doubles). Verified table.<br>
+  <b>K2</b> trainer scores YOUR blot exposure to a simple wall of black — it teaches risk pricing, not a full AI opponent.<br>
+  <b>K3</b> "direct hit" only (one move reaching the blot). Real games also have indirect/return shots — this is the core lesson first.<br>
+  <b>K4</b> Πόρτες rules: hit a lone checker → it goes to the bar and re-enters. Bearing off + full opponent = next version.
+</div>
+
+<div class="stamp">TAVLIUM v1.1 · genesis kernel · MNet palette · P=12 · χ=2 · always</div>
+
+<script>
+// TAVLIUM v1.1 -- Greek tavli (Portes) hit-probability trainer.
+// Bow to the boskis: Genesis kernel, MNet palette, honesty caveats. The board is a graph; dice are the edges.
+// Hit-odds table verified by computation before ship. Stamp is signature, not a P=12 claim.
+(function(){
+  var cv=document.getElementById('cv'), ctx=cv.getContext('2d');
+  var CW=760, CH=660;
+  function fit(){ var dpr=Math.min(window.devicePixelRatio||1,2); cv.width=CW*dpr; cv.height=CH*dpr; ctx.setTransform(dpr,0,0,dpr,0,0); }
+  fit(); addEventListener('resize',fit);
+
+  var GOLD='#ffd700', CYAN='#00d4ff', RED='#ff5470', AMBER='#ffb454', GREEN='#00ffd5', DIM='#6a6a82';
+  var WHITE='#e8e2d0', WBORD='#b8a878', BLACK='#2a2622';
+
+  // verified hit-probability table: ways out of 36 to reach distance d
+  var WAYS=[0,11,12,14,15,15,17,6,6,5,3,2,3];
+  function prob(d){ return (d>=1&&d<=12)?WAYS[d]/36:0; }
+
+  function startPos(){
+    var p=new Array(25).fill(0);
+    p[24]=2; p[13]=5; p[8]=3; p[6]=5;        // white moves 24 -> 1
+    p[1]=-2; p[12]=-5; p[17]=-3; p[19]=-5;   // black moves 1 -> 24
+    return p;
+  }
+  var pos=startPos(), dice=[], used=[], history=[], whiteBar=0;
+
+  // geometry
+  var pad=14, barW=20, topY=18, rowH=CH*0.40;
+  var halfW=(CW-2*pad-barW)/12;
+  var chipR=Math.min(halfW*0.40, 17);
+
+  function pointX(i){
+    var col;
+    if(i>=13){ col=i-13; return pad + (col>=6?barW:0) + col*halfW + halfW/2; }
+    col=12-i; return pad + (col>=6?barW:0) + col*halfW + halfW/2;
+  }
+  function isTop(i){ return i>=13; }
+
+  // ---- animation state (spini spini) ----
+  var T=0;                       // global frame time
+  var diceAnim=0;                // >0 while dice tumble
+  var diceShown=[0,0];           // values shown on the rolling dice
+  var pulse=0;                   // pulsing phase for graph edges
+  function diceCenter(){ return {x:CW/2, y:CH/2}; }
+
+  // worst current blot risk for white
+  function worstRisk(){
+    var worst=0, wi=null;
+    for(var i=1;i<=24;i++){
+      if(pos[i]===1){
+        var best=0;
+        for(var j=1;j<i;j++){ if(pos[j]<0){ var d=i-j; if(d>=1&&d<=12) best=Math.max(best,prob(d)); } }
+        if(best>worst){ worst=best; wi=i; }
+      }
+    }
+    return {worst:worst, wi:wi};
+  }
+
+  function draw(){
+    ctx.fillStyle='#0a0a12'; ctx.fillRect(0,0,CW,CH);
+    // bar
+    ctx.fillStyle='rgba(106,106,130,0.25)'; ctx.fillRect(pad+(CW-2*pad-barW)/2, 0, barW, CH);
+    // triangles
+    for(var i=1;i<=24;i++){
+      var x=pointX(i), top=isTop(i);
+      var y0=top?0:CH, y1=top?rowH:CH-rowH;
+      ctx.beginPath(); ctx.moveTo(x-halfW/2,y0); ctx.lineTo(x+halfW/2,y0); ctx.lineTo(x,y1); ctx.closePath();
+      ctx.fillStyle=(i%2===0)?'rgba(201,160,99,0.45)':'rgba(138,106,63,0.5)'; ctx.fill();
+      // point number
+      ctx.fillStyle=DIM; ctx.font='9px ui-monospace,Consolas,monospace'; ctx.textAlign='center';
+      ctx.fillText(i, x, top?rowH+12:CH-rowH-6);
+    }
+    // central diamond
+    var cx=CW/2, cy=CH/2;
+    ctx.beginPath(); ctx.moveTo(cx,cy-18); ctx.lineTo(cx+26,cy); ctx.lineTo(cx,cy+18); ctx.lineTo(cx-26,cy); ctx.closePath();
+    ctx.fillStyle='rgba(201,160,99,0.4)'; ctx.fill(); ctx.strokeStyle=WBORD; ctx.lineWidth=1; ctx.stroke();
+
+    var sel=worstRisk();
+    // checkers
+    for(var i=1;i<=24;i++){
+      var n=pos[i]; if(n===0) continue;
+      var cnt=Math.abs(n), white=n>0, top=isTop(i), x=pointX(i);
+      for(var k=0;k<Math.min(cnt,5);k++){
+        var y=top?(chipR+topY+k*chipR*1.75):(CH-chipR-topY-k*chipR*1.75);
+        ctx.beginPath(); ctx.arc(x,y,chipR,0,Math.PI*2);
+        ctx.fillStyle=white?WHITE:BLACK; ctx.fill();
+        ctx.strokeStyle=white?WBORD:'#000'; ctx.lineWidth=1.4; ctx.stroke();
+      }
+      if(cnt>5){
+        var yl=top?(chipR+topY+4*chipR*1.75):(CH-chipR-topY-4*chipR*1.75);
+        ctx.fillStyle=white?BLACK:WHITE; ctx.font='bold 12px ui-monospace,Consolas,monospace'; ctx.textAlign='center';
+        ctx.fillText(cnt, x, yl+4);
+      }
+      // blot danger badge
+      if(white && cnt===1){
+        var best=0; for(var j=1;j<i;j++){ if(pos[j]<0){ var d=i-j; if(d>=1&&d<=12) best=Math.max(best,prob(d)); } }
+        if(best>0){
+          var by=top?(rowH+22):(CH-rowH-22);
+          var col=best>=0.40?RED:best>=0.20?AMBER:GREEN;
+          ctx.fillStyle=col; roundRect(x-18,by-10,36,18,9); ctx.fill();
+          ctx.fillStyle='#0a0a12'; ctx.font='bold 11px ui-monospace,Consolas,monospace'; ctx.textAlign='center';
+          ctx.fillText(Math.round(best*100)+'%', x, by+3);
+        }
+      }
+    }
+    // ---- GRAPH EDGES: the dice unlock paths across the board (spini spini) ----
+    if(movesLeft()>0 && diceAnim<=0){
+      var rd=remainingDice();
+      var pulseA=0.35+0.30*Math.sin(pulse*3);
+      // if a source is selected, show ITS edges bright; else show all movable sources faintly
+      var sources = selFrom!==null ? [selFrom] : [];
+      if(selFrom===null){ for(var i=1;i<=24;i++){ if(pos[i]>0 && hasLegalFrom(i)) sources.push(i); } }
+      for(var si=0; si<sources.length; si++){
+        var from=sources[si], fx=pointX(from), ftop=isTop(from);
+        var fy=ftop?(chipR+topY):(CH-chipR-topY);
+        for(var di=0; di<rd.length; di++){
+          var to=from-rd[di];
+          if(to>=1 && pos[to]>-2 && whiteBar===0){
+            var tx=pointX(to), ttop=isTop(to);
+            var ty=ttop?(rowH*0.5):(CH-rowH*0.5);
+            // landing risk colour
+            var risk=0; for(var j=1;j<to;j++){ if(pos[j]<0){ var dd=to-j; if(dd>=1&&dd<=12) risk=Math.max(risk,prob(dd)); } }
+            var ec = risk>=0.40?RED : risk>=0.20?AMBER : GREEN;
+            var bright = selFrom!==null ? 0.9 : 0.5;
+            // curved edge
+            ctx.strokeStyle=ec; ctx.globalAlpha=bright*pulseA+0.15; ctx.lineWidth=selFrom!==null?2.5:1.5;
+            ctx.beginPath(); ctx.moveTo(fx,fy);
+            var midx=(fx+tx)/2, midy=(fy+ty)/2 + (ftop?40:-40);
+            ctx.quadraticCurveTo(midx,midy,tx,ty); ctx.stroke();
+            // landing node glow
+            ctx.fillStyle=ec; ctx.globalAlpha=bright*pulseA+0.2;
+            ctx.beginPath(); ctx.arc(tx, ttop?(rowH-8):(CH-rowH+8), 5+2*Math.sin(pulse*3+di), 0, Math.PI*2); ctx.fill();
+            ctx.globalAlpha=1;
+          }
+        }
+        // glowing ring on movable source
+        ctx.strokeStyle=CYAN; ctx.globalAlpha=0.5+0.4*Math.sin(pulse*3); ctx.lineWidth=2;
+        ctx.beginPath(); ctx.arc(fx,fy,chipR+3,0,Math.PI*2); ctx.stroke(); ctx.globalAlpha=1;
+      }
+    }
+    // bar checkers (white hit)
+    if(whiteBar>0){
+      ctx.fillStyle=WHITE; ctx.beginPath(); ctx.arc(CW/2,CH/2,chipR,0,Math.PI*2); ctx.fill();
+      ctx.strokeStyle=WBORD; ctx.lineWidth=1.4; ctx.stroke();
+      ctx.fillStyle=BLACK; ctx.font='bold 11px ui-monospace'; ctx.textAlign='center'; ctx.fillText(whiteBar,CW/2,CH/2+4);
+    }
+
+    document.getElementById('s-risk').textContent = sel.worst>0?Math.round(sel.worst*100)+'%':'safe';
+    document.getElementById('s-risk').style.color = sel.worst>=0.40?RED:sel.worst>=0.20?AMBER:(sel.worst>0?GREEN:GOLD);
+    document.getElementById('s-moves').textContent = movesLeft();
+  }
+  function roundRect(x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+
+  // ---- tumbling dice (spini spini) ----
+  function pips(v){
+    var P={1:[[0,0]],2:[[-1,-1],[1,1]],3:[[-1,-1],[0,0],[1,1]],
+      4:[[-1,-1],[1,-1],[-1,1],[1,1]],5:[[-1,-1],[1,-1],[0,0],[-1,1],[1,1]],
+      6:[[-1,-1],[1,-1],[-1,0],[1,0],[-1,1],[1,1]]};
+    return P[v]||[];
+  }
+  function drawDie(cx,cy,sz,v,rot,glow){
+    ctx.save(); ctx.translate(cx,cy); ctx.rotate(rot);
+    if(glow){ ctx.shadowColor=GOLD; ctx.shadowBlur=14; }
+    roundRect(-sz/2,-sz/2,sz,sz,sz*0.18);
+    ctx.fillStyle='#f2ead6'; ctx.fill();
+    ctx.shadowBlur=0; ctx.strokeStyle=WBORD; ctx.lineWidth=1.5; ctx.stroke();
+    ctx.fillStyle='#2a2622'; var u=sz*0.26, pr=sz*0.085;
+    pips(v).forEach(function(p){ ctx.beginPath(); ctx.arc(p[0]*u,p[1]*u,pr,0,Math.PI*2); ctx.fill(); });
+    ctx.restore();
+  }
+  function drawDiceLayer(){
+    if(diceAnim<=0 && dice.length===0) return;
+    var c=diceCenter(), sz=Math.min(halfW*1.1,46), gap=sz*0.5;
+    if(diceAnim>0){
+      // tumbling: spin + cycle random faces, settle near the end
+      var k=diceAnim;            // 1 -> 0
+      var spin = k*k*22;         // fast then slow
+      var jitter = k>0.18;       // still cycling faces?
+      var v0 = jitter ? 1+Math.floor(Math.random()*6) : (dice[0]||1);
+      var v1 = jitter ? 1+Math.floor(Math.random()*6) : (dice[1]||dice[0]||1);
+      diceShown=[v0,v1];
+      var bob = Math.sin(T*0.6)*6*k;
+      drawDie(c.x-sz/2-gap, c.y+bob, sz, v0, spin+0.3, true);
+      drawDie(c.x+sz/2+gap, c.y-bob, sz, v1, -spin-0.6, true);
+    } else {
+      // settled: show the rolled values, gentle idle glow
+      var pa=0.5+0.5*Math.sin(pulse*2);
+      var a=dice[0], b=(dice[1]!==undefined?dice[1]:dice[0]);
+      ctx.save(); ctx.globalAlpha=0.95;
+      drawDie(c.x-sz/2-gap, c.y, sz, a, 0.0, false);
+      drawDie(c.x+sz/2+gap, c.y, sz, b, 0.0, false);
+      ctx.restore();
+    }
+  }
+
+  function loop(){
+    T+=1; pulse+=0.05;
+    if(diceAnim>0){
+      diceAnim-=0.018;
+      if(diceAnim<=0){
+        diceAnim=0;
+        // reveal: now legal moves & edges light up
+        msg(dice.length===4?'double! four moves of '+dice[0]+' — tap a glowing checker':'tap a glowing checker, then a glowing landing');
+      }
+    }
+    draw();
+    drawDiceLayer();
+    requestAnimationFrame(loop);
+  }
+
+  function movesLeft(){ return dice.length - used.length; }
+  function remainingDice(){ var r=dice.slice(); used.forEach(function(u){ var k=r.indexOf(u); if(k>=0) r.splice(k,1); }); return r; }
+  function hasLegalFrom(i){ var rd=remainingDice(); for(var x=0;x<rd.length;x++){ var to=i-rd[x]; if(whiteBar>0) return false; if(to>=1 && pos[to]>-2) return true; } return false; }
+
+  function rollDice(){
+    if(movesLeft()>0){ msg('finish your moves first, or undo'); return; }
+    var a=1+Math.floor(Math.random()*6), b=1+Math.floor(Math.random()*6);
+    dice = (a===b)?[a,a,a,a]:[a,b]; used=[];
+    document.getElementById('s-dice').textContent = a+'  '+b + (a===b?'  ×4':'');
+    history.push({pos:pos.slice(), bar:whiteBar, dice:dice.slice(), used:[]});
+    diceAnim=1.0;            // start the tumble; reveal happens when it settles
+    selFrom=null;
+    msg('rolling…');
+  }
+
+  // tap to select source, tap again to land
+  var selFrom=null;
+  function pointAt(px,py){
+    for(var i=1;i<=24;i++){
+      var x=pointX(i); if(Math.abs(px-x)<halfW/2){
+        var top=isTop(i);
+        if(top && py<CH*0.5) return i;
+        if(!top && py>=CH*0.5) return i;
+      }
+    }
+    return null;
+  }
+  cv.addEventListener('click',function(e){
+    if(movesLeft()<=0){ msg('roll the dice'); return; }
+    var rect=cv.getBoundingClientRect();
+    var px=(e.clientX-rect.left)*(CW/rect.width), py=(e.clientY-rect.top)*(CH/rect.height);
+    var i=pointAt(px,py); if(i===null) return;
+    if(selFrom===null){
+      if(pos[i]>0 && hasLegalFrom(i)){ selFrom=i; msg('point '+i+' selected — tap a landing point'); }
+      else msg('pick a glowing point (your checker, has a legal move)');
+    } else {
+      var d=selFrom-i, rd=remainingDice();
+      if(d>0 && rd.indexOf(d)>=0 && pos[i]>-2){
+        if(pos[i]===-1){ pos[i]=0; /* hit black blot, simplified */ }
+        pos[selFrom]-=1; pos[i]=(pos[i]>=0?pos[i]+1:1); used.push(d);
+        selFrom=null;
+        var w=worstRisk();
+        if(movesLeft()===0) msg(w.worst>=0.40?'risky! you left a '+Math.round(w.worst*100)+'% shot. roll again to continue':'move done — roll again');
+        else msg('good — '+movesLeft()+' move(s) left');
+      } else {
+        msg('that distance isn\'t in your dice — try another landing');
+        selFrom=null;
+      }
+      draw();
+    }
+  });
+
+  function undo(){
+    if(history.length===0){ msg('nothing to undo'); return; }
+    var h=history[history.length-1];
+    pos=h.pos.slice(); whiteBar=h.bar; dice=h.dice.slice(); used=h.used.slice(); selFrom=null;
+    if(movesLeft()===0){ history.pop(); }
+    msg('undone'); draw();
+  }
+
+  function drawOdds(){
+    var bar=document.getElementById('oddsbar'); bar.innerHTML='';
+    for(var d=1;d<=12;d++){
+      var p=prob(d), col=p>=0.40?RED:p>=0.20?AMBER:GREEN;
+      var cell=document.createElement('div'); cell.className='obar';
+      var b=document.createElement('div'); b.className='b'; b.style.background=col; b.style.height=Math.round(p*120)+'%';
+      var l=document.createElement('div'); l.className='l'; l.textContent=d;
+      cell.appendChild(b); cell.appendChild(l); bar.appendChild(cell);
+    }
+  }
+  function msg(t){ document.getElementById('msg').textContent=t; }
+
+  document.getElementById('roll').addEventListener('click',rollDice);
+  document.getElementById('undo').addEventListener('click',undo);
+  document.getElementById('reset').addEventListener('click',function(){
+    pos=startPos(); dice=[]; used=[]; history=[]; whiteBar=0; selFrom=null;
+    document.getElementById('s-dice').textContent='– –'; msg('roll the dice to begin'); draw();
+  });
+
+  drawOdds(); loop();
+})();
+</script>
+</body></html>

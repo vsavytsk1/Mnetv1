@@ -1,0 +1,352 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>EMPORIUM 3D v2.0 — fly around the empire</title>
+<style>
+  :root{
+    --bg:#050510; --gold:#ffd700; --cyan:#00d4ff; --pink:#ff69b4; --green:#00ffd5;
+    --esp:#c7894a; --pur:#cc44ff; --red:#ff5470; --amber:#ffb454; --teal:#1de5b0; --dim:#6a6a82; --txt:#e8e0d0;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;background:var(--bg);color:var(--txt);font-family:var(--mono);overflow:hidden;touch-action:none}
+  canvas{display:block}
+  #label-layer{position:fixed;inset:0;z-index:4;pointer-events:none}
+  .nlabel{position:absolute;transform:translate(-50%,-140%);font-size:10px;font-weight:bold;white-space:nowrap;
+    text-shadow:0 0 6px #000,0 0 6px #000;letter-spacing:.03em}
+  .nlabel small{display:block;font-size:8px;font-weight:normal;color:var(--dim);text-align:center;text-shadow:0 0 5px #000}
+  #top{position:fixed;top:8px;left:8px;right:8px;z-index:6;display:flex;gap:10px;align-items:flex-start;pointer-events:none;flex-wrap:wrap}
+  #ttlbox{background:rgba(8,8,16,.82);border:1px solid #20202e;border-radius:8px;padding:7px 11px;max-width:560px}
+  #ttl{color:var(--gold);font-size:13px;letter-spacing:.05em}
+  #sub{color:var(--dim);font-size:9.5px;margin-top:2px;line-height:1.4}
+  #hint{color:var(--cyan);font-size:9px;margin-top:3px}
+  #bott{margin-left:auto;background:rgba(8,8,16,.9);border:1px solid #20202e;border-radius:8px;padding:7px 12px;min-width:220px}
+  #bott .lab{font-size:8px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em}
+  #bott .v{font-size:14px;font-weight:bold;margin-top:1px}
+  #cards{position:fixed;top:70px;left:8px;z-index:6;display:grid;grid-template-columns:repeat(2,1fr);gap:5px;width:214px}
+  .mc{background:rgba(8,8,16,.86);border:1px solid #20202e;border-radius:6px;padding:5px 8px}
+  .mc .lab{font-size:7.5px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em}
+  .mc .val{font-size:14px;font-weight:bold;color:var(--gold)}
+  .mc .val.cy{color:var(--cyan)} .mc .val.gn{color:var(--green)} .mc .val.rd{color:var(--red)} .mc .val.am{color:var(--amber)}
+  #bar{position:fixed;bottom:0;left:0;right:0;z-index:10;background:rgba(8,8,16,.95);border-top:1px solid #20202e;
+    padding:7px 9px;display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:7px 14px;align-items:center}
+  .sl{display:flex;flex-direction:column;gap:1px}
+  .sl .top{display:flex;justify-content:space-between;align-items:baseline}
+  .sl label{font-size:8px;color:var(--dim);text-transform:uppercase;letter-spacing:.05em}
+  .sl .v{font-size:10px;color:var(--gold);font-weight:bold}
+  input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:4px;background:#2a2a3a;border-radius:3px;outline:none}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:15px;height:15px;border-radius:50%;background:var(--cyan);cursor:pointer;border:2px solid #050508}
+  input[type=range]::-moz-range-thumb{width:15px;height:15px;border-radius:50%;background:var(--cyan);cursor:pointer;border:2px solid #050508}
+  #btns{grid-column:1/-1;display:flex;gap:7px;justify-content:center;flex-wrap:wrap;margin-top:1px}
+  button{background:#14141f;border:1px solid #2a2a3a;border-radius:5px;color:var(--cyan);font:11px var(--mono);padding:5px 12px;cursor:pointer}
+  button:hover{border-color:var(--cyan)}
+  .wip{position:fixed;bottom:150px;left:8px;z-index:6;background:rgba(8,8,16,.9);border:1px solid var(--esp);border-radius:8px;
+    padding:6px 9px;font-size:8.5px;color:var(--esp);max-width:360px;line-height:1.5;display:none}
+  .wip.show{display:block} .wip b{color:var(--gold)} .wip i{color:var(--cyan)}
+  #khint{position:fixed;bottom:150px;right:8px;z-index:6}
+  button#kbtn{font-size:9px;color:var(--esp);border-color:#3a2a1a}
+  .stamp{position:fixed;bottom:150px;left:50%;transform:translateX(-50%);z-index:5;font-size:8px;color:rgba(0,212,255,.25);letter-spacing:.08em;text-align:center;pointer-events:none}
+  #brk{position:fixed;top:46%;left:50%;transform:translate(-50%,-50%);z-index:8;pointer-events:none;
+    font-size:15px;font-weight:bold;color:var(--red);text-align:center;text-shadow:0 0 20px rgba(255,84,112,.6);opacity:0;transition:opacity .2s;letter-spacing:.04em}
+  #brk.show{opacity:1}
+  #brk small{display:block;font-size:10px;color:var(--amber);margin-top:4px;font-weight:normal}
+  #boot{position:fixed;inset:0;z-index:20;background:var(--bg);display:flex;align-items:center;justify-content:center;color:var(--dim);font-size:12px}
+  #boot.hide{display:none}
+</style>
+</head>
+<body>
+<div id="boot">loading the empire… (needs internet for the 3D engine)</div>
+<div id="label-layer"></div>
+
+<div id="top">
+  <div id="ttlbox">
+    <div id="ttl">EMPORIUM 3D v2.0 — fly around the empire</div>
+    <div id="sub">the 500-restaurant group as a 3D world. money flows as light between the companies — royalty to the IP holder, rent to property, fees to service, interest to treasury — then up to the parent. push the cyan knobs to hit the institutional walls.</div>
+    <div id="hint">drag to orbit · scroll to zoom · same skeleton as any multinational</div>
+  </div>
+  <div id="bott">
+    <div class="lab">group effective tax rate</div>
+    <div class="v" id="bott-v" style="color:var(--gold)">— %</div>
+    <div class="lab" style="margin-top:4px">what the haven play WOULD get (no Pillar Two)</div>
+    <div class="v" id="naive-v" style="color:var(--dim);font-size:12px">— %</div>
+  </div>
+</div>
+
+<div id="cards">
+  <div class="mc"><div class="lab">group sales</div><div class="val gn" id="m-sales">—</div></div>
+  <div class="mc"><div class="lab">royalty → IPCo</div><div class="val am" id="m-roy">—</div></div>
+  <div class="mc"><div class="lab">Pillar Two top-up</div><div class="val rd" id="m-top">—</div></div>
+  <div class="mc"><div class="lab">OpCo profit left</div><div class="val cy" id="m-op">—</div></div>
+  <div class="mc"><div class="lab">total tax paid</div><div class="val" id="m-tax">—</div></div>
+  <div class="mc"><div class="lab">profit after tax</div><div class="val gn" id="m-pat">—</div></div>
+</div>
+
+<div id="brk"></div>
+
+<div class="wip" id="wip">
+  <b>honesty (K1–K7) — real institutional physics, honest limits:</b><br>
+  <b>K1</b> a TEACHING model of multi-entity tax structuring, grounded in the deep-research build-spec (OECD transfer pricing, BEPS, Pillar Two). NOT a fitted model of any real company, and NOT tax advice.<br>
+  <b>K2</b> the light-flows are real intercompany transactions: <i>royalty</i>→IPCo, <i>rent</i>→PropCo, <i>fee</i>→ServiceCo, <i>interest</i>→FinCo, <i>dividend</i>→parent. On consolidation they net toward zero — but each moves profit between jurisdictions.<br>
+  <b>K3</b> <i>Pillar Two</i> (2024+): a 15% global minimum effective tax. Route profit to a sub-15% haven and a red TOP-UP flow claws the difference back. The old haven play hits a hard floor. Current law, not a trick.<br>
+  <b>K4</b> <i>transfer-pricing wall</i>: royalty+interest can't exceed the profit that exists. Past ~90% of EBITDA the arrangement is non-arm's-length — a tax authority demolishes it. The structure SNAPS.<br>
+  <b>K5</b> <i>ATAD interest cap</i>: interest is deductible only up to ~30% of EBITDA. Over-lever the group and the excess debt buys no shield.<br>
+  <b>K6</b> unit economics (AUV, margins, %s) are industry order-of-magnitude from the research; tune to real 10-K / franchise-disclosure data before relying on any number.<br>
+  <b>K7</b> the exact curves are illustrative; the DIRECTIONS and the three walls are the honest lesson. Stamp is a signature, not a claim.
+</div>
+<div id="khint"><button id="kbtn">honesty K1–K7 ▸</button></div>
+<div class="stamp">EMPORIUM 3D v2.0 · MNet · structure &gt; scale · for the TITAN</div>
+
+<div id="bar">
+  <div class="sl"><div class="top"><label>locations</label><span class="v" id="v-n">50</span></div><input id="s-n" type="range" min="1" max="500" step="1" value="50"></div>
+  <div class="sl"><div class="top"><label>royalty → IPCo</label><span class="v" id="v-roy">5.0%</span></div><input id="s-roy" type="range" min="0" max="15" step="0.5" value="5"></div>
+  <div class="sl"><div class="top"><label>IPCo tax (haven)</label><span class="v" id="v-iptax">0%</span></div><input id="s-iptax" type="range" min="0" max="25" step="0.5" value="0"></div>
+  <div class="sl"><div class="top"><label>management fee</label><span class="v" id="v-mgmt">3.0%</span></div><input id="s-mgmt" type="range" min="0" max="8" step="0.5" value="3"></div>
+  <div class="sl"><div class="top"><label>debt / leverage</label><span class="v" id="v-debt">40%</span></div><input id="s-debt" type="range" min="0" max="100" step="1" value="40"></div>
+  <div class="sl"><div class="top"><label>flow speed</label><span class="v" id="v-spd">100%</span></div><input id="s-spd" type="range" min="20" max="200" step="1" value="100"></div>
+  <div id="btns">
+    <button id="p-one">one shop</button>
+    <button id="p-ire">500 → Ireland</button>
+    <button id="p-haven">500 → haven</button>
+    <button id="p-maxroy">max royalty</button>
+    <button id="p-maxdebt">max debt</button>
+    <button id="p-spin">auto-spin ⟳</button>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+// EMPORIUM 3D v2.0 — the QSR empire as a THREE.js world, fusing the MachineNet sandbox concept.
+// For the TITAN. Model grounded in OECD/BEPS/Pillar Two research (K1). Verified by computation before ship.
+// Stamp is a signature, not a claim.
+(function(){
+  if(typeof THREE==='undefined'){ document.getElementById('boot').textContent='could not load the 3D engine — check internet connection'; return; }
+  document.getElementById('boot').classList.add('hide');
+
+  // ---------- tax model (identical, verified) ----------
+  var P={ n:50, roy:0.05, iptax:0.0, mgmt:0.03, debt:0.40, spd:100, spin:false };
+  var AUV=2.4e6, RE=0.17, OPCO_TAX=0.22, MIN_RATE=0.15, RENT=0.08, INT_RATE=0.05;
+  function model(){
+    var sales=P.n*AUV, eb=sales*RE, royalty=sales*P.roy, rent=sales*RENT, mgmt=sales*P.mgmt;
+    var interest=sales*RE*P.debt*INT_RATE*10, raw=interest; interest=Math.min(interest,eb*0.30);
+    var atad_break=raw>eb*0.30;
+    var opco_taxable=Math.max(0,eb-royalty-interest), opco_tax=opco_taxable*OPCO_TAX;
+    var ipco_profit=royalty*0.95, ipco_tax=ipco_profit*P.iptax;
+    var topup=P.iptax<MIN_RATE?Math.max(0,(MIN_RATE-P.iptax)*ipco_profit):0;
+    var total_tax=opco_tax+ipco_tax+topup, pretax=eb*0.95;
+    var eff=total_tax/Math.max(pretax,1), naive=(opco_tax+ipco_tax)/Math.max(pretax,1);
+    var tp_break=(royalty+interest)>eb*0.9, pat=pretax-total_tax;
+    return {sales:sales,ebitda:eb,royalty:royalty,rent:rent,mgmt:mgmt,interest:interest,topup:topup,
+            eff:eff,naive:naive,tp_break:tp_break,atad_break:atad_break,opco_taxable:opco_taxable,total_tax:total_tax,pat:pat};
+  }
+
+  // ---------- three.js scene ----------
+  var scene=new THREE.Scene();
+  scene.fog=new THREE.FogExp2(0x050510,0.020);
+  var camera=new THREE.PerspectiveCamera(60, innerWidth/innerHeight, 0.1, 2000);
+  camera.position.set(0,14,30);
+  var renderer=new THREE.WebGLRenderer({antialias:true});
+  renderer.setSize(innerWidth,innerHeight); renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  renderer.setClearColor(0x050510); document.body.appendChild(renderer.domElement);
+  var controls=new THREE.OrbitControls(camera, renderer.domElement);
+  controls.enableDamping=true; controls.dampingFactor=0.08; controls.minDistance=10; controls.maxDistance=90;
+  controls.target.set(0,2,0);
+
+  scene.add(new THREE.AmbientLight(0x8080a0,0.9));
+  var dl=new THREE.DirectionalLight(0xffffff,0.9); dl.position.set(8,20,12); scene.add(dl);
+
+  // ground grid (the world floor, sandbox-style)
+  var grid=new THREE.GridHelper(80,40,0x1a2a3a,0x0d1520); grid.position.y=-6; scene.add(grid);
+
+  // ---------- entity nodes in 3D ----------
+  var COLS={ hold:0xffd700, op:0x00d4ff, ip:0xffb454, prop:0x1de5b0, serv:0xff69b4, fin:0xcc44ff };
+  // layout: HoldCo up top, OpCo center-low, arms ringed around OpCo at mid height
+  var LAYOUT={
+    hold:{p:[0,12,0], r:2.2, name:'HoldCo', sub:'parent'},
+    op:  {p:[0,0,0],  r:2.8, name:'OpCo', sub:'runs the shops'},
+    ip:  {p:[-11,5,-3], r:2.0, name:'IPCo', sub:'brand · haven'},
+    prop:{p:[11,5,-3], r:1.8, name:'PropCo', sub:'real estate'},
+    serv:{p:[-8,3,9], r:1.7, name:'ServiceCo', sub:'HQ fees'},
+    fin: {p:[8,3,9], r:1.7, name:'FinCo', sub:'treasury'}
+  };
+  var ent={}, labelEls={};
+  var layer=document.getElementById('label-layer');
+  Object.keys(LAYOUT).forEach(function(k){
+    var L=LAYOUT[k];
+    var geo=new THREE.SphereGeometry(L.r,24,16);
+    var mat=new THREE.MeshPhongMaterial({color:COLS[k],emissive:COLS[k],emissiveIntensity:0.35,specular:0xffffff,shininess:90,transparent:true,opacity:0.92});
+    var mesh=new THREE.Mesh(geo,mat); mesh.position.set(L.p[0],L.p[1],L.p[2]); scene.add(mesh);
+    // wire halo
+    var halo=new THREE.Mesh(new THREE.SphereGeometry(L.r*1.25,16,10), new THREE.MeshBasicMaterial({color:COLS[k],wireframe:true,transparent:true,opacity:0.12}));
+    mesh.add(halo);
+    ent[k]={mesh:mesh, mat:mat, halo:halo, pos:new THREE.Vector3(L.p[0],L.p[1],L.p[2]), r:L.r, col:COLS[k]};
+    // html label
+    var el=document.createElement('div'); el.className='nlabel'; el.style.color='#'+COLS[k].toString(16).padStart(6,'0');
+    el.innerHTML=L.name+'<small>'+L.sub+'</small>'; layer.appendChild(el); labelEls[k]=el;
+  });
+
+  // ---------- location cloud around OpCo ----------
+  var locGeo=new THREE.BufferGeometry(); var LOCMAX=500; var locPos=new Float32Array(LOCMAX*3);
+  var locSeed=[]; for(var i=0;i<LOCMAX;i++){ var a=Math.random()*Math.PI*2, b=Math.acos(2*Math.random()-1), rr=4.2+Math.random()*1.8;
+    locSeed.push({a:a,b:b,rr:rr,sp:0.3+Math.random()*0.5}); }
+  locGeo.setAttribute('position', new THREE.BufferAttribute(locPos,3));
+  var locMat=new THREE.PointsMaterial({color:0x00ffd5,size:0.16,transparent:true,opacity:0.8,sizeAttenuation:true});
+  var locPoints=new THREE.Points(locGeo,locMat); scene.add(locPoints);
+
+  // ---------- money-flow particles along edges ----------
+  // each edge: from->to, a stream of points. We build one Points cloud per edge and animate along the segment.
+  var EDGES=[
+    {from:'op',to:'ip', col:0xffb454, key:'royalty'},
+    {from:'op',to:'prop', col:0x1de5b0, key:'rent'},
+    {from:'op',to:'serv', col:0xff69b4, key:'mgmt'},
+    {from:'op',to:'fin', col:0xcc44ff, key:'interest'},
+    {from:'op',to:'hold', col:0x00d4ff, key:'dividend'},
+    {from:'ip',to:'hold', col:0xffb454, key:'roy_up'},
+    {from:'ip',to:'hold', col:0xff5470, key:'clawback', back:true}   // Pillar Two red flow
+  ];
+  var PER=26;  // particles per edge
+  EDGES.forEach(function(e){
+    var g=new THREE.BufferGeometry(); e.pos=new Float32Array(PER*3); g.setAttribute('position',new THREE.BufferAttribute(e.pos,3));
+    e.mat=new THREE.PointsMaterial({color:e.col,size:0.28,transparent:true,opacity:0.9,sizeAttenuation:true,blending:THREE.AdditiveBlending,depthWrite:false});
+    e.pts=new THREE.Points(g,e.mat); scene.add(e.pts);
+    // static faint line
+    var lg=new THREE.BufferGeometry(); lg.setAttribute('position', new THREE.Float32BufferAttribute([ent[e.from].pos.x,ent[e.from].pos.y,ent[e.from].pos.z, ent[e.to].pos.x,ent[e.to].pos.y,ent[e.to].pos.z],3));
+    e.line=new THREE.LineSegments(lg, new THREE.LineBasicMaterial({color:e.col,transparent:true,opacity:0.10}));
+    scene.add(e.line);
+    e.t0=Math.random();
+  });
+
+  // break overlay ring on OpCo
+  var breakRing=new THREE.Mesh(new THREE.TorusGeometry(4.6,0.14,8,48), new THREE.MeshBasicMaterial({color:0xff5470,transparent:true,opacity:0}));
+  breakRing.position.copy(ent.op.pos); breakRing.rotation.x=Math.PI/2; scene.add(breakRing);
+
+  var fmtM=function(v){return '€'+(v/1e6).toFixed(v>=1e8?0:1)+'M';};
+  var fmtB=function(v){return v>=1e9? '€'+(v/1e9).toFixed(2)+'B':fmtM(v);};
+
+  var Tt=0, _proj=new THREE.Vector3();
+  function edgeThick(m,key){
+    switch(key){
+      case 'royalty': return Math.min(1,(m.royalty/1e6)*0.02+0.12);
+      case 'rent': return Math.min(1,(m.rent/1e6)*0.02+0.08);
+      case 'mgmt': return Math.min(1,(m.mgmt/1e6)*0.03+0.06);
+      case 'interest': return Math.min(1,(m.interest/1e6)*0.02+0.06);
+      case 'dividend': return Math.min(1,(m.pat/1e6)*0.012+0.10);
+      case 'roy_up': return Math.min(1,(m.royalty/1e6)*0.01+0.05);
+      case 'clawback': return m.topup>0? Math.min(1,(m.topup/1e6)*0.03+0.15):0;
+    }
+    return 0.1;
+  }
+
+  function animate(){
+    requestAnimationFrame(animate);
+    var m=model();
+    if(P.spin){ controls.autoRotate=true; controls.autoRotateSpeed=0.8; } else controls.autoRotate=false;
+    controls.update();
+    Tt+=0.016*(P.spd/100);
+
+    // pulse the parent + IPCo
+    var pl=0.5+0.5*Math.sin(Tt*2);
+    ent.hold.mat.emissiveIntensity=0.30+0.15*pl;
+    ent.ip.mat.emissiveIntensity=0.30+ (m.topup>0? 0.4*pl:0.05);
+    ent.op.mat.emissiveIntensity=0.30+ (m.tp_break? 0.5*pl:0.08);
+
+    // locations orbit OpCo; only show P.n of them
+    var shown=P.n;
+    for(var i=0;i<LOCMAX;i++){
+      var s=locSeed[i];
+      if(i<shown){
+        var a=s.a+Tt*0.2*s.sp, b=s.b+Tt*0.05*s.sp;
+        var x=ent.op.pos.x+s.rr*Math.sin(b)*Math.cos(a);
+        var y=ent.op.pos.y+s.rr*Math.cos(b);
+        var z=ent.op.pos.z+s.rr*Math.sin(b)*Math.sin(a);
+        locPos[i*3]=x; locPos[i*3+1]=y; locPos[i*3+2]=z;
+      } else { locPos[i*3]=0; locPos[i*3+1]=-999; locPos[i*3+2]=0; }
+    }
+    locGeo.attributes.position.needsUpdate=true;
+    locMat.size=0.10+0.10*(1-Math.min(1,P.n/500)); // fewer shops = bigger dots
+
+    // animate money particles along each edge
+    EDGES.forEach(function(e){
+      var A=ent[e.from].pos, B=ent[e.to].pos;
+      var thick=edgeThick(m,e.key);
+      e.mat.opacity= thick<=0.001?0:0.85;
+      e.mat.size=0.14+thick*0.5;
+      e.line.material.opacity= thick<=0.001?0:0.10;
+      for(var j=0;j<PER;j++){
+        var t=((Tt*0.35 + e.t0 + j/PER)%1);
+        if(e.back) t=1-t;
+        // slight arc via midpoint lift
+        var mx=(A.x+B.x)/2, my=(A.y+B.y)/2+2.2, mz=(A.z+B.z)/2;
+        var it=1-t;
+        var x=it*it*A.x+2*it*t*mx+t*t*B.x;
+        var y=it*it*A.y+2*it*t*my+t*t*B.y;
+        var z=it*it*A.z+2*it*t*mz+t*t*B.z;
+        e.pos[j*3]=x; e.pos[j*3+1]=y; e.pos[j*3+2]=z;
+      }
+      e.pts.geometry.attributes.position.needsUpdate=true;
+    });
+
+    // break ring
+    breakRing.material.opacity = m.tp_break? (0.4+0.4*pl) : 0;
+    breakRing.scale.setScalar(1+(m.tp_break?0.05*pl:0));
+
+    // project labels to screen
+    Object.keys(ent).forEach(function(k){
+      var v=_proj.copy(ent[k].pos); v.y+=ent[k].r+0.6; v.project(camera);
+      var el=labelEls[k];
+      if(v.z>1){ el.style.display='none'; return; }
+      el.style.display='';
+      el.style.left=((0.5+v.x*0.5)*innerWidth)+'px';
+      el.style.top=((0.5-v.y*0.5)*innerHeight)+'px';
+    });
+
+    renderer.render(scene,camera);
+
+    // readouts
+    document.getElementById('bott-v').textContent=(m.eff*100).toFixed(1)+' %';
+    document.getElementById('bott-v').style.color=m.eff>0.30?'#ff5470':m.eff>0.20?'#ffd700':'#00ffd5';
+    document.getElementById('naive-v').textContent=(m.naive*100).toFixed(1)+' %';
+    document.getElementById('m-sales').textContent=fmtB(m.sales);
+    document.getElementById('m-roy').textContent=fmtM(m.royalty);
+    document.getElementById('m-top').textContent=fmtM(m.topup);
+    document.getElementById('m-op').textContent=fmtM(m.opco_taxable);
+    document.getElementById('m-tax').textContent=fmtM(m.total_tax);
+    document.getElementById('m-pat').textContent=fmtM(m.pat);
+
+    var brk=document.getElementById('brk');
+    if(m.tp_break){ brk.innerHTML='STRUCTURE SNAPPED<small>royalty + interest exceed the profit — not arm\u2019s-length — a tax authority demolishes it</small>'; brk.classList.add('show'); }
+    else if(m.atad_break){ brk.innerHTML='ATAD WALL<small>interest deduction capped at 30% of EBITDA — the excess debt buys no tax shield</small>'; brk.classList.add('show'); }
+    else brk.classList.remove('show');
+  }
+
+  // ---------- controls ----------
+  function bind(id,key,fmt,scale){ var el=document.getElementById(id), o=document.getElementById('v-'+id.split('-')[1]);
+    el.addEventListener('input',function(){ P[key]=(+el.value)*(scale||1); o.textContent=fmt(+el.value); }); }
+  bind('s-n','n',function(v){return Math.round(v);});
+  bind('s-roy','roy',function(v){return (+v).toFixed(1)+'%';},0.01);
+  bind('s-iptax','iptax',function(v){return (+v).toFixed(0)+'%';},0.01);
+  bind('s-mgmt','mgmt',function(v){return (+v).toFixed(1)+'%';},0.01);
+  bind('s-debt','debt',function(v){return Math.round(v)+'%';},0.01);
+  document.getElementById('s-spd').addEventListener('input',function(e){P.spd=+e.target.value; document.getElementById('v-spd').textContent=Math.round(P.spd)+'%';});
+
+  function setAll(n,roy,ip,mg,dbt){ P.n=n;P.roy=roy;P.iptax=ip;P.mgmt=mg;P.debt=dbt;
+    document.getElementById('s-n').value=n; document.getElementById('v-n').textContent=Math.round(n);
+    document.getElementById('s-roy').value=roy*100; document.getElementById('v-roy').textContent=(roy*100).toFixed(1)+'%';
+    document.getElementById('s-iptax').value=ip*100; document.getElementById('v-iptax').textContent=(ip*100).toFixed(0)+'%';
+    document.getElementById('s-mgmt').value=mg*100; document.getElementById('v-mgmt').textContent=(mg*100).toFixed(1)+'%';
+    document.getElementById('s-debt').value=dbt*100; document.getElementById('v-debt').textContent=Math.round(dbt*100)+'%'; }
+  document.getElementById('p-one').onclick=function(){setAll(1,0,0.22,0,0);};
+  document.getElementById('p-ire').onclick=function(){setAll(500,0.05,0.125,0.03,0.30);};
+  document.getElementById('p-haven').onclick=function(){setAll(500,0.06,0.0,0.04,0.50);};
+  document.getElementById('p-maxroy').onclick=function(){setAll(500,0.15,0.0,0.05,0.50);};
+  document.getElementById('p-maxdebt').onclick=function(){setAll(500,0.05,0.125,0.03,1.0);};
+  document.getElementById('p-spin').onclick=function(){P.spin=!P.spin; this.style.borderColor=P.spin?'#ffd700':'#2a2a3a'; this.style.color=P.spin?'#ffd700':'#00d4ff';};
+
+  document.getElementById('kbtn').onclick=function(){ var w=document.getElementById('wip'); w.classList.toggle('show');
+    this.textContent=w.classList.contains('show')?'honesty K1–K7 ▾':'honesty K1–K7 ▸'; };
+
+  addEventListener('resize',function(){ camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth,innerHeight); });
+  animate();
+})();
+</script>
+</body></html>

@@ -1,0 +1,373 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>Allonet v1.2 -- desertion curve + the graph that catches the child</title>
+<style>
+  :root{
+    --bg:#050508; --gold:#ffd700; --cyan:#00d4ff; --pink:#ff69b4; --green:#00ffd5;
+    --esp:#c7894a; --pur:#cc44ff; --red:#ff5470; --amber:#ffb454; --dim:#6a6a82; --txt:#e8e0d0;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{background:var(--bg);color:var(--txt);font-family:var(--mono);width:100%;min-height:100%;overflow-x:hidden}
+  body{padding:10px 10px 24px;max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:10px}
+  .card{background:rgba(8,8,16,0.85);border:1px solid #20202e;border-radius:10px;padding:10px 12px}
+  #ttl{color:var(--gold);font-size:14px;letter-spacing:0.04em}
+  #sub{color:var(--dim);font-size:10px;margin-top:2px;line-height:1.4}
+  #note{color:var(--esp);font-size:10px;margin-top:5px;line-height:1.4}
+  #note b{color:var(--gold)}
+  #stats{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+  .mc{background:rgba(8,8,16,0.9);border:1px solid #20202e;border-radius:8px;padding:7px 9px}
+  .mc .lab{font-size:8px;color:var(--dim);text-transform:uppercase;letter-spacing:0.06em}
+  .mc .val{font-size:16px;font-weight:bold;color:var(--gold);margin-top:1px}
+  #boardwrap{width:100%;background:rgba(8,8,16,0.6);border:1px solid #20202e;border-radius:10px;overflow:hidden}
+  #cv{display:block;width:100%;height:auto}
+  .sliders{display:flex;flex-direction:column;gap:12px}
+  .srow{display:grid;grid-template-columns:1fr auto;gap:3px 10px;align-items:center}
+  .srow label{font-size:11.5px;color:var(--dim)}
+  .srow .v{font-size:12px;color:var(--gold);font-weight:bold;text-align:right;min-width:46px}
+  .srow .hint{grid-column:1 / -1;font-size:10px;color:#55556a;margin-top:-1px}
+  .srow input[type=range]{grid-column:1 / -1;appearance:none;-webkit-appearance:none;width:100%;height:24px;background:transparent;outline:none;cursor:pointer}
+  .srow input[type=range]::-webkit-slider-runnable-track{height:5px;background:#2a2a3a;border-radius:4px}
+  .srow input[type=range]::-moz-range-track{height:5px;background:#2a2a3a;border-radius:4px}
+  .srow input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;margin-top:-9px;width:22px;height:22px;border-radius:50%;background:var(--gold);border:3px solid #050508;cursor:pointer}
+  .srow input[type=range]::-moz-range-thumb{width:22px;height:22px;border:3px solid #050508;border-radius:50%;background:var(--gold);cursor:pointer}
+  .btns{display:flex;gap:8px;flex-wrap:wrap}
+  button{flex:1;min-width:74px;background:#14141f;border:1px solid #2a2a3a;border-radius:8px;color:var(--gold);
+    font:12px var(--mono);padding:10px 6px;cursor:pointer;transition:all .12s}
+  button:hover{border-color:var(--gold)} button:active{transform:scale(0.98)}
+  button.cyan{color:var(--cyan);border-color:#1e4a55}
+  .verdict-card{border:1px solid #20202e;border-radius:10px;padding:10px 12px;background:rgba(8,8,16,0.85)}
+  #verdict{font-size:15px;font-weight:bold}
+  #vsub{font-size:11px;color:var(--dim);margin-top:3px;line-height:1.4}
+  .wip{background:rgba(8,8,16,0.85);border:1px solid #c7894a;border-radius:10px;padding:8px 11px;font-size:10px;color:var(--esp);line-height:1.5}
+  .wip b{color:var(--gold)}
+  .stamp{text-align:center;font-size:8px;color:rgba(0,212,255,0.3);letter-spacing:0.08em;line-height:1.7}
+
+  /* ---- desktop: wider screens get a 2-column slider grid, carded rows, slimmer hover-glow thumbs ---- */
+  @media (min-width:640px){
+    body{max-width:920px;padding:14px 16px 28px;gap:12px}
+    #cv{max-height:560px;object-fit:contain}
+    .sliders{display:grid;grid-template-columns:1fr 1fr;gap:10px 16px}
+    .srow{background:rgba(12,12,22,0.5);border:1px solid #1a1a28;border-radius:8px;padding:9px 12px 11px;
+      grid-template-columns:1fr auto;column-gap:12px;align-content:start}
+    .srow:hover{border-color:#2a2a3a}
+    .srow label{font-size:12px}
+    .srow .v{font-size:13px}
+    .srow .hint{font-size:10px;color:#55556a;margin-top:2px;line-height:1.35}
+    .srow input[type=range]{height:20px;margin-top:4px}
+    .srow input[type=range]::-webkit-slider-runnable-track{height:5px;background:#2a2a3a;transition:background .12s}
+    .srow input[type=range]:hover::-webkit-slider-runnable-track{background:#33334a}
+    .srow input[type=range]::-moz-range-track{height:5px;background:#2a2a3a}
+    .srow input[type=range]:hover::-moz-range-track{background:#33334a}
+    /* slimmer thumb on desktop, with a gold hover glow (pointer precision = no need for the fat 22px touch target) */
+    .srow input[type=range]::-webkit-slider-thumb{margin-top:-6px;width:16px;height:16px;border-width:2px;
+      box-shadow:0 0 0 0 rgba(255,215,0,0);transition:box-shadow .14s,transform .1s}
+    .srow input[type=range]:hover::-webkit-slider-thumb{box-shadow:0 0 9px 1px rgba(255,215,0,0.55)}
+    .srow input[type=range]:active::-webkit-slider-thumb{transform:scale(1.12)}
+    .srow input[type=range]::-moz-range-thumb{width:16px;height:16px;border-width:2px}
+    .srow input[type=range]:hover::-moz-range-thumb{box-shadow:0 0 9px 1px rgba(255,215,0,0.55)}
+    .btns button{min-width:96px;padding:9px 8px}
+    .btns button:hover{box-shadow:0 0 8px 0 rgba(255,215,0,0.18)}
+  }
+  /* very wide: a touch more breathing room, 3-up presets stay one row */
+  @media (min-width:860px){
+    .sliders{gap:11px 20px}
+  }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <div id="ttl">ALLONET v1.2 — the desertion curve &amp; the graph that catches the child</div>
+  <div id="sub">top: the population bell curve of male strategy (desert ← → provide). bottom: the actual helpers — mother, gran, aunt, sibling, best friend, even a stranger — who route energy to one orphan. two views, one system.</div>
+  <div id="note">claim under test: <b>desertion is a distribution, not a switch — and when a father lands in the left tail, a typed graph of others composes the missing energy</b>. scale doesn't save the child; cohesion and kin do. watch both move together.</div>
+</div>
+
+<div id="stats">
+  <div class="mc"><div class="lab">desertion rate</div><div class="val" id="s-des" style="color:var(--amber)">−</div></div>
+  <div class="mc"><div class="lab">need met</div><div class="val" id="s-surv">−</div></div>
+  <div class="mc"><div class="lab">network strain</div><div class="val" id="s-strain">−</div></div>
+</div>
+
+<div id="boardwrap"><canvas id="cv" width="760" height="640"></canvas></div>
+
+<div class="verdict-card">
+  <div id="verdict">—</div>
+  <div id="vsub">—</div>
+</div>
+
+<div class="card sliders">
+  <div class="srow"><label>father's pull to desert</label><span class="v" id="desv">50%</span>
+    <input id="des" type="range" min="0" max="100" step="1" value="50">
+    <div class="hint">shifts the bell curve left (provide) ↔ right (desert). the left tail is where help is needed.</div></div>
+  <div class="srow"><label>helpers in the network (N)</label><span class="v" id="nv">9</span>
+    <input id="n" type="range" min="1" max="200" step="1" value="9">
+    <div class="hint">how many nodes could route energy. types are auto-composed: kin core first, then friends, then strangers.</div></div>
+  <div class="srow"><label>social cohesion (the glue)</label><span class="v" id="cv2">70%</span>
+    <input id="coh" type="range" min="0" max="100" step="1" value="70">
+    <div class="hint">willingness of non-kin (friends, strangers) to pay a cost. kin give regardless (Hamilton).</div></div>
+  <div class="srow"><label>kin fraction (blood is thick)</label><span class="v" id="kv">55%</span>
+    <input id="kin" type="range" min="0" max="100" step="1" value="55">
+    <div class="hint">share of helpers who are family. the rest split into best-friends and strangers.</div></div>
+  <div class="srow"><label>child's energy need</label><span class="v" id="ndv">3.0</span>
+    <input id="need" type="range" min="0.5" max="6" step="0.1" value="3.0">
+    <div class="hint">how costly the young is — a human child is enormously expensive.</div></div>
+  <div class="srow"><label>surplus per helper</label><span class="v" id="spv">0.6</span>
+    <input id="surp" type="range" min="0.1" max="1.5" step="0.05" value="0.6">
+    <div class="hint">spare energy each node has after feeding its own dependents.</div></div>
+</div>
+
+<div class="btns">
+  <button id="b-band" class="cyan">kin band</button>
+  <button id="b-alone">single mom</button>
+  <button id="b-huge">8.3 billion</button>
+  <button id="b-grandma">gran saves it</button>
+  <button id="b-village">village</button>
+</div>
+
+<div class="wip">
+  <b>honesty (K1–K5):</b><br>
+  <b>K1</b> a TEACHING composite — grounded in the research (Hrdy's allomothers, Sear &amp; Mace, Hamilton's kin selection, Trivers), NOT a fitted law. The weights are a reasonable encoding.<br>
+  <b>K2</b> the bell curve is the population distribution of male strategy; "desert" slider shifts its mean. The shaded left tail is the fraction of fathers who desert — desertion is a <b>distribution, not a switch</b>.<br>
+  <b>K3</b> helper give: kin = 0.5+0.5·cohesion (readily); best-friend = cohesion·0.7; stranger = cohesion²·dilution (rare &amp; fragile, thins as the net grows). Honest shape, illustrative curve.<br>
+  <b>K4</b> two failure modes — DEFICIT (child starves) and BUCKLE (meeting need overdraws helpers past ~90% of surplus → cascade as they protect their own).<br>
+  <b>K5</b> nodes + curve are the same system in two views: the curve is <i>how many</i> fathers leave; the graph is <i>who composes</i> the energy when one does.
+</div>
+
+<div class="stamp">ALLONET v1.2 · genesis kernel · MNet palette · P=12 · χ=2 · always</div>
+
+<script>
+// ALLONET v1.2 -- desertion bell curve fused with a typed helper graph.
+// Bow to the boskis: Genesis kernel, MNet palette, honesty caveats. Stamp is a signature, not a P=12 claim.
+// Model grounded in cooperative-breeding research; weights are a teaching encoding (K1). Two views of one system (K5).
+(function(){
+  var cv=document.getElementById('cv'), ctx=cv.getContext('2d');
+  var CW=760, CH=640;
+  function fit(){ var dpr=Math.min(window.devicePixelRatio||1,2); cv.width=CW*dpr; cv.height=CH*dpr; ctx.setTransform(dpr,0,0,dpr,0,0); }
+  fit(); addEventListener('resize',fit);
+
+  var GOLD='#ffd700', CYAN='#00d4ff', PINK='#ff69b4', GREEN='#00ffd5', RED='#ff5470', AMBER='#ffb454', PUR='#cc44ff', DIM='#6a6a82', ESP='#c7894a';
+  var TWO=Math.PI*2, T=0;
+
+  // P.des = father's desertion pull (0..1) -> mean of bell curve. higher = more desertion.
+  var P={ des:0.50, N:9, coh:0.70, kin:0.55, need:3.0, surp:0.60 };
+
+  // ---- helper TYPES: kin (gold), best-friend (pink), stranger (cyan) ----
+  // give-per-node by type, all grounded in K3
+  function dilution(){ return 1.0/(1.0+Math.log10(Math.max(P.N,1))); }
+  function giveKin(){ return P.surp*(0.5+0.5*P.coh); }
+  function giveFriend(){ return P.surp*(P.coh*0.7); }
+  function giveStranger(){ return P.surp*(P.coh*P.coh)*dilution(); }
+
+  // compose the N helpers into types: kin core first, then a few best-friends, then strangers
+  function compose(){
+    var N=P.N;
+    var nKin=Math.round(N*P.kin);
+    var rest=N-nKin;
+    // of the non-kin, ~1 in 5 is a "best friend" (the cool uncle-figure / chosen family), rest strangers
+    var nFriend=Math.min(rest, Math.max(rest>0?1:0, Math.round(rest*0.2)));
+    var nStranger=rest-nFriend;
+    return {nKin:nKin, nFriend:nFriend, nStranger:nStranger, N:N};
+  }
+
+  function model(){
+    var c=compose();
+    var provided = c.nKin*giveKin() + c.nFriend*giveFriend() + c.nStranger*giveStranger();
+    var survival = Math.min(1, provided/Math.max(P.need,1e-6));
+    var used = Math.min(provided, P.need);
+    var strain = (used/Math.max(P.N,1))/Math.max(P.surp,1e-6);
+    var buckle = strain>0.9;
+    return {c:c, provided:provided, survival:survival, strain:strain, buckle:buckle};
+  }
+
+  // desertion fraction = area of the bell curve's right ("desert") half-tail beyond the midline,
+  // driven by how far P.des has pushed the mean. Simple, honest monotone mapping.
+  function desertionRate(){
+    // mean mu in [-1,1]; provide at -1, desert at +1. fraction deserting = CDF beyond 0.
+    var mu = (P.des-0.5)*2;          // -1..1
+    var sigma=0.5;
+    // normal CDF at x=0 with mean mu: fraction with strategy>0 (desert side)
+    var z = (0-mu)/sigma;
+    var cdf = 0.5*(1+erf(z/Math.SQRT2));   // P(X<0)
+    return 1-cdf;                          // P(X>0) = desert fraction
+  }
+  function erf(x){ var t=1/(1+0.3275911*Math.abs(x));
+    var y=1-(((((1.061405429*t-1.453152027)*t)+1.421413741)*t-0.284496736)*t+0.254829592)*t*Math.exp(-x*x);
+    return x>=0?y:-y; }
+
+  // ---- node layout: helpers in rings around the child (lower 60% of canvas) ----
+  var nodes=[];
+  function layout(){
+    nodes=[]; var c=compose();
+    var shown=Math.min(c.N,120);
+    var cx=CW*0.5, cy=CH*0.66, types=[];
+    for(var i=0;i<c.nKin;i++) types.push('kin');
+    for(var f=0;f<c.nFriend;f++) types.push('friend');
+    for(var s=0;s<c.nStranger;s++) types.push('stranger');
+    types=types.slice(0,shown);
+    for(var i2=0;i2<types.length;i2++){
+      var ring=Math.floor(i2/12), idx=i2%12, per=Math.min(12, types.length-ring*12);
+      var rad=70+ring*44, ang=(idx/per)*TWO + ring*0.5;
+      nodes.push({ x:cx+Math.cos(ang)*rad, y:cy+Math.sin(ang)*rad*0.78, type:types[i2], phase:i2*0.7 });
+    }
+    return {cx:cx, cy:cy, capped:c.N>120};
+  }
+
+  function typeColor(t){ return t==='kin'?GOLD : t==='friend'?PINK : CYAN; }
+  function typeGive(t){ return t==='kin'?giveKin() : t==='friend'?giveFriend() : giveStranger(); }
+
+  // ---- the bell curve (top third) ----
+  function drawBell(){
+    var x0=14, x1=CW-14, yBase=CH*0.30, yTop=18, w=x1-x0;
+    var mu=(P.des-0.5)*2, sigma=0.5;
+    function bell(xn){ return Math.exp(-0.5*Math.pow((xn-mu)/sigma,2)); } // xn in [-1,1]
+    // axis
+    ctx.strokeStyle='rgba(106,106,130,0.3)'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(x0,yBase); ctx.lineTo(x1,yBase); ctx.stroke();
+    // midline (the desert/provide split at xn=0)
+    var xmid=x0+0.5*w;
+    ctx.setLineDash([3,4]); ctx.strokeStyle='rgba(106,106,130,0.4)';
+    ctx.beginPath(); ctx.moveTo(xmid,yTop); ctx.lineTo(xmid,yBase); ctx.stroke(); ctx.setLineDash([]);
+    // filled curve, split-coloured: left half (provide) green-ish, right half (desert) amber/red
+    function px(xn){ return x0 + (xn+1)/2*w; }
+    function py(xn){ return yBase - bell(xn)*(yBase-yTop); }
+    // desert tail fill (xn>0)
+    ctx.beginPath(); ctx.moveTo(xmid,yBase);
+    for(var i=0;i<=60;i++){ var xn=i/60; ctx.lineTo(px(xn),py(xn)); }
+    ctx.lineTo(px(1),yBase); ctx.closePath();
+    ctx.fillStyle='rgba(255,84,112,0.18)'; ctx.fill();
+    // provide side fill (xn<0)
+    ctx.beginPath(); ctx.moveTo(px(-1),yBase);
+    for(var j=0;j<=60;j++){ var xn2=-1+j/60; ctx.lineTo(px(xn2),py(xn2)); }
+    ctx.lineTo(xmid,yBase); ctx.closePath();
+    ctx.fillStyle='rgba(0,255,213,0.13)'; ctx.fill();
+    // curve stroke
+    ctx.beginPath();
+    for(var k=0;k<=120;k++){ var xn3=-1+k/60*1; if(xn3>1)break; var X=px(xn3),Y=py(xn3); if(k===0)ctx.moveTo(X,Y); else ctx.lineTo(X,Y); }
+    ctx.strokeStyle=GOLD; ctx.lineWidth=2; ctx.stroke();
+    // mean marker
+    var mx=px(mu);
+    ctx.setLineDash([4,4]); ctx.strokeStyle = mu>0?RED:GREEN; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.moveTo(mx,yTop); ctx.lineTo(mx,yBase); ctx.stroke(); ctx.setLineDash([]);
+    // labels
+    ctx.font='10px ui-monospace,Consolas,monospace'; ctx.textAlign='left';
+    ctx.fillStyle=GREEN; ctx.fillText('◄ provide', x0, yBase+14);
+    ctx.textAlign='right'; ctx.fillStyle=RED; ctx.fillText('desert ►', x1, yBase+14);
+    ctx.textAlign='center'; ctx.fillStyle=DIM; ctx.font='9px ui-monospace,Consolas,monospace';
+    ctx.fillText('population of fathers — '+Math.round(desertionRate()*100)+'% land in the desert tail', CW/2, yTop+2);
+    // a marker dot for "this child's father" sitting on the curve at the mean
+    ctx.fillStyle = mu>0?RED:GREEN;
+    ctx.beginPath(); ctx.arc(mx, py(mu), 4, 0, TWO); ctx.fill();
+    ctx.fillStyle=DIM; ctx.textAlign='center'; ctx.font='9px ui-monospace,Consolas,monospace';
+    ctx.fillText('this father', mx, py(mu)-8);
+    return yBase;
+  }
+
+  function draw(){
+    var m=model(), L=layout();
+    ctx.fillStyle='#0a0a12'; ctx.fillRect(0,0,CW,CH);
+
+    // divider hint between the two views
+    drawBell();
+    ctx.strokeStyle='rgba(32,32,46,0.8)'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(14,CH*0.37); ctx.lineTo(CW-14,CH*0.37); ctx.stroke();
+    ctx.fillStyle=DIM; ctx.font='9px ui-monospace,Consolas,monospace'; ctx.textAlign='left';
+    ctx.fillText('the graph that catches the child ↓', 16, CH*0.37+13);
+
+    var cx=L.cx, cy=L.cy, pulse=0.5+0.5*Math.sin(T*0.06);
+
+    // edges with traveling energy packets
+    for(var i=0;i<nodes.length;i++){
+      var nd=nodes[i];
+      var give=typeGive(nd.type), giveN=Math.max(0,Math.min(1, give/0.9));
+      if(giveN<0.015) { // still draw a faint dead link for strangers giving nothing
+        ctx.strokeStyle='rgba(106,106,130,0.10)'; ctx.lineWidth=1;
+        ctx.beginPath(); ctx.moveTo(nd.x,nd.y); ctx.lineTo(cx,cy); ctx.stroke(); continue;
+      }
+      var col=typeColor(nd.type);
+      var t=((T*0.012 + nd.phase)%1);
+      var px2=cx+(nd.x-cx)*t, py2=cy+(nd.y-cy)*t;
+      ctx.strokeStyle=col; ctx.globalAlpha=0.08+0.18*giveN; ctx.lineWidth=1+giveN*1.5;
+      ctx.beginPath(); ctx.moveTo(nd.x,nd.y); ctx.lineTo(cx,cy); ctx.stroke();
+      ctx.fillStyle=col; ctx.globalAlpha=0.35+0.5*giveN;
+      ctx.beginPath(); ctx.arc(px2,py2,1.6+2*giveN,0,TWO); ctx.fill();
+      ctx.globalAlpha=1;
+    }
+    // helper nodes by type
+    for(var j=0;j<nodes.length;j++){
+      var n2=nodes[j], col2=typeColor(n2.type);
+      ctx.fillStyle=col2; ctx.globalAlpha = (n2.type==='stranger' && typeGive('stranger')<0.02)?0.35:0.9;
+      ctx.beginPath(); ctx.arc(n2.x,n2.y, n2.type==='kin'?5:n2.type==='friend'?4.5:3.5, 0, TWO); ctx.fill();
+      ctx.globalAlpha=1;
+    }
+    if(L.capped){ ctx.fillStyle=DIM; ctx.font='10px ui-monospace,Consolas,monospace'; ctx.textAlign='center';
+      ctx.fillText('(showing 120 of '+P.N+')', cx, CH-10); }
+
+    // child core
+    var s=m.survival, childCol=s>=0.99?GREEN:s>=0.6?AMBER:RED, glow=m.buckle?(0.3+0.4*pulse):(0.5+0.3*pulse);
+    ctx.fillStyle=childCol; ctx.globalAlpha=0.12*glow;
+    ctx.beginPath(); ctx.arc(cx,cy, 32+8*s+(m.buckle?6*pulse:0), 0, TWO); ctx.fill(); ctx.globalAlpha=1;
+    ctx.fillStyle=childCol; ctx.beginPath(); ctx.arc(cx,cy, 13+6*s, 0, TWO); ctx.fill();
+    ctx.strokeStyle=m.buckle?RED:'rgba(255,255,255,0.3)'; ctx.lineWidth=m.buckle?2:1;
+    ctx.beginPath(); ctx.arc(cx,cy, 13+6*s, 0, TWO); ctx.stroke();
+    ctx.fillStyle='#0a0a12'; ctx.font='bold 11px ui-monospace,Consolas,monospace'; ctx.textAlign='center';
+    ctx.fillText(Math.round(s*100)+'%', cx, cy+4);
+
+    // legend (typed)
+    ctx.textAlign='left'; ctx.font='9.5px ui-monospace,Consolas,monospace';
+    ctx.fillStyle=GOLD; ctx.fillText('● kin', CW-150, CH*0.40+14);
+    ctx.fillStyle=PINK; ctx.fillText('● best friend', CW-150, CH*0.40+28);
+    ctx.fillStyle=CYAN; ctx.fillText('● stranger', CW-150, CH*0.40+42);
+
+    // stats + verdict
+    document.getElementById('s-des').textContent=Math.round(desertionRate()*100)+'%';
+    document.getElementById('s-surv').textContent=Math.round(m.survival*100)+'%';
+    document.getElementById('s-surv').style.color=childCol;
+    document.getElementById('s-strain').textContent=Math.round(m.strain*100)+'%';
+    document.getElementById('s-strain').style.color=m.buckle?RED:m.strain>0.6?AMBER:GOLD;
+
+    var v=document.getElementById('verdict'), vs=document.getElementById('vsub');
+    var c=m.c;
+    var compTxt=c.nKin+' kin · '+c.nFriend+' friend'+(c.nFriend===1?'':'s')+' · '+c.nStranger+' stranger'+(c.nStranger===1?'':'s');
+    if(m.survival>=0.99 && !m.buckle){ v.textContent='✓ the child lives, the net holds'; v.style.color=GREEN;
+      vs.textContent=compTxt+' — enough composed without overdrawing anyone. cooperative breeding, working.'; }
+    else if(m.survival>=0.99 && m.buckle){ v.textContent='⚠ child fed — but the net is buckling'; v.style.color=AMBER;
+      vs.textContent=compTxt+' — need met, but helpers give past ~90% of surplus; they will drop out to protect their own. cascade risk.'; }
+    else if(m.buckle){ v.textContent='✗ deficit AND buckling'; v.style.color=RED;
+      vs.textContent=compTxt+' — too few stretched too thin: the child starves and the strained nodes collapse.'; }
+    else { v.textContent='✗ the child starves'; v.style.color=RED;
+      vs.textContent=compTxt+' — '+(P.kin<0.2?'almost no kin, and stranger-help dilutes to nothing. scale without cohesion fails.':'not enough routed; raise cohesion, add kin, or the need is too high.'); }
+  }
+
+  function loop(){ T+=1; draw(); requestAnimationFrame(loop); }
+
+  function bind(id,key,fmt,scale){ var el=document.getElementById(id),
+    o=document.getElementById(id==='coh'?'cv2':id==='surp'?'spv':id==='need'?'ndv':id==='des'?'desv':id+'v');
+    el.addEventListener('input',function(){ P[key]=(+el.value)*(scale||1); o.textContent=fmt(P[key]); }); }
+  bind('des','des',function(v){return Math.round(v*100)+'%';},0.01);
+  bind('n','N',function(v){return Math.round(v);});
+  bind('coh','coh',function(v){return Math.round(v*100)+'%';},0.01);
+  bind('kin','kin',function(v){return Math.round(v*100)+'%';},0.01);
+  bind('need','need',function(v){return v.toFixed(1);});
+  bind('surp','surp',function(v){return v.toFixed(2);});
+
+  function setAll(des,N,coh,kin,need,surp){
+    P.des=des; P.N=N; P.coh=coh; P.kin=kin; P.need=need; P.surp=surp;
+    document.getElementById('des').value=des*100; document.getElementById('desv').textContent=Math.round(des*100)+'%';
+    document.getElementById('n').value=N; document.getElementById('nv').textContent=N;
+    document.getElementById('coh').value=coh*100; document.getElementById('cv2').textContent=Math.round(coh*100)+'%';
+    document.getElementById('kin').value=kin*100; document.getElementById('kv').textContent=Math.round(kin*100)+'%';
+    document.getElementById('need').value=need; document.getElementById('ndv').textContent=need.toFixed(1);
+    document.getElementById('surp').value=surp; document.getElementById('spv').textContent=surp.toFixed(2);
+  }
+  document.getElementById('b-band').onclick=function(){ setAll(0.7,9,0.85,0.7,3.0,0.6); };
+  document.getElementById('b-alone').onclick=function(){ setAll(0.9,1,0.5,1.0,3.0,0.6); };
+  document.getElementById('b-huge').onclick=function(){ setAll(0.7,200,0.06,0.02,3.0,0.6); };
+  document.getElementById('b-grandma').onclick=function(){ setAll(0.8,4,0.65,1.0,2.4,0.85); };
+  document.getElementById('b-village').onclick=function(){ setAll(0.6,20,0.55,0.25,3.0,0.6); };
+
+  loop();
+})();
+</script>
+</body></html>

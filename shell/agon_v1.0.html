@@ -1,0 +1,406 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>AGON v1.0 — the brilliance that could not unite</title>
+<style>
+  :root{
+    --bg:#050508; --gold:#ffd700; --cyan:#00d4ff; --pink:#ff69b4; --green:#00ffd5;
+    --amber:#ffae42; --crim:#e0455e; --esp:#c7894a; --pur:#cc44ff; --red:#ff5470;
+    --marble:#dfe6ef; --dim:#6a6a82; --txt:#e8e0d0;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;background:var(--bg);color:var(--txt);font-family:var(--mono);overflow:hidden;touch-action:none}
+  #cv{position:fixed;inset:0;display:block}
+  #top{position:fixed;top:8px;left:8px;right:8px;z-index:6;display:flex;gap:10px;align-items:flex-start;pointer-events:none;flex-wrap:wrap}
+  #ttlbox{background:rgba(8,8,16,.82);border:1px solid #20202e;border-radius:8px;padding:7px 11px;max-width:600px}
+  #ttl{color:var(--gold);font-size:13px;letter-spacing:.05em}
+  #sub{color:var(--dim);font-size:9.5px;margin-top:2px;line-height:1.4}
+  #stat{margin-left:auto;background:rgba(8,8,16,.9);border:1px solid #20202e;border-radius:8px;padding:7px 12px;min-width:236px}
+  #stat .lab{font-size:8px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em}
+  #stat .v{font-size:15px;font-weight:bold;margin-top:1px}
+  #cards{position:fixed;top:66px;left:8px;z-index:6;display:grid;grid-template-columns:repeat(2,1fr);gap:5px;width:216px}
+  .mc{background:rgba(8,8,16,.86);border:1px solid #20202e;border-radius:6px;padding:5px 8px}
+  .mc .lab{font-size:7.5px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em}
+  .mc .val{font-size:15px;font-weight:bold}
+  #bar{position:fixed;bottom:0;left:0;right:0;z-index:10;background:rgba(8,8,16,.95);border-top:1px solid #20202e;
+    padding:7px 9px;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:7px 14px;align-items:center}
+  .sl{display:flex;flex-direction:column;gap:1px}
+  .sl .top{display:flex;justify-content:space-between;align-items:baseline}
+  .sl label{font-size:8px;color:var(--dim);text-transform:uppercase;letter-spacing:.05em}
+  .sl .v{font-size:10px;color:var(--gold);font-weight:bold}
+  .sl.key label{color:var(--cyan)} .sl.key .v{color:var(--cyan)}
+  input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:4px;background:#2a2a3a;border-radius:3px;outline:none}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:15px;height:15px;border-radius:50%;background:var(--gold);cursor:pointer;border:2px solid #050508}
+  .key input[type=range]::-webkit-slider-thumb{background:var(--cyan)}
+  input[type=range]::-moz-range-thumb{width:15px;height:15px;border-radius:50%;background:var(--gold);cursor:pointer;border:2px solid #050508}
+  .key input[type=range]::-moz-range-thumb{background:var(--cyan)}
+  #btns{grid-column:1/-1;display:flex;gap:7px;justify-content:center;flex-wrap:wrap;margin-top:1px}
+  button{background:#14141f;border:1px solid #2a2a3a;border-radius:5px;color:var(--cyan);font:11px var(--mono);padding:5px 12px;cursor:pointer}
+  button:hover{border-color:var(--cyan)}
+  .wip{position:fixed;bottom:150px;left:8px;z-index:6;background:rgba(8,8,16,.92);border:1px solid var(--esp);border-radius:8px;
+    padding:6px 9px;font-size:8.5px;color:var(--esp);max-width:392px;line-height:1.5;display:none}
+  .wip.show{display:block} .wip b{color:var(--gold)} .wip i{color:var(--cyan)}
+  #khint{position:fixed;bottom:150px;right:8px;z-index:6}
+  button#kbtn{font-size:9px;color:var(--esp);border-color:#3a2a1a}
+  .stamp{position:fixed;bottom:150px;left:50%;transform:translateX(-50%);z-index:5;font-size:8px;color:rgba(0,212,255,.25);letter-spacing:.08em;text-align:center;pointer-events:none}
+  #brk{position:fixed;top:46%;left:50%;transform:translate(-50%,-50%);z-index:8;pointer-events:none;
+    font-size:15px;font-weight:bold;color:var(--red);text-align:center;text-shadow:0 0 20px rgba(255,84,112,.6);opacity:0;transition:opacity .25s;letter-spacing:.04em}
+  #brk.show{opacity:1}
+  #brk small{display:block;font-size:10px;color:var(--amber);margin-top:4px;font-weight:normal;max-width:440px}
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+
+<div id="top">
+  <div id="ttlbox">
+    <div id="ttl">AGON v1.0 — the brilliance that could not unite</div>
+    <div id="sub">hundreds of proud city-states compete at everything — the <i>agon</i> — and the rivalry manufactures culture. but the same rivalry bleeds them in war and stops them federating, so a single unified outsider absorbs the divided pieces one by one. the legacy does not die: it transmits. turn the cyan knobs.</div>
+  </div>
+  <div id="stat">
+    <div class="lab">the greek world</div>
+    <div class="v" id="fs" style="color:var(--dim)">warming up…</div>
+    <div class="lab" style="margin-top:4px">phase</div>
+    <div class="v" id="phase" style="color:var(--cyan);font-size:12px">—</div>
+  </div>
+</div>
+
+<div id="cards">
+  <div class="mc"><div class="lab">free poleis 🏛️</div><div class="val" id="m-free" style="color:var(--green)">—</div></div>
+  <div class="mc"><div class="lab">culture / sec ✍️</div><div class="val" id="m-cult" style="color:var(--gold)">—</div></div>
+  <div class="mc"><div class="lab">legacy transmitted 📜</div><div class="val" id="m-leg" style="color:var(--cyan)">—</div></div>
+  <div class="mc"><div class="lab">at war ⚔️ / absorbed ⛓️</div><div class="val" id="m-war" style="color:var(--amber)">—</div></div>
+</div>
+
+<div id="brk"></div>
+
+<div class="wip" id="wip">
+  <b>honesty (K1–K7):</b><br>
+  <b>K1</b> a <i>dynamical-systems teaching model</i>, not a fitted cliometric simulation. It dramatizes one real thesis about Classical Greece; the curves are illustrative, the directions are the lesson.<br>
+  <b>K2</b> the <i>agon</i> is real: Greeks competed formally at drama, athletics, philosophy and rhetoric, and that fragmented, leisured, sea-linked competition genuinely turbo-charged output (Burckhardt's agonal culture; the leisure rested on slavery — modelled only as background wealth).<br>
+  <b>K3</b> the tragic coupling: rivalry drives BOTH culture AND internecine war. The Peloponnesian War + the plague of Athens are the archetype of the self-inflicted wound — here, high rivalry drains power on every front.<br>
+  <b>K4</b> two knobs do DIFFERENT jobs. <i>rivalry</i> makes the brilliance; <i>unity</i> (panhellenic feeling / durable federation) is what could let them keep the brilliance AND survive. They are independent on purpose — they were not culturally incapable, they were politically disunited.<br>
+  <b>K5</b> the hegemon wins by <i>division</i>: weakened, un-federated cities fall first, which lowers the collective shield and cascades (Philip at Chaeronea; then Rome). Unity raises the survival threshold — the buildable variable.<br>
+  <b>K6</b> "collapse" is a misnomer. The legacy counter keeps rising even at full conquest: Greek thought was absorbed by the Hellenistic kingdoms and Rome, which is why we still discuss it.<br>
+  <b>K7</b> names/positions are decorative. Tune to real scholarship before relying on any number. Stamp is a signature, not a claim.
+</div>
+<div id="khint"><button id="kbtn">honesty K1–K7 ▸</button></div>
+<div class="stamp">AGON v1.0 · MNet · unity &gt; brilliance · the ideas transmit</div>
+
+<div id="bar">
+  <div class="sl"><div class="top"><label>poleis</label><span class="v" id="v-n">9</span></div><input id="s-n" type="range" min="5" max="14" step="1" value="9"></div>
+  <div class="sl"><div class="top"><label>🌊 trade & sea</label><span class="v" id="v-trade">70%</span></div><input id="s-trade" type="range" min="0" max="100" step="1" value="70"></div>
+  <div class="sl key"><div class="top"><label>⚔️ rivalry (the agon)</label><span class="v" id="v-riv">65%</span></div><input id="s-riv" type="range" min="0" max="100" step="1" value="65"></div>
+  <div class="sl key"><div class="top"><label>🤝 panhellenic unity</label><span class="v" id="v-unity">28%</span></div><input id="s-unity" type="range" min="0" max="100" step="1" value="28"></div>
+  <div class="sl key"><div class="top"><label>🏛️ hegemon (Persia→Rome)</label><span class="v" id="v-heg">15%</span></div><input id="s-heg" type="range" min="0" max="100" step="1" value="15"></div>
+  <div class="sl"><div class="top"><label>sim speed</label><span class="v" id="v-spd">1.0×</span></div><input id="s-spd" type="range" min="20" max="300" step="5" value="100"></div>
+  <div id="btns">
+    <button id="b-pause">pause</button>
+    <button id="b-reseed">🏛️ reseed hellas</button>
+    <button id="b-golden">🏛️ golden age</button>
+    <button id="b-pelo">⚔️ peloponnesian war</button>
+    <button id="b-philip">🐎 philip at the gates</button>
+    <button id="b-rome">🦅 rome</button>
+    <button id="b-road">🤝 the road not taken</button>
+  </div>
+</div>
+
+<script>
+"use strict";
+(function(){
+const cv=document.getElementById('cv'), ctx=cv.getContext('2d');
+let W,H,DPR;
+function resize(){ DPR=Math.min(devicePixelRatio||1,2); W=innerWidth; H=innerHeight; cv.width=W*DPR; cv.height=H*DPR; ctx.setTransform(DPR,0,0,DPR,0,0); place(); }
+addEventListener('resize',resize);
+const GOLD='#ffd700',CY='#00d4ff',GN='#00ffd5',AM='#ffae42',CR='#e0455e',DIM='#6a6a82',RED='#ff5470',PUR='#cc44ff',MAR='#dfe6ef',ESP='#c7894a';
+const TWO=Math.PI*2;
+
+// ---------- constants (verified headlessly before ship) ----------
+const KC=0.9, KR=0.22, KW=0.05, HEGK=1.15, CONQ=3.0, PMIN=0.02;
+const CONQ_TRANSMIT=0.42;   // conquered cities still transmit ideas at this fraction
+
+const P={ n:9, trade:70, riv:65, unity:28, heg:15, spd:100, running:true };
+
+// a pool of real poleis; assigned round-robin
+const NAMES=['Athens','Sparta','Thebes','Corinth','Argos','Syracuse','Miletus','Rhodes','Ephesus','Megara','Elis','Chalcis','Samos','Thessaly'];
+
+let poleis=[], particles=[], sparks=[];
+let sim=0, rot=0, legacy=0, cultRate=0;
+function rand(a,b){ return a+Math.random()*(b-a); }
+
+function newPolis(p,i){
+  p.name=NAMES[i%NAMES.length]; p.hue=rand(0,1);
+  p.power=rand(0.6,1.0); p.state='free'; p.pulse=0; p.warFlash=0; p.plagued=0; p.spawnT=0;
+}
+function makePoleis(){ poleis=[]; for(let i=0;i<P.n;i++){ const p={id:i}; newPolis(p,i); poleis.push(p);} particles=[]; sparks=[]; sim=0; legacy=0; place(); }
+const nb=i=>[(i+1)%poleis.length,(i-1+poleis.length)%poleis.length];
+
+let cx,cy,rx,ry,legX,legY;
+function place(){ if(!W)return; cx=W*0.5; cy=H*0.52; rx=Math.min(W*0.30,340); ry=Math.min(H*0.24,240);
+  legX=cx; legY=Math.max(96,H*0.13); layout(); }
+function layout(){ if(!W)return; const N=poleis.length; poleis.forEach((p,i)=>{ p.baseA=(i/N)*TWO; }); }
+
+// ---------- physics ----------
+function hegEra(h){ return h<0.22?'distant (Persia repelled)': h<0.45?'pressure building': h<0.72?'MACEDON — Philip & Alexander':'ROME'; }
+
+function step(dt){
+  sim+=dt;
+  const trade=P.trade/100, riv=P.riv/100, unity=P.unity/100, heg=P.heg/100;
+  const free=poleis.filter(p=>p.state==='free');
+  const nFree=free.length||1;
+  const sumFree=free.reduce((s,p)=>s+p.power,0);
+  const meanFree=sumFree/nFree;
+  let warTot=0; cultRate=0;
+
+  // free poleis: culture, regen, internecine war
+  for(const p of free){
+    const cRate=KC*trade*(0.25+0.75*riv)*(0.3+0.7*p.power);
+    legacy+=cRate*dt; cultRate+=cRate;
+    p.power+=KR*trade*(1-p.power)*dt;
+    let drain=0;
+    for(const j of nb(p.id)){ const q=poleis[j]; if(q.state==='free'){ drain+=KW*riv*(1-0.75*unity); } }
+    warTot+=drain;
+    p.power-=drain*dt;
+    if(p.power<PMIN)p.power=PMIN;
+    p.warFlash=Math.max(0,p.warFlash-dt*1.6);
+    p.plagued=Math.max(0,p.plagued-dt*0.7);
+    // culture particles rise toward the LEGACY urn
+    p.spawnT-=dt;
+    if(p.spawnT<=0){ p.spawnT=rand(0.08,0.5)/(0.4+cRate); spawnParticle(p, hsl(p.hue,0.7,0.62)); }
+  }
+
+  // war flares (stochastic, between free rival neighbours) — visual + small extra bite
+  if(free.length>1 && Math.random()<riv*(1-0.7*unity)*dt*9){
+    const a=free[(Math.random()*free.length)|0]; const ns=nb(a.id).map(j=>poleis[j]).filter(q=>q.state==='free');
+    if(ns.length){ const b=ns[(Math.random()*ns.length)|0];
+      a.warFlash=b.warFlash=1; a.power-=0.02; b.power-=0.02;
+      const mx=(px(a)+px(b))/2, my=(py(a)+py(b))/2; burst(mx,my,RED,10);
+    }
+  }
+
+  // plague of Athens: rare shock, likelier when war is high
+  if(free.length && Math.random()<warTot*0.012*dt*60){
+    const v=free[(Math.random()*free.length)|0]; v.power*=0.55; v.plagued=1; burst(px(v),py(v),'#9be36a',14);
+  }
+
+  // hegemon: conquest by division
+  for(const p of free){
+    const defense=p.power*(1-unity)+(meanFree*1.15)*unity;
+    const hazard=HEGK*heg-defense;
+    if(hazard>0 && Math.random()<hazard*dt*CONQ){
+      p.state='conquered'; p.power*=0.4; burst(px(p),py(p),PUR,18);
+    }
+  }
+
+  // conquered cities: reduced culture still transmits (absorbed by the successors)
+  for(const p of poleis){ if(p.state==='conquered'){
+    const cRate=KC*CONQ_TRANSMIT*trade*(0.25+0.75*riv)*0.5;
+    legacy+=cRate*dt; cultRate+=cRate;
+    p.spawnT-=dt; if(p.spawnT<=0){ p.spawnT=rand(0.5,1.4); spawnParticle(p, 'rgba(204,68,255,0.85)'); }
+    p.pulse=0;
+  }}
+
+  // advance visuals
+  rot+=dt*0.10;
+  for(let i=particles.length-1;i>=0;i--){ const pa=particles[i];
+    pa.t+=dt*pa.spd; if(pa.t>=1){ particles.splice(i,1); continue; }
+    const e=pa.t*pa.t*(3-2*pa.t);
+    pa.x=pa.x0+(legX-pa.x0)*e; pa.y=pa.y0+(legY-pa.y0)*e - Math.sin(pa.t*Math.PI)*22;
+  }
+  for(let i=sparks.length-1;i>=0;i--){ const s=sparks[i]; s.x+=s.vx*dt; s.y+=s.vy*dt; s.life-=dt*2.4; if(s.life<=0)sparks.splice(i,1); }
+}
+
+function px(p){ return cx+Math.cos(p.baseA+rot)*rx; }
+function py(p){ return cy+Math.sin(p.baseA+rot)*ry; }
+function spawnParticle(p,tint){ if(particles.length>360)return; particles.push({x:px(p),y:py(p),x0:px(p),y0:py(p),t:0,spd:rand(0.35,0.6),tint,r:rand(1.1,2.2)}); }
+function burst(x,y,c,n){ for(let k=0;k<n;k++){ const a=Math.random()*TWO,s=rand(30,120); sparks.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:1,c}); } }
+function hsl(v,s,l){ return 'hsl('+Math.round(v*300+20)+','+Math.round(s*100)+'%,'+Math.round(l*100)+'%)'; }
+
+// ---------- draw ----------
+function draw(){
+  ctx.fillStyle='#07070c'; ctx.fillRect(0,0,W,H);
+  const trade=P.trade/100, riv=P.riv/100, unity=P.unity/100, heg=P.heg/100;
+
+  // the Aegean — faint sea ellipse
+  ctx.strokeStyle='rgba(0,120,150,0.10)'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.ellipse(cx,cy,rx*0.72,ry*0.72,0,0,TWO); ctx.stroke();
+
+  // hegemon ring — tightens as pressure grows
+  const RhegX=rx*(1.9-0.85*heg), RhegY=ry*(1.9-0.85*heg);
+  ctx.save();
+  ctx.strokeStyle='rgba(255,84,112,'+(0.15+0.5*heg)+')'; ctx.lineWidth=1.5+2.5*heg; ctx.setLineDash([9,7]);
+  ctx.beginPath(); ctx.ellipse(cx,cy,RhegX,RhegY,rot*0.3,0,TWO); ctx.stroke(); ctx.setLineDash([]);
+  // inward pressure ticks
+  const ticks=26;
+  for(let k=0;k<ticks;k++){ const a=(k/ticks)*TWO+rot*0.3; const ox=cx+Math.cos(a)*RhegX, oy=cy+Math.sin(a)*RhegY;
+    const ix=cx+Math.cos(a)*(RhegX-10-16*heg), iy=cy+Math.sin(a)*(RhegY-10-16*heg);
+    ctx.strokeStyle='rgba(255,84,112,'+(0.10+0.35*heg)+')'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(ox,oy); ctx.lineTo(ix,iy); ctx.stroke(); }
+  ctx.restore();
+  ctx.fillStyle='rgba(255,84,112,'+(0.4+0.4*heg)+')'; ctx.font='9px ui-monospace,monospace'; ctx.textAlign='center';
+  ctx.fillText('⟵ hegemon: '+hegEra(heg)+' ⟶', cx, cy-RhegY-8);
+
+  // unity web — gold threads among free poleis (panhellenic feeling / federated defence)
+  const free=poleis.filter(p=>p.state==='free');
+  if(unity>0.02){
+    for(let i=0;i<free.length;i++)for(let j=i+1;j<free.length;j++){
+      ctx.strokeStyle='rgba(255,215,0,'+(0.03+0.16*unity)+')'; ctx.lineWidth=0.8+unity*1.2;
+      ctx.beginPath(); ctx.moveTo(px(free[i]),py(free[i])); ctx.lineTo(px(free[j]),py(free[j])); ctx.stroke();
+    }
+  }
+
+  // rivalry edges (neighbours) — red when at war
+  for(const p of poleis){ if(p.state!=='free')continue;
+    for(const j of nb(p.id)){ if(j<p.id)continue; const q=poleis[j]; if(q.state!=='free')continue;
+      const flare=Math.max(p.warFlash,q.warFlash);
+      ctx.strokeStyle= flare>0.05? 'rgba(255,84,112,'+(0.25+0.5*flare)+')' : 'rgba(224,69,94,'+(0.05+0.12*riv)+')';
+      ctx.lineWidth= flare>0.05?2:1; ctx.beginPath(); ctx.moveTo(px(p),py(p)); ctx.lineTo(px(q),py(q)); ctx.stroke();
+    }
+  }
+
+  // culture particles
+  for(const pa of particles){ ctx.fillStyle=pa.tint; ctx.globalAlpha=0.85*(1-pa.t*0.4);
+    ctx.beginPath(); ctx.arc(pa.x,pa.y,pa.r,0,TWO); ctx.fill(); }
+  ctx.globalAlpha=1;
+
+  // poleis
+  ctx.textAlign='center';
+  for(const p of poleis){
+    const x=px(p),y=py(p);
+    const conq=p.state==='conquered';
+    const R=10+p.power*30;
+    const col= conq? PUR : (p.warFlash>0.05? RED : hsl(p.hue,0.7,0.60));
+    // culture glow
+    const glow= conq?0.12: 0.10+0.22*trade*(0.3+0.7*p.power)*(0.25+0.75*riv);
+    ctx.fillStyle=col; ctx.globalAlpha=glow; ctx.beginPath(); ctx.arc(x,y,R+10,0,TWO); ctx.fill(); ctx.globalAlpha=1;
+    // ring (power)
+    ctx.lineWidth=2.2; ctx.strokeStyle=col; ctx.beginPath(); ctx.arc(x,y,R,0,TWO); ctx.stroke();
+    ctx.fillStyle=col; ctx.globalAlpha=0.14; ctx.beginPath(); ctx.arc(x,y,R,0,TWO); ctx.fill(); ctx.globalAlpha=1;
+    // core
+    ctx.fillStyle=conq?PUR:GOLD; ctx.beginPath(); ctx.arc(x,y,Math.max(3,R*0.22),0,TWO); ctx.fill();
+    if(conq){ // chain marker
+      ctx.strokeStyle=PUR; ctx.lineWidth=1.5; ctx.beginPath(); ctx.arc(x,y,R*0.5,0,TWO); ctx.stroke();
+    }
+    if(p.plagued>0.05){ ctx.fillStyle='rgba(155,227,106,'+p.plagued+')'; ctx.font='8px ui-monospace,monospace'; ctx.fillText('plague', x, y-R-12); }
+    // name + power bar
+    ctx.fillStyle= conq?'#b98fd6':'#cdd3dd'; ctx.font='10px ui-monospace,monospace';
+    ctx.fillText(p.name+(conq?' ⛓':''), x, y-R-2);
+    const bw=34, bx=x-bw/2, by=y+R+7;
+    ctx.fillStyle='#1a1a24'; ctx.fillRect(bx,by,bw,3);
+    ctx.fillStyle= conq?PUR: p.power>0.5?GN: p.power>0.25?AM:CR; ctx.fillRect(bx,by,bw*Math.max(0,Math.min(1,p.power)),3);
+  }
+
+  // war sparks
+  for(const s of sparks){ ctx.fillStyle=s.c; ctx.globalAlpha=s.life; ctx.beginPath(); ctx.arc(s.x,s.y,1.6,0,TWO); ctx.fill(); }
+  ctx.globalAlpha=1;
+
+  drawLegacy();
+  drawWell();
+  banner();
+}
+
+// LEGACY urn at top-centre — particles converge here; total keeps rising even after conquest
+function drawLegacy(){
+  const pulse=0.5+0.5*Math.sin(sim*3);
+  ctx.fillStyle='rgba(0,212,255,0.14)'; ctx.beginPath(); ctx.arc(legX,legY,18,0,TWO); ctx.fill();
+  ctx.strokeStyle=CY; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(legX,legY,14+pulse*1.5,0,TWO); ctx.stroke();
+  ctx.fillStyle=CY; ctx.beginPath(); ctx.arc(legX,legY,4,0,TWO); ctx.fill();
+  ctx.fillStyle=DIM; ctx.font='8px ui-monospace,monospace'; ctx.textAlign='center';
+  ctx.fillText('LEGACY', legX, legY-22);
+  ctx.fillStyle=CY; ctx.font='bold 13px ui-monospace,monospace';
+  ctx.fillText(fmt(legacy), legX, legY+30);
+}
+
+// phase inset — the survival barrier. barrier height = panhellenic unity.
+function drawWell(){
+  const w=182,h=94, x=W-w-14, y=H-h-160;
+  ctx.fillStyle='rgba(8,8,16,.86)'; ctx.strokeStyle='#20202e'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.rect(x,y,w,h); ctx.fill(); ctx.stroke();
+  const unity=P.unity/100;
+  const barrier=0.12+0.9*unity;
+  const U=t=>{ const wl=-Math.exp(-((t-0.28)**2)/(2*0.02)); const wr=-0.95*Math.exp(-((t-0.74)**2)/(2*0.03)); const b=barrier*Math.exp(-((t-0.5)**2)/(2*0.02)); return wl+wr+b; };
+  let umin=9,umax=-9; for(let t=0;t<=1;t+=0.01){ const u=U(t); if(u<umin)umin=u; if(u>umax)umax=u; }
+  const gx=t=>x+8+t*(w-16), gy=u=>y+16+(u-umax)/(umin-umax)*(h-30);
+  ctx.strokeStyle='rgba(150,180,210,.6)'; ctx.lineWidth=1.5; ctx.beginPath();
+  for(let t=0;t<=1;t+=0.01){ const X=gx(t),Y=gy(U(t)); if(t===0)ctx.moveTo(X,Y); else ctx.lineTo(X,Y); } ctx.stroke();
+  // marble = fraction conquered
+  let conq=0; for(const p of poleis) if(p.state==='conquered')conq++;
+  const fc=poleis.length? conq/poleis.length : 0;
+  const mt=0.28+fc*0.46;
+  ctx.fillStyle= fc>0.5?PUR: fc>0.15?AM:GN; ctx.shadowColor=ctx.fillStyle; ctx.shadowBlur=8;
+  ctx.beginPath(); ctx.arc(gx(mt),gy(U(mt))-3,4,0,TWO); ctx.fill(); ctx.shadowBlur=0;
+  ctx.fillStyle=GN; ctx.font='7px ui-monospace,monospace'; ctx.textAlign='left'; ctx.fillText('independent', gx(0.02), y+h-4);
+  ctx.fillStyle=PUR; ctx.textAlign='right'; ctx.fillText('absorbed', gx(0.98), y+h-4);
+  ctx.fillStyle=CY; ctx.textAlign='center'; ctx.font='8px ui-monospace,monospace';
+  ctx.fillText('barrier = unity', x+w/2, y+11);
+}
+
+function banner(){
+  const brk=document.getElementById('brk');
+  let conq=0,free=0; for(const p of poleis){ if(p.state==='conquered')conq++; else free++; }
+  const fc=poleis.length?conq/poleis.length:0;
+  if(sim>40 && fc>=0.999){
+    brk.innerHTML='THE POLIS ERA ENDS<small>every city absorbed — yet the legacy counter still climbs. Greek thought did not die, it was inherited by the Hellenistic kingdoms and Rome.</small>';
+    brk.classList.add('show');
+  } else if(sim>40 && fc>0.55){
+    brk.innerHTML='CONQUEST CASCADE<small>divided and un-federated, the cities fall one by one — exactly how a unified outsider wins</small>';
+    brk.classList.add('show');
+  } else brk.classList.remove('show');
+}
+
+const fmt=v=> v>=1000? (v/1000).toFixed(1)+'k' : Math.round(v).toString();
+
+// ---------- readouts ----------
+function readouts(){
+  let free=0,conq=0,war=0;
+  for(const p of poleis){ if(p.state==='conquered')conq++; else free++; if(p.warFlash>0.05)war++; }
+  document.getElementById('m-free').textContent=free;
+  document.getElementById('m-cult').textContent=cultRate.toFixed(1);
+  document.getElementById('m-leg').textContent=fmt(legacy);
+  document.getElementById('m-war').textContent=war+' / '+conq;
+
+  const fs=document.getElementById('fs'), ph=document.getElementById('phase');
+  const fc=poleis.length?conq/poleis.length:0;
+  const freeArr=poleis.filter(p=>p.state==='free');
+  const meanFree=freeArr.length? freeArr.reduce((s,p)=>s+p.power,0)/freeArr.length : 0;
+  const riv=P.riv/100, unity=P.unity/100;
+  if(sim<40){ fs.textContent='warming up…'; fs.style.color=DIM; ph.textContent='—'; return; }
+  if(fc>0.6){ fs.textContent='ABSORBED — polis era ends'; fs.style.color=PUR; ph.textContent='tipped into the absorbed basin · the legacy transmits'; }
+  else if(fc>0.15){ fs.textContent='CONQUEST CASCADE'; fs.style.color=RED; ph.textContent='near the barrier — divided, they fall'; }
+  else if(meanFree<0.4 && riv>0.6 && unity<0.4){ fs.textContent='BLEEDING OUT'; fs.style.color=AM; ph.textContent='the Peloponnesian wound · self-inflicted'; }
+  else if(unity>0.6 && fc===0){ fs.textContent='FEDERATED — the line holds'; fs.style.color=GN; ph.textContent='in the independent basin — brilliant AND unified'; }
+  else { fs.textContent='GOLDEN AGE'; fs.style.color=GN; ph.textContent='rivalry → culture, holding for now'; }
+}
+
+// ---------- loop ----------
+let last=null;
+function frame(now){ if(last==null)last=now; let dt=(now-last)/1000; last=now; if(dt<0)dt=0; if(dt>0.05)dt=0.05;
+  if(P.running){ const s=dt*(P.spd/100); const st=Math.max(1,Math.ceil(s/0.04)); for(let i=0;i<st;i++) step(s/st); }
+  draw(); readouts(); requestAnimationFrame(frame); }
+
+// ---------- controls ----------
+function bind(id,key,fmt,after){ const el=document.getElementById('s-'+id),out=document.getElementById('v-'+id);
+  el.addEventListener('input',()=>{ P[key]=+el.value; out.textContent=fmt(P[key]); if(after)after(); }); }
+bind('n','n',v=>v,()=>{ makePoleis(); });
+bind('trade','trade',v=>v+'%');
+bind('riv','riv',v=>v+'%');
+bind('unity','unity',v=>v+'%');
+bind('heg','heg',v=>v+'%');
+bind('spd','spd',v=>(v/100).toFixed(1)+'×');
+
+document.getElementById('b-pause').onclick=function(){ P.running=!P.running; this.textContent=P.running?'pause':'play'; };
+document.getElementById('b-reseed').onclick=()=>{ makePoleis(); };
+
+function setS(o){ for(const k in o){ const el=document.getElementById('s-'+k); if(el){ el.value=o[k]; el.dispatchEvent(new Event('input')); } } }
+document.getElementById('b-golden').onclick=()=>{ makePoleis(); setS({riv:70,unity:35,heg:10,trade:80}); };
+document.getElementById('b-pelo').onclick  =()=>{ makePoleis(); setS({riv:95,unity:12,heg:15,trade:50}); };
+document.getElementById('b-philip').onclick=()=>{ makePoleis(); setS({riv:70,unity:18,heg:62,trade:60}); };
+document.getElementById('b-rome').onclick  =()=>{ makePoleis(); setS({riv:50,unity:20,heg:90,trade:60}); };
+document.getElementById('b-road').onclick  =()=>{ makePoleis(); setS({riv:70,unity:90,heg:62,trade:70}); };
+
+document.getElementById('kbtn').onclick=function(){ const w=document.getElementById('wip'); w.classList.toggle('show'); this.textContent=w.classList.contains('show')?'honesty K1–K7 ▾':'honesty K1–K7 ▸'; };
+
+resize(); makePoleis(); requestAnimationFrame(frame);
+})();
+</script>
+</body></html>

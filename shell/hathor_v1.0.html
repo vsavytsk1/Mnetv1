@@ -1,0 +1,490 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>HATHOR v1.0 — the song that moves stone · sound, water & luck on the force-chain graph</title>
+<!--
+  HATHOR v1.0  —  THE SONG THAT MOVES STONE
+  =========================================
+  Named for Hathor, goddess of music and joy. Built on BERSHA's wet-sand engine
+  (sand = a graph of grains; contacts = force chains; water grows capillary-bridge
+  edges that cut friction, Fall–Bonn PRL 2014). Here we add the two things the
+  craftsman's-son grew up inside: SONG and the RIVER.
+
+  THREE LEVERS, HONESTLY LABELLED
+  -------------------------------
+  1. WATER  (real)         — capillary bridges stiffen the sand, μ ~0.55→0.30.
+  2. SONG · coordination (real, documented) — a steady beat syncs the pullers so
+       they heave on the SAME instant. Out of phase, their forces partly cancel;
+       locked to the chant, effective pull jumps. Work songs across cultures
+       (incl. the gangs who built Egypt) exist for exactly this.
+  3. SONG · vibration  (real physics, speculative as Egyptian technique) — drum
+       hard enough and the ground shakes; vibration shakes force-chains loose and
+       lowers the sand's yield stress (acoustic / vibration fluidization,
+       Γ = Aω²/g; granular Leidenfrost & Faraday onset near Γ≈2.4 — see the
+       fluidized-bed physics). Helpful in small doses; push it and the bed
+       FLUIDIZES and the titan SINKS. There is no evidence Egyptians drummed sand
+       loose — this lever is a "what if the band was secretly doing physics."
+
+  AND THE LUCK
+  ------------
+  The Nile happened to be a dilute, alkaline calcium-bicarbonate river (TDS
+  ~170–280 mg/L) carrying fine silt — a forgiving water+sand pairing. "New
+  riverbank" rolls a random grain size + water chemistry: some banks give a wide,
+  blessed operating window, some a razor-thin cursed one. So you can TEST the
+  hunch — was a given success craft, or just luck of the right water vs sand?
+  We check by simulation, in funny funny graph math.
+
+  The oracle credited Ra. The real magic was writing it down. χ=2 · always.
+  Pure Canvas 2D, no deps. Built 2026-06-22.
+-->
+<style>
+  :root{
+    --bg:#0b0907; --gold:#ffd700; --cyan:#00d4ff; --pink:#ff69b4; --green:#00ffd5;
+    --sand:#c7894a; --sandlt:#e7c08a; --wet:#6b4a2a; --steel:#7fa8c0; --dim:#6a6a82;
+    --txt:#ece3d2; --alarm:#ff3b3b; --violet:#b38bff;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;background:var(--bg);color:var(--txt);font-family:var(--mono);overflow:hidden}
+  #cv{position:fixed;inset:0;display:block;touch-action:none;cursor:crosshair}
+
+  #hud{position:fixed;top:0;left:0;right:0;padding:9px 92px 9px 13px;display:flex;gap:12px;align-items:flex-start;pointer-events:none;font-size:11px;z-index:10;flex-wrap:wrap}
+  #hud > div{pointer-events:auto;background:rgba(11,9,7,0.84);border:1px solid #25201a;border-radius:8px;padding:8px 11px;backdrop-filter:blur(3px)}
+  #ttl{color:var(--gold);font-size:14px;letter-spacing:0.04em}
+  #sub{color:var(--dim);font-size:10px;margin-top:3px;max-width:560px;line-height:1.55}
+  #sub b{color:var(--cyan)} #sub .pk{color:var(--pink)} #sub .gd{color:var(--gold)} #sub .gr{color:var(--green)} #sub .vi{color:var(--violet)}
+  #read{margin-left:auto;min-width:300px}
+  #read h{display:block;color:var(--gold);font-size:11px;letter-spacing:0.06em;margin-bottom:6px}
+  #read table{border-collapse:collapse;width:100%}
+  #read td{padding:2px 0;font-size:11px}
+  #read td.k{color:var(--dim)} #read td.v{text-align:right;font-weight:bold;color:var(--green)}
+  #read td.v.gold{color:var(--gold)} #read td.v.cy{color:var(--cyan)} #read td.v.pk{color:var(--pink)} #read td.v.sd{color:var(--sand)} #read td.v.st{color:var(--steel)} #read td.v.vi{color:var(--violet)}
+  #read .hr{height:1px;background:#221c16;margin:5px 0}
+  #verdict{margin-top:6px;font-size:12px;font-weight:bold;letter-spacing:0.04em;text-align:center;padding:4px;border-radius:5px}
+  #luck{margin-top:5px;font-size:10px;text-align:center;color:var(--steel)}
+  #read .ref{color:#6a5a44;font-size:9px;margin-top:6px;line-height:1.45}
+  #read .ref b{color:var(--steel)}
+
+  #bar{position:fixed;left:50%;transform:translateX(-50%);bottom:10px;display:flex;flex-wrap:wrap;gap:7px 9px;align-items:center;justify-content:center;background:rgba(11,9,7,0.93);border:1px solid #25201a;border-radius:10px;padding:8px 12px;z-index:20;max-width:98vw}
+  button{background:#191309;border:1px solid #2e2517;border-radius:6px;color:var(--gold);font:11px var(--mono);padding:6px 10px;cursor:pointer;transition:all .12s}
+  button:hover{border-color:var(--gold)}
+  #bRiver{color:var(--cyan);border-color:#1d3540} #bRiver:hover{border-color:var(--cyan);background:#0d1a20}
+  .ctl{display:flex;align-items:center;gap:5px}
+  .klbl{color:var(--dim);font-size:10px;text-transform:uppercase;letter-spacing:0.05em}
+  .val{font-size:11px;min-width:30px;text-align:right;color:var(--gold)}
+  input[type=range]{appearance:none;-webkit-appearance:none;height:4px;background:#2a2218;border-radius:3px;outline:none;width:78px}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;border-radius:50%;background:var(--sand);cursor:pointer}
+  input[type=range]::-moz-range-thumb{width:13px;height:13px;border:0;border-radius:50%;background:var(--sand);cursor:pointer}
+  #sPour::-webkit-slider-thumb{background:var(--cyan)} #sChem::-webkit-slider-thumb{background:var(--cyan)}
+  #sBlock::-webkit-slider-thumb{background:var(--gold)}
+  #sTempo::-webkit-slider-thumb{background:var(--green)} #sDrum::-webkit-slider-thumb{background:var(--pink)}
+  #sDetail{width:64px} #sDetail::-webkit-slider-thumb{background:var(--violet)}
+  .sep{width:1px;height:20px;background:#2e2517;margin:0 1px}
+
+  #uiToggle{position:fixed;top:11px;right:13px;z-index:40;font:11px var(--mono);padding:6px 10px;background:rgba(11,9,7,0.93);border:1px solid #2e2517;color:var(--steel);border-radius:7px;cursor:pointer;backdrop-filter:blur(3px)}
+  #uiToggle:hover{border-color:var(--cyan);color:var(--cyan)}
+  .fold{position:absolute;top:6px;right:7px;width:18px;height:18px;padding:0;font:13px/1 var(--mono);border-radius:5px;background:#191309;border:1px solid #2e2517;color:var(--dim);display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:4}
+  .fold:hover{border-color:var(--cyan);color:var(--cyan)}
+  #hdr,#read{position:relative}#hdr{padding-right:26px}
+  #hdr.folded #sub{display:none} #read.folded table,#read.folded .ref,#read.folded #verdict,#read.folded #luck{display:none}
+  body.hideui #hud,body.hideui #bar{display:none}
+
+  #flood{position:fixed;inset:0;z-index:50;display:none;align-items:center;justify-content:center;flex-direction:column;text-align:center;padding:24px}
+  #flood.on{display:flex;animation:fl 1.1s infinite}
+  @keyframes fl{0%,100%{background:rgba(70,12,10,0.93)}50%{background:rgba(120,18,16,0.95)}}
+  #flood .big{color:#ffe0d0;font-size:24px;letter-spacing:0.12em;font-weight:bold;margin-bottom:10px}
+  #flood .msg{color:#ffc0b0;font-size:13px;line-height:1.7;max-width:540px} #flood .msg b{color:#fff}
+  #flood .load{color:#fff;font-size:12px;margin-top:14px;letter-spacing:0.06em}
+
+  #reveal{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:60;background:rgba(11,9,7,0.97);border:1px solid var(--gold);border-radius:10px;padding:22px 30px;text-align:center;display:none;max-width:520px;max-height:90vh;overflow:auto}
+  #reveal h2{color:var(--gold);font-size:14px;letter-spacing:0.09em;margin-bottom:14px}
+  #reveal .eq{font-size:13px;color:var(--cyan);margin:5px 0;font-family:Georgia,serif}
+  #reveal .eq.g{color:var(--green)} #reveal .eq.p{color:var(--pink)}
+  #reveal .desc{font-size:10px;color:#a99;line-height:1.95;margin:14px 0}
+  #reveal .desc b{color:var(--green)} #reveal .desc i{color:var(--sand)} #reveal .desc u{color:var(--pink);text-decoration:none} #reveal .desc em{color:var(--violet);font-style:normal}
+  #reveal button{background:var(--gold);color:#1a1206;border:none;padding:6px 22px;border-radius:4px;cursor:pointer;font-family:inherit;font-size:10px;text-transform:uppercase;letter-spacing:0.1em;margin-top:6px}
+  @media (max-width:960px){ #read{margin-left:0;min-width:0} #sub{max-width:90vw} }
+</style>
+</head>
+<body>
+
+<canvas id="cv"></canvas>
+<button id="uiToggle" title="hide panels (H)">hide UI</button>
+
+<div id="hud">
+  <div id="hdr">
+    <button class="fold" id="foldHdr">−</button>
+    <div id="ttl">HATHOR v1.0 — the song that moves stone</div>
+    <div id="sub">Sand is a <b>graph</b> (grains=nodes, force-chains=edges). <b>Water</b> grows capillary bridges that cut friction (μ≈0.55→0.30). Now add the <span class="gr">song</span>: a steady beat <span class="gr">syncs the pullers</span> so they heave on the same instant — real work-song <span class="gr">coordination</span>, a true pull boost. Drum harder and the ground <span class="vi">vibrates</span>, shaking force-chains loose (Γ=Aω²/g) — helpful, until it <span class="pk">over-fluidizes</span> and the titan <b class="pk">SINKS</b>. And the <b>river is luck</b>: roll a <b>new riverbank</b> — its grain + chemistry give a wide <span class="gr">blessed</span> window or a thin <span class="pk">cursed</span> one. Was it craft, or good water vs sand? Check by sim. Push any slider to the limit; if it breaks, pull it back.</div>
+  </div>
+  <div id="read">
+    <button class="fold" id="foldRead">−</button>
+    <h>THE HAUL</h>
+    <div class="hr"></div>
+    <table><tbody>
+      <tr><td class="k">titan mass</td><td class="v gold" id="rMass">—</td></tr>
+      <tr><td class="k">water w · μ(w)</td><td class="v cy" id="rWmu">—</td></tr>
+      <tr><td class="k">riverbank TDS</td><td class="v cy" id="rTDS">—</td></tr>
+      <tr><td class="hr" colspan="2"></td></tr>
+      <tr><td class="k">beat · tempo</td><td class="v gr" id="rTempo">—</td></tr>
+      <tr><td class="k">puller sync κ</td><td class="v gr" id="rKappa">—</td></tr>
+      <tr><td class="k">vibration Γ</td><td class="v vi" id="rGamma">—</td></tr>
+      <tr><td class="k">pull vs drag</td><td class="v" id="rForce">—</td></tr>
+      <tr><td class="hr" colspan="2"></td></tr>
+      <tr><td class="k">grains · bridges</td><td class="v st" id="rGr">—</td></tr>
+      <tr><td class="k">compute load</td><td class="v" id="rLoad">—</td></tr>
+    </tbody></table>
+    <div id="verdict">—</div>
+    <div id="luck">—</div>
+    <div class="ref">force chains = granular graph (Jaeger–Nagel–Behringer 1996) · wet-sand <b>Fall–Bonn PRL 2014</b> · vibration Γ=Aω²/g (Kunii–Levenspiel) · work-song coordination · Nile TDS 169–277 mg/L · F=μN · χ=2 · always</div>
+  </div>
+</div>
+
+<div id="bar">
+  <div class="ctl"><span class="klbl">titan</span><input id="sBlock" type="range" min="1" max="100" step="1" value="56"><span class="val" id="vBlock">—</span></div>
+  <div class="ctl"><span class="klbl">pullers</span><input id="sPull" type="range" min="1" max="400" step="1" value="172"><span class="val" id="vPull">172</span></div>
+  <span class="sep"></span>
+  <div class="ctl"><span class="klbl">water</span><input id="sPour" type="range" min="0" max="100" step="1" value="62"><span class="val" id="vPour">62</span></div>
+  <div class="ctl"><span class="klbl">aridity</span><input id="sArid" type="range" min="0" max="100" step="1" value="35"><span class="val" id="vArid">35</span></div>
+  <div class="ctl"><span class="klbl">chemistry</span><input id="sChem" type="range" min="0" max="100" step="1" value="42"><span class="val" id="vChem">42</span></div>
+  <span class="sep"></span>
+  <div class="ctl"><span class="klbl">tempo</span><input id="sTempo" type="range" min="0" max="100" step="1" value="55"><span class="val" id="vTempo">55</span></div>
+  <div class="ctl"><span class="klbl">drum</span><input id="sDrum" type="range" min="0" max="100" step="1" value="30"><span class="val" id="vDrum">30</span></div>
+  <span class="sep"></span>
+  <div class="ctl"><span class="klbl">detail</span><input id="sDetail" type="range" min="6" max="100" step="1" value="40"><span class="val" id="vDetail">40</span></div>
+  <button id="bRiver" title="roll a random grain + water chemistry">new riverbank</button>
+  <button id="bReset">reset</button>
+  <button id="bReveal">reveal</button>
+</div>
+
+<div id="flood">
+  <div class="big">⚠ COMPUTE LIMIT</div>
+  <div class="msg">Too many grains for the browser to carve per tick — the graph outgrew the budget, so the desert freezes.<br>Pull <b>detail</b> back to bring the sand online.</div>
+  <div class="load" id="floodLoad"></div>
+</div>
+
+<div id="reveal">
+  <h2>SOUND, WATER & LUCK (in pure graph math)</h2>
+  <div class="eq">F = μ(w) · N &nbsp; — out-pull the drag</div>
+  <div class="eq g">pull_eff = pullers · f · κ(beat) &nbsp; — sing in time</div>
+  <div class="eq p">Γ = A·ω² / g &nbsp; — shake the chains loose (don't fluidize)</div>
+  <div class="desc">
+    A sledge fights <i>friction</i>, and friction lives in the sand's force-chain graph.<br>
+    <b>Water</b> grows capillary bridges that stiffen the grains so no berm forms —<br>
+    the famous half-ing of μ. That part is settled physics.<br><br>
+    Then the <b>song</b>. Its honest, documented job is <b>coordination</b>: a beat<br>
+    locks 172 pullers into one instant of effort instead of a smear of half-pulls.<br>
+    Sing in time and the effective pull climbs. Every hauling culture knew this.<br><br>
+    Its second job is a <u>maybe</u>: a hard beat <u>vibrates</u> the ground, and<br>
+    vibration shakes force-chains loose, lowering the sand's yield stress<br>
+    (acoustic fluidization, Γ=Aω²/g). A little helps; too much and the graph<br>
+    dissolves to liquid and the titan sinks. <em>We have no proof Egyptians did this</em><br>
+    <em>— it's a what-if the sim lets you test, not a claim.</em><br><br>
+    And the <b>river was luck</b>. The Nile's dilute alkaline water and fine silt<br>
+    were a forgiving pairing; another bank's grain and chemistry might give you<br>
+    no window at all. So some "secrets" were craft — and some were a good bank,<br>
+    later blessed by an oracle who said "Ra did it," and then, crucially,<br>
+    <b>written down</b>. The myth was wrong; the record is why the craft survived.<br><br>
+    χ = 2 · always.
+  </div>
+  <button id="xReveal">SING IN TIME</button>
+</div>
+
+<script>
+"use strict";
+// ============================================================
+// HATHOR v1.0 — wet-sand force-chain haul + sound + luck
+// ============================================================
+var cv=document.getElementById("cv"), ctx=cv.getContext("2d");
+var W=0,H=0,DPR=1, surfY=0, bedBot=0;
+
+var BUDGET=2600;
+function grainsTarget(d){ return Math.round(260 + (d/100)*3000); }
+function computeLoad(){ return G.n; }
+
+// base physics constants
+var WOPT=0.45, MU_DRY=0.55, MU_MIN=0.30, MU_WET=0.74, WFLUID=0.84, g=9.81;
+
+var S={ block:56, pullers:172, pour:62, arid:35, chem:42, tempo:55, drum:30, detail:40,
+        overload:false, fps:60, frameMs:16 };
+
+// hidden riverbank luck: grain fineness (1=fine silt, 0=coarse)
+var BANK={ fine:0.62 };
+
+// haul state
+var B={ x:0, vx:0, mass:0, wAvg:0, mu:0, muMin:0, wopt:0, drag:0, pull:0, kappa:0,
+        gamma:0, berm:0, sink:0, verdict:"—", window:0, beat:0, beatPhase:0, pulse:0 };
+
+var WF={ cols:140, w:null };
+var G={ n:0, gx:null, gy:null, gcol:null, edges:null, _cap:0 };
+
+// ---------- slider → physical mappings ----------
+function blockMass(){ return 0.5*Math.pow(10, (S.block/100)*3.38); }      // tons 0.5..~1200
+function pourRate(){ return (S.pour/100)*0.66; }
+function aridLoss(){ return 0.10 + (S.arid/100)*1.7; }                    // evap+absorb combined
+function absorbExtra(){ return (1-BANK.fine)*0.5; }                        // coarse grain drains faster
+function bpm(){ return 30 + (S.tempo/100)*130; }                          // 30..160
+
+// chemistry-shaped friction floor + optimum (the "luck" of the water)
+function chemMuMin(){
+  var c=S.chem/100;
+  var bridge=0.07*Math.exp(-Math.pow((c-0.42)/0.22,2));                    // Nile-sweet bonus
+  var crust =0.20*Math.max(0,(c-0.62)/0.38);                              // saline crust penalty
+  var grain =-0.045*BANK.fine;                                            // fine silt → better bridges
+  return Math.max(0.20, Math.min(0.55, MU_MIN - bridge + crust + grain));
+}
+function chemWopt(){ var c=S.chem/100; return Math.max(0.30, Math.min(0.60, WOPT - 0.06*(c-0.42))); }
+
+// friction vs local water, given this bank's chemistry (no vibration yet)
+function muChem(w){
+  var mm=B.muMin, wo=B.wopt, mu;
+  if(w<=wo) mu = MU_DRY + (mm-MU_DRY)*(w/wo);
+  else      mu = mm + (MU_WET-mm)*((w-wo)/(1-wo));
+  return Math.max(0.16, Math.min(0.95, mu));
+}
+// vibration cut (acoustic fluidization lowers friction, saturating)
+function vibCut(gam){ return 0.34*(1-Math.exp(-2.4*gam)); }
+function muEffOf(w,gam){ return muChem(w)*(1-vibCut(gam)); }
+
+// sound: coordination κ and vibration Γ
+function coordination(){
+  var beatPresent=1-Math.exp(-3*(S.drum/100));                            // need an audible beat
+  var t=(bpm()-75)/40; var entrain=Math.exp(-t*t);                        // best ~75 bpm chant
+  return 0.62 + 0.38*beatPresent*entrain;
+}
+function vibration(){ return (S.drum/100)*(0.4+0.6*(S.tempo/100))*1.5; }  // Γ-like, 0..~1.5
+
+// ---------- grain graph ----------
+function buildGrains(){
+  var n=grainsTarget(S.detail);
+  if(n>BUDGET){ G.n=n; return; }
+  var bedH=bedBot-surfY, sp=Math.sqrt((W*bedH)/Math.max(1,n));
+  var cols=Math.max(8,Math.floor(W/sp)), rows=Math.max(4,Math.floor(bedH/sp));
+  var gx=[],gy=[],gcol=[];
+  for(var r=0;r<rows;r++)for(var c=0;c<cols;c++){
+    var x=(c+0.5)*sp+(Math.random()-0.5)*sp*0.5, y=surfY+(r+0.5)*sp+(Math.random()-0.5)*sp*0.5;
+    if(x<2||x>W-2)continue;
+    gx.push(x); gy.push(y); gcol.push(Math.max(0,Math.min(WF.cols-1,Math.floor(x/W*WF.cols))));
+  }
+  G.gx=gx; G.gy=gy; G.gcol=gcol; G.n=gx.length;
+  var edges=[], R2=(sp*1.5)*(sp*1.5), cw=Math.max(8,sp*1.5), gw=Math.ceil(W/cw)+1, gh=Math.ceil(bedH/cw)+1, grid=[];
+  for(var k=0;k<gw*gh;k++)grid[k]=[];
+  for(var i=0;i<G.n;i++){ grid[(Math.floor((gy[i]-surfY)/cw))*gw+Math.floor(gx[i]/cw)].push(i); }
+  for(i=0;i<G.n;i++){ var cx=Math.floor(gx[i]/cw), cy=Math.floor((gy[i]-surfY)/cw);
+    for(var dy=0;dy<=1;dy++)for(var dx=-1;dx<=1;dx++){ if(dy===0&&dx<0)continue;
+      var nx=cx+dx, ny=cy+dy; if(nx<0||ny<0||nx>=gw||ny>=gh)continue; var cell=grid[ny*gw+nx];
+      for(var t=0;t<cell.length;t++){ var j=cell[t]; if(j<=i)continue;
+        var ax=gx[i]-gx[j], ay=gy[i]-gy[j]; if(ax*ax+ay*ay<=R2) edges.push(i,j); } }
+  }
+  G.edges=edges;
+}
+
+// ---------- operating window (the luck metric) ----------
+function computeWindow(){
+  var gam=B.gamma, pull=B.pull||(S.pullers*800), N=blockMass()*1000*g, mm=B.muMin||chemMuMin(), movable=0, tot=0;
+  for(var w=0; w<=1.0001; w+=0.02){ tot++;
+    if(w>=WFLUID) continue;                                  // fluidized = not movable
+    var mu=muEffOf(w,gam), berm=Math.max(0,Math.min(3.5,(mu-mm)*8));
+    var drag=mu*N + berm*N*0.4;                              // same drag the haul actually feels
+    if(pull>drag) movable++;
+  }
+  return movable/tot;
+}
+
+// ---------- physics step ----------
+function stepPhysics(dt){
+  if(S.overload) return;
+  B.muMin=chemMuMin(); B.wopt=chemWopt();
+  B.kappa=coordination(); B.gamma=vibration();
+  // beat phase (visual + pulse)
+  B.beatPhase += (bpm()/60)*dt; if(B.beatPhase>=1){ B.beatPhase-=1; B.pulse=1; }
+  B.pulse*=Math.pow(0.02,dt); // decay
+
+  var P=pourRate(), L=aridLoss()+absorbExtra();
+  var bcol=Math.floor(B.x/W*WF.cols), half=Math.round(WF.cols*0.10);
+  for(var c=0;c<WF.cols;c++){
+    var inZone=(c>=bcol-half-2 && c<=bcol+half+6); var pour=inZone?P:0;
+    WF.w[c]+=(pour-L*WF.w[c])*dt; if(WF.w[c]<0)WF.w[c]=0; if(WF.w[c]>1)WF.w[c]=1;
+  }
+  var wsum=0,cnt=0; for(c=bcol-half;c<=bcol+half;c++){ if(c>=0&&c<WF.cols){ wsum+=WF.w[c]; cnt++; } }
+  B.wAvg=cnt?wsum/cnt:0;
+  B.mu=muEffOf(B.wAvg,B.gamma);                              // friction after water + vibration
+  B.mass=blockMass();
+  var N=B.mass*1000*g;
+  var bermTarget=Math.max(0,Math.min(3.5,(B.mu-B.muMin)*8));
+  B.berm+=(bermTarget-B.berm)*Math.min(1,0.5*dt); if(B.berm<0)B.berm=0;
+  B.drag=B.mu*N + B.berm*N*0.4;
+  B.pull=S.pullers*800*B.kappa;                             // coordination boost
+  // fluidize from too-much water OR too-much vibration
+  var wetF=Math.max(0,B.wAvg-WFLUID), vibF=Math.max(0,B.gamma-0.72);
+  if(wetF>0||vibF>0){ B.sink+=(wetF*7+vibF*4.5)*dt; } else { B.sink-=1.6*dt; }
+  if(B.sink<0)B.sink=0; if(B.sink>1)B.sink=1;
+  var excess=B.pull-B.drag;
+  if(B.sink>0.50){ B.vx*=0.80; if(B.vx<1)B.vx=0; B.verdict="SUNK"; }
+  else if(excess<=0){ B.vx*=0.85; if(B.vx<2)B.vx=0; B.verdict="STALLED"; }
+  else{
+    var frac=Math.min(1,excess/B.pull), targetV=frac*90;
+    B.vx+=(targetV-B.vx)*Math.min(1,4*dt); if(B.vx<0)B.vx=0;
+    B.x+=B.vx*dt; if(B.x>W+40)B.x=-40;
+    if(Math.abs(B.wAvg-B.wopt)<0.10 && B.vx>18) B.verdict="BUBBLE"; else B.verdict="MOVING";
+  }
+  B.window=computeWindow();
+}
+
+// ============================================================
+//  RENDER
+// ============================================================
+function frame(now){
+  var dt=Math.min((now-lastTS)/1000,0.05); lastTS=now;
+  S.frameMs=S.frameMs*0.9+(now-lastDraw)*0.1; lastDraw=now; S.fps=Math.round(1000/Math.max(1,S.frameMs));
+  var load=computeLoad();
+  if(!S.overload&&load>BUDGET)S.overload=true;
+  if(S.overload&&load<BUDGET*0.9){ S.overload=false; buildGrains(); }
+  document.getElementById("flood").classList.toggle("on",S.overload);
+  if(S.overload){ document.getElementById("floodLoad").textContent="grains "+load.toLocaleString()+"  /  budget "+BUDGET.toLocaleString()+"   ·   detail "+S.detail; setLoad(load); ctx.clearRect(0,0,W,H); requestAnimationFrame(frame); return; }
+  stepPhysics(dt);
+  ctx.clearRect(0,0,W,H);
+  drawSky(); drawBed(); drawGrains(); drawWaterProfile(); drawBubble(); drawBerm(); drawBlock(); drawPullers(); drawMusician();
+  refreshReadout(); setLoad(load);
+  requestAnimationFrame(frame);
+}
+function lerpC(a,b,t){ return [a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t]; }
+var C_SAND=[199,137,74], C_WET=[90,64,40], C_FLU=[0,150,180];
+function drawSky(){ var gg=ctx.createLinearGradient(0,0,0,surfY); gg.addColorStop(0,"#0b0907"); gg.addColorStop(1,"#1a130c"); ctx.fillStyle=gg; ctx.fillRect(0,0,W,surfY); }
+function drawBed(){ ctx.fillStyle="#1c140d"; ctx.fillRect(0,surfY,W,bedBot-surfY); }
+function drawGrains(){
+  if(!G.gx)return;
+  var ed=G.edges, gx=G.gx, gy=G.gy, w=WF.w, jit=B.gamma*2.2;             // vibration jitter
+  ctx.lineWidth=0.6; ctx.strokeStyle="rgba(120,90,55,"+(0.16*(1-0.5*Math.min(1,B.gamma)))+")"; ctx.beginPath();
+  for(var e=0;e<ed.length;e+=2){ ctx.moveTo(gx[ed[e]],gy[ed[e]]); ctx.lineTo(gx[ed[e+1]],gy[ed[e+1]]); }
+  ctx.stroke();
+  ctx.strokeStyle="rgba(0,212,255,0.5)"; ctx.lineWidth=0.9; ctx.beginPath(); var cap=0;
+  for(e=0;e<ed.length;e+=2){ var a=ed[e],b=ed[e+1], wm=(w[G.gcol[a]]+w[G.gcol[b]])*0.5;
+    if(wm>0.16&&wm<0.78){ ctx.moveTo(gx[a],gy[a]); ctx.lineTo(gx[b],gy[b]); cap++; } }
+  ctx.stroke(); G._cap=cap;
+  for(var i=0;i<G.n;i++){ var wi=w[G.gcol[i]], col;
+    if(wi<WFLUID) col=lerpC(C_SAND,C_WET,Math.min(1,wi/0.7)); else col=lerpC(C_WET,C_FLU,Math.min(1,(wi-WFLUID)/0.16));
+    var jx=jit>0.05?(Math.random()-0.5)*jit:0, jy=jit>0.05?(Math.random()-0.5)*jit:0;
+    ctx.fillStyle="rgb("+(col[0]|0)+","+(col[1]|0)+","+(col[2]|0)+")";
+    ctx.beginPath(); ctx.arc(gx[i]+jx,gy[i]+jy,1.7,0,6.2832); ctx.fill();
+  }
+}
+function drawWaterProfile(){
+  ctx.strokeStyle="rgba(0,212,255,0.65)"; ctx.lineWidth=1.4; ctx.beginPath();
+  for(var c=0;c<WF.cols;c++){ var x=(c+0.5)/WF.cols*W, y=surfY-2-WF.w[c]*26; c?ctx.lineTo(x,y):ctx.moveTo(x,y); }
+  ctx.stroke();
+  ctx.fillStyle="rgba(0,212,255,0.45)"; ctx.font="9px ui-monospace,monospace"; ctx.fillText("water w(x) · the bubble",12,surfY-30);
+}
+function drawBubble(){ var bw=blockW(); ctx.strokeStyle="rgba(0,255,213,0.30)"; ctx.setLineDash([4,4]); ctx.lineWidth=1.2; ctx.beginPath(); ctx.ellipse(B.x+bw*0.2,surfY+8,bw*0.95,26,0,0,6.2832); ctx.stroke(); ctx.setLineDash([]); }
+function drawBerm(){ if(B.berm<0.05)return; var bw=blockW(), bx=B.x+bw*0.5+4, h=B.berm*16;
+  ctx.fillStyle="rgba(199,137,74,0.85)"; ctx.beginPath(); ctx.moveTo(bx,surfY); ctx.lineTo(bx+18,surfY); ctx.lineTo(bx,surfY-h); ctx.closePath(); ctx.fill();
+  ctx.fillStyle="rgba(255,105,180,0.8)"; ctx.font="9px ui-monospace,monospace"; ctx.fillText("berm",bx+2,surfY-h-3); }
+function blockW(){ return Math.max(26,Math.min(150,26+Math.log10(B.mass+1)*38)); }
+function drawBlock(){
+  var bw=blockW(), bh=bw*0.7, sink=B.sink*bh*0.9, x=B.x, baseY=surfY-1+sink;
+  ctx.strokeStyle="#6b4a2a"; ctx.lineWidth=3; ctx.beginPath(); ctx.moveTo(x-bw*0.6,baseY+2); ctx.lineTo(x+bw*0.7,baseY+2); ctx.stroke();
+  var vcol=(B.verdict==="SUNK"||B.verdict==="STALLED")?"#a8742f":"#ffd700";
+  ctx.fillStyle=vcol; ctx.strokeStyle="rgba(255,255,255,0.25)"; ctx.lineWidth=1; ctx.beginPath(); ctx.rect(x-bw*0.5,baseY-bh,bw,bh); ctx.fill(); ctx.stroke();
+  ctx.strokeStyle="rgba(80,55,20,0.5)"; ctx.beginPath(); ctx.moveTo(x-bw*0.2,baseY-bh+5); ctx.lineTo(x-bw*0.2,baseY-3); ctx.stroke();
+  ctx.fillStyle="rgba(40,28,12,0.85)"; ctx.font="bold 9px ui-monospace,monospace"; ctx.textAlign="center"; ctx.fillText(fmtMass(B.mass),x,baseY-bh*0.5); ctx.textAlign="left";
+  // water-pourer ahead of the runners
+  var px=x+bw*0.6+22, py=surfY-14;
+  ctx.fillStyle="#d8c0a0"; ctx.beginPath(); ctx.arc(px,py,3,0,6.2832); ctx.fill();
+  ctx.strokeStyle="#d8c0a0"; ctx.lineWidth=1.5; ctx.beginPath(); ctx.moveTo(px,py+3); ctx.lineTo(px,py+11); ctx.moveTo(px,py+11); ctx.lineTo(px-3,py+16); ctx.moveTo(px,py+11); ctx.lineTo(px+3,py+16); ctx.stroke();
+  if(pourRate()>0.02){ ctx.strokeStyle="rgba(0,212,255,0.7)"; ctx.beginPath(); ctx.moveTo(px-4,py+6); ctx.lineTo(px-9,surfY-1); ctx.stroke(); }
+}
+function drawPullers(){
+  var bw=blockW(), rx=B.x+bw*0.6, ry=surfY-8;
+  var tx=Math.min(W-30,rx+90+Math.min(120,S.pullers*0.4));
+  ctx.strokeStyle="rgba(220,200,170,0.5)"; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(rx,ry); ctx.lineTo(tx,ry); ctx.stroke();
+  // sync: dots pulse together when κ high, scattered when low
+  var cluster=Math.min(40,Math.round(S.pullers/8)), sync=(B.kappa-0.62)/0.38;
+  for(var i=0;i<cluster;i++){
+    var phase=B.beatPhase + (1-sync)*((i*0.137)%1);                       // locked vs smeared
+    var bob=Math.sin(phase*6.2832)*2.2*(0.4+0.6*sync);
+    var ox=tx+(i%8)*4, oy=ry-8+Math.floor(i/8)*5 - bob;
+    var lit=sync>0.5 && B.pulse>0.4 ? 1:0.7;
+    ctx.fillStyle="rgba("+(220)+","+(200)+","+(170)+","+lit+")"; ctx.beginPath(); ctx.arc(ox,oy,1.7,0,6.2832); ctx.fill();
+  }
+  ctx.fillStyle="rgba(0,255,213,"+(0.4+0.5*sync)+")"; ctx.font="9px ui-monospace,monospace";
+  ctx.fillText(S.pullers+" pullers · "+(sync>0.6?"in time":(sync>0.3?"loose":"scattered")),tx,ry-14);
+}
+function drawMusician(){
+  // a player on a pillar, beating time
+  var bw=blockW(), mx=Math.max(40, B.x - bw*0.5 - 70), pillH=64, py=surfY;
+  ctx.fillStyle="#2a2014"; ctx.fillRect(mx-7,py-pillH,14,pillH);                 // pillar
+  ctx.strokeStyle="#3a2c1a"; ctx.strokeRect(mx-7,py-pillH,14,pillH);
+  var top=py-pillH;
+  var beatBob=Math.sin(B.beatPhase*6.2832)*2*(S.drum/100);
+  ctx.fillStyle="#e6c98a"; ctx.beginPath(); ctx.arc(mx,top-10+beatBob,3.2,0,6.2832); ctx.fill();           // head
+  ctx.strokeStyle="#e6c98a"; ctx.lineWidth=1.6; ctx.beginPath(); ctx.moveTo(mx,top-7+beatBob); ctx.lineTo(mx,top-1+beatBob); ctx.stroke(); // body
+  // a drum
+  ctx.fillStyle="#7a4a24"; ctx.beginPath(); ctx.ellipse(mx+6,top+1,4,3,0,0,6.2832); ctx.fill();
+  // beat pulse ring
+  if(S.drum>2){ var rr=(1-B.pulse)*40; ctx.strokeStyle="rgba(255,105,180,"+(B.pulse*0.5)+")"; ctx.lineWidth=1.4; ctx.beginPath(); ctx.arc(mx,top-6,6+rr,0,6.2832); ctx.stroke(); }
+  ctx.fillStyle="rgba(0,255,213,0.55)"; ctx.font="9px ui-monospace,monospace"; ctx.textAlign="center"; ctx.fillText(Math.round(bpm())+" bpm",mx,py+12); ctx.textAlign="left";
+}
+
+// ============================================================
+//  READOUTS
+// ============================================================
+function fmtMass(t){ return t>=1000?(t/1000).toFixed(1)+" kt":Math.round(t)+" t"; }
+function refreshReadout(){
+  setTxt("rMass",fmtMass(B.mass));
+  setTxt("rWmu",(B.wAvg*100).toFixed(0)+"% · μ"+B.mu.toFixed(2));
+  setTxt("rTDS",Math.round(100+400*(S.chem/100))+" mg/L "+chemWord());
+  setTxt("rTempo",Math.round(bpm())+" bpm");
+  setTxt("rKappa",(B.kappa*100).toFixed(0)+"%  "+(B.kappa>0.9?"locked":(B.kappa>0.75?"loose":"off")));
+  setTxt("rGamma",B.gamma.toFixed(2)+(B.gamma>0.72?"  fluidizing!":""));
+  var el=document.getElementById("rGamma"); if(el)el.className="v vi"+(B.gamma>0.72?" pk":"");
+  var ratio=B.drag>0?(B.pull/B.drag):9; setTxt("rForce",((B.pull/1000)|0)+" / "+((B.drag/1000)|0)+" kN"+(ratio>=1?" ✓":" ✗"));
+  var fe=document.getElementById("rForce"); if(fe)fe.className="v"+(ratio>=1.05?" gr":(ratio<1?" pk":" gold"));
+  setTxt("rGr",G.n.toLocaleString()+" · "+(G._cap||0).toLocaleString());
+  var v=document.getElementById("verdict"); if(v){
+    var m={"BUBBLE":["RIDING THE BUBBLE ✦","#00ffd5","rgba(0,255,213,0.12)"],
+           "MOVING":["MOVING","#ffd700","rgba(255,215,0,0.10)"],
+           "STALLED":["STALLED · berm / too heavy","#ff69b4","rgba(255,59,59,0.14)"],
+           "SUNK":["SUNK · bed fluidized","#ff3b3b","rgba(255,59,59,0.16)"],
+           "—":["—","#6a6a82","transparent"]}[B.verdict]||["—","#6a6a82","transparent"];
+    v.textContent=m[0]; v.style.color=m[1]; v.style.background=m[2];
+  }
+  var lw=B.window*100, word=lw<8?"cursed bank":lw<20?"tough bank":lw<40?"workable bank":"blessed bank";
+  var lc=lw<8?"#ff3b3b":lw<20?"#ff69b4":lw<40?"#ffd700":"#00ffd5";
+  var lu=document.getElementById("luck"); if(lu){ lu.innerHTML="operating window <b style='color:"+lc+"'>"+lw.toFixed(0)+"%</b> of water range — <b style='color:"+lc+"'>"+word+"</b>"; }
+}
+function chemWord(){ var c=S.chem/100; return c<0.22?"(soft)":c<0.55?"(Nile-like)":c<0.75?"(hard)":"(saline)"; }
+function setLoad(load){ var el=document.getElementById("rLoad"); if(el){ el.textContent=load.toLocaleString()+" / "+BUDGET.toLocaleString(); el.className="v"+(load>BUDGET?" pk":(load>BUDGET*0.7?" gold":"")); } }
+function setTxt(id,t){ var e=document.getElementById(id); if(e)e.textContent=t; }
+
+// ============================================================
+//  CONTROLS
+// ============================================================
+function bind(id,key){ var e=document.getElementById(id); e.addEventListener("input",function(){ S[key]=+this.value; var lab=document.getElementById("v"+id.slice(1)); if(lab) lab.textContent=(key==="block")?fmtMass(blockMass()):this.value; }); }
+bind("sBlock","block"); bind("sPull","pullers"); bind("sPour","pour"); bind("sArid","arid"); bind("sChem","chem"); bind("sTempo","tempo"); bind("sDrum","drum");
+document.getElementById("sDetail").addEventListener("input",function(){ S.detail=+this.value; setTxt("vDetail",this.value); if(computeLoad()<=BUDGET)buildGrains(); else G.n=grainsTarget(S.detail); });
+document.getElementById("bRiver").addEventListener("click",function(){
+  BANK.fine=Math.random(); var c=Math.round(Math.random()*100); S.chem=c;
+  var sc=document.getElementById("sChem"); sc.value=c; setTxt("vChem",c);
+  resetHaul();
+});
+document.getElementById("bReset").addEventListener("click",resetHaul);
+document.getElementById("bReveal").addEventListener("click",function(){ document.getElementById("reveal").style.display="block"; });
+document.getElementById("xReveal").addEventListener("click",function(){ document.getElementById("reveal").style.display="none"; });
+document.addEventListener("click",function(e){ var r=document.getElementById("reveal"); if(r.style.display==="block"&&!r.contains(e.target)&&e.target.id!=="bReveal")r.style.display="none"; });
+function fold(b,p){ var B2=document.getElementById(b),P=document.getElementById(p); if(B2&&P)B2.addEventListener("click",function(){ P.classList.toggle("folded"); B2.textContent=P.classList.contains("folded")?"+":"−"; }); }
+fold("foldHdr","hdr"); fold("foldRead","read");
+document.getElementById("uiToggle").addEventListener("click",function(){ document.body.classList.toggle("hideui"); this.textContent=document.body.classList.contains("hideui")?"show UI":"hide UI"; });
+window.addEventListener("keydown",function(e){ if(e.key==="h"||e.key==="H")document.getElementById("uiToggle").click(); });
+
+// ============================================================
+//  INIT
+// ============================================================
+function resetHaul(){ B.x=W*0.20; B.vx=0; B.berm=0; B.sink=0; B.beatPhase=0; B.pulse=0; for(var c=0;c<WF.cols;c++)WF.w[c]=0; }
+function resize(){ DPR=Math.min(window.devicePixelRatio||1,2); W=window.innerWidth; H=window.innerHeight; cv.width=W*DPR; cv.height=H*DPR; cv.style.width=W+"px"; cv.style.height=H+"px"; ctx.setTransform(DPR,0,0,DPR,0,0);
+  surfY=Math.round(H*0.54); bedBot=Math.round(H*0.94); WF.w=new Float32Array(WF.cols); buildGrains(); resetHaul();
+  setTxt("vBlock",fmtMass(blockMass())); }
+window.addEventListener("resize",resize);
+var lastTS=performance.now(), lastDraw=performance.now();
+resize(); requestAnimationFrame(frame);
+</script>
+</body></html>

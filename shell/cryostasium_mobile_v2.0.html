@@ -1,0 +1,377 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Cryostasium v2.0 -- Ice+Salt Cooler (mobile)</title>
+<style>
+  :root{
+    --bg:#050508; --panel:rgba(8,8,16,0.85); --gold:#ffd700; --cyan:#00d4ff; --pink:#ff69b4;
+    --green:#00ffd5; --esp:#c7894a; --red:#ff5470; --dim:#6a6a82; --txt:#e8e0d0;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{background:var(--bg);color:var(--txt);font-family:var(--mono);
+    width:100%;min-height:100%;overflow-x:hidden}
+  body{padding:10px 10px 28px;max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:10px}
+
+  .card{background:var(--panel);border:1px solid #20202e;border-radius:10px;padding:10px 12px}
+  #ttl{color:var(--gold);font-size:14px;letter-spacing:0.04em;line-height:1.25}
+  #sub{color:var(--dim);font-size:10.5px;margin-top:3px;line-height:1.4}
+  #note{color:var(--esp);font-size:10px;margin-top:6px;line-height:1.4}
+  #note b{color:var(--gold)}
+
+  /* canvas scales to width, fixed aspect */
+  #cvwrap{position:relative;width:100%;background:#050508;border:1px solid #20202e;border-radius:10px;overflow:hidden}
+  #cv{display:block;width:100%;height:auto}
+
+  /* readouts: 2 cols on phone, 3 on wider */
+  #metrics{display:grid;grid-template-columns:repeat(2,1fr);gap:7px}
+  @media(min-width:520px){ #metrics{grid-template-columns:repeat(3,1fr)} }
+  .mc{background:rgba(8,8,16,0.9);border:1px solid #20202e;border-radius:8px;padding:8px 10px}
+  .mc .lab{font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:0.06em}
+  .mc .val{font-size:18px;font-weight:bold;color:var(--gold);margin-top:2px}
+  .mc .val.cyan{color:var(--cyan)} .mc .val.green{color:var(--green)} .mc .val.pink{color:var(--pink)}
+
+  /* sliders: full width, big touch targets */
+  .sliders{display:flex;flex-direction:column;gap:13px}
+  .srow{display:grid;grid-template-columns:1fr auto;gap:4px 10px;align-items:center}
+  .srow label{font-size:11.5px;color:var(--dim);letter-spacing:0.02em}
+  .srow .v{font-size:12px;color:var(--gold);font-weight:bold;text-align:right;min-width:54px}
+  .srow input[type=range]{grid-column:1 / -1;appearance:none;-webkit-appearance:none;width:100%;
+    height:26px;background:transparent;outline:none;cursor:pointer}
+  /* track */
+  .srow input[type=range]::-webkit-slider-runnable-track{height:6px;background:#2a2a3a;border-radius:4px}
+  .srow input[type=range]::-moz-range-track{height:6px;background:#2a2a3a;border-radius:4px}
+  /* thumb -- finger size */
+  .srow input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;margin-top:-10px;
+    width:26px;height:26px;border-radius:50%;background:var(--gold);border:3px solid #050508;cursor:pointer}
+  .srow input[type=range]::-moz-range-thumb{width:26px;height:26px;border:3px solid #050508;border-radius:50%;background:var(--gold);cursor:pointer}
+  .srow.salt input[type=range]::-webkit-slider-thumb{background:var(--cyan)}
+  .srow.salt input[type=range]::-moz-range-thumb{background:var(--cyan)}
+
+  .btns{display:flex;gap:8px;flex-wrap:wrap}
+  button{flex:1;min-width:90px;background:#14141f;border:1px solid #2a2a3a;border-radius:8px;
+    color:var(--gold);font:13px var(--mono);padding:12px 10px;cursor:pointer}
+  button:active{transform:scale(0.98)}
+  button.cyan{color:var(--cyan);border-color:#1e4a55}
+  button.pink{color:var(--pink);border-color:#5a2030}
+
+  /* collapsible honesty box */
+  details{background:rgba(8,8,16,0.85);border:1px solid #c7894a;border-radius:10px;padding:0}
+  summary{list-style:none;cursor:pointer;padding:10px 12px;font-size:11px;color:var(--gold);display:flex;justify-content:space-between;align-items:center}
+  summary::-webkit-details-marker{display:none}
+  summary .chev{color:var(--esp);transition:transform .15s}
+  details[open] summary .chev{transform:rotate(90deg)}
+  .honesty{padding:0 12px 11px;font-size:10px;color:var(--esp);line-height:1.5}
+  .honesty b{color:var(--gold)}
+
+  /* bottom toast for eutectic warning -- does NOT cover the view */
+  #warn{position:fixed;left:50%;bottom:14px;transform:translateX(-50%) translateY(150%);
+    background:rgba(40,8,16,0.96);border:1px solid var(--red);border-radius:10px;padding:11px 16px;
+    font-size:11.5px;color:var(--red);z-index:50;text-align:center;line-height:1.45;
+    max-width:92vw;width:360px;transition:transform .28s ease;box-shadow:0 6px 24px rgba(0,0,0,0.5)}
+  #warn.show{transform:translateX(-50%) translateY(0)}
+  #warn b{color:var(--gold)}
+
+  .stamp{text-align:center;font-size:8.5px;color:rgba(0,212,255,0.3);letter-spacing:0.08em;line-height:1.7;padding:2px 0 6px}
+</style>
+</head>
+<body>
+
+<div class="card">
+  <div id="ttl">CRYOSTASIUM v2.0 — ice + salt cooler</div>
+  <div id="sub">a dead chest freezer as an insulated box · ice + salt brine chills the cans · zero electricity · find the salt the business wants</div>
+  <div id="note">salt makes ice colder (freezing-point depression) — but <b>colder-faster trades against longer-hold</b>. there's an optimum, and mama thermo sets it. textbook: L_f=334 kJ/kg, K_f=1.86, eutectic −21.1°C @ 23.3 wt%.</div>
+</div>
+
+<div id="cvwrap"><canvas id="cv" width="760" height="560"></canvas></div>
+
+<div id="metrics">
+  <div class="mc"><div class="lab">bath temp</div><div class="val cyan" id="m-bath">−</div></div>
+  <div class="mc"><div class="lab">salt conc</div><div class="val" id="m-conc">−</div></div>
+  <div class="mc"><div class="lab">time → 4°C</div><div class="val green" id="m-t4">−</div></div>
+  <div class="mc"><div class="lab">hold &lt; 4°C</div><div class="val green" id="m-hold">−</div></div>
+  <div class="mc"><div class="lab">ice budget</div><div class="val" id="m-ice">−</div></div>
+  <div class="mc"><div class="lab">wall leak</div><div class="val pink" id="m-leak">−</div></div>
+</div>
+
+<div class="card sliders">
+  <div class="srow"><label>salt — the magic knob (wt%)</label><span class="v" id="saltv">10.0</span>
+    <input id="salt" class="" type="range" min="0" max="30" step="0.5" value="10"></div>
+  <div class="srow salt" style="display:none"></div>
+  <div class="srow"><label>ice loaded (kg)</label><span class="v" id="icev">12.0</span>
+    <input id="ice" type="range" min="1" max="200" step="1" value="12"></div>
+  <div class="srow"><label>cans</label><span class="v" id="cansv">24</span>
+    <input id="cans" type="range" min="0" max="500" step="2" value="24"></div>
+  <div class="srow"><label>can size (ml)</label><span class="v" id="cmlv">330</span>
+    <input id="cml" type="range" min="200" max="660" step="10" value="330"></div>
+  <div class="srow"><label>ambient — Greek sun (°C)</label><span class="v" id="ambv">30</span>
+    <input id="amb" type="range" min="5" max="45" step="1" value="30"></div>
+  <div class="srow"><label>box length (m)</label><span class="v" id="Lv">1.00</span>
+    <input id="L" type="range" min="0.4" max="1.6" step="0.05" value="1.0"></div>
+  <div class="srow"><label>box width (m)</label><span class="v" id="Wdv">0.50</span>
+    <input id="Wd" type="range" min="0.3" max="0.9" step="0.05" value="0.50"></div>
+  <div class="srow"><label>box depth (m)</label><span class="v" id="Hdv">0.85</span>
+    <input id="Hd" type="range" min="0.4" max="1.1" step="0.05" value="0.85"></div>
+  <div class="srow"><label>wall insulation U (W/m²K)</label><span class="v" id="Uv">0.40</span>
+    <input id="U" type="range" min="0.2" max="2.0" step="0.05" value="0.40"></div>
+  <div class="srow"><label>time speed</label><span class="v" id="spdv">40×</span>
+    <input id="spd" type="range" min="1" max="120" step="1" value="40"></div>
+</div>
+
+<div class="card" style="padding:9px 12px">
+  <div style="font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:7px">ice type — crushed chills faster, holds shorter</div>
+  <div class="btns">
+    <button id="ice-block">block</button>
+    <button id="ice-cubed" class="cyan">cubed</button>
+    <button id="ice-crushed">crushed</button>
+  </div>
+</div>
+
+<div class="btns">
+  <button id="play" class="cyan">pause</button>
+  <button id="restart">restart batch</button>
+  <button id="reset" class="pink">reset all</button>
+</div>
+
+<details>
+  <summary><span>honesty (K1–K5) — mama thermo's receipts</span><span class="chev">▶</span></summary>
+  <div class="honesty">
+    <b>K1</b> well-mixed bath: ice+brine+cans one lumped node, Newton cooling to cans (h·A). NOT a CFD/3D field.<br>
+    <b>K2</b> T_f from ideal van't Hoff (K_f·i·molality), CLAMPED at eutectic −21.1°C. Ideal over-predicts high-conc; clamp is honest.<br>
+    <b>K3</b> latent L_f=334 kJ/kg dominates; meltwater sensible warmup included, supercooling ignored.<br>
+    <b>K4</b> wall leak Q=U·A·ΔT, lid-open + solar gain NOT modelled. Real stall = sun + opening the lid.<br>
+    <b>K5</b> past eutectic → error + slider snaps back. Salt beyond 23.3 wt% does nothing but cost money.
+  </div>
+</details>
+
+<div class="stamp">CRYOSTASIUM v2.0 · genesis kernel · MNet palette · P=12 · χ=2 · always</div>
+
+<div id="warn"></div>
+
+<script>
+// CRYOSTASIUM v2.0 -- mobile layout, IDENTICAL verified physics core as v1.
+// Bow to the boskis: Genesis kernel, MNet palette, honesty caveats. Stamp is signature, not a P=12 claim.
+(function(){
+  const cv=document.getElementById('cv'); const ctx=cv.getContext('2d');
+  // internal render resolution fixed; CSS scales it to the phone width
+  const CW=760, CH=560;
+  function fitCanvas(){
+    const dpr=Math.min(window.devicePixelRatio||1, 2);
+    cv.width=Math.round(CW*dpr); cv.height=Math.round(CH*dpr);
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+  }
+  fitCanvas(); addEventListener('resize', fitCanvas);
+
+  const BG='#050508', CYAN='#00d4ff', GOLD='#ffd700', PINK='#ff69b4', GREEN='#00ffd5', RED='#ff5470', DIM='#6a6a82';
+  const TWO=Math.PI*2;
+
+  // ---- physical constants (textbook) ----
+  const Lf=334.0, c_w=4.18, c_ice=2.09, c_alu=0.90, c_brine=3.9;
+  const Kf=1.86, ivant=2.0, M=58.44;
+  const EUT_T=-21.1, EUT_W=23.3;
+  const can_alu=0.013;
+
+  const P={ L:1.0, Wd:0.5, Hd:0.85, U:0.4, ice:12, salt:10, cans:24, cml:330, amb:30, spd:40, iceType:'cubed', running:true };
+  let St={ t:0, Tbath:0, Tbeer:0, iceLeft:0, t4:null, done:false };
+
+  function Tf_of_salt(wtpct){
+    if(wtpct<=0) return 0;
+    const wf=wtpct/100, ms=wf, mwater=1-wf;
+    const molal=(ms/(M/1000))/Math.max(mwater,1e-6);
+    let T=-Kf*ivant*molal;
+    if(T<EUT_T) T=EUT_T;
+    return T;
+  }
+  function area(){ return 2*(P.L*P.Wd + P.L*P.Hd + P.Wd*P.Hd); }
+  function beerMass(){ return P.cans*P.cml/1000.0; }
+  function canMetal(){ return P.cans*can_alu*(P.cml/330); }
+  function iceBudgetKJ(){ return P.ice*Lf; }
+  function leakW(Tb){ return P.U*area()*Math.max(0,(P.amb-Tb)); }
+
+  function restart(){
+    St.t=0; St.t4=null; St.done=false;
+    St.Tbeer=P.amb; St.iceLeft=P.ice; St.Tbath=Tf_of_salt(P.salt);
+  }
+
+  function physStep(dt){
+    if(St.iceLeft<=0){
+      const m=beerMass();
+      const Q=leakW(St.Tbath)*dt/1000;
+      const cap=Math.max(m*c_w,0.1);
+      St.Tbath += Q/cap; St.Tbeer=St.Tbath;
+      if(St.Tbath>P.amb) St.Tbath=P.amb;
+      return;
+    }
+    const Tf=Tf_of_salt(P.salt);
+    St.Tbath=Tf;
+    const mB=beerMass(), mC=canMetal();
+    const capBeer=Math.max(mB*c_w + mC*c_alu, 0.05);
+    const iceMult = P.iceType==='crushed' ? 2.5 : P.iceType==='block' ? 0.4 : 1.0;
+    const hA = (2.0 + 0.9*P.cans) * iceMult;
+    const Qbeer = hA*(St.Tbeer - St.Tbath)*dt/1000;
+    St.Tbeer -= Qbeer/capBeer;
+    if(St.Tbeer < St.Tbath) St.Tbeer=St.Tbath;
+    const Qleak = leakW(St.Tbath)*dt/1000;
+    const Qinto_ice = Math.max(0,Qbeer) + Qleak;
+    const burnPerKg = Lf + c_w*Math.abs(Tf);
+    const melted = Qinto_ice / burnPerKg;
+    St.iceLeft -= melted; if(St.iceLeft<0) St.iceLeft=0;
+    if(St.t4==null && St.Tbeer<=4.0) St.t4=St.t;
+  }
+
+  function fmtTime(s){
+    if(s==null||s<0) return '—';
+    const h=Math.floor(s/3600), m=Math.floor((s%3600)/60);
+    if(h>0) return h+'h '+m+'m';
+    const sec=Math.floor(s%60);
+    return m+'m '+sec+'s';
+  }
+
+  function draw(){
+    ctx.fillStyle=BG; ctx.fillRect(0,0,CW,CH);
+    const cx=CW*0.46, cy=CH*0.48;
+    const boxW=Math.min(CW*0.62, 440), boxH=Math.min(CH*0.62, 320);
+    const x0=cx-boxW/2, y0=cy-boxH/2;
+
+    ctx.strokeStyle='#2a2a3a'; ctx.lineWidth=10; ctx.strokeRect(x0,y0,boxW,boxH);
+    ctx.strokeStyle='#15151f'; ctx.lineWidth=1; ctx.strokeRect(x0,y0,boxW,boxH);
+
+    const frac=Math.max(0.08, St.iceLeft/Math.max(P.ice,0.1));
+    const fillH=boxH*Math.min(1,0.25+0.6*frac);
+    const tb=St.Tbath;
+    const cold=Math.max(0,Math.min(1,(-tb)/21));
+    const bg=Math.round(120-cold*40), bb=Math.round(180+cold*60);
+    ctx.fillStyle='rgba(20,'+bg+','+bb+',0.35)';
+    ctx.fillRect(x0+6, y0+boxH-fillH-6, boxW-12, fillH);
+
+    const nChunks=Math.round(6+18*frac);
+    ctx.fillStyle='rgba(200,235,255,0.55)';
+    for(let i=0;i<nChunks;i++){
+      const rng=(i*9301+49297)%233280/233280, rng2=(i*4021+7919)%233280/233280;
+      const cxk=x0+12+rng*(boxW-30), cyk=y0+boxH-fillH+6+rng2*(fillH*0.5);
+      const s=4+rng2*7; ctx.fillRect(cxk,cyk,s,s);
+    }
+
+    const ncan=Math.min(P.cans,40), perRow=Math.min(ncan,8);
+    const tBeer=St.Tbeer;
+    const warm=Math.max(0,Math.min(1,(tBeer-4)/(P.amb-4+1e-6)));
+    const cr=Math.round(0+warm*255), cg=Math.round(212-warm*107), cb=Math.round(255-warm*75);
+    const canCol='rgb('+cr+','+cg+','+cb+')';
+    if(ncan>0){
+      const cw=22, ch=38, gap=6;
+      for(let i=0;i<ncan;i++){
+        const r=Math.floor(i/perRow), c=i%perRow;
+        const rowCount=Math.min(perRow, ncan-r*perRow);
+        const totalW=rowCount*cw+(rowCount-1)*gap;
+        const bx=cx-totalW/2+c*(cw+gap);
+        const by=y0+boxH-fillH*0.5 - r*(ch+5) - ch/2;
+        ctx.fillStyle=canCol; ctx.globalAlpha=0.92; ctx.fillRect(bx,by,cw,ch); ctx.globalAlpha=1;
+        ctx.strokeStyle='rgba(255,255,255,0.25)'; ctx.lineWidth=1; ctx.strokeRect(bx,by,cw,ch);
+      }
+    }
+
+    ctx.fillStyle=GOLD; ctx.font='bold 14px ui-monospace,Consolas,monospace'; ctx.textAlign='center';
+    const canTxt = P.cans>40 ? 'beer '+St.Tbeer.toFixed(1)+'°C ('+P.cans+', showing 40)' : 'beer '+St.Tbeer.toFixed(1)+'°C';
+    ctx.fillText(canTxt, cx, y0-12);
+    ctx.fillStyle=DIM; ctx.font='10px ui-monospace,Consolas,monospace';
+    ctx.fillText(P.iceType+' ice', cx, y0-28);
+    ctx.fillStyle=CYAN; ctx.font='12px ui-monospace,Consolas,monospace';
+    ctx.fillText('brine bath '+St.Tbath.toFixed(1)+'°C', cx, y0+boxH+22);
+
+    ctx.fillStyle=DIM; ctx.font='10px ui-monospace,Consolas,monospace'; ctx.textAlign='left';
+    ctx.fillText('amb '+P.amb.toFixed(0)+'°C ☀', x0+boxW+12, y0+16);
+
+    const barx=x0+boxW+12, bary=y0+40, barh=boxH-50;
+    ctx.strokeStyle='#2a2a3a'; ctx.lineWidth=1; ctx.strokeRect(barx,bary,14,barh);
+    ctx.fillStyle='rgba(0,212,255,0.5)'; ctx.fillRect(barx, bary+barh*(1-frac), 14, barh*frac);
+    ctx.fillStyle=DIM; ctx.fillText('ice', barx-1, bary-6);
+    ctx.fillText(St.iceLeft.toFixed(1), barx-1, bary+barh+14);
+
+    ctx.fillStyle=GREEN; ctx.font='12px ui-monospace,Consolas,monospace'; ctx.textAlign='center';
+    ctx.fillText('elapsed '+fmtTime(St.t), cx, y0+boxH+42);
+  }
+
+  function updateMetrics(){
+    document.getElementById('m-bath').textContent=St.Tbath.toFixed(1)+'°C';
+    document.getElementById('m-conc').textContent=P.salt.toFixed(1)+' wt%';
+    document.getElementById('m-t4').textContent=fmtTime(St.t4);
+    const leak=leakW(St.Tbath);
+    const holdS = leak>0 ? (St.iceLeft*(Lf+c_w*Math.abs(St.Tbath)))/(leak/1000) : Infinity;
+    document.getElementById('m-hold').textContent = St.iceLeft<=0 ? 'spent' : fmtTime(holdS);
+    document.getElementById('m-ice').textContent=iceBudgetKJ().toFixed(0)+' kJ';
+    document.getElementById('m-leak').textContent=leak.toFixed(0)+' W';
+  }
+
+  const warn=document.getElementById('warn');
+  let warnTimer=null;
+  function flashWarn(msg){
+    warn.innerHTML=msg; warn.classList.add('show');
+    if(warnTimer) clearTimeout(warnTimer);
+    warnTimer=setTimeout(()=>{ warn.classList.remove('show'); }, 2800);
+  }
+
+  let last=null;
+  function frame(now){
+    if(last==null) last=now;
+    let dt=(now-last)/1000; last=now; if(dt<0)dt=0; if(dt>0.05)dt=0.05;
+    if(P.running){
+      const simDt=dt*P.spd*60;
+      const steps=6; for(let k=0;k<steps;k++) physStep(simDt/steps);
+      St.t+=simDt;
+    }
+    draw(); updateMetrics();
+    requestAnimationFrame(frame);
+  }
+
+  function bind(id, key, fmt, after){
+    const el=document.getElementById(id), out=document.getElementById(id+'v');
+    el.addEventListener('input',()=>{ P[key]=+el.value; out.textContent=fmt(P[key]); if(after)after(); });
+  }
+  bind('ice','ice',v=>v.toFixed(1),restart);
+  bind('cans','cans',v=>String(v|0),restart);
+  bind('cml','cml',v=>String(v|0),restart);
+  bind('amb','amb',v=>String(v|0));
+  bind('L','L',v=>v.toFixed(2),restart);
+  bind('Wd','Wd',v=>v.toFixed(2),restart);
+  bind('Hd','Hd',v=>v.toFixed(2),restart);
+  bind('U','U',v=>v.toFixed(2));
+  bind('spd','spd',v=>v+'×');
+
+  const saltEl=document.getElementById('salt'), saltOut=document.getElementById('saltv');
+  saltEl.addEventListener('input',()=>{
+    let v=+saltEl.value;
+    if(v>EUT_W){
+      v=EUT_W; saltEl.value=EUT_W;
+      flashWarn('<b>EUTECTIC FLOOR — '+EUT_W+' wt%</b><br>past this, salt stops working. bath can\'t go below −21.1°C. extra salt just sinks, wasting money. <span style="color:#6a6a82">snapped back — mama thermo says no.</span>');
+    }
+    P.salt=v; saltOut.textContent=v.toFixed(1); restart();
+  });
+
+  function setIce(type){
+    P.iceType=type;
+    for(const t of ['block','cubed','crushed']) document.getElementById('ice-'+t).classList.toggle('cyan', t===type);
+    restart();
+  }
+  document.getElementById('ice-block').addEventListener('click',()=>setIce('block'));
+  document.getElementById('ice-cubed').addEventListener('click',()=>setIce('cubed'));
+  document.getElementById('ice-crushed').addEventListener('click',()=>setIce('crushed'));
+
+  document.getElementById('play').addEventListener('click',function(){ P.running=!P.running; this.textContent=P.running?'pause':'play'; });
+  document.getElementById('restart').addEventListener('click', restart);
+  document.getElementById('reset').addEventListener('click',()=>{
+    Object.assign(P,{L:1.0,Wd:0.5,Hd:0.85,U:0.4,ice:12,salt:10,cans:24,cml:330,amb:30,spd:40,iceType:'cubed',running:true});
+    for(const t of ['block','cubed','crushed']) document.getElementById('ice-'+t).classList.toggle('cyan', t==='cubed');
+    for(const [id,k] of [['salt','salt'],['ice','ice'],['cans','cans'],['cml','cml'],['amb','amb'],['L','L'],['Wd','Wd'],['Hd','Hd'],['U','U'],['spd','spd']]){
+      const el=document.getElementById(id); el.value=P[k];
+      const out=document.getElementById(id+'v');
+      out.textContent = (k==='cans'||k==='cml'||k==='amb')?String(P[k]|0):(k==='spd')?P[k]+'×':P[k].toFixed((k==='U'||k==='L'||k==='Wd'||k==='Hd')?2:1);
+    }
+    document.getElementById('play').textContent='pause';
+    restart();
+  });
+
+  restart();
+  requestAnimationFrame(frame);
+})();
+</script>
+</body></html>

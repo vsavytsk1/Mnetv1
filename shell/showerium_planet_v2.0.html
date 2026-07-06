@@ -1,0 +1,255 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>Showerium v2.0 -- the transformer · one shower to the whole planet</title>
+<style>
+  :root{
+    --bg:#050508; --gold:#ffd700; --cyan:#00d4ff; --pink:#ff69b4; --green:#00ffd5;
+    --esp:#c7894a; --red:#ff5470; --amber:#ffb454; --dim:#6a6a82; --txt:#e8e0d0;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{background:var(--bg);color:var(--txt);font-family:var(--mono);width:100%;min-height:100%;overflow-x:hidden}
+  body{padding:10px 10px 24px;max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:10px}
+  .card{background:rgba(8,8,16,0.85);border:1px solid #20202e;border-radius:10px;padding:10px 12px}
+  #ttl{color:var(--gold);font-size:14px;letter-spacing:0.04em}
+  #sub{color:var(--dim);font-size:10px;margin-top:2px;line-height:1.4}
+  #note{color:var(--esp);font-size:10px;margin-top:5px;line-height:1.4}
+  #note b{color:var(--gold)}
+  #stats{display:grid;grid-template-columns:repeat(2,1fr);gap:7px}
+  .mc{background:rgba(8,8,16,0.9);border:1px solid #20202e;border-radius:8px;padding:7px 9px}
+  .mc .lab{font-size:8px;color:var(--dim);text-transform:uppercase;letter-spacing:0.06em}
+  .mc .val{font-size:16px;font-weight:bold;color:var(--gold);margin-top:1px}
+  #boardwrap{width:100%;background:rgba(8,8,16,0.6);border:1px solid #20202e;border-radius:10px;overflow:hidden}
+  #cv{display:block;width:100%;height:auto}
+  .ctry{display:grid;grid-template-columns:repeat(2,1fr);gap:7px;margin-top:2px}
+  .cbtn{background:#14141f;border:1px solid #2a2a3a;border-radius:8px;color:var(--cyan);font:11px var(--mono);padding:9px 6px;cursor:pointer;text-align:center;transition:all .12s}
+  .cbtn:hover{border-color:var(--cyan)} .cbtn.on{border-color:var(--gold);color:var(--gold);background:rgba(255,215,0,0.06)}
+  .cbtn small{display:block;color:var(--dim);font-size:9px;margin-top:1px}
+  .sliders{display:flex;flex-direction:column;gap:13px;margin-top:4px}
+  .srow{display:grid;grid-template-columns:1fr auto;gap:3px 10px;align-items:center}
+  .srow label{font-size:11.5px;color:var(--dim)}
+  .srow .v{font-size:12px;color:var(--gold);font-weight:bold;text-align:right;min-width:74px}
+  .srow .hint{grid-column:1 / -1;font-size:10px;color:#55556a;margin-top:-1px}
+  .srow input[type=range]{grid-column:1 / -1;appearance:none;-webkit-appearance:none;width:100%;height:24px;background:transparent;outline:none;cursor:pointer}
+  .srow input[type=range]::-webkit-slider-runnable-track{height:5px;background:#2a2a3a;border-radius:4px}
+  .srow input[type=range]::-moz-range-track{height:5px;background:#2a2a3a;border-radius:4px}
+  .srow input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;margin-top:-9px;width:22px;height:22px;border-radius:50%;background:var(--gold);border:3px solid #050508;cursor:pointer}
+  .srow input[type=range]::-moz-range-thumb{width:22px;height:22px;border:3px solid #050508;border-radius:50%;background:var(--gold);cursor:pointer}
+  .btns{display:flex;gap:8px;flex-wrap:wrap}
+  button.preset{flex:1;min-width:74px;background:#14141f;border:1px solid #2a2a3a;border-radius:8px;color:var(--gold);font:12px var(--mono);padding:10px 6px;cursor:pointer;transition:all .12s}
+  button.preset:hover{border-color:var(--gold)} button.preset:active{transform:scale(0.98)}
+  .wip{background:rgba(8,8,16,0.85);border:1px solid #c7894a;border-radius:10px;padding:8px 11px;font-size:10px;color:var(--esp);line-height:1.5}
+  .wip b{color:var(--gold)}
+  .stamp{text-align:center;font-size:8px;color:rgba(0,212,255,0.3);letter-spacing:0.08em;line-height:1.7}
+  @media (min-width:640px){
+    body{max-width:900px;padding:14px 16px 28px;gap:12px}
+    #cv{max-height:440px;object-fit:contain}
+    #stats{grid-template-columns:repeat(4,1fr)}
+    .ctry{grid-template-columns:repeat(4,1fr)}
+    .sliders{display:grid;grid-template-columns:1fr 1fr;gap:10px 16px}
+    .srow{background:rgba(12,12,22,0.5);border:1px solid #1a1a28;border-radius:8px;padding:9px 12px 11px}
+    .srow input[type=range]{height:20px;margin-top:4px}
+    .srow input[type=range]::-webkit-slider-thumb{margin-top:-6px;width:16px;height:16px;border-width:2px;box-shadow:0 0 0 0 rgba(255,215,0,0);transition:box-shadow .14s}
+    .srow input[type=range]:hover::-webkit-slider-thumb{box-shadow:0 0 9px 1px rgba(255,215,0,0.55)}
+    .srow input[type=range]::-moz-range-thumb{width:16px;height:16px;border-width:2px}
+  }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <div id="ttl">SHOWERIUM v2.0 — the transformer · one shower → the whole planet</div>
+  <div id="sub">step 2: bow to the electrical-balance magic. take the one bitchy-thermo shower and multiply it by the monkeys. the grid that balances a kettle spike — now imagine it balancing a species.</div>
+  <div id="note">mama charges by the delta, so <b>where</b> you shower changes the bill. then the engineering question: how much of humanity can Earth's whole grid actually wash at once? (spoiler: almost none.)</div>
+</div>
+
+<div class="card" style="padding:9px 12px">
+  <div style="font-size:10px;color:var(--dim);margin-bottom:3px">cold inlet — pick the city (colder = bigger delta = bigger bill)</div>
+  <div class="ctry" id="ctry"></div>
+</div>
+
+<div id="stats">
+  <div class="mc"><div class="lab">per shower</div><div class="val" id="s-per" style="color:var(--cyan)">−</div></div>
+  <div class="mc"><div class="lab">total demand</div><div class="val" id="s-tot">−</div></div>
+  <div class="mc"><div class="lab">× Earth's capacity</div><div class="val" id="s-earth" style="color:var(--red)">−</div></div>
+  <div class="mc"><div class="lab">Electric Mountains</div><div class="val" id="s-dino" style="color:var(--green)">−</div></div>
+</div>
+
+<div id="boardwrap"><canvas id="cv" width="760" height="380"></canvas></div>
+
+<div class="card sliders">
+  <div class="srow"><label>monkeys showering at once</label><span class="v" id="nv">8.3 B</span>
+    <input id="n" type="range" min="0" max="100" step="0.5" value="100">
+    <div class="hint">slide from 1 person → all 8.3 billion. (log scale — every step ×10s of millions)</div></div>
+  <div class="srow"><label>shower length</label><span class="v" id="lenv">45 min</span>
+    <input id="len" type="range" min="1" max="60" step="1" value="45">
+    <div class="hint">drives the ENERGY (kWh), not the instantaneous power needle</div></div>
+</div>
+
+<div class="btns">
+  <button class="preset" id="b-you">just you</button>
+  <button class="preset" id="b-city">one city (1M)</button>
+  <button class="preset" id="b-uk">all UK (67M)</button>
+  <button class="preset" id="b-all">all 8.3 B</button>
+</div>
+
+<div class="wip">
+  <b>honesty (K1–K4) — mama thermo × the grid:</b><br>
+  <b>K1</b> per-shower power is exact (P = flow·c·ΔT, c=4.186). Total = per-shower × count. Real, exact arithmetic.<br>
+  <b>K2</b> Earth's generating capacity ≈ 9 TW (≈9000 GW) installed, ~2024 order of magnitude. Dinorwig "Electric Mountain" = 1.32 GW, the world's fastest pumped-storage. UK peak ≈ 60 GW.<br>
+  <b>K3</b> the headline: heat-on-demand for everyone at once is physically impossible — Earth's whole grid washes only ~6% of humanity simultaneously. Real systems stagger demand across time; that's the actual magic.<br>
+  <b>K4</b> ignores heater efficiency and assumes all-electric instantaneous heating (worst case). The stamp is a signature, not a P=12 claim.
+</div>
+
+<div class="stamp">SHOWERIUM v2.0 · genesis kernel · MNet palette · P=12 · χ=2 · always</div>
+
+<script>
+// SHOWERIUM v2.0 -- the transformer. One shower's P = flow*c*dT, scaled by population.
+// Verified before ship (JS recompute matches Python). Bow to the boskis. Stamp is a signature.
+(function(){
+  var cv=document.getElementById('cv'), ctx=cv.getContext('2d');
+  var CW=760, CH=380;
+  function fit(){ var dpr=Math.min(window.devicePixelRatio||1,2); cv.width=CW*dpr; cv.height=CH*dpr; ctx.setTransform(dpr,0,0,dpr,0,0); }
+  fit(); addEventListener('resize',fit);
+
+  var GOLD='#ffd700', CYAN='#00d4ff', PINK='#ff69b4', GREEN='#00ffd5', RED='#ff5470', AMBER='#ffb454', DIM='#6a6a82';
+  var TWO=Math.PI*2, T=0, C_WATER=4.186;
+
+  var FLOW=11, TOUT=40, POP=8.3e9;
+  var EARTH_GW=9000, DINO_GW=1.32, UK_GW=60, TVPICK_GW=2.8;
+  var CITIES=[
+    {name:'Greece', tin:16, sub:'warm 16°C'},
+    {name:'Germany', tin:9, sub:'cool 9°C'},
+    {name:'Sweden', tin:4, sub:'winter 4°C'},
+    {name:'Shanghai', tin:12, sub:'mega 12°C'},
+  ];
+  var P={ city:0, nFrac:1.0, len:45 };
+
+  function perShowerKW(){ return (FLOW/60)*C_WATER*(TOUT-CITIES[P.city].tin); }
+  // log-scale population: nFrac 0..1 -> count 1 .. POP
+  function count(){ if(P.nFrac<=0) return 1; return Math.min(POP, Math.pow(10, P.nFrac*Math.log10(POP))); }
+  function totalGW(){ return perShowerKW()*count()/1e6; }   // kW*count -> kW -> /1e6 GW
+
+  function fmtCount(c){
+    if(c>=1e9) return (c/1e9).toFixed(1)+' B';
+    if(c>=1e6) return (c/1e6).toFixed(1)+' M';
+    if(c>=1e3) return (c/1e3).toFixed(0)+' k';
+    return Math.round(c)+'';
+  }
+  function fmtPow(gw){
+    if(gw>=1000) return (gw/1000).toFixed(1)+' TW';
+    if(gw>=1) return gw.toFixed(1)+' GW';
+    return (gw*1000).toFixed(0)+' MW';
+  }
+
+  var drops=[]; for(var i=0;i<60;i++) drops.push({x:Math.random(),y:Math.random(),s:0.4+Math.random()*0.6});
+
+  function draw(){
+    var per=perShowerKW(), c=count(), gw=totalGW();
+    ctx.fillStyle='#0a0a12'; ctx.fillRect(0,0,CW,CH);
+
+    // TITLE strip: the transformer arrow  [one shower] --x N--> [planet demand]
+    // left: a little shower icon with falling water tinted by dT
+    var dT=TOUT-CITIES[P.city].tin;
+    var tcol = dT>32?RED : dT>26?AMBER : CYAN;
+    var sx=70, sy=54;
+    ctx.strokeStyle=DIM; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(sx,30); ctx.lineTo(sx,sy); ctx.stroke();
+    ctx.fillStyle='#9aa'; ctx.beginPath(); ctx.ellipse(sx,sy,20,5,0,0,TWO); ctx.fill();
+    for(var i=0;i<16;i++){ var d=drops[i]; var x=sx-16+((i*5)%32); var y=sy+6+((T*4*d.s+d.y*120)%110);
+      ctx.strokeStyle=tcol; ctx.globalAlpha=0.5; ctx.lineWidth=1.5; ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x,y+7); ctx.stroke(); }
+    ctx.globalAlpha=1;
+    ctx.fillStyle=CYAN; ctx.font='9px ui-monospace,Consolas,monospace'; ctx.textAlign='center';
+    ctx.fillText(per.toFixed(1)+' kW', sx, 24);
+    ctx.fillText('1 shower', sx, sy+86);
+
+    // arrow with × count
+    ctx.strokeStyle=GOLD; ctx.lineWidth=2; ctx.globalAlpha=0.7;
+    ctx.beginPath(); ctx.moveTo(sx+34,sy+30); ctx.lineTo(sx+150,sy+30); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(sx+150,sy+30); ctx.lineTo(sx+143,sy+26); ctx.lineTo(sx+143,sy+34); ctx.closePath(); ctx.fillStyle=GOLD; ctx.fill();
+    ctx.globalAlpha=1;
+    ctx.fillStyle=GOLD; ctx.font='bold 12px ui-monospace,Consolas,monospace';
+    ctx.fillText('× '+fmtCount(c), sx+92, sy+22);
+    ctx.fillStyle=DIM; ctx.font='9px ui-monospace,Consolas,monospace';
+    ctx.fillText('monkeys', sx+92, sy+44);
+
+    // BIG number: total demand
+    ctx.fillStyle=GOLD; ctx.font='bold 30px ui-monospace,Consolas,monospace'; ctx.textAlign='left';
+    ctx.fillText(fmtPow(gw), sx+180, sy+38);
+
+    // THE BAR: total demand vs Earth's capacity (log, because it blows past)
+    var gy=170, gh=140, gx=40, gw_px=CW-80;
+    // we draw a log axis from 1 GW to 1,000,000 GW (1 PW)
+    function logx(val){ var lo=0, hi=6; var v=Math.log10(Math.max(val,1)); return gx+ (Math.max(0,Math.min(hi,v))/hi)*gw_px; }
+    // axis line
+    ctx.strokeStyle='rgba(106,106,130,0.4)'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(gx,gy+gh); ctx.lineTo(gx+gw_px,gy+gh); ctx.stroke();
+    // reference marks
+    var refs=[
+      {v:UK_GW, c:CYAN, l:'UK grid 60 GW'},
+      {v:EARTH_GW, c:RED, l:'EARTH 9 TW'},
+    ];
+    ctx.font='9px ui-monospace,Consolas,monospace'; ctx.textAlign='center';
+    for(var r=0;r<refs.length;r++){ var rx=logx(refs[r].v);
+      ctx.setLineDash([3,4]); ctx.strokeStyle=refs[r].c; ctx.globalAlpha=0.8; ctx.lineWidth=1.5;
+      ctx.beginPath(); ctx.moveTo(rx,gy-6); ctx.lineTo(rx,gy+gh); ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha=1;
+      ctx.fillStyle=refs[r].c; ctx.fillText(refs[r].l, rx, gy-10);
+    }
+    // the demand bar grows along the log axis, pulsing if over Earth
+    var dx=logx(gw);
+    var over = gw>EARTH_GW;
+    var pulse=0.6+0.4*Math.sin(T*0.08);
+    ctx.fillStyle = over?RED : gw>UK_GW?AMBER:CYAN;
+    ctx.globalAlpha = over?(0.6+0.35*pulse):0.85;
+    ctx.fillRect(gx, gy+24, dx-gx, gh-48);
+    ctx.globalAlpha=1;
+    // bar end marker
+    ctx.fillStyle=GOLD; ctx.beginPath(); ctx.arc(dx, gy+gh/2, 6, 0, TWO); ctx.fill();
+    // demand label on bar
+    ctx.fillStyle=GOLD; ctx.font='bold 11px ui-monospace,Consolas,monospace'; ctx.textAlign='left';
+    ctx.fillText('shower demand', gx+4, gy+18);
+
+    // verdict line under the bar
+    ctx.textAlign='center'; ctx.font='11px ui-monospace,Consolas,monospace';
+    var ratio=gw/EARTH_GW;
+    if(over){ ctx.fillStyle=RED;
+      ctx.fillText('IMPOSSIBLE — needs '+ratio.toFixed(1)+'× the entire planet\u2019s generating capacity', CW/2, gy+gh+26); }
+    else { ctx.fillStyle=GREEN;
+      ctx.fillText('Earth could supply this — '+(ratio*100).toFixed(1)+'% of total capacity', CW/2, gy+gh+26); }
+    // how much of humanity Earth COULD wash
+    var maxN = EARTH_GW*1e6/per;   // showers Earth can power
+    ctx.fillStyle=DIM; ctx.font='10px ui-monospace,Consolas,monospace';
+    ctx.fillText('Earth\u2019s whole grid can wash only '+fmtCount(maxN)+' at once = '+(maxN/POP*100).toFixed(1)+'% of humanity', CW/2, gy+gh+44);
+
+    // stats
+    document.getElementById('s-per').textContent=per.toFixed(1)+' kW';
+    document.getElementById('s-tot').textContent=fmtPow(gw);
+    document.getElementById('s-earth').textContent=(gw>=EARTH_GW)?(gw/EARTH_GW).toFixed(1)+'×':(gw/EARTH_GW*100).toFixed(1)+'%';
+    document.getElementById('s-dino').textContent=fmtCount(gw/DINO_GW);
+  }
+
+  function loop(){ T+=1; draw(); requestAnimationFrame(loop); }
+
+  // country buttons
+  var ctryEl=document.getElementById('ctry');
+  CITIES.forEach(function(ci,idx){
+    var b=document.createElement('div'); b.className='cbtn'+(idx===0?' on':'');
+    b.innerHTML=ci.name+'<small>'+ci.sub+'</small>';
+    b.onclick=function(){ P.city=idx; [].forEach.call(ctryEl.children,function(x){x.classList.remove('on');}); b.classList.add('on'); };
+    ctryEl.appendChild(b);
+  });
+
+  var nEl=document.getElementById('n'), lenEl=document.getElementById('len');
+  nEl.addEventListener('input',function(){ P.nFrac=(+nEl.value)/100; document.getElementById('nv').textContent=fmtCount(count()); });
+  lenEl.addEventListener('input',function(){ P.len=+lenEl.value; document.getElementById('lenv').textContent=P.len+' min'; });
+
+  function setN(frac){ P.nFrac=frac; nEl.value=frac*100; document.getElementById('nv').textContent=fmtCount(count()); }
+  document.getElementById('b-you').onclick=function(){ setN(0); };
+  document.getElementById('b-city').onclick=function(){ setN(Math.log10(1e6)/Math.log10(POP)); };
+  document.getElementById('b-uk').onclick=function(){ setN(Math.log10(67e6)/Math.log10(POP)); };
+  document.getElementById('b-all').onclick=function(){ setN(1); };
+
+  loop();
+})();
+</script>
+</body></html>

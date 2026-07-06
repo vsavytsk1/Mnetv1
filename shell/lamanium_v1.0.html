@@ -1,0 +1,481 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>LAMANIUM v1.0 — rigid and mobile are one matrix</title>
+<!--
+  LAMANIUM v1.0  —  RIGID AND MOBILE ARE ONE MATRIX
+  =================================================
+  The bow to the rigidity titans. Built on the ARACNIUM/BERSHA idea that a
+  machine is a GRAPH: joints are nodes, bars are edges. Here the graph is a
+  bar-joint FRAMEWORK, and the honest engine is its RIGIDITY MATRIX R (E×2V).
+
+  THE REAL ENGINE (exact, computed live from the graph + coordinates):
+    rank(R) decides everything. With the plane's 3 rigid-body motions removed:
+        m = 2V − 3 − rank(R)      internal mechanisms (degrees of freedom)
+        s = E − rank(R)           states of self-stress (redundant bars)
+        m − s = 2V − 3 − E        Maxwell 1864 / Calladine 1978  (always holds)
+    m=0 → it is RIGID (it DRIVES, bears load, 0 DOF).
+    m≥1 → it is a MECHANISM (it TRANSFORMS, moves, cannot bear load).
+    The flex you see animated is a TRUE non-trivial kernel vector of R — the
+    actual degree of freedom moving. Verified in Node before this build
+    (triangle m=0; bare square m=1 = the shear; one brace → isostatic;
+    two braces → over-built s=1; 4-bar → 1 DOF crank).
+
+  THE WALL (why a real Transformer can't exist):
+    A load-bearing state needs m=0. A transformation needs m≥1. No single
+    fixed edge set is both — so a real transformer must CHANGE its graph
+    mid-motion (a metamorphic mechanism) and pay an energy barrier to cross,
+    amplified by the square-cube law: actuation demand ∝ L⁴, muscle ∝ L³.
+    The movie's cube makes the crossing free. Physics sends the bill.
+
+  HONESTY CAVEATS (read them — they are the point):
+   K1  R, rank, m, s, and the redundant-bar highlight are REAL, recomputed
+       live. The flex animation is a real kernel vector of R.
+   K2  2D and GENERIC. Laman 1970 makes 2D rigidity purely combinatorial
+       (E=2V−3 + every subgraph ≤ 2V'−3). In 3D there is NO known clean
+       combinatorial law — the "double banana" passes the count yet flexes.
+       That gap is an OPEN PROBLEM, not laziness.
+   K3  rank is computed at the CURRENT coordinates. Drag joints collinear and
+       rank can drop — extra "paradoxical" motion appears. Not a bug: that is
+       exactly how Bennett/Bricard overconstrained linkages move (special
+       geometry).
+   K4  The energy barrier and the car∩plane two-physics gate are NOT solved
+       here (they need an energy functional + aero/structural constraints).
+       The square-cube bill is a real scaling law shown as a formula — no FEA,
+       no integral performed.
+
+  Pure Canvas 2D, no deps. χ=2 · always. Built 2026-06-23.
+-->
+<style>
+  :root{
+    --bg:#06070b; --gold:#ffd700; --cyan:#00d4ff; --pink:#ff69b4; --green:#00ffd5;
+    --espresso:#c7894a; --steel:#7fa8c0; --dim:#6a6a82; --txt:#e8e0d0;
+    --amber:#ffb347; --alarm:#ff3b3b;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;background:var(--bg);color:var(--txt);font-family:var(--mono);overflow:hidden}
+  #cv{position:fixed;inset:0;display:block;touch-action:none;cursor:crosshair}
+
+  #hud{position:fixed;top:0;left:0;right:0;padding:9px 92px 9px 13px;display:flex;gap:12px;align-items:flex-start;pointer-events:none;font-size:11px;z-index:10;flex-wrap:wrap}
+  #hud > div{pointer-events:auto;background:rgba(6,7,11,0.85);border:1px solid #1d2230;border-radius:8px;padding:8px 11px;backdrop-filter:blur(3px)}
+  #ttl{color:var(--gold);font-size:14px;letter-spacing:0.04em}
+  #sub{color:var(--dim);font-size:10px;margin-top:3px;max-width:540px;line-height:1.55}
+  #sub b{color:var(--cyan)} #sub .gd{color:var(--gold)} #sub .gr{color:var(--green)} #sub .pk{color:var(--pink)}
+  #read{margin-left:auto;min-width:262px}
+  #read h{display:block;color:var(--gold);font-size:11px;letter-spacing:0.06em;margin-bottom:6px}
+  #read table{border-collapse:collapse;width:100%}
+  #read td{padding:2px 0;font-size:11px}
+  #read td.k{color:var(--dim)} #read td.v{text-align:right;font-weight:bold;color:var(--green)}
+  #read td.v.cy{color:var(--cyan)} #read td.v.gd{color:var(--gold)} #read td.v.pk{color:var(--pink)} #read td.v.am{color:var(--amber)} #read td.v.st{color:var(--steel)}
+  #read .hr{height:1px;background:#1a1f2e;margin:5px 0}
+  #verdict{margin-top:6px;font-size:13px;font-weight:bold;letter-spacing:0.03em;text-align:center;padding:5px;border-radius:5px}
+  #vsub{margin-top:4px;font-size:9.5px;text-align:center;color:var(--dim);line-height:1.4}
+  #read .ref{color:#5a5468;font-size:9px;margin-top:7px;line-height:1.45}
+  #read .ref b{color:var(--steel)}
+
+  #bar{position:fixed;left:50%;transform:translateX(-50%);bottom:10px;display:flex;flex-wrap:wrap;gap:7px 9px;align-items:center;justify-content:center;background:rgba(6,7,11,0.93);border:1px solid #1d2230;border-radius:10px;padding:8px 12px;z-index:20;max-width:98vw}
+  button{background:#0a0e18;border:1px solid #1d2533;border-radius:6px;color:var(--gold);font:11px var(--mono);padding:6px 10px;cursor:pointer;transition:all .12s}
+  button:hover{border-color:var(--gold)}
+  button.preset{color:var(--steel)} button.preset:hover{border-color:var(--cyan);color:var(--cyan)}
+  button.on{background:var(--cyan);color:#06070b;border-color:var(--cyan)}
+  .ctl{display:flex;align-items:center;gap:5px}
+  .klbl{color:var(--dim);font-size:10px;text-transform:uppercase;letter-spacing:0.05em}
+  .val{font-size:11px;min-width:54px;text-align:right;color:var(--gold)}
+  input[type=range]{appearance:none;-webkit-appearance:none;height:4px;background:#1a2230;border-radius:3px;outline:none;width:92px}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;border-radius:50%;background:var(--cyan);cursor:pointer}
+  input[type=range]::-moz-range-thumb{width:13px;height:13px;border:0;border-radius:50%;background:var(--cyan);cursor:pointer}
+  .sep{width:1px;height:20px;background:#1d2533;margin:0 1px}
+
+  #uiToggle{position:fixed;top:11px;right:13px;z-index:40;font:11px var(--mono);padding:6px 10px;background:rgba(6,7,11,0.93);border:1px solid #1d2533;color:var(--steel);border-radius:7px;cursor:pointer;backdrop-filter:blur(3px)}
+  #uiToggle:hover{border-color:var(--cyan);color:var(--cyan)}
+  .fold{position:absolute;top:6px;right:7px;width:18px;height:18px;padding:0;font:13px/1 var(--mono);border-radius:5px;background:#0a0e18;border:1px solid #1d2533;color:var(--dim);display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:4}
+  .fold:hover{border-color:var(--cyan);color:var(--cyan)}
+  #hdr,#read{position:relative}#hdr{padding-right:26px}
+  #hdr.folded #sub{display:none} #read.folded table,#read.folded .ref,#read.folded #verdict,#read.folded #vsub,#read.folded .hr{display:none}
+  body.hideui #hud,body.hideui #bar{display:none}
+  #hint{position:fixed;left:50%;transform:translateX(-50%);bottom:58px;z-index:15;font-size:9.5px;color:var(--dim);background:rgba(6,7,11,0.7);border:1px solid #161b27;border-radius:6px;padding:3px 9px;pointer-events:none}
+
+  #reveal{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:60;background:rgba(6,7,11,0.975);border:1px solid var(--gold);border-radius:10px;padding:22px 28px;text-align:center;display:none;max-width:540px;max-height:92vh;overflow:auto}
+  #reveal h2{color:var(--gold);font-size:14px;letter-spacing:0.08em;margin-bottom:14px}
+  #reveal .eq{font-size:13px;color:var(--cyan);margin:5px 0;font-family:Georgia,serif}
+  #reveal .eq.g{color:var(--green)} #reveal .eq.am{color:var(--amber)}
+  #reveal .desc{font-size:10.5px;color:#a7a3b2;line-height:1.95;margin:14px 0;text-align:left}
+  #reveal .desc b{color:var(--green)} #reveal .desc i{color:var(--espresso);font-style:normal} #reveal .desc u{color:var(--pink);text-decoration:none}
+  #reveal .k{font-size:10px;color:#8a8698;line-height:1.85;margin:9px 0;text-align:left;border-left:2px solid #1d2533;padding-left:10px}
+  #reveal .k b{color:var(--steel)}
+  #reveal button{background:var(--gold);color:#1a1206;border:none;padding:6px 22px;border-radius:4px;cursor:pointer;font-family:inherit;font-size:10px;text-transform:uppercase;letter-spacing:0.1em;margin-top:8px}
+  .stamp{position:fixed;bottom:9px;right:11px;font-size:8px;color:rgba(0,212,255,0.22);letter-spacing:0.08em;text-align:right;z-index:5;line-height:1.5}
+  @media (max-width:900px){ #read{margin-left:0;min-width:0} #sub{max-width:90vw} }
+</style>
+</head>
+<body>
+
+<canvas id="cv"></canvas>
+<button id="uiToggle" title="hide panels (H)">hide UI</button>
+
+<div id="hud">
+  <div id="hdr">
+    <button class="fold" id="foldHdr">−</button>
+    <div id="ttl">LAMANIUM v1.0 — rigid and mobile are one matrix</div>
+    <div id="sub">A machine is a <b>graph</b>: joints are nodes, bars are edges. The same <b>rigidity matrix R</b>, read once, says whether it <span class="gd">DRIVES</span> (rigid, 0 DOF) or <span class="gr">TRANSFORMS</span> (a mechanism, ≥1 DOF) — and proves <b>no single fixed graph is both</b>. <span class="pk">Click two joints</span> to toggle a bar · <span class="pk">drag</span> a joint · double-click empty to add one. Maxwell 1864 · Laman 1970 · Calladine 1978.</div>
+  </div>
+  <div id="read">
+    <button class="fold" id="foldRead">−</button>
+    <h>THE FRAME</h>
+    <div class="hr"></div>
+    <table><tbody>
+      <tr><td class="k">joints V</td><td class="v st" id="rV">—</td></tr>
+      <tr><td class="k">bars E</td><td class="v st" id="rE">—</td></tr>
+      <tr><td class="k">Maxwell 2V−3 vs E</td><td class="v" id="rMax">—</td></tr>
+      <tr><td class="k">rank R</td><td class="v cy" id="rRank">—</td></tr>
+      <tr><td class="k">mechanisms m (DOF)</td><td class="v gr" id="rM">—</td></tr>
+      <tr><td class="k">self-stress s</td><td class="v am" id="rS">—</td></tr>
+    </tbody></table>
+    <div id="verdict">—</div>
+    <div id="vsub">—</div>
+    <div class="hr"></div>
+    <table><tbody>
+      <tr><td class="k">scale L</td><td class="v gd" id="rL">—</td></tr>
+      <tr><td class="k">demand ∝ L⁴ / muscle ∝ L³</td><td class="v pk" id="rBill">—</td></tr>
+    </tbody></table>
+    <div class="ref">rigidity matrix (Maxwell 1864; Calladine 1978) · Laman 1970 · pebble-game lineage · <b>m−s = 2V−3−E</b> always · the flex is a real kernel vector · χ=2</div>
+  </div>
+</div>
+
+<div id="bar">
+  <button class="preset" data-p="square">square</button>
+  <button class="preset" data-p="braced">braced</button>
+  <button class="preset" data-p="double">double-braced</button>
+  <button class="preset" data-p="fourbar">4-bar</button>
+  <button class="preset" data-p="truss">car-truss</button>
+  <button class="preset" data-p="banana">double-banana*</button>
+  <span class="sep"></span>
+  <div class="ctl"><span class="klbl">scale</span><input id="sScale" type="range" min="0" max="100" step="1" value="8"><span class="val" id="vScale">—</span></div>
+  <span class="sep"></span>
+  <button id="bFlex" class="on">flex: on</button>
+  <button id="bReset">reset</button>
+  <button id="bReveal">reveal</button>
+</div>
+
+<div id="hint">click a joint, then another, to add/remove a bar · drag to move · select + Backspace deletes a joint</div>
+
+<div id="reveal">
+  <h2>RIGID AND MOBILE ARE ONE MATRIX</h2>
+  <div class="eq">m = 2V − 3 − rank(R) &nbsp; (degrees of freedom)</div>
+  <div class="eq am">s = E − rank(R) &nbsp; (redundant bars / self-stress)</div>
+  <div class="eq g">m − s = 2V − 3 − E &nbsp; (Maxwell · Calladine · always)</div>
+  <div class="desc">
+    Strip a machine to its skeleton: rigid bars joined at pin joints. Build the
+    <b>rigidity matrix R</b> — one row per bar, holding the direction it can push
+    or pull. The <i>kernel</i> of R is every motion that keeps all bars the right
+    length; three of those are just sliding and spinning the whole thing (the
+    rigid-body motions). Whatever kernel is <b>left over</b> is a real
+    <b>degree of freedom</b> — the structure flexing. Count it and you get m.<br><br>
+    m = 0 → the frame is <b>rigid</b>. It <i>drives</i>, it bears load, it does not
+    move. m ≥ 1 → it is a <u>mechanism</u>. It <i>transforms</i>, it moves — and it
+    cannot hold a load. Here is the whole wall: a load-bearing state needs m=0, a
+    transformation needs m≥1, and <b>no single fixed edge set is both</b>. To
+    transform you must <b>remove a bar</b> — and m snaps from 0 to ≥1.<br><br>
+    So a real Transformer cannot be one rigid object that folds. It must
+    <b>change which graph it is</b> mid-motion (a metamorphic mechanism), unlock
+    and relock its own joints, and <b>pay an energy barrier</b> to cross — a bill
+    the square-cube law inflates without mercy: actuation demand climbs as
+    <b>L⁴</b> while the muscle to pay it climbs only as <b>L³</b>. A toy crosses
+    for almost nothing. A five-tonne car cannot. The movie's cube makes the
+    crossing free. Mother Nature sends the invoice — every single time.
+  </div>
+  <div class="k"><b>K1</b> · R, rank, m, s and the amber redundant-bar highlight are real, recomputed live from the graph and the current joint coordinates. The animated flex is a true non-trivial kernel vector of R — the actual DOF moving.</div>
+  <div class="k"><b>K2</b> · 2D and generic. Laman (E=2V−3 and every subgraph ≤ 2V′−3) makes 2D rigidity purely combinatorial. In 3D there is <b>no known clean combinatorial law</b> — the "double banana" passes the count yet flexes. That gap is an open problem, not laziness.</div>
+  <div class="k"><b>K3</b> · rank is computed at the current coordinates. Drag joints collinear and rank can drop — extra "paradoxical" motion appears. Not a bug: that is exactly how Bennett/Bricard overconstrained linkages move, on special geometry.</div>
+  <div class="k"><b>K4</b> · the energy barrier and the car∩plane two-physics gate are <b>not</b> solved here — they need an energy functional and aero/structural constraints. The square-cube bill is a real scaling law shown as a formula. No FEA, no integral performed.</div>
+  <button id="xReveal">I SEE THE MATRIX</button>
+</div>
+
+<div class="stamp">LAMANIUM v1.0<br>χ=2 · always</div>
+
+<script>
+"use strict";
+// ============================================================
+// LAMANIUM v1.0 — bar-joint rigidity, computed live
+// ============================================================
+var cv=document.getElementById("cv"), ctx=cv.getContext("2d");
+var W=0,H=0,DPR=1;
+
+// ---- state ----
+// nodes in world coords (centered ~[-1.6,1.6]); edges as [i,j]
+var S={ nodes:[], edges:[], sel:-1, scale:8, flex:true, theta:0,
+        drag:-1, dragMoved:false, downX:0, downY:0 };
+
+// ---- presets ----
+function P(list){ return list.map(function(p){return {x:p[0],y:p[1]};}); }
+var PRESETS={
+  square:{ n:P([[-1,-1],[1,-1],[1,1],[-1,1]]), e:[[0,1],[1,2],[2,3],[3,0]] },
+  braced:{ n:P([[-1,-1],[1,-1],[1,1],[-1,1]]), e:[[0,1],[1,2],[2,3],[3,0],[0,2]] },
+  double:{ n:P([[-1,-1],[1,-1],[1,1],[-1,1]]), e:[[0,1],[1,2],[2,3],[3,0],[0,2],[1,3]] },
+  fourbar:{ n:P([[-1.5,-1],[1.5,-1],[1.7,0.8],[-1.1,1.1]]), e:[[0,1],[1,2],[2,3],[3,0]] },
+  truss:{ n:P([[-1.7,-0.7],[-0.55,-0.7],[0.6,-0.7],[1.7,-0.7],[-1.1,0.7],[0.05,0.7],[1.15,0.7]]),
+          e:[[0,1],[1,2],[2,3],[4,5],[5,6],[0,4],[1,4],[1,5],[2,5],[2,6],[3,6]] },
+  // double banana (2D stand-in): two rigid "bananas" sharing two pins via a non-edge
+  banana:{ n:P([[-1.6,0],[-0.9,1.0],[-0.9,-1.0],[0,0.55],[0,-0.55],[1.6,0],[0.9,1.0],[0.9,-1.0]]),
+           e:[[0,1],[0,2],[1,3],[2,4],[1,2],[3,4],[5,6],[5,7],[6,3],[7,4],[6,7]] }
+};
+function load(name){ var p=PRESETS[name]; S.nodes=p.n.map(function(o){return {x:o.x,y:o.y};});
+  S.edges=p.e.map(function(e){return [e[0],e[1]];}); S.sel=-1; }
+
+// ============================================================
+//  THE HONEST ENGINE — rigidity matrix rank, m, s, redundancy, flex
+// ============================================================
+function buildR(nodes,edges){
+  var V=nodes.length, R=[];
+  for(var k=0;k<edges.length;k++){ var i=edges[k][0], j=edges[k][1];
+    var row=new Array(2*V).fill(0);
+    var dx=nodes[i].x-nodes[j].x, dy=nodes[i].y-nodes[j].y;
+    row[2*i]=dx; row[2*i+1]=dy; row[2*j]=-dx; row[2*j+1]=-dy; R.push(row);
+  }
+  return R;
+}
+// Gauss-Jordan to RREF → rank, pivot columns, reduced matrix
+function rref(Min, tol){ tol=tol||1e-9;
+  var M=Min.map(function(r){return r.slice();});
+  var rows=M.length, cols=rows?M[0].length:0, r=0, piv=[];
+  for(var c=0;c<cols && r<rows;c++){
+    var best=Math.abs((M[r]&&M[r][c])||0), pr=r;
+    for(var k=r+1;k<rows;k++){ var v=Math.abs(M[k][c]); if(v>best){best=v;pr=k;} }
+    if(best<tol) continue;
+    var tmp=M[r]; M[r]=M[pr]; M[pr]=tmp;
+    var pv=M[r][c]; for(var cc=0;cc<cols;cc++) M[r][cc]/=pv;
+    for(var k2=0;k2<rows;k2++){ if(k2!==r){ var f=M[k2][c];
+      if(Math.abs(f)>tol) for(var cc2=0;cc2<cols;cc2++) M[k2][cc2]-=f*M[r][cc2]; } }
+    piv.push(c); r++;
+  }
+  return {rank:piv.length, piv:piv, M:M, cols:cols};
+}
+function rankOf(Min){ return rref(Min).rank; }
+function nullBasis(Min){
+  var rr=rref(Min), pivset={}; rr.piv.forEach(function(c){pivset[c]=1;});
+  var basis=[];
+  for(var c=0;c<rr.cols;c++){ if(pivset[c]) continue;
+    var v=new Array(rr.cols).fill(0); v[c]=1;
+    for(var pr=0;pr<rr.piv.length;pr++) v[rr.piv[pr]]=-rr.M[pr][c];
+    basis.push(v);
+  }
+  return basis;
+}
+function dot(a,b){var s=0;for(var i=0;i<a.length;i++)s+=a[i]*b[i];return s;}
+function gs(vs,tol){ tol=tol||1e-9; var out=[];
+  for(var q=0;q<vs.length;q++){ var v=vs[q].slice();
+    for(var o=0;o<out.length;o++){ var p=dot(v,out[o]); for(var i=0;i<v.length;i++) v[i]-=p*out[o][i]; }
+    var n=Math.sqrt(dot(v,v)); if(n>tol){ for(var i2=0;i2<v.length;i2++) v[i2]/=n; out.push(v); }
+  }
+  return out;
+}
+function trivialModes(nodes){
+  var V=nodes.length, cx=0, cy=0, i;
+  for(i=0;i<V;i++){ cx+=nodes[i].x; cy+=nodes[i].y; } cx/=V; cy/=V;
+  var T1=new Array(2*V).fill(0), T2=new Array(2*V).fill(0), Rot=new Array(2*V).fill(0);
+  for(i=0;i<V;i++){ T1[2*i]=1; T2[2*i+1]=1; Rot[2*i]=-(nodes[i].y-cy); Rot[2*i+1]=(nodes[i].x-cx); }
+  return gs([T1,T2,Rot]);
+}
+function analyze(){
+  var nodes=S.nodes, edges=S.edges, V=nodes.length, E=edges.length;
+  if(V<1) return {V:0,E:0,rank:0,m:0,s:0,maxwell:0,verdict:"—",flex:null,redund:[]};
+  var R=buildR(nodes,edges), rank=rankOf(R);
+  var s=E-rank;
+  // internal mechanisms via kernel minus rigid-body modes
+  var basis=nullBasis(R), triv=trivialModes(nodes);
+  var flexes=basis.map(function(v){ v=v.slice();
+    for(var t=0;t<triv.length;t++){ var p=dot(v,triv[t]); for(var i=0;i<v.length;i++) v[i]-=p*triv[t][i]; } return v; });
+  flexes=gs(flexes);
+  var m=flexes.length;
+  // redundant members: removing the bar does not drop rank (carries self-stress)
+  var redund=[];
+  if(s>0){ for(var k=0;k<E;k++){ var sub=edges.slice(0,k).concat(edges.slice(k+1));
+      if(rankOf(buildR(nodes,sub))===rank) redund.push(k); } }
+  var verdict = m>0 ? "MECH" : (s>0 ? "OVER" : "RIGID");
+  return {V:V,E:E,rank:rank,m:m,s:s,maxwell:(2*V-3-E),verdict:verdict,flex:flexes[0]||null,redund:redund};
+}
+var A=analyze();
+function recompute(){ A=analyze(); }
+
+// ============================================================
+//  VIEW / COORD MAPPING
+// ============================================================
+function worldScale(){ return Math.min(W,H)*0.30; }
+function toPx(x,y){ return [W/2 + x*worldScale(), H/2 - y*worldScale()]; }
+function fromPx(px,py){ return [ (px-W/2)/worldScale(), -(py-H/2)/worldScale() ]; }
+
+// animated positions (rest + flex oscillation)
+function animNodes(){
+  var f=A.flex;
+  if(!(S.flex && f && A.m>0)) return S.nodes;
+  var amp=0.34*Math.sin(S.theta), out=new Array(S.nodes.length);
+  for(var i=0;i<S.nodes.length;i++) out[i]={ x:S.nodes[i].x+amp*f[2*i], y:S.nodes[i].y+amp*f[2*i+1] };
+  return out;
+}
+
+// ============================================================
+//  RENDER
+// ============================================================
+function frame(now){
+  if(frame._t==null) frame._t=now; var dt=Math.min((now-frame._t)/1000,0.05); frame._t=now;
+  S.theta += dt*2.2;
+  ctx.clearRect(0,0,W,H);
+  drawGrid();
+  var np=animNodes();
+  drawEdges(np); drawNodes(np);
+  drawReadout();
+  requestAnimationFrame(frame);
+}
+function drawGrid(){
+  ctx.strokeStyle="rgba(0,212,255,0.05)"; ctx.lineWidth=1;
+  var c=toPx(0,0);
+  ctx.beginPath(); ctx.moveTo(0,c[1]); ctx.lineTo(W,c[1]); ctx.moveTo(c[0],0); ctx.lineTo(c[0],H); ctx.stroke();
+}
+function edgeColor(k){
+  if(A.redund.indexOf(k)>=0) return "var-amber";
+  if(A.verdict==="RIGID") return "rigid";
+  if(A.verdict==="MECH") return "mech";
+  return "steel";
+}
+function drawEdges(np){
+  for(var k=0;k<S.edges.length;k++){
+    var i=S.edges[k][0], j=S.edges[k][1];
+    var a=toPx(np[i].x,np[i].y), b=toPx(np[j].x,np[j].y);
+    var role=edgeColor(k), col, wdt=2.2, dash=false;
+    if(role==="var-amber"){ col="#ffb347"; dash=true; }
+    else if(role==="rigid"){ col="#00ffd5"; }
+    else if(role==="mech"){ col="#00d4ff"; }
+    else { col="#7fa8c0"; }
+    ctx.strokeStyle=col; ctx.lineWidth=wdt; ctx.lineCap="round";
+    if(dash) ctx.setLineDash([5,4]); else ctx.setLineDash([]);
+    ctx.beginPath(); ctx.moveTo(a[0],a[1]); ctx.lineTo(b[0],b[1]); ctx.stroke();
+  }
+  ctx.setLineDash([]);
+}
+function drawNodes(np){
+  for(var i=0;i<np.length;i++){
+    var p=toPx(np[i].x,np[i].y);
+    // selection ring
+    if(i===S.sel){ ctx.strokeStyle="#ff69b4"; ctx.lineWidth=1.6;
+      ctx.beginPath(); ctx.arc(p[0],p[1],10,0,6.2832); ctx.stroke(); }
+    ctx.fillStyle="#06070b"; ctx.beginPath(); ctx.arc(p[0],p[1],6,0,6.2832); ctx.fill();
+    var nc = A.m>0 ? "#00d4ff" : (A.s>0 ? "#ffb347" : "#00ffd5");
+    ctx.fillStyle=nc; ctx.beginPath(); ctx.arc(p[0],p[1],4.2,0,6.2832); ctx.fill();
+  }
+}
+
+// ============================================================
+//  READOUTS
+// ============================================================
+function txt(id,t){ var e=document.getElementById(id); if(e)e.textContent=t; }
+function physScale(){ // slider 0..100 → L from 0.05 m (toy) to 6 m (vehicle), log
+  return 0.05*Math.pow(6/0.05, S.scale/100);
+}
+function drawReadout(){
+  txt("rV",A.V); txt("rE",A.E);
+  var mx=document.getElementById("rMax");
+  if(mx){ var tgt=2*A.V-3; mx.textContent=tgt+" vs "+A.E;
+    mx.className="v "+(A.E===tgt?"gr":(A.E<tgt?"cy":"am")); }
+  txt("rRank",A.rank); txt("rM",A.m); txt("rS",A.s);
+
+  var v=document.getElementById("verdict"), vs=document.getElementById("vsub");
+  if(v){
+    if(A.verdict==="MECH"){ v.textContent="TRANSFORMS · "+A.m+" DOF";
+      v.style.color="#00ffd5"; v.style.background="rgba(0,255,213,0.12)";
+      vs.textContent="it MOVES — but cannot bear load. To drive, it must lock (remove DOF)."; }
+    else if(A.verdict==="RIGID"){ v.textContent="DRIVES · rigid, 0 DOF";
+      v.style.color="#ffd700"; v.style.background="rgba(255,215,0,0.10)";
+      vs.textContent="isostatic — load-bearing. To transform, remove a bar → m jumps to ≥1."; }
+    else { v.textContent="OVER-BUILT · "+A.s+" redundant";
+      v.style.color="#ffb347"; v.style.background="rgba(255,179,71,0.12)";
+      vs.textContent="rigid, but "+A.s+" bar"+(A.s>1?"s":"")+" carry self-stress (amber). Heavier, still can't transform."; }
+  }
+  var L=physScale();
+  txt("rL", L<1 ? (L*100).toFixed(0)+" cm" : L.toFixed(2)+" m");
+  // bill: demand ∝ L^4, muscle ∝ L^3 → deficit ∝ L, normalized to toy (5 cm)=1
+  var deficit=L/0.05;
+  txt("rBill", "×"+(deficit>=100? (deficit/1000).toFixed(1)+"k" : deficit.toFixed(0)));
+  var bill=document.getElementById("rBill");
+  if(bill) bill.className="v "+(deficit>40?"pk":(deficit>8?"am":"gr"));
+}
+
+// ============================================================
+//  INTERACTION
+// ============================================================
+function nodeAt(px,py){
+  for(var i=0;i<S.nodes.length;i++){ var p=toPx(S.nodes[i].x,S.nodes[i].y);
+    if((p[0]-px)*(p[0]-px)+(p[1]-py)*(p[1]-py) <= 13*13) return i; }
+  return -1;
+}
+function hasEdge(a,b){ for(var k=0;k<S.edges.length;k++){ var e=S.edges[k];
+  if((e[0]===a&&e[1]===b)||(e[0]===b&&e[1]===a)) return k; } return -1; }
+function toggleEdge(a,b){ if(a===b) return; var k=hasEdge(a,b);
+  if(k>=0) S.edges.splice(k,1); else S.edges.push([a,b]); recompute(); }
+
+cv.addEventListener("pointerdown",function(ev){
+  var r=cv.getBoundingClientRect(), px=ev.clientX-r.left, py=ev.clientY-r.top;
+  S.downX=px; S.downY=py; S.dragMoved=false;
+  var i=nodeAt(px,py); S.drag = i;
+});
+cv.addEventListener("pointermove",function(ev){
+  if(S.drag<0) return;
+  var r=cv.getBoundingClientRect(), px=ev.clientX-r.left, py=ev.clientY-r.top;
+  if(!S.dragMoved && (Math.abs(px-S.downX)+Math.abs(py-S.downY))>5) S.dragMoved=true;
+  if(S.dragMoved){ var w=fromPx(px,py); S.nodes[S.drag].x=w[0]; S.nodes[S.drag].y=w[1]; recompute(); }
+});
+cv.addEventListener("pointerup",function(ev){
+  var r=cv.getBoundingClientRect(), px=ev.clientX-r.left, py=ev.clientY-r.top;
+  if(S.drag>=0 && !S.dragMoved){ // a click on a node
+    var i=S.drag;
+    if(S.sel<0) S.sel=i;
+    else if(S.sel===i) S.sel=-1;
+    else { toggleEdge(S.sel,i); S.sel=-1; }
+  } else if(S.drag<0 && !S.dragMoved){ S.sel=-1; }
+  S.drag=-1; S.dragMoved=false;
+});
+cv.addEventListener("dblclick",function(ev){
+  var r=cv.getBoundingClientRect(), px=ev.clientX-r.left, py=ev.clientY-r.top;
+  if(nodeAt(px,py)>=0) return; // dbl on node does nothing
+  var w=fromPx(px,py); S.nodes.push({x:w[0],y:w[1]}); recompute();
+});
+window.addEventListener("keydown",function(ev){
+  if((ev.key==="Backspace"||ev.key==="Delete"||ev.key==="x") && S.sel>=0){
+    var d=S.sel;
+    S.edges=S.edges.filter(function(e){return e[0]!==d && e[1]!==d;})
+      .map(function(e){ return [ e[0]>d?e[0]-1:e[0], e[1]>d?e[1]-1:e[1] ]; });
+    S.nodes.splice(d,1); S.sel=-1; recompute(); ev.preventDefault();
+  }
+  if(ev.key==="h"||ev.key==="H") document.getElementById("uiToggle").click();
+});
+
+// ---- controls ----
+document.querySelectorAll("button.preset").forEach(function(b){
+  b.addEventListener("click",function(){ load(b.dataset.p); recompute(); });
+});
+var sc=document.getElementById("sScale");
+sc.addEventListener("input",function(){ S.scale=+this.value; drawReadout(); });
+document.getElementById("bFlex").addEventListener("click",function(){
+  S.flex=!S.flex; this.textContent="flex: "+(S.flex?"on":"off"); this.classList.toggle("on",S.flex);
+});
+document.getElementById("bReset").addEventListener("click",function(){ load("square"); recompute(); });
+document.getElementById("bReveal").addEventListener("click",function(){ document.getElementById("reveal").style.display="block"; });
+document.getElementById("xReveal").addEventListener("click",function(){ document.getElementById("reveal").style.display="none"; });
+document.addEventListener("click",function(e){ var rv=document.getElementById("reveal");
+  if(rv.style.display==="block" && !rv.contains(e.target) && e.target.id!=="bReveal") rv.style.display="none"; });
+function fold(b,p){ var B=document.getElementById(b), Pn=document.getElementById(p);
+  if(B&&Pn) B.addEventListener("click",function(){ Pn.classList.toggle("folded"); B.textContent=Pn.classList.contains("folded")?"+":"−"; }); }
+fold("foldHdr","hdr"); fold("foldRead","read");
+document.getElementById("uiToggle").addEventListener("click",function(){
+  document.body.classList.toggle("hideui"); this.textContent=document.body.classList.contains("hideui")?"show UI":"hide UI"; });
+
+// ---- init ----
+function resize(){ DPR=Math.min(window.devicePixelRatio||1,2); W=window.innerWidth; H=window.innerHeight;
+  cv.width=W*DPR; cv.height=H*DPR; cv.style.width=W+"px"; cv.style.height=H+"px"; ctx.setTransform(DPR,0,0,DPR,0,0); }
+window.addEventListener("resize",resize);
+resize(); load("square"); recompute();
+document.getElementById("vScale").textContent="0.05 m";
+sc.value=8; S.scale=8; drawReadout();
+requestAnimationFrame(frame);
+</script>
+</body></html>

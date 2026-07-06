@@ -1,0 +1,745 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>ARACNIUM RELAY v1.0 — pure microwave · the telaraña (push-to-talk, 80s)</title>
+<!--
+  ARACNIUM RELAY v1.0 — THE MICROWAVE TELARAÑA
+  ============================================
+  Papa went back to the roots: before fiber, the towers talked over
+  MICROWAVE. Point-to-point dishes on the ridgelines, line-of-sight,
+  hop after hop — a spider web strung across the mountains.
+
+  The web is REAL physics, not decoration:
+   · free-space path loss   FSPL = 92.45 + 20log d_km + 20log f_GHz   (Friis 1946)
+   · parabolic dish gain     G ≈ 17.8 + 20log D_m + 20log f_GHz  dBi
+   · 1st Fresnel radius       F1 = 17.32·√(d1·d2 / (f·D))  m         (clearance)
+   · earth bulge              h  = d1·d2 / (12.74·k),  k = 4/3       (curvature)
+   · rain fade                γ  = k·R^α  dB/km                       (ITU-R P.838)
+   · multipath / availability                                        (ITU-R P.530)
+  A hop only forms with clear line-of-sight (≥0.6 F1) AND positive fade margin,
+  so high bands + rain make SHORT dense hops, low bands go FAR — the core of
+  microwave planning, shown by the web rethreading itself.
+
+  Walkie-talkie magic: ONE channel, ONE voice at a time (half-duplex).
+  HOLD PTT to key — a broadcast burst floods the web hop by hop; release,
+  squelch tail, and the mountain answers "ROGER". Callsigns are NATO phonetic,
+  the way papa called them on the radio.
+
+  Pure Canvas 2D. No dependencies. χ=2 · always.
+  Built: 2026-06-21
+-->
+<style>
+  :root{
+    --bg:#06070b; --gold:#ffd700; --cyan:#00d4ff; --pink:#ff69b4; --green:#00ffd5;
+    --espresso:#c7894a; --steel:#7fa8c0; --dim:#6a6a82; --txt:#e8e0d0;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;background:var(--bg);color:var(--txt);font-family:var(--mono);overflow:hidden}
+  #cv{position:fixed;inset:0;display:block;touch-action:none;cursor:crosshair}
+
+  #hud{position:fixed;top:0;left:0;right:0;padding:9px 92px 9px 13px;display:flex;gap:12px;align-items:flex-start;
+    pointer-events:none;font-size:11px;z-index:10;flex-wrap:wrap}
+  #hud > div{pointer-events:auto;background:rgba(8,9,15,0.82);border:1px solid #1d2230;
+    border-radius:8px;padding:8px 11px;backdrop-filter:blur(3px)}
+  #ttl{color:var(--gold);font-size:14px;letter-spacing:0.05em}
+  #sub{color:var(--dim);font-size:10px;margin-top:3px;max-width:470px;line-height:1.5}
+  #sub b{color:var(--cyan)} #sub .pk{color:var(--pink)}
+  #read{margin-left:auto;min-width:286px}
+  #read h{display:block;color:var(--gold);font-size:11px;letter-spacing:0.07em;margin-bottom:6px}
+  #read .who{color:var(--steel);font-weight:bold}
+  #read table{border-collapse:collapse;width:100%}
+  #read td{padding:2px 0;font-size:11px}
+  #read td.k{color:var(--dim)} #read td.v{text-align:right;font-weight:bold;color:var(--green)}
+  #read td.v.gold{color:var(--gold)} #read td.v.pk{color:var(--pink)} #read td.v.cy{color:var(--cyan)} #read td.v.st{color:var(--steel)}
+  #read .hr{height:1px;background:#1a1f2c;margin:5px 0}
+  #read .ref{color:#566;font-size:9px;margin-top:6px;line-height:1.45}
+  #read .ref b{color:var(--steel)}
+
+  #dims{position:fixed;left:13px;top:128px;width:228px;background:rgba(8,9,15,0.86);
+    border:1px solid #1d2230;border-radius:9px;padding:9px 11px;z-index:10;font-size:10px}
+  #dims h{display:block;color:var(--cyan);font-size:11px;letter-spacing:0.06em;margin-bottom:7px}
+  #dims .r{display:grid;grid-template-columns:64px 1fr 42px;align-items:center;gap:7px;margin:5px 0}
+  #dims .r label{color:var(--dim)} #dims .r .vv{color:var(--gold);text-align:right}
+  #dims .sub{color:#4a4a5a;font-size:9px;margin:8px 0 2px}
+  input[type=range]{appearance:none;-webkit-appearance:none;width:100%;height:4px;background:#262b3a;border-radius:3px;outline:none}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:var(--gold);cursor:pointer}
+  input[type=range]::-moz-range-thumb{width:12px;height:12px;border:0;border-radius:50%;background:var(--gold);cursor:pointer}
+
+  #bar{position:fixed;left:50%;transform:translateX(-50%);bottom:12px;display:flex;flex-wrap:wrap;gap:9px;
+    align-items:center;justify-content:center;background:rgba(8,9,15,0.92);border:1px solid #1d2230;
+    border-radius:10px;padding:8px 13px;z-index:10;max-width:96vw}
+  button{background:#14141f;border:1px solid #2a2a3a;border-radius:6px;color:var(--gold);
+    font:12px var(--mono);padding:6px 10px;cursor:pointer;transition:all .12s}
+  button:hover{border-color:var(--gold)}
+  button.on{background:#1d2233;border-color:var(--cyan);color:var(--cyan)}
+  button.band.on{background:#23202f;border-color:var(--gold);color:var(--gold)}
+  #bPtt{color:var(--pink);border-color:#5a2740;font-size:13px;letter-spacing:0.06em;padding:7px 16px}
+  #bPtt:hover{border-color:var(--pink)}
+  #bPtt.keyed{background:var(--pink);color:#0a0a12;border-color:var(--pink);animation:keypulse .5s infinite}
+  @keyframes keypulse{0%,100%{opacity:1}50%{opacity:0.72}}
+  .klbl{color:var(--dim);font-size:10px}
+  .val{color:var(--gold);font-size:11px;min-width:30px;text-align:right}
+  .sep{width:1px;height:22px;background:#2a2a3a;margin:0 2px}
+
+  #uiToggle{position:fixed;top:11px;right:13px;z-index:40;font:11px var(--mono);padding:6px 10px;
+    background:rgba(8,9,15,0.92);border:1px solid #2a2a3a;color:var(--steel);border-radius:7px;
+    cursor:pointer;backdrop-filter:blur(3px)}
+  #uiToggle:hover{border-color:var(--cyan);color:var(--cyan)}
+  .fold{position:absolute;top:6px;right:7px;width:18px;height:18px;padding:0;
+    font:13px/1 var(--mono);border-radius:5px;background:#14141f;border:1px solid #2a2a3a;
+    color:var(--dim);display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:4}
+  .fold:hover{border-color:var(--cyan);color:var(--cyan)}
+  #hdr,#read{position:relative}#hdr{padding-right:26px}
+  #hdr.folded #sub{display:none}
+  #dims.folded .r,#dims.folded .sub{display:none}#dims.folded{padding-bottom:9px}
+  #read.folded table,#read.folded .ref{display:none}
+  body.hideui #hud,body.hideui #dims,body.hideui #bar{display:none}
+
+  /* channel / radio strip — bottom-left, the walkie-talkie status */
+  #chan{position:fixed;left:13px;bottom:64px;z-index:9;background:rgba(8,9,15,0.86);
+    border:1px solid #1d2230;border-radius:8px;padding:7px 11px;font-size:10px;min-width:228px}
+  #chan .led{display:inline-block;width:8px;height:8px;border-radius:50%;background:#2a3a2a;margin-right:6px;vertical-align:middle}
+  #chan.busy .led{background:var(--pink);box-shadow:0 0 8px var(--pink)}
+  #chan .st{color:var(--steel)} #chan .st b{color:var(--green)}
+  #chan.busy .st b{color:var(--pink)}
+  #chan .msg{color:var(--dim);margin-top:4px;line-height:1.5;min-height:14px}
+  #chan .msg .cs{color:var(--gold)}
+  body.hideui #chan{display:none}
+  @media (max-width:900px){ #dims{display:none} #read{margin-left:0;min-width:0} #chan{display:none} }
+
+  #reveal{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:60;
+    background:rgba(6,7,11,0.97);border:1px solid var(--gold);border-radius:10px;
+    padding:22px 30px;text-align:center;display:none;max-width:440px}
+  #reveal h2{color:var(--gold);font-size:15px;letter-spacing:0.14em;margin-bottom:14px}
+  #reveal .eq{font-size:13px;color:var(--cyan);margin:5px 0;font-family:Georgia,serif}
+  #reveal .desc{font-size:10px;color:#9aa;line-height:1.95;margin:14px 0}
+  #reveal .desc b{color:var(--green)} #reveal .desc i{color:var(--espresso)}
+  #reveal button{background:var(--gold);color:#0a0a12;border:none;padding:6px 22px;border-radius:4px;
+    cursor:pointer;font-family:inherit;font-size:10px;text-transform:uppercase;letter-spacing:0.1em;margin-top:6px}
+</style>
+</head>
+<body>
+
+<canvas id="cv"></canvas>
+<button id="uiToggle" title="hide all panels (press H)">hide UI</button>
+
+<div id="hud">
+  <div id="hdr">
+    <button class="fold" id="foldHdr" title="collapse">−</button>
+    <div id="ttl">ARACNIUM RELAY v1.0 — pure microwave · la telaraña</div>
+    <div id="sub"><b>Click a ridgeline</b> to drop a relay site — the web auto-weaves a microwave hop to every site in <b>line-of-sight</b> with margin to spare. <b>Click a thread</b> to read its link budget. <b class="pk">HOLD PTT</b> (or Space) to key a half-duplex voice burst that floods the web hop by hop; release and the mountain answers <b class="pk">ROGER</b>. Change the <b>band</b> and watch high frequencies go short &amp; dense, low frequencies reach far.</div>
+  </div>
+  <div id="read">
+    <button class="fold" id="foldRead" title="collapse">−</button>
+    <h>LINK BUDGET · <span class="who" id="rWho">select a hop</span></h>
+    <div class="hr"></div>
+    <table><tbody>
+      <tr><td class="k">band / freq</td><td class="v gold" id="rFreq">11 GHz</td></tr>
+      <tr><td class="k">path length</td><td class="v cy" id="rDist">— km</td></tr>
+      <tr><td class="k">free-space loss</td><td class="v" id="rFspl">— dB</td></tr>
+      <tr><td class="k">dish gain (each)</td><td class="v" id="rGain">— dBi</td></tr>
+      <tr><td class="k">EIRP</td><td class="v" id="rEirp">— dBm</td></tr>
+      <tr><td class="k">rain fade</td><td class="v" id="rRain">— dB</td></tr>
+      <tr><td class="k">RX level (RSL)</td><td class="v cy" id="rRsl">— dBm</td></tr>
+      <tr><td class="k">RX threshold</td><td class="v st" id="rThr">−85 dBm</td></tr>
+      <tr><td class="k">fade margin</td><td class="v gold" id="rFm">— dB</td></tr>
+      <tr><td class="hr" colspan="2"></td></tr>
+      <tr><td class="k">1st Fresnel @ mid</td><td class="v" id="rF1">— m</td></tr>
+      <tr><td class="k">clearance</td><td class="v" id="rClr">— % F1</td></tr>
+      <tr><td class="k">earth bulge (k=4/3)</td><td class="v" id="rBulge">— m</td></tr>
+      <tr><td class="k">availability</td><td class="v" id="rAvail">— %</td></tr>
+      <tr><td class="k">status</td><td class="v" id="rStat">—</td></tr>
+    </tbody></table>
+    <div class="ref">standards: <b>ITU-R P.530</b> (path / multipath fade), <b>ITU-R P.838</b> (rain), <b>Friis 1946</b> (free-space loss), Fresnel zones · χ=2 · always</div>
+  </div>
+</div>
+
+<div id="dims">
+  <button class="fold" id="foldDims" title="collapse">−</button>
+  <h>LINK PLANNING</h>
+  <div class="r"><label>dish Ø (m)</label><input id="d_dish" type="range" min="3" max="37" step="1" value="12"><span class="vv" id="v_dish">1.2</span></div>
+  <div class="r"><label>mast (m)</label><input id="d_mast" type="range" min="10" max="120" step="2" value="40"><span class="vv" id="v_mast">40</span></div>
+  <div class="r"><label>TX power</label><input id="d_ptx" type="range" min="10" max="33" step="1" value="25"><span class="vv" id="v_ptx">25</span></div>
+  <div class="r"><label>rain (mm/h)</label><input id="d_rain" type="range" min="0" max="120" step="2" value="0"><span class="vv" id="v_rain">0</span></div>
+  <div class="sub">low band = long haul · high band = short, dense, rain-shy</div>
+</div>
+
+<div id="chan">
+  <div><span class="led"></span><span class="st">channel <b id="chState">IDLE</b> · <span id="chBand">11 GHz</span> simplex</span></div>
+  <div class="msg" id="chMsg">one frequency · one voice at a time · key to talk</div>
+</div>
+
+<div id="bar">
+  <span class="klbl">band</span>
+  <button class="band" data-f="2"  id="bf2">2&nbsp;GHz</button>
+  <button class="band" data-f="6"  id="bf6">6&nbsp;GHz</button>
+  <button class="band on" data-f="11" id="bf11">11&nbsp;GHz</button>
+  <button class="band" data-f="18" id="bf18">18&nbsp;GHz</button>
+  <button class="band" data-f="23" id="bf23">23&nbsp;GHz</button>
+  <span class="sep"></span>
+  <button id="bPtt" title="HOLD to talk (Space)">◉ PUSH&nbsp;TO&nbsp;TALK</button>
+  <button id="bRoger" class="on" title="auto ROGER reply">roger: ON</button>
+  <span class="sep"></span>
+  <button id="bReveal">reveal</button>
+  <button id="bSeed" title="regenerate ridgeline + sites">new ridge</button>
+  <button id="bClear" title="remove all sites">clear web</button>
+</div>
+
+<div id="reveal">
+  <h2>HOW DID THE MOUNTAINS TALK?</h2>
+  <div class="eq">FSPL = 92.45 + 20·log d + 20·log f</div>
+  <div class="eq">F₁ = 17.32·√(d₁·d₂ / (f·D))</div>
+  <div class="eq">one channel · one voice · over.</div>
+  <div class="desc">
+    Before the fiber, there was <i>line of sight</i>.<br>
+    A dish on this hill, a dish on that one,<br>
+    and a pencil of microwave strung between them —<br>
+    a thread in a web across the sierra. <i>La telaraña.</i><br><br>
+    Each hop is a <b>repeater</b>: hear it, lift it, throw it on.<br>
+    Clear the <b>Fresnel zone</b> or the hill eats your signal.<br>
+    Climb in frequency and the rain starts drinking it,<br>
+    so the high bands run <b>short and dense</b>,<br>
+    the low bands run <b>far</b>.<br><br>
+    And the oldest magic, the one papa keyed by hand:<br>
+    <b>one frequency, one voice at a time.</b><br>
+    Push to talk. Say your piece. Say <b>over.</b><br>
+    Let go — and the mountain answers.<br><br>
+    Shannon drew the limit. The dishes did the reaching.<br>
+    χ = 2 · always.
+  </div>
+  <button id="xReveal">ROGER</button>
+</div>
+
+<script>
+"use strict";
+// ============================================================
+// ARACNIUM RELAY v1.0 — the microwave telaraña
+// A line-of-sight point-to-point relay web with real link
+// budgets + a half-duplex walkie-talkie PTT flood.
+// ============================================================
+
+var cv=document.getElementById("cv"), ctx=cv.getContext("2d");
+var W=0,H=0,DPR=1;
+
+// ---- world scale ----
+var WIDTH_KM=60;          // canvas spans 60 km horizontally
+var RELIEF_M=1400;        // vertical relief mapped into the terrain band
+var SKY_FRAC=0.55;        // top 55% sky, bottom 45% terrain band
+function pxPerKm(){ return W/WIDTH_KM; }
+function bandPx(){ return H*(1-SKY_FRAC); }
+function yBase(){ return H-26; }                 // ground baseline (above bar)
+function mPerPxV(){ return RELIEF_M/bandPx(); }  // vertical meters per pixel
+
+// ---- state ----
+var S={
+  freq:11, dish_m:1.2, mast_m:40, ptx:25, rain:0,
+  roger:true, sel:-1, keyed:false, keyT:0, srcSite:0,
+  t:0
+};
+
+// ---- RX threshold by band (dBm) — coarse, higher band → slightly worse ----
+function rxThreshold(){ return -85; }
+
+// ---- rain specific attenuation γ = k·R^α (dB/km), ITU-R P.838 (h-pol approx) ----
+var RAINK={ 2:[0.000154,0.963], 6:[0.00175,1.308], 11:[0.0188,1.217], 18:[0.0691,1.065], 23:[0.124,1.005] };
+function rainGamma(f,R){ if(R<=0)return 0; var ka=RAINK[f]||RAINK[11]; return ka[0]*Math.pow(R,ka[1]); }
+// path reduction factor r (rain cells aren't uniform), simplified
+function rainPathFactor(d){ return 1/(1+d/15); }
+
+// ---- terrain: normalized heightmap 0..1 across width ----
+var NSAMP=240, terr=new Float32Array(NSAMP);
+function genTerrain(seed){
+  var s=seed||Math.random()*1000;
+  function rnd(i){ var x=Math.sin((i*12.9898+s*78.233))*43758.5453; return x-Math.floor(x); }
+  // layered value noise
+  var oct=[ {w:1.0,n:2}, {w:0.5,n:5}, {w:0.28,n:11}, {w:0.14,n:23} ];
+  for(var i=0;i<NSAMP;i++){
+    var u=i/(NSAMP-1), h=0, wsum=0;
+    oct.forEach(function(o){
+      var x=u*o.n, x0=Math.floor(x), fr=x-x0;
+      var a=rnd(x0+o.n*7), b=rnd(x0+1+o.n*7);
+      var sm=fr*fr*(3-2*fr);
+      h+=(a*(1-sm)+b*sm)*o.w; wsum+=o.w;
+    });
+    h/=wsum;
+    // bias toward a sierra: lift the middle a touch, keep valleys
+    h=Math.pow(h,1.15)*0.86+0.06;
+    terr[i]=h;
+  }
+}
+function terrAtFx(fx){
+  var x=Math.max(0,Math.min(1,fx))*(NSAMP-1), i=Math.floor(x), fr=x-i;
+  var a=terr[i], b=terr[Math.min(NSAMP-1,i+1)];
+  return a+(b-a)*fr;
+}
+function groundY(fx){ return yBase()-terrAtFx(fx)*bandPx(); }
+
+// ---- sites (relay stations) ----
+var PHON=["ALFA","BRAVO","CHARLIE","DELTA","ECHO","FOXTROT","GOLF","HOTEL","INDIA","JULIET","KILO","LIMA","MIKE","NOVEMBER","OSCAR","PAPA","QUEBEC","ROMEO","SIERRA","TANGO","UNIFORM","VICTOR","WHISKEY","XRAY","YANKEE","ZULU"];
+var sites=[];   // {fx, mast_m, name}
+function addSite(fx, mast){
+  if(sites.length>=PHON.length) return;
+  sites.push({ fx:Math.max(0.02,Math.min(0.98,fx)), mast_m: mast||S.mast_m, name:PHON[sites.length] });
+  recomputeWeb();
+}
+function siteTopY(st){ return groundY(st.fx) - st.mast_m/mPerPxV(); }
+function siteX(st){ return st.fx*W; }
+
+// seed a few sites on local ridge maxima
+function seedSites(){
+  sites=[];
+  // find candidate peaks
+  var cand=[];
+  for(var i=6;i<NSAMP-6;i++){
+    if(terr[i]>terr[i-4]&&terr[i]>terr[i+4]&&terr[i]>0.4) cand.push({i:i,h:terr[i]});
+  }
+  cand.sort(function(a,b){return b.h-a.h;});
+  // spread them out
+  var chosen=[], minGap=NSAMP*0.10;
+  for(var k=0;k<cand.length && chosen.length<6;k++){
+    var ok=true;
+    for(var j=0;j<chosen.length;j++) if(Math.abs(chosen[j]-cand[k].i)<minGap){ok=false;break;}
+    if(ok) chosen.push(cand[k].i);
+  }
+  chosen.sort(function(a,b){return a-b;});
+  chosen.forEach(function(ci){ sites.push({fx:ci/(NSAMP-1), mast_m:S.mast_m, name:PHON[sites.length]}); });
+  recomputeWeb();
+}
+
+// ============================================================
+//  LINK BUDGET MATH
+// ============================================================
+function distKm(a,b){ return Math.abs(a.fx-b.fx)*WIDTH_KM; }
+function fspl(dKm,f){ if(dKm<=0)return 0; return 92.45+20*Math.log10(dKm)+20*Math.log10(f); }
+function dishGain(Dm,f){ return 17.8+20*Math.log10(Dm)+20*Math.log10(f); }
+function fresnel1(d1,d2,f){ var D=d1+d2; if(D<=0||d1<=0||d2<=0)return 0; return 17.32*Math.sqrt((d1*d2)/(f*D)); }
+function earthBulge(d1,d2){ return (d1*d2)/(12.74*(4/3)); } // meters, k=4/3
+
+// line-of-sight + Fresnel clearance test between two sites
+function losClear(a,b){
+  var ax=siteX(a), ay=siteTopY(a), bx=siteX(b), by=siteTopY(b);
+  var D=distKm(a,b); if(D<=0) return {ok:false,minClr:0};
+  var N=44, worst=1e9, mv=mPerPxV();
+  for(var s=1;s<N;s++){
+    var u=s/N;
+    var fx=a.fx+(b.fx-a.fx)*u;
+    var lineY=ay+(by-ay)*u;
+    var gY=groundY(fx);
+    var clrPx=gY-lineY;                  // +ve = line above ground
+    var d1=u*D, d2=(1-u)*D;
+    var need=(0.6*fresnel1(d1,d2,S.freq)+earthBulge(d1,d2))/mv; // px needed
+    var slack=clrPx-need;
+    if(slack<worst) worst=slack;
+  }
+  return {ok:worst>=0, minClr:worst};
+}
+
+// full budget for a pair
+function budget(a,b){
+  var D=distKm(a,b);
+  var L=fspl(D,S.freq);
+  var G=dishGain(S.dish_m,S.freq);
+  var eirp=S.ptx+G;
+  var rg=rainGamma(S.freq,S.rain), rfade=rg*D*rainPathFactor(D);
+  var feeder=2.0;                         // misc/feeder loss dB
+  var rsl=S.ptx+2*G-L-rfade-feeder;
+  var thr=rxThreshold();
+  var fm=rsl-thr;
+  var f1=fresnel1(D/2,D/2,S.freq);
+  var bulge=earthBulge(D/2,D/2);
+  var los=losClear(a,b);
+  var mv=mPerPxV();
+  var clrPct = f1>0 ? ( (los.minClr*mv)/ (0.6*f1) )*60 : 0; // rough % of F1 cleared
+  // availability from fade margin (multipath, ITU-R P.530 simplified) + rain
+  var outage=Math.pow(10,-fm/10)*Math.max(0.4,D/20); // worst-month-ish fraction
+  if(rfade>fm) outage=0.5;                            // rain dominates → poor
+  var avail=Math.max(0,Math.min(100, 100*(1-Math.min(0.5,outage))));
+  // status
+  var stat, sc;
+  if(!los.ok){ stat="OBSTRUCTED (Fresnel)"; sc="pk"; }
+  else if(fm<=0){ stat="FADE — no margin"; sc="pk"; }
+  else if(rfade>fm*0.6){ stat="RAIN-LIMITED"; sc="gold"; }
+  else if(fm<12){ stat="THIN MARGIN"; sc="gold"; }
+  else { stat="LOS OK"; sc=null; }
+  return {D:D,L:L,G:G,eirp:eirp,rfade:rfade,rsl:rsl,thr:thr,fm:fm,f1:f1,bulge:bulge,
+          los:los.ok, clrPct:clrPct, avail:avail, stat:stat, sc:sc};
+}
+
+// ---- the web: viable hops ----
+var links=[];   // {a,b,bud}
+function recomputeWeb(){
+  links=[];
+  for(var i=0;i<sites.length;i++){
+    for(var j=i+1;j<sites.length;j++){
+      var bud=budget(sites[i],sites[j]);
+      if(bud.los && bud.fm>0){ links.push({a:i,b:j,bud:bud}); }
+    }
+  }
+  // keep selection valid
+  if(S.sel>=links.length) S.sel=-1;
+  buildAdj();
+  refreshReadout();
+}
+// adjacency for PTT flood
+var adj=[];
+function buildAdj(){
+  adj=sites.map(function(){return [];});
+  links.forEach(function(l,idx){ adj[l.a].push({to:l.b,li:idx}); adj[l.b].push({to:l.a,li:idx}); });
+}
+
+// ============================================================
+//  WALKIE-TALKIE  (half-duplex PTT flood)
+// ============================================================
+var burst=null;  // {order:[{site,t}], edges:[{li,a,b,t0,t1}], reach:Set, dir, done}
+var HOP_MS=150;  // visual per-hop delay
+
+function keyPTT(){
+  if(S.keyed||!sites.length) return;
+  if(!links.length){ chanMsg('<span class="cs">'+csname(S.srcSite)+'</span>: keying… but no hop in range — change band or add a site','warn'); }
+  S.keyed=true; S.keyT=S.t;
+  setChan(true,"KEYED · TX");
+  startBurst(S.srcSite, "fwd",
+    '<span class="cs">'+csname(S.srcSite)+'</span>: "all stations, '+csname(S.srcSite)+', radio check — over"');
+}
+function releasePTT(){
+  if(!S.keyed) return;
+  S.keyed=false;
+  setChan(false,"IDLE");
+  // squelch tail, then optional ROGER from farthest reached site
+  var far=burst? burst.farthest : -1;
+  chanMsg('<span style="color:var(--dim)">— kssht — squelch tail —</span>');
+  if(S.roger && far>=0 && far!==S.srcSite){
+    setTimeout(function(){
+      if(S.keyed) return;
+      setChan(true,"KEYED · TX");
+      startBurst(far, "rev",
+        '<span class="cs">'+csname(far)+'</span>: "'+csname(S.srcSite)+', '+csname(far)+', copy loud and clear — ROGER, over"');
+      // auto-unkey the roger after it finishes
+      setTimeout(function(){ setChan(false,"IDLE");
+        chanMsg('channel clear · '+S.freq+' GHz'); }, (burst?burst.totalMs:600)+260);
+    }, 480);
+  }
+}
+function startBurst(src,dir,msg){
+  if(src<0||src>=sites.length){ burst=null; return; }
+  // BFS from src over current links
+  var seen={}, order=[{site:src,t:0}], edges=[];
+  seen[src]=0; var q=[src], parentT={}; parentT[src]=0; var maxT=0, far=src;
+  while(q.length){
+    var u=q.shift(), ut=parentT[u];
+    (adj[u]||[]).forEach(function(e){
+      if(seen[e.to]==null){
+        seen[e.to]=ut+1;
+        var t0=ut*HOP_MS, t1=t0+HOP_MS;
+        parentT[e.to]=ut+1;
+        edges.push({li:e.li,a:u,b:e.to,t0:t0,t1:t1});
+        order.push({site:e.to,t:t1});
+        if(t1>maxT){maxT=t1;}
+        q.push(e.to);
+      }
+    });
+  }
+  // farthest by hop count
+  var best=-1; for(var k in seen){ if(seen[k]>best){best=seen[k];far=+k;} }
+  burst={src:src,dir:dir,order:order,edges:edges,seen:seen,farthest:far,totalMs:maxT,start:S.t,msg:msg};
+  chanMsg(msg);
+}
+
+// ============================================================
+//  RENDER
+// ============================================================
+function draw(){
+  ctx.clearRect(0,0,W,H);
+  drawSky();
+  drawTerrain();
+  drawLinks();
+  drawSites();
+  if(burst) drawBurst();
+}
+
+function drawSky(){
+  // faint stars
+  ctx.save();
+  for(var i=0;i<60;i++){
+    var x=((i*131.5)%W), y=((i*71.3)%(H*SKY_FRAC));
+    var tw=0.2+0.3*Math.abs(Math.sin(S.t*0.6+i));
+    ctx.fillStyle="rgba(180,200,230,"+tw*0.25+")";
+    ctx.fillRect(x,y,1,1);
+  }
+  ctx.restore();
+}
+function drawTerrain(){
+  ctx.beginPath();
+  ctx.moveTo(0,yBase());
+  for(var i=0;i<NSAMP;i++){ var fx=i/(NSAMP-1); ctx.lineTo(fx*W, groundY(fx)); }
+  ctx.lineTo(W,yBase()); ctx.lineTo(W,H); ctx.lineTo(0,H); ctx.closePath();
+  var grd=ctx.createLinearGradient(0,yBase()-bandPx(),0,H);
+  grd.addColorStop(0,"rgba(199,137,74,0.30)");
+  grd.addColorStop(0.5,"rgba(90,60,38,0.85)");
+  grd.addColorStop(1,"rgba(20,14,10,1)");
+  ctx.fillStyle=grd; ctx.fill();
+  // ridge line
+  ctx.beginPath();
+  for(i=0;i<NSAMP;i++){ var f=i/(NSAMP-1); var x=f*W,y=groundY(f); i?ctx.lineTo(x,y):ctx.moveTo(x,y); }
+  ctx.strokeStyle="rgba(199,137,74,0.55)"; ctx.lineWidth=1; ctx.stroke();
+}
+
+function drawLinks(){
+  for(var i=0;i<links.length;i++){
+    var l=links[i], A=sites[l.a], B=sites[l.b];
+    var ax=siteX(A),ay=siteTopY(A),bx=siteX(B),by=siteTopY(B);
+    var sel=(i===S.sel);
+    var fm=l.bud.fm;
+    // health → color
+    var col = l.bud.sc==="pk" ? "rgba(255,105,180,0.5)" :
+              l.bud.sc==="gold"? "rgba(255,215,0,0.5)"  :
+              "rgba(0,212,255,0.42)";
+    // web thread: slight catenary sag
+    var mx=(ax+bx)/2, my=(ay+by)/2 + Math.min(26, distKm(A,B)*0.6);
+    ctx.beginPath(); ctx.moveTo(ax,ay); ctx.quadraticCurveTo(mx,my,bx,by);
+    ctx.strokeStyle= sel? "rgba(0,255,213,0.95)" : col;
+    ctx.lineWidth= sel?2.2: (1+Math.max(0,Math.min(1.4,fm/30)));
+    ctx.stroke();
+    // selected: draw Fresnel zone ellipse hint along the path
+    if(sel) drawFresnel(A,B,l.bud);
+    // dew node at midpoint
+    ctx.fillStyle= sel? "rgba(0,255,213,0.9)":"rgba(127,168,192,0.5)";
+    ctx.beginPath(); ctx.arc(mx,my,sel?2.4:1.4,0,6.2832); ctx.fill();
+  }
+}
+function drawFresnel(A,B,bud){
+  var ax=siteX(A),ay=siteTopY(A),bx=siteX(B),by=siteTopY(B);
+  var mv=mPerPxV(), N=40;
+  ctx.beginPath();
+  for(var s=0;s<=N;s++){ var u=s/N; var d1=u*bud.D,d2=(1-u)*bud.D;
+    var r=fresnel1(d1,d2,S.freq)/mv;
+    var x=ax+(bx-ax)*u, y=ay+(by-ay)*u-r; s?ctx.lineTo(x,y):ctx.moveTo(x,y); }
+  for(s=N;s>=0;s--){ var u2=s/N; var e1=u2*bud.D,e2=(1-u2)*bud.D;
+    var r2=fresnel1(e1,e2,S.freq)/mv;
+    var x2=ax+(bx-ax)*u2, y2=ay+(by-ay)*u2+r2; ctx.lineTo(x2,y2); }
+  ctx.closePath();
+  ctx.fillStyle="rgba(0,255,213,0.06)"; ctx.fill();
+  ctx.strokeStyle="rgba(0,255,213,0.25)"; ctx.lineWidth=0.8; ctx.stroke();
+}
+
+function drawSites(){
+  for(var i=0;i<sites.length;i++){
+    var st=sites[i], x=siteX(st), gy=groundY(st.fx), ty=siteTopY(st);
+    var isSrc=(i===S.srcSite), reached = burst && burst.seen && burst.seen[i]!=null &&
+              (S.t-burst.start)*1000 >= (burst.order.find(function(o){return o.site===i;})||{t:1e9}).t;
+    // mast
+    ctx.strokeStyle= isSrc? "rgba(255,215,0,0.9)":"rgba(127,168,192,0.7)";
+    ctx.lineWidth=1.5; ctx.beginPath(); ctx.moveTo(x,gy); ctx.lineTo(x,ty); ctx.stroke();
+    // guy hint
+    ctx.strokeStyle="rgba(127,168,192,0.18)"; ctx.lineWidth=0.6;
+    ctx.beginPath(); ctx.moveTo(x-7,gy); ctx.lineTo(x,ty+3); ctx.lineTo(x+7,gy); ctx.stroke();
+    // dish (triangle)
+    ctx.fillStyle= isSrc? "#ffd700":"rgba(160,190,210,0.9)";
+    ctx.beginPath(); ctx.moveTo(x,ty-4); ctx.lineTo(x+5,ty+1); ctx.lineTo(x-5,ty+1); ctx.closePath(); ctx.fill();
+    // RX/keyed glow
+    if(S.keyed && isSrc){
+      ctx.strokeStyle="rgba(255,105,180,0.8)"; ctx.lineWidth=1.4;
+      ctx.beginPath(); ctx.arc(x,ty-1,7+Math.sin(S.t*10)*2,0,6.2832); ctx.stroke();
+    } else if(reached && burst && (S.t-burst.start)*1000 < burst.totalMs+700){
+      ctx.strokeStyle="rgba(0,255,213,0.7)"; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.arc(x,ty-1,6,0,6.2832); ctx.stroke();
+    }
+    // callsign
+    ctx.fillStyle= isSrc? "#ffd700":"rgba(127,168,192,0.8)";
+    ctx.font="9px ui-monospace,monospace"; ctx.textAlign="center";
+    ctx.fillText(st.name, x, ty-9);
+    ctx.textAlign="left";
+  }
+}
+
+function drawBurst(){
+  var el=(S.t-burst.start)*1000;
+  burst.edges.forEach(function(e){
+    if(el<e.t0) return;
+    var A=sites[e.a], B=sites[e.b];
+    if(!A||!B) return;
+    var ax=siteX(A),ay=siteTopY(A),bx=siteX(B),by=siteTopY(B);
+    var u=Math.max(0,Math.min(1,(el-e.t0)/(e.t1-e.t0)));
+    // light the edge as wave passes
+    ctx.beginPath(); ctx.moveTo(ax,ay); ctx.lineTo(bx,by);
+    ctx.strokeStyle="rgba(255,105,180,"+(0.15+0.25*(1-Math.abs(0.5-u)*2))+")"; ctx.lineWidth=2.4; ctx.stroke();
+    // mote (the voice burst) — a little scuttling spider of signal
+    if(u<1){
+      var mx=ax+(bx-ax)*u, my=ay+(by-ay)*u;
+      var grd=ctx.createRadialGradient(mx,my,0,mx,my,7);
+      grd.addColorStop(0,"#ffffff"); grd.addColorStop(0.4,"#ff69b4"); grd.addColorStop(1,"rgba(255,105,180,0)");
+      ctx.fillStyle=grd; ctx.beginPath(); ctx.arc(mx,my,7,0,6.2832); ctx.fill();
+    }
+  });
+}
+
+// ============================================================
+//  READOUT / CHANNEL UI
+// ============================================================
+function refreshReadout(){
+  setTxt("chBand", S.freq+" GHz");
+  if(S.sel<0||S.sel>=links.length){ setTxt("rWho","select a hop"); blankReadout(); return; }
+  var l=links[S.sel], A=sites[l.a], B=sites[l.b], d=l.bud;
+  setTxt("rWho", A.name+" → "+B.name);
+  setTxt("rFreq", S.freq+" GHz ("+bandName(S.freq)+")");
+  setTxt("rDist", d.D.toFixed(1)+" km");
+  setTxt("rFspl", d.L.toFixed(1)+" dB");
+  setTxt("rGain", d.G.toFixed(1)+" dBi");
+  setTxt("rEirp", d.eirp.toFixed(1)+" dBm");
+  setTxt("rRain", d.rfade.toFixed(2)+" dB");
+  setTxt("rRsl", d.rsl.toFixed(1)+" dBm");
+  setTxt("rThr", d.thr+" dBm");
+  setCV("rFm", d.fm.toFixed(1)+" dB", d.fm>=12?null:(d.fm>0?"gold":"pk"));
+  setTxt("rF1", d.f1.toFixed(1)+" m");
+  setCV("rClr", Math.round(Math.max(0,d.clrPct))+" % F1", d.clrPct>=60?null:"gold");
+  setTxt("rBulge", d.bulge.toFixed(1)+" m");
+  setCV("rAvail", d.avail.toFixed(3)+" %", d.avail>=99.99?null:(d.avail>=99.9?"gold":"pk"));
+  setCV("rStat", d.stat, d.sc);
+}
+function blankReadout(){
+  ["rDist","rFspl","rGain","rEirp","rRain","rRsl","rF1","rClr","rBulge","rAvail"].forEach(function(id){ setTxt(id,"—"); });
+  setTxt("rFreq", S.freq+" GHz ("+bandName(S.freq)+")");
+  setCV("rFm","—",null); setCV("rStat","—",null);
+}
+function bandName(f){ return f<=2?"L/S long-haul": f<=6?"lower 6 long-haul": f<=11?"11 medium": f<=18?"18 short": "23 short-haul"; }
+function csname(i){ return (sites[i]&&sites[i].name)||"—"; }
+function setChan(busy,state){
+  var c=document.getElementById("chan"); if(c)c.classList.toggle("busy",busy);
+  setTxt("chState",state);
+}
+function chanMsg(html){ var m=document.getElementById("chMsg"); if(m)m.innerHTML=html; }
+
+function setTxt(id,t){ var e=document.getElementById(id); if(e)e.textContent=t; }
+function setCV(id,t,cls){ var e=document.getElementById(id); if(!e)return; e.textContent=t; e.className="v"+(cls?(" "+cls):""); }
+
+// ============================================================
+//  INTERACTION
+// ============================================================
+function pickAt(mx,my){
+  // site first
+  for(var i=0;i<sites.length;i++){
+    var st=sites[i], x=siteX(st), ty=siteTopY(st);
+    if((mx-x)*(mx-x)+(my-ty)*(my-ty) < 130){ return {type:"site",i:i}; }
+  }
+  // link (distance to quad midline approx by sampling)
+  var bestL=-1, bestD=10;
+  for(i=0;i<links.length;i++){
+    var l=links[i], A=sites[l.a], B=sites[l.b];
+    var ax=siteX(A),ay=siteTopY(A),bx=siteX(B),by=siteTopY(B);
+    var mxp=(ax+bx)/2, myp=(ay+by)/2+Math.min(26,distKm(A,B)*0.6);
+    for(var s=0;s<=20;s++){ var u=s/20;
+      var px=(1-u)*(1-u)*ax+2*(1-u)*u*mxp+u*u*bx;
+      var py=(1-u)*(1-u)*ay+2*(1-u)*u*myp+u*u*by;
+      var dd=Math.hypot(px-mx,py-my); if(dd<bestD){bestD=dd;bestL=i;}
+    }
+  }
+  if(bestL>=0) return {type:"link",i:bestL};
+  return {type:"ground"};
+}
+cv.addEventListener("pointerdown",function(e){
+  if(e.button!==undefined && e.button!==0) return;
+  var hit=pickAt(e.clientX,e.clientY);
+  if(hit.type==="site"){ S.srcSite=hit.i; S.sel=-1; refreshReadout();
+    chanMsg('<span class="cs">'+csname(hit.i)+'</span> selected as your handset · HOLD PTT to key'); }
+  else if(hit.type==="link"){ S.sel=hit.i; refreshReadout(); }
+  else { // ground → drop a new relay site here
+    addSite(e.clientX/W, S.mast_m);
+    chanMsg('site <span class="cs">'+csname(sites.length-1)+'</span> raised · web re-woven');
+  }
+});
+
+// ---- band buttons ----
+document.querySelectorAll(".band").forEach(function(b){
+  b.addEventListener("click",function(){
+    S.freq=+b.getAttribute("data-f");
+    document.querySelectorAll(".band").forEach(function(x){ x.classList.toggle("on", x===b); });
+    recomputeWeb();
+    chanMsg('band → <span class="cs">'+S.freq+' GHz</span> · '+bandName(S.freq));
+  });
+});
+
+// ---- sliders ----
+function wireSlider(id,valId,fn,fmt){
+  var el=document.getElementById(id), v=document.getElementById(valId);
+  if(!el)return;
+  el.addEventListener("input",function(){ fn(+el.value); if(v)v.textContent=fmt?fmt(+el.value):el.value; });
+}
+wireSlider("d_dish","v_dish",function(x){ S.dish_m=x/10; recomputeWeb(); },function(x){return (x/10).toFixed(1);});
+wireSlider("d_mast","v_mast",function(x){ S.mast_m=x; recomputeWeb(); });
+wireSlider("d_ptx","v_ptx",function(x){ S.ptx=x; recomputeWeb(); });
+wireSlider("d_rain","v_rain",function(x){ S.rain=x; recomputeWeb();
+  chanMsg(x>0? 'rain '+x+' mm/h · high bands feel it first':'rain clear'); });
+
+// ---- PTT (hold) ----
+var pttBtn=document.getElementById("bPtt");
+function pttDown(e){ if(e)e.preventDefault(); pttBtn.classList.add("keyed"); keyPTT(); }
+function pttUp(e){ if(e)e.preventDefault(); pttBtn.classList.remove("keyed"); releasePTT(); }
+pttBtn.addEventListener("pointerdown",pttDown);
+window.addEventListener("pointerup",pttUp);
+pttBtn.addEventListener("touchstart",pttDown,{passive:false});
+window.addEventListener("touchend",pttUp);
+
+document.getElementById("bRoger").addEventListener("click",function(){
+  S.roger=!S.roger; this.classList.toggle("on",S.roger); this.textContent="roger: "+(S.roger?"ON":"OFF");
+});
+document.getElementById("bReveal").addEventListener("click",function(){ document.getElementById("reveal").style.display="block"; });
+document.getElementById("xReveal").addEventListener("click",function(){ document.getElementById("reveal").style.display="none"; });
+document.getElementById("bSeed").addEventListener("click",function(){ genTerrain(); seedSites(); S.sel=-1; S.srcSite=0; refreshReadout(); });
+document.getElementById("bClear").addEventListener("click",function(){ sites=[]; links=[]; S.sel=-1; S.srcSite=0; recomputeWeb();
+  chanMsg('web cleared · click a ridgeline to start a new telaraña'); });
+
+// ---- fold / hide UI ----
+function fold(btnId,panelId){ var b=document.getElementById(btnId),p=document.getElementById(panelId);
+  if(b&&p)b.addEventListener("click",function(){ p.classList.toggle("folded"); b.textContent=p.classList.contains("folded")?"+":"−"; }); }
+fold("foldHdr","hdr"); fold("foldRead","read"); fold("foldDims","dims");
+document.getElementById("uiToggle").addEventListener("click",function(){
+  document.body.classList.toggle("hideui");
+  this.textContent=document.body.classList.contains("hideui")?"show UI":"hide UI";
+});
+
+// ---- keyboard ----
+window.addEventListener("keydown",function(e){
+  if(e.code==="Space"){ e.preventDefault(); pttDown(); }
+  else if(e.key==="h"||e.key==="H"){ document.getElementById("uiToggle").click(); }
+});
+window.addEventListener("keyup",function(e){ if(e.code==="Space"){ e.preventDefault(); pttUp(); } });
+
+// ---- reveal outside click ----
+document.addEventListener("click",function(e){
+  var r=document.getElementById("reveal");
+  if(r.style.display==="block" && !r.contains(e.target) && e.target.id!=="bReveal"){ r.style.display="none"; }
+});
+
+// ============================================================
+//  LOOP / INIT
+// ============================================================
+function resize(){
+  DPR=Math.min(window.devicePixelRatio||1,2);
+  W=window.innerWidth; H=window.innerHeight;
+  cv.width=W*DPR; cv.height=H*DPR; cv.style.width=W+"px"; cv.style.height=H+"px";
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+  recomputeWeb();
+}
+window.addEventListener("resize",resize);
+
+var lastTS=performance.now();
+function frame(now){
+  var dt=Math.min((now-lastTS)/1000,0.05); lastTS=now;
+  S.t+=dt;
+  // expire a finished burst
+  if(burst && !S.keyed && (S.t-burst.start)*1000 > burst.totalMs+1400 && burst.dir==="rev"){ /* keep last frame */ }
+  draw();
+  requestAnimationFrame(frame);
+}
+
+// boot
+genTerrain(7.0);
+resize();
+seedSites();
+S.srcSite=0; S.sel = links.length? 0 : -1;
+refreshReadout();
+chanMsg('one frequency · one voice at a time · key to talk');
+requestAnimationFrame(frame);
+</script>
+</body></html>

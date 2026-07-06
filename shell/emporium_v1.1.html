@@ -1,0 +1,307 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>EMPORIUM v1.0 — the empire as a flow system</title>
+<style>
+  :root{
+    --bg:#050508; --gold:#ffd700; --cyan:#00d4ff; --pink:#ff69b4; --green:#00ffd5;
+    --esp:#c7894a; --pur:#cc44ff; --red:#ff5470; --amber:#ffb454; --teal:#1de5b0; --dim:#6a6a82; --txt:#e8e0d0;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;background:var(--bg);color:var(--txt);font-family:var(--mono);overflow:hidden;touch-action:none}
+  #cv{position:fixed;inset:0;display:block}
+  #top{position:fixed;top:8px;left:8px;right:8px;z-index:6;display:flex;gap:10px;align-items:flex-start;pointer-events:none;flex-wrap:wrap}
+  #ttlbox{background:rgba(8,8,16,.82);border:1px solid #20202e;border-radius:8px;padding:7px 11px;max-width:580px}
+  #ttl{color:var(--gold);font-size:13px;letter-spacing:.05em}
+  #sub{color:var(--dim);font-size:9.5px;margin-top:2px;line-height:1.4}
+  #bott{margin-left:auto;background:rgba(8,8,16,.9);border:1px solid #20202e;border-radius:8px;padding:7px 12px;min-width:220px}
+  #bott .lab{font-size:8px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em}
+  #bott .v{font-size:14px;font-weight:bold;margin-top:1px}
+  #cards{position:fixed;top:66px;left:8px;z-index:6;display:grid;grid-template-columns:repeat(2,1fr);gap:5px;width:214px}
+  .mc{background:rgba(8,8,16,.86);border:1px solid #20202e;border-radius:6px;padding:5px 8px}
+  .mc .lab{font-size:7.5px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em}
+  .mc .val{font-size:14px;font-weight:bold;color:var(--gold)}
+  .mc .val.cy{color:var(--cyan)} .mc .val.gn{color:var(--green)} .mc .val.pk{color:var(--pink)} .mc .val.rd{color:var(--red)} .mc .val.am{color:var(--amber)}
+  #bar{position:fixed;bottom:0;left:0;right:0;z-index:10;background:rgba(8,8,16,.95);border-top:1px solid #20202e;
+    padding:7px 9px;display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:7px 14px;align-items:center}
+  .sl{display:flex;flex-direction:column;gap:1px}
+  .sl .top{display:flex;justify-content:space-between;align-items:baseline}
+  .sl label{font-size:8px;color:var(--dim);text-transform:uppercase;letter-spacing:.05em}
+  .sl .v{font-size:10px;color:var(--gold);font-weight:bold}
+  input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:4px;background:#2a2a3a;border-radius:3px;outline:none}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:15px;height:15px;border-radius:50%;background:var(--cyan);cursor:pointer;border:2px solid #050508}
+  input[type=range]::-moz-range-thumb{width:15px;height:15px;border-radius:50%;background:var(--cyan);cursor:pointer;border:2px solid #050508}
+  #btns{grid-column:1/-1;display:flex;gap:7px;justify-content:center;flex-wrap:wrap;margin-top:1px}
+  button{background:#14141f;border:1px solid #2a2a3a;border-radius:5px;color:var(--cyan);font:11px var(--mono);padding:5px 12px;cursor:pointer}
+  button:hover{border-color:var(--cyan)}
+  .wip{position:fixed;bottom:150px;left:8px;z-index:6;background:rgba(8,8,16,.9);border:1px solid var(--esp);border-radius:8px;
+    padding:6px 9px;font-size:8.5px;color:var(--esp);max-width:360px;line-height:1.5;display:none}
+  .wip.show{display:block} .wip b{color:var(--gold)} .wip i{color:var(--cyan)}
+  #khint{position:fixed;bottom:150px;right:8px;z-index:6}
+  button#kbtn{font-size:9px;color:var(--esp);border-color:#3a2a1a}
+  .stamp{position:fixed;bottom:150px;left:50%;transform:translateX(-50%);z-index:5;font-size:8px;color:rgba(0,212,255,.25);letter-spacing:.08em;text-align:center;pointer-events:none}
+  #brk{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:8;pointer-events:none;
+    font-size:15px;font-weight:bold;color:var(--red);text-align:center;text-shadow:0 0 20px rgba(255,84,112,.6);opacity:0;transition:opacity .2s;letter-spacing:.04em}
+  #brk.show{opacity:1}
+  #brk small{display:block;font-size:10px;color:var(--amber);margin-top:4px;font-weight:normal}
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+
+<div id="top">
+  <div id="ttlbox">
+    <div id="ttl">EMPORIUM v1.0 — the empire as a flow system</div>
+    <div id="sub">500 restaurants earn; the money routes through a graph of companies — royalty to the IP holder, rent to the property arm, fees to the service co, interest to the treasury — then up to the parent. push the cyan knobs to the upper limit and watch the structure hit its institutional walls. same skeleton as any multinational.</div>
+  </div>
+  <div id="bott">
+    <div class="lab">group effective tax rate</div>
+    <div class="v" id="bott-v" style="color:var(--gold)">— %</div>
+    <div class="lab" style="margin-top:4px">what the aggressive play WOULD get (no Pillar Two)</div>
+    <div class="v" id="naive-v" style="color:var(--dim);font-size:12px">— %</div>
+  </div>
+</div>
+
+<div id="cards">
+  <div class="mc"><div class="lab">group sales</div><div class="val gn" id="m-sales">—</div></div>
+  <div class="mc"><div class="lab">royalty → IPCo</div><div class="val am" id="m-roy">—</div></div>
+  <div class="mc"><div class="lab">Pillar Two top-up</div><div class="val rd" id="m-top">—</div></div>
+  <div class="mc"><div class="lab">OpCo profit left</div><div class="val cy" id="m-op">—</div></div>
+  <div class="mc"><div class="lab">total tax paid</div><div class="val" id="m-tax">—</div></div>
+  <div class="mc"><div class="lab">profit after tax</div><div class="val gn" id="m-pat">—</div></div>
+</div>
+
+<div id="brk"></div>
+
+<div class="wip" id="wip">
+  <b>honesty (K1–K7) — real institutional physics, honest limits:</b><br>
+  <b>K1</b> a TEACHING model of multi-entity tax structuring, grounded in the deep-research build-spec (OECD transfer pricing, BEPS, Pillar Two). NOT a fitted model of any real company, and NOT tax advice.<br>
+  <b>K2</b> the money-flows are real intercompany transactions: <i>royalty</i> → IPCo, <i>rent</i> → PropCo, <i>management fee</i> → ServiceCo, <i>interest</i> → FinCo, <i>dividend</i> → parent. On consolidation they net toward zero — but each moves profit between tax jurisdictions.<br>
+  <b>K3</b> <i>Pillar Two</i> (2024+): a 15% global minimum effective tax. Route profit to a sub-15% haven and a TOP-UP tax claws the difference back — the red flow. The old "haven" play hits a hard floor. This is current law, not a trick.<br>
+  <b>K4</b> <i>transfer-pricing wall</i>: royalty+interest can't exceed the profit that exists. Push past ~90% of EBITDA and the arrangement is non-arm's-length — a tax authority demolishes it. The structure SNAPS.<br>
+  <b>K5</b> <i>ATAD interest cap</i>: interest is deductible only up to ~30% of EBITDA. Over-lever the group and the excess debt buys no shield.<br>
+  <b>K6</b> unit economics (AUV, EBITDA margin, royalty/rent/fee %) are industry order-of-magnitude from the research; tune to real 10-K / franchise-disclosure data before relying on any number.<br>
+  <b>K7</b> the exact curves are illustrative; the DIRECTIONS and the three walls are the honest lesson. Stamp is a signature, not a claim.
+</div>
+<div id="khint"><button id="kbtn">honesty K1–K7 ▸</button></div>
+<div class="stamp">EMPORIUM v1.0 · MNet · structure &gt; scale · for the TITAN</div>
+
+<div id="bar">
+  <div class="sl"><div class="top"><label>locations</label><span class="v" id="v-n">50</span></div><input id="s-n" type="range" min="1" max="500" step="1" value="50"></div>
+  <div class="sl"><div class="top"><label>royalty → IPCo</label><span class="v" id="v-roy">5.0%</span></div><input id="s-roy" type="range" min="0" max="15" step="0.5" value="5"></div>
+  <div class="sl"><div class="top"><label>IPCo tax rate (haven)</label><span class="v" id="v-iptax">0%</span></div><input id="s-iptax" type="range" min="0" max="25" step="0.5" value="0"></div>
+  <div class="sl"><div class="top"><label>management fee</label><span class="v" id="v-mgmt">3.0%</span></div><input id="s-mgmt" type="range" min="0" max="8" step="0.5" value="3"></div>
+  <div class="sl"><div class="top"><label>debt / leverage</label><span class="v" id="v-debt">40%</span></div><input id="s-debt" type="range" min="0" max="100" step="1" value="40"></div>
+  <div class="sl"><div class="top"><label>flow speed</label><span class="v" id="v-spd">100%</span></div><input id="s-spd" type="range" min="20" max="200" step="1" value="100"></div>
+  <div id="btns">
+    <button id="p-one">one shop</button>
+    <button id="p-ire">500 → Ireland</button>
+    <button id="p-haven">500 → haven</button>
+    <button id="p-maxroy">max royalty</button>
+    <button id="p-maxdebt">max debt</button>
+  </div>
+</div>
+
+<script>
+// EMPORIUM v1.0 — the QSR empire as a living flow system. For the TITAN.
+// Pure canvas, zero deps. MNet palette. Model grounded in OECD/BEPS/Pillar Two research (K1).
+// Verified by computation before ship: the three walls (Pillar Two, transfer pricing, ATAD) reproduce.
+// Stamp is a signature, not a claim.
+(function(){
+  const cv=document.getElementById('cv'), ctx=cv.getContext('2d');
+  let W=0,H=0,DPR=1;
+  function resize(){ DPR=Math.min(devicePixelRatio||1,2); W=innerWidth; H=innerHeight; cv.width=W*DPR; cv.height=H*DPR; ctx.setTransform(DPR,0,0,DPR,0,0); place(); }
+
+  const GOLD='#ffd700',CYAN='#00d4ff',PINK='#ff69b4',GREEN='#00ffd5',ESP='#c7894a',PUR='#cc44ff',RED='#ff5470',AMBER='#ffb454',TEAL='#1de5b0',DIM='#6a6a82';
+  const TWO=Math.PI*2;
+
+  const P={ n:50, roy:0.05, iptax:0.0, mgmt:0.03, debt:0.40, spd:100, running:true };
+  const AUV=2.4e6, REST_EBITDA=0.17, OPCO_TAX=0.22, MIN_RATE=0.15, RENT=0.08, INT_RATE=0.05;
+
+  function model(){
+    const sales=P.n*AUV, ebitda=sales*REST_EBITDA;
+    const royalty=sales*P.roy;
+    const rent=sales*RENT;
+    const mgmt=sales*P.mgmt;
+    let interest=sales*REST_EBITDA*P.debt*INT_RATE*10;
+    const interest_raw=interest;
+    interest=Math.min(interest, ebitda*0.30);               // ATAD cap
+    const atad_break = interest_raw > ebitda*0.30;
+    const opco_taxable=Math.max(0, ebitda-royalty-interest);
+    const opco_tax=opco_taxable*OPCO_TAX;
+    const ipco_profit=royalty*0.95;
+    const ipco_tax=ipco_profit*P.iptax;
+    const topup = P.iptax<MIN_RATE ? Math.max(0,(MIN_RATE-P.iptax)*ipco_profit) : 0;
+    const total_tax=opco_tax+ipco_tax+topup;
+    const pretax=ebitda*0.95;
+    const eff=total_tax/Math.max(pretax,1), naive=(opco_tax+ipco_tax)/Math.max(pretax,1);
+    const tp_break=(royalty+interest)>ebitda*0.9;
+    const pat=pretax-total_tax;
+    return {sales,ebitda,royalty,rent,mgmt,interest,topup,eff,naive,tp_break,atad_break,
+            opco_taxable,total_tax,pat,ipco_profit};
+  }
+
+  // ---------- entity nodes ----------
+  let nodes={};
+  function place(){
+    if(!W) return;
+    const cx=W*0.5, cy=H*0.50;
+    const R=Math.min(W*0.34, H*0.30);
+    nodes={
+      hold:{x:cx, y:cy-R*1.02, r:20, col:GOLD, name:'HoldCo', sub:'parent'},
+      op:  {x:cx, y:cy+R*0.35, r:26, col:CYAN, name:'OpCo', sub:'runs the shops'},
+      ip:  {x:cx-R*1.15, y:cy-R*0.15, r:18, col:AMBER, name:'IPCo', sub:'brand · haven'},
+      prop:{x:cx+R*1.15, y:cy-R*0.15, r:16, col:TEAL, name:'PropCo', sub:'real estate'},
+      serv:{x:cx-R*0.72, y:cy+R*0.72, r:15, col:PINK, name:'ServiceCo', sub:'HQ fees'},
+      fin: {x:cx+R*0.72, y:cy+R*0.72, r:15, col:PUR, name:'FinCo', sub:'treasury'},
+    };
+  }
+
+  let T=0;
+  // a flowing edge with moving money packets; back=true reverses (clawback)
+  function flow(a,b,thick,color,phase,back){
+    ctx.strokeStyle='rgba(106,106,130,0.22)'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
+    const spd=(P.spd/100);
+    const np=Math.max(1,Math.round(thick*1.5));
+    for(let i=0;i<np;i++){
+      let t=((T*0.010*spd + phase + i/np)%1);
+      if(back) t=1-t;
+      const x=a.x+(b.x-a.x)*t, y=a.y+(b.y-a.y)*t;
+      ctx.fillStyle=color; ctx.globalAlpha=0.9;
+      ctx.beginPath(); ctx.arc(x,y,1.4+thick*0.45,0,TWO); ctx.fill();
+    }
+    ctx.globalAlpha=1;
+  }
+  function drawNode(n,pulse){
+    ctx.beginPath(); ctx.arc(n.x,n.y,n.r+(pulse||0),0,TWO);
+    ctx.fillStyle=n.col; ctx.globalAlpha=0.14; ctx.fill(); ctx.globalAlpha=1;
+    ctx.lineWidth=2.2; ctx.strokeStyle=n.col;
+    ctx.beginPath(); ctx.arc(n.x,n.y,n.r,0,TWO); ctx.stroke();
+    ctx.fillStyle=n.col; ctx.font='bold 12px '+'ui-monospace,Consolas,monospace'; ctx.textAlign='center';
+    ctx.fillText(n.name, n.x, n.y-n.r-8);
+    ctx.fillStyle=DIM; ctx.font='8px ui-monospace,Consolas,monospace';
+    ctx.fillText(n.sub, n.x, n.y-n.r+2);
+  }
+
+  const fmtM=v=>'€'+(v/1e6).toFixed(v>=1e8?0:1)+'M';
+  const fmtB=v=> v>=1e9? '€'+(v/1e9).toFixed(2)+'B' : fmtM(v);
+
+  function frame(){
+    const m=model(), nd=nodes;
+    ctx.fillStyle='#07070d'; ctx.fillRect(0,0,W,H);
+    if(!nd.op){ requestAnimationFrame(frame); return; }
+
+    const pulse=Math.sin(T*0.05);
+
+    // locations orbiting OpCo (the earners)
+    const locN=Math.min(P.n,80);
+    for(let i=0;i<locN;i++){
+      const ang=(i/locN)*TWO + T*0.004;
+      const rr=nd.op.r+30+(i%4)*6;
+      const lx=nd.op.x+Math.cos(ang)*rr, ly=nd.op.y+Math.sin(ang)*rr*0.85;
+      ctx.fillStyle=GREEN; ctx.globalAlpha=0.55;
+      ctx.beginPath(); ctx.arc(lx,ly,2,0,TWO); ctx.fill(); ctx.globalAlpha=1;
+      if(i%5===0){ ctx.strokeStyle='rgba(0,255,213,0.10)'; ctx.lineWidth=1;
+        ctx.beginPath(); ctx.moveTo(lx,ly); ctx.lineTo(nd.op.x,nd.op.y); ctx.stroke(); }
+    }
+    ctx.fillStyle=GREEN; ctx.font='9px ui-monospace,Consolas,monospace'; ctx.textAlign='center';
+    ctx.fillText(P.n+(P.n===1?' location':' locations')+'  ·  '+fmtB(m.sales)+' sales', nd.op.x, nd.op.y+nd.op.r+46);
+
+    // thicknesses scale with € flow
+    const royThick=Math.min(8, 0.5+(m.royalty/1e6)*0.11);
+    const rentThick=Math.min(5, 0.5+(m.rent/1e6)*0.08);
+    const mgmtThick=Math.min(5, 0.5+(m.mgmt/1e6)*0.14);
+    const intThick=Math.min(6, 0.5+(m.interest/1e6)*0.10);
+    const divThick=Math.min(6, 0.5+(m.pat/1e6)*0.05);
+
+    // the money routes OUT of OpCo to the arms
+    flow(nd.op,nd.ip, royThick, AMBER, 0.0);
+    flow(nd.op,nd.prop, rentThick, TEAL, 0.25);
+    flow(nd.op,nd.serv, mgmtThick, PINK, 0.5);
+    flow(nd.op,nd.fin, intThick, PUR, 0.75);
+    // dividends up to HoldCo
+    flow(nd.op,nd.hold, divThick, CYAN, 0.1);
+    // arms also pass residual up to HoldCo (thin)
+    flow(nd.ip,nd.hold, Math.min(4,royThick*0.5), AMBER, 0.4);
+    flow(nd.prop,nd.hold, 1.5, TEAL, 0.6);
+
+    // PILLAR TWO clawback: red flow BACK from IPCo to HoldCo
+    if(m.topup>0){
+      const tThick=Math.min(7,0.5+(m.topup/1e6)*0.14);
+      flow(nd.ip,nd.hold, tThick, RED, 0.5, true);
+    }
+
+    // nodes
+    drawNode(nd.hold, Math.abs(pulse)*1.5);
+    drawNode(nd.prop); drawNode(nd.serv); drawNode(nd.fin);
+    drawNode(nd.ip, m.topup>0? Math.abs(pulse)*3:0);
+    drawNode(nd.op, m.tp_break? Math.abs(pulse)*4:0);
+
+    // break visuals + banner
+    const brk=document.getElementById('brk');
+    if(m.tp_break){
+      ctx.fillStyle=RED; ctx.globalAlpha=0.06+0.03*Math.abs(pulse); ctx.fillRect(0,0,W,H); ctx.globalAlpha=1;
+      ctx.strokeStyle=RED; ctx.lineWidth=2.5; ctx.setLineDash([8,5]);
+      ctx.strokeRect(4,4,W-8,H-8); ctx.setLineDash([]);
+      brk.innerHTML='STRUCTURE SNAPPED<small>royalty + interest exceed the profit — not arm\u2019s-length — a tax authority demolishes it</small>';
+      brk.classList.add('show');
+    } else if(m.atad_break){
+      brk.innerHTML='ATAD WALL<small>interest deduction capped at 30% of EBITDA — the excess debt buys no tax shield</small>';
+      brk.classList.add('show');
+    } else if(m.topup>0 && P.iptax<0.15){
+      brk.classList.remove('show');
+    } else {
+      brk.classList.remove('show');
+    }
+
+    // readouts
+    document.getElementById('bott-v').textContent=(m.eff*100).toFixed(1)+' %';
+    document.getElementById('bott-v').style.color = m.eff>0.30?RED : m.eff>0.20?GOLD : GREEN;
+    document.getElementById('naive-v').textContent=(m.naive*100).toFixed(1)+' %';
+    document.getElementById('m-sales').textContent=fmtB(m.sales);
+    document.getElementById('m-roy').textContent=fmtM(m.royalty);
+    document.getElementById('m-top').textContent=fmtM(m.topup);
+    document.getElementById('m-op').textContent=fmtM(m.opco_taxable);
+    document.getElementById('m-tax').textContent=fmtM(m.total_tax);
+    document.getElementById('m-pat').textContent=fmtM(m.pat);
+
+    T++; requestAnimationFrame(frame);
+  }
+
+  // ---------- controls ----------
+  function bind(id,key,fmt,scale){ const el=document.getElementById(id), o=document.getElementById('v-'+id.split('-')[1]);
+    el.addEventListener('input',()=>{ P[key]=(+el.value)*(scale||1); o.textContent=fmt(+el.value); }); }
+  bind('s-n','n',v=>Math.round(v));
+  bind('s-roy','roy',v=>(+v).toFixed(1)+'%',0.01);
+  bind('s-iptax','iptax',v=>(+v).toFixed(0)+'%',0.01);
+  bind('s-mgmt','mgmt',v=>(+v).toFixed(1)+'%',0.01);
+  bind('s-debt','debt',v=>Math.round(v)+'%',0.01);
+  bind('s-spd','spd',v=>Math.round(v)+'%');
+  // spd stored as raw percent
+  document.getElementById('s-spd').addEventListener('input',e=>{P.spd=+e.target.value;});
+
+  function setAll(n,roy,ip,mg,dbt){
+    P.n=n;P.roy=roy;P.iptax=ip;P.mgmt=mg;P.debt=dbt;
+    const S=(id,val,txt)=>{document.getElementById(id).value=val;};
+    document.getElementById('s-n').value=n; document.getElementById('v-n').textContent=Math.round(n);
+    document.getElementById('s-roy').value=roy*100; document.getElementById('v-roy').textContent=(roy*100).toFixed(1)+'%';
+    document.getElementById('s-iptax').value=ip*100; document.getElementById('v-iptax').textContent=(ip*100).toFixed(0)+'%';
+    document.getElementById('s-mgmt').value=mg*100; document.getElementById('v-mgmt').textContent=(mg*100).toFixed(1)+'%';
+    document.getElementById('s-debt').value=dbt*100; document.getElementById('v-debt').textContent=Math.round(dbt*100)+'%';
+  }
+  document.getElementById('p-one').onclick=()=>setAll(1,0,0.22,0,0);
+  document.getElementById('p-ire').onclick=()=>setAll(500,0.05,0.125,0.03,0.30);
+  document.getElementById('p-haven').onclick=()=>setAll(500,0.06,0.0,0.04,0.50);
+  document.getElementById('p-maxroy').onclick=()=>setAll(500,0.15,0.0,0.05,0.50);
+  document.getElementById('p-maxdebt').onclick=()=>setAll(500,0.05,0.125,0.03,1.0);
+
+  document.getElementById('kbtn').onclick=function(){ const w=document.getElementById('wip'); w.classList.toggle('show');
+    this.textContent=w.classList.contains('show')?'honesty K1–K7 ▾':'honesty K1–K7 ▸'; };
+
+  addEventListener('resize',resize);
+  resize(); frame();
+})();
+</script>
+</body></html>

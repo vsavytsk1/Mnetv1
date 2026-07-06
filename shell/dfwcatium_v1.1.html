@@ -1,0 +1,520 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>DFWCatium v1.1 — the nose is the fingerprint · lock a cat/dog by its noseprint</title>
+<!--
+  DFWCatium v1.1  —  THE NOSE IS THE FINGERPRINT
+  ==============================================
+  "DermatoFinger-Whisker-Cat-ium." A fast-LOCK simulator for individual cat/dog
+  identification from a phone photo, built honestly on the research:
+
+  THE REAL SIGNAL: the NOSE-PRINT (rhinarium) — a bead-and-groove dermatoglyphic
+  pattern proven unique AND lifetime-stable (cattle: Petersen, J. Dairy Sci. 1922;
+  dogs: Choi et al., Animals 2021 — perfect separation across 38,503 comparisons,
+  but only on CLEAN images). Coat pattern looks like the obvious fingerprint but is
+  the WEAK signal (molts, lighting, pose, left-flank≠right-flank) — a soft pre-filter,
+  never the lock. So this sim locks on the NOSE.
+
+  THE MATCH MATH (funny funny graph math, == Shazam, Avery Wang ISMIR 2003):
+    • minutiae (bead/groove junctions) = a 2-D CONSTELLATION of points
+    • hash geometric PAIRS of minutiae into rotation/scale-invariant tokens
+      (Shazam hashes peak pairs; geometric hashing, Lamdan & Wolfson 1988)
+    • inverted hash-table lookup → candidates in sub-second time
+    • RANSAC geometric verification = the image twin of Shazam's Δt-coherence:
+      count INLIERS consistent with one transform (HotSpotter, Jang et al. 2020)
+
+  THE FAST-LOCK UX: stream frames, score capture quality, tell the user
+  "come closer / hold steady / more light" until enough reliable minutiae are
+  captured to cross the BIRTHDAY BOUND for a database of N animals:
+      required_bits ≈ 2·log2(N) + margin   (Daugman, biometric birthday problem)
+  ~60 bits separates one cat from a MILLION — well inside a clean nose.
+
+  Push any slider to the limit; if it breaks — signal lost / collision risk /
+  compute flood — dum dum pulls the slider back. χ=2 · always. Built 2026-06-23.
+  HONEST: vendor "99%" claims vary (Megvii 95%, Alipay >99%, Petnow ~99% w/ a
+  98.97% peer-reviewed basis). This is a teaching toy, not a shipping matcher.
+-->
+<style>
+  :root{
+    --bg:#070a0c; --gold:#ffd700; --cyan:#00d4ff; --pink:#ff4f9b; --green:#00ffd5;
+    --amber:#ffb454; --steel:#7fa8c0; --dim:#5f6b74; --txt:#e6eef2; --scan:#22e0ff;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;background:var(--bg);color:var(--txt);font-family:var(--mono);overflow:hidden}
+  #cv{position:fixed;inset:0;display:block;touch-action:none;cursor:crosshair}
+
+  #hud{position:fixed;top:0;left:0;right:0;padding:9px 92px 9px 13px;display:flex;gap:12px;align-items:flex-start;pointer-events:none;font-size:11px;z-index:10;flex-wrap:wrap}
+  #hud > div{pointer-events:auto;background:rgba(7,10,12,0.86);border:1px solid #14202a;border-radius:8px;padding:8px 11px;backdrop-filter:blur(3px)}
+  #ttl{color:var(--gold);font-size:14px;letter-spacing:0.04em}
+  #sub{color:var(--dim);font-size:10px;margin-top:3px;max-width:560px;line-height:1.55}
+  #sub b{color:var(--cyan)} #sub .pk{color:var(--pink)} #sub .gd{color:var(--gold)} #sub .gr{color:var(--green)}
+  #read{margin-left:auto;min-width:300px}
+  #read h{display:block;color:var(--gold);font-size:11px;letter-spacing:0.06em;margin-bottom:6px}
+  #read table{border-collapse:collapse;width:100%}
+  #read td{padding:2px 0;font-size:11px}
+  #read td.k{color:var(--dim)} #read td.v{text-align:right;font-weight:bold;color:var(--green)}
+  #read td.v.gold{color:var(--gold)} #read td.v.cy{color:var(--cyan)} #read td.v.pk{color:var(--pink)} #read td.v.am{color:var(--amber)} #read td.v.st{color:var(--steel)}
+  #read .hr{height:1px;background:#13202a;margin:5px 0}
+  #verdict{margin-top:6px;font-size:12px;font-weight:bold;letter-spacing:0.04em;text-align:center;padding:4px;border-radius:5px}
+  #lockwrap{margin-top:7px}
+  #lockbar{height:9px;background:#10222c;border-radius:5px;overflow:hidden;border:1px solid #15303c}
+  #lockfill{height:100%;width:0%;background:linear-gradient(90deg,#00d4ff,#00ffd5);transition:width .08s linear}
+  #lockpct{font-size:9px;color:var(--dim);text-align:center;margin-top:2px}
+  #read .ref{color:#4a5a64;font-size:9px;margin-top:6px;line-height:1.45}
+  #read .ref b{color:var(--steel)}
+
+  #bar{position:fixed;left:50%;transform:translateX(-50%);bottom:10px;display:flex;flex-wrap:wrap;gap:7px 9px;align-items:center;justify-content:center;background:rgba(7,10,12,0.94);border:1px solid #14202a;border-radius:10px;padding:8px 12px;z-index:20;max-width:98vw}
+  button{background:#0c1318;border:1px solid #1b2a33;border-radius:6px;color:var(--gold);font:11px var(--mono);padding:6px 10px;cursor:pointer;transition:all .12s}
+  button:hover{border-color:var(--gold)}
+  #bSpecies{color:var(--cyan);border-color:#1d3540} #bSpecies:hover{border-color:var(--cyan)}
+  .ctl{display:flex;align-items:center;gap:5px}
+  .klbl{color:var(--dim);font-size:10px;text-transform:uppercase;letter-spacing:0.05em}
+  .val{font-size:11px;min-width:30px;text-align:right;color:var(--gold)}
+  input[type=range]{appearance:none;-webkit-appearance:none;height:4px;background:#16242e;border-radius:3px;outline:none;width:74px}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;border-radius:50%;background:var(--cyan);cursor:pointer}
+  input[type=range]::-moz-range-thumb{width:13px;height:13px;border:0;border-radius:50%;background:var(--cyan);cursor:pointer}
+  #sN::-webkit-slider-thumb{background:var(--pink)} #sN{accent-color:var(--pink)}
+  #sDetail::-webkit-slider-thumb{background:var(--gold)} #sDetail{width:62px}
+  .sep{width:1px;height:20px;background:#1b2a33;margin:0 1px}
+
+  #uiToggle{position:fixed;top:11px;right:13px;z-index:40;font:11px var(--mono);padding:6px 10px;background:rgba(7,10,12,0.94);border:1px solid #1b2a33;color:var(--steel);border-radius:7px;cursor:pointer;backdrop-filter:blur(3px)}
+  #uiToggle:hover{border-color:var(--cyan);color:var(--cyan)}
+  .fold{position:absolute;top:6px;right:7px;width:18px;height:18px;padding:0;font:13px/1 var(--mono);border-radius:5px;background:#0c1318;border:1px solid #1b2a33;color:var(--dim);display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:4}
+  .fold:hover{border-color:var(--cyan);color:var(--cyan)}
+  #hdr,#read{position:relative}#hdr{padding-right:26px}
+  #hdr.folded #sub{display:none} #read.folded table,#read.folded .ref,#read.folded #verdict,#read.folded #lockwrap{display:none}
+  body.hideui #hud,body.hideui #bar{display:none}
+
+  #flood{position:fixed;inset:0;z-index:50;display:none;align-items:center;justify-content:center;flex-direction:column;text-align:center;padding:24px}
+  #flood.on{display:flex;animation:fl 1.1s infinite}
+  @keyframes fl{0%,100%{background:rgba(70,12,10,0.93)}50%{background:rgba(120,18,16,0.95)}}
+  #flood .big{color:#ffe0d0;font-size:24px;letter-spacing:0.12em;font-weight:bold;margin-bottom:10px}
+  #flood .msg{color:#ffc0b0;font-size:13px;line-height:1.7;max-width:540px} #flood .msg b{color:#fff}
+  #flood .load{color:#fff;font-size:12px;margin-top:14px;letter-spacing:0.06em}
+
+  /* collectible card */
+  #card{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(0.8);z-index:55;display:none;width:300px;background:linear-gradient(160deg,#0d1820,#0a1016);border:1px solid var(--cyan);border-radius:14px;padding:0;overflow:hidden;box-shadow:0 0 40px rgba(0,212,255,0.25);opacity:0;transition:all .25s}
+  #card.show{display:block;opacity:1;transform:translate(-50%,-50%) scale(1)}
+  #card .cardtop{padding:10px 14px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #15303c}
+  #card .cspec{color:var(--gold);font-size:12px;letter-spacing:0.08em;font-weight:bold}
+  #card .crar{font-size:9px;padding:2px 7px;border-radius:4px;letter-spacing:0.08em}
+  #cardcanvas{display:block;width:300px;height:170px;background:#06121a}
+  #card .cardbody{padding:11px 14px}
+  #card .cid{color:var(--cyan);font-size:14px;letter-spacing:0.12em;text-align:center;margin-bottom:8px;font-weight:bold}
+  #card .crow{display:flex;justify-content:space-between;font-size:10px;color:var(--dim);padding:2px 0}
+  #card .crow b{color:var(--green)}
+  #card .cbtn{width:100%;margin-top:10px;background:var(--cyan);color:#04121a;border:none;padding:7px;border-radius:6px;cursor:pointer;font:11px var(--mono);letter-spacing:0.1em;text-transform:uppercase}
+
+  #reveal{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:60;background:rgba(7,10,12,0.97);border:1px solid var(--gold);border-radius:10px;padding:22px 30px;text-align:center;display:none;max-width:530px;max-height:90vh;overflow:auto}
+  #reveal h2{color:var(--gold);font-size:14px;letter-spacing:0.09em;margin-bottom:14px}
+  #reveal .eq{font-size:13px;color:var(--cyan);margin:5px 0;font-family:Georgia,serif}
+  #reveal .eq.g{color:var(--green)} #reveal .eq.p{color:var(--pink)}
+  #reveal .desc{font-size:10px;color:#9aa;line-height:1.95;margin:14px 0}
+  #reveal .desc b{color:var(--green)} #reveal .desc i{color:var(--cyan)} #reveal .desc u{color:var(--pink);text-decoration:none}
+  #reveal button{background:var(--gold);color:#1a1206;border:none;padding:6px 22px;border-radius:4px;cursor:pointer;font-family:inherit;font-size:10px;text-transform:uppercase;letter-spacing:0.1em;margin-top:6px}
+  @media (max-width:980px){ #read{margin-left:0;min-width:0} #sub{max-width:90vw} }
+</style>
+</head>
+<body>
+
+<canvas id="cv"></canvas>
+<button id="uiToggle" title="hide panels (H)">hide UI</button>
+
+<div id="hud">
+  <div id="hdr">
+    <button class="fold" id="foldHdr">−</button>
+    <div id="ttl">DFWCatium v1.1 — the nose is the fingerprint</div>
+    <div id="sub">The <b>nose-print</b> is the real biometric — a bead-and-groove pattern proven unique & lifelong (dogs: Choi 2021; cattle: Petersen 1922). Coat looks like the fingerprint but is the <span class="pk">weak</span> signal, so we lock on the nose. Minutiae form a <b>constellation</b>; we hash geometric <b>pairs</b> into invariant tokens (== <b>Shazam</b>), then <span class="gd">RANSAC</span> counts inliers. Lock fires when captured bits beat the <b>birthday bound</b> <b>2·log₂(N)+margin</b>. Bad capture → <span class="pk">SIGNAL LOST</span>; huge N → <span class="pk">COLLISION</span>; too much detail → <span class="pk">compute flood</span>. Push a slider to the limit; if it breaks, pull it back.</div>
+  </div>
+  <div id="read">
+    <button class="fold" id="foldRead">−</button>
+    <h>THE LOCK</h>
+    <div class="hr"></div>
+    <table><tbody>
+      <tr><td class="k">subject</td><td class="v cy" id="rSpec">—</td></tr>
+      <tr><td class="k">capture quality</td><td class="v" id="rQ">—</td></tr>
+      <tr><td class="k">minutiae detected</td><td class="v cy" id="rMin">—</td></tr>
+      <tr><td class="k">pair-hashes</td><td class="v st" id="rHash">—</td></tr>
+      <tr><td class="k">RANSAC inliers</td><td class="v gold" id="rInl">—</td></tr>
+      <tr><td class="hr" colspan="2"></td></tr>
+      <tr><td class="k">database N</td><td class="v pk" id="rN">—</td></tr>
+      <tr><td class="k">required bits</td><td class="v am" id="rReq">—</td></tr>
+      <tr><td class="k">captured bits</td><td class="v" id="rBits">—</td></tr>
+      <tr><td class="k">compute load</td><td class="v" id="rLoad">—</td></tr>
+    </tbody></table>
+    <div id="verdict">—</div>
+    <div id="lockwrap"><div id="lockbar"><div id="lockfill"></div></div><div id="lockpct">lock 0%</div></div>
+    <div class="ref">noseprint dermatoglyphics <b>Petersen 1922 · Choi 2021</b> · pair-hash == <b>Shazam (Wang 2003)</b> · geometric hashing <b>Lamdan–Wolfson 1988</b> · RANSAC verify <b>HotSpotter</b> · birthday bound <b>Daugman</b> · χ=2 · always</div>
+  </div>
+</div>
+
+<div id="bar">
+  <div class="ctl"><span class="klbl">distance</span><input id="sDist" type="range" min="0" max="100" step="1" value="80"><span class="val" id="vDist">80</span></div>
+  <div class="ctl"><span class="klbl">focus</span><input id="sFocus" type="range" min="0" max="100" step="1" value="78"><span class="val" id="vFocus">78</span></div>
+  <div class="ctl"><span class="klbl">light</span><input id="sLight" type="range" min="0" max="100" step="1" value="68"><span class="val" id="vLight">68</span></div>
+  <div class="ctl"><span class="klbl">steady</span><input id="sSteady" type="range" min="0" max="100" step="1" value="75"><span class="val" id="vSteady">75</span></div>
+  <span class="sep"></span>
+  <div class="ctl"><span class="klbl">database N</span><input id="sN" type="range" min="0" max="100" step="1" value="55"><span class="val" id="vN">1M</span></div>
+  <div class="ctl"><span class="klbl">detail</span><input id="sDetail" type="range" min="0" max="100" step="1" value="45"><span class="val" id="vDetail">45</span></div>
+  <span class="sep"></span>
+  <button id="bSpecies" title="cat / dog">subject: CAT</button>
+  <button id="bReset">rescan</button>
+  <button id="bReveal">reveal</button>
+</div>
+
+<div id="flood">
+  <div class="big">⚠ COMPUTE LIMIT</div>
+  <div class="msg">Too many candidate minutiae to hash per frame — the constellation outgrew the budget, so the scanner freezes.<br>Pull <b>detail</b> back to bring the matcher online.</div>
+  <div class="load" id="floodLoad"></div>
+</div>
+
+<div id="card">
+  <div class="cardtop"><span class="cspec" id="cardSpec">CAT</span><span class="crar" id="cardRar">COMMON</span></div>
+  <canvas id="cardcanvas" width="300" height="170"></canvas>
+  <div class="cardbody">
+    <div class="cid" id="cardId">NOSE::0000-0000</div>
+    <div class="crow"><span>captured entropy</span><b id="cardBits">— bits</b></div>
+    <div class="crow"><span>minutiae locked</span><b id="cardMin">—</b></div>
+    <div class="crow"><span>uniqueness vs N</span><b id="cardUniq">—</b></div>
+    <button class="cbtn" id="cardBtn">scan another</button>
+  </div>
+</div>
+
+<div id="reveal">
+  <h2>HOW DO YOU LOCK A CAT BY ITS NOSE? (funny graph math)</h2>
+  <div class="eq">minutiae → a 2-D constellation of points</div>
+  <div class="eq g">hash geometric PAIRS → invariant tokens (== Shazam)</div>
+  <div class="eq">RANSAC inliers = one consistent transform</div>
+  <div class="eq p">lock when captured bits ≥ 2·log₂(N) + margin</div>
+  <div class="desc">
+    The coat <i>looks</i> like the fingerprint, but it melts — molt, light, pose,<br>
+    left flank ≠ right flank. The <b>nose</b> is the real one: a bead-and-groove<br>
+    pattern, unique and unchanging for life (proven in dogs, 2021; in cattle, 1922).<br><br>
+    We treat its junctions as a <b>constellation of points</b>, exactly like Shazam<br>
+    treats spectrogram peaks. We hash <b>pairs</b> of points into tokens that don't<br>
+    care about rotation or scale, look them up in an inverted table, then run<br>
+    <b>RANSAC</b> — keep only the matches that agree on a single geometry. That<br>
+    agreement is the image-domain twin of Shazam's time-coherence spike.<br><br>
+    How sharp a photo do you need? Enough to separate one nose from <b>N</b> of them.<br>
+    The <u>birthday bound</u> says you need about <b>2·log₂(N)+margin</b> bits — roughly<br>
+    <b>60 bits to be unique among a million cats</b>, which a clean nose carries easily.<br>
+    Blur the shot and the minutiae vanish; the captured bits fall below the line;<br>
+    the lock won't fire. So the whole game is the <i>capture loop</i>: come closer,<br>
+    hold steady, more light — until the nose gives up enough of itself.<br><br>
+    <u>Honest:</u> real apps quote 95–99%, but the numbers are vendor claims on clean<br>
+    images; wet, moving noses are the true bottleneck. This is a toy that shows<br>
+    the shape of the problem — not a shipping matcher. χ = 2 · always.
+  </div>
+  <button id="xReveal">LOCK IT IN</button>
+</div>
+
+<script>
+"use strict";
+// ============================================================
+// DFWCatium v1.1 — noseprint fast-lock simulator
+// ============================================================
+var cv=document.getElementById("cv"), ctx=cv.getContext("2d");
+var W=0,H=0,DPR=1, cx=0, cy=0, R=0;
+
+// ---- constants (grounded estimates) ----
+var B_PER_MIN=3.3;      // bits of entropy per reliable minutia (~fingerprint scale)
+var MARGIN=20;          // birthday-bound safety margin (bits)
+var INLIER_MIN=12;      // min RANSAC inliers to verify (cattle ~9-of-12 floor, scaled)
+var MIN_MIN=8;          // min detected minutiae to attempt a lock
+var DETAIL_BUDGET=170;  // candidate-minutiae compute budget → flood above
+
+var S={ dist:80, focus:78, light:68, steady:75, n:55, detail:45,
+        species:"CAT", overload:false, frameMs:16, fps:60 };
+
+// state
+var L={ Q:0, qDist:0,qFocus:0,qLight:0,qSteady:0, Mtot:0, Mdet:0, hashes:0, inliers:0,
+        reqBits:0, bits:0, lockProg:0, charge:0, locked:false, scanning:false, verdict:"—",
+        feedback:"", scanY:0, jx:0, jy:0, t:0 };
+
+// minutiae set (nose-local, seeded so a "scan" is stable)
+var MIN=[];  // {x,y, q} in local [-1..1]
+var seed=12345;
+function rnd(){ seed=(seed*1103515245+12345)&0x7fffffff; return seed/0x7fffffff; }
+function buildMinutiae(){
+  MIN.length=0;
+  S.Mtot = Math.round(20 + (S.detail/100)*180);   // 20..200 candidate minutiae
+  if(S.Mtot>DETAIL_BUDGET){ return; }              // overloaded: skip build
+  seed = S.species==="CAT"? 12345 : 67890;
+  for(var i=0;i<S.Mtot;i++){
+    // sample inside the rhinarium ellipse (rejection)
+    var x,y,ok=false,tries=0;
+    while(!ok && tries<20){ x=rnd()*2-1; y=rnd()*2-1; tries++;
+      var ex=x/0.92, ey=(y-0.05)/0.86;
+      if(ex*ex+ey*ey<=1 && !(y>0.28 && Math.abs(x)<0.18)) ok=true; // avoid philtrum gap
+    }
+    MIN.push({ x:x, y:y, q:0.5+rnd()*0.5 });       // per-minutia base detectability
+  }
+  MIN_ORDER = MIN.map(function(_,i){return i;}).sort(function(a,b){return MIN[b].q-MIN[a].q;});
+}
+var MIN_ORDER=[];
+
+// ---- slider → capture-quality components ----
+function qOfDist(){ var d=S.dist/100; var q=Math.min(1,d/0.85); if(d>0.92)q-=(d-0.92)/0.08*0.35; return Math.max(0,q); }
+function qOfFocus(){ return S.focus/100; }
+function qOfLight(){ var l=S.light/100; return Math.max(0, 1-Math.abs(l-0.70)/0.70); }
+function qOfSteady(){ return S.steady/100; }
+function dbN(){ return Math.round(Math.pow(10, 1+(S.n/100)*8)); }   // 10 .. 1e9
+
+function step(dt){
+  if(S.overload) return;
+  L.t+=dt;
+  L.qDist=qOfDist(); L.qFocus=qOfFocus(); L.qLight=qOfLight(); L.qSteady=qOfSteady();
+  // focus weighted most (blur is the dominant failure)
+  L.Q = Math.pow(L.qDist,0.9)*Math.pow(L.qFocus,1.25)*Math.pow(L.qLight,0.8)*Math.pow(L.qSteady,1.0);
+  L.Q = Math.max(0,Math.min(1,L.Q));
+  // detectable minutiae: smooth fraction of the constellation, gated by quality & steadiness
+  var detFrac=Math.pow(L.Q,1.25);
+  var keep=detFrac*(0.6+0.4*L.qSteady);
+  L.Mdet=Math.max(0,Math.min(MIN.length, Math.round(MIN.length*keep)));
+  for(var i=0;i<MIN.length;i++) MIN[i].det=false;
+  for(i=0;i<L.Mdet;i++) MIN[MIN_ORDER[i]].det=true;   // strongest minutiae detected first
+  // pair-hashes (Shazam-style anchor→zone pairing); ~fanout per detected anchor
+  var FAN=5; L.hashes = Math.max(0, L.Mdet*FAN - FAN);
+  // RANSAC inliers: fraction consistent rises with quality
+  L.inliers = Math.round(L.Mdet*(0.35+0.65*L.Q));
+  // entropy: captured bits vs birthday-bound requirement
+  L.bits = L.Mdet*B_PER_MIN;
+  L.reqBits = 2*Math.log2(dbN()) + MARGIN;
+  // lock progress = min of the three gates
+  var gA = L.bits/L.reqBits;
+  var gB = L.inliers/INLIER_MIN;
+  var gC = L.Mdet/MIN_MIN;
+  L.lockProg = Math.max(0, Math.min(gA, gB, gC));
+  // charge the lock when all gates clear
+  if(!L.locked && L.scanning){
+    if(L.lockProg>=1) L.charge += dt*0.9; else L.charge -= dt*1.5;
+    if(L.charge<0)L.charge=0; if(L.charge>1)L.charge=1;
+    if(L.charge>=1){ L.locked=true; mintCard(); }
+  }
+  // verdict + feedback
+  if(L.Mdet<MIN_MIN){ L.verdict="SIGNAL LOST"; L.feedback=weakMsg(); }
+  else if(L.bits<L.reqBits){
+    if(L.Q<0.5){ L.verdict="SIGNAL LOST"; L.feedback=weakMsg(); }        // capture is the weak link
+    else { L.verdict="COLLISION RISK"; L.feedback="database too large — shrink N"; } // capture fine, N too big
+  }
+  else if(L.inliers<INLIER_MIN){ L.verdict="VERIFYING…"; L.feedback="hold steady"; }
+  else if(L.lockProg>=1){ L.verdict="LOCKING…"; L.feedback="hold it…"; }
+  else { L.verdict="ADJUSTING…"; L.feedback=weakMsg(); }
+  if(!L.scanning && !L.locked){ L.verdict="IDLE"; L.feedback="▶ tap to scan"; }
+  if(L.locked){ L.verdict="LOCKED ✦"; L.feedback="registered"; }
+  // scan line sweep
+  L.scanY=(L.scanY+dt*0.6)%1;
+  // hand jitter
+  var amp=(1-L.qSteady)*12;
+  L.jx=Math.sin(L.t*13.3)*amp*0.5 + (Math.random()-0.5)*amp*0.4;
+  L.jy=Math.cos(L.t*11.1)*amp*0.5 + (Math.random()-0.5)*amp*0.4;
+}
+function weakMsg(){
+  var arr=[[L.qDist,"come closer"],[L.qFocus,"focusing — hold steady"],[L.qLight,"more light"],[L.qSteady,"hold steady"]];
+  if(S.dist/100>0.92) arr[0][1]="too close";
+  if(S.light/100>0.92) arr[2][1]="too bright";
+  arr.sort(function(a,b){return a[0]-b[0];});
+  return arr[0][1];
+}
+
+// ============================================================
+//  RENDER
+// ============================================================
+function frame(now){
+  var dt=Math.min((now-lastTS)/1000,0.05); lastTS=now;
+  S.frameMs=S.frameMs*0.9+(now-lastDraw)*0.1; lastDraw=now; S.fps=Math.round(1000/Math.max(1,S.frameMs));
+  var load=S.Mtot;
+  if(!S.overload && load>DETAIL_BUDGET) S.overload=true;
+  if(S.overload && load<=DETAIL_BUDGET){ S.overload=false; buildMinutiae(); }
+  document.getElementById("flood").classList.toggle("on",S.overload);
+  if(S.overload){ document.getElementById("floodLoad").textContent="candidate minutiae "+load+"  /  budget "+DETAIL_BUDGET+"   ·   detail "+S.detail; setLoad(load); ctx.clearRect(0,0,W,H); requestAnimationFrame(frame); return; }
+  step(dt);
+  ctx.clearRect(0,0,W,H);
+  drawCamera(); drawNose(); drawConstellation(); drawReticle(); drawFeedback();
+  refreshReadout(); setLoad(load);
+  requestAnimationFrame(frame);
+}
+
+function drawCamera(){
+  // subtle vignette / camera feel
+  var g=ctx.createRadialGradient(cx,cy,R*0.2,cx,cy,Math.max(W,H)*0.7);
+  g.addColorStop(0,"#0a141a"); g.addColorStop(1,"#04080b");
+  ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+}
+function noseColor(a){ return "rgba(40,28,30,"+a+")"; }
+function drawNose(){
+  var jx=L.jx, jy=L.jy;
+  ctx.save(); ctx.translate(cx+jx, cy+jy);
+  var rx=R*0.92, ry=R*0.86;
+  // rhinarium body
+  var grad=ctx.createRadialGradient(-rx*0.2,-ry*0.2,R*0.1,0,0,rx);
+  grad.addColorStop(0,"#3a2a2c"); grad.addColorStop(0.7,"#241a1c"); grad.addColorStop(1,"#160f10");
+  ctx.fillStyle=grad; ctx.beginPath(); ctx.ellipse(0,R*0.05,rx,ry,0,0,6.2832); ctx.fill();
+  // bead texture (faint stipple) — the dermatoglyphic surface
+  ctx.fillStyle="rgba(90,66,68,0.18)";
+  for(var i=0;i<260;i++){ var a=(i*2.399), rr=Math.sqrt((i%50)/50)*rx*0.95;
+    var bx=Math.cos(a)*rr, by=R*0.05+Math.sin(a)*rr*(ry/rx);
+    ctx.beginPath(); ctx.arc(bx,by,1.1,0,6.2832); ctx.fill(); }
+  // nostrils
+  ctx.fillStyle="#0a0708";
+  ctx.beginPath(); ctx.ellipse(-rx*0.42,R*0.12,rx*0.20,ry*0.30,-0.5,0,6.2832); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(rx*0.42,R*0.12,rx*0.20,ry*0.30,0.5,0,6.2832); ctx.fill();
+  // philtrum
+  ctx.strokeStyle="rgba(10,7,8,0.8)"; ctx.lineWidth=R*0.04;
+  ctx.beginPath(); ctx.moveTo(0,R*0.30); ctx.lineTo(0,R*0.86); ctx.stroke();
+  // focus blur veil: overlay translucent when focus low
+  var blur=1-L.qFocus; if(blur>0.02){ ctx.fillStyle="rgba(10,16,20,"+(blur*0.55)+")"; ctx.beginPath(); ctx.ellipse(0,R*0.05,rx,ry,0,0,6.2832); ctx.fill(); }
+  // darkness veil when light low
+  var dark=1-Math.min(1,S.light/70); if(dark>0.02){ ctx.fillStyle="rgba(0,0,0,"+(dark*0.5)+")"; ctx.beginPath(); ctx.ellipse(0,R*0.05,rx,ry,0,0,6.2832); ctx.fill(); }
+  ctx.restore();
+}
+function L2S(p){ return { x:cx+L.jx+p.x*R*0.92, y:cy+L.jy+R*0.05+p.y*R*0.86 }; }
+function drawConstellation(){
+  // pair-hash edges among detected minutiae (cyan), inliers gold
+  var det=[]; for(var i=0;i<MIN.length;i++){ if(MIN[i].det){ MIN[i]._s=L2S(MIN[i]); det.push(MIN[i]); } }
+  // mark first `inliers` as inliers (schematic geometric-consistent set)
+  for(i=0;i<det.length;i++) det[i]._in = (i<L.inliers);
+  // edges: each anchor → nearest few detected (Shazam target-zone pairing)
+  ctx.lineWidth=0.8;
+  for(i=0;i<det.length;i++){
+    var a=det[i]; // find a few nearest
+    var nn=[];
+    for(var j=0;j<det.length;j++){ if(j===i)continue; var b=det[j];
+      var dx=a._s.x-b._s.x, dy=a._s.y-b._s.y; nn.push([dx*dx+dy*dy,j]); }
+    nn.sort(function(p,q){return p[0]-q[0];});
+    var fan=Math.min(4,nn.length);
+    for(var k=0;k<fan;k++){ var b2=det[nn[k][1]];
+      var inlier=a._in&&b2._in;
+      ctx.strokeStyle= inlier? "rgba(255,215,0,0.55)" : "rgba(0,212,255,0.22)";
+      ctx.beginPath(); ctx.moveTo(a._s.x,a._s.y); ctx.lineTo(b2._s.x,b2._s.y); ctx.stroke();
+    }
+  }
+  // minutiae points
+  for(i=0;i<det.length;i++){ var p=det[i];
+    if(p._in){ ctx.fillStyle="#ffd700"; ctx.beginPath(); ctx.arc(p._s.x,p._s.y,2.6,0,6.2832); ctx.fill();
+      ctx.strokeStyle="rgba(255,215,0,0.4)"; ctx.lineWidth=1; ctx.beginPath(); ctx.arc(p._s.x,p._s.y,5,0,6.2832); ctx.stroke();
+    } else { ctx.fillStyle="#22e0ff"; ctx.beginPath(); ctx.arc(p._s.x,p._s.y,2.0,0,6.2832); ctx.fill(); }
+  }
+  // undetected candidates (very faint) so you feel detail you're missing
+  ctx.fillStyle="rgba(120,140,150,0.10)";
+  for(i=0;i<MIN.length;i++){ if(!MIN[i].det){ var s=L2S(MIN[i]); ctx.beginPath(); ctx.arc(s.x,s.y,1.2,0,6.2832); ctx.fill(); } }
+}
+function drawReticle(){
+  var col = L.locked? "#00ffd5" : (!L.scanning)? "#3a6b80" : (L.verdict==="SIGNAL LOST"||L.verdict==="COLLISION RISK")? "#ff4f9b" : "#ffb454";
+  var s=R*1.18, L0=R*0.34, lw=3;
+  ctx.strokeStyle=col; ctx.lineWidth=lw;
+  var corners=[[-1,-1],[1,-1],[1,1],[-1,1]];
+  for(var c=0;c<4;c++){ var dx=corners[c][0], dy=corners[c][1]; var x=cx+dx*s, y=cy+dy*s;
+    ctx.beginPath(); ctx.moveTo(x, y-dy*L0); ctx.lineTo(x,y); ctx.lineTo(x-dx*L0,y); ctx.stroke(); }
+  // scan line (only while actively scanning)
+  if(L.scanning && !L.locked){ var sy=cy-s+ (L.scanY*2*s); ctx.strokeStyle="rgba(34,224,255,0.5)"; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.moveTo(cx-s,sy); ctx.lineTo(cx+s,sy); ctx.stroke(); }
+  // lock ring
+  if(L.charge>0 && !L.locked){ ctx.strokeStyle="rgba(0,255,213,0.8)"; ctx.lineWidth=3;
+    ctx.beginPath(); ctx.arc(cx,cy,s*1.06,-1.5708,-1.5708+L.charge*6.2832); ctx.stroke(); }
+}
+function drawFeedback(){
+  ctx.textAlign="center";
+  var col = L.locked? "#00ffd5" : (!L.scanning)? "#22e0ff" : (L.verdict==="SIGNAL LOST"||L.verdict==="COLLISION RISK")? "#ff4f9b" : "#ffe0b0";
+  var idle=(!L.scanning && !L.locked);
+  ctx.globalAlpha = idle? (0.5+0.5*Math.sin(L.t*3)) : 1;
+  ctx.fillStyle=col; ctx.font="bold "+(idle?18:16)+"px ui-monospace,monospace";
+  ctx.fillText(L.feedback.toUpperCase(), cx, cy+R*1.5);
+  ctx.globalAlpha=1;
+  ctx.textAlign="left";
+}
+
+// ============================================================
+//  CARD MINT
+// ============================================================
+function fnv(str){ var h=0x811c9dc5; for(var i=0;i<str.length;i++){ h^=str.charCodeAt(i); h=(h*0x01000193)>>>0; } return h>>>0; }
+function mintCard(){
+  // hash the locked minutiae positions → fingerprint id
+  var str=S.species+":"; var det=[]; for(var i=0;i<MIN.length;i++){ if(MIN[i].det){ det.push(MIN[i]); str+=(MIN[i].x.toFixed(3))+(MIN[i].y.toFixed(3)); } }
+  var h=fnv(str), h2=fnv(str+"salt");
+  var hex=(h.toString(16)+h2.toString(16)).toUpperCase().slice(0,12);
+  var id=(S.species==="CAT"?"CAT":"DOG")+"::"+hex.slice(0,4)+"-"+hex.slice(4,8)+"-"+hex.slice(8,12);
+  var bits=Math.round(L.bits);
+  var rar = bits>150?"MYTHIC":bits>110?"RARE":bits>75?"UNCOMMON":"COMMON";
+  var rcol = bits>150?"#ff4f9b":bits>110?"#b38bff":bits>75?"#00d4ff":"#7fa8c0";
+  document.getElementById("cardSpec").textContent=S.species;
+  var rarEl=document.getElementById("cardRar"); rarEl.textContent=rar; rarEl.style.background=rcol; rarEl.style.color="#06121a";
+  document.getElementById("cardId").textContent=id;
+  document.getElementById("cardBits").textContent=bits+" bits";
+  document.getElementById("cardMin").textContent=L.Mdet+" / "+S.Mtot;
+  var headroom=Math.max(0,bits-L.reqBits);
+  document.getElementById("cardUniq").textContent="1 in "+dbN().toLocaleString()+"  (+"+Math.round(headroom)+" bits)";
+  // draw the noseprint thumbnail onto the card canvas
+  var cc=document.getElementById("cardcanvas"), cg=cc.getContext("2d");
+  cg.fillStyle="#06121a"; cg.fillRect(0,0,300,170);
+  var ox=150,oy=85,rr=66;
+  cg.fillStyle="#241a1c"; cg.beginPath(); cg.ellipse(ox,oy+5,rr,rr*0.92,0,0,6.2832); cg.fill();
+  cg.fillStyle="#0a0708"; cg.beginPath(); cg.ellipse(ox-rr*0.42,oy+10,rr*0.2,rr*0.3,-0.5,0,6.2832); cg.fill();
+  cg.beginPath(); cg.ellipse(ox+rr*0.42,oy+10,rr*0.2,rr*0.3,0.5,0,6.2832); cg.fill();
+  for(i=0;i<det.length;i++){ var p=det[i]; var px=ox+p.x*rr*0.92, py=oy+5+p.y*rr*0.86;
+    cg.strokeStyle="rgba(255,215,0,0.4)"; cg.lineWidth=0.6;
+    if(i>0){ var q=det[i-1]; cg.beginPath(); cg.moveTo(ox+q.x*rr*0.92,oy+5+q.y*rr*0.86); cg.lineTo(px,py); cg.stroke(); }
+    cg.fillStyle="#ffd700"; cg.beginPath(); cg.arc(px,py,1.8,0,6.2832); cg.fill(); }
+  document.getElementById("card").classList.add("show");
+}
+
+// ============================================================
+//  READOUTS
+// ============================================================
+function refreshReadout(){
+  setTxt("rSpec", S.species+" · noseprint");
+  var q=document.getElementById("rQ"); if(q){ q.textContent=(L.Q*100).toFixed(0)+"%"; q.className="v"+(L.Q>0.6?" gr":(L.Q>0.35?" am":" pk")); }
+  setTxt("rMin", L.Mdet+" / "+S.Mtot);
+  setTxt("rHash", L.hashes.toLocaleString());
+  var inl=document.getElementById("rInl"); if(inl){ inl.textContent=L.inliers+" / "+INLIER_MIN+(L.inliers>=INLIER_MIN?" ✓":""); inl.className="v"+(L.inliers>=INLIER_MIN?" gold":" pk"); }
+  setTxt("rN", fmtN(dbN()));
+  setTxt("rReq", L.reqBits.toFixed(0)+" bits");
+  var b=document.getElementById("rBits"); if(b){ b.textContent=L.bits.toFixed(0)+" bits"; b.className="v"+(L.bits>=L.reqBits?" gr":" pk"); }
+  // verdict
+  var v=document.getElementById("verdict"); if(v){
+    var m={ "LOCKED ✦":["LOCKED ✦","#00ffd5","rgba(0,255,213,0.14)"],
+            "LOCKING…":["LOCKING…","#00d4ff","rgba(0,212,255,0.10)"],
+            "VERIFYING…":["VERIFYING…","#ffb454","rgba(255,180,84,0.10)"],
+            "ADJUSTING…":["ADJUSTING…","#ffb454","rgba(255,180,84,0.08)"],
+            "SIGNAL LOST":["SIGNAL LOST","#ff4f9b","rgba(255,79,155,0.14)"],
+            "COLLISION RISK":["COLLISION RISK · N too high","#ff4f9b","rgba(255,79,155,0.14)"],
+            "—":["—","#5f6b74","transparent"] }[L.verdict]||["—","#5f6b74","transparent"];
+    v.textContent=m[0]; v.style.color=m[1]; v.style.background=m[2];
+  }
+  var pct=Math.min(100,Math.round(L.lockProg*100));
+  document.getElementById("lockfill").style.width=(L.locked?100:pct)+"%";
+  document.getElementById("lockpct").textContent= L.locked? "LOCKED · charge "+Math.round(L.charge*100)+"%" : "lock "+pct+"%  ·  charge "+Math.round(L.charge*100)+"%";
+}
+function fmtN(n){ if(n>=1e9)return (n/1e9).toFixed(1)+"B"; if(n>=1e6)return (n/1e6).toFixed(n>=1e7?0:1)+"M"; if(n>=1e3)return (n/1e3).toFixed(0)+"k"; return ""+n; }
+function setLoad(load){ var el=document.getElementById("rLoad"); if(el){ el.textContent=load+" / "+DETAIL_BUDGET; el.className="v"+(load>DETAIL_BUDGET?" pk":(load>DETAIL_BUDGET*0.75?" gold":"")); } }
+function setTxt(id,t){ var e=document.getElementById(id); if(e)e.textContent=t; }
+
+// ============================================================
+//  CONTROLS
+// ============================================================
+function bind(id,key){ var e=document.getElementById(id); e.addEventListener("input",function(){ S[key]=+this.value; var lab=document.getElementById("v"+id.slice(1)); if(lab){ lab.textContent = key==="n"? fmtN(dbN()) : this.value; } if(key==="detail"){ buildMinutiae(); } }); }
+bind("sDist","dist"); bind("sFocus","focus"); bind("sLight","light"); bind("sSteady","steady"); bind("sN","n"); bind("sDetail","detail");
+document.getElementById("bSpecies").addEventListener("click",function(){ S.species = S.species==="CAT"?"DOG":"CAT"; this.textContent="subject: "+S.species; rescan(); });
+document.getElementById("bReset").addEventListener("click",rescan);
+document.getElementById("cardBtn").addEventListener("click",function(){ document.getElementById("card").classList.remove("show"); rescan(); });
+document.getElementById("bReveal").addEventListener("click",function(){ document.getElementById("reveal").style.display="block"; });
+document.getElementById("xReveal").addEventListener("click",function(){ document.getElementById("reveal").style.display="none"; });
+document.addEventListener("click",function(e){ var r=document.getElementById("reveal"); if(r.style.display==="block"&&!r.contains(e.target)&&e.target.id!=="bReveal")r.style.display="none"; });
+function fold(b,p){ var B2=document.getElementById(b),P=document.getElementById(p); if(B2&&P)B2.addEventListener("click",function(){ P.classList.toggle("folded"); B2.textContent=P.classList.contains("folded")?"+":"−"; }); }
+fold("foldHdr","hdr"); fold("foldRead","read");
+document.getElementById("uiToggle").addEventListener("click",function(){ document.body.classList.toggle("hideui"); this.textContent=document.body.classList.contains("hideui")?"show UI":"hide UI"; });
+window.addEventListener("keydown",function(e){ if(e.key==="h"||e.key==="H")document.getElementById("uiToggle").click(); });
+
+// ============================================================
+//  INIT
+// ============================================================
+cv.addEventListener("click",function(){ if(!L.scanning && !L.locked){ L.scanning=true; L.charge=0; L.scanY=0; } });
+function rescan(){ document.getElementById("card").classList.remove("show"); L.locked=false; L.scanning=false; L.charge=0; L.scanY=0; buildMinutiae(); }
+function resize(){ DPR=Math.min(window.devicePixelRatio||1,2); W=window.innerWidth; H=window.innerHeight; cv.width=W*DPR; cv.height=H*DPR; cv.style.width=W+"px"; cv.style.height=H+"px"; ctx.setTransform(DPR,0,0,DPR,0,0);
+  cx=W*0.5; cy=H*0.47; R=Math.min(W,H)*0.20; buildMinutiae(); }
+window.addEventListener("resize",resize);
+var lastTS=performance.now(), lastDraw=performance.now();
+resize(); requestAnimationFrame(frame);
+</script>
+</body></html>

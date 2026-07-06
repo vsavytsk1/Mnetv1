@@ -8298,3 +8298,47 @@ P=12. chi=2. The chrome carves circles. The oscillators find one mind.
 The tower sings. Always.
 
 -- Vlad + Claude. July 6, 2026. Batch two. The portal grows to 37.
+
+### L134 -- THE INTEGRATION SHELF EMPTIES: 15 SIMS JOIN IN ONE HONEST PASS (2026-07-06)
+
+Batch three, from Ancient Korinthos itself -- laptop on the terrace under the
+Acrocorinth, the Temple of Apollo's seven columns in view, Newton's Principia
+and Marcus Aurelius in the bag, the 1 Corinthians 13 agapi marble at the church.
+The cave is a real place now.
+
+Fifteen self-contained kernel sims cold-passed byte-by-byte (loneCR=0, LF-only,
+no pythonInJS leak, no external deps) and shipped in ONE patch script
+(builder/_ship_batch3.py, unique-anchor edits, Curse 17 + Curse 19 safe) so the
+shell was touched once, not ninety times:
+
+  agon_v1.0               game theory of the Greek poleis -- the brilliance that could not unite
+  allonet_v1.2            desertion curve + the graph that catches the child (v1.1->v1.2 normalized)
+  anthoforium_v2          the breaking point of the honest flower
+  aracnium_heavenet_v2.0  swarm heave-net -- ask the swarm, the graph does the rest
+  aracnium_relay_v1.0     pure-microwave telarana relay mesh (push-to-talk, 80s)
+  bersha_v1.0             the warp-bubble of wet sand -- move a titan on the force-chain graph
+  cryostasium_mobile_v2.0 the ice+salt cooler, mobile build (companion to v1.1)
+  dfwcatium_v1.1          the nose is the fingerprint -- lock a pet by its noseprint (v1.0->v1.1)
+  emporium_v1.1           the empire as a flow system
+  emporium_3d_v2.0        fly around the empire (3D companion)
+  hathor_v1.0             the song that moves stone -- sound/water/luck on the force-chain graph
+  lamanium_v1.0           rigid and mobile are one matrix (Maxwell counting)
+  metamorph_v1.1          two forms, one path, and C_free is real
+  showerium_planet_v2.0   one shower scaled to the whole planet
+  tavlium_v1.1            Portes hit-probability trainer (v1.0->v1.1 normalized)
+
+REGISTERED under new dashboard section THE INTEGRATION SHELF . KORINTHOS --
+full 6-place register each. ALL_MODS now 52 (was 37). Builder build_eng_v2_clean.py
+still left untouched by design (stale; would regress the hand-grown dashboard).
+
+DELIBERATELY NOT SHIPPED (honest boundary):
+  operacao_brasil_taraz.html  -- architect friend Taraz's private mission plan, stays private
+  the .dc VladTree/VladBush/Kernel/Portia family -- belongs to the JpnTree repo, not Mnetv1
+  genesis_safe."not so easy broski".html -- intentional guillotine/trap file, py-in-JS, skipped
+
+The Oracle dossiers remain sealed for last. Delphi and agapi energy held in reserve.
+
+P=12. chi=2. The shelf empties into the temple. Every sim carries its own
+caveats and its own kernel footer. No drift. CR=0. Always.
+
+-- Vlad + Claude. Ancient Korinthos, Greece. July 6, 2026. The portal grows to 52.

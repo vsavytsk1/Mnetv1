@@ -1,0 +1,345 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>ANTHOFORIUM v2 — the breaking point of the honest flower</title>
+<style>
+  :root{
+    --bg:#050508; --gold:#ffd700; --cyan:#00d4ff; --pink:#ff69b4; --green:#00ffd5;
+    --amber:#ffae42; --crim:#e0455e; --esp:#c7894a; --red:#ff5470; --dim:#6a6a82; --txt:#e8e0d0;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;background:var(--bg);color:var(--txt);font-family:var(--mono);overflow:hidden;touch-action:none}
+  #cv{position:fixed;inset:0;display:block}
+  #top{position:fixed;top:8px;left:8px;right:8px;z-index:6;display:flex;gap:10px;align-items:flex-start;pointer-events:none;flex-wrap:wrap}
+  #ttlbox{background:rgba(8,8,16,.82);border:1px solid #20202e;border-radius:8px;padding:7px 11px;max-width:560px}
+  #ttl{color:var(--gold);font-size:13px;letter-spacing:.05em}
+  #sub{color:var(--dim);font-size:9.5px;margin-top:2px;line-height:1.4}
+  #stat{margin-left:auto;background:rgba(8,8,16,.9);border:1px solid #20202e;border-radius:8px;padding:7px 12px;min-width:220px}
+  #stat .lab{font-size:8px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em}
+  #stat .v{font-size:15px;font-weight:bold;margin-top:1px}
+  #cards{position:fixed;top:66px;left:8px;z-index:6;display:grid;grid-template-columns:repeat(2,1fr);gap:5px;width:212px}
+  .mc{background:rgba(8,8,16,.86);border:1px solid #20202e;border-radius:6px;padding:5px 8px}
+  .mc .lab{font-size:7.5px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em}
+  .mc .val{font-size:15px;font-weight:bold}
+  #bar{position:fixed;bottom:0;left:0;right:0;z-index:10;background:rgba(8,8,16,.95);border-top:1px solid #20202e;
+    padding:7px 9px;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:7px 14px;align-items:center}
+  .sl{display:flex;flex-direction:column;gap:1px}
+  .sl .top{display:flex;justify-content:space-between;align-items:baseline}
+  .sl label{font-size:8px;color:var(--dim);text-transform:uppercase;letter-spacing:.05em}
+  .sl .v{font-size:10px;color:var(--gold);font-weight:bold}
+  .sl.inst label{color:var(--cyan)} .sl.inst .v{color:var(--cyan)}
+  input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:4px;background:#2a2a3a;border-radius:3px;outline:none}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:15px;height:15px;border-radius:50%;background:var(--gold);cursor:pointer;border:2px solid #050508}
+  .inst input[type=range]::-webkit-slider-thumb{background:var(--cyan)}
+  input[type=range]::-moz-range-thumb{width:15px;height:15px;border-radius:50%;background:var(--gold);cursor:pointer;border:2px solid #050508}
+  #btns{grid-column:1/-1;display:flex;gap:7px;justify-content:center;flex-wrap:wrap;margin-top:1px}
+  button{background:#14141f;border:1px solid #2a2a3a;border-radius:5px;color:var(--cyan);font:11px var(--mono);padding:5px 12px;cursor:pointer}
+  button:hover{border-color:var(--cyan)}
+  .wip{position:fixed;bottom:150px;left:8px;z-index:6;background:rgba(8,8,16,.92);border:1px solid var(--esp);border-radius:8px;
+    padding:6px 9px;font-size:8.5px;color:var(--esp);max-width:380px;line-height:1.5;display:none}
+  .wip.show{display:block} .wip b{color:var(--gold)}
+  #khint{position:fixed;bottom:150px;right:8px;z-index:6}
+  button#kbtn{font-size:9px;color:var(--esp);border-color:#3a2a1a}
+  .stamp{position:fixed;bottom:150px;left:50%;transform:translateX(-50%);z-index:5;font-size:8px;color:rgba(0,212,255,.25);letter-spacing:.08em;text-align:center;pointer-events:none}
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+
+<div id="top">
+  <div id="ttlbox">
+    <div id="ttl">ANTHOFORIUM v2 — the breaking point of the honest flower</div>
+    <div id="sub">flowers earn from the bees, bleed under cost pressure. at the desperation line a good owner either gets caught by a safety net, exits clean, or breaks into the jungle — and the jungle spreads. the barrier is made of institutions. turn the cyan knobs.</div>
+  </div>
+  <div id="stat">
+    <div class="lab">field state</div>
+    <div class="v" id="fs" style="color:var(--dim)">warming up…</div>
+    <div class="lab" style="margin-top:4px">phase</div>
+    <div class="v" id="phase" style="color:var(--cyan);font-size:12px">—</div>
+  </div>
+</div>
+
+<div id="cards">
+  <div class="mc"><div class="lab">honest 🌼</div><div class="val" id="m-h" style="color:var(--green)">—</div></div>
+  <div class="mc"><div class="lab">distressed 🥀</div><div class="val" id="m-d" style="color:var(--amber)">—</div></div>
+  <div class="mc"><div class="lab">broken (jungle) 🔥</div><div class="val" id="m-b" style="color:var(--crim)">—</div></div>
+  <div class="mc"><div class="lab">rescued / exited</div><div class="val" id="m-re" style="color:var(--cyan)">—</div></div>
+</div>
+
+<div class="wip" id="wip">
+  <b>honesty (K1–K7):</b><br>
+  <b>K1</b> the breaking point is modeled as a <i>phase change / bistable barrier</i> (dynamical-systems metaphor) — the inset well is illustrative, not a fitted potential.<br>
+  <b>K2</b> the institutional effect is the well-evidenced flip side of Gambetta/Varese/Tilly: rule of law + accessible credit RAISE the defection threshold and stop contagion. Build trust → the protection market shrinks.<br>
+  <b>K3</b> two knobs do DIFFERENT jobs: <b>credit/safety-net</b> stops <i>death</i> (rescues viable owners); <b>rule of law</b> stops <i>predation</i> (catches predators, protects neighbors). You need both.<br>
+  <b>K4</b> credit only rescues the <i>viable</i> — a structurally-unprofitable flower a loan can't save (honest, and true).<br>
+  <b>K5</b> "breaking" = desperation-driven defection under weak institutions. This is NOT "poor people are criminals" — the whole point is that institutions, not character, set the line.<br>
+  <b>K6</b> governance quality is measurable (World Bank WGI) and BUILDABLE — not any country's destiny.<br>
+  <b>K7</b> illustrative agent model, not a calibrated prediction. Tune to reality.
+</div>
+<div id="khint"><button id="kbtn">honesty K1–K7 ▸</button></div>
+<div class="stamp">ANTHOFORIUM v2 · MNet · institutions &gt; character</div>
+
+<div id="bar">
+  <div class="sl"><div class="top"><label>flowers</label><span class="v" id="v-n">10</span></div><input id="s-n" type="range" min="4" max="16" step="1" value="10"></div>
+  <div class="sl"><div class="top"><label>bee footfall</label><span class="v" id="v-arr">medium</span></div><input id="s-arr" type="range" min="1" max="100" step="1" value="55"></div>
+  <div class="sl"><div class="top"><label>decisiveness</label><span class="v" id="v-temp">balanced</span></div><input id="s-temp" type="range" min="0" max="100" step="1" value="45"></div>
+  <div class="sl"><div class="top"><label>bee diversity</label><span class="v" id="v-div">40%</span></div><input id="s-div" type="range" min="0" max="100" step="1" value="40"></div>
+  <div class="sl"><div class="top"><label>💸 cost pressure (the squeeze)</label><span class="v" id="v-cost">55%</span></div><input id="s-cost" type="range" min="0" max="100" step="1" value="55"></div>
+  <div class="sl inst"><div class="top"><label>⚖️ rule of law</label><span class="v" id="v-law">70%</span></div><input id="s-law" type="range" min="0" max="100" step="1" value="70"></div>
+  <div class="sl inst"><div class="top"><label>🛟 safety net / credit</label><span class="v" id="v-credit">70%</span></div><input id="s-credit" type="range" min="0" max="100" step="1" value="70"></div>
+  <div class="sl"><div class="top"><label>sim speed</label><span class="v" id="v-spd">1.0×</span></div><input id="s-spd" type="range" min="20" max="300" step="5" value="100"></div>
+  <div id="btns">
+    <button id="b-pause">pause</button>
+    <button id="b-shuffle">🌼 reseed field</button>
+    <button id="b-strong">🏛️ strong institutions</button>
+    <button id="b-crunch">💸 credit crunch (law only)</button>
+    <button id="b-weak">🌪️ weak state → jungle</button>
+  </div>
+</div>
+
+<script>
+"use strict";
+(function(){
+const cv=document.getElementById('cv'), ctx=cv.getContext('2d');
+let W,H,DPR;
+function resize(){ DPR=Math.min(devicePixelRatio||1,2); W=innerWidth; H=innerHeight; cv.width=W*DPR; cv.height=H*DPR; ctx.setTransform(DPR,0,0,DPR,0,0); place(); }
+addEventListener('resize',resize);
+const GOLD='#ffd700',CY='#00d4ff',GN='#00ffd5',AM='#ffae42',CR='#e0455e',DIM='#6a6a82',RED='#ff5470';
+
+const P={ n:10, arr:55, temp:45, div:40, cost:55, law:70, credit:70, spd:100, running:true };
+// fixed bee-choice weights (the competitive substrate)
+const QW=0.62*1.6, PS=0.5*1.4, LAZY=0.45*1.5, VIBEW=0.4*1.8, CROWDW=0.3*1.4;
+// economics
+const REVK=2.6, FIXB=0.30, FIXK=1.5, QCOST=0.45, BUF=30, DEBTMAX=32, priceScale=14, CAP=12, CATCH=0.006;
+
+let flowers=[], bees=[], edges=[], adj=[];
+let stats={rescued:0, exited:0, broke:0};
+function rand(a,b){ return a+Math.random()*(b-a); }
+function newHonest(f){ f.quality=rand(0.32,0.96); f.price=rand(8,16); f.vibe=Math.random(); f.vis=rand(0.2,1);
+  f.cash=BUF; f.state='honest'; f.distressT=0; f.respawn=0; f.picks=0.001; f.pulse=0; f.thorn=0; }
+function makeFlowers(){
+  flowers=[]; for(let i=0;i<P.n;i++){ const f={id:i}; newHonest(f); flowers.push(f); }
+  place(); computeEdges();
+}
+function place(){
+  if(!W) return; const N=flowers.length, y=H*0.60, x0=70, x1=W-70;
+  flowers.forEach((f,i)=>{ f.x=N>1? x0+(x1-x0)*(i/(N-1)) : (x0+x1)/2; f.y=y+(i%2?-1:1)*70; f.roadX=f.x; });
+}
+function computeEdges(){
+  edges=[]; adj=flowers.map(()=>[]);
+  for(let i=0;i<flowers.length;i++)for(let j=i+1;j<flowers.length;j++){
+    const dv=Math.abs(flowers[i].vibe-flowers[j].vibe);
+    if(dv<0.14){ edges.push([i,j,1-dv/0.14]); adj[i].push(j); adj[j].push(i); }
+  }
+}
+const ROAD_Y=()=>H*0.60;
+
+// ---------- bees ----------
+function beePref(){
+  const div=P.div/100, j=(b,a)=>b*(1+(Math.random()*2-1)*a*div);
+  return { qW:j(QW,0.9), pS:j(PS,0.9), lazy:j(LAZY,0.9), vibeW:j(VIBEW,0.9),
+    vibeTarget: Math.random()<div? Math.random() : 0.5+(Math.random()*2-1)*0.15*div };
+}
+function tempVal(){ return 0.06 + (P.temp/100)*0.9; }
+function utilities(bee, atX){
+  const T=tempVal(); const us=[]; let mx=-1e9;
+  for(const f of flowers){
+    if(f.state==='exited'){ us.push({U:-1e6}); continue; }
+    const qmul = f.state==='broken'?0.45:1;   // a captured/predatory place degrades
+    const U = bee.qW*f.quality*qmul - bee.pS*(f.price/priceScale) - bee.lazy*(Math.abs(f.roadX-atX)/W)
+            - bee.vibeW*Math.abs(f.vibe-bee.vibeTarget) + 0.5*f.vis + CROWDW*(f.occ0||0)/CAP;
+    us.push({U}); if(U>mx)mx=U;
+  }
+  let Z=0; for(const u of us){ u.e=Math.exp((u.U-mx)/T); Z+=u.e; }
+  for(const u of us) u.pi=u.e/Z; return us;
+}
+function choose(bee, atX){ const us=utilities(bee,atX); let r=Math.random(),a=0,k=0;
+  for(let i=0;i<us.length;i++){ a+=us[i].pi; if(r<=a){k=i;break;} k=i; } return k; }
+
+let sim=0, nextBee=0;
+function scheduleBee(){ const s=(P.arr/100)*3.2+0.2; nextBee=sim+(-Math.log(1-Math.random())/s); }
+function spawnBee(){ const L=Math.random()<0.5; bees.push({x:L?30:W-30,y:ROAD_Y()+rand(-6,6),pref:beePref(),state:'walk',target:null,vx:L?1:-1,dwell:0}); }
+
+// occupancy snapshot for crowd term
+function snapOcc(){ for(const f of flowers) f.occ0=0; for(const b of bees) if(b.state==='dwell'&&b.target) b.target.occ0=(b.target.occ0||0)+1; }
+
+// ---------- economics + breaking ----------
+function economicStep(dt){
+  let tot=0; for(const f of flowers) tot+=f.picks; tot=Math.max(tot,1e-6);
+  const arr=P.arr/100, cp=P.cost/100, law=P.law/100, credit=P.credit/100;
+  // predators extort neighbors first
+  for(const f of flowers){
+    if(f.state!=='broken') continue;
+    f.thorn=Math.min(1,f.thorn+dt);
+    let take=0;
+    for(const nj of adj[f.id]){ const nb=flowers[nj]; if(nb&&nb.state!=='exited'){ const t=1.0*dt; nb.cash-=t; take+=t*0.7; } }
+    f.cash += take + 0.15*dt;                          // parasitic survival
+    if(Math.random() < law*CATCH*dt*60){ f.state='exited'; f.respawn=rand(4,8); f.cash=0; } // strong law catches predators
+  }
+  for(const f of flowers){
+    if(f.state==='exited'){ f.respawn-=dt; if(f.respawn<=0) newHonest(f); continue; }
+    const share=f.picks/tot;
+    const rev = share*arr*REVK*flowers.length;
+    const cost = FIXB + FIXK*cp + QCOST*f.quality*cp;
+    f.cash += (rev-cost)*dt;
+    if(f.cash<0){ f.distressT+=dt; if(f.state==='honest') f.state='distress'; }
+    else { f.distressT=Math.max(0,f.distressT-dt*0.5); if(f.cash>BUF*0.5&&f.state==='distress') f.state='honest'; }
+    if(f.cash < -DEBTMAX){
+      const viable = share*arr*REVK*flowers.length > cost;             // can this business actually clear its costs?
+      if(credit>0.45 && viable){ f.cash=BUF*0.4; f.state='honest'; f.distressT=0; stats.rescued++; }
+      else if(law>0.5){ f.state='exited'; f.respawn=rand(4,9); f.cash=0; stats.exited++; }
+      else { f.state='broken'; f.cash=2; f.thorn=0; stats.broke++; }
+    }
+  }
+}
+
+function step(dt){
+  sim+=dt; snapOcc();
+  if(sim>=nextBee){ if(bees.length<420) spawnBee(); scheduleBee(); }
+  const roadY=ROAD_Y(), speed=140;
+  for(let i=bees.length-1;i>=0;i--){ const b=bees[i];
+    if(b.state==='walk'){ b.x+=b.vx*speed*dt*0.5; b.y+=(roadY-b.y)*Math.min(1,dt*4);
+      if(!b.decideAt) b.decideAt=b.x+b.vx*rand(40,W*0.35);
+      if((b.vx>0&&b.x>=b.decideAt)||(b.vx<0&&b.x<=b.decideAt)||b.x<10||b.x>W-10){ const k=choose(b.pref,b.x); b.target=flowers[k]; b.state='fly'; } }
+    else if(b.state==='fly'){ const f=b.target; if(f.state==='exited'){ bees.splice(i,1); continue; }
+      const dx=f.x-b.x,dy=f.y-b.y,d=Math.hypot(dx,dy);
+      if(d>5){ const m=Math.min(d,speed*dt); b.x+=dx/d*m; b.y+=dy/d*m; } else { b.state='dwell'; b.dwell=rand(1.4,3.2); f.pulse=1; f.picks+=1; } }
+    else if(b.state==='dwell'){ b.dwell-=dt; if(b.dwell<=0) bees.splice(i,1); }
+  }
+  const decay=Math.exp(-dt*0.06); for(const f of flowers){ f.picks*=decay; f.pulse=Math.max(0,f.pulse-dt*1.4); }
+  economicStep(dt);
+}
+
+// ---------- draw ----------
+function hue(v){ return 'hsl('+Math.round(v*320)+',70%,60%)'; }
+function draw(){
+  ctx.fillStyle='#07070c'; ctx.fillRect(0,0,W,H);
+  const roadY=ROAD_Y();
+  ctx.strokeStyle='#20202e'; ctx.lineWidth=10; ctx.beginPath(); ctx.moveTo(40,roadY); ctx.lineTo(W-40,roadY); ctx.stroke();
+  ctx.strokeStyle='#33333f'; ctx.lineWidth=1; ctx.setLineDash([8,10]); ctx.beginPath(); ctx.moveTo(40,roadY); ctx.lineTo(W-40,roadY); ctx.stroke(); ctx.setLineDash([]);
+
+  // substitute edges
+  for(const [i,j,w] of edges){ const a=flowers[i],b=flowers[j];
+    const pred = a.state==='broken'||b.state==='broken';
+    ctx.strokeStyle= pred? 'rgba(224,69,94,'+(0.15+0.2*w)+')' : 'rgba(255,215,0,'+(0.05+0.1*w)+')';
+    ctx.lineWidth= pred?1.5:1; ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke(); }
+
+  let tot=0; for(const f of flowers) tot+=f.picks; tot=Math.max(tot,1e-6);
+  ctx.textAlign='center';
+  for(const f of flowers){
+    const share=f.picks/tot; const R=10+share*70+ (f.occ0||0)*0.6;
+    let col; if(f.state==='honest') col=hue(f.vibe); else if(f.state==='distress') col=AM; else if(f.state==='broken') col=CR; else col='#3a3a46';
+    // stem
+    ctx.strokeStyle='rgba(120,160,120,.3)'; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(f.roadX,roadY); ctx.lineTo(f.x,f.y+(f.y<roadY?R*0.4:-R*0.4)); ctx.stroke();
+    if(f.state==='exited'){ ctx.globalAlpha=0.4; ctx.strokeStyle='#4a4a56'; ctx.beginPath(); ctx.arc(f.x,f.y,10,0,7); ctx.stroke();
+      ctx.fillStyle='#5a5a66'; ctx.font='8px ui-monospace,monospace'; ctx.fillText('closed',f.x,f.y+3); ctx.globalAlpha=1; continue; }
+    if(f.pulse>0.05){ ctx.shadowColor=col; ctx.shadowBlur=16*f.pulse; }
+    if(f.state==='broken'){
+      // thorns
+      const sp=8; for(let k=0;k<sp;k++){ const a=k/sp*Math.PI*2+f.id; const r1=R*0.4,r2=R*0.72;
+        ctx.fillStyle=col; ctx.globalAlpha=0.85; ctx.beginPath();
+        ctx.moveTo(f.x+Math.cos(a-0.13)*r1,f.y+Math.sin(a-0.13)*r1);
+        ctx.lineTo(f.x+Math.cos(a)*r2,f.y+Math.sin(a)*r2);
+        ctx.lineTo(f.x+Math.cos(a+0.13)*r1,f.y+Math.sin(a+0.13)*r1); ctx.closePath(); ctx.fill(); }
+      ctx.globalAlpha=1;
+      // extortion arrows to neighbors
+      for(const nj of adj[f.id]){ const nb=flowers[nj]; if(nb.state==='exited')continue;
+        ctx.strokeStyle='rgba(224,69,94,.35)'; ctx.lineWidth=1; ctx.setLineDash([2,3]); ctx.beginPath(); ctx.moveTo(f.x,f.y); ctx.lineTo(nb.x,nb.y); ctx.stroke(); ctx.setLineDash([]); }
+    } else {
+      const petals=6; for(let k=0;k<petals;k++){ const a=k/petals*Math.PI*2+f.id;
+        ctx.fillStyle=col; ctx.globalAlpha= f.state==='distress'?0.4:0.55;
+        const pr=f.state==='distress'?0.32:0.42;
+        ctx.beginPath(); ctx.ellipse(f.x+Math.cos(a)*R*0.5,f.y+Math.sin(a)*R*0.5,R*pr,R*0.22,a,0,7); ctx.fill(); }
+      ctx.globalAlpha=1;
+    }
+    ctx.shadowBlur=0;
+    ctx.fillStyle= f.state==='broken'?CR:GOLD; ctx.beginPath(); ctx.arc(f.x,f.y,Math.max(4,R*0.26),0,7); ctx.fill();
+    // cash bar
+    const bw=32, bx=f.x-bw/2, by=f.y+(f.y<roadY?-R*0.5-16:R*0.5+16);
+    ctx.fillStyle='#1a1a24'; ctx.fillRect(bx,by,bw,4);
+    const frac=Math.max(-1,Math.min(1,f.cash/BUF));
+    if(frac>=0){ ctx.fillStyle=GN; ctx.fillRect(bx+bw/2,by,bw/2*frac,4); }
+    else { ctx.fillStyle=CR; ctx.fillRect(bx+bw/2+bw/2*frac,by,-bw/2*frac,4); }
+    ctx.fillStyle=DIM; ctx.font='7px ui-monospace,monospace';
+    ctx.fillText(Math.round(share*100)+'%', f.x, f.y+(f.y<roadY?-R*0.5-6:R*0.5+12));
+  }
+
+  // bees
+  for(const b of bees){ ctx.fillStyle= b.state==='dwell'?GOLD:'#ffd76a'; ctx.beginPath(); ctx.arc(b.x,b.y,2.5,0,7); ctx.fill(); }
+
+  drawWell();
+}
+
+// ---------- phase-change inset (illustrative bistable barrier) ----------
+function drawWell(){
+  const w=180,h=92, x=W-w-14, y=H-h-160;
+  ctx.fillStyle='rgba(8,8,16,.86)'; ctx.strokeStyle='#20202e'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.rect(x,y,w,h); ctx.fill(); ctx.stroke();
+  const inst=((P.law+P.credit)/2)/100;          // institutional strength -> barrier height
+  // U(t) = honest well (left) + jungle well (right), barrier ~ inst
+  const barrier=0.15+0.85*inst;
+  const U=t=>{ const wl=-Math.exp(-((t-0.28)**2)/(2*0.02)); const wr=-0.9*Math.exp(-((t-0.74)**2)/(2*0.03)); const b=barrier*Math.exp(-((t-0.5)**2)/(2*0.02)); return wl+wr+b; };
+  let umin=9,umax=-9; for(let t=0;t<=1;t+=0.01){ const u=U(t); if(u<umin)umin=u; if(u>umax)umax=u; }
+  const px=t=>x+8+t*(w-16), py=u=>y+14+ (u-umax)/(umin-umax)*(h-26);
+  ctx.strokeStyle='rgba(150,180,210,.6)'; ctx.lineWidth=1.5; ctx.beginPath();
+  for(let t=0;t<=1;t+=0.01){ const X=px(t),Y=py(U(t)); if(t===0)ctx.moveTo(X,Y); else ctx.lineTo(X,Y); } ctx.stroke();
+  // marble = current fraction broken (field position)
+  let broke=0,alive=0; for(const f of flowers){ if(f.state!=='exited')alive++; if(f.state==='broken')broke++; }
+  const fb=alive? broke/alive : 0;
+  const mt=0.28 + fb*0.46;                        // map 0..1 -> honest well .. jungle well
+  ctx.fillStyle= fb>0.4?CR : fb>0.15?AM:GN; ctx.shadowColor=ctx.fillStyle; ctx.shadowBlur=8;
+  ctx.beginPath(); ctx.arc(px(mt),py(U(mt))-3,4,0,7); ctx.fill(); ctx.shadowBlur=0;
+  ctx.fillStyle=DIM; ctx.font='7px ui-monospace,monospace'; ctx.textAlign='left';
+  ctx.fillText('honest', px(0.20), y+h-4); ctx.fillStyle=CR; ctx.textAlign='right'; ctx.fillText('jungle', px(0.86), y+h-4);
+  ctx.fillStyle=CY; ctx.textAlign='center'; ctx.font='8px ui-monospace,monospace';
+  ctx.fillText('barrier = institutions', x+w/2, y+11);
+}
+
+// ---------- readouts ----------
+function readouts(){
+  let h=0,d=0,b=0,ex=0; for(const f of flowers){ if(f.state==='honest')h++; else if(f.state==='distress')d++; else if(f.state==='broken')b++; else ex++; }
+  document.getElementById('m-h').textContent=h;
+  document.getElementById('m-d').textContent=d;
+  document.getElementById('m-b').textContent=b;
+  document.getElementById('m-re').textContent=stats.rescued+' / '+stats.exited;
+  const alive=Math.max(1,h+d+b);
+  const fb=b/alive, fd=(b+d)/alive;
+  const fs=document.getElementById('fs'), ph=document.getElementById('phase');
+  if(sim<40){ fs.textContent='warming up…'; fs.style.color=DIM; ph.textContent='—'; return; }
+  if(fb>0.33){ fs.textContent='JUNGLE — predation spreading'; fs.style.color=CR; ph.textContent='⚠ tipped into the jungle well'; }
+  else if(fb>0.08){ fs.textContent='fracturing'; fs.style.color=AM; ph.textContent='near the barrier — cascade risk'; }
+  else if(fd>0.35){ fs.textContent='stressed but holding'; fs.style.color=AM; ph.textContent='distress high, no predation'; }
+  else { fs.textContent='healthy field'; fs.style.color=GN; ph.textContent='sitting in the honest well'; }
+}
+
+// ---------- loop ----------
+let last=null;
+function frame(now){ if(last==null)last=now; let dt=(now-last)/1000; last=now; if(dt<0)dt=0; if(dt>0.05)dt=0.05;
+  if(P.running){ const s=dt*(P.spd/100); const st=Math.max(1,Math.ceil(s/0.05)); for(let i=0;i<st;i++) step(s/st); }
+  draw(); readouts(); requestAnimationFrame(frame); }
+
+// ---------- controls ----------
+function bind(id,key,fmt,after){ const el=document.getElementById('s-'+id),out=document.getElementById('v-'+id);
+  el.addEventListener('input',()=>{ P[key]=+el.value; out.textContent=fmt(P[key]); if(after)after(); }); }
+bind('n','n',v=>v,()=>{makeFlowers();bees=[];});
+bind('arr','arr',v=>v<30?'quiet':v>70?'busy':'medium');
+bind('temp','temp',v=>v<25?'decisive':v>70?'exploratory':'balanced');
+bind('div','div',v=>v+'%');
+bind('cost','cost',v=>v+'%');
+bind('law','law',v=>v+'%');
+bind('credit','credit',v=>v+'%');
+bind('spd','spd',v=>(v/100).toFixed(1)+'×');
+
+document.getElementById('b-pause').onclick=function(){ P.running=!P.running; this.textContent=P.running?'pause':'play'; };
+document.getElementById('b-shuffle').onclick=()=>{ makeFlowers(); bees=[]; stats={rescued:0,exited:0,broke:0}; };
+function setS(o){ for(const k in o){ const el=document.getElementById('s-'+k); if(el){ el.value=o[k]; el.dispatchEvent(new Event('input')); } } }
+document.getElementById('b-strong').onclick=()=>{ setS({law:92,credit:88,cost:68}); };
+document.getElementById('b-crunch').onclick=()=>{ setS({law:80,credit:12,cost:68}); };  // law ok, no credit -> deaths not predation
+document.getElementById('b-weak').onclick=()=>{ setS({law:14,credit:14,cost:68}); };     // both low -> jungle + contagion
+document.getElementById('kbtn').onclick=function(){ const w=document.getElementById('wip'); w.classList.toggle('show'); this.textContent=w.classList.contains('show')?'honesty K1–K7 ▾':'honesty K1–K7 ▸'; };
+
+resize(); makeFlowers(); scheduleBee(); requestAnimationFrame(frame);
+})();
+</script>
+</body></html>
