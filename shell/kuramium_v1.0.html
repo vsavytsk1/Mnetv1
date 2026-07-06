@@ -1,0 +1,234 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>Kuramium v1.0 -- Phase Synchronization</title>
+<style>
+  :root{
+    --bg:#050508; --gold:#ffd700; --cyan:#00d4ff; --pink:#ff69b4; --green:#00ffd5;
+    --esp:#c7894a; --pur:#cc44ff; --dim:#6a6a82; --txt:#e8e0d0;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;background:var(--bg);color:var(--txt);font-family:var(--mono);overflow:hidden}
+  #cv{position:fixed;inset:0;display:block}
+  #hud{position:fixed;top:0;left:0;right:0;padding:10px 14px;display:flex;gap:14px;align-items:flex-start;
+    pointer-events:none;font-size:11px;z-index:10;flex-wrap:wrap}
+  #hud > div{pointer-events:auto;background:rgba(8,8,16,0.78);border:1px solid #20202e;
+    border-radius:8px;padding:8px 11px;backdrop-filter:blur(3px)}
+  #ttl{color:var(--gold);font-size:14px;letter-spacing:0.06em}
+  #sub{color:var(--dim);font-size:10px;margin-top:1px;max-width:520px}
+  #note{color:var(--esp);font-size:10px;margin-top:5px;max-width:520px;line-height:1.4}
+  #note b{color:var(--gold)}
+  #side{margin-left:auto;max-width:300px;color:var(--dim);font-size:10px;line-height:1.5}
+  #side b{color:var(--cyan)} #side .l{color:var(--gold)}
+  #side .row{display:flex;align-items:center;gap:6px;margin:1px 0}
+  #side .sw{width:14px;height:8px;border-radius:2px;display:inline-block}
+  #metrics{position:fixed;top:92px;left:14px;display:flex;gap:6px;flex-wrap:wrap;z-index:10}
+  .mc{background:rgba(8,8,16,0.85);border:1px solid #20202e;border-radius:6px;padding:5px 10px;min-width:74px}
+  .mc .lab{font-size:8px;color:var(--dim);text-transform:uppercase;letter-spacing:0.08em}
+  .mc .val{font-size:15px;font-weight:bold;color:var(--gold)}
+  .mc .val.cyan{color:var(--cyan)}
+  #bar{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;display:flex;flex-wrap:wrap;gap:10px;
+    align-items:center;background:rgba(8,8,16,0.88);border:1px solid #20202e;border-radius:10px;padding:8px 14px;z-index:10}
+  button{background:#14141f;border:1px solid #2a2a3a;border-radius:6px;color:var(--gold);
+    font:12px var(--mono);padding:6px 11px;cursor:pointer;transition:all .12s}
+  button:hover{border-color:var(--gold)}
+  button.cyan{color:var(--cyan)} button.cyan:hover{border-color:var(--cyan)}
+  button.pink{color:var(--pink)} button.pink:hover{border-color:var(--pink)}
+  .klbl{color:var(--dim);font-size:10px;letter-spacing:0.06em}
+  input[type=range]{appearance:none;-webkit-appearance:none;width:90px;height:4px;background:#2a2a3a;border-radius:3px;outline:none}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;border-radius:50%;background:var(--gold);cursor:pointer}
+  input[type=range]::-moz-range-thumb{width:13px;height:13px;border:none;border-radius:50%;background:var(--gold);cursor:pointer}
+  .sep{width:1px;height:22px;background:#2a2a3a;margin:0 3px}
+  .val2{color:var(--gold);font-size:11px;min-width:30px;text-align:right}
+  .wip{position:fixed;left:14px;bottom:14px;background:rgba(8,8,16,0.85);border:1px solid #c7894a;
+    border-radius:8px;padding:6px 10px;font-size:10px;color:var(--esp);z-index:10;max-width:392px;line-height:1.45}
+  .wip b{color:var(--gold)}
+  .stamp{position:fixed;bottom:14px;right:14px;font-size:8px;color:rgba(0,212,255,0.25);
+    letter-spacing:0.08em;text-align:right;line-height:1.7;z-index:10}
+</style>
+</head>
+<body>
+<canvas id="cv" width="1440" height="900"></canvas>
+
+<div id="hud">
+  <div>
+    <div id="ttl">KURAMIUM v1.0 -- phase synchronization</div>
+    <div id="sub">N phase oscillators · each with its own natural frequency · coupling K pulls them together · watch the all become one</div>
+    <div id="note">claim under test: <b>coupling alone -- no conductor, no clock -- locks many oscillators into one rhythm, but only above a critical K_c</b>. honest order parameter r, real 2nd-order transition (Kuramoto 1975).</div>
+  </div>
+  <div id="side">
+    dot colour = <span class="l">natural frequency</span><br>
+    <div class="row"><span class="sw" style="background:#00d4ff"></span>slow oscillator</div>
+    <div class="row"><span class="sw" style="background:#ffd700"></span>mid</div>
+    <div class="row"><span class="sw" style="background:#ff69b4"></span>fast oscillator</div>
+    <br>
+    <span class="l">gold arrow</span> = order parameter<br>
+    r·e<sup>iψ</sup> -- the resultant of every phase<br>
+    <b>r = 0</b> incoherent · <b>r = 1</b> one mind<br>
+    <br>
+    push K past <span class="l">K_c</span> → the pack locks
+  </div>
+</div>
+
+<div id="metrics">
+  <div class="mc"><div class="lab">order r</div><div class="val" id="r-val">0.00</div></div>
+  <div class="mc"><div class="lab">K_c crit</div><div class="val cyan" id="kc-val">1.28</div></div>
+  <div class="mc"><div class="lab">K / K_c</div><div class="val" id="ratio-val">0.39</div></div>
+  <div class="mc"><div class="lab">regime</div><div class="val cyan" id="reg-val" style="font-size:12px">incoherent</div><div class="lab" id="reg-sub" style="color:#6a6a82;text-transform:none;margin-top:1px">no conductor wins</div></div>
+</div>
+
+<div id="bar">
+  <span class="klbl">coupling K</span>
+  <input id="K" type="range" min="0" max="5" step="0.05" value="0.5">
+  <span class="val2" id="Kv">0.50</span>
+  <span class="sep"></span>
+  <span class="klbl">freq spread σ</span>
+  <input id="sig" type="range" min="0.1" max="2" step="0.05" value="0.8">
+  <span class="val2" id="sigv">0.80</span>
+  <span class="sep"></span>
+  <span class="klbl">N</span>
+  <input id="N" type="range" min="10" max="300" step="5" value="120">
+  <span class="val2" id="Nv">120</span>
+  <span class="sep"></span>
+  <button id="play" class="cyan">pause</button>
+  <button id="kick">kick</button>
+  <button id="reset" class="pink">reset</button>
+</div>
+
+<div class="wip">
+  <b>honesty (K1-K4):</b><br>
+  <b>K1</b> mean-field is EXACT here: (K/N)·Σ sin(θⱼ−θᵢ) = K·r·sin(ψ−θᵢ) for all-to-all coupling · O(N)/step, no approximation<br>
+  <b>K2</b> finite N → residual r ≈ 1/√N even when incoherent -- that floor is noise, not a cluster<br>
+  <b>K3</b> K_c = 2√(2/π)·σ ≈ 1.60·σ holds for a Gaussian spread in the N→∞ limit; finite N smears the edge<br>
+  <b>K4</b> all-to-all here; real nets (neurons, fireflies, grids) couple locally -- same idea, messier threshold
+</div>
+
+<div class="stamp">KURAMIUM v1.0<br>genesis kernel · MNet palette<br>P=12 · χ=2 · always</div>
+
+<script>
+// KURAMIUM v1.0 -- Kuramoto phase synchronization
+// Borrowed, with a bow to the other boskis:
+//   - GENESIS KERNEL (brainium L127): no DPR, no setTransform, no getBoundingClientRect
+//   - golden-ratio scatter (cave-flavor): even initial phase spread
+//   - MNet palette (ancientmagic / brainium): cyan / gold / pink on #050508
+// The math is the real Kuramoto model. No P=12 claim here -- the stamp is a signature, not a mechanism.
+(function(){
+  const cv = document.getElementById('cv');
+  const ctx = cv.getContext('2d');
+  let W=0, H=0;
+  function resize(){ W = cv.width = innerWidth; H = cv.height = innerHeight; }
+  resize(); addEventListener('resize', resize);
+
+  const BG='#050508', GOLD='#ffd700', DIM='#6a6a82';
+  const TWO = Math.PI*2;
+  const W0 = 0.6;   // centre frequency -- so the LOCKED pack visibly orbits (spini spini)
+
+  function gauss(){ let u=Math.random()||1e-9, v=Math.random(); return Math.sqrt(-2*Math.log(u))*Math.cos(TWO*v); }
+
+  const S = { N:120, K:0.5, sigma:0.8, running:true };
+  let g = [];      // unit-normal natural-frequency seeds (frequencies = W0 + sigma*g[i])
+  let theta = [];  // phases
+
+  function rebuild(){
+    g = []; theta = [];
+    for (let i=0;i<S.N;i++){ g.push(gauss()); theta.push(((i*0.61803)%1)*TWO); } // golden = even start
+  }
+  function kick(){ for (let i=0;i<S.N;i++) theta[i] = Math.random()*TWO; }
+
+  function orderParam(){
+    let sx=0, sy=0;
+    for (let i=0;i<S.N;i++){ sx+=Math.cos(theta[i]); sy+=Math.sin(theta[i]); }
+    sx/=S.N; sy/=S.N;
+    return { r:Math.hypot(sx,sy), psi:Math.atan2(sy,sx) };
+  }
+  function Kc(){ return 2*Math.sqrt(2/Math.PI)*S.sigma; }
+
+  function freqColor(w){
+    const t = Math.max(-1, Math.min(1, w/(3*S.sigma+1e-9)));
+    let r,gg,b;
+    if (t<0){ const u=t+1; r=Math.round(u*255); gg=Math.round(212+u*3); b=Math.round(255-u*255); }
+    else    { const u=t;   r=255;               gg=Math.round(215-u*110); b=Math.round(u*180); }
+    return 'rgb('+r+','+gg+','+b+')';
+  }
+
+  function step(dt, op){
+    const K=S.K, r=op.r, psi=op.psi;
+    for (let i=0;i<S.N;i++){
+      const omega = W0 + S.sigma*g[i];
+      theta[i] += dt*( omega + K*r*Math.sin(psi - theta[i]) ); // mean-field exact for all-to-all
+    }
+  }
+
+  function draw(op){
+    ctx.fillStyle=BG; ctx.fillRect(0,0,W,H);
+    const cx=W/2, cy=H*0.46, R=Math.min(W*0.42, H*0.36);
+
+    ctx.strokeStyle='#15151f'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.arc(cx,cy,R,0,TWO); ctx.stroke();
+
+    for (let i=0;i<S.N;i++){
+      const x=cx+Math.cos(theta[i])*R, y=cy+Math.sin(theta[i])*R;
+      ctx.fillStyle=freqColor(W0+S.sigma*g[i]);
+      ctx.globalAlpha=0.9;
+      ctx.beginPath(); ctx.arc(x,y,3,0,TWO); ctx.fill();
+    }
+    ctx.globalAlpha=1;
+
+    ctx.strokeStyle=GOLD; ctx.globalAlpha=0.22; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.arc(cx,cy,R*0.17,-Math.PI/2,-Math.PI/2+TWO*op.r); ctx.stroke();
+    ctx.globalAlpha=1;
+
+    const vx=cx+Math.cos(op.psi)*R*op.r, vy=cy+Math.sin(op.psi)*R*op.r;
+    ctx.strokeStyle=GOLD; ctx.lineWidth=3;
+    ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(vx,vy); ctx.stroke();
+    ctx.fillStyle=GOLD; ctx.beginPath(); ctx.arc(vx,vy,5,0,TWO); ctx.fill();
+    ctx.fillStyle=DIM;  ctx.beginPath(); ctx.arc(cx,cy,3,0,TWO); ctx.fill();
+  }
+
+  function updateHUD(op){
+    const kc=Kc();
+    document.getElementById('r-val').textContent=op.r.toFixed(3);
+    document.getElementById('kc-val').textContent=kc.toFixed(2);
+    document.getElementById('ratio-val').textContent=(S.K/kc).toFixed(2);
+    let reg, sub;
+    if (S.K < 0.95*kc){ reg='incoherent';   sub='no conductor wins'; }
+    else if (S.K < 1.5*kc){ reg='partial sync'; sub='a cluster forms'; }
+    else { reg='synchronized'; sub='all beat as one'; }
+    document.getElementById('reg-val').textContent=reg;
+    document.getElementById('reg-sub').textContent=sub;
+  }
+
+  let last=null;
+  function frame(now){
+    if (last==null) last=now;
+    let dt=(now-last)/1000; last=now;
+    if (dt<0) dt=0; if (dt>0.05) dt=0.05;
+    const op = orderParam();          // current order parameter drives the dynamics
+    if (S.running) step(dt, op);
+    const opDraw = S.running ? orderParam() : op; // recompute so the gold arrow matches the drawn dots
+    draw(opDraw); updateHUD(opDraw);
+    requestAnimationFrame(frame);
+  }
+
+  const Ks=document.getElementById('K'), sigs=document.getElementById('sig'), Ns=document.getElementById('N');
+  Ks.addEventListener('input',()=>{ S.K=+Ks.value; document.getElementById('Kv').textContent=S.K.toFixed(2); });
+  sigs.addEventListener('input',()=>{ S.sigma=+sigs.value; document.getElementById('sigv').textContent=S.sigma.toFixed(2); });
+  Ns.addEventListener('input',()=>{ S.N=+Ns.value; document.getElementById('Nv').textContent=S.N; rebuild(); });
+  document.getElementById('play').addEventListener('click',function(){ S.running=!S.running; this.textContent=S.running?'pause':'play'; });
+  document.getElementById('kick').addEventListener('click',kick);
+  document.getElementById('reset').addEventListener('click',()=>{
+    S.K=0.5; S.sigma=0.8; S.N=120; S.running=true;
+    Ks.value=0.5; sigs.value=0.8; Ns.value=120;
+    document.getElementById('Kv').textContent='0.50';
+    document.getElementById('sigv').textContent='0.80';
+    document.getElementById('Nv').textContent='120';
+    document.getElementById('play').textContent='pause';
+    rebuild();
+  });
+
+  rebuild();
+  requestAnimationFrame(frame);
+})();
+</script>
+</body></html>

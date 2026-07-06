@@ -8261,3 +8261,40 @@ optimum. The gluon couples to itself and the loop number is still Euler.
 
 -- Vlad + Claude. Buenos Aires. July 6, 2026. Three sims, one honest shelf.
 
+### L133 -- THREE MORE FROM THE SHELF: CHROMIUM v1.0, KURAMIUM v1.0, SHANNONIUM v1.0 (2026-07-06)
+
+Batch two of the claudyVSintegr integration. Three self-contained sims,
+cold-passed byte-by-byte (loneCR=0, LF-only, no pythonInJS leak, no external
+deps) and tested live before shipping. Versions already consistent (all v1.0,
+no drift to heal this time).
+
+  shell/chromium_v1.0.html    NEW -- graph-Fourier lithography wave foundry.
+    A microchip is a lattice of circles: each circle a node, its 6 bonds edges,
+    the wave operator = graph Laplacian L = D - A. On a lattice the eigenvectors
+    ARE the Fourier modes -- build any wave (focus/plane/Bessel/vortex/array)
+    from the lowest graph frequencies. Kirchhoff 1847, Chung 1997, Shuman 2013,
+    Airy 1835, Durnin 1987, Gerchberg-Saxton 1972. Rigorous, not hand-wavy.
+
+  shell/kuramium_v1.0.html    NEW -- Kuramoto phase synchronization. N phase
+    oscillators, each its own natural frequency; coupling K pulls them together;
+    above K_c the pack locks into one rhythm. Honest order parameter r, real
+    2nd-order transition (Kuramoto 1975). K1-K4: mean-field is EXACT for
+    all-to-all coupling, O(N)/step, no approximation.
+
+  shell/shannonium_v1.0.html  NEW -- from tower to song. Shannon capacity
+    C = B*log2(1+S/N). OFDMA resource grid, FFT-based (Shazam's transform,
+    exactly). Watch 1G -> 5G change the time x frequency tiling.
+
+REGISTERED in shell/eng_v2.0.html under new section SIGNAL . SYNC .
+LITHOGRAPHY -- full 6-place register each (card, ms-row, LINKS, MODULE_CAPS,
+ALL_MODS, modState default dim). ALL_MODS now 37 (was 34). Builder left
+untouched by design (build_eng_v2_clean.py is stale, would regress modules).
+
+CLOSE: the dashboard grows link-by-link, the Temple-OS way. Every sim carries
+its own honest caveats and its own kernel footer. No drift. CR=0 across all
+tracked files.
+
+P=12. chi=2. The chrome carves circles. The oscillators find one mind.
+The tower sings. Always.
+
+-- Vlad + Claude. July 6, 2026. Batch two. The portal grows to 37.

@@ -1,0 +1,431 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>CHROMIUM v1.0 — carve circles, build any wave · graph-Fourier lithography</title>
+<!--
+  CHROMIUM v1.0  —  THE VOLUMETRIC WAVE FOUNDRY
+  =============================================
+  A microchip is a lattice of circles carved in chrome. Here every circle is a
+  NODE of a graph; the bonds to its 6 neighbours are EDGES. The wave operator is
+  the graph Laplacian  L = D − A.
+
+  The deep, honest bridge (both research passes agree on this):
+      on a regular lattice the finite-difference Laplacian IS the grid-graph
+      Laplacian, so the eigenvectors of L are EXACTLY the Fourier modes —
+              ψ_pqr(i,j,k) = cos((i+½)pπ/N)·cos((j+½)qπ/N)·cos((k+½)rπ/N)
+      with graph frequency (eigenvalue)
+              λ_pqr = s(p)+s(q)+s(r),   s(x) = 2 − 2cos(xπ/N) = 4 sin²(xπ/2N).
+  "Graph Fourier" and "wave Fourier" are the same mathematics here. Rigorous,
+  not hand-wavy.
+
+  BUILD ANY WAVE to spec = project the target onto the lowest graph modes and
+  re-synthesize:   field = Σ_m ⟨T,ψ_m⟩ ψ_m.   More modes = finer wave = more
+  compute. A denser chip (more circles) = more nodes = more compute. Push the
+  detail and you pay — to the CHROMIUM LIMIT (your browser's, reached long
+  before the real chrome-mask limit; that honesty is the joke).
+
+  Refs: Airy 1835 (jinc/Airy of a circle) · Durnin 1987 (Bessel beam) ·
+  Gerchberg–Saxton 1972 (build-to-spec) · Yu–Capasso 2011 (meta-atoms) ·
+  Kirchhoff 1847 / Chung 1997 (graph Laplacian) · Shuman 2013 (graph Fourier).
+  Pure Canvas 2D, no deps. χ=2 · always. Built 2026-06-21.
+-->
+<style>
+  :root{
+    --bg:#06070b; --gold:#ffd700; --cyan:#00d4ff; --pink:#ff69b4; --green:#00ffd5;
+    --espresso:#c7894a; --steel:#7fa8c0; --dim:#6a6a82; --txt:#e8e0d0; --chrome:#cfd8e4;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;background:var(--bg);color:var(--txt);font-family:var(--mono);overflow:hidden}
+  #cv{position:fixed;inset:0;display:block;touch-action:none;cursor:grab}
+  #cv:active{cursor:grabbing}
+
+  #hud{position:fixed;top:0;left:0;right:0;padding:9px 92px 9px 13px;display:flex;gap:12px;align-items:flex-start;pointer-events:none;font-size:11px;z-index:10;flex-wrap:wrap}
+  #hud > div{pointer-events:auto;background:rgba(8,9,15,0.82);border:1px solid #1d2230;border-radius:8px;padding:8px 11px;backdrop-filter:blur(3px)}
+  #ttl{color:var(--gold);font-size:14px;letter-spacing:0.05em}
+  #sub{color:var(--dim);font-size:10px;margin-top:3px;max-width:520px;line-height:1.55}
+  #sub b{color:var(--cyan)} #sub .pk{color:var(--pink)} #sub .gd{color:var(--gold)} #sub .cr{color:var(--chrome)}
+  #read{margin-left:auto;min-width:280px}
+  #read h{display:block;color:var(--gold);font-size:11px;letter-spacing:0.07em;margin-bottom:6px}
+  #read table{border-collapse:collapse;width:100%}
+  #read td{padding:2px 0;font-size:11px}
+  #read td.k{color:var(--dim)} #read td.v{text-align:right;font-weight:bold;color:var(--green)}
+  #read td.v.gold{color:var(--gold)} #read td.v.cy{color:var(--cyan)} #read td.v.pk{color:var(--pink)} #read td.v.st{color:var(--steel)} #read td.v.cr{color:var(--chrome)}
+  #read .hr{height:1px;background:#1a1f2c;margin:5px 0}
+  #read .ref{color:#566;font-size:9px;margin-top:6px;line-height:1.45}
+  #read .ref b{color:var(--steel)}
+
+  #bar{position:fixed;left:50%;transform:translateX(-50%);bottom:12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:center;background:rgba(8,9,15,0.92);border:1px solid #1d2230;border-radius:10px;padding:8px 12px;z-index:20;max-width:97vw}
+  button{background:#14141f;border:1px solid #2a2a3a;border-radius:6px;color:var(--gold);font:11px var(--mono);padding:6px 10px;cursor:pointer;transition:all .12s}
+  button:hover{border-color:var(--gold)}
+  .wv{color:var(--steel);border-color:#243240;font-size:11px;padding:6px 11px}
+  .wv:hover{border-color:var(--cyan);color:var(--cyan)}
+  .wv.on{background:var(--cyan);color:#06121a;border-color:var(--cyan)}
+  .klbl{color:var(--dim);font-size:10px;text-transform:uppercase;letter-spacing:0.07em}
+  .val{color:var(--gold);font-size:11px;min-width:26px;text-align:right}
+  #sN{width:118px;accent-color:var(--pink)} #sK{width:78px;accent-color:var(--gold)}
+  input[type=range]{appearance:none;-webkit-appearance:none;height:4px;background:#262b3a;border-radius:3px;outline:none}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;border-radius:50%;background:var(--pink);cursor:pointer}
+  input[type=range]::-moz-range-thumb{width:13px;height:13px;border:0;border-radius:50%;background:var(--pink);cursor:pointer}
+  #sK::-webkit-slider-thumb{background:var(--gold)} #sK::-moz-range-thumb{background:var(--gold)}
+  .sep{width:1px;height:22px;background:#2a2a3a;margin:0 2px}
+
+  #uiToggle{position:fixed;top:11px;right:13px;z-index:40;font:11px var(--mono);padding:6px 10px;background:rgba(8,9,15,0.92);border:1px solid #2a2a3a;color:var(--steel);border-radius:7px;cursor:pointer;backdrop-filter:blur(3px)}
+  #uiToggle:hover{border-color:var(--cyan);color:var(--cyan)}
+  .fold{position:absolute;top:6px;right:7px;width:18px;height:18px;padding:0;font:13px/1 var(--mono);border-radius:5px;background:#14141f;border:1px solid #2a2a3a;color:var(--dim);display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:4}
+  .fold:hover{border-color:var(--cyan);color:var(--cyan)}
+  #hdr,#read{position:relative}#hdr{padding-right:26px}
+  #hdr.folded #sub{display:none} #read.folded table,#read.folded .ref{display:none}
+  body.hideui #hud,body.hideui #bar{display:none}
+
+  /* CHROMIUM LIMIT flood */
+  #flood{position:fixed;inset:0;z-index:50;display:none;align-items:center;justify-content:center;flex-direction:column;text-align:center;padding:24px}
+  #flood.on{display:flex;animation:fl 1.1s infinite}
+  @keyframes fl{0%,100%{background:rgba(70,12,14,0.93)}50%{background:rgba(120,18,22,0.95)}}
+  #flood .big{color:#ffe0e0;font-size:25px;letter-spacing:0.12em;font-weight:bold;margin-bottom:10px}
+  #flood .msg{color:#ffc0c0;font-size:13px;line-height:1.7;max-width:560px}
+  #flood .msg b{color:#fff}
+  #flood .load{color:#fff;font-size:12px;margin-top:14px;letter-spacing:0.06em}
+
+  #reveal{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:60;background:rgba(6,7,11,0.97);border:1px solid var(--gold);border-radius:10px;padding:22px 30px;text-align:center;display:none;max-width:470px;max-height:90vh;overflow:auto}
+  #reveal h2{color:var(--gold);font-size:15px;letter-spacing:0.11em;margin-bottom:14px}
+  #reveal .eq{font-size:13px;color:var(--cyan);margin:5px 0;font-family:Georgia,serif}
+  #reveal .desc{font-size:10px;color:#9aa;line-height:1.95;margin:14px 0}
+  #reveal .desc b{color:var(--green)} #reveal .desc i{color:var(--espresso)} #reveal .desc .cr{color:var(--chrome)}
+  #reveal button{background:var(--gold);color:#0a0a12;border:none;padding:6px 22px;border-radius:4px;cursor:pointer;font-family:inherit;font-size:10px;text-transform:uppercase;letter-spacing:0.1em;margin-top:6px}
+  @media (max-width:900px){ #read{margin-left:0;min-width:0} #sub{max-width:90vw} }
+</style>
+</head>
+<body>
+
+<canvas id="cv"></canvas>
+<button id="uiToggle" title="hide panels (H)">hide UI</button>
+
+<div id="hud">
+  <div id="hdr">
+    <button class="fold" id="foldHdr">−</button>
+    <div id="ttl">CHROMIUM v1.0 — the wave foundry</div>
+    <div id="sub">A microchip is a lattice of <span class="cr">circles carved in chrome</span>. Here each circle is a <b>node</b>; its 6 bonds are <b>edges</b>; the wave operator is the <b>graph Laplacian L = D − A</b>. On a lattice its eigenvectors <i>are</i> the Fourier modes — so we <b class="gd">build any wave</b> by summing graph eigenmodes: pick a target (<b class="pk">focus, plane, Bessel, vortex, array</b>) and it is re-synthesized from the lowest graph frequencies. More <b>modes</b> = finer wave, more <b>detail</b> = denser chip — both cost compute, to the <b class="pk">Chromium limit</b>. Drag to rotate.</div>
+  </div>
+  <div id="read">
+    <button class="fold" id="foldRead">−</button>
+    <h>THE LATTICE</h>
+    <div class="hr"></div>
+    <table><tbody>
+      <tr><td class="k">lattice N³</td><td class="v cy" id="rN">—</td></tr>
+      <tr><td class="k">nodes (circles)</td><td class="v" id="rNodes">—</td></tr>
+      <tr><td class="k">edges (bonds)</td><td class="v" id="rE">—</td></tr>
+      <tr><td class="k">feature pitch</td><td class="v cr" id="rPitch">—</td></tr>
+      <tr><td class="hr" colspan="2"></td></tr>
+      <tr><td class="k">graph modes M</td><td class="v gold" id="rM">—</td></tr>
+      <tr><td class="k">max graph freq λ</td><td class="v" id="rLam">—</td></tr>
+      <tr><td class="k">target wave</td><td class="v pk" id="rWave">—</td></tr>
+      <tr><td class="k">synthesis fidelity</td><td class="v" id="rFid">—</td></tr>
+      <tr><td class="hr" colspan="2"></td></tr>
+      <tr><td class="k">compute load</td><td class="v" id="rLoad">—</td></tr>
+      <tr><td class="k">render</td><td class="v" id="rFps">— fps</td></tr>
+    </tbody></table>
+    <div class="ref">pure graph math: <b>L = D − A</b> (Kirchhoff 1847 · Chung 1997) · graph Fourier <b>Shuman 2013</b> · FD-Laplacian ≡ grid-graph Laplacian · circle→jinc <b>Airy 1835</b> · <b>Durnin 1987</b> Bessel · <b>Gerchberg–Saxton 1972</b> · χ=2 · always</div>
+  </div>
+</div>
+
+<div id="bar">
+  <button class="wv on" data-w="focus">focus</button>
+  <button class="wv" data-w="plane">plane</button>
+  <button class="wv" data-w="bessel">Bessel</button>
+  <button class="wv" data-w="vortex">vortex</button>
+  <button class="wv" data-w="array">array</button>
+  <span class="sep"></span>
+  <span class="klbl">detail&nbsp;N</span>
+  <input id="sN" type="range" min="6" max="22" step="1" value="12">
+  <span class="val" id="vN">12</span>
+  <span class="klbl">modes</span>
+  <input id="sK" type="range" min="1" max="7" step="1" value="5">
+  <span class="val" id="vK">5</span>
+  <span class="sep"></span>
+  <button id="bSpin" title="toggle rotation">⟳ spin</button>
+  <button id="bReveal">reveal</button>
+</div>
+
+<div id="flood">
+  <div class="big">⚠ CHROMIUM LIMIT</div>
+  <div class="msg">Too many circles × too many modes for the budget — the <b>browser (Chromium)</b> can't carve this much per tick, so the foundry stops.<br>Pull <b>detail</b> or <b>modes</b> back to resume.<br><span style="opacity:.7;font-size:11px">(the real chrome-mask limit is ~8&nbsp;nm — that needs ~10⁵ circles per side, far past any browser. we are humble.)</span></div>
+  <div class="load" id="floodLoad"></div>
+</div>
+
+<div id="reveal">
+  <h2>HOW DOES A LATTICE OF CIRCLES BECOME ANY WAVE?</h2>
+  <div class="eq">L = D − A &nbsp;(graph Laplacian)</div>
+  <div class="eq">ψ_pqr = cos(·pπ/N)cos(·qπ/N)cos(·rπ/N)</div>
+  <div class="eq">λ_pqr = s(p)+s(q)+s(r), &nbsp;s = 2−2cos</div>
+  <div class="eq">field = Σ_m ⟨target, ψ_m⟩ ψ_m</div>
+  <div class="desc">
+    A chip is just <span class="cr">circles carved in chrome</span>.<br>
+    Make each circle a node, each bond an edge — now it's a <b>graph</b>.<br>
+    The wave operator on that graph is the Laplacian <b>L = D − A</b>,<br>
+    and here is the quiet miracle both of our searches confirmed:<br>
+    <i>on a lattice, the Laplacian's eigenvectors ARE the Fourier modes.</i><br>
+    Graph Fourier and wave Fourier are the same mathematics — rigorous.<br><br>
+    So to build <b>any</b> wave, you project it onto the lowest graph<br>
+    frequencies and add them back. Few modes → a soft, blurred wave;<br>
+    more modes → sharper — exactly the band-limit a real chip lives under.<br>
+    A focus, a plane, a Bessel pencil, a vortex — all just sums of circles.<br><br>
+    Every extra mode and every extra circle is paid for in compute,<br>
+    until the <span class="cr">Chromium</span> limit — your browser's, reached long<br>
+    before the real chrome-mask limit. Math is the base. You pay to see.<br>
+    χ = 2 · always.
+  </div>
+  <button id="xReveal">I SEE THE MODES</button>
+</div>
+
+<script>
+"use strict";
+// ============================================================
+// CHROMIUM v1.0 — volumetric graph-Fourier wave foundry
+// ============================================================
+var cv=document.getElementById("cv"), ctx=cv.getContext("2d");
+var W=0,H=0,DPR=1;
+
+// deterministic compute budget → the "Chromium limit" fires reliably
+var BUDGET=1500000;
+function nodesOf(N){ return N*N*N; }
+function modesOf(K){ return K*K*K; }
+function computeLoad(){ return nodesOf(S.N)*modesOf(S.K); }
+
+var S={ N:12, K:5, wave:"focus", yaw:0.6, pitch:-0.45, spin:true,
+        field:null, coeffs:null, modes:null, fid:0, maxAbs:1,
+        overload:false, fps:60, frameMs:16, seed:1, drag:false, px:0, py:0 };
+
+// ---------- math helpers ----------
+function s_of(x,N){ return 2-2*Math.cos(x*Math.PI/N); }          // per-axis graph eigenvalue
+function J0(x){                                                   // Abramowitz & Stegun
+  var ax=Math.abs(x);
+  if(ax<8){ var y=x*x;
+    var p1=57568490574.0+y*(-13362590354.0+y*(651619640.7+y*(-11214424.18+y*(77392.33017+y*(-184.9052456)))));
+    var p2=57568490411.0+y*(1029532985.0+y*(9494680.718+y*(59272.64853+y*(267.8532712+y*1.0))));
+    return p1/p2;
+  } else { var z=8.0/ax,y=z*z,xx=ax-0.785398164;
+    var p1=1.0+y*(-0.1098628627e-2+y*(0.2734510407e-4+y*(-0.2073370639e-5+y*0.2093887211e-6)));
+    var p2=-0.1562499995e-1+y*(0.1430488765e-3+y*(-0.6911147651e-5+y*(0.7621095161e-6+y*(-0.934935152e-7))));
+    return Math.sqrt(0.636619772/ax)*(Math.cos(xx)*p1-z*Math.sin(xx)*p2);
+  }
+}
+// target wavefield T(i,j,k) on centered coords in [-1,1]^3
+function targetField(i,j,k,N){
+  var x=(i/(N-1)-0.5)*2, y=(j/(N-1)-0.5)*2, z=(k/(N-1)-0.5)*2;
+  var r=Math.sqrt(x*x+y*y), R=Math.sqrt(x*x+y*y+z*z), th=Math.atan2(y,x);
+  var ph=S.seed*0.7;
+  switch(S.wave){
+    case "focus":  // metalens focal spot: converging spherical wave into a bright core
+      return Math.cos(5.0*R+ph)*Math.exp(-R*R/(2*0.28*0.28));
+    case "plane":  { // steered plane wave (tilted)
+      var a=Math.cos(ph)*0.7, b=Math.sin(ph)*0.5, c=0.55;
+      return Math.cos(5.2*(a*x+b*y+c*z)); }
+    case "bessel": // Durnin non-diffracting J0 beam (rings of light = circles)
+      return J0(5.5*r)*Math.cos(2.0*z+ph);
+    case "vortex": { // orbital-angular-momentum helix (Laguerre–Gaussian-like)
+      var ell=2, ring=r*Math.exp(-r*r/(2*0.32*0.32));
+      return ring*Math.cos(ell*th - 3.0*z + ph)*2.2; }
+    case "array": { // Dammann-style spot array (diffractive grating → many foci)
+      var f=0, sp=0.42, w=0.20;
+      var pts=[[sp,sp],[-sp,sp],[sp,-sp],[-sp,-sp]];
+      for(var t=0;t<pts.length;t++){ var dx=x-pts[t][0],dy=y-pts[t][1],dd=dx*dx+dy*dy+z*z; f+=Math.cos(5.5*Math.sqrt(dd)+ph)*Math.exp(-dd/(2*w*w)); }
+      return f; }
+  }
+  return 0;
+}
+
+// ---------- build the M lowest graph-Fourier modes ----------
+function buildModes(){
+  var N=S.N, K=Math.min(S.K, N);
+  // separable cosine tables: cosT[idx][n] = cos((n+0.5)*idx*pi/N)
+  var cosT=[]; for(var idx=0;idx<K;idx++){ var row=new Float32Array(N); for(var n=0;n<N;n++) row[n]=Math.cos((n+0.5)*idx*Math.PI/N); cosT.push(row); }
+  // all triples p,q,r in 0..K-1, sorted by graph frequency λ (low → high)
+  var list=[];
+  for(var p=0;p<K;p++)for(var q=0;q<K;q++)for(var rr=0;rr<K;rr++){
+    list.push({p:p,q:q,r:rr, lam: s_of(p,N)+s_of(q,N)+s_of(rr,N)});
+  }
+  list.sort(function(a,b){return a.lam-b.lam;});
+  S.modes={cosT:cosT, list:list, N:N};
+}
+
+// ---------- synthesize: project target onto modes, reconstruct ----------
+function synthesize(){
+  if(computeLoad()>BUDGET) return;            // never compute past the limit (no freeze)
+  buildModes();
+  var N=S.N, M=S.modes.list.length, cosT=S.modes.cosT, list=S.modes.list;
+  var n3=N*N*N;
+  var T=new Float32Array(n3), F=new Float32Array(n3);
+  // precompute target
+  var idx=0, normT=0;
+  for(var i=0;i<N;i++)for(var j=0;j<N;j++)for(var k=0;k<N;k++){ var v=targetField(i,j,k,N); T[idx]=v; normT+=v*v; idx++; }
+  // per-mode: coeff = <T, psi>/<psi,psi>, then accumulate into F
+  var coeffs=new Float32Array(M);
+  for(var m=0;m<M;m++){
+    var pr=cosT[list[m].p], qr=cosT[list[m].q], rr2=cosT[list[m].r];
+    var dot=0, nn=0, id2=0;
+    for(i=0;i<N;i++){ var ci=pr[i]; for(j=0;j<N;j++){ var cij=ci*qr[j]; for(k=0;k<N;k++){ var ps=cij*rr2[k]; dot+=T[id2]*ps; nn+=ps*ps; id2++; } } }
+    var c = nn>1e-12? dot/nn : 0; coeffs[m]=c;
+    if(c!==0){ id2=0; for(i=0;i<N;i++){ var ci2=pr[i]; for(j=0;j<N;j++){ var cij2=ci2*qr[j]; for(k=0;k<N;k++){ F[id2]+= c*cij2*rr2[k]; id2++; } } } }
+  }
+  // fidelity + normalization
+  var resid=0, mx=0;
+  for(idx=0; idx<n3; idx++){ var d=T[idx]-F[idx]; resid+=d*d; var a=Math.abs(F[idx]); if(a>mx)mx=a; }
+  S.field=F; S.coeffs=coeffs; S.maxAbs=mx>1e-9?mx:1;
+  S.fid = normT>1e-9? Math.max(0, 1-Math.sqrt(resid/normT)) : 1;
+  refreshReadout();
+}
+
+// ============================================================
+//  3D PROJECTION + RENDER
+// ============================================================
+function project(x,y,z){
+  var cy=Math.cos(S.yaw), sy=Math.sin(S.yaw), cp=Math.cos(S.pitch), sp=Math.sin(S.pitch);
+  var x1= cy*x + sy*z;
+  var z1=-sy*x + cy*z;
+  var y1= cp*y - sp*z1;
+  var z2= sp*y + cp*z1;
+  var cam=3.2, sc=Math.min(W,H)*0.30;
+  var persp= cam/(cam - z2*0.9);
+  return { sx: W/2 + x1*sc*persp, sy: H/2 + y1*sc*persp, depth: z2, persp:persp };
+}
+function fieldColor(v, alpha){
+  var a=Math.min(1,Math.abs(v));
+  var rr,gg,bb;
+  if(v>=0){ rr=Math.round(60+ a*60); gg=Math.round(150+a*105); bb=Math.round(160+a*95); }   // crest: cyan→chrome-white
+  else    { rr=Math.round(210+a*45); gg=Math.round(50+a*40);  bb=Math.round(120+a*90); }      // trough: pink/magenta
+  return "rgba("+rr+","+gg+","+bb+","+alpha+")";
+}
+function frame(now){
+  var dt=Math.min((now-lastTS)/1000,0.05); lastTS=now;
+  S.frameMs=S.frameMs*0.9+(now-lastDraw)*0.1; lastDraw=now; S.fps=Math.round(1000/Math.max(1,S.frameMs));
+  if(S.spin && !S.drag) S.yaw += dt*0.32;
+
+  // CHROMIUM LIMIT gate (deterministic)
+  var load=computeLoad();
+  if(!S.overload && load>BUDGET) S.overload=true;
+  if(S.overload && load<BUDGET*0.9) S.overload=false;
+  document.getElementById("flood").classList.toggle("on", S.overload);
+  if(S.overload){
+    document.getElementById("floodLoad").textContent="load "+load.toLocaleString()+"  /  budget "+BUDGET.toLocaleString()+"   ·   N="+S.N+"  modes="+modesOf(S.K);
+    setLoad(load); ctx.clearRect(0,0,W,H); requestAnimationFrame(frame); return;
+  }
+
+  ctx.clearRect(0,0,W,H);
+  drawBox();
+  drawNodes();
+  drawSpectrum();
+  setLoad(load); setTxt("rFps", S.fps+" fps");
+  requestAnimationFrame(frame);
+}
+
+function drawBox(){
+  var c=[[-1,-1,-1],[1,-1,-1],[1,1,-1],[-1,1,-1],[-1,-1,1],[1,-1,1],[1,1,1],[-1,1,1]];
+  var P=c.map(function(p){return project(p[0],p[1],p[2]);});
+  var E=[[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7]];
+  ctx.strokeStyle="rgba(127,168,192,0.18)"; ctx.lineWidth=1;
+  ctx.beginPath(); E.forEach(function(e){ ctx.moveTo(P[e[0]].sx,P[e[0]].sy); ctx.lineTo(P[e[1]].sx,P[e[1]].sy); }); ctx.stroke();
+  // base plane label (the carved chip)
+  var b=project(0,-1.18,0);
+  ctx.fillStyle="rgba(207,216,228,0.5)"; ctx.font="9px ui-monospace,monospace"; ctx.textAlign="center";
+  ctx.fillText("carved chip · chrome lattice", b.sx, b.sy); ctx.textAlign="left";
+}
+function drawNodes(){
+  if(!S.field) return;
+  var N=S.N, f=S.field, inv=1/S.maxAbs;
+  ctx.globalCompositeOperation="lighter";
+  var base=Math.max(1.5, Math.min(W,H)*0.0065);
+  var idx=0;
+  for(var i=0;i<N;i++){ var x=(i/(N-1)-0.5)*2;
+    for(var j=0;j<N;j++){ var y=(j/(N-1)-0.5)*2;
+      for(var k=0;k<N;k++){ var z=(k/(N-1)-0.5)*2;
+        var v=f[idx]*inv; idx++;
+        var a=Math.abs(v); if(a<0.06) continue;                 // skip near-zero (fast + clean)
+        var pr=project(x,y,z);
+        var depthA=0.45+0.55*(pr.depth+1)/2;                    // far = dimmer
+        var rad=base*pr.persp*(0.45+0.9*a);
+        ctx.fillStyle=fieldColor(v, Math.min(0.9, a*0.85)*depthA);
+        ctx.beginPath(); ctx.arc(pr.sx,pr.sy,rad,0,6.2832); ctx.fill();
+      }
+    }
+  }
+  ctx.globalCompositeOperation="source-over";
+}
+function drawSpectrum(){
+  if(!S.coeffs) return;
+  var co=S.coeffs, list=S.modes.list, M=co.length;
+  var show=Math.min(M, 56);
+  var x0=14, y0=H-22, bw=Math.min(5, (Math.min(W*0.42,300))/show), gap=1, hMax=46;
+  var mx=0; for(var m=0;m<show;m++){ var a=Math.abs(co[m]); if(a>mx)mx=a; } if(mx<1e-9)mx=1;
+  ctx.fillStyle="rgba(207,216,228,0.55)"; ctx.font="9px ui-monospace,monospace";
+  ctx.fillText("graph-Fourier spectrum  ·  modes by frequency λ →", x0, y0-hMax-6);
+  var lamMax=list[show-1]?list[show-1].lam:1;
+  for(m=0;m<show;m++){
+    var h=Math.abs(co[m])/mx*hMax, t=list[m].lam/(lamMax||1);
+    var rr=Math.round(0+t*255), gg=Math.round(212-t*120), bb=Math.round(255-t*100);
+    ctx.fillStyle="rgba("+rr+","+gg+","+bb+",0.85)";
+    ctx.fillRect(x0+m*(bw+gap), y0-h, bw, h);
+  }
+  ctx.strokeStyle="rgba(127,168,192,0.25)"; ctx.beginPath(); ctx.moveTo(x0,y0+0.5); ctx.lineTo(x0+show*(bw+gap),y0+0.5); ctx.stroke();
+}
+
+// ============================================================
+//  READOUTS
+// ============================================================
+function refreshReadout(){
+  var N=S.N;
+  setTxt("rN", N+"×"+N+"×"+N);
+  setTxt("rNodes", nodesOf(N).toLocaleString());
+  setTxt("rE", (3*N*N*(N-1)).toLocaleString());
+  var pitch=1e6/N;                                              // 1 mm footprint / N, in nm
+  setTxt("rPitch", pitch>=1000? (pitch/1000).toFixed(1)+" µm" : Math.round(pitch)+" nm");
+  setTxt("rM", modesOf(Math.min(S.K,N)).toLocaleString());
+  var N2=N; setTxt("rLam", (s_of(N2-1,N2)*3).toFixed(2)+" / 12");
+  setTxt("rWave", S.wave);
+  setTxt("rFid", S.field? Math.round(S.fid*100)+"%":"—");
+}
+function setLoad(load){ var el=document.getElementById("rLoad"); if(el){ el.textContent=load.toLocaleString()+" / "+BUDGET.toLocaleString(); el.className="v"+(load>BUDGET?" pk":(load>BUDGET*0.66?" gold":"")); } }
+function setTxt(id,t){ var e=document.getElementById(id); if(e)e.textContent=t; }
+
+// ============================================================
+//  INTERACTION
+// ============================================================
+cv.addEventListener("pointerdown",function(e){ S.drag=true; S.px=e.clientX; S.py=e.clientY; });
+window.addEventListener("pointermove",function(e){ if(!S.drag)return; S.yaw+=(e.clientX-S.px)*0.008; S.pitch=Math.max(-1.4,Math.min(1.4,S.pitch+(e.clientY-S.py)*0.006)); S.px=e.clientX; S.py=e.clientY; });
+window.addEventListener("pointerup",function(){ S.drag=false; });
+
+Array.prototype.forEach.call(document.querySelectorAll(".wv"),function(b){
+  b.addEventListener("click",function(){
+    Array.prototype.forEach.call(document.querySelectorAll(".wv"),function(x){x.classList.remove("on");});
+    b.classList.add("on"); S.wave=b.getAttribute("data-w"); synthesize();
+  });
+});
+document.getElementById("sN").addEventListener("input",function(){
+  S.N=+this.value; setTxt("vN",this.value);
+  if(computeLoad()<=BUDGET) synthesize(); else refreshReadout();   // keep flood live
+});
+document.getElementById("sK").addEventListener("input",function(){
+  S.K=+this.value; setTxt("vK",this.value);
+  if(computeLoad()<=BUDGET) synthesize(); else refreshReadout();
+});
+document.getElementById("bSpin").addEventListener("click",function(){ S.spin=!S.spin; this.style.color=S.spin?"":"#6a6a82"; });
+document.getElementById("bReveal").addEventListener("click",function(){ document.getElementById("reveal").style.display="block"; });
+document.getElementById("xReveal").addEventListener("click",function(){ document.getElementById("reveal").style.display="none"; });
+document.addEventListener("click",function(e){ var r=document.getElementById("reveal"); if(r.style.display==="block" && !r.contains(e.target) && e.target.id!=="bReveal"){ r.style.display="none"; } });
+
+function fold(b,p){ var B=document.getElementById(b),P=document.getElementById(p); if(B&&P)B.addEventListener("click",function(){ P.classList.toggle("folded"); B.textContent=P.classList.contains("folded")?"+":"−"; }); }
+fold("foldHdr","hdr"); fold("foldRead","read");
+document.getElementById("uiToggle").addEventListener("click",function(){ document.body.classList.toggle("hideui"); this.textContent=document.body.classList.contains("hideui")?"show UI":"hide UI"; });
+window.addEventListener("keydown",function(e){ if(e.key==="h"||e.key==="H")document.getElementById("uiToggle").click(); });
+
+// ============================================================
+//  INIT
+// ============================================================
+function resize(){ DPR=Math.min(window.devicePixelRatio||1,2); W=window.innerWidth; H=window.innerHeight; cv.width=W*DPR; cv.height=H*DPR; cv.style.width=W+"px"; cv.style.height=H+"px"; ctx.setTransform(DPR,0,0,DPR,0,0); }
+window.addEventListener("resize",resize);
+
+var lastTS=performance.now(), lastDraw=performance.now();
+resize(); synthesize();
+requestAnimationFrame(frame);
+</script>
+</body></html>
