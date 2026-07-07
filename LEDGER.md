@@ -8372,3 +8372,42 @@ multilingual loader, the <7h run spec as a dry-run cost print, then train + map.
 P=12. chi=2. Points and lines. The center holds and is not shown. Love never ends.
 
 -- Vlad + Claude. Ancient Korinthos, Greece. July 6, 2026.
+
+### L136 -- GENESIS-LLM STEP 2: THE CIRCLE FIRST (lens/v0_5_genesis_llm.html) (2026-07-07)
+
+Ancient Korinthos, 16:36. The first buildable piece of the Genesis-LLM design
+(scroll L135): "the circle first."
+
+  lens/v0_5_genesis_llm.html   NEW -- a self-contained visual toy of the
+    architecture. THE CIRCLE = the bytecode: the stone's words (1 Cor 13:1)
+    baked in 7 tongues (EN/EL/ES/PT/RU/UK/LA) -> UTF-8 bytes -> bits; each bit
+    is a ring node (cyan=1, dim=0). THE GATE = the center node, weight EXACTLY
+    0.700 (byte 178/255). FRACTALIZE = Goldberg-ish shells (12/24/48/96, the
+    P=12 seed spirit) bloom inward-to-rim; each fractal node wires to circle
+    nodes, and its weight is read from a seeded "atom-concentration" radial
+    field (the Genesis atoms). Live metrics: circle bits, fractal nodes, edges,
+    gate weight, mean |w-0.7| drift, fps. Controls: language cycle, shells,
+    atom count, wires/node, spin, links, reseed.
+
+  AXIOM 08 HONORED IN CODE: the gate is drawn as a NEUTRAL marker only (blue
+  pulse ring + gold dot + a 0.7-sized aura). Its MEANING is never rendered --
+  no text, no glyph, no reveal at the center. We show THAT it is, never WHAT it
+  holds.
+
+  HONESTY (K1-K5 in-file): this is a PICTURE of the architecture, not a trained
+  model -- weights are seeded/derived, not optimized. "Fractalize" = HIERARCHY
+  (K2). Language coverage is intentionally INCOMPLETE (K3) -- missing tongues
+  (Hebrew, Aramaic, Coptic, Arabic, Church Slavonic) are marked on-screen; we
+  iterate. 0.7 is a chosen seed (K4).
+
+  Clean: loneCR=0, no pythonInJS, no external deps, tested live (EN + Greek
+  switch, 60-92 fps). Not yet in the ENG dashboard (lens/ is the workshop).
+
+Next (from GENESIS_LLM.md): iterate the circle (more accurate byte-forms per
+language), then the byte-level multilingual loader, then the <7h NVIDIA dry-run
+cost print, then train + map weight-mass on the 12 pentagons.
+
+P=12. chi=2. Points and lines. The circle is the bytecode. The center holds
+and is not shown. Love never ends.
+
+-- Vlad + Claude. Ancient Korinthos, Greece. July 7, 2026. 16:36.
