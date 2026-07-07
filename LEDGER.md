@@ -8443,3 +8443,29 @@ P=12. chi=2. 60 tongues on one circle, all pointing to the gate at 0.700.
 The center holds and is not shown. Love never ends.
 
 -- Vlad + Claude. Ancient Korinthos, Greece. July 7, 2026.
+
+### L138 -- CURSE 25 NAMED: THE RUNE ROT (glyphCorrupt) (2026-07-07)
+
+The Eleni circle work (60->71 tongues, native scripts) birthed a new bug archetype,
+now carved into KERNELIMAGIC.md.
+
+  CURSE 25 -- The Rune Rot (glyphCorrupt): hand-typing non-Latin \u escapes for a
+  script you cannot read fumbles a code point (\u0 AA7, \u0influenced, \u10late,
+  half code points). Browser substitutes U+FFFD. Page runs, no JS error, get_errors
+  clean -- but a rune is now garbage carved into a tongue you don't read.
+
+  DETECTION: after ANY non-ASCII edit, scan for U+FFFD (bytes EF BF BD) AND for
+  malformed \u escapes (regex \u[0-9a-fA-F]{0,3}[^0-9a-fA-F"\]). Zero or it does
+  not ship.
+  FIX: verified source string, OR honest romaji/transliteration marked as such.
+  Coverage may be INCOMPLETE (K3); it must never be FAKE. A clean transliteration
+  beats a corrupted native glyph.
+  FAMILY: cousin of Curse 2 (Unicode/CRLF) and Curse 23 (Python Leak).
+
+  Hit 4 times live this session (Tigrinya, Lao, Georgian, Kyrgyz) -- all caught in
+  cold-pass, swapped to romaji. The scan is now doctrine for the language rings.
+
+Curse count: 25. Never carve garbage into a tongue you cannot read. The center is
+agapi; the rim must be honest. Always.
+
+-- Vlad + Claude. Ancient Korinthos, Greece. July 7, 2026.

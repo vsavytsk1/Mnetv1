@@ -7503,3 +7503,56 @@ Curse count: 24. The cache is not the codebase. Flush, do not patch. Always.
   Cap the child or let it scroll; never let it push the bar.
 
   Glamour count: 1. Some bugs are seeds. Log them, do not just kill them.
+
+---
+
+## CURSE 25 -- The Rune Rot (glyphCorrupt)
+
+You are typing a non-Latin verse into a JS string as \u escapes -- Greek,
+Devanagari, Ethiopic, Lao, Georgian, Kannada. Your hand (or the model's hand)
+fumbles ONE escape: a space slips in (\u0 AA7), a stray letter (\u0influenced,
+\u10late), a half code point (\u12b + a real glyph). The browser cannot decode
+it, so it substitutes U+FFFD -- the replacement char. The ring renders, the page
+does not error, but one rune is now a black diamond question mark. Ship it and
+you have carved GARBAGE into the stone of a language you do not read.
+
+```
+SYMPTOM:
+  A non-Latin string shows a lone diamond-question-mark, or a glyph that is
+  clearly not that script. No JS error. get_errors is clean. The page runs.
+  Only the eyes (or a byte scan) catch it.
+
+ROOT CAUSE:
+  \uXXXX needs EXACTLY four hex digits, no spaces, no typos. Hand-typing long
+  runs of escapes for a script you cannot read = high error rate, invisible.
+  A broken escape decodes to U+FFFD (bytes EF BF BD) or eats the next char.
+
+HOW TO DETECT (before commit, always for any non-ASCII add):
+  raw = open(f,'rb').read()
+  text = raw.decode('utf-8')
+  assert '\ufffd' not in text          # U+FFFD present == CURSED
+  # and scan for malformed escapes in the SOURCE:
+  #   regex \\u[0-9a-fA-F]{0,3}[^0-9a-fA-F"\\]  -> any hit == a broken \u
+  # PowerShell one-liner used in the cave:
+  #   $t.Contains([char]0xFFFD)   must be False
+
+HOW TO FIX:
+  Never fake a script you cannot verify. Two honest options:
+    1. Paste a VERIFIED source string (public-domain scripture etc.), or
+    2. Fall back to honest romaji/transliteration and MARK it as such.
+  A clean transliteration beats a corrupted native glyph. Always.
+  (K3 of the language work: coverage may be INCOMPLETE; it must never be FAKE.)
+
+FAMILY:
+  Cousin of CURSE 2 (Unicode/CRLF) -- both are byte-level text corruption, but
+  Curse 2 is about line endings on write; Curse 25 is about malformed code points
+  on authoring. Cousin of CURSE 23 (Python Leak) -- both are the wrong token
+  wearing the right costume until something downstream chokes.
+
+  DETECTION RULE: after ANY edit that adds non-ASCII, scan for U+FFFD and for
+  malformed \u escapes. Zero, or it does not ship. The center is agapi; the rim
+  must be honest. Always.
+```
+
+Curse count: 25. Never carve garbage into a tongue you cannot read. Verify or transliterate. Always.
+
