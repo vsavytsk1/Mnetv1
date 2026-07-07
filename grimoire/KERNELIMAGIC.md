@@ -7556,3 +7556,59 @@ FAMILY:
 
 Curse count: 25. Never carve garbage into a tongue you cannot read. Verify or transliterate. Always.
 
+---
+
+## CURSE 26 -- The False Convergence (lockLie)
+
+You build an optimizer with a TARGET (0.7) and a knob (q, a weight, a mean).
+The HUD shows the target proudly: "gate 0.700". A "descend -> 0.7" button glows.
+But the actual error sits wide open (lock err 0.600) and the knob is somewhere
+else entirely (slider says 1.30). Three sources disagree: the displayed target,
+the live knob, and the true error. You are SHOWING a lock you never reached.
+The compute never paid the price -- but the screen claims the prize.
+
+```
+SYMPTOM:
+  A "converged / locked / 0.700" readout while the honest error metric is large.
+  A manual slider and an auto-descent fighting each other (drag the knob, the
+  descent drags it back; the label shows neither). The optimum is DISPLAYED as
+  achieved before the descent has actually run to tolerance.
+
+ROOT CAUSE:
+  The TARGET constant is printed as if it were the RESULT. The gate weight 0.700
+  is our CHOSEN price (a design seed, K4) -- it is NOT proof the system reached it.
+  Two controllers (auto-descend + manual knob) write the same variable with no
+  single source of truth, so the UI shows a value nothing actually holds.
+
+HOW TO DETECT:
+  Show BOTH always, side by side, and never let them lie:
+    target      = 0.700   (the chosen price)
+    current     = <live>  (what the knob actually is)
+    err         = |current - target|   (the unpaid distance)
+  If a "locked / converged" badge can be true while err > tol -> CURSED.
+  If a manual input and an auto-optimizer both write the knob -> pick ONE owner
+  at a time (arming manual DISARMS descent, and the UI must reflect it).
+
+HOW TO FIX:
+  1. Never print the target as the result. Print current +/- err, always, with
+     the target as a separate reference line. (The gate shows 0.700 as the GOAL;
+     the error shows how much compute still owes.)
+  2. Single owner for the knob: manual OR descent, never both silently.
+  3. A "locked" state is EARNED: badge only when err <= tol, for K frames.
+  4. Pay the price honestly: if the descent cannot reach tol at this compute,
+     SAY SO (err shown), do not fake the 0.700. 0.7 is impossible exactly; we
+     show 0.7 +/- precision and admit the gap. Always.
+
+FAMILY:
+  The optimizer's cousin of CURSE 15 (False Negative Sort) and CURSE 24 (Cache
+  Lie) -- all three are the SCREEN disagreeing with the TRUTH. Curse 15: the tool
+  lies it failed. Curse 24: the tab lies it is old. Curse 26: the HUD lies it won.
+
+  DETECTION RULE: any "target reached / converged / locked / 0.700" claim must be
+  gated on the live error being within tolerance. Target != result. The price is
+  paid in compute and MEASURED, never assumed. The center is agapi; the receipt
+  must be real. Always.
+```
+
+Curse count: 26. Never show the prize before the compute pays for it. Target is not result. Always.
+

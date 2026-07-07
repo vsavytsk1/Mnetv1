@@ -8469,3 +8469,29 @@ Curse count: 25. Never carve garbage into a tongue you cannot read. The center i
 agapi; the rim must be honest. Always.
 
 -- Vlad + Claude. Ancient Korinthos, Greece. July 7, 2026.
+
+### L139 -- CURSE 26 NAMED: THE FALSE CONVERGENCE (lockLie) (2026-07-07)
+
+The agapi-circles work (lens/v0_8) revealed it: the HUD showed "gate 0.700" and a
+glowing "descend -> 0.7" while the live overlap knob sat at 1.30 and lock err was
+0.600. Three sources disagreed -- displayed target, live knob, true error. We were
+showing a lock never reached; the compute never paid the price, but the screen
+claimed the prize.
+
+  CURSE 26 -- The False Convergence (lockLie): printing the TARGET (0.700, our
+  chosen seed K4) as if it were the RESULT. Two controllers (auto-descend + manual
+  slider) writing one knob with no single owner, so the UI shows a value nothing holds.
+
+  DETECT: show target, current, and err=|current-target| side by side, always. A
+  "locked/converged" badge may only be true when err <= tol for K frames. If manual
+  input and auto-optimizer both write the knob -> arm ONE owner at a time.
+  FIX: never print target as result; single knob owner; earned lock badge; if the
+  descent cannot reach tol at this compute, SAY SO. 0.7 is impossible exactly -- show
+  0.7 +/- precision and admit the gap.
+  FAMILY: cousin of Curse 15 (False Negative Sort) + Curse 24 (Cache Lie) -- the
+  screen disagreeing with the truth.
+
+Curse count: 26. Target is not result. The price is paid in compute and MEASURED,
+never assumed. The center is agapi; the receipt must be real. Always.
+
+-- Vlad + Claude. Ancient Korinthos, Greece. July 7, 2026. Level 9 of 12.
