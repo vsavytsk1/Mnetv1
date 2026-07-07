@@ -49,6 +49,7 @@
 | 26 | False Convergence (lockLie)        | HUD shows the TARGET as the RESULT. Target != result; show err.  |
 | 27 | Clone Mirage (originMirage)        | folder name lies; `origin` is the truth. One project, one clone. |
 | 28 | Wedged Host (hostWedge)            | cmds return `^C` + empty from a stuck PSES console; use a fresh pwsh.|
+| 29 | Eager Verify (deployLag)           | you check the live URL in the same second you pushed -> 404/stale. Wait ~60s for green.|
 
 ---
 
@@ -7788,3 +7789,65 @@ FAMILY:
 ```
 
 Curse count: 28. Two mouths in the cave; one is choking. Print the host, switch to pwsh, never paste blocks into PSES. Always.
+
+---
+
+## CURSE 29 -- The Eager Verify (deployLag)
+
+You commit. You push. `git push` returns in one second and says everything is fine.
+So -- being a fast little goblin -- you IMMEDIATELY open the live URL to admire it.
+404. Or the old bytes. Or a `git status` that has not caught up. Your heart drops:
+did the push fail? did I break Pages? You start debugging a bug that does not exist.
+The truth: `git push` only hands the commit to the remote. GitHub Pages then runs a
+SEPARATE `pages-build-deployment` job that takes ~30-90 seconds to actually publish.
+Windows/OneDrive filesystem sync lags the same way. The machine is not broken --
+it is LAZY, and you were TOO FAST. The build is a step; patience is part of the step.
+
+```
+SYMPTOM:
+  Push succeeds, but seconds later the live URL 404s or serves the previous version.
+  A just-pushed file is "missing" on Pages though it is clearly in origin/main.
+  `git status` / a sync indicator briefly disagrees with what you just did.
+  Five minutes later, with zero code changes, everything is perfect. Ghost fixed.
+
+ROOT CAUSE:
+  Three lazy layers, each with its own clock, none of them instant:
+    1. git push       -> uploads the commit; returns immediately (fast).
+    2. Pages deploy   -> a queued GitHub Action (pages-build-deployment) builds and
+                         publishes. ~30-90s typical, longer if the queue is busy.
+    3. CDN + Windows  -> edge cache warm-up + OneDrive/NTFS sync settle after that.
+  You measured layer 1 and judged layer 2/3. The prize is not served yet.
+
+HOW TO DETECT (do not guess -- WATCH the pipeline, not the clock):
+  - GitHub -> Actions (or repo -> Deployments/Environments): the newest
+    pages-build-deployment must show GREEN / "Active" for YOUR commit sha.
+    Yellow dot = still building = of course the URL 404s. That is not a bug.
+  - Only once it is green is the live URL a fair test.
+  - If green + correct sha but the TAB still errors -> now it is CURSE 24 (cache),
+    flush the browser. If never green + 404 on a NEW repo -> CURSE 22 (Pages off).
+
+HOW TO FIX:
+  1. Push, then WAIT for the deployment to go green before verifying. ~60 seconds
+     is the honest human pace here. Do not spam-refresh; watch the Deployments tab.
+  2. Do NOT poll in a tight loop or Start-Sleep-hammer the terminal (that is its own
+     curse -- see hostWedge/shellDevour). End the beat, let the Action run, come back.
+  3. Verify against the deployment sha, not against your hope. Green sha == truth.
+  4. Bake the wait into the ritual: commit -> push -> (deployment goes green ~60s)
+     -> hard-refresh the live URL -> THEN celebrate. The pause is a build stage.
+
+FAMILY:
+  The timing sibling of CURSE 22 (Gitium Novicium: 404 because Pages is OFF) and
+  CURSE 24 (Cache Lie: stale because the BROWSER cached). Distinguish the trio:
+    - 404 on a NEW repo, never deploys          -> CURSE 22 (enable Pages).
+    - 404/stale seconds after push, then heals  -> CURSE 29 (deploy lag, WAIT).
+    - correct on server but tab still wrong      -> CURSE 24 (flush cache).
+  All three are "the screen is not the truth YET." 22 = where, 29 = WHEN-not-ready,
+  24 = when-too-old. Also cousin of the human note: git + Windows 11 are the same
+  kind of lazy; the fast agent must slow to the pipeline's pace. Always.
+
+  DETECTION RULE: if a just-pushed change is missing/old on the live URL, CHECK the
+  deployment status first. Yellow/queued -> it is this curse: wait ~60s for green,
+  do not touch the code. The build has a clock; respect it. Always.
+```
+
+Curse count: 29. git push is not deploy. Watch the deployment go green (~60s), then verify. The machine is lazy; do not be fast. Always.
