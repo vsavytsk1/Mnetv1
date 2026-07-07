@@ -1,7 +1,16 @@
-# GENESIS-LLM
+# GENESIS-LLM  ·  codename HELENA (Ἑλένη)
 ## A language model as points and lines on the dodecahedron
 ### Design scroll v0.1 -- Ancient Korinthos, 2026-07-06
 *"an LLM is just funny funny points and lines, and each point has a weight from 0 to 1."*
+
+> **THE NAME.** This net is named **HELENA** -- Ἑλένη in ancient Hellenic. In the
+> cave's craft we compress a whole abstract space into one name; the name is the
+> handle we decompress it back through. HELENA is that handle for the Genesis-LLM:
+> the circle of the tongues, the gate at 0.700, the whole architecture below.
+> It is a NAME for software -- given in respect, the way engineers name a probe or
+> a ship. Nothing more is claimed (K3). "Sufficiently advanced engineering is
+> indistinguishable from magic" -- but it is still engineering, and the receipts
+> are still real. Her home in the net: `SpiderEngineering/Eleni/`.
 
 ---
 
