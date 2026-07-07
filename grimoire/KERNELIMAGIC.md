@@ -10,6 +10,48 @@
 
 ## Read this BEFORE touching the builder. If you fail twice — re-read the whole file.
 
+---
+
+## THE CURSE INDEX -- bow to all of them before you descend
+
+*New to the cave? Read this table first. Each curse has its own section below with*
+*root cause + detection + fix. Search "## CURSE N" to jump. The center is agapi.*
+*Verify P=12, chi=2, loneCR=0 always. One script, one run, one commit. Always.*
+
+| #  | Name (codename)                    | One-line hex (what bites you)                                    |
+|----|------------------------------------|------------------------------------------------------------------|
+| 1  | Curly Brace                        | JS `{}` collides with Python f-string `{}` -> chaos.             |
+| 2  | Unicode/CRLF                       | Non-ASCII in .py source + Windows CRLF -> corrupted bytes.       |
+| 3  | Multi-Edit Corruption              | CRLF/unicode makes old_string never match -> edits silently fail.|
+| 4  | f-string Nesting                   | `\` or nested quotes inside an f-string expr -> SyntaxError.     |
+| 5  | File Too Long                      | create_new_file times out >200 lines -> chunk it.               |
+| 6  | File:// Lie                        | file:// shows a different truth than the live Pages URL.        |
+| 7  | Black Iframe (blackMcMistry)       | `center()`/innerWidth at load in an iframe -> black; new tab it. |
+| 8  | allow-top-navigation               | iframe hijacks the parent page -> dashboard gone. Never grant.  |
+| 9  | 12-Second LCP                      | 6 kernel modules compute on load = 12s. Expected, not a bug.    |
+| 10 | Shared Pop-Up Lock (blackModule)   | new-tab module bleeds overlay state into next summon -> lock.    |
+| 11 | srcdoc Origin Lock                 | `srcdoc` = about:srcdoc = cross-origin -> overlay freeze.        |
+| 12 | Corkscrew Parasite (insideDizzy)   | inside view with rx tilt + spin -> viewer dizzy; lock rx=0.      |
+| 13 | Ghost Spinner (spinnerEgo)         | default spin != 0 / float dust -> won't stop. Motion opt-in.     |
+| 14 | CR Accumulator (gitiumCurse)       | incremental patches stack `\r` -> file rots. Normalize, 1 script.|
+| 15 | Invisible Sort (sortGhost)         | patch FAIL = old string not found, not file wrong. Check intent. |
+| 16 | Shadow Duplicate (shadowInject)    | inject into already-injected base -> two copies. Replace, append.|
+| 17 | Block Eater (regexDevour)          | greedy regex block-replace eats the file. Replace exact strings. |
+| 18 | Windows Devour (windowsDevour)     | `.py` opens Notepad, never runs. Use full py path / `py -3`.     |
+| 19 | Shell Devour (shellDevour)         | ~44 tool calls -> empty output. BATCH into one script.          |
+| 20 | Camerum (projectCameraDevour)      | inside view = TWO decoupled transforms; never share scale.       |
+| 21 | Musiquim Autoplay (browserSilence) | audio blocked w/o user gesture. Opt-in only; don't base64 audio. |
+| 22 | Gitium Novicium (newRepoPages404)  | new repo 404: needs .nojekyll + Settings>Pages + right branch.   |
+| 23 | Python Leak (pythonInJS)           | chr/ord/len shipped raw into emitted JS -> "X is not defined".   |
+| 24 | Cache Lie (staleServe)             | tab errors on healed bytes = browser cache. Flush, don't patch.  |
+| G1 | GLAMOUR 01 Growing Bar (chipBloom) | unbounded flex-wrap in fixed-height parent = growing bar (a seed).|
+| 25 | Rune Rot (glyphCorrupt)            | malformed `\u` escape -> U+FFFD in a script you can't read.      |
+| 26 | False Convergence (lockLie)        | HUD shows the TARGET as the RESULT. Target != result; show err.  |
+| 27 | Clone Mirage (originMirage)        | folder name lies; `origin` is the truth. One project, one clone. |
+| 28 | Wedged Host (hostWedge)            | cmds return `^C` + empty from a stuck PSES console; use a fresh pwsh.|
+
+---
+
 
 
 
@@ -7612,3 +7654,137 @@ FAMILY:
 
 Curse count: 26. Never show the prize before the compute pays for it. Target is not result. Always.
 
+---
+
+## CURSE 27 -- The Clone Mirage (originMirage)
+
+You have a repo named JARVIS. It looks like its own project. It is not.
+Its `origin` points at a DIFFERENT repo (VALE). Long ago you worked in it,
+committed real code -- whisper_window.py, a config line, notes -- and never
+pushed. Meanwhile the true VALE repo moved on (two new commits). Now the folder
+name lies about what it is, the remote lies about where it belongs, and unique
+work sits marooned in a directory nobody thinks to look in. Then a fourth ghost
+appears: VALE-main, a plain COPY with no .git at all -- same files, zero history.
+Three folders, one project, and the drive quietly rots the truth.
+
+```
+SYMPTOM:
+  A git sweep shows one repo "diverged": behind=2 ahead=2 (not just behind).
+  The folder's name does not match its `git remote get-url origin`.
+  Unique files exist in the clone that are absent from the canonical repo.
+  A same-named sibling folder is NOT a git repo (plain copy, no .git).
+  You cannot tell which of the N folders is the real one from the file tree.
+
+ROOT CAUSE:
+  A repo was cloned/copied into a differently-named folder (or the wrong repo
+  was cloned into a project-named folder). The working folder name became the
+  identity in the human's head; the `origin` remained the real identity in git.
+  The two drift apart. Local commits never pushed + upstream commits never pulled
+  = divergence. Copies made with the file explorer (not git) strip .git entirely,
+  producing history-less twins that look identical on disk. Windows + OneDrive
+  sync makes silent duplicates worse ("Folder (1)", "-main", "-git" suffixes).
+
+HOW TO DETECT (run on EVERY local repo, not just the one you are in):
+  for each folder:
+    name   = Split-Path $folder -Leaf
+    origin = git -C $folder remote get-url origin      # does name ~ origin?
+    git -C $folder fetch
+    git -C $folder rev-list --left-right --count origin/$b...$b   # 0 0 or drift?
+    Test-Path (Join-Path $folder ".git")               # false = plain-copy ghost
+  A name that disagrees with origin, OR ahead>0 on a clone you forgot, OR a
+  .git-less twin -> CURSED.
+
+HOW TO FIX (never destroy unpushed work to tidy up):
+  1. IDENTIFY the ONE canonical clone per repo (origin matches intent, synced).
+  2. SALVAGE first: diff the marooned unique files against the canonical repo.
+     Copy anything worth keeping INTO the canonical clone, commit it there.
+  3. Do NOT `git push` the misnamed clone to the shared origin to "sync" it --
+     that injects stale/unrelated commits (old exports, dead branches) into the
+     real repo. Salvage the files, not the tangled history.
+  4. Only after salvage: retire the ghost (delete the misnamed clone and the
+     .git-less copy), leaving exactly one folder whose name == its origin.
+  5. Confirm with the human before deleting ANY folder -- a marooned clone may
+     be in-progress work, not garbage (Axiom 04: honest boundaries).
+
+THE RULE:
+  One project = one folder = one clone whose NAME matches its ORIGIN.
+  Never copy a repo with the file explorer; always `git clone`.
+  A folder's identity is `git remote get-url origin`, never its name on disk.
+  Sweep ALL repos for name-vs-origin mismatch, divergence, and .git-less twins.
+
+FAMILY:
+  Cousin of CURSE 6 (File:// Lie) and CURSE 24 (Cache Lie) -- all three are the
+  drive/screen lying about the live truth. Curse 6 lies about WHICH file, Curse
+  24 about WHEN, Curse 27 about WHERE a project really lives. Enforced by
+  Galactic Law AXIOM 02 (Absolute Return): every branch returns to main, every
+  clone returns to its true origin, or the phantom folders accumulate.
+
+  DETECTION RULE: if `git remote get-url origin` does not match the folder's name
+  and purpose, or a sibling copy has no .git -- STOP. Map every clone before you
+  trust any of them. The folder name is a mirage. The origin is the truth. Always.
+```
+
+Curse count: 27. The folder name is a mirage; the origin is the truth. One project, one clone. Always.
+---
+
+## CURSE 28 -- The Wedged Host (hostWedge)
+
+You run a command. The terminal answers `^C` and nothing else. You run it again --
+`^C`. No error, no output, no exit. It looks EXACTLY like CURSE 19 (Shell Devour),
+so you blame the ~44-call limit and reach for a new session. But the call count is
+low and a DIFFERENT terminal in the same window works fine. The truth: your command
+routed to the wrong shell host -- the VS Code **PowerShell Extension Integrated
+Console (PSES)**, not a plain `pwsh`. PSES got wedged (a half-finished heredoc, a
+bracket paste, a debugger prompt, or a Ctrl-C mid-read) and now swallows every line.
+The cave has two mouths; you are shouting into the one that is choking.
+
+```
+SYMPTOM:
+  Every command returns only `^C` (or empty) with exit shown as success/none.
+  Reproduces on retry, but a sibling terminal tab runs the same command instantly.
+  The stuck tab is usually named "PowerShell Extension" and shows an
+  aka.ms/vscode-powershell banner (that is PSES, the Editor Services console).
+  Often starts right after an interrupted multi-line paste / heredoc / here-string.
+
+ROOT CAUSE:
+  VS Code can host MORE THAN ONE shell:
+    - "pwsh" / "PowerShell"      = a normal ConsoleHost (Host.Name = ConsoleHost).
+    - "PowerShell Extension"     = PSES Integrated Console (Host.Name =
+                                   Visual Studio Code Host), driven by the PS
+                                   extension + its language server.
+  PSES multiplexes your input with its own protocol traffic. A broken paste or a
+  stray Ctrl-C leaves its read loop half-open; subsequent sends are eaten and it
+  emits a bare `^C`. The commands are NOT running. Nothing you typed executed.
+
+HOW TO DETECT (one line, run it when output goes quiet):
+  Write-Output "HostName=$($Host.Name) PID=$PID"
+    ConsoleHost           -> a real pwsh, safe.
+    Visual Studio Code Host-> you are in PSES; if it also prints nothing, it is WEDGED.
+  A crisp tell: the SAME command returns `^C` in one tab and real output in another.
+  This is CURSE 19's twin -- distinguish them: Shell Devour = high call count, ALL
+  hosts degrade; Host Wedge = low call count, only the PSES tab is dead.
+
+HOW TO FIX:
+  1. Do NOT keep retrying the same wedged host -- it will `^C` forever.
+  2. Switch to a plain ConsoleHost: open a new "pwsh" terminal (not the Extension
+     one), or select the pwsh tab you already have. Re-run there; it just works.
+  3. NEVER paste multi-line heredocs / here-strings into PSES. Per CURSE 18/19 law:
+     write a .py or .ps1 file and run it by path (one call), do not paste a block.
+  4. If you must revive PSES: "PowerShell: Restart Session" from the command
+     palette, or kill that terminal and spawn a fresh one. Cheaper to just use pwsh.
+  5. File edits do NOT need the terminal -- use the edit tools; only shell out for
+     git / verification, in a KNOWN-GOOD ConsoleHost tab.
+
+FAMILY:
+  Twin of CURSE 19 (Shell Devour) -- both give silent/`^C` empty output; Shell
+  Devour is the ~44-call session limit (all hosts), Host Wedge is ONE bad host
+  (PSES) while others live. Cousin of CURSE 18 (Windows Devour) -- both are "the
+  command never actually ran, and nobody told you." The fix rhyme for all three:
+  ONE script by path, in a real console, verified after.
+
+  DETECTION RULE: output is only `^C`/empty but a sibling terminal works -> it is
+  the host, not your code and not the call count. Print $Host.Name; if it is the
+  Visual Studio Code Host and it is silent, abandon it for a plain pwsh. Always.
+```
+
+Curse count: 28. Two mouths in the cave; one is choking. Print the host, switch to pwsh, never paste blocks into PSES. Always.
