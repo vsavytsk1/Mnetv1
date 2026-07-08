@@ -35,9 +35,12 @@
 import os, sys, json, glob, csv, struct, hashlib, zipfile, random, argparse, time
 
 VAULT = "vault"                 # subfolder that holds the 3-format copies + manifest
-WORD = 4                        # bytes per value (float32 / int32)
-FLOAT_EXT = ".f32"
-INT_EXT = ".i32"
+
+# each vaulted array declares its element type by extension. word size is per-type
+# so the atomic-clock timestamp (float64) is NOT silently truncated to float32.
+#   .f32 float32 (4B)   .i32 int32 (4B)   .f64 float64 (8B, the unix atomic clock)
+TYPE_BY_EXT = {".f32": "f", ".i32": "i", ".f64": "d"}
+STRUCT = {"f": ("<f", 4), "i": ("<i", 4), "d": ("<d", 8)}
 
 
 def sha(b):
@@ -54,10 +57,9 @@ def human(n):
 
 
 def typ_of(name):
-    if name.endswith(FLOAT_EXT):
-        return "f"
-    if name.endswith(INT_EXT):
-        return "i"
+    for ext, t in TYPE_BY_EXT.items():
+        if name.endswith(ext):
+            return t
     return None
 
 
@@ -66,25 +68,25 @@ def typ_of(name):
 # ---------------------------------------------------------------------------
 def raw_to_csv(raw, typ):
     """canonical bytes -> list of text lines (one value per line; bit-exact)."""
-    fmt = "<f" if typ == "f" else "<i"
-    n = len(raw) // WORD
+    fmt, word = STRUCT[typ]
+    n = len(raw) // word
     lines = []
     for i in range(n):
-        v = struct.unpack(fmt, raw[i*WORD:(i+1)*WORD])[0]
-        # repr() round-trips exactly; float32 value survives the widen->pack.
-        lines.append(repr(v) if typ == "f" else str(v))
+        v = struct.unpack(fmt, raw[i*word:(i+1)*word])[0]
+        # repr() round-trips exactly; the widen->pack preserves the stored value.
+        lines.append(str(v) if typ == "i" else repr(v))
     return lines
 
 
 def csv_to_raw(lines, typ):
     """text lines -> canonical bytes."""
-    fmt = "<f" if typ == "f" else "<i"
+    fmt, word = STRUCT[typ]
     out = bytearray()
     for ln in lines:
         ln = ln.strip()
         if ln == "":
             continue
-        v = float(ln) if typ == "f" else int(ln)
+        v = int(ln) if typ == "i" else float(ln)
         out += struct.pack(fmt, v)
     return bytes(out)
 
@@ -141,16 +143,16 @@ def decode_copy(vault_dir, base, fmt, typ):
 # ---------------------------------------------------------------------------
 #  TMR VOTE  -- word-by-word majority across the (up to three) decoded copies
 # ---------------------------------------------------------------------------
-def tmr_vote(candidates):
+def tmr_vote(candidates, word):
     """candidates: list of canonical byte-strings (already length-checked equal).
-       returns (voted_bytes, unrecoverable_word_count)."""
+       word = element size in bytes (vote per element). returns (voted, unrec_count)."""
     if len(candidates) == 1:
         return candidates[0], 0
     n = len(candidates[0])
     out = bytearray()
     unrec = 0
-    for i in range(0, n, WORD):
-        words = [c[i:i+WORD] for c in candidates]
+    for i in range(0, n, word):
+        words = [c[i:i+word] for c in candidates]
         winner = None
         for w in words:
             if words.count(w) >= 2:      # a clear majority (2 of 3, or all agree)
@@ -169,30 +171,33 @@ def tmr_vote(candidates):
 def cmd_save(net):
     if not os.path.isdir(net):
         sys.exit("ERROR: not a folder: " + net)
-    sources = sorted(glob.glob(os.path.join(net, "*" + FLOAT_EXT)) +
-                     glob.glob(os.path.join(net, "*" + INT_EXT)))
+    sources = []
+    for ext in TYPE_BY_EXT:
+        sources += glob.glob(os.path.join(net, "*" + ext))
+    sources = sorted(sources)
     if not sources:
-        sys.exit("ERROR: no *.f32 / *.i32 arrays found in " + net)
+        sys.exit("ERROR: no *.f32 / *.i32 / *.f64 arrays found in " + net)
     vault_dir = os.path.join(net, VAULT)
     os.makedirs(vault_dir, exist_ok=True)
 
     print("HELENA // vault -- saving 3 formats (bin / csv / zip) + SHA-256 manifest")
     manifest = {"created_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-                "word_bytes": WORD, "arrays": {}}
+                "arrays": {}}
     total = 0
     for src in sources:
         name = os.path.basename(src)
         typ = typ_of(name)
+        word = STRUCT[typ][1]
         base = name                                # keep full name incl extension as base
         raw = _read_file(src)
         copies = write_copies(vault_dir, base, raw, typ)
         manifest["arrays"][name] = {
-            "type": typ, "values": len(raw) // WORD, "bytes": len(raw),
+            "type": typ, "word_bytes": word, "values": len(raw) // word, "bytes": len(raw),
             "canonical_sha256": sha(raw), "copies": copies,
         }
         sz = sum(os.path.getsize(os.path.join(vault_dir, base + e)) for e in (".bin", ".csv", ".zip"))
         total += sz
-        print("  [vault] " + name + "  (" + f"{len(raw)//WORD:,}" + " " + typ +
+        print("  [vault] " + name + "  (" + f"{len(raw)//word:,}" + " " + typ +
               "-values)  -> bin+csv+zip " + human(sz))
 
     with open(os.path.join(vault_dir, "MANIFEST.json"), "w", encoding="utf-8", newline="\n") as fh:
@@ -281,7 +286,7 @@ def cmd_repair(net):
             cands = [decoded[f] for f in ("bin", "csv", "zip")
                      if decoded[f] is not None and len(decoded[f]) == nbytes]
             if len(cands) >= 2:
-                voted, unrec = tmr_vote(cands)
+                voted, unrec = tmr_vote(cands, STRUCT[typ][1])
                 unrec_total += unrec
                 if sha(voted) == canon:
                     truth = voted
@@ -336,13 +341,17 @@ def cmd_selftest():
     tmp = tempfile.mkdtemp(prefix="helena_vault_")
     net = os.path.join(tmp, "net")
     os.makedirs(net)
-    # a synthetic array of int32 and one of float32
+    # a synthetic array of int32, one of float32, and the CENTER as float64
     ints = struct.pack("<" + "i" * 300, *range(300))
     with open(os.path.join(net, "probe.i32"), "wb") as fh:
         fh.write(ints)
     flts = struct.pack("<" + "f" * 300, *[i * 0.5 - 75.0 for i in range(300)])
     with open(os.path.join(net, "probe.f32"), "wb") as fh:
         fh.write(flts)
+    # the center 2-vector: [gate 0.700, unix atomic clock] -- needs float64 precision
+    center = struct.pack("<dd", 0.700, time.time())
+    with open(os.path.join(net, "center.f64"), "wb") as fh:
+        fh.write(center)
 
     print("  1) save the 3-format vault ...")
     cmd_save(net)
@@ -353,7 +362,7 @@ def cmd_selftest():
     print("     clean: PASS")
 
     vault_dir = os.path.join(net, VAULT)
-    for target in ("probe.i32.bin", "probe.f32.csv", "probe.i32.zip"):
+    for target in ("probe.i32.bin", "probe.f32.csv", "center.f64.bin", "probe.i32.zip"):
         print("  3) simulate a cosmic ray: flip ONE bit in " + target)
         _flip_one_bit(os.path.join(vault_dir, target))
         print("     verify (should DETECT):")

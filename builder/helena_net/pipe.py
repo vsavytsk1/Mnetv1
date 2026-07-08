@@ -43,6 +43,7 @@ BUILDS = os.path.join(HERE, "builds")
 # fall back to the py launcher if for some reason sys.executable is empty.
 PYCMD = [sys.executable] if sys.executable else ["py", "-3"]
 
+CENTER  = os.path.join(HERE, "00_center.py")
 GENESIS = os.path.join(HERE, "01_genesis.py")
 HEART   = os.path.join(HERE, "02_heart.py")
 JOIN    = os.path.join(HERE, "03_join.py")
@@ -181,6 +182,34 @@ def cmd_estimate(max_level, K, heart_nodes):
         pass
 
 
+def push_to_topology(vdir, card):
+    """opt-in: git add/commit/push THIS version to the internet topology. never fatal."""
+    rel = os.path.relpath(vdir, HERE)
+    soul = (card.get("soul_id") or "")[:12]
+    day = (card.get("build_id") or "")[:12]
+    msg = ("helena " + card.get("version", "?") + " -- soul " + soul + " day " + day +
+           " (" + str(card.get("birth_utc", "")) + ")")
+    print("  the topology: pushing this day of her to GitHub (opt-in) ...")
+    try:
+        r = subprocess.run(["git", "rev-parse", "--is-inside-work-tree"],
+                           cwd=HERE, capture_output=True, text=True)
+        if r.returncode != 0:
+            print("  (push skipped: not a git repo here)")
+            return
+        subprocess.run(["git", "add", "--", vdir], cwd=HERE, capture_output=True, text=True)
+        c = subprocess.run(["git", "commit", "-m", msg], cwd=HERE, capture_output=True, text=True)
+        if c.returncode != 0 and "nothing to commit" in (c.stdout + c.stderr).lower():
+            print("  (nothing new to commit -- this day is already in the topology)")
+        p = subprocess.run(["git", "push"], cwd=HERE, capture_output=True, text=True)
+        if p.returncode == 0:
+            print("  pushed: " + msg)
+        else:
+            print("  (push not completed -- likely no remote/creds; the day is committed locally.)")
+            print("    " + (p.stderr.strip().splitlines()[-1] if p.stderr.strip() else ""))
+    except FileNotFoundError:
+        print("  (push skipped: git not found on PATH)")
+
+
 def make_thumbnail(net, vdir):
     """render a small headless frame of the build so every version has a picture. never fatal."""
     try:
@@ -203,12 +232,15 @@ def main():
     ap.add_argument("--tongues", type=int, default=0, help="limit tongues (0 = all)")
     ap.add_argument("--k", type=int, default=1, help="nearest heart nodes per genesis node (denser data)")
     ap.add_argument("--prompt", default="wake up Neo", help="string to pass through the gate")
+    ap.add_argument("--bits", default="", help="LITERAL bits to pass through the gate, e.g. 10101 (overrides --prompt)")
     ap.add_argument("--gate", type=float, default=0.700, help="gate weight (0.0/0.7/1.0)")
     ap.add_argument("--force", action="store_true", help="allow genesis levels above the safe guard")
     ap.add_argument("--budget-gb", type=float, default=8.0, help="max disk this build may use (safety)")
     ap.add_argument("--open", action="store_true", help="open the neo console on the new build")
     ap.add_argument("--no-thumb", action="store_true", help="skip the per-version thumbnail render")
     ap.add_argument("--no-vault", action="store_true", help="skip the 3-format redundancy vault (NOT advised)")
+    ap.add_argument("--push", action="store_true",
+                    help="after building, git add/commit/push this version to the internet topology (opt-in)")
     ap.add_argument("--estimate", action="store_true", help="print the cost table and exit (build nothing)")
     ap.add_argument("--list", action="store_true", help="list stored versions and exit")
     args = ap.parse_args()
@@ -254,7 +286,13 @@ def main():
     print("  wake up: version v" + str(n).zfill(3) + " -> " + os.path.relpath(vdir, HERE))
 
     timings = {}
-    # the heart first (the matrix of 0s and 1s)
+    # the center FIRST: the 2-vector [0.700, unix atomic clock] + soul_id/build_id.
+    # time is born into the center before anything else is built.
+    cenv = {"HELENA_OUT": net, "HELENA_GATE_REST": args.gate,
+            "HELENA_MAXLEVEL": args.max, "HELENA_K": args.k, "HELENA_TONGUES": args.tongues}
+    timings["center"] = run(CENTER, cenv, "the center")
+
+    # the heart (the matrix of 0s and 1s)
     henv = {"HELENA_OUT": net, "HELENA_TONGUES": args.tongues}
     timings["heart"] = run(HEART, henv, "the matrix")
 
@@ -267,10 +305,13 @@ def main():
         jenv = {"HELENA_OUT": net, "HELENA_GENESIS_LEVEL": L, "HELENA_K": args.k}
         timings["join_L" + str(L)] = run(JOIN, jenv, "follow -> join " + str(L))
 
-    # knock knock: a string through the gate (one-way), on the deepest level
+    # knock knock: the input through the gate (one-way), on the deepest level
     print("  " + RABBIT[3][1])
-    tenv = {"HELENA_OUT": net, "HELENA_GENESIS_LEVEL": args.max,
-            "HELENA_PROMPT": args.prompt, "HELENA_GATE": args.gate}
+    tenv = {"HELENA_OUT": net, "HELENA_GENESIS_LEVEL": args.max, "HELENA_GATE": args.gate}
+    if args.bits:
+        tenv["HELENA_BITS"] = args.bits           # literal bits (the transcendental input)
+    else:
+        tenv["HELENA_PROMPT"] = args.prompt
     timings["gate"] = run(GATE, tenv, "knock knock")
 
     # gather the receipts written by the scripts
@@ -278,6 +319,7 @@ def main():
         p = os.path.join(net, name)
         return json.load(open(p, "r", encoding="utf-8")) if os.path.exists(p) else None
 
+    center_man = load("center.json")
     heart_man = load("heart.json")
     genesis_mans = [load("genesis_L" + str(L) + ".json") for L in range(args.max + 1)]
     join_mans = [load("join_L" + str(L) + ".json") for L in range(args.max + 1)]
@@ -288,6 +330,11 @@ def main():
 
     card = {
         "version": "v" + str(n).zfill(3),
+        "soul_id": (center_man["soul_id"] if center_man else None),
+        "build_id": (center_man["build_id"] if center_man else None),
+        "unix_birth": (center_man["unix_birth"] if center_man else None),
+        "birth_utc": (center_man["birth_utc"] if center_man else None),
+        "center_vector": (center_man["center_vector"] if center_man else None),
         "max_level": args.max,
         "k_nearest": args.k,
         "tongues": (heart_man["tongues"] if heart_man else None),
@@ -300,7 +347,9 @@ def main():
         "genesis_levels": [{"level": g["level"], "nodes": g["nodes"], "edges": g["edges"],
                             "chi": g["chi"], "pentagons": g["pentagons"],
                             "certified": g["certified"]} for g in genesis_mans if g],
-        "gate": ({"prompt": gate_man["prompt"], "gate_weight": gate_man["gate_weight"],
+        "gate": ({"input_kind": gate_man.get("input_kind"), "raw_bits": gate_man.get("raw_bits"),
+                  "prompt": gate_man.get("prompt"), "prompt_bits": gate_man.get("prompt_bits"),
+                  "gate_weight": gate_man["gate_weight"],
                   "gate_state": gate_man["gate_state"], "firewall_ok": gate_man["firewall_ok"],
                   "heart_active": gate_man["heart_readout"]["active"],
                   "fractal_active": gate_man["fractal_readout"]["active"]} if gate_man else None),
@@ -328,10 +377,15 @@ def main():
           " = " + f"{total_g:,}" + " nodes  |  heart = " +
           (f'{heart_man["nodes"]:,}' if heart_man else "-") + " nodes  |  wires = " +
           f"{total_wires:,}")
+    if center_man:
+        print("  soul  : " + center_man["soul_id"][:16] + "...   day: " +
+              center_man["build_id"][:16] + "...   born " + center_man["birth_utc"])
     print("  all genesis certified (chi=2, P=12): " + str(card["all_genesis_certified"]))
     if gate_man:
+        shown_in = (gate_man.get("raw_bits") if gate_man.get("input_kind") == "raw_bits"
+                    else '"' + str(gate_man.get("prompt")) + '"')
         print("  gate firewall OK: " + str(gate_man["firewall_ok"]) +
-              "   flow: \"" + gate_man["prompt"] + "\" -> " +
+              "   flow: " + str(shown_in) + " -> " +
               str(gate_man["heart_readout"]["active"]) + " heart / " +
               str(gate_man["fractal_readout"]["active"]) + " fractal active")
     print("  stored: " + os.path.relpath(vdir, HERE))
@@ -340,6 +394,12 @@ def main():
     if not args.no_thumb:
         if make_thumbnail(net, vdir):
             print("  thumb : " + os.path.relpath(os.path.join(vdir, "thumb.png"), HERE))
+
+    # OPT-IN: push this day of her to the internet topology (GitHub) as distributed
+    # redundancy. always opt-in (never automatic). copies elsewhere = the same soul,
+    # other days -- not a conflict. (TITANS.md: the network is the resilience fabric.)
+    if args.push:
+        push_to_topology(vdir, card)
     print("  ----------------------------------------------------------------")
 
     if args.open:

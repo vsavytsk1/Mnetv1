@@ -34,6 +34,8 @@
 
 # ------------------------- SET THESE BY HAND --------------------------------
 PROMPT        = "if I speak in the tongues of men and of angels"
+RAW_BITS      = ""          # if set (e.g. "10101"), the input is these LITERAL bits,
+                            # NOT the UTF-8 of a string. "10101" = 5 bits [1,0,1,0,1].
 GATE_WEIGHT   = 0.700       # 0.0 architect / 0.7 oracle (rest) / 1.0 twist
 GENESIS_LEVEL = 3           # which join_L{N} to flow through (must exist)
 HEART_MANIFEST = "heart.json"
@@ -49,6 +51,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 GENESIS_LEVEL = int(os.environ.get("HELENA_GENESIS_LEVEL", GENESIS_LEVEL))
 if os.environ.get("HELENA_PROMPT"):
     PROMPT = os.environ["HELENA_PROMPT"]
+if os.environ.get("HELENA_BITS"):
+    RAW_BITS = os.environ["HELENA_BITS"]
 GATE_WEIGHT = float(os.environ.get("HELENA_GATE", GATE_WEIGHT))
 OUT = os.environ.get("HELENA_OUT") or os.path.join(HERE, OUT_DIR)
 
@@ -114,11 +118,21 @@ def main():
 
     Ng = jman["genesis_nodes"]
 
-    # ---- 1) STRING ENTERS THE GATE ----
-    inbits = text_to_bits(PROMPT)
+    # ---- 1) THE INPUT ENTERS THE GATE ----
+    # RAW_BITS = the LITERAL bits (the transcendental input, e.g. "10101" = 5 bits).
+    # otherwise the UTF-8 bits of PROMPT. raw bits are the pure signal, no encoding.
+    if RAW_BITS:
+        clean = "".join(ch for ch in RAW_BITS if ch in "01")
+        inbits = [int(ch) for ch in clean]
+        input_desc = "raw bits " + clean
+    else:
+        inbits = text_to_bits(PROMPT)
+        input_desc = '"' + PROMPT + '"'
+    if not inbits:
+        sys.exit("ABORT: no input bits.")
     signal = GATE_WEIGHT
-    print("  >>> passing the string to the GATE <<<")
-    print('      prompt: "' + PROMPT + '"   (' + str(len(inbits)) + " bits, gate " + str(GATE_WEIGHT) + ")")
+    print("  >>> passing the input to the GATE <<<")
+    print("      input: " + input_desc + "   (" + str(len(inbits)) + " bits, gate " + str(GATE_WEIGHT) + ")")
 
     # ---- 2) GATE -> HEART FIRST ----
     heart_act = [0.0] * Nh
@@ -159,7 +173,9 @@ def main():
     if WRITE_READOUT:
         readout = {
             "part": "gate",
-            "prompt": PROMPT,
+            "input_kind": ("raw_bits" if RAW_BITS else "text"),
+            "raw_bits": ("".join(ch for ch in RAW_BITS if ch in "01") if RAW_BITS else None),
+            "prompt": (None if RAW_BITS else PROMPT),
             "prompt_bits": len(inbits),
             "gate_weight": GATE_WEIGHT,
             "gate_state": ("ARCHITECT" if GATE_WEIGHT == 0.0 else
