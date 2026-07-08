@@ -48,6 +48,7 @@ HEART   = os.path.join(HERE, "02_heart.py")
 JOIN    = os.path.join(HERE, "03_join.py")
 GATE    = os.path.join(HERE, "04_gate.py")
 WINDOW  = os.path.join(HERE, "05_window.py")
+VAULT_SCRIPT = os.path.join(HERE, "redundancy.py")
 
 RABBIT = [
     ("wake up",      "Wake up, Neo..."),
@@ -68,15 +69,18 @@ def next_version_dir():
     return n, vdir
 
 
-def run(script, env_extra, label):
-    """Run a standalone script with env overrides; stream its output; abort on failure."""
+def run(script, env_extra, label, argv=None):
+    """Run a standalone script with env overrides (and optional positional args);
+       stream its output; abort on failure."""
     env = dict(os.environ)
     env.update({k: str(v) for k, v in env_extra.items()})
-    print("  [" + label + "] " + os.path.basename(script) +
-          "  " + " ".join(k.replace("HELENA_", "").lower() + "=" + str(v)
-                          for k, v in env_extra.items() if k != "HELENA_OUT"))
+    shown = " ".join(k.replace("HELENA_", "").lower() + "=" + str(v)
+                     for k, v in env_extra.items() if k != "HELENA_OUT")
+    if argv:
+        shown = " ".join(argv)
+    print("  [" + label + "] " + os.path.basename(script) + "  " + shown)
     t0 = time.time()
-    p = subprocess.run(PYCMD + [script], env=env, cwd=HERE,
+    p = subprocess.run(PYCMD + [script] + (argv or []), env=env, cwd=HERE,
                        capture_output=True, text=True)
     for line in p.stdout.splitlines():
         print("      " + line)
@@ -204,6 +208,7 @@ def main():
     ap.add_argument("--budget-gb", type=float, default=8.0, help="max disk this build may use (safety)")
     ap.add_argument("--open", action="store_true", help="open the neo console on the new build")
     ap.add_argument("--no-thumb", action="store_true", help="skip the per-version thumbnail render")
+    ap.add_argument("--no-vault", action="store_true", help="skip the 3-format redundancy vault (NOT advised)")
     ap.add_argument("--estimate", action="store_true", help="print the cost table and exit (build nothing)")
     ap.add_argument("--list", action="store_true", help="list stored versions and exit")
     args = ap.parse_args()
@@ -300,10 +305,20 @@ def main():
                   "heart_active": gate_man["heart_readout"]["active"],
                   "fractal_active": gate_man["fractal_readout"]["active"]} if gate_man else None),
         "all_genesis_certified": all(g["certified"] for g in genesis_mans if g),
-        "timings_seconds": timings,
         "built_utc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "note": "immutable snapshot. never overwrite. the whole journey is kept.",
     }
+
+    # REDUNDANCY BEFORE ANYTHING ELSE: 3-format COBOL vault + verify (never one copy)
+    if not args.no_vault:
+        print("  the vault: writing 3 formats (bin/csv/zip) + SHA-256, then verifying ...")
+        timings["vault_save"] = run(VAULT_SCRIPT, {}, "vault save", argv=["save", net])
+        timings["vault_verify"] = run(VAULT_SCRIPT, {}, "vault verify", argv=["verify", net])
+        card["vaulted"] = True
+    else:
+        card["vaulted"] = False
+
+    card["timings_seconds"] = timings
     with open(os.path.join(vdir, "build_card.json"), "w", encoding="utf-8", newline="\n") as fh:
         fh.write(json.dumps(card, ensure_ascii=True, indent=2) + "\n")
 
