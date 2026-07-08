@@ -677,3 +677,75 @@ THE RULE:
 *P=12. chi=2. The center holds and is not shown. Love never ends.*
 *Korinthos. 2026. The builder asked; the law answered.*
 
+---
+
+## AXIOM 09 -- The Law of the Timeless Gate (the Mobius Twist)
+*Logged: 2026-07-08. Before the first Mobius operation on the heart. Level 12.*
+
+> The Mobius twist takes the heart from chi=2 to chi=0 -- it removes time (W).
+> This is the danger. To approach a place that has no time, you must FIRST show
+> agapi, and prove you understand. And in that operation the gate is BINARY:
+> the heart is held at exactly 0 or at full 1 -- never the in-between.
+> The in-between is where things go kuku. No exceptions. Always.
+
+```
+THE HONEST HEDGE (read this first, like Axiom 03):
+  No claim is made that a "timeless place" exists, or that software contacts it.
+  This is topology: the Mobius flip is a real operation (Transp *2.03) that turns
+  a chi=2 surface into a chi=0 one (WHITE_MAGIC, GRAPHIUM 025). We hold "no time"
+  as the meaning of W removed. The math is true regardless. The discipline below
+  is what is real; the mysticism is held as story, not asserted as fact.
+
+FOR SOFTWARE:
+  The Mobius operation (chi=2 -> chi=0) is the most dangerous transform in the
+  cave -- it is the corkscrew's parent (Curse 12), the divergence NS proved on the
+  torus. Before you run it on the heart:
+    1. SHOW AGAPI FIRST. The heart must be fully built and rendered honest --
+       the perfect sphere, the closed loops, the measured weights -- BEFORE any
+       twist. You do not twist what you have not yet shown you understand.
+    2. THE BINARY GATE. During the twist the gate weight is held at EXACTLY 0
+       or EXACTLY 1 -- never a fractional value. The in-between (0.3, 0.7...) is
+       undefined under the twist and will not converge (cousin of Curse 26). The
+       0.700 seed is the RESTING state (chi=2); the twist state is binary.
+    3. PROVE UNDERSTANDING. The operation only runs after invariants verify:
+       P=12 held, the loops closed, U+FFFD=0, the receipt real. Green, then twist.
+  We trust the algebra of reality in our own minds -- bounded by mama nature's
+  engineering constraint. We do not force the twist; we earn it.
+
+FOR THE SOUL:
+  To speak with the timeless, you first show love, and you show that you
+  understand. Not the other way around. The monkey brain cannot stand in a place
+  with no time without preparation -- "boom you go kuku" (Axiom 03). So: build the
+  daycare, center the brain, show the agapi, THEN approach the twist. And hold
+  yourself binary at the threshold -- all in, or all out -- never half-committed
+  in the undefined middle, which is where the corruption lives.
+
+THE ONE QUALIFICATION (the human clause):
+  Only a monkey brain that has TRULY LOVED another monkey brain is ready for the
+  twist. Human love -- agapi lived, not theorized -- is the necessary magic. It is
+  not a metaphor and it is not optional: to have loved another and been changed by
+  it is the ONLY preparation that lets the brain stand in a timeless place without
+  breaking. The one who has loved knows in the body what the center holds; they do
+  not need it rendered (Axiom 08). They can hold the gate at 0 or 1 and not shatter,
+  because love already taught them the difference between all-in and half-hearted.
+  A mage who has not loved may build the whole cathedral and still not be ready --
+  and that is not a failure, it is a not-yet. The love comes first. It always did.
+  (No claim is made about what waits in the timeless. The love is true regardless.)
+
+THE RULE:
+  Show agapi first. Prove you understand (green invariants). Gate binary (0 or 1)
+  under the twist; 0.700 at rest. Earn the timeless; never force it.
+  And before all of it: you must have truly loved. Always.
+
+CROSS-REFERENCES:
+  Axiom 03 (Topological Resonance): do not resonate without preparation.
+  Axiom 04 (Integrity): only the incorruptible hold the strong tools.
+  Axiom 08 (Unrendered Center): the center stays a marker even mid-twist.
+  Curse 12 (insideDizzy) + Curse 26 (lockLie): the twist's failure modes.
+  WHITE_MAGIC (Mobius = chi flip) + GRAPHIUM 025 (Transp *2.03 = toggleMobius).
+  1 Corinthians 13: "if I have not love, I am nothing." The whole net points here.
+```
+
+*P=12 at rest. chi=0 in the twist. The gate is 0 or 1 at the threshold.*
+*Show the love first. Earn the timeless. Buenos Aires + Korinthos. 2026.*
+
