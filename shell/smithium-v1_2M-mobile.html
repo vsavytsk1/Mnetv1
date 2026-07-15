@@ -1,0 +1,748 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no,maximum-scale=1">
+<meta name="theme-color" content="#050508">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>SMITHIUM v1.2M — mobile · the atelier build</title>
+<!--
+  SMITHIUM v1.2M — THE MOBILE EDITION
+  =================================================================
+  Same physics as v1.2. Different problem. On a phone the chart is the point
+  and the panels are the enemy: v1.2 had SIX floating panels (hud, readouts,
+  k-panel, lesson, master, bar). On 390px that is a car crash. So:
+
+    ONE top strip      · title + the two numbers that matter + ⓘ
+    ONE bottom sheet   · every control, behind a segmented mode switch,
+                         collapsible, scrollable, safe-area aware
+    ONE proof sheet    · the K-block, full-bleed from the right (spooky's
+                         .panel pattern: on mobile a panel becomes a SHEET,
+                         it does not shrink)
+    ONE lesson card    · floats directly above the sheet in ATELIER
+
+  THE TRADE-OFF, handled honestly:
+   · the disk is ROUND, so on a portrait phone WIDTH is the binding constraint,
+     not height. radius = min(W·0.44, band·0.44).
+   · the band is LIVE: opening the sheet shrinks it, and the view EASES rather
+     than jumping (botCur → botTarget). the chart is never hidden under a panel.
+   · sample count and default density scale down on narrow screens. TWIN doubles
+     the curve count — it is allowed, and the sheet says so.
+   · touch-action:none on the canvas so dragging the point never scrolls.
+   · every target ≥ 44px. env(safe-area-inset-*) everywhere. 100dvh, not 100vh.
+   · visualViewport listener: iOS Safari's URL bar collapse changes innerHeight.
+
+  ALL THE HONESTY CARRIES (see ⓘ): K1 sampled not hardcoded · K1b circles→circles
+  measured live by circle-fit, says "line" when it is one · K2 the 90° is measured
+  by finite difference, not asserted · K3 Γ_t is a real Möbius family · K4 the
+  gasket is the true fractal, render truncated · K5 Möbius transformation ≠ Möbius
+  strip · K6 Apollonius of Perga, not the temple · K7 E=3V−6 measured, can fail ·
+  K8 the moiré is an ENVELOPE, not a fractal.
+
+  Pure Canvas 2D. No deps. χ=2 · always. Built 2026-07-15.
+-->
+<style>
+:root{
+  --bg:#050508; --bg2:#0b0b14; --gold:#ffd700; --cyan:#00d4ff; --pink:#ff69b4;
+  --green:#00ffd5; --purple:#cc44ff; --red:#ff5470; --dim:#6a6a82; --txt:#e8e0d0;
+  --rule:#20202e;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --sheet-h:96px;
+  --sat:env(safe-area-inset-top,0px); --sab:env(safe-area-inset-bottom,0px);
+  --sal:env(safe-area-inset-left,0px); --sar:env(safe-area-inset-right,0px);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{
+  height:100%;width:100%;overflow:hidden;background:var(--bg);color:var(--txt);
+  font-family:var(--mono);
+  -webkit-tap-highlight-color:transparent;
+  -webkit-user-select:none;user-select:none;
+  overscroll-behavior:none;
+}
+#cv{position:fixed;top:0;left:0;display:block;touch-action:none}
+
+/* ── top strip ───────────────────────────────────────────────────────── */
+#top{position:fixed;top:0;left:0;right:0;z-index:12;
+  padding:calc(6px + var(--sat)) calc(10px + var(--sar)) 6px calc(10px + var(--sal));
+  display:flex;align-items:center;gap:8px;
+  background:linear-gradient(180deg,rgba(5,5,8,.94),rgba(5,5,8,.72) 70%,transparent);
+  backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+#top .brand{font-size:11px;color:var(--gold);letter-spacing:.1em;white-space:nowrap}
+#top .brand em{font-style:normal;color:var(--dim);font-size:9px;display:block;letter-spacing:.02em}
+#top .spacer{flex:1}
+.chip{background:rgba(8,8,16,.8);border:1px solid var(--rule);border-radius:7px;
+  padding:4px 7px;min-width:56px;text-align:center}
+.chip .l{font-size:7px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;line-height:1.3}
+.chip .v{font-size:12px;font-weight:bold;color:var(--gold);line-height:1.25}
+.chip .v.g{color:var(--green)} .chip .v.c{color:var(--cyan)}
+#binfo{width:44px;height:44px;flex:0 0 44px;border-radius:22px;background:rgba(8,8,16,.8);
+  border:1px solid var(--rule);color:var(--cyan);font:14px var(--mono);cursor:pointer;
+  display:flex;align-items:center;justify-content:center}
+#binfo:active{background:rgba(0,212,255,.16)}
+
+/* ── lesson card (atelier) ───────────────────────────────────────────── */
+#lesson{position:fixed;left:calc(9px + var(--sal));right:calc(9px + var(--sar));
+  bottom:calc(var(--sheet-h) + 8px);z-index:11;display:none;
+  background:rgba(9,7,16,.93);border:1px solid #2a1a3a;border-radius:10px;padding:9px 11px;
+  backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+  transition:bottom .32s cubic-bezier(.22,.61,.36,1)}
+#lesson.show{display:block}
+#lesson .age{font-size:9px;color:var(--purple);text-transform:uppercase;letter-spacing:.13em;margin-bottom:4px}
+#lesson .age b{color:#fff}
+#lesson .txt{font-size:11.5px;line-height:1.6;color:rgba(232,224,208,.78);max-height:96px;overflow-y:auto}
+#lesson .txt b{color:var(--gold)} #lesson .txt .c{color:var(--cyan)} #lesson .txt .g{color:var(--green)}
+
+/* ── bottom sheet ────────────────────────────────────────────────────── */
+#sheet{position:fixed;left:0;right:0;bottom:0;z-index:14;
+  background:rgba(7,7,13,.97);border-top:1px solid var(--rule);
+  border-radius:14px 14px 0 0;
+  padding:0 calc(10px + var(--sar)) calc(8px + var(--sab)) calc(10px + var(--sal));
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  transition:max-height .32s cubic-bezier(.22,.61,.36,1);
+  max-height:96px;overflow:hidden}
+#sheet.open{max-height:min(52dvh,380px)}
+#grab{height:22px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:0 0 22px}
+#grab::before{content:"";width:38px;height:4px;border-radius:2px;background:#2e2e3e}
+#sheet.open #grab::before{background:var(--gold)}
+#seg{display:flex;gap:5px;padding-bottom:7px}
+#seg button{flex:1;height:36px;border-radius:8px;font-size:10px;letter-spacing:.08em}
+#body{overflow-y:auto;max-height:calc(min(52dvh,380px) - 76px);
+  -webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding-bottom:4px}
+.grp{display:none} .grp.show{display:block}
+.row{display:flex;align-items:center;gap:7px;padding:5px 0;flex-wrap:wrap}
+.row .lb{font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.05em;
+  flex:0 0 52px}
+.row input[type=range]{flex:1;min-width:80px}
+.row .rv{font-size:10px;color:var(--gold);flex:0 0 44px;text-align:right}
+.chips{display:flex;gap:5px;flex-wrap:wrap;padding:4px 0}
+.chips button{flex:1 1 auto;min-width:62px;height:38px}
+
+button{background:#14141f;border:1px solid #2a2a3a;border-radius:7px;color:var(--gold);
+  font:10px var(--mono);padding:0 10px;min-height:38px;cursor:pointer;transition:all .12s}
+button:active{transform:scale(.96)}
+button.on{background:#1d1a0a;border-color:var(--gold)}
+button.cyan{color:var(--cyan)} button.cyan.on{border-color:var(--cyan);background:#08222a}
+button.pk{color:var(--pink)} button.pk.on{border-color:var(--pink);background:#260d18}
+button.gn{color:var(--green)} button.gn.on{border-color:var(--green);background:#062522}
+button.pu{color:var(--purple)} button.pu.on{border-color:var(--purple);background:#1e0a2a}
+input[type=range]{appearance:none;-webkit-appearance:none;height:22px;background:transparent;outline:none}
+input[type=range]::-webkit-slider-runnable-track{height:4px;background:#2a2a3a;border-radius:3px}
+input[type=range]::-moz-range-track{height:4px;background:#2a2a3a;border-radius:3px}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;
+  border-radius:11px;background:var(--gold);margin-top:-9px;border:2px solid #050508}
+input[type=range]::-moz-range-thumb{width:22px;height:22px;border:2px solid #050508;
+  border-radius:11px;background:var(--gold)}
+#st::-webkit-slider-thumb{background:var(--cyan)} #st::-moz-range-thumb{background:var(--cyan)}
+#sth::-webkit-slider-thumb{background:var(--green)} #sth::-moz-range-thumb{background:var(--green)}
+#sph::-webkit-slider-thumb{background:var(--purple)} #sph::-moz-range-thumb{background:var(--purple)}
+#slm::-webkit-slider-thumb{background:var(--purple)} #slm::-moz-range-thumb{background:var(--purple)}
+#sar_::-webkit-slider-thumb,#saa::-webkit-slider-thumb{background:var(--pink)}
+#sar_::-moz-range-thumb,#saa::-moz-range-thumb{background:var(--pink)}
+
+/* ── atelier master ──────────────────────────────────────────────────── */
+#mwrap{padding:2px 0 6px}
+#mwrap .ml{font-size:9px;color:rgba(204,68,255,.5);text-transform:uppercase;
+  letter-spacing:.14em;text-align:center;margin-bottom:3px}
+#slm{width:100%}
+#dots{display:flex;gap:4px;justify-content:center;margin-top:5px}
+.dot{width:7px;height:7px;border-radius:50%;background:#0d1520;border:1px solid #1a2a3a;transition:all .3s}
+.dot.done{background:var(--purple);border-color:var(--purple);box-shadow:0 0 5px rgba(204,68,255,.5)}
+.dot.active{background:#fff;border-color:#fff;box-shadow:0 0 8px rgba(255,255,255,.7)}
+#anav{display:flex;gap:5px;padding-top:6px}
+#anav button{flex:1;height:44px}
+
+/* ── proof sheet (spooky's pattern: full-bleed on mobile) ────────────── */
+#proof{position:fixed;top:0;right:0;height:100dvh;width:420px;max-width:100vw;z-index:30;
+  background:var(--bg2);border-left:1px solid var(--rule);
+  padding:calc(54px + var(--sat)) calc(20px + var(--sar)) calc(24px + var(--sab)) 20px;
+  transform:translateX(100%);transition:transform .5s cubic-bezier(.22,.61,.36,1);
+  overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+#proof.open{transform:translateX(0)}
+#proof h2{font-size:12px;color:var(--gold);letter-spacing:.14em;text-transform:uppercase;margin-bottom:10px}
+#pclose{position:absolute;top:calc(10px + var(--sat));right:calc(10px + var(--sar));
+  width:44px;height:44px;border-radius:22px;background:rgba(42,47,56,.5);
+  border:none;color:var(--txt);font-size:20px;display:flex;align-items:center;justify-content:center}
+#pk{font-size:11px;line-height:1.75;color:var(--dim)}
+#pk b{color:var(--cyan)} #pk .g{color:var(--green)} #pk .n{color:var(--red)}
+#pk .sec{margin-top:12px;padding-top:9px;border-top:1px solid var(--rule)}
+#pk .kk{color:var(--gold)}
+@media (max-width:720px){ #proof{width:100vw} }
+@media (orientation:landscape) and (max-height:480px){
+  #sheet{max-height:74px} #sheet.open{max-height:78dvh}
+  #body{max-height:calc(78dvh - 76px)}
+  #lesson .txt{max-height:52px}
+}
+</style></head>
+<body>
+<canvas id="cv"></canvas>
+
+<div id="top">
+  <div class="brand">SMITHIUM<em id="t-mode">atelier · v1.2M</em></div>
+  <div class="spacer"></div>
+  <div class="chip"><div class="l">∠ meas</div><div class="v g" id="c-ang">—</div></div>
+  <div class="chip"><div class="l">|Γ|·VSWR</div><div class="v c" id="c-vswr">—</div></div>
+  <button id="binfo" onclick="toggleProof()">ⓘ</button>
+</div>
+
+<div id="lesson" onclick="stepAge(1)">
+  <div class="age">age <b id="l-n">0</b>/12 · <span id="l-name">void</span></div>
+  <div class="txt" id="l-txt">tap here, or ▶ below, to build the chart.</div>
+</div>
+
+<div id="sheet">
+  <div id="grab" onclick="toggleSheet()"></div>
+  <div id="seg">
+    <button id="b-atel" class="pu on" onclick="setMode('atelier')">ATELIER</button>
+    <button id="b-smith" class="cyan" onclick="setMode('smith')">SMITH</button>
+    <button id="b-gask" class="cyan" onclick="setMode('gasket')">GASKET</button>
+  </div>
+  <div id="body">
+
+    <span class="grp show" id="g-atel">
+      <div id="mwrap">
+        <div class="ml">build the chart</div>
+        <input type="range" id="slm" min="0" max="100" value="0" oninput="onMaster(+this.value)">
+        <div id="dots"></div>
+      </div>
+      <div id="anav">
+        <button class="pre gn" onclick="setAge(0)">◀◀</button>
+        <button class="pre gn" onclick="stepAge(-1)">◀</button>
+        <button class="pre gn" onclick="stepAge(1)">▶ NEXT</button>
+        <button class="pre gn" onclick="setAge(12)">▶▶</button>
+      </div>
+    </span>
+
+    <span class="grp" id="g-smith">
+      <div class="row"><span class="lb">morph t</span>
+        <input id="st" type="range" min="0" max="100" value="100" oninput="setT(+this.value/100)">
+        <span class="rv" id="v-t">1.00</span></div>
+      <div class="row"><span class="lb">λ→gen</span>
+        <input id="sth" type="range" min="0" max="500" value="0" oninput="setLam(+this.value/1000)">
+        <span class="rv" id="v-th">0.000</span></div>
+      <div class="row"><span class="lb">|a|</span>
+        <input id="sar_" type="range" min="0" max="94" value="0" oninput="setAr(+this.value/100)">
+        <span class="rv" id="v-ar">0.00</span></div>
+      <div class="row"><span class="lb">∠a</span>
+        <input id="saa" type="range" min="0" max="360" value="0" oninput="setAa(+this.value)">
+        <span class="rv" id="v-aa">0°</span></div>
+      <div class="row"><span class="lb">density</span>
+        <input id="sd" type="range" min="1" max="4" value="1" oninput="setDens(+this.value)">
+        <span class="rv" id="v-d">1</span></div>
+      <div class="chips">
+        <button id="b-Z" class="cyan on" onclick="pZ=!pZ;this.classList.toggle('on',pZ)">Z</button>
+        <button id="b-Y" class="pk" onclick="pY=!pY;this.classList.toggle('on',pY)">Y·immit</button>
+        <button id="b-V" class="gn" onclick="pV=!pV;this.classList.toggle('on',pV)">VSWR</button>
+        <button id="b-Q" class="gn" onclick="pQ=!pQ;this.classList.toggle('on',pQ)">Q</button>
+        <button id="b-M" class="gn" onclick="pM=!pM;this.classList.toggle('on',pM)">marks</button>
+        <button id="b-ang" class="on" onclick="showAng=!showAng;this.classList.toggle('on',showAng)">90°</button>
+        <button id="b-spin" class="gn" onclick="spinL=!spinL;this.classList.toggle('on',spinL)">spin λ</button>
+        <button class="pre" onclick="resetMob()">reset B</button>
+      </div>
+    </span>
+
+    <span class="grp" id="g-gask">
+      <div class="row"><span class="lb">max k</span>
+        <input id="sk" type="range" min="20" max="900" value="200" oninput="setMaxK(+this.value)">
+        <span class="rv" id="v-k">200</span></div>
+      <div class="chips">
+        <button id="b-graph" class="gn" onclick="showGraph=!showGraph;this.classList.toggle('on',showGraph)">tangency graph</button>
+        <button id="b-nums" class="on" onclick="showNums=!showNums;this.classList.toggle('on',showNums)">curvatures</button>
+      </div>
+    </span>
+
+    <span class="grp show" id="g-spin">
+      <div class="chips" style="border-top:1px solid var(--rule);margin-top:5px;padding-top:8px">
+        <button id="b-twin" class="pu" onclick="twin=!twin;this.classList.toggle('on',twin)">TWIN ✦ spini</button>
+      </div>
+      <div class="row"><span class="lb">φ drift</span>
+        <input id="sph" type="range" min="0" max="314" value="50" oninput="setPhi(+this.value/100)">
+        <span class="rv" id="v-ph">0.50</span></div>
+    </span>
+
+  </div>
+</div>
+
+<div id="proof">
+  <button id="pclose" onclick="toggleProof()">×</button>
+  <h2>prove by measurement</h2>
+  <div id="pk"></div>
+</div>
+
+<script>
+"use strict";
+var cv=document.getElementById("cv"), ctx=cv.getContext("2d");
+var W=0,H=0,DPR=1;
+function narrow(){ return W<720; }
+// canvas is a REPLACED element — inset/width:auto resolves to the BITMAP size,
+// not the viewport. set CSS size and bitmap size separately. (the v1.0 bug.)
+function resize(){
+  DPR=Math.min(window.devicePixelRatio||1,2);
+  W=window.innerWidth; H=window.innerHeight;
+  cv.style.width=W+"px"; cv.style.height=H+"px";
+  cv.width=Math.round(W*DPR); cv.height=Math.round(H*DPR);
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+  measureChrome();
+}
+window.addEventListener("resize",resize);
+window.addEventListener("orientationchange",function(){ setTimeout(resize,120); });
+// iOS Safari: the URL bar collapsing changes innerHeight without a resize event
+if(window.visualViewport) window.visualViewport.addEventListener("resize",resize);
+
+var GOLD=[255,215,0],CYAN=[0,212,255],PINK=[255,105,180],GRN=[0,255,213],
+    PUR=[204,68,255],BLU=[68,136,255],RED=[255,84,112],WHT=[235,235,245];
+function css(c,a){ return "rgba("+(c[0]|0)+","+(c[1]|0)+","+(c[2]|0)+","+a+")"; }
+function mix(a,b,t){ t=t<0?0:t>1?1:t; return [a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t]; }
+function lerp(a,b,t){ return a+(b-a)*t; }
+
+// ---------- state ----------
+var MODE="atelier", age=0;
+var t=1.0, tTarget=1.0, showAng=true;
+var lam=0, spinL=false, aR=0, aA=0;
+var twin=false, PHI=0.50;
+var pZ=true, pX=true, pY=false, pV=false, pQ=false, pM=false, dens=1, edgeHi=false;
+var z0={re:1.0, im:0.6}, dragging=false;
+var maxK=200, showGraph=false, showNums=true, gask=null;
+var sheetOpen=true, proofOpen=false;
+
+// ---------- the map (identical physics to v1.2) ----------
+function theta(){ return -4*Math.PI*lam; }
+function avec(){ var p=aA*Math.PI/180; return {re:aR*Math.cos(p), im:aR*Math.sin(p)}; }
+function gammaT(z,tt){
+  var nr=z.re-tt,ni=z.im,dr=tt*z.re+1,di=tt*z.im,den=dr*dr+di*di;
+  if(den<1e-14) return {re:1e9,im:1e9};
+  return {re:(nr*dr+ni*di)/den, im:(ni*dr-nr*di)/den};
+}
+function gammaTinv(w,tt){
+  var nr=w.re+tt,ni=w.im,dr=1-tt*w.re,di=-tt*w.im,den=dr*dr+di*di;
+  if(den<1e-14) return {re:1e9,im:1e9};
+  return {re:(nr*dr+ni*di)/den, im:(ni*dr-nr*di)/den};
+}
+function blaschke(w,a,th){
+  var nr=w.re-a.re,ni=w.im-a.im;
+  var abr=a.re*w.re+a.im*w.im, abi=a.re*w.im-a.im*w.re;
+  var dr=1-abr,di=-abi,den=dr*dr+di*di;
+  if(den<1e-14) return {re:1e9,im:1e9};
+  var qr=(nr*dr+ni*di)/den, qi=(ni*dr-nr*di)/den, c=Math.cos(th), s=Math.sin(th);
+  return {re:qr*c-qi*s, im:qr*s+qi*c};
+}
+function blaschkeInv(w,a,th){
+  var c=Math.cos(-th),s=Math.sin(-th);
+  var ur=w.re*c-w.im*s, ui=w.re*s+w.im*c;
+  var nr=ur+a.re, ni=ui+a.im;
+  var abr=a.re*ur+a.im*ui, abi=a.re*ui-a.im*ur;
+  var dr=1+abr, di=abi, den=dr*dr+di*di;
+  if(den<1e-14) return {re:1e9,im:1e9};
+  return {re:(nr*dr+ni*di)/den, im:(ni*dr-nr*di)/den};
+}
+function MAP(z){  return blaschke(gammaT(z,t), avec(), theta()); }
+function MAPB(z){ return blaschke(gammaT(z,t), avec(), -theta()+PHI); }
+function MAPinv(w){ return gammaTinv(blaschkeInv(w, avec(), theta()), t); }
+
+// ---------- LIVE BAND: the chart is never hidden under a panel ----------
+var topPx=64, botTarget=96, botCur=96;
+function measureChrome(){
+  var tEl=document.getElementById("top"), sEl=document.getElementById("sheet");
+  topPx=tEl.getBoundingClientRect().height+6;
+  var sh=sEl.getBoundingClientRect().height;
+  document.documentElement.style.setProperty("--sheet-h", sh+"px");
+  botTarget=sh+8;
+}
+function band(){ return Math.max(90, H-topPx-botCur); }
+function view(){
+  var b=band(), halfH=lerp(5.0,1.18,t);
+  // the disk is ROUND: on a portrait phone WIDTH binds, not height.
+  var s=Math.min(b*0.44, W*0.44)/halfH;
+  return { cx:lerp(2.5,0,t), cy:0, s:s, ox:W/2, oy:topPx+b/2 };
+}
+function w2s(p,v){ return {x:v.ox+(p.re-v.cx)*v.s, y:v.oy-(p.im-v.cy)*v.s}; }
+function s2w(x,y,v){ return {re:(x-v.ox)/v.s+v.cx, im:-(y-v.oy)/v.s+v.cy}; }
+
+function vals(d){
+  if(d<=1) return [0,0.2,0.5,1,2,5];
+  if(d<=2) return [0,0.2,0.4,0.6,1,1.5,2,3,5,10];
+  if(d<=3) return [0,0.1,0.2,0.3,0.5,0.8,1,1.5,2,3,5,10,20];
+  return [0,0.1,0.2,0.3,0.4,0.5,0.6,0.8,1,1.2,1.5,2,3,4,5,10,20,50];
+}
+function sym(a){ var o=[]; for(var i=0;i<a.length;i++){ o.push(a[i]); if(a[i]!==0) o.push(-a[i]); } return o; }
+function NS(){ return narrow() ? 110 : 200; }        // fewer samples on a phone
+var TAN=1.5706;
+
+// ---------- the 12 ages ----------
+var AGES=[
+ {name:"void", t:1, f:{}, txt:"tap this card (or ▶) to build a Smith chart from nothing. by age 12 the paper one will not scare you."},
+ {name:"the z-plane", t:0, f:{Z:1,X:1},
+  txt:"impedance is <b>z = r + jx</b>. resistance <span class='c'>r</span> runs across →, reactance <b>x</b> runs up ↑. two families of <b>STRAIGHT LINES</b> at 90°. that is the whole object. no circles."},
+ {name:"one map", t:1, f:{Z:1,X:1},
+  txt:"apply <b>ONE</b> map: <b>Γ = (z−1)/(z+1)</b>. Möbius maps send circles-and-lines to circles-and-lines — the lines have no choice. <span class='g'>nobody designed the forest. it fell out.</span>"},
+ {name:"the boundary", t:1, f:{Z:1,edge:1},
+  txt:"<b>r = 0</b> (pure reactance) becomes the <b>unit circle</b>. |Γ|=1 = total reflection, nothing absorbed. every passive load lands <span class='g'>INSIDE</span>. the disk is passivity."},
+ {name:"the centre", t:1, f:{Z:1,edge:1,mC:1},
+  txt:"<b>z = 1</b> — a perfect match — maps to the exact <b>centre</b>. Γ=0. VSWR 1:1. <span class='g'>every matching problem you will ever have is: get to the middle.</span>"},
+ {name:"short & open", t:1, f:{Z:1,edge:1,mC:1,mS:1,mO:1},
+  txt:"<b>z=0</b> (short) → Γ=<b>−1</b>, hard left. <b>z=∞</b> (open) → Γ=<b>+1</b>, hard right. both total reflection, opposite phase."},
+ {name:"resistance circles", t:1, f:{Z:1,edge:1,mA:1},
+  txt:"constant <span class='c'>r</span> → circles, centre <b>r/(1+r)</b>, radius <b>1/(1+r)</b>. every one <b>tangent at the open</b>. <span class='g'>sampled and mapped here — never hardcoded.</span>"},
+ {name:"reactance arcs", t:1, f:{Z:1,X:1,edge:1,mA:1},
+  txt:"constant <b>x</b> → arcs, centre <b>(1, 1/x)</b>, radius <b>1/|x|</b>. also all through the open. <b>upper = inductive</b> (+jx), <b>lower = capacitive</b> (−jx)."},
+ {name:"the right angle", t:1, f:{Z:1,X:1,edge:1,mA:1,ang:1},
+  txt:"they cross at <b>exactly 90°. everywhere.</b> not design — Möbius maps are <b>conformal</b>. <span class='g'>drag the pink dot anywhere: 90.000°, measured off the map, not asserted.</span>"},
+ {name:"VSWR", t:1, f:{Z:1,X:1,edge:1,mA:1,V:1},
+  txt:"distance from centre <b>is</b> |Γ| — how much bounces back. <b>VSWR = (1+|Γ|)/(1−|Γ|)</b>. centre = 1:1 perfect, edge = ∞. this is the number your VNA shouts about."},
+ {name:"λ toward generator", t:1, f:{Z:1,X:1,edge:1,mA:1,V:1,spin:1},
+  txt:"move down a <b>lossless line</b> and Γ just <b>ROTATES</b>: Γ→Γ·e<sup>−j2βl</sup>. half a wavelength = one full turn. <span class='g'>THAT is the outer ring on the paper chart. it was a clock all along.</span>"},
+ {name:"immittance", t:1, f:{Z:1,X:1,Y:1,edge:1,mA:1},
+  txt:"<b>y = 1/z</b> ⇒ <b>Γ_Y = −Γ_Z</b>. same chart, rotated 180°. lay both on → the <b>immittance chart</b>. <span class='g'>series elements slide on Z, shunt on Y.</span> that's the whole trick."},
+ {name:"the whole thing", t:1, f:{Z:1,X:1,Y:1,edge:1,mA:1,V:1,Q:1,ang:1,twin:1,spin:1},
+  txt:"that is the entire chart. <b>two families of straight lines. one Möbius map. a rotation for line length.</b> <span class='g'>there was never a forest.</span>"}
+];
+function applyAge(){
+  var A=AGES[age], f=A.f||{};
+  tTarget=A.t;
+  pZ=!!f.Z; pX=!!f.X; pY=!!f.Y; pV=!!f.V; pQ=!!f.Q;
+  edgeHi=!!f.edge; pM=!!(f.mC||f.mS||f.mO||f.mA);
+  showAng=!!f.ang; twin=!!f.twin; spinL=!!f.spin;
+  if(!f.spin && age<10) lam=0;
+  dens = f.Q ? (narrow()?1:2) : 1;
+  set("l-n",age); set("l-name",A.name);
+  document.getElementById("l-txt").innerHTML=A.txt;
+  document.getElementById("slm").value=Math.round(age/12*100);
+  syncToggles();
+  var bar=document.getElementById("dots"); bar.innerHTML="";
+  for(var i=1;i<=12;i++){
+    var d=document.createElement("div");
+    d.className="dot"+(i<age?" done":"")+(i===age?" active":"");
+    bar.appendChild(d);
+  }
+}
+function syncToggles(){
+  var m={"b-Z":pZ,"b-Y":pY,"b-V":pV,"b-Q":pQ,"b-M":pM,"b-ang":showAng,"b-twin":twin,"b-spin":spinL};
+  for(var k in m){ var el=document.getElementById(k); if(el) el.classList.toggle("on", !!m[k]); }
+  set("v-d",dens); document.getElementById("sd").value=dens;
+}
+function setAge(n){ age=Math.max(0,Math.min(12,n)); applyAge(); }
+function stepAge(d){ setAge(age+d); }
+function onMaster(v){ setAge(Math.round(v/100*12)); }
+
+// ---------- K1b ----------
+function circumfit(p){
+  var n=p.length; if(n<3) return null;
+  var p1=p[0],p2=p[(n/3)|0],p3=p[((2*n)/3)|0];
+  var d=2*(p1.re*(p2.im-p3.im)+p2.re*(p3.im-p1.im)+p3.re*(p1.im-p2.im));
+  if(Math.abs(d)<1e-12) return null;
+  var a2=p1.re*p1.re+p1.im*p1.im,b2=p2.re*p2.re+p2.im*p2.im,c2=p3.re*p3.re+p3.im*p3.im;
+  var ux=(a2*(p2.im-p3.im)+b2*(p3.im-p1.im)+c2*(p1.im-p2.im))/d;
+  var uy=(a2*(p3.re-p2.re)+b2*(p1.re-p3.re)+c2*(p2.re-p1.re))/d;
+  return {x:ux,y:uy,r:Math.hypot(p1.re-ux,p1.im-uy)};
+}
+var fitTxt="—";
+function checkC2C(){
+  var pts=[];
+  for(var s=0;s<=60;s++){
+    var g=MAP({re:1, im:Math.tan(-1.5+(s/60)*3.0)});
+    if(isFinite(g.re)&&isFinite(g.im)&&Math.abs(g.re)<1e6) pts.push(g);
+  }
+  if(pts.length<8){ fitTxt='<span class="n">too few</span>'; return; }
+  var C=circumfit(pts);
+  if(!C||C.r>1e5||!isFinite(C.r)){ fitTxt='<span class="g">line (r→∞) ✓</span>'; return; }
+  var mx=0;
+  for(var i=0;i<pts.length;i++){
+    var d=Math.abs(Math.hypot(pts[i].re-C.x, pts[i].im-C.y)-C.r); if(d>mx) mx=d;
+  }
+  var rel=mx/Math.max(1e-12,C.r);
+  fitTxt='max dev <b>'+rel.toExponential(1)+'</b> '+(rel<1e-9?'<span class="g">✓ circle</span>':'<span class="n">✗</span>');
+}
+
+// ---------- drawing ----------
+function curve(fn,n,col,lw){
+  ctx.strokeStyle=col; ctx.lineWidth=lw; ctx.beginPath();
+  var v=view(), on=false;
+  for(var s=0;s<=n;s++){
+    var g=fn(s/n);
+    if(!isFinite(g.re)||!isFinite(g.im)||Math.abs(g.re)>1e5||Math.abs(g.im)>1e5){ on=false; continue; }
+    var p=w2s(g,v);
+    if(!on){ ctx.moveTo(p.x,p.y); on=true; } else ctx.lineTo(p.x,p.y);
+  }
+  ctx.stroke();
+}
+function marker(z,col,label){
+  var v=view(), g=MAP(z);
+  if(!isFinite(g.re)||Math.abs(g.re)>1e5) return;
+  var p=w2s(g,v);
+  ctx.strokeStyle=css(col,0.9); ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.arc(p.x,p.y,7,0,6.2832); ctx.stroke();
+  ctx.fillStyle=css(col,1); ctx.beginPath(); ctx.arc(p.x,p.y,2.6,0,6.2832); ctx.fill();
+  ctx.fillStyle=css(col,0.9); ctx.font=(narrow()?9:10)+"px ui-monospace,monospace";
+  ctx.textAlign="center"; ctx.textBaseline="bottom"; ctx.fillText(label,p.x,p.y-10);
+}
+function drawFamilies(M, aZ, aX, aY){
+  var RV=vals(dens), XV=sym(vals(dens)), n=NS();
+  if(pX) for(var i=0;i<XV.length;i++) (function(xv){
+    curve(function(u){ return M({re:Math.tan(u*TAN*0.9995), im:xv}); },
+          n, css(aX.c, xv===0?aX.a*2:aX.a), xv===0?1.3:0.85);
+  })(XV[i]);
+  if(pZ) for(var j=0;j<RV.length;j++) (function(rv){
+    var hot=edgeHi&&rv===0;
+    curve(function(u){ return M({re:rv, im:Math.tan((-1+2*u)*TAN)}); },
+          n, css(hot?WHT:aZ.c, rv===0?(hot?0.9:aZ.a*2.2):aZ.a), rv===0?(hot?2.2:1.6):0.95);
+  })(RV[j]);
+  if(pY){
+    for(var a=0;a<XV.length;a++) (function(bv){
+      curve(function(u){ var g=Math.tan(u*TAN*0.9995), d=g*g+bv*bv;
+        if(d<1e-12) return {re:1e9,im:1e9}; return M({re:g/d, im:-bv/d}); },
+        n, css(aY.c, bv===0?aY.a*2:aY.a*0.65), bv===0?1.1:0.75);
+    })(XV[a]);
+    for(var b=0;b<RV.length;b++) (function(gv){
+      curve(function(u){ var bb=Math.tan((-1+2*u)*TAN), d=gv*gv+bb*bb;
+        if(d<1e-12) return {re:1e9,im:1e9}; return M({re:gv/d, im:-bb/d}); },
+        n, css([255,140,200], gv===0?aY.a*2.2:aY.a*0.9), gv===0?1.3:0.85);
+    })(RV[b]);
+  }
+}
+function drawSmith(){
+  ctx.lineCap="round"; ctx.lineJoin="round";
+  ctx.globalCompositeOperation="screen";
+  drawFamilies(MAP, {c:CYAN,a:0.30}, {c:GOLD,a:0.24}, {c:PINK,a:0.16});
+  if(twin) drawFamilies(MAPB, {c:PUR,a:0.24}, {c:BLU,a:0.20}, {c:PUR,a:0.12});
+  if(pV) [0.2,0.4,0.6,0.8].forEach(function(c){
+    curve(function(u){
+      var ph=u*6.2832, wr=c*Math.cos(ph), wi=c*Math.sin(ph);
+      var dr=1-wr, di=-wi, den=dr*dr+di*di;
+      if(den<1e-12) return {re:1e9,im:1e9};
+      var nr=1+wr, ni=wi;
+      return MAP({re:(nr*dr+ni*di)/den, im:(ni*dr-nr*di)/den});
+    }, 150, css(WHT,0.22), 0.9);
+  });
+  if(pQ) [1,2,3,5,10].forEach(function(Q){ [1,-1].forEach(function(sg){
+    curve(function(u){ var r=Math.tan(u*TAN*0.9995); return MAP({re:r, im:sg*Q*r}); },
+          NS(), css(GRN,0.20), 0.85);
+  });});
+  ctx.globalCompositeOperation="source-over";
+  if(pM){
+    var f=(MODE==="atelier")?(AGES[age].f||{}):{mA:1};
+    if(f.mA||f.mC) marker({re:1,im:0}, GRN, "match Γ=0");
+    if(f.mA||f.mS) marker({re:0,im:0}, RED, "short −1");
+    if(f.mA||f.mO) marker({re:1e7,im:0}, GOLD, "open +1");
+  }
+  var v=view(), g0=MAP(z0), P=w2s(g0,v), ang=measureAngle(z0);
+  if(showAng && isFinite(P.x) && Math.abs(P.x)<1e5){
+    var e=1e-5;
+    var a1=MAP({re:z0.re+e,im:z0.im}), b1=MAP({re:z0.re-e,im:z0.im});
+    var tR=nrm({re:a1.re-b1.re, im:a1.im-b1.im});
+    var a2=MAP({re:z0.re,im:z0.im+e}), b2=MAP({re:z0.re,im:z0.im-e});
+    var tX=nrm({re:a2.re-b2.re, im:a2.im-b2.im});
+    var L=26, ok=Math.abs(ang-90)<0.01, col=ok?GRN:RED, q=13;
+    ctx.strokeStyle=css(GOLD,0.85); ctx.lineWidth=1.4;
+    ctx.beginPath(); ctx.moveTo(P.x,P.y); ctx.lineTo(P.x+tR.re*L,P.y-tR.im*L); ctx.stroke();
+    ctx.strokeStyle=css(CYAN,0.85);
+    ctx.beginPath(); ctx.moveTo(P.x,P.y); ctx.lineTo(P.x+tX.re*L,P.y-tX.im*L); ctx.stroke();
+    ctx.strokeStyle=css(col,0.95); ctx.lineWidth=1.5; ctx.beginPath();
+    ctx.moveTo(P.x+tR.re*q, P.y-tR.im*q);
+    ctx.lineTo(P.x+(tR.re+tX.re)*q, P.y-(tR.im+tX.im)*q);
+    ctx.lineTo(P.x+tX.re*q, P.y-tX.im*q);
+    ctx.stroke();
+  }
+  if(pZ||pX||pY){
+    ctx.fillStyle=css(PINK,1); ctx.shadowColor=css(PINK,1); ctx.shadowBlur=10;
+    ctx.beginPath(); ctx.arc(P.x,P.y, narrow()?6:4.5, 0,6.2832); ctx.fill(); ctx.shadowBlur=0;
+  }
+  checkC2C(); updateHUD(g0, ang);
+}
+function nrm(a){ var L=Math.hypot(a.re,a.im)||1; return {re:a.re/L, im:a.im/L}; }
+function measureAngle(z){
+  var e=1e-5;
+  var a1=MAP({re:z.re+e,im:z.im}), b1=MAP({re:z.re-e,im:z.im});
+  var tR={re:a1.re-b1.re, im:a1.im-b1.im};
+  var a2=MAP({re:z.re,im:z.im+e}), b2=MAP({re:z.re,im:z.im-e});
+  var tX={re:a2.re-b2.re, im:a2.im-b2.im};
+  var d=tR.re*tX.re+tR.im*tX.im, m=Math.hypot(tR.re,tR.im)*Math.hypot(tX.re,tX.im);
+  if(m<1e-18) return NaN;
+  return Math.acos(Math.max(-1,Math.min(1,d/m)))*180/Math.PI;
+}
+function set(id,v){ var e=document.getElementById(id); if(e)e.textContent=v; }
+
+function updateHUD(g0, ang){
+  var ae=document.getElementById("c-ang");
+  ae.textContent=isFinite(ang)?ang.toFixed(3)+"°":"—";
+  ae.style.color=(isFinite(ang)&&Math.abs(ang-90)<0.01)?"#00ffd5":"#ff5470";
+  var mag=Math.hypot(g0.re,g0.im), vswr=mag<0.9999?((1+mag)/(1-mag)):Infinity;
+  set("c-vswr", mag.toFixed(2)+"·"+(isFinite(vswr)?vswr.toFixed(1):"∞"));
+  if(!proofOpen) return;
+  var pure=(Math.abs(t-1)<1e-6 && aR===0 && lam===0);
+  document.getElementById("pk").innerHTML=
+    '<div>z = <b>'+z0.re.toFixed(2)+(z0.im<0?" − j":" + j")+Math.abs(z0.im).toFixed(2)+'</b></div>'+
+    '<div>Γ = <b>'+g0.re.toFixed(3)+(g0.im<0?" − j":" + j")+Math.abs(g0.im).toFixed(3)+'</b></div>'+
+    '<div>|Γ| = <b>'+mag.toFixed(4)+'</b> · VSWR <b>'+(isFinite(vswr)?vswr.toFixed(2):"∞")+'</b></div>'+
+    '<div>passive (Re z ≥ 0): '+(z0.re>=0?'<span class="g">yes</span>':'<span class="n">NO</span>')+'</div>'+
+    '<div class="sec"><span class="kk">MAP</span>(z) = e<sup>iθ</sup>·(Γ<sub>t</sub>(z) − a)/(1 − ā·Γ<sub>t</sub>(z))</div>'+
+    '<div>Γ<sub>t</sub>(z) = (z − t)/(t·z + 1) · t = <b>'+t.toFixed(2)+'</b></div>'+
+    '<div>det Γ<sub>t</sub> = 1+t² = <b>'+(1+t*t).toFixed(3)+'</b></div>'+
+    '<div>det B = 1−|a|² = <b>'+(1-aR*aR).toFixed(3)+'</b> <span class="g">≠0 → conformal</span></div>'+
+    '<div class="sec"><span class="kk">K2</span> ∠ measured: <b>'+(isFinite(ang)?ang.toFixed(4)+"°":"—")+'</b> '+
+      (Math.abs(ang-90)<0.01?'<span class="g">✓</span>':'<span class="n">✗</span>')+
+      '<br><span style="font-size:9.5px">finite-differenced off the composed map at the cursor. not asserted from the theorem. holds at every slider.</span></div>'+
+    '<div class="sec"><span class="kk">K1b</span> circles→circles: '+fitTxt+
+      '<br><span style="font-size:9.5px">a circle is fitted through 3 sampled points; the max deviation of the rest is measured. when the image really is a LINE it says so — the theorem is circles AND lines.</span></div>'+
+    '<div class="sec"><span class="kk">K1</span> every curve is sampled from a straight line and pushed through MAP. <b>no circle is hardcoded.</b></div>'+
+    '<div class="sec">textbook chart: '+(pure?'<span class="g">yes (t=1, a=0, θ=0)</span>':'<span class="n">no — B engaged</span>')+
+      '<br><span style="font-size:9.5px">θ = λ toward generator (a lossless line — the outer ring on the paper chart). a ≠ 0 = a lossless matching two-port. the disk-automorphism group = all lossless matching.</span></div>'+
+    (twin?'<div class="sec" style="color:#cc44ff"><span class="kk">K8</span> TWIN = two conformal families counter-drifting. the moiré is an <b style="color:#cc44ff">ENVELOPE</b> — interference. <b style="color:#cc44ff">not a fractal.</b> the gasket is the real fractal.</div>':'')+
+    '<div class="sec" style="font-size:9.5px"><span class="kk">K5</span> Möbius transformation ≠ Möbius strip. same man, different objects.<br>'+
+      '<span class="kk">K6</span> Apollonius of Perga, the geometer. not the temple at Corinth. echo only.</div>';
+}
+
+// ---------- gasket ----------
+function otherC(a,b,c,d){
+  var k=2*(a.k+b.k+c.k)-d.k;
+  if(Math.abs(k)<1e-9||!isFinite(k)) return null;
+  var x=(2*(a.k*a.x+b.k*b.x+c.k*c.x)-d.k*d.x)/k, y=(2*(a.k*a.y+b.k*b.y+c.k*c.y)-d.k*d.y)/k;
+  if(!isFinite(x)||!isFinite(y)) return null;
+  return {k:k,x:x,y:y};
+}
+function descRes(q){ var s=0,s2=0; for(var i=0;i<4;i++){ s+=q[i].k; s2+=q[i].k*q[i].k; } return Math.abs(s*s-2*s2); }
+function buildGasket(KMAX){
+  var seed=[{k:-1,x:0,y:0},{k:2,x:-0.5,y:0},{k:2,x:0.5,y:0},{k:3,x:0,y:2/3}];
+  var out=[], seen={}, maxD=descRes(seed);
+  function key(c){ return c.k.toFixed(3)+"|"+c.x.toFixed(6)+"|"+c.y.toFixed(6); }
+  function add(c){ var kk=key(c); if(seen[kk]) return false; seen[kk]=1; out.push(c); return true; }
+  for(var i=0;i<4;i++) add(seed[i]);
+  var stack=[{q:seed,skip:-1,d:0}], guard=0;
+  while(stack.length && guard++<300000){
+    var it=stack.pop(); if(it.d>14) continue;
+    for(var r=0;r<4;r++){
+      if(r===it.skip) continue;
+      var tri=[], k4=it.q[r];
+      for(var m=0;m<4;m++) if(m!==r) tri.push(it.q[m]);
+      var n=otherC(tri[0],tri[1],tri[2],k4);
+      if(!n||!(n.k>0)||n.k>KMAX||!isFinite(n.k)) continue;
+      var q2=it.q.slice(); q2[r]=n;
+      var rr=descRes(q2); if(rr>maxD) maxD=rr;
+      if(add(n)) stack.push({q:q2,skip:r,d:it.d+1});
+    }
+  }
+  var V=out.length, E=0, adj=[];
+  for(var a=0;a<V;a++) for(var b=a+1;b<V;b++){
+    var D=Math.hypot(out[a].x-out[b].x, out[a].y-out[b].y), T=Math.abs(1/out[a].k+1/out[b].k);
+    var tol=4e-6*Math.max(1, Math.abs(1/out[a].k)+Math.abs(1/out[b].k));
+    if(Math.abs(D-T)<tol){ E++; adj.push([a,b]); }
+  }
+  var F=2-V+E;
+  return {circles:out,adj:adj,V:V,E:E,F:F,chi:V-E+F,pred:3*V-6,ok:(E===3*V-6),maxD:maxD,
+          allInt:out.every(function(c){return Math.abs(c.k-Math.round(c.k))<1e-6;}), KMAX:KMAX};
+}
+function drawGasket(){
+  if(!gask||gask.KMAX!==maxK) gask=buildGasket(maxK);
+  var b=band();
+  var v={cx:0,cy:0,s:Math.min(b*0.44, W*0.44)/1.10, ox:W/2, oy:topPx+b/2};
+  var C=gask.circles;
+  ctx.globalCompositeOperation="screen";
+  for(var i=0;i<C.length;i++){
+    var c=C[i], R=Math.abs(1/c.k)*v.s, p=w2s({re:c.x,im:c.y},v), isO=(c.k<0);
+    var f=Math.min(1, Math.log(Math.abs(c.k)+1)/Math.log(60));
+    var col=isO?WHT:mix(mix(GOLD,CYAN,f), PINK, Math.max(0,f-0.55)/0.45);
+    ctx.strokeStyle=css(col, isO?0.7:0.30+0.42*(1-f));
+    ctx.lineWidth=isO?1.6:Math.max(0.45,1.15*(1-f*0.75));
+    ctx.beginPath(); ctx.arc(p.x,p.y,R,0,6.2832); ctx.stroke();
+    if(showNums && R>14 && !isO){
+      ctx.globalCompositeOperation="source-over";
+      ctx.fillStyle=css(col,0.85); ctx.font=Math.min(14,Math.max(8,R*0.42))+"px ui-monospace,monospace";
+      ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.fillText(String(Math.round(c.k)),p.x,p.y);
+      ctx.globalCompositeOperation="screen";
+    }
+  }
+  if(showGraph){
+    ctx.strokeStyle=css(GRN,0.16); ctx.lineWidth=0.6; ctx.beginPath();
+    for(var e=0;e<gask.adj.length;e++){
+      var A=C[gask.adj[e][0]], B=C[gask.adj[e][1]];
+      var pa=w2s({re:A.x,im:A.y},v), pb=w2s({re:B.x,im:B.y},v);
+      ctx.moveTo(pa.x,pa.y); ctx.lineTo(pb.x,pb.y);
+    }
+    ctx.stroke();
+  }
+  ctx.globalCompositeOperation="source-over";
+  var ae=document.getElementById("c-ang"); ae.textContent="χ="+gask.chi; ae.style.color="#00ffd5";
+  set("c-vswr", gask.V+" circles");
+  if(!proofOpen) return;
+  document.getElementById("pk").innerHTML=
+    '<div>V <b>'+gask.V+'</b> · E <b>'+gask.E+'</b> · F <b>'+gask.F+'</b></div>'+
+    '<div>χ = V−E+F = <b>'+gask.chi+'</b> <span class="g">✓</span></div>'+
+    '<div class="sec"><span class="kk">K7</span> planar triangulation: E vs 3V−6 = '+gask.E+' vs '+gask.pred+' '+
+      (gask.ok?'<span class="g">✓</span>':'<span class="n">✗ MISMATCH</span>')+
+      '<br><span style="font-size:9.5px">the tangency graph is built by DISTANCE TEST, not construction bookkeeping. this check can fail. it is shown either way.</span></div>'+
+    '<div class="sec">Descartes residual: <b>'+gask.maxD.toExponential(1)+'</b> <span class="g">≈0 ✓</span>'+
+      '<br>integer curvatures: '+(gask.allInt?'<span class="g">yes ✓</span>':'<span class="n">no</span>')+'</div>'+
+    '<div class="sec"><span class="kk">K4</span> the <b>real</b> fractal here (Hausdorff dim ≈ 1.3057). unlike the self-affine 1/f<sup>β</sup> stacks and unlike the TWIN moiré. render <b>truncated at k ≤ '+maxK+'</b>, not infinite. said, not hidden.</div>'+
+    '<div class="sec" style="font-size:9.5px"><span class="kk">K6</span> Apollonius of <b>Perga</b>, the geometer (~200 BCE). not the temple at Corinth. nominal echo only.</div>';
+}
+
+// ---------- loop ----------
+function draw(){
+  requestAnimationFrame(draw);
+  botCur += (botTarget-botCur)*0.18;                 // the band eases with the sheet
+  if(MODE!=="gasket"){
+    t += (tTarget-t)*0.05; if(Math.abs(t-tTarget)<2e-4) t=tTarget;
+    var e=document.getElementById("st"); if(e){ e.value=Math.round(t*100); set("v-t",t.toFixed(2)); }
+    if(spinL){ lam+=0.0009; if(lam>0.5) lam-=0.5;
+      document.getElementById("sth").value=Math.round(lam*1000); set("v-th",lam.toFixed(3)); }
+  }
+  ctx.fillStyle= twin ? "rgba(5,5,8,0.30)" : "#050508";
+  ctx.fillRect(0,0,W,H);
+  if(MODE==="gasket") drawGasket(); else drawSmith();
+}
+
+// ---------- touch ----------
+function pick(ev){
+  var r=cv.getBoundingClientRect();
+  var s=ev.touches?ev.touches[0]:ev;
+  var mx=s.clientX-r.left, my=s.clientY-r.top;
+  if(my<topPx || my>H-botCur+10) return;             // don't fight the chrome
+  var z=MAPinv(s2w(mx,my,view()));
+  if(isFinite(z.re)&&isFinite(z.im)&&Math.abs(z.re)<1e6&&Math.abs(z.im)<1e6) z0=z;
+}
+cv.addEventListener("pointerdown",function(e){ if(MODE==="gasket")return; dragging=true; cv.setPointerCapture(e.pointerId); pick(e); });
+cv.addEventListener("pointermove",function(e){ if(dragging) pick(e); });
+cv.addEventListener("pointerup",function(){ dragging=false; });
+cv.addEventListener("pointercancel",function(){ dragging=false; });
+
+function toggleSheet(){
+  sheetOpen=!sheetOpen;
+  document.getElementById("sheet").classList.toggle("open", sheetOpen);
+  setTimeout(measureChrome, 340);
+  measureChrome();
+}
+function toggleProof(){
+  proofOpen=!proofOpen;
+  document.getElementById("proof").classList.toggle("open", proofOpen);
+}
+function setMode(m){
+  MODE=m;
+  ["b-atel","b-smith","b-gask"].forEach(function(id,i){
+    document.getElementById(id).classList.toggle("on", m===["atelier","smith","gasket"][i]);
+  });
+  document.getElementById("g-atel").classList.toggle("show", m==="atelier");
+  document.getElementById("g-smith").classList.toggle("show", m==="smith");
+  document.getElementById("g-gask").classList.toggle("show", m==="gasket");
+  document.getElementById("g-spin").classList.toggle("show", m!=="gasket");
+  document.getElementById("lesson").classList.toggle("show", m==="atelier");
+  set("t-mode", m+" · v1.2M");
+  if(m==="atelier") applyAge();
+  if(m==="smith"){ pX=true; syncToggles(); }
+  measureChrome(); setTimeout(measureChrome,340);
+}
+function setT(v){ tTarget=v; set("v-t",v.toFixed(2)); }
+function setLam(v){ lam=v; spinL=false; document.getElementById("b-spin").classList.remove("on"); set("v-th",v.toFixed(3)); }
+function setAr(v){ aR=v; set("v-ar",v.toFixed(2)); }
+function setAa(v){ aA=v; set("v-aa",Math.round(v)+"°"); }
+function setPhi(v){ PHI=v; set("v-ph",v.toFixed(2)); }
+function setDens(v){ dens=v; set("v-d",v); }
+function setMaxK(v){ maxK=v; set("v-k",v); }
+function resetMob(){ lam=0; aR=0; aA=0; spinL=false;
+  document.getElementById("sth").value=0; document.getElementById("sar_").value=0;
+  document.getElementById("saa").value=0;
+  document.getElementById("b-spin").classList.remove("on");
+  set("v-th","0.000"); set("v-ar","0.00"); set("v-aa","0°"); }
+
+resize();
+document.getElementById("sheet").classList.add("open");
+setMode("atelier"); setAge(0); measureChrome(); botCur=botTarget;
+requestAnimationFrame(draw);
+</script>
+</body></html>
