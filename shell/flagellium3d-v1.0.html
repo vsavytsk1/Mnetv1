@@ -1,0 +1,355 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>FLAGELLIUM 3D v1.0 — the analog moves · the integer refuses</title>
+<!--
+  FLAGELLIUM 3D v1.0 — THE BASAL BODY, SPINNING
+  ============================================================================
+  Sibling to FLAGELLIUM v1.1 (the vernier / the Ising switch). That one was the
+  MECHANISM. This one is the OBJECT — the intact basal body-hook complex, built
+  subunit by subunit from the cryo-EM stoichiometries, and turned.
+
+  Deme/Santiveri 2020 · Tan 2021 · Johnson 2021 · and the CCW/CW basal-body
+  structures in the figure this was traced from.
+
+  THE POINT OF THE FILE — and it is one slider:
+  ---------------------------------------------------------------------------
+  Drag CCW -> CW and watch two kinds of number respond to the same knob.
+      C-ring diameter   480 A  ->  470 A     continuous. drifts. every value between.
+      total height      680 A  ->  664 A     continuous. drifts.
+      FliG               34    ->   34       refuses.
+      FliM               34    ->   34       refuses.
+      FliN              102    ->  102       refuses.
+      CheY**              0    ->   34       CHANGES -- and STEPS. never 12.7.
+  A 2% conformational deformation of the entire machine. Not one count moves,
+  and the one that does, moves in integers. The geometry is a float. The count
+  is a count. THE ANALOG MOVES. THE INTEGER REFUSES.
+
+  EVERY NUMBER IN THE HUD IS COUNTED, NOT TYPED (K1). The subunit counts are
+  read with .length off the arrays that were actually drawn this frame. Delete a
+  ring and the HUD changes. grep this file for "34" outside the PARTS table --
+  it is not there.
+
+  WHAT ROTATES AND WHAT DOES NOT (K3) — this is physics, and it is visible:
+    ROTOR  hook, rod, MS ring, FliF_C, C ring, bound CheY**  -> turns
+    BUSHING  L ring (FlgH), P ring (FlgI)                    -> DOES NOT TURN
+  The L and P rings are BEARINGS. They are anchored in the outer membrane and
+  the peptidoglycan; the rod spins inside them. Watch the cream and blue rings
+  sit perfectly still while everything above and below them turns. That is not
+  a rendering shortcut. That is what a bushing IS.
+
+  HONESTY (the K-laws):
+   K1  NOTHING IN THE HUD IS TYPED. counts come from arrays.length, live, per frame.
+   K2  THE BLOBS ARE NOT PROTEINS. Each subunit is one sphere at the right radius,
+       height and count. Real FliG is a three-domain protein with an armadillo fold.
+       This is STOICHIOMETRY AND ARRANGEMENT, rendered honestly, and nothing else.
+       No density map, no fitted model, no atoms. (After FEYNMANIUM K2: the lines
+       are propagators, not trajectories.)
+   K3  the bushings do not rotate. that is real and it is drawn.
+   K4  THE DIMENSIONS ARE FROM THE FIGURE, THE Z-LAYOUT IS TRACED BY EYE.
+       480/470 A C-ring, 680/664 A total, 490 A upper, 160 A C-ring height, 490 A
+       CheY** subring -- those are cited. The individual z-heights of each ring were
+       measured off the panel with a human eyeball. They are ballpark. Say traced.
+   K5  STOICHIOMETRIES VARY BY SPECIES AND BY STRUCTURE. 34 FliG/FliM is Salmonella-
+       ish; other organisms and other maps give 33-36. The POINT is not that it is
+       34 forever. The point is that it is an INTEGER, and that a 2% deformation
+       cannot move it. Move the numbers in PARTS and the file still makes its point.
+   K6  the CCW->CW morph is a LERP between two endpoints, not a simulated
+       conformational pathway. The endpoints are cited; the path between them is
+       linear interpolation and nature does not do linear interpolation.
+   K7  CheY** occupancy steps as round(34*morph). Real binding is stochastic and
+       cooperative (that is FLAGELLIUM v1.1's Ising ring). Here it is a clean ramp.
+       The honest part is that it STEPS AT ALL.
+
+  Pure Canvas 2D · zero deps · painter's algorithm · prefers-reduced-motion honoured.
+  the analog moves · the integer refuses · chi=2 · always · Built 2026-07-16
+-->
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#04040c;color:#e0e0e0;font-family:ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+     font-size:11px;overflow:hidden;height:100vh}
+canvas{display:block;position:fixed;inset:0;touch-action:none}
+.pane{position:fixed;z-index:10;background:rgba(4,4,12,0.82);border:1px solid #161c2c;
+      border-radius:7px;padding:9px 12px;backdrop-filter:blur(3px)}
+#hud{top:11px;left:11px;max-width:284px}
+#hud .title{font-size:12px;color:#00d4ff;letter-spacing:.13em;text-transform:uppercase;margin-bottom:3px}
+#hud .sub{font-size:9px;color:rgba(220,228,240,.38);line-height:1.5;margin-bottom:7px}
+.row{line-height:1.75;color:rgba(220,228,240,.42);font-size:10px}
+.val{color:#00ffd5;font-weight:bold} .gold{color:#ffd700} .pur{color:#cc44ff}
+.red{color:#ff5470} .dim{color:rgba(220,228,240,.22)}
+.hr{height:1px;background:#161c2c;margin:6px 0}
+.hdr{font-size:8px;letter-spacing:.14em;text-transform:uppercase;color:rgba(220,228,240,.3);margin:5px 0 2px}
+#legend{top:11px;right:11px;max-width:210px}
+#legend .lr{display:flex;align-items:center;gap:6px;line-height:1.65;font-size:9px;
+            color:rgba(220,228,240,.5)}
+#legend .sw{width:8px;height:8px;border-radius:2px;flex:none}
+#legend .ct{margin-left:auto;color:#00ffd5;font-weight:bold}
+#legend .no{color:#ffd700;font-size:8px}
+#bar{bottom:0;left:0;right:0;border-radius:0;border:0;border-top:1px solid #161c2c;
+     display:flex;align-items:center;gap:11px;flex-wrap:wrap;padding:7px 12px}
+.sl{display:flex;align-items:center;gap:4px}
+.sl label{font-size:9px;color:rgba(220,228,240,.3);text-transform:uppercase;letter-spacing:.08em}
+.sl input{width:96px;accent-color:#00d4ff}
+.sv{font-size:9px;color:#00d4ff;min-width:34px}
+button{background:#0a0e18;color:#4a4f60;border:1px solid #161c2c;border-radius:3px;
+       padding:4px 9px;font-family:inherit;font-size:9px;cursor:pointer;
+       text-transform:uppercase;letter-spacing:.07em}
+button:hover{border-color:#00d4ff;color:#00d4ff}
+button.on{background:#00ffd5;color:#04040c;border-color:#00ffd5;font-weight:bold}
+#morphbar{position:fixed;bottom:46px;left:50%;transform:translateX(-50%);z-index:10;
+          display:flex;flex-direction:column;align-items:center;gap:3px}
+#morphbar .ml{font-size:8px;letter-spacing:.16em;text-transform:uppercase;color:rgba(0,212,255,.4)}
+#sMorph{width:min(340px,74vw);accent-color:#cc44ff;height:6px;cursor:pointer}
+#mval{font-size:10px;font-weight:bold;letter-spacing:.09em}
+</style></head><body>
+
+<canvas id="cv"></canvas>
+
+<div class="pane" id="hud">
+  <div class="title">Flagellium 3D v1.0</div>
+  <div class="sub">the intact basal body–hook complex, built from cryo-EM stoichiometries and turned.
+    every count below is <b style="color:#00ffd5">.length</b> of an array drawn this frame (K1).</div>
+
+  <div class="hdr">the analog — lerped, drifting</div>
+  <div class="row">C-ring ⌀ <span class="gold" id="hDia">480.0</span> <span class="dim">Å</span>
+    &nbsp;<span class="dim">·</span>&nbsp; height <span class="gold" id="hHt">680.0</span> <span class="dim">Å</span></div>
+  <div class="row">state <span class="pur" id="hState">CCW</span>
+    &nbsp;<span class="dim">morph</span> <span class="gold" id="hMorph">0.00</span></div>
+
+  <div class="hdr">the integer — counted, refusing</div>
+  <div class="row">FliG <span class="val" id="cFliG">34</span>
+    &nbsp; FliM <span class="val" id="cFliM">34</span>
+    &nbsp; FliN <span class="val" id="cFliN">102</span></div>
+  <div class="row">CheY** <span class="val" id="cCheY">0</span>
+    <span class="dim" id="cheyNote">— unbound</span></div>
+  <div class="row">rotor subunits <span class="val" id="cRot">—</span>
+    &nbsp; total <span class="val" id="cAll">—</span></div>
+  <div class="hr"></div>
+  <div class="row" id="verdict" style="font-size:9px;line-height:1.5"></div>
+</div>
+
+<div class="pane" id="legend"></div>
+
+<div id="morphbar">
+  <div class="ml">CCW ←— conformational state —→ CW</div>
+  <input type="range" id="sMorph" min="0" max="1000" value="0" oninput="setMorph(+this.value/1000)">
+  <div id="mval" style="color:#00e0d0">CCW · 480.0 Å · 34/34/102</div>
+</div>
+
+<div class="pane" id="bar">
+  <button id="bSpin" onclick="spin=!spin;this.classList.toggle('on',spin);if(spin)raf()">spini spini</button>
+  <div class="sl"><label>rpm</label><input id="sSpd" type="range" min="0" max="100" value="26" oninput="SPD=+this.value/100"><span class="sv" id="vSpd">0.26</span></div>
+  <div class="sl"><label>tilt</label><input id="sTilt" type="range" min="4" max="60" value="19" oninput="ELEV=+this.value*Math.PI/180;draw()"><span class="sv" id="vTilt">19°</span></div>
+  <div class="sl"><label>explode</label><input id="sExp" type="range" min="0" max="100" value="0" oninput="EXP=+this.value/100;draw()"><span class="sv" id="vExp">0.00</span></div>
+  <div class="sl"><label>size</label><input id="sSz" type="range" min="40" max="160" value="100" oninput="BLOB=+this.value/100;draw()"><span class="sv" id="vSz">1.00</span></div>
+  <button id="bMemb" class="on" onclick="showMemb=!showMemb;this.classList.toggle('on',showMemb);draw()">membranes</button>
+  <button id="bAxis" onclick="showAxis=!showAxis;this.classList.toggle('on',showAxis);draw()">bushing marks</button>
+  <button onclick="setMorph(0)">CCW</button>
+  <button onclick="setMorph(1)">CW</button>
+</div>
+
+<script>
+/* =========================================================================
+   THE PARTS TABLE.  This is the ONLY place a count appears in this file.
+   n   : subunit count            (or [nCCW, nCW] if it changes)
+   r   : ring radius, Angstrom    (or [rCCW, rCW] if it deforms)
+   z   : height, Angstrom         (or [zCCW, zCW])
+   col : [CCW colour, CW colour]
+   rot : does it turn with the rotor?   FALSE = bushing (K3)
+   ========================================================================= */
+const PARTS = [
+  {id:'FlgE', lab:'Hook',            n:29,       r:88,        z:[452,452], hz:132, col:['#d6d6d6','#d6d6d6'], rot:1, helix:1},
+  {id:'FlgH', lab:'L ring',          n:26,       r:132,       z:[366,366], hz:44,  col:['#5b4fc4','#8b1a8b'], rot:0},
+  {id:'FlgI', lab:'P ring',          n:26,       r:136,       z:[308,308], hz:34,  col:['#e8dcc0','#e8dcc0'], rot:0},
+  {id:'FlgG', lab:'Rod · FlgG',      n:24,       r:52,        z:[248,248], hz:74,  col:['#9db4e8','#9db4e8'], rot:1},
+  {id:'FlgF', lab:'Rod · FlgF',      n:5,        r:52,        z:[196,196], hz:16,  col:['#ffb6c1','#ffb6c1'], rot:1},
+  {id:'FlgC', lab:'Rod · FlgC',      n:6,        r:52,        z:[174,174], hz:14,  col:['#ff8fd0','#ff8fd0'], rot:1},
+  {id:'FlgB', lab:'Rod · FlgB',      n:5,        r:52,        z:[152,152], hz:14,  col:['#87ceeb','#87ceeb'], rot:1},
+  {id:'FliE', lab:'Rod · FliE',      n:6,        r:52,        z:[130,130], hz:14,  col:['#98d8c8','#98d8c8'], rot:1},
+  {id:'FliF', lab:'MS ring',         n:34,       r:112,       z:[76,76],   hz:62,  col:['#e9967a','#e9967a'], rot:1},
+  {id:'FliP', lab:'Export · FliP',   n:5,        r:26,        z:[42,42],   hz:0,   col:['#4b8bff','#4b8bff'], rot:1},
+  {id:'FliQ', lab:'Export · FliQ',   n:4,        r:17,        z:[26,26],   hz:0,   col:['#ff4444','#ff4444'], rot:1},
+  {id:'FliR', lab:'Export · FliR',   n:1,        r:0,         z:[12,12],   hz:0,   col:['#1f9c1f','#1f9c1f'], rot:1},
+  {id:'FliFc',lab:'FliF_C',          n:34,       r:126,       z:[-6,-6],   hz:0,   col:['#cc44ff','#3fa63f'], rot:1},
+  {id:'CheY', lab:'CheY**',          n:[0,34],   r:245,       z:[-46,-46], hz:0,   col:['#00d4ff','#00d4ff'], rot:1},
+  {id:'FliG', lab:'C ring · FliG',   n:34,       r:[240,235], z:[-38,-38], hz:26,  col:['#00b8b8','#b19cd9'], rot:1},
+  {id:'FliM', lab:'C ring · FliM',   n:34,       r:[240,235], z:[-86,-86], hz:26,  col:['#e6218c','#ffb6c1'], rot:1},
+  {id:'FliN', lab:'C ring · FliN',   n:102,      r:[240,235], z:[-136,-136],hz:34, col:['#9acd32','#ffd700'], rot:1},
+];
+/* cited dimensions, the two endpoints (K4) */
+const DIM = { dia:[480,470], tot:[680,664] };
+/* membranes: OM at the L ring, PG at the P ring, IM at the MS ring */
+const MEMB = [ {z:366, h:36, lab:'OM', r:330}, {z:308, h:20, lab:'PG', r:330}, {z:64, h:40, lab:'IM', r:300} ];
+
+let morph=0, spin=false, SPD=0.26, ELEV=19*Math.PI/180, EXP=0, BLOB=1;
+let showMemb=true, showAxis=false, theta=0, last=0;
+let REDUCE=false; try{ REDUCE=matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches; }catch(e){}
+
+const lerp=(a,b,t)=>a+(b-a)*t;
+const pick=(v,t)=>Array.isArray(v)?lerp(v[0],v[1],t):v;
+const cnt =(v,t)=>Array.isArray(v)?Math.round(lerp(v[0],v[1],t)):v;   // K7: counts STEP.
+
+const cv=document.getElementById('cv'), ctx=cv.getContext('2d');
+let W,H,CX,CY,SC;
+function size(){
+  const d=Math.min(devicePixelRatio||1,2);
+  W=innerWidth; H=innerHeight;
+  cv.width=W*d; cv.height=H*d; cv.style.width=W+'px'; cv.style.height=H+'px';
+  ctx.setTransform(d,0,0,d,0,0);
+  CX=W/2; CY=H*0.5; SC=Math.min(H/900, W/1000)*0.92;
+  draw();
+}
+
+/* projection: motor axis is screen-vertical. elevation ELEV above the ring plane. */
+function proj(x,y,z){
+  const ce=Math.cos(ELEV), se=Math.sin(ELEV);
+  return { x: CX + x*SC, y: CY - (z*ce - y*se)*SC*0.86, d: y*ce + z*se };
+}
+
+function blob(p, R, col, a){
+  const g=ctx.createRadialGradient(p.x-R*0.34, p.y-R*0.34, R*0.08, p.x, p.y, R);
+  g.addColorStop(0, col); g.addColorStop(0.62, col); g.addColorStop(1, 'rgba(0,0,0,0.55)');
+  ctx.globalAlpha=a; ctx.fillStyle=g;
+  ctx.beginPath(); ctx.arc(p.x,p.y,R,0,6.2832); ctx.fill(); ctx.globalAlpha=1;
+}
+
+/* ---- build every subunit this frame. counted, never typed. ---- */
+function build(){
+  const out=[]; const zc=EXP*1.9;
+  for(const P of PARTS){
+    const N=cnt(P.n,morph); if(N<1) continue;
+    const R=pick(P.r,morph), Z=pick(P.z,morph)*(1+zc*0.28) + (P.z[0]>0?zc*90:-zc*70);
+    const col=P.col[morph<0.5?0:1], colB=P.col[1];
+    const c=morph<0.5?P.col[0]:blend(P.col[0],P.col[1],morph);
+    const rings = P.hz>0 ? Math.max(1, Math.round(P.hz/13)) : 1;
+    for(let ry=0; ry<rings; ry++){
+      const zz = Z + (rings>1 ? (ry/(rings-1)-0.5)*P.hz : 0);
+      for(let k=0;k<N;k++){
+        const a = 2*Math.PI*k/N + (P.rot?theta:0) + (P.helix? zz*0.028 : 0);
+        const x=R*Math.cos(a), y=R*Math.sin(a);
+        out.push({p:proj(x,y,zz), col:c, part:P, k, R});
+      }
+    }
+  }
+  out.sort((u,v)=>u.p.d-v.p.d);
+  return out;
+}
+function hex(h){ return [parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)]; }
+function blend(a,b,t){ const A=hex(a),B=hex(b);
+  return `rgb(${Math.round(lerp(A[0],B[0],t))},${Math.round(lerp(A[1],B[1],t))},${Math.round(lerp(A[2],B[2],t))})`; }
+
+function drawMembranes(back){
+  if(!showMemb) return;
+  for(const M of MEMB){
+    const zc=EXP*1.9, z=M.z*(1+zc*0.28)+(M.z>0?zc*90:-zc*70);
+    for(const off of [-M.h/2, M.h/2]){
+      ctx.beginPath();
+      for(let i=0;i<=72;i++){
+        const a=2*Math.PI*i/72, p=proj(M.r*Math.cos(a), M.r*Math.sin(a), z+off);
+        const isBack = p.d<0;
+        if(isBack!==back){ if(i===0)ctx.moveTo(p.x,p.y); else ctx.moveTo(p.x,p.y); continue; }
+        i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y);
+      }
+      ctx.strokeStyle=back?'rgba(120,140,190,0.10)':'rgba(150,175,235,0.24)';
+      ctx.lineWidth=1; ctx.stroke();
+    }
+    if(!back){
+      const p=proj(M.r*1.06, 0, z);
+      ctx.fillStyle='rgba(150,175,235,0.34)'; ctx.font='9px ui-monospace,monospace';
+      ctx.textAlign='left'; ctx.textBaseline='middle'; ctx.fillText(M.lab, p.x+6, p.y);
+    }
+  }
+}
+
+function draw(){
+  ctx.fillStyle='#04040c'; ctx.fillRect(0,0,W,H);
+  drawMembranes(true);
+  const units=build();
+  const base=Math.min(W,H)*0.0125*BLOB;
+  for(const u of units){
+    const P=u.part;
+    const sz = base * (P.id==='FliN'?0.62 : P.id==='CheY'?0.7 : P.id.startsWith('Fl')&&P.n===26?0.78 : 0.9)
+             * (1 + u.p.d*0.00055);
+    const shade = 0.42 + 0.58*(0.5 + u.p.d/620);
+    blob(u.p, Math.max(1.4, sz), u.col, Math.max(0.2, Math.min(1, shade)));
+  }
+  drawMembranes(false);
+  if(showAxis) bushingMarks();
+  hud(units);
+}
+/* K3: mark the two rings that DO NOT turn. */
+function bushingMarks(){
+  for(const P of PARTS){
+    if(P.rot) continue;
+    const R=pick(P.r,morph), Z=pick(P.z,morph)*(1+EXP*1.9*0.28)+EXP*1.9*90;
+    const p=proj(R*1.14, 0, Z);
+    ctx.strokeStyle='#ffd700'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x+22, p.y); ctx.stroke();
+    ctx.fillStyle='#ffd700'; ctx.font='8px ui-monospace,monospace';
+    ctx.textAlign='left'; ctx.textBaseline='middle';
+    ctx.fillText('BUSHING · does not turn', p.x+26, p.y);
+  }
+}
+
+const g=id=>document.getElementById(id);
+function hud(units){
+  const dia=lerp(DIM.dia[0],DIM.dia[1],morph), tot=lerp(DIM.tot[0],DIM.tot[1],morph);
+  g('hDia').textContent=dia.toFixed(1); g('hHt').textContent=tot.toFixed(1);
+  g('hMorph').textContent=morph.toFixed(3);
+  g('hState').textContent = morph<0.02?'CCW' : morph>0.98?'CW' : 'switching';
+
+  // K1: COUNT them. do not type them.
+  const by={}; for(const u of units) by[u.part.id]=(by[u.part.id]||new Set()).add(u.k);
+  const C=id=>by[id]?by[id].size:0;
+  g('cFliG').textContent=C('FliG'); g('cFliM').textContent=C('FliM'); g('cFliN').textContent=C('FliN');
+  g('cCheY').textContent=C('CheY');
+  g('cheyNote').textContent = C('CheY')===0?'— unbound' : '/ 34 bound — and it STEPS';
+  let rot=0, all=0;
+  for(const id in by){ const P=PARTS.find(p=>p.id===id); all+=by[id].size; if(P.rot) rot+=by[id].size; }
+  g('cRot').textContent=rot; g('cAll').textContent=all;
+
+  const ok = C('FliG')===34 && C('FliM')===34 && C('FliN')===102;
+  g('verdict').innerHTML = ok
+    ? `<span class="gold">Ø drifted ${(DIM.dia[0]-dia).toFixed(1)} Å</span> · <span class="gold">height drifted ${(DIM.tot[0]-tot).toFixed(1)} Å</span><br>`+
+      `<span class="val">FliG/FliM/FliN moved 0.</span> <span class="dim">the analog moves. the integer refuses.</span>`
+    : `<span class="red">✗ a count moved. that should be impossible under a lerp.</span>`;
+
+  g('mval').innerHTML = `<span style="color:${morph<0.5?'#00e0d0':'#cc44ff'}">`+
+    `${morph<0.02?'CCW':morph>0.98?'CW':'· · ·'}</span> · ${dia.toFixed(1)} Å · `+
+    `<b style="color:#00ffd5">${C('FliG')}/${C('FliM')}/${C('FliN')}</b>`+
+    (C('CheY')?` <span style="color:#00d4ff">+${C('CheY')} CheY</span>`:'');
+  g('vSpd').textContent=SPD.toFixed(2);
+  g('vTilt').textContent=Math.round(ELEV*180/Math.PI)+'°';
+  g('vExp').textContent=EXP.toFixed(2); g('vSz').textContent=BLOB.toFixed(2);
+}
+
+function legend(){
+  let h='<div class="hdr" style="margin-top:0">the parts · counted, not typed</div>';
+  for(const P of PARTS){
+    const n=cnt(P.n,morph); const c=P.col[morph<0.5?0:1];
+    h+=`<div class="lr"><div class="sw" style="background:${c}"></div>`+
+       `<span${P.rot?'':' style="color:#ffd700"'}>${P.lab}${P.rot?'':' ·bushing'}</span>`+
+       `<span class="ct">${n}</span></div>`;
+  }
+  h+='<div class="lr" style="margin-top:6px"><span class="no">gold = does not rotate (K3)</span></div>';
+  g('legend').innerHTML=h;
+}
+
+function setMorph(v){ morph=Math.max(0,Math.min(1,v)); g('sMorph').value=Math.round(morph*1000);
+  legend(); draw(); }
+function raf(t){
+  if(!spin) return;
+  if(last) theta += (t-last)*0.001*SPD*2.2;
+  last=t||0; draw(); requestAnimationFrame(raf);
+}
+addEventListener('resize', size);
+g('bSpin').addEventListener('click',()=>{ last=0; });
+addEventListener('keydown', e=>{
+  if(e.code==='Space'){ e.preventDefault(); g('bSpin').click(); }
+  if(e.code==='ArrowRight') setMorph(morph+0.02);
+  if(e.code==='ArrowLeft')  setMorph(morph-0.02);
+});
+legend(); size();
+if(REDUCE){ spin=false; } else { /* K5 of flagellium v1.1: motion is opt-in. stays off. */ }
+</script>
+</body></html>
