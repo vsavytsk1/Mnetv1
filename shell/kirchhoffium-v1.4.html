@@ -1,0 +1,922 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>KIRCHHOFFIUM v1.4 — the shared risk · you buy what you pay for</title>
+<!--
+  KIRCHHOFFIUM v1.4 — THE DOSSIER BUILD
+  =================================================================
+  Conventions folded in from apollonium / AgeOfLenguages / bersha:
+    · DOSSIER      — apollonium tabbed receipts (Cut / Choke / Own / Fleet / K)
+    · COST METER   — AgeOfLenguages: you field only what you PAY for
+    · VERDICT      — bersha-style honest outcome, no fake prize
+    · BADGE        — grey → gold only when EARNED (Path III: target ≠ result)
+
+  =================================================================
+  ## CURSE 31 -- The Orphan Node (phantomVertex)
+  =================================================================
+  Found by Vlad, in a screenshot, from the NUMBERS.
+
+  SYMPTOM:
+    λ₂ = 0.0000. Naive min-cut = SPLIT. Every global metric flat on the floor.
+    No console error. No red. The KERNEL CHECK said "✓ 176 hops from 47 cables,
+    0 silent drops" — cheerfully, and truthfully.
+
+  ROOT CAUSE:
+    `Muscat` was in the HUBS array. No cable path ever touched it. One isolated
+    vertex. And a disconnected graph GENUINELY has λ₂ = 0 and min-cut = 0.
+
+    THE ALGORITHMS WERE ALL CORRECT. Stoer-Wagner correctly reported the graph
+    was already split. Fiedler correctly reported λ₂ = 0 for a disconnected
+    graph. Nothing was broken. They were faithfully reporting a TYPO as if it
+    were a FINDING, and every downstream number inherited the lie.
+
+  THE DEEPER FAILURE — and this is the lesson:
+    v1.1's kernel check validated that every EDGE resolves to a NODE.
+    It never checked that every NODE resolves to an EDGE.
+    VALIDATION ONLY RAN ONE WAY.
+    A check that only runs one direction is not a check. It is a comfort.
+
+  FAMILY:
+    Cousin of CURSE 26 (lockLie) — the screen disagreeing with the truth.
+    Cousin of CURSE 30 (corpseParse) — but INVERTED, and worse:
+      CURSE 30: total silence. Everything blank. Loud, obvious, findable.
+      CURSE 31: total CONFIDENCE. Every number present, formatted, plausible,
+                and wrong. A green ✓ sitting on top of a poisoned graph.
+    The silent failure is kinder than the confident one.
+
+  THE FIX:
+    buildGraph() now walks BOTH directions and reports ORPHANS by name in the
+    KERNEL chip, in red. And Muscat got the cable it always had in reality —
+    Blue-Raman lands in Oman; Omantel is a partner on it.
+
+  Curse count: 31. Validate both directions or you have not validated.
+  A confident wrong number is worse than a blank one. Always.
+  =================================================================
+
+  THE THESIS (unchanged, and now provable on a connected graph):
+    GRAPH THEORY ASSUMES EDGES FAIL INDEPENDENTLY. THE OCEAN DOES NOT CARE.
+    Fifteen cables drawn as fifteen lines are ONE cable if they lie in the same
+    26 km strait. The naive min-cut and the SRG truth are printed side by side,
+    and the gap between them is the whole file.
+
+  HONESTY (K1-K8): see the K tab. ~47 real cables is a SAMPLE of ~570. Route
+  geometry simplified. City-level landings by choice. Motter-Lai is a model.
+  Baltic/Taiwan attribution officially UNRESOLVED. 95-99% is of INTERCONTINENTAL
+  traffic, not "the internet". Repair-fleet and cost figures are estimates.
+
+  Pure Canvas 2D. No deps. chi=2 · always. Built 2026-07-16.
+-->
+<style>
+:root{
+  --bg:#050508; --gold:#ffd700; --cyan:#00d4ff; --pink:#ff69b4; --green:#00ffd5;
+  --purple:#cc44ff; --red:#ff3355; --amber:#ffb454; --dim:#6a6a82; --txt:#e8e0d0;
+  --rule:#20202e; --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--txt);font-family:var(--mono);overflow:hidden}
+#cv{position:fixed;top:0;left:0;display:block;cursor:crosshair}
+
+/* ── top strip: brand + verdict + badge ── */
+#top{position:fixed;top:0;left:0;right:0;z-index:12;padding:7px 11px;
+  display:flex;gap:9px;align-items:center;pointer-events:none;flex-wrap:wrap}
+#top>*{pointer-events:auto}
+#brand{background:rgba(8,8,16,.9);border:1px solid var(--rule);border-radius:8px;padding:5px 9px}
+#brand .t{color:var(--gold);font-size:12px;letter-spacing:.05em}
+#brand .s{color:var(--dim);font-size:9px;margin-top:1px}
+#verdict{flex:1;min-width:230px;max-width:440px;border-radius:8px;padding:5px 10px;
+  background:rgba(8,8,16,.9);border:1px solid var(--rule);display:flex;align-items:center;gap:9px}
+#verdict .vt{font-size:12px;font-weight:bold;letter-spacing:.05em;white-space:nowrap}
+#verdict .vs{font-size:9px;color:var(--dim);line-height:1.35}
+#verdict.good{border-color:var(--green);box-shadow:0 0 14px rgba(0,255,213,.15)}
+#verdict.good .vt{color:var(--green)}
+#verdict.warn .vt{color:var(--amber)} #verdict.warn{border-color:#3a2c10}
+#verdict.bad .vt{color:var(--red)} #verdict.bad{border-color:#3a1018}
+#badge{font-size:8.5px;letter-spacing:.09em;text-transform:uppercase;padding:4px 10px;
+  border-radius:5px;background:#14141f;border:1px solid #2a2a3a;color:#5c5343;white-space:nowrap}
+#badge.earned{background:var(--gold);color:#050508;border-color:var(--gold);
+  box-shadow:0 0 14px rgba(255,215,0,.5);font-weight:bold}
+.chips{display:flex;gap:4px;flex-wrap:wrap}
+.mc{background:rgba(8,8,16,.9);border:1px solid var(--rule);border-radius:6px;padding:3px 7px;min-width:52px}
+.mc .lab{font-size:7px;color:var(--dim);text-transform:uppercase;letter-spacing:.05em}
+.mc .val{font-size:12px;font-weight:bold;color:var(--gold)}
+.mc .val.cyan{color:var(--cyan)} .mc .val.green{color:var(--green)} .mc .val.red{color:var(--red)}
+.mc .val.pu{color:var(--purple)}
+
+/* ── DOSSIER (apollonium tabbed receipts) ── */
+#dossier{position:fixed;top:74px;right:11px;bottom:52px;width:280px;z-index:10;
+  background:rgba(8,8,16,.94);border:1px solid var(--rule);border-radius:8px;
+  display:flex;flex-direction:column;overflow:hidden}
+#dossier .tabs{display:flex;border-bottom:1px solid var(--rule);flex:0 0 auto}
+#dossier .tab{flex:1;text-align:center;padding:6px 2px;cursor:pointer;color:#5a5440;
+  font-size:8.5px;letter-spacing:.06em;border-right:1px solid var(--rule);transition:all .12s}
+#dossier .tab:last-child{border-right:none}
+#dossier .tab.active{background:var(--gold);color:#050508;font-weight:bold}
+#dossier .tab:hover{color:var(--gold)}
+#dbody{flex:1;overflow-y:auto;padding:8px 10px;font-size:9.5px;line-height:1.6;color:var(--dim)}
+#dbody b{color:var(--cyan)} #dbody .g{color:var(--green)} #dbody .r{color:var(--red)}
+#dbody .kk{color:var(--gold)} #dbody .sec{margin-top:7px;padding-top:6px;border-top:1px solid var(--rule)}
+#dbody .rank{display:flex;justify-content:space-between;gap:6px;padding:1px 0}
+#dbody .rank.click{cursor:pointer} #dbody .rank.click:hover span{color:var(--gold)}
+#dbody h4{color:var(--gold);font-size:9.5px;letter-spacing:.08em;margin-bottom:3px;font-weight:normal}
+
+#bar{position:fixed;left:50%;transform:translateX(-50%);bottom:7px;display:flex;flex-wrap:wrap;
+  gap:4px 8px;align-items:center;justify-content:center;background:rgba(8,8,16,.96);
+  border:1px solid var(--rule);border-radius:10px;padding:6px 11px;z-index:11;max-width:70vw}
+button{background:#14141f;border:1px solid #2a2a3a;border-radius:5px;color:var(--gold);
+  font:9.5px var(--mono);padding:4px 7px;cursor:pointer;transition:all .12s}
+button:hover{border-color:var(--gold)} button.on{background:#1d1a0a;border-color:var(--gold)}
+button.cyan{color:var(--cyan)} button.cyan.on{border-color:var(--cyan);background:#08222a}
+button.gn{color:var(--green)} button.gn.on{border-color:var(--green);background:#062522}
+button.rd{color:var(--red)} button.rd.on{border-color:var(--red);background:#2a0810}
+button.pu{color:var(--purple)} button.pu.on{border-color:var(--purple);background:#1e0a2a}
+button.am{color:var(--amber)} button.am.on{border-color:var(--amber);background:#2a1c06}
+.ctl{display:flex;align-items:center;gap:3px}
+.klbl{color:var(--dim);font-size:8.5px;text-transform:uppercase}
+.val2{color:var(--gold);font-size:9px;min-width:28px;text-align:right}
+input[type=range]{appearance:none;-webkit-appearance:none;width:64px;height:4px;background:#2a2a3a;border-radius:3px;outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:var(--red);cursor:pointer}
+input[type=range]::-moz-range-thumb{width:12px;height:12px;border:none;border-radius:50%;background:var(--red);cursor:pointer}
+.sep{width:1px;height:16px;background:#2a2a3a}
+</style></head>
+<body>
+<canvas id="cv"></canvas>
+
+<div id="top">
+  <div id="brand"><div class="t">KIRCHHOFFIUM v1.4</div><div class="s" id="b-sub">the shared risk</div></div>
+  <div id="verdict" class="bad">
+    <div class="vt" id="v-t">—</div>
+    <div class="vs" id="v-s">booting…</div>
+    <div id="badge">resilient</div>
+  </div>
+  <div class="chips">
+    <div class="mc"><div class="lab">kernel</div><div class="val green" id="m-kern">—</div></div>
+    <div class="mc"><div class="lab">naive cut</div><div class="val" id="m-cut">—</div></div>
+    <div class="mc"><div class="lab">SRG truth</div><div class="val red" id="m-srg">—</div></div>
+    <div class="mc"><div class="lab">λ₂</div><div class="val green" id="m-fied">—</div></div>
+    <div class="mc"><div class="lab">you spent</div><div class="val pu" id="m-cost">$0</div></div>
+  </div>
+</div>
+
+<div id="dossier">
+  <div class="tabs">
+    <div class="tab active" data-t="cut"   onclick="setTab('cut')">CUT</div>
+    <div class="tab"        data-t="choke" onclick="setTab('choke')">CHOKE</div>
+    <div class="tab"        data-t="own"   onclick="setTab('own')">OWN</div>
+    <div class="tab"        data-t="fleet" onclick="setTab('fleet')">FLEET</div>
+    <div class="tab"        data-t="k"     onclick="setTab('k')">K</div>
+  </div>
+  <div id="dbody">booting…</div>
+</div>
+
+<div id="bar">
+  <button id="b-net" class="cyan on" onclick="setMode('net')">NETWORK</button>
+  <button id="b-srg" class="rd" onclick="setMode('srg')">☠ CHOKE</button>
+  <button id="b-casc" class="pu" onclick="setMode('casc')">CASCADE</button>
+  <button id="b-lay" class="gn" onclick="setMode('lay')">＋ LAY</button>
+  <button id="b-tit" class="am" onclick="setMode('titans')">🏛 TITANS</button>
+  <div class="sep"></div>
+  <button id="b-own" class="pu" onclick="colorOwner=!colorOwner;this.classList.toggle('on',colorOwner)">owner</button>
+  <button id="b-load" class="gn on" onclick="colorLoad=!colorLoad;this.classList.toggle('on',colorLoad)">load</button>
+  <div class="sep"></div>
+  <div class="ctl"><span class="klbl">α</span><input id="sAl" type="range" min="0" max="100" value="20" oninput="setAlpha(+this.value/100)"><span class="val2" id="v-al">.20</span></div>
+  <div class="ctl"><span class="klbl">ships</span><input id="sSh" type="range" min="1" max="20" value="4" oninput="setShips(+this.value)"><span class="val2" id="v-sh">4</span></div>
+  <button onclick="resetAll()">reset</button>
+</div>
+
+<script>
+"use strict";
+var cv=document.getElementById("cv"), ctx=cv.getContext("2d");
+var W=0,H=0,DPR=1;
+function resize(){
+  DPR=Math.min(window.devicePixelRatio||1,2);
+  W=window.innerWidth; H=window.innerHeight;
+  cv.style.width=W+"px"; cv.style.height=H+"px";
+  cv.width=Math.round(W*DPR); cv.height=Math.round(H*DPR);
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+}
+window.addEventListener("resize",resize); resize();
+
+var GOLD=[255,215,0],CYAN=[0,212,255],GRN=[0,255,213],PUR=[204,68,255],RED=[255,51,85],
+    AMB=[255,180,84],WHT=[235,235,245],GRY=[110,115,135],BLU=[66,133,244],ORG=[255,153,0];
+function css(c,a){ return "rgba("+(c[0]|0)+","+(c[1]|0)+","+(c[2]|0)+","+a+")"; }
+function mix(a,b,t){ t=t<0?0:t>1?1:t; return [a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t]; }
+
+var LAND=[
+ [[-168,66],[-156,71],[-140,70],[-125,70],[-110,69],[-95,69],[-85,68],[-80,73],[-73,78],[-60,76],
+  [-55,70],[-63,62],[-78,62],[-80,55],[-64,60],[-55,52],[-53,47],[-66,45],[-70,42],[-74,40],
+  [-76,35],[-81,31],[-80,25],[-83,25],[-90,29],[-94,29],[-97,26],[-97,22],[-95,18],[-88,21],
+  [-87,16],[-83,9],[-79,9],[-83,15],[-92,15],[-96,16],[-105,20],[-110,23],[-114,28],[-117,32],
+  [-121,35],[-124,40],[-124,46],[-131,52],[-136,58],[-146,60],[-152,58],[-158,56],[-162,59],[-165,63]],
+ [[-81,8],[-77,8],[-72,11],[-64,10],[-60,8],[-52,5],[-50,0],[-44,-2],[-38,-5],[-35,-8],
+  [-38,-13],[-39,-18],[-44,-23],[-48,-25],[-53,-33],[-58,-35],[-62,-39],[-65,-45],[-68,-50],
+  [-70,-55],[-75,-52],[-74,-45],[-73,-37],[-71,-30],[-70,-23],[-70,-18],[-76,-14],[-79,-8],[-81,-5],[-80,0],[-78,2]],
+ [[-10,43],[-9,39],[-6,37],[0,38],[3,42],[8,44],[12,45],[14,42],[18,40],[21,38],[24,40],
+  [26,41],[29,41],[30,45],[34,45],[38,47],[40,50],[42,55],[38,60],[32,65],[28,70],[22,70],
+  [16,69],[12,65],[10,60],[7,58],[8,55],[5,53],[3,51],[-2,49],[-5,48],[-2,43]],
+ [[-5,50],[-6,53],[-5,58],[-2,58],[0,54],[1,52],[-2,50]],
+ [[-17,15],[-16,20],[-13,28],[-10,31],[-6,36],[0,37],[10,37],[11,33],[20,32],[25,32],[32,31],
+  [35,28],[38,22],[43,12],[51,12],[48,5],[42,-1],[40,-10],[35,-18],[32,-26],[27,-34],[20,-35],
+  [18,-33],[14,-23],[12,-16],[9,-1],[9,4],[5,4],[-4,5],[-8,4],[-13,8]],
+ [[26,41],[30,45],[38,47],[42,55],[50,55],[60,58],[70,60],[80,62],[90,65],[100,70],[110,72],
+  [120,72],[130,70],[140,72],[155,70],[170,68],[178,65],[170,60],[160,58],[155,52],[145,45],
+  [140,42],[135,35],[128,35],[122,30],[120,25],[110,20],[105,10],[100,5],[100,7],[98,14],
+  [95,20],[90,22],[87,21],[80,10],[77,8],[72,20],[65,25],[60,25],[57,22],[48,28],[42,15],
+  [38,22],[35,28],[32,31]],
+ [[130,32],[132,34],[136,35],[140,36],[142,40],[145,43],[142,45],[139,42],[137,37],[133,35]],
+ [[95,5],[100,3],[104,1],[106,-6],[110,-7],[115,-8],[120,-9],[125,-9],[130,-8],[128,-4],
+  [120,-3],[115,-2],[110,0],[104,2],[98,4]],
+ [[113,-22],[114,-26],[116,-32],[118,-35],[125,-33],[132,-32],[137,-35],[140,-38],[146,-39],
+  [150,-37],[153,-30],[153,-25],[146,-19],[142,-11],[136,-12],[130,-11],[125,-14],[122,-18]],
+ [[172,-34],[174,-37],[177,-38],[178,-39],[176,-41],[174,-41],[171,-44],[168,-46],[166,-45],[170,-42],[173,-40]],
+ [[-45,60],[-50,65],[-55,70],[-60,76],[-55,82],[-40,83],[-25,80],[-20,75],[-25,70],[-35,65]],
+ [[-24,65],[-22,66],[-14,66],[-13,64],[-18,63],[-22,64]],
+ [[44,-12],[50,-15],[50,-20],[47,-25],[45,-25],[43,-20]],
+ [[140,-3],[145,-3],[150,-6],[150,-10],[143,-9],[137,-8],[138,-4]],
+ [[119,19],[122,19],[122,14],[126,10],[124,6],[121,6],[120,13]]
+];
+
+var HUBS=[
+  ["New York",     -74,  40.7,0,0],["Virginia Bch",-76,  36.8,0,0],["Myrtle Bch", -79,  33.7,0,0],
+  ["Boston",       -71,  42.4,0,0],["Miami",       -80,  25.8,0,0],["Halifax",    -63,  44.6,0,0],
+  ["Los Angeles", -118,  34.0,0,0],["Grover Beach",-121, 35.1,0,0],["Oregon",    -124,  45.0,0,0],
+  ["Vancouver",   -123,  49.3,0,0],
+  ["Fortaleza",    -38,  -3.7,16,1],["Praia Grande", -46, -24.0,0,0],["Rio",        -43, -22.9,0,0],
+  ["Punta d.Este", -55, -34.9,0,0],["Las Toninas",  -57, -36.3,0,0],["Valparaiso", -72, -33.0,0,0],
+  ["Panama",       -79,   9.0,0,0],
+  ["Bude",          -4,  50.8,8,0],["Galway",        -9,  53.3,0,0],["Reykjavik",  -22,  64.1,0,0],
+  ["Bilbao",        -3,  43.3,0,0],["Santander",     -4,  43.5,0,0],["Lisbon/Sines",-9,  38.5,0,0],
+  ["Le Porge",      -1,  44.9,0,0],["Barcelona",      2,  41.4,0,0],["Marseille",    5,  43.3,17,1],
+  ["Genoa",          9,  44.4,0,0],["Palermo",       13,  38.1,0,0],["Athens",      24,  37.9,0,0],
+  ["Amsterdam",      5,  52.4,0,0],["Hamburg",       10,  53.5,0,0],["Helsinki",    25,  60.2,0,0],
+  ["Stockholm",     18,  59.3,0,0],["Klaipeda",      21,  55.7,0,0],
+  ["Casablanca",    -8,  33.6,0,0],["Dakar",        -17,  14.7,0,0],["Accra",        0,   5.6,0,0],
+  ["Lagos",          3,   6.5,0,0],["Swakopmund",    15, -22.7,0,0],["Cape Town",   18, -33.9,0,1],
+  ["Mombasa",       40,  -4.0,6,0],["Dar es Salaam", 39,  -6.8,0,0],["Djibouti",    43,  11.6,10,1],
+  ["Alexandria",    30,  31.2,16,1],["Port Said",     32,  31.3,0,1],["Suez",        32,  30.0,0,1],
+  ["Ras Ghareb",    33,  28.4,0,1],["Zafarana",      33,  29.1,0,1],
+  ["Jeddah",        39,  21.5,13,1],["Aqaba",         35,  29.5,0,0],["Haifa",       35,  32.8,0,0],
+  ["Fujairah",      56,  25.1,18,1],["Muscat",        59,  23.6,0,0],["Salalah",     54,  17.0,0,0],
+  ["Karachi",       67,  24.9,0,0],["Mumbai",        73,  19.0,11,1],["Chennai",     80,  13.1,0,0],
+  ["Colombo",       80,   6.9,0,1],
+  ["Singapore",    104,   1.3,16,1],["Jakarta",      107,  -6.2,0,0],["Davao",      126,   7.1,0,0],
+  ["Manila",       121,  14.6,0,0],["Taiwan",       121,  24.0,0,1],["Luzon Strait",121, 20.5,0,1],
+  ["Hong Kong",    114,  22.3,10,0],["Shanghai",     122,  31.2,0,0],["Tokyo",      140,  35.0,0,0],
+  ["Busan",        129,  35.2,0,0],
+  ["Guam",         145,  13.4,11,1],["Hawaii",      -158,  21.3,0,1],["Sydney",     151, -33.9,0,0],
+  ["Perth",        116, -32.0,0,0],["Auckland",     175, -36.8,0,0],["Fiji",       178, -18.1,0,0]
+];
+
+var SRGS={
+  "red-sea":  {label:"Red Sea / Bab-el-Mandeb", real:"15–17", lng:43, lat:13,
+    inc:"Feb–Mar 2024: the drifting, Houthi-struck Rubymar dragged its anchor — AAE-1, Seacom/TGN and EIG cut together, ~25% of Asia–Europe traffic gone. Mar 2025: PEACE cut near Zafarana. Sep 2025: SMW4 and IMEWE near Jeddah. A 26 km strait carrying ~17% of global traffic and ~90% of Europe–Asia."},
+  "egypt":    {label:"Egypt land crossing", real:"15–16", lng:32, lat:30.5,
+    inc:"~90% of Europe–Asia traffic crosses Egyptian SOIL between the Red Sea and the Med. No engineer would choose this; history did. 2013: divers cut SMW4 off Alexandria — Egyptian internet dropped ~60%. Blue-Raman and Medusa exist to route around it."},
+  "luzon":    {label:"Luzon Strait", real:"~10", lng:121, lat:20.5,
+    inc:"26 Dec 2006, Hengchun earthquake (M7.0): submarine landslides severed ~6 of 7 cables AT ONCE. Asian internet, IDD and FX trading disrupted for weeks. The canonical shared-risk event."},
+  "malacca":  {label:"Malacca / Singapore", real:"~18", lng:102, lat:2.5,
+    inc:"~18 cables follow the shipping lanes through a strait 2.8 km wide at its narrowest. The densest cable-and-anchor convergence on earth. Meta's Waterworth deliberately routes India–Australia AROUND it."},
+  "marseille":{label:"Marseille convergence", real:"16–17", lng:5, lat:43.3,
+    inc:"Europe's #1 hub, ~6th worldwide. Europe–Asia and Europe–Africa both land here. Oct 2022: cuts near Marseille disrupted connectivity to Asia, Europe and beyond."},
+  "fortaleza":{label:"Fortaleza convergence", real:"~16→18", lng:-38, lat:-3.7,
+    inc:"The Atlantic pivot for all of South America ↔ Europe/US/Africa. Reportedly the most cable-dense city on earth. No multi-cable incident yet — that is luck, not design."},
+  "baltic":   {label:"Baltic Sea", real:"~10", lng:19, lat:57,
+    inc:"Nov 2024: the Yi Peng 3 crossed BCS East-West (17th) and C-Lion1 (18th) as each failed, AIS off. Dec 2024: Estlink 2, the tanker Eagle S. K8: ATTRIBUTION OFFICIALLY UNRESOLVED — Europe leaned sabotage, US officials leaned accident."},
+  "pacific":  {label:"Guam / Hawaii pivot", real:"~11", lng:145, lat:13.4,
+    inc:"Every trans-Pacific route threads Guam or Hawaii. Guam is also a US military node, which cuts both ways. SEA-US was built specifically to reach the US via Guam/Hawaii while AVOIDING the South China Sea."}
+};
+
+var CABLES=[
+  {n:"2Africa", o:"m", pairs:16, yr:2025, srg:["egypt","red-sea","marseille"],
+   p:["Marseille","Barcelona","Port Said","Suez","Ras Ghareb","Jeddah","Djibouti","Mombasa","Dar es Salaam","Cape Town","Swakopmund","Lagos","Accra","Dakar","Casablanca","Lisbon/Sines"]},
+  {n:"Marea", o:"m", pairs:8, yr:2018, srg:[], p:["Virginia Bch","Bilbao"]},
+  {n:"Dunant", o:"g", pairs:12, yr:2020, srg:[], p:["Virginia Bch","Le Porge"]},
+  {n:"Grace Hopper", o:"g", pairs:16, yr:2022, srg:[], p:["Bilbao","New York","Bude"]},
+  {n:"Amitié", o:"m", pairs:16, yr:2023, srg:[], p:["Boston","Bude","Le Porge"]},
+  {n:"Equiano", o:"g", pairs:12, yr:2023, srg:[], p:["Lisbon/Sines","Lagos","Accra","Swakopmund","Cape Town"]},
+  {n:"Firmina", o:"g", pairs:12, yr:2023, srg:[], p:["Myrtle Bch","Praia Grande","Punta d.Este","Las Toninas"]},
+  {n:"Anjana", o:"m", pairs:24, yr:2025, srg:[], p:["Myrtle Bch","Santander"]},
+  {n:"Nuvem", o:"g", pairs:16, yr:2026, srg:[], p:["Myrtle Bch","Lisbon/Sines"]},
+  {n:"Bifrost", o:"m", pairs:12, yr:2025, srg:["malacca"], p:["Singapore","Jakarta","Davao","Guam","Grover Beach"]},
+  {n:"Echo", o:"g", pairs:12, yr:2025, srg:["malacca","pacific"], p:["Los Angeles","Guam","Jakarta","Singapore"]},
+  {n:"Apricot", o:"g", pairs:12, yr:2027, srg:["luzon","malacca","pacific"], p:["Tokyo","Taiwan","Guam","Manila","Jakarta","Singapore"]},
+  {n:"Topaz", o:"g", pairs:12, yr:2023, srg:[], p:["Vancouver","Tokyo"]},
+  {n:"Curie", o:"g", pairs:4, yr:2019, srg:[], p:["Los Angeles","Panama","Valparaiso"]},
+  {n:"SEA-ME-WE-5", o:"c", pairs:3, yr:2016, srg:["egypt","red-sea","malacca","marseille"],
+   p:["Singapore","Chennai","Colombo","Mumbai","Fujairah","Djibouti","Jeddah","Suez","Alexandria","Palermo","Marseille"]},
+  {n:"SEA-ME-WE-6", o:"c", pairs:10, yr:2025, srg:["egypt","red-sea","malacca","marseille"],
+   p:["Singapore","Chennai","Colombo","Karachi","Mumbai","Fujairah","Djibouti","Jeddah","Ras Ghareb","Port Said","Marseille"]},
+  {n:"AAE-1", o:"c", pairs:5, yr:2017, srg:["egypt","red-sea","malacca","marseille","luzon"],
+   p:["Hong Kong","Luzon Strait","Singapore","Chennai","Mumbai","Fujairah","Djibouti","Jeddah","Suez","Alexandria","Athens","Palermo","Marseille"]},
+  {n:"PEACE", o:"h", pairs:4, yr:2022, srg:["egypt","red-sea","marseille"],
+   p:["Marseille","Alexandria","Suez","Zafarana","Jeddah","Djibouti","Mombasa","Karachi"]},
+  // CURSE 31: Muscat lives here. Blue-Raman lands in Oman; Omantel is a partner.
+  {n:"Blue-Raman", o:"g", pairs:16, yr:2025, srg:["red-sea"],
+   p:["Genoa","Palermo","Haifa","Aqaba","Jeddah","Djibouti","Salalah","Muscat","Mumbai"]},
+  {n:"Medusa", o:"c", pairs:24, yr:2026, srg:["marseille"],
+   p:["Marseille","Barcelona","Palermo","Athens","Alexandria"]},
+  {n:"EllaLink", o:"c", pairs:4, yr:2021, srg:["fortaleza"], p:["Lisbon/Sines","Fortaleza"]},
+  {n:"EIG", o:"c", pairs:4, yr:2011, srg:["egypt","red-sea"],
+   p:["Bude","Lisbon/Sines","Palermo","Alexandria","Suez","Jeddah","Djibouti","Fujairah","Mumbai"]},
+  {n:"IMEWE", o:"c", pairs:4, yr:2010, srg:["egypt","red-sea","marseille"],
+   p:["Marseille","Alexandria","Suez","Jeddah","Fujairah","Karachi","Mumbai"]},
+  {n:"SMW4", o:"c", pairs:2, yr:2005, srg:["egypt","red-sea","malacca","marseille"],
+   p:["Marseille","Alexandria","Suez","Jeddah","Fujairah","Karachi","Mumbai","Chennai","Colombo","Singapore"]},
+  {n:"SEACOM", o:"c", pairs:2, yr:2009, srg:[], p:["Mumbai","Mombasa","Dar es Salaam","Cape Town"]},
+  {n:"SEACOM-N", o:"c", pairs:2, yr:2009, srg:["egypt","red-sea","marseille"],
+   p:["Mombasa","Djibouti","Jeddah","Suez","Alexandria","Marseille"]},
+  {n:"SAT-3/WASC", o:"c", pairs:2, yr:2002, srg:[], p:["Lisbon/Sines","Dakar","Accra","Lagos","Cape Town"]},
+  {n:"WACS", o:"c", pairs:4, yr:2012, srg:[], p:["Bude","Lisbon/Sines","Dakar","Lagos","Swakopmund","Cape Town"]},
+  {n:"JUPITER", o:"a", pairs:6, yr:2020, srg:["pacific"], p:["Manila","Tokyo","Los Angeles"]},
+  {n:"FASTER", o:"g", pairs:6, yr:2016, srg:["pacific"], p:["Los Angeles","Tokyo"]},
+  {n:"PLCN", o:"g", pairs:6, yr:2022, srg:["luzon","pacific"], p:["Los Angeles","Taiwan","Manila"]},
+  {n:"SEA-US", o:"c", pairs:2, yr:2017, srg:["pacific"], p:["Davao","Guam","Hawaii","Los Angeles"]},
+  {n:"TGN-Pacific", o:"c", pairs:2, yr:2002, srg:["pacific"], p:["Los Angeles","Guam","Tokyo"]},
+  {n:"Hawaiki", o:"c", pairs:4, yr:2018, srg:[], p:["Sydney","Auckland","Oregon"]},
+  {n:"S.Cross NEXT", o:"c", pairs:4, yr:2022, srg:["pacific"], p:["Sydney","Auckland","Fiji","Hawaii","Los Angeles"]},
+  {n:"IRIS", o:"c", pairs:4, yr:2022, srg:[], p:["Reykjavik","Galway"]},
+  {n:"Apollo", o:"c", pairs:4, yr:2003, srg:[], p:["New York","Bude"]},
+  {n:"Yellow/AC-2", o:"c", pairs:4, yr:2000, srg:[], p:["New York","Bude"]},
+  {n:"C-Lion1", o:"c", pairs:8, yr:2016, srg:["baltic"], p:["Helsinki","Hamburg"]},
+  {n:"BCS East-West", o:"c", pairs:4, yr:1997, srg:["baltic"], p:["Stockholm","Klaipeda"]},
+  {n:"Havfrue/AEC-2", o:"c", pairs:6, yr:2020, srg:[], p:["New York","Amsterdam"]},
+  {n:"Waterworth*", o:"m", pairs:24, yr:2030, srg:[], p:["Myrtle Bch","Fortaleza","Cape Town","Mumbai","Perth","Sydney"]},
+  {n:"HK–Asia", o:"c", pairs:4, yr:2015, srg:["luzon"], p:["Hong Kong","Luzon Strait","Taiwan","Shanghai","Busan","Tokyo"]},
+  {n:"Bay of Bengal", o:"c", pairs:2, yr:2016, srg:["malacca"], p:["Chennai","Singapore"]},
+  {n:"Miami–Fortaleza", o:"c", pairs:4, yr:2018, srg:["fortaleza"], p:["Miami","Fortaleza","Rio","Praia Grande"]},
+  {n:"North Atlantic", o:"c", pairs:4, yr:2001, srg:[], p:["Halifax","New York","Boston"]},
+  {n:"Perth–Singapore", o:"c", pairs:2, yr:2018, srg:["malacca"], p:["Perth","Jakarta","Singapore"]},
+  {n:"Gulf Loop", o:"c", pairs:2, yr:2014, srg:[], p:["Fujairah","Muscat","Salalah"]}
+];
+var OWNERS={ g:{n:"Google",c:BLU}, m:{n:"Meta",c:[24,119,242]}, ms:{n:"Microsoft",c:[0,164,239]},
+             a:{n:"Amazon",c:ORG}, c:{n:"consortium",c:CYAN}, h:{n:"HMN/PEACE",c:RED} };
+
+var TITANS=[
+ [1843,"William Montgomerie","gutta-percha","Documented the latex of Palaquium gutta from Singapore. It insulated every cable for 90 years. He WARNED that felling instead of tapping would destroy the species. He was ignored. ~50–100 million trees felled by 1900. Near-extinct in the wild."],
+ [1850,"John & Jacob Brett","the first cable","28 Aug 1850, Dover–Calais. Bare copper in gutta-percha, weighted with lead, no armour. It failed the first night — a French fisherman snagged it and displayed a piece as a strange new seaweed. It had carried a message first."],
+ [1851,"Thomas Crampton","the first that LASTED","Four conductors, armoured with iron wire. Opened 13 Nov 1851 — the first submarine cable in lasting service anywhere on earth."],
+ [1857,"Cyrus West Field","the man who would not quit","An American paper magnate with no engineering training who crossed the Atlantic more than THIRTY times over twelve years to make it happen. He went broke. He did it anyway."],
+ [1858,"Charles Tilston Bright","chief engineer, knighted at 26","Laid the 1858 transatlantic cable through a storm that flooded Thomson's cabin aboard HMS Agamemnon. 5 Aug 1858: connected. Queen Victoria's 98-word message took ~16 hours."],
+ [1858,"Wildman Whitehouse","the cautionary tale","A Brighton surgeon turned self-taught electrician. He rejected Thomson's theory, insisted on a thin cheap conductor, and when the signal faded he applied induction coils at ~2,000+ volts and BURNED THE CABLE TO DEATH in three weeks. The 1861 Joint Committee of Inquiry laid the blame on him — and founded the discipline of engineering failure investigation. We bow to him too, differently."],
+ [1858,"William Thomson / Kelvin","the mirror galvanometer","Sailed on the ships. When Whitehouse's crude apparatus could not read the faint signal, Thomson invented one that could: a light beam bounced off a tiny mirror. Then the siphon recorder (1867), which WROTE the Morse in electrified ink. ~70 patents. First UK scientist in the House of Lords."],
+ [1866,"Gooch · Canning · Halpin","the impossible recovery","The SS Great Eastern — Brunel's white-elephant liner that broke his health and killed him in 1859 — was the only hull on earth big enough to carry 2,300 miles of cable. In 1866 they laid a new one. Then went BACK to mid-Atlantic, grappled up the cable lost in 1865 from two and a half miles down, spliced it, and finished it. Two working cables."],
+ [1887,"Oliver Heaviside","R/L = G/C","A deaf ex-telegrapher working alone at home for £40 a year of articles. He rewrote Maxwell into the telegrapher's equations and found the DISTORTIONLESS CONDITION. His prescription — ADD inductance — was mocked. Preece blocked his paper. AT&T later paid Pupin royalties for the same idea. Offered money for his rights without full credit, he REFUSED, and died poor and isolated. Z₀ and Γ=(z−1)/(z+1) are his. Every Smith chart is his ghost. 'Shall I refuse my dinner because I do not fully understand the process of digestion?'"],
+ [1933,"Fawcett & Gibson","polyethylene, by accident","24 March 1933, ICI Winnington. An accident in a pressure vessel. It replaced gutta-percha, saved what was left of the trees, and insulated TAT-1."],
+ [1956,"TAT-1","the first voice across","51 VACUUM-TUBE repeaters on the seabed, unreachable, each ~5,000 parts. 36 telephone circuits. $42M. Bell Labs tested those tubes for EIGHTEEN YEARS first. It ran 22 years without a single tube failure. Later it carried the Moscow–Washington hotline."],
+ [1966,"Charles Kao","the 20 dB/km insight","Proposed that glass pure enough could carry light 1,000× further than anyone thought possible. Nobel Prize, 2009 — forty-three years later."],
+ [1970,"Maurer · Keck · Schultz","Corning makes it real","Fused-silica fibre at ~17–20 dB/km. They broke Kao's barrier four years after he named it."],
+ [1987,"Payne & Desurvire","the EDFA — the one that mattered","Southampton and Bell Labs, in parallel. Before this, every ~100 km a signal had to become electricity, be regenerated, and turn back into light. The erbium-doped fibre amplifier amplifies the LIGHT ITSELF — and works at 1550 nm, exactly where glass is most transparent. Regenerator spacing went from ~100 km to ~10,000 km, and one amplifier boosts ALL wavelengths at once. Without it there is no WDM, no cheap bandwidth, no modern internet."],
+ [1988,"TAT-8","the first fibre across","~40,000 circuits — ten times the last copper cable. Designed not to fill for a decade. It SATURATED IN 18 MONTHS. A circuit over it linked CERN and Cornell, and the Web was born on the other end of it."],
+ [2026,"the anonymous","the ones with no statue","The gutta-percha tappers of colonial Malaya whose forests were destroyed. The Greenwich hands who wound and armoured every mile. The cable-ship crews, then and now. The ~60 ships and their crews who go out in the weather to splice a broken cable in the dark, for less money than laying a new one. The record does not have their names. Bow anyway."]
+];
+
+// ---------- build: K6 validates BOTH directions (CURSE 31) ----------
+var EDGES=[], BUILD_ERRORS=[], ORPHANS=[];
+function idx(n){ for(var i=0;i<HUBS.length;i++){ if(HUBS[i][0]===n) return i; } return -1; }
+function buildGraph(){
+  EDGES=[]; BUILD_ERRORS=[]; ORPHANS=[];
+  var used=new Array(HUBS.length).fill(false);
+  for(var c=0;c<CABLES.length;c++){
+    var cab=CABLES[c];
+    for(var i=0;i<cab.p.length-1;i++){
+      var a=idx(cab.p[i]), b=idx(cab.p[i+1]);
+      if(a<0){ BUILD_ERRORS.push(cab.n+": no hub \""+cab.p[i]+"\""); continue; }
+      if(b<0){ BUILD_ERRORS.push(cab.n+": no hub \""+cab.p[i+1]+"\""); continue; }
+      if(a===b){ BUILD_ERRORS.push(cab.n+": self-loop at "+cab.p[i]); continue; }
+      used[a]=true; used[b]=true;
+      EDGES.push({a:a,b:b,cable:c,srg:cab.srg,owner:cab.o,cut:false});
+    }
+  }
+  // ── CURSE 31: the OTHER direction. A hub with no cable zeroes λ₂ and forces
+  //    min-cut to SPLIT — a typo wearing a finding's clothes. Report it. ──
+  for(var h=0;h<HUBS.length;h++){ if(!used[h]) ORPHANS.push(HUBS[h][0]); }
+}
+buildGraph();
+
+// ---------- projection: TRUE 2:1, centred (v1.3 stretched it) ----------
+function project(){
+  var top=76, bot=52, pad=14;
+  var aw=W-2*pad, ah=H-top-bot;
+  var w=Math.min(aw, ah*2), h=w/2;
+  var ox=(W-w)/2, oy=top+(ah-h)/2;
+  return { toX:function(lg){ return ox+(lg+180)/360*w; },
+           toY:function(lt){ return oy+(90-lt)/180*h; } };
+}
+function hubXY(i){ var p=project(); return {x:p.toX(HUBS[i][1]), y:p.toY(HUBS[i][2])}; }
+function haversine(a,b){
+  var R=6371, la1=HUBS[a][2]*Math.PI/180, la2=HUBS[b][2]*Math.PI/180;
+  var dLa=la2-la1, dLo=(HUBS[b][1]-HUBS[a][1])*Math.PI/180;
+  var x=Math.sin(dLa/2)*Math.sin(dLa/2)+Math.cos(la1)*Math.cos(la2)*Math.sin(dLo/2)*Math.sin(dLo/2);
+  return 2*R*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));
+}
+
+// ---------- algorithms (K2) ----------
+function activeEdges(){ var o=[]; for(var i=0;i<EDGES.length;i++){ if(!EDGES[i].cut) o.push(EDGES[i]); } return o; }
+function adjAlive(alive){
+  var n=HUBS.length, adj=[];
+  for(var i=0;i<n;i++) adj.push([]);
+  var e=activeEdges();
+  for(var k=0;k<e.length;k++){
+    if(alive&&(!alive[e[k].a]||!alive[e[k].b])) continue;
+    adj[e[k].a].push(e[k].b); adj[e[k].b].push(e[k].a);
+  }
+  return adj;
+}
+function componentsOf(adj,alive){
+  var n=adj.length, comp=new Array(n).fill(-1), c=0;
+  for(var s=0;s<n;s++){
+    if(comp[s]!==-1) continue; if(alive&&!alive[s]) continue;
+    var st=[s]; comp[s]=c;
+    while(st.length){ var u=st.pop();
+      for(var i=0;i<adj[u].length;i++){ var v=adj[u][i];
+        if(alive&&!alive[v]) continue;
+        if(comp[v]===-1){ comp[v]=c; st.push(v); } } }
+    c++;
+  }
+  return {comp:comp,count:c};
+}
+function artPoints(adj){
+  var n=adj.length, disc=new Array(n).fill(-1), low=new Array(n).fill(0),
+      isArt=new Array(n).fill(false), timer=0;
+  function dfs(u,par){
+    disc[u]=low[u]=timer++; var ch=0;
+    for(var i=0;i<adj[u].length;i++){
+      var v=adj[u][i]; if(v===par) continue;
+      if(disc[v]===-1){ ch++; dfs(v,u); if(low[v]<low[u]) low[u]=low[v];
+        if(par!==-1&&low[v]>=disc[u]) isArt[u]=true; }
+      else if(disc[v]<low[u]) low[u]=disc[v];
+    }
+    if(par===-1&&ch>1) isArt[u]=true;
+  }
+  for(var s=0;s<n;s++){ if(disc[s]===-1) dfs(s,-1); }
+  return isArt;
+}
+function stoerWagner(){
+  var n=HUBS.length;
+  if(componentsOf(adjAlive(null),null).count>1) return 0;
+  var w=[]; for(var i=0;i<n;i++) w.push(new Array(n).fill(0));
+  var e=activeEdges();
+  for(var k=0;k<e.length;k++){ w[e[k].a][e[k].b]+=1; w[e[k].b][e[k].a]+=1; }
+  var pres=[]; for(var v=0;v<n;v++) pres.push(v);
+  var best=Infinity;
+  while(pres.length>1){
+    var inA=new Array(n).fill(false), ws=new Array(n).fill(0);
+    var a0=pres[0]; inA[a0]=true;
+    for(var i2=0;i2<pres.length;i2++) ws[pres[i2]]=w[a0][pres[i2]];
+    var prev=a0, last=a0, cop=0;
+    for(var ad=1;ad<pres.length;ad++){
+      var sel=-1, mx=-1;
+      for(var j=0;j<pres.length;j++){ var vv=pres[j]; if(!inA[vv]&&ws[vv]>mx){ mx=ws[vv]; sel=vv; } }
+      if(sel<0) break;
+      inA[sel]=true; prev=last; last=sel; cop=mx;
+      for(var j2=0;j2<pres.length;j2++){ var v2=pres[j2]; if(!inA[v2]) ws[v2]+=w[sel][v2]; }
+    }
+    if(cop<best) best=cop;
+    for(var t=0;t<pres.length;t++){ var vt=pres[t]; if(vt===last||vt===prev) continue;
+      w[prev][vt]+=w[last][vt]; w[vt][prev]=w[prev][vt]; }
+    pres=pres.filter(function(x){ return x!==last; });
+  }
+  return best===Infinity?0:best;
+}
+function fiedler(){
+  var n=HUBS.length;
+  if(componentsOf(adjAlive(null),null).count>1) return 0;
+  var L=[]; for(var i=0;i<n;i++) L.push(new Array(n).fill(0));
+  var e=activeEdges();
+  for(var k=0;k<e.length;k++){ L[e[k].a][e[k].a]++; L[e[k].b][e[k].b]++; L[e[k].a][e[k].b]--; L[e[k].b][e[k].a]--; }
+  var kap=3*n, x=new Array(n);
+  for(var i2=0;i2<n;i2++) x[i2]=Math.sin(i2*1.7)+0.3*Math.cos(i2*0.9);
+  function defl(v){ var m=0; for(var i=0;i<n;i++) m+=v[i]; m/=n; for(var i=0;i<n;i++) v[i]-=m; }
+  function nrm(v){ var s=0; for(var i=0;i<n;i++) s+=v[i]*v[i]; s=Math.sqrt(s)||1; for(var i=0;i<n;i++) v[i]/=s; }
+  defl(x); nrm(x);
+  for(var it=0;it<350;it++){
+    var y=new Array(n);
+    for(var i3=0;i3<n;i3++){ var s2=kap*x[i3]; for(var j=0;j<n;j++) s2-=L[i3][j]*x[j]; y[i3]=s2; }
+    defl(y); nrm(y); x=y;
+  }
+  var lam=0;
+  for(var i4=0;i4<n;i4++){ var s3=0; for(var j2=0;j2<n;j2++) s3+=L[i4][j2]*x[j2]; lam+=x[i4]*s3; }
+  return Math.max(0,lam);
+}
+function betweenness(adj,alive){
+  var n=adj.length, CB=new Array(n).fill(0);
+  for(var s=0;s<n;s++){
+    if(alive&&!alive[s]) continue;
+    var S=[], P=[], sig=new Array(n).fill(0), d=new Array(n).fill(-1);
+    for(var i=0;i<n;i++) P.push([]);
+    sig[s]=1; d[s]=0;
+    var Q=[s], head=0;
+    while(head<Q.length){
+      var v=Q[head++]; S.push(v);
+      for(var k=0;k<adj[v].length;k++){
+        var w=adj[v][k]; if(alive&&!alive[w]) continue;
+        if(d[w]<0){ Q.push(w); d[w]=d[v]+1; }
+        if(d[w]===d[v]+1){ sig[w]+=sig[v]; P[w].push(v); }
+      }
+    }
+    var del=new Array(n).fill(0);
+    while(S.length){
+      var w2=S.pop();
+      for(var j=0;j<P[w2].length;j++){ var v2=P[w2][j]; del[v2]+=(sig[v2]/sig[w2])*(1+del[w2]); }
+      if(w2!==s) CB[w2]+=del[w2];
+    }
+  }
+  for(var i2=0;i2<n;i2++) CB[i2]/=2;
+  return CB;
+}
+
+// ---------- SRG kill ----------
+var activeSRG=null, srgResult=null;
+function killSRG(key){
+  for(var i=0;i<EDGES.length;i++) EDGES[i].cut=false;
+  var lost={};
+  for(var e=0;e<EDGES.length;e++){
+    for(var j=0;j<EDGES[e].srg.length;j++){
+      if(EDGES[e].srg[j]===key){ EDGES[e].cut=true; lost[EDGES[e].cable]=1; break; }
+    }
+  }
+  var cablesLost=Object.keys(lost).length;
+  var comp=componentsOf(adjAlive(null),null), sizes={}, mxs=0;
+  for(var k=0;k<HUBS.length;k++){ var c=comp.comp[k]; if(c<0) continue; sizes[c]=(sizes[c]||0)+1; if(sizes[c]>mxs) mxs=sizes[c]; }
+  var adj=adjAlive(null), iso=[];
+  for(var h=0;h<HUBS.length;h++){ if(adj[h].length===0) iso.push(HUBS[h][0]); }
+  srgResult={ key:key, cablesLost:cablesLost, comps:comp.count, survival:mxs/HUBS.length,
+              isolated:iso, repairDays:Math.ceil(cablesLost/Math.max(1,ships))*40 };
+  activeSRG=key; recompute();
+}
+function clearSRG(){ for(var i=0;i<EDGES.length;i++) EDGES[i].cut=false; activeSRG=null; srgResult=null; recompute(); }
+
+// ---------- cascade ----------
+var alpha=0.20, ships=4, L0=null, activeCascade=null;
+function cascade(seed){
+  var n=HUBS.length, alive=new Array(n).fill(true);
+  alive[seed]=false;
+  var C=[]; for(var i=0;i<n;i++) C.push((1+alpha)*L0[i]);
+  var killed=[seed], rounds=0;
+  while(rounds++<20){
+    var L=betweenness(adjAlive(alive),alive), fail=[];
+    for(var i2=0;i2<n;i2++){ if(alive[i2]&&L[i2]>C[i2]) fail.push(i2); }
+    if(!fail.length) break;
+    for(var j=0;j<fail.length;j++){ alive[fail[j]]=false; killed.push(fail[j]); }
+  }
+  var comp=componentsOf(adjAlive(alive),alive), sizes={}, mxs=0;
+  for(var k=0;k<n;k++){ if(!alive[k]) continue; var c=comp.comp[k]; sizes[c]=(sizes[c]||0)+1; if(sizes[c]>mxs) mxs=sizes[c]; }
+  return {alive:alive,killed:killed,survival:mxs/n,rounds:rounds-1,seed:seed};
+}
+
+// ---------- state · COST METER (AgeOfLenguages: you pay for what you field) ----------
+var MODE="net", dTab="cut", colorOwner=false, colorLoad=true, hoverHub=-1, titanSel=0;
+var layFrom=-1, laid=[], spentCable=0, spentShips=0;
+var KM_COST=30000;   // ~$30k/km · 2Africa ≈ $1B / 45,000 km ≈ $22k/km; TAT-8 ≈ $50k/km
+var SHIP_COST=80e6;  // a converted repair vessel, order-of-magnitude
+var cache={};
+function totalSpent(){ return spentCable+spentShips; }
+function usd(v){ return v>=1e9? "$"+(v/1e9).toFixed(2)+"B" : v>=1e6? "$"+Math.round(v/1e6)+"M" : "$"+Math.round(v/1e3)+"k"; }
+function hyperPct(){ var h=0; for(var i=0;i<CABLES.length;i++){ if(CABLES[i].o!=="c"&&CABLES[i].o!=="h") h++; } return Math.round(100*h/CABLES.length); }
+
+// ---------- VERDICT + BADGE (bersha · Path III: earned, never faked) ----------
+function judge(){
+  var conn=(cache.comp.count===1), arts=0;
+  for(var i=0;i<cache.isArt.length;i++){ if(cache.isArt[i]) arts++; }
+  var worstSurv=1;
+  for(var k in SRGS){
+    for(var e=0;e<EDGES.length;e++) EDGES[e].cut=false;
+    var lost={};
+    for(var e2=0;e2<EDGES.length;e2++){
+      for(var j=0;j<EDGES[e2].srg.length;j++){ if(EDGES[e2].srg[j]===k){ EDGES[e2].cut=true; lost[EDGES[e2].cable]=1; break; } }
+    }
+    var cp=componentsOf(adjAlive(null),null), sz={}, mx=0;
+    for(var h=0;h<HUBS.length;h++){ var c=cp.comp[h]; if(c<0) continue; sz[c]=(sz[c]||0)+1; if(sz[c]>mx) mx=sz[c]; }
+    if(mx/HUBS.length<worstSurv) worstSurv=mx/HUBS.length;
+  }
+  for(var e3=0;e3<EDGES.length;e3++) EDGES[e3].cut=false;
+  if(activeSRG) killSRGQuiet(activeSRG);
+  var lam=cache.fied;
+  var pass=[conn, arts===0, worstSurv>0.75, lam>0.12];
+  var earned=pass[0]&&pass[1]&&pass[2]&&pass[3];
+  var cls, t, s;
+  if(!conn){ cls="bad"; t="SPLIT"; s="the graph is in "+cache.comp.count+" pieces. some region is dark right now."; }
+  else if(worstSurv<0.6){ cls="bad"; t="CHOKED"; s="one strait takes "+(100-Math.round(worstSurv*100))+"% of the network with it. the min-cut never saw this coming."; }
+  else if(arts>0){ cls="warn"; t="BRITTLE"; s=arts+" hub"+(arts>1?"s":"")+" whose loss splits the graph. no backup path exists for "+(arts>1?"them":"it")+"."; }
+  else if(lam<=0.12){ cls="warn"; t="THIN"; s="connected, but λ₂="+lam.toFixed(3)+". easy to cut in two. lay a cable across a gap and watch it climb."; }
+  else { cls="good"; t="RESILIENT"; s="connected · no articulation points · worst strait leaves "+Math.round(worstSurv*100)+"% standing · λ₂="+lam.toFixed(3)+". earned."; }
+  cache.worstSurv=worstSurv; cache.arts=arts;
+  var ve=document.getElementById("verdict");
+  ve.className=cls; set("v-t",t); set("v-s",s);
+  var be=document.getElementById("badge");
+  be.classList.toggle("earned",earned);
+  be.textContent = earned? "★ resilient" : "resilient "+pass.filter(Boolean).length+"/4";
+}
+function killSRGQuiet(key){
+  for(var e=0;e<EDGES.length;e++){
+    for(var j=0;j<EDGES[e].srg.length;j++){ if(EDGES[e].srg[j]===key){ EDGES[e].cut=true; break; } }
+  }
+}
+
+function recompute(){
+  var adj=adjAlive(null);
+  cache.comp=componentsOf(adj,null);
+  cache.isArt=artPoints(adj);
+  cache.cut=stoerWagner();
+  cache.fied=fiedler();
+  L0=betweenness(adj,null); cache.L0=L0;
+  var mx=0; for(var i=0;i<L0.length;i++){ if(L0[i]>mx) mx=L0[i]; }
+  cache.Lmax=mx||1;
+  var worst=0, wk=null;
+  for(var k in SRGS){
+    var cnt={};
+    for(var e=0;e<EDGES.length;e++){ for(var j=0;j<EDGES[e].srg.length;j++){ if(EDGES[e].srg[j]===k) cnt[EDGES[e].cable]=1; } }
+    var c2=Object.keys(cnt).length;
+    if(c2>worst){ worst=c2; wk=k; }
+  }
+  cache.srgWorst=worst; cache.srgWorstKey=wk;
+  var ke=document.getElementById("m-kern");
+  var bad=BUILD_ERRORS.length+ORPHANS.length;
+  if(bad){ ke.textContent="FAIL "+bad; ke.style.color="#ff3355"; }
+  else { ke.textContent="OK"; ke.style.color="#00ffd5"; }
+  set("m-cut", cache.comp.count>1?"SPLIT":cache.cut);
+  set("m-srg", worst);
+  set("m-fied", cache.fied.toFixed(4));
+  set("m-cost", usd(totalSpent()));
+  judge();
+  renderDossier();
+}
+function set(id,v){ var e=document.getElementById(id); if(e)e.textContent=v; }
+
+// ---------- draw ----------
+function draw(){
+  requestAnimationFrame(draw);
+  ctx.fillStyle="#050508"; ctx.fillRect(0,0,W,H);
+  if(MODE==="titans"){ drawTitans(); return; }
+  var p=project();
+  ctx.fillStyle="#0d0d16"; ctx.strokeStyle="rgba(110,115,135,0.16)"; ctx.lineWidth=0.8;
+  for(var L=0;L<LAND.length;L++){
+    var poly=LAND[L]; ctx.beginPath();
+    for(var q=0;q<poly.length;q++){ var x=p.toX(poly[q][0]), y=p.toY(poly[q][1]); q?ctx.lineTo(x,y):ctx.moveTo(x,y); }
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+  }
+  ctx.lineCap="round";
+  var ac=activeCascade;
+  for(var i=0;i<EDGES.length;i++){
+    var e=EDGES[i], A=hubXY(e.a), B=hubXY(e.b), cab=CABLES[e.cable];
+    var col,al,lw=1;
+    if(e.cut){ col=RED; al=0.5; lw=1.5; }
+    else if(ac&&(!ac.alive[e.a]||!ac.alive[e.b])){ col=RED; al=0.08; lw=0.6; }
+    else if(colorOwner){ col=OWNERS[e.owner].c; al=0.4; }
+    else { col= e.srg.length? AMB:CYAN; al= e.srg.length?0.32:0.22; }
+    ctx.strokeStyle=css(col,al); ctx.lineWidth=lw;
+    if(cab.yr>2026) ctx.setLineDash([5,4]);
+    ctx.beginPath(); ctx.moveTo(A.x,A.y); ctx.lineTo(B.x,B.y); ctx.stroke(); ctx.setLineDash([]);
+  }
+  for(var d=0;d<laid.length;d++){
+    var A2=hubXY(laid[d].a), B2=hubXY(laid[d].b);
+    ctx.strokeStyle=css(GRN,0.7); ctx.lineWidth=1.6; ctx.setLineDash([6,3]);
+    ctx.beginPath(); ctx.moveTo(A2.x,A2.y); ctx.lineTo(B2.x,B2.y); ctx.stroke(); ctx.setLineDash([]);
+  }
+  for(var k in SRGS){
+    var s=SRGS[k], xy={x:p.toX(s.lng), y:p.toY(s.lat)}, on=(activeSRG===k);
+    ctx.strokeStyle=css(on?RED:AMB, on?0.95:0.34); ctx.lineWidth=on?2.4:1.1;
+    ctx.setLineDash(on?[]:[3,3]);
+    ctx.beginPath(); ctx.arc(xy.x,xy.y,on?22:15,0,6.2832); ctx.stroke(); ctx.setLineDash([]);
+    if(on){
+      ctx.fillStyle=css(RED,0.95); ctx.font="9px ui-monospace,monospace";
+      ctx.textAlign="center"; ctx.textBaseline="bottom";
+      ctx.fillText(s.label, xy.x, xy.y-26);
+    }
+  }
+  var adjNow=adjAlive(null);
+  for(var i2=0;i2<HUBS.length;i2++){
+    var xy2=hubXY(i2), hb=HUBS[i2];
+    var load=cache.L0?cache.L0[i2]/cache.Lmax:0;
+    var r=colorLoad? 2.2+load*5.5 : 3;
+    var col2=WHT, a=0.7;
+    if(colorLoad){ col2=mix(mix(CYAN,GOLD,Math.min(1,load*2)),RED,Math.max(0,load-0.5)*2); a=0.5+load*0.5; }
+    if(hb[4]){ col2=AMB; a=0.9; }
+    if(cache.isArt&&cache.isArt[i2]){ col2=RED; a=1; r=Math.max(r,4); }
+    if(ac&&!ac.alive[i2]){ col2=RED; a=0.95; }
+    if(ac&&i2===ac.seed){ col2=WHT; r=6; }
+    if(i2===layFrom&&MODE==="lay"){ col2=GRN; r=6; }
+    var dark=(adjNow[i2].length===0), orph=(ORPHANS.indexOf(hb[0])>=0);
+    if(dark){ col2=RED; a=1; r=Math.max(r,4); }
+    ctx.fillStyle=css(col2,a); ctx.shadowColor=css(col2,0.8);
+    ctx.shadowBlur=(load>0.4||hb[4]||dark)?7:0;
+    ctx.beginPath(); ctx.arc(xy2.x,xy2.y,r,0,6.2832); ctx.fill(); ctx.shadowBlur=0;
+    if(dark||orph){ ctx.strokeStyle=css(RED,0.7); ctx.lineWidth=1.2;
+      ctx.beginPath(); ctx.arc(xy2.x,xy2.y,r+5,0,6.2832); ctx.stroke(); }
+    // declutter: label only the ones that earn it
+    if(i2===hoverHub || hb[3]>0 || load>0.62 || dark){
+      ctx.fillStyle=css(col2,0.88); ctx.font="8px ui-monospace,monospace";
+      ctx.textAlign="center"; ctx.textBaseline="bottom";
+      ctx.fillText(hb[0]+(hb[3]>0?" ("+hb[3]+")":""), xy2.x, xy2.y-r-3);
+    }
+  }
+}
+function drawTitans(){
+  var pad=70, x0=pad, x1=W-320, y=H*0.36;
+  ctx.strokeStyle=css(GOLD,0.22); ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.moveTo(x0,y); ctx.lineTo(x1,y); ctx.stroke();
+  function tx(yr){ return x0+(yr-1840)/(2030-1840)*(x1-x0); }
+  for(var d=1850;d<=2030;d+=20){
+    var x=tx(d);
+    ctx.strokeStyle=css(WHT,0.09); ctx.beginPath(); ctx.moveTo(x,y-5); ctx.lineTo(x,y+5); ctx.stroke();
+    ctx.fillStyle=css(WHT,0.28); ctx.font="9px ui-monospace,monospace"; ctx.textAlign="center";
+    ctx.fillText(d,x,y+18);
+  }
+  for(var i=0;i<TITANS.length;i++){
+    var t=TITANS[i], x=tx(t[0]), sel=(i===titanSel);
+    var up=(i%2===0), yy=up? y-16-(i%3)*13 : y+30+(i%3)*13;
+    ctx.strokeStyle=css(sel?GOLD:GRY, sel?0.8:0.22); ctx.lineWidth=sel?1.6:1;
+    ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x,yy); ctx.stroke();
+    ctx.fillStyle=css(sel?GOLD:AMB, sel?1:0.55); ctx.shadowColor=css(GOLD,0.9); ctx.shadowBlur=sel?10:0;
+    ctx.beginPath(); ctx.arc(x,y,sel?6:3.2,0,6.2832); ctx.fill(); ctx.shadowBlur=0;
+    ctx.font=(sel?"9.5px":"8px")+" ui-monospace,monospace";
+    ctx.textAlign="center"; ctx.textBaseline=up?"bottom":"top";
+    ctx.fillStyle=css(sel?WHT:GRY, sel?0.95:0.45);
+    ctx.fillText(t[1].split(" ")[0], x, yy);
+  }
+  var T=TITANS[titanSel];
+  var bx=70, by=H*0.52, bw=x1-70;
+  ctx.fillStyle="rgba(8,8,16,0.9)"; ctx.strokeStyle=css(GOLD,0.28); ctx.lineWidth=1;
+  ctx.fillRect(bx,by,bw,H*0.34); ctx.strokeRect(bx,by,bw,H*0.34);
+  ctx.textAlign="left"; ctx.textBaseline="alphabetic";
+  ctx.fillStyle=css(GOLD,1); ctx.font="15px ui-monospace,monospace";
+  ctx.fillText(T[0]+"  ·  "+T[1], bx+18, by+28);
+  ctx.fillStyle=css(CYAN,0.9); ctx.font="11px ui-monospace,monospace";
+  ctx.fillText(T[2], bx+18, by+46);
+  ctx.fillStyle=css(WHT,0.72); ctx.font="11px ui-monospace,monospace";
+  wrap(T[3], bx+18, by+68, bw-36, 16);
+  ctx.fillStyle=css(GRY,0.45); ctx.font="9px ui-monospace,monospace"; ctx.textAlign="left";
+  ctx.fillText("← →  ·  "+(titanSel+1)+" / "+TITANS.length, bx+18, by+H*0.34-12);
+}
+function wrap(text,x,y,maxw,lh){
+  var words=text.split(" "), line="", yy=y;
+  for(var i=0;i<words.length;i++){
+    var test=line+words[i]+" ";
+    if(ctx.measureText(test).width>maxw && line){ ctx.fillText(line,x,yy); line=words[i]+" "; yy+=lh; }
+    else line=test;
+  }
+  ctx.fillText(line,x,yy);
+}
+
+// ---------- DOSSIER (apollonium tabbed receipts) ----------
+function setTab(t){
+  dTab=t;
+  var tabs=document.querySelectorAll("#dossier .tab");
+  for(var i=0;i<tabs.length;i++) tabs[i].classList.toggle("active", tabs[i].getAttribute("data-t")===t);
+  renderDossier();
+}
+function renderDossier(){
+  if(!cache.comp) return;
+  var h="";
+  if(MODE==="titans"){
+    h='<h4>🏛 WE BOW</h4><div>175 years. From a bare copper wire cut by a fisherman on its first night, to 1.4 million km carrying 95–99% of everything that crosses an ocean.</div>'+
+      '<div class="sec"><span class="kk">the ones who paid</span><br><span style="font-size:8.5px">Brunel died at 53, days after the Great Eastern\'s trials. Field went broke, repeatedly. Heaviside died poor and alone, having refused money without credit. Kao waited 43 years for the Nobel. Whitehouse was destroyed by an inquiry that was right about him. The gutta-percha tappers have no names at all.</span></div>'+
+      '<div class="sec" style="font-size:8.5px"><span class="kk">K8</span> the record is thin on the anonymous labour and near-silent on women in the industry\'s first century. That silence is itself a finding.</div>';
+    document.getElementById("dbody").innerHTML=h; return;
+  }
+  if(dTab==="cut"){
+    h='<h4>THE LIE</h4>'+
+     '<div class="rank"><span>naive min-cut</span><b>'+(cache.comp.count>1?"SPLIT":cache.cut+" edges")+'</b></div>'+
+     '<div style="font-size:8.5px">graph theory\'s answer. it assumes every cable fails independently.</div>'+
+     '<div class="rank" style="margin-top:4px"><span>SRG truth</span><b class="r">'+cache.srgWorst+' cables</b></div>'+
+     '<div style="font-size:8.5px">die together in '+(cache.srgWorstKey?SRGS[cache.srgWorstKey].label:"—")+'.</div>'+
+     '<div class="sec g" style="font-size:9px">that gap is the whole file. fifteen lines on a map inside one 26 km strait are not fifteen edges. they are one.</div>'+
+     '<div class="sec"><div class="rank"><span>λ₂ Fiedler</span><b>'+cache.fied.toFixed(4)+'</b></div>'+
+     '<div class="rank"><span>components</span><b>'+cache.comp.count+'</b></div>'+
+     '<div class="rank"><span>articulation pts</span><b class="'+(cache.arts?'r':'g')+'">'+cache.arts+'</b></div>'+
+     '<div class="rank"><span>worst-strait survival</span><b>'+Math.round(cache.worstSurv*100)+'%</b></div></div>'+
+     '<div class="sec"><h4>BADGE · 4 conditions</h4>'+
+     cond(cache.comp.count===1,"connected")+cond(cache.arts===0,"no articulation points")+
+     cond(cache.worstSurv>0.75,"worst strait leaves &gt;75%")+cond(cache.fied>0.12,"λ₂ &gt; 0.12")+
+     '<div style="font-size:8.5px;margin-top:3px">Path III: the badge is EARNED. it does not light because you want it to.</div></div>';
+  }
+  else if(dTab==="choke"){
+    h='<h4>☠ SHARED RISK GROUPS</h4><div style="font-size:8.5px">click one. every cable in that strait dies in the same instant.</div><div class="sec">';
+    for(var k in SRGS){
+      var s=SRGS[k], cnt={};
+      for(var e=0;e<EDGES.length;e++){ for(var j=0;j<EDGES[e].srg.length;j++){ if(EDGES[e].srg[j]===k) cnt[EDGES[e].cable]=1; } }
+      var mc=Object.keys(cnt).length;
+      h+='<div class="rank click" onclick="killSRG(\''+k+'\')"><span'+(activeSRG===k?' style="color:#ff3355"':'')+'>'+s.label+'</span><b>'+mc+' <span style="color:#6a6a82">/ '+s.real+'</span></b></div>';
+    }
+    h+='<div class="g" style="font-size:8.5px;margin-top:4px">K3: modelled vs real. they differ because this is a SAMPLE of ~570. shown, not hidden.</div></div>';
+    if(srgResult){
+      var S=SRGS[srgResult.key];
+      h+='<div class="sec"><h4>'+S.label+'</h4>'+
+        '<div class="rank"><span>cables lost</span><b class="r">'+srgResult.cablesLost+'</b></div>'+
+        '<div class="rank"><span>hubs dark</span><b class="r">'+srgResult.isolated.length+'</b></div>'+
+        '<div class="rank"><span>fragments</span><b>'+srgResult.comps+'</b></div>'+
+        '<div class="rank"><span>largest survivor</span><b>'+Math.round(srgResult.survival*100)+'%</b></div>'+
+        (srgResult.isolated.length?'<div class="r" style="font-size:8.5px">dark: '+srgResult.isolated.join(", ")+'</div>':'')+
+        '<div style="font-size:8.5px;margin-top:5px">'+S.inc+'</div>'+
+        '<div style="margin-top:5px"><button onclick="clearSRG()" style="width:100%">↺ restore</button></div></div>';
+    }
+  }
+  else if(dTab==="own"){
+    var cnt={g:0,m:0,ms:0,a:0,c:0,h:0};
+    for(var i=0;i<CABLES.length;i++) cnt[CABLES[i].o]++;
+    h='<h4>CONCENTRATION</h4>'+
+     '<div class="rank"><span>hyperscaler (this set)</span><b style="color:#cc44ff">'+hyperPct()+'%</b></div>'+
+     '<div class="sec">';
+    for(var o in cnt){ if(!cnt[o]) continue;
+      h+='<div class="rank"><span style="color:rgb('+OWNERS[o].c.join(",")+')">'+OWNERS[o].n+'</span><b>'+cnt[o]+'</b></div>'; }
+    h+='</div><div class="sec" style="font-size:8.5px">real: Google/Meta/Microsoft/Amazon hold <b>~71% of global subsea capacity</b>, ~90% transatlantic — up from under 10% in 2012. Google alone has stakes in 33 cables (17 wholly owned). Unlike carrier cables, private ones carry <b>no common-carriage obligation</b>.<br><br><span class="r">correlated failure by owner is a risk mode that did not exist a decade ago.</span> Above ~80% it becomes the dominant one.</div>';
+  }
+  else if(dTab==="fleet"){
+    h='<h4>THE REPAIR QUEUE</h4>'+
+     '<div class="rank"><span>ships on station</span><b>'+ships+'</b></div>'+
+     '<div class="rank"><span>you spent on ships</span><b style="color:#cc44ff">'+usd(spentShips)+'</b></div>';
+    if(srgResult){
+      h+='<div class="sec"><div class="rank"><span>cables to splice</span><b class="r">'+srgResult.cablesLost+'</b></div>'+
+        '<div class="rank"><span>est. full restore</span><b class="r">'+srgResult.repairDays+' days</b></div>'+
+        '<div style="font-size:8.5px">median restoration is ~40 days <b>per cable</b>. with '+ships+' ships you do not wait 40 days. <b class="r">you queue.</b></div></div>';
+    } else h+='<div class="sec" style="font-size:8.5px">kill a chokepoint to see the queue.</div>';
+    h+='<div class="sec" style="font-size:8.5px"><b>~60 specialised vessels exist worldwide. FEWER THAN 20 are repair-dedicated.</b><br><br>~65% reach end of life within 15 years; the study says <b>$3B</b> just to keep standing still — 15 replacements plus 5 more in Asia — while deployed cable km grow 48% and repairs 36%.<br><br><span class="r">the economics are perverse: a two-week repair earns far less than deploying the same ship on a new install. A major installer has already quit the repair market.</span><br><br>K8: fleet size, ages and the $3B are ESTIMATES.</div>';
+  }
+  else {
+    h='<h4>K6 · KERNEL CHECK</h4>'+
+      (BUILD_ERRORS.length? '<div class="r">✗ '+BUILD_ERRORS.join("<br>")+'</div>':'')+
+      (ORPHANS.length? '<div class="r">✗ ORPHAN HUBS (no cable): '+ORPHANS.join(", ")+'<br><span style="font-size:8.5px">this zeroes λ₂ and forces min-cut to SPLIT. it is a typo, not a finding.</span></div>'
+                     : '<div class="g">✓ '+EDGES.length+' hops · '+CABLES.length+' cables · 0 silent drops · 0 orphan hubs</div>')+
+      '<div style="font-size:8.5px">validation runs BOTH ways: every edge resolves to a hub, AND every hub resolves to an edge. <b>a check that runs one direction is not a check. it is a comfort.</b> (CURSE 31)</div>'+
+      '<div class="sec"><h4>K1</h4><span style="font-size:8.5px">~'+CABLES.length+' real cables — a SAMPLE of ~570 in service. hop geometry simplified; no cable follows a straight line. city-level landings only, by choice.</span></div>'+
+      '<div class="sec"><h4>K2</h4><span style="font-size:8.5px">Brandes, Hopcroft–Tarjan, Stoer–Wagner, Edmonds–Karp, Motter–Lai. exact on the shown graph. computed, never asserted.</span></div>'+
+      '<div class="sec"><h4>K5</h4><span style="font-size:8.5px">Motter–Lai is a MODEL. real capacity is not proportional to betweenness; real rerouting is not shortest-path. the shape is robust; <b class="r">the percentages are the model talking. do not quote them.</b></span></div>'+
+      '<div class="sec"><h4>K8 · disputed</h4><span style="font-size:8.5px">total cable count (~450 to >600, by counting rules). SMW-6 length (19,200 vs 21,700 km). <b>Baltic/Taiwan attribution officially UNRESOLVED</b> — this file says "suspected", not "sabotage". 95–99% is of <b>INTERCONTINENTAL</b> traffic, not "the internet". Repair-fleet, $3B, and all cost figures are ESTIMATES.</span></div>';
+  }
+  document.getElementById("dbody").innerHTML=h;
+}
+function cond(ok,txt){ return '<div class="rank"><span>'+(ok?'<span class="g">✓</span>':'<span class="r">✗</span>')+' '+txt+'</span></div>'; }
+
+// ---------- interaction ----------
+function nearestHub(mx,my){
+  var b=-1, bd=14;
+  for(var i=0;i<HUBS.length;i++){ var xy=hubXY(i), d=Math.hypot(xy.x-mx,xy.y-my); if(d<bd){ bd=d; b=i; } }
+  return b;
+}
+function nearestSRG(mx,my){
+  var p=project();
+  for(var k in SRGS){ var s=SRGS[k];
+    if(Math.hypot(p.toX(s.lng)-mx, p.toY(s.lat)-my)<22) return k; }
+  return null;
+}
+cv.addEventListener("mousemove",function(ev){ if(MODE!=="titans") hoverHub=nearestHub(ev.clientX,ev.clientY); });
+cv.addEventListener("click",function(ev){
+  if(MODE==="titans"){
+    var x0=70, x1=W-320, best=0, bd=1e9;
+    for(var i=0;i<TITANS.length;i++){
+      var x=x0+(TITANS[i][0]-1840)/(2030-1840)*(x1-x0);
+      var d=Math.abs(x-ev.clientX); if(d<bd){ bd=d; best=i; }
+    }
+    titanSel=best; renderDossier(); return;
+  }
+  var hi=nearestHub(ev.clientX,ev.clientY);
+  if(MODE==="lay"){
+    if(hi<0) return;
+    if(layFrom<0){ layFrom=hi; return; }
+    if(hi===layFrom){ layFrom=-1; return; }
+    var km=haversine(layFrom,hi);
+    EDGES.push({a:layFrom,b:hi,cable:CABLES.length-1,srg:[],owner:"c",cut:false});
+    laid.push({a:layFrom,b:hi,km:km});
+    spentCable+=km*KM_COST; layFrom=-1;
+    if(activeSRG) killSRGQuiet(activeSRG);
+    recompute(); return;
+  }
+  var sk=nearestSRG(ev.clientX,ev.clientY);
+  if(sk){ if(activeSRG===sk) clearSRG(); else { killSRG(sk); setTab("choke"); } return; }
+  if(hi<0) return;
+  if(MODE==="casc"){ if(!L0) L0=betweenness(adjAlive(null),null); activeCascade=cascade(hi); recompute(); }
+});
+window.addEventListener("keydown",function(e){
+  if(MODE!=="titans") return;
+  if(e.code==="ArrowRight"){ titanSel=Math.min(TITANS.length-1,titanSel+1); renderDossier(); }
+  if(e.code==="ArrowLeft"){ titanSel=Math.max(0,titanSel-1); renderDossier(); }
+});
+function setMode(m){
+  MODE=m; layFrom=-1;
+  ["b-net","b-srg","b-casc","b-lay","b-tit"].forEach(function(id,i){
+    document.getElementById(id).classList.toggle("on", m===["net","srg","casc","lay","titans"][i]);
+  });
+  if(m!=="casc") activeCascade=null;
+  set("b-sub", m==="srg"?"click a ring · they die together" : m==="casc"?"click a hub · Motter–Lai"
+    : m==="lay"?"click two hubs · you pay for it" : m==="titans"?"175 years · ← →" : "the shared risk");
+  if(m==="srg") setTab("choke");
+  if(m==="lay") setTab("cut");
+  if(m==="titans") renderDossier(); else recompute();
+}
+function setAlpha(v){ alpha=v; set("v-al",v.toFixed(2).slice(1)); if(activeCascade) activeCascade=cascade(activeCascade.seed); recompute(); }
+function setShips(v){
+  if(v>ships) spentShips+=(v-ships)*SHIP_COST;
+  ships=v; set("v-sh",v);
+  if(srgResult) srgResult.repairDays=Math.ceil(srgResult.cablesLost/Math.max(1,ships))*40;
+  recompute();
+}
+function resetAll(){
+  buildGraph(); laid=[]; spentCable=0; spentShips=0; ships=4;
+  document.getElementById("sSh").value=4; set("v-sh",4);
+  activeCascade=null; activeSRG=null; srgResult=null; layFrom=-1;
+  recompute();
+}
+
+resize(); setMode("net");
+requestAnimationFrame(draw);
+</script>
+</body></html>
