@@ -1,0 +1,1043 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>ISINGIUM ATELIER v1.0 — one spin to the fractal, in 12 layers</title>
+<!--
+  ISINGIUM ATELIER v1.0
+  =================================================================
+  the BAUDIN gesture, applied to the ISING machine.
+  =================================================================
+
+  THE BAUDIN ATELIER reveals an atom: one master slider, 12 shells,
+  void -> full, each layer persisting under the next, the outermost
+  white and labelled ALWAYS. It does not explain. It REVEALS.
+
+  So: the same slider, on ISINGIUM v1.1. Twelve layers, and the arc
+  is the whole story of the file in one drag:
+
+      ONE SPIN  ->  THE FRACTAL
+
+  L1  the spin              a single cell of the real lattice
+  L2  the neighbours        four cells, periodic
+  L3  the hamiltonian       H = -J sum s_i s_j.  RULE 2. there is no rule 3.
+  L4  the energy            dE in {-8,-4,0,+4,+8}.  five values. ever.
+  L5  the boltzmann table   SEVENTEEN slots.  CURSE 32's grave.
+  L6  the coin              rand < p.  nothing else ever happens.
+  L7  the lattice           16384 of them, ~3M proposals a second
+  L8  the order parameter   |m| and the 1/sqrt(N^2) floor  (K0c)
+  L9  the susceptibility    chi(T), drawn while it is paid for
+  L10 T_c                   Onsager 1944, exact, and the honest gap
+  L11 the largest cluster   one connected sign
+  L12 d_f = 187/96          the outermost . always
+
+  WHY CONCENTRIC IS NOT DECORATION:
+    the shells are SCALES. one site, its neighbourhood, its rule, the
+    machine, the whole lattice, the divergence. dragging the slider is
+    zooming out. that is Wilson's RG flow, and at T_c -- and nowhere
+    else -- the picture stops changing as you zoom. the atelier IS the
+    flow, made draggable. the Baudin's shells were orbitals. these are
+    magnifications of one object.
+
+  THE LOUPE IS READ-ONLY. It never writes a spin. It takes an atomic
+  snapshot of site (64,64) and walks ONE Metropolis proposal at 0.55 Hz
+  -- slowed roughly 10^6x -- showing s, nb, dE, the lookup index, p, the
+  coin, the verdict. The bulk sweep does the actual flipping, millions
+  per second, with the identical expression. The loupe is a witness, not
+  a hand. Nothing here is a cartoon: every number on the plate was read
+  off the same Int8Array you are looking at.
+
+  ** THE CURSE IS REAL AND IT IS A BUTTON. **
+    press [ CURSE 32 ] and the file does, on purpose, the exact thing
+    v1.0 did by accident:
+        expTab = new Float64Array(9);   // <- NINE
+    the writes to index 12 and 16 are then SILENTLY DROPPED -- an
+    out-of-bounds write to a TypedArray is a no-op, the read returns
+    undefined, and `Math.random() < undefined` is `false`, not an error.
+    every uphill move is eaten. that is T = 0, exactly, at every slider
+    position. no simulation of the bug. THE BUG.
+
+    and now you can watch all five witnesses fire at once:
+      L5  the table ring physically ENDS at slot 8. 12 and 16 fall off
+          the end into the void, drawn where they went: nowhere.
+      L6  p = undefined. the threshold arc has no extent. the coin can
+          never land inside it. REJECT, forever.
+      L7  the lattice freezes into the metastable stripe state in about
+          a second. real, known, published physics -- OF THE WRONG MODEL.
+      L8  |m| walks off the 1/N floor at T >> T_c.  K0c goes red.
+      K0b the acceptance rate pins at the dE<=0 fraction.
+
+    in v1.0 exactly ONE of those five existed. it was the render.
+    THE ONLY WITNESS WAS THE RENDER. so this file draws the witness
+    first, shell by shell, and then hands you the curse.
+
+  THE PRICE, PAID IN THE OPEN:
+    L9 does not fake the chi curve. it runs 41 temperatures, ~2.3M flips
+    each, ONE PER FRAME, and you watch the lattice scan 1.6 -> 3.2 while
+    the peak grows. ~94 million flips, in front of you, for one curve.
+    L12 does not print d_f. it draws the boxes it counted.
+
+  ** L9 DOES NOT USE v1.1's sweepTc(). HERE IS WHY. **
+    v1.1 calls randomize() at every temperature, then thermalises 60
+    sweeps, then samples 40 times two sweeps apart. that is a QUENCH,
+    41 times, and it does not measure a susceptibility. measured, node,
+    same engine, same machine:
+
+      protocol                                  chi peak    gap to Onsager
+      v1.1: randomize + 60sw, 40 x 2sw           1.68-1.80    24-26%   OFF
+      same, 7x the compute (400sw, 60 x 5sw)     1.680        26%      OFF   <-- !!
+      anneal: carry the config, 60sw, 50 x 4sw   2.24-2.48    1-9%     ok
+
+    MORE COMPUTE DOES NOT FIX IT. the bug is the protocol, not the budget.
+    and the tell was already on v1.1's own plot, in cyan, the whole time:
+    below T_c the |m| curve should be Yang's smooth exact curve. under the
+    quench it reads 0.023 at T=1.60 where Yang says 0.9796 -- forty times
+    wrong -- and it JITTERS: 0.023, 0.222, 0.034, 0.186. that is not a
+    magnetisation. it is 41 unrelated coarsening transients, each frozen
+    60 sweeps after a random start, wearing a gold line.
+
+    why the quench is seductive: randomize() LOOKS like hygiene. fresh
+    start, independent samples, no correlation between points. it is
+    exactly backwards -- the previous temperature's equilibrium is the
+    only thing that makes the next one affordable. CURSE 32 was "I used a
+    TypedArray for SPEED and it ate my writes." this is "I randomised for
+    INDEPENDENCE and it ate my equilibrium." same shape. the virtuous-
+    sounding practice is the poison, and every line of the code is right.
+
+    so this file ANNEALS. AND IT ANNEALS UPWARD, WHICH TURNS OUT TO BE THE
+    WHOLE MEASUREMENT -- because the first anneal I wrote went DOWN, and K0d
+    (below) caught it in the render before this file ever shipped:
+
+      protocol (5 runs each)          K0d = worst |m| vs Yang    trapped
+      anneal DOWN from random          0.002 / .301 / .316 / …     4 of 5
+      anneal UP   from random          0.663 … 0.909               5 of 5
+      anneal UP   from ORDERED         0.001 0.002 0.002 0.001 0.002   0 of 5
+
+    cooling through T_c has to break the symmetry and coarsen, and on a torus
+    it falls into the METASTABLE STRIPE STATE -- flat domain walls, every flip
+    costs dE >= 0, nothing moves again, |m| frozen at ~0.21 forever. that is
+    THE SAME OBJECT CURSE 32 PRODUCED. it ate the quench protocol, it ate the
+    broken Boltzmann table, and it ate my first anneal. this file has exactly
+    one villain and it is the stripe state.
+
+    heating does not have to break anything. all +1 at T=1.6 IS equilibrium,
+    so you start there and MELT upward: no quench, no coarsening, no trap.
+    0 of 5. |m| on Yang to three decimals, every run. you watch it melt.
+
+  ** AND THE CHECK THAT CATCHES IT — K0d — IS NEW HERE. **
+    Yang 1952 gives the exact spontaneous magnetisation below T_c:
+        m = (1 - sinh^-4(2J/T))^(1/8)
+    it is drawn on the plot, dashed, next to the measured points. melted
+    upward from ordered, they land on it to THREE DECIMALS, 5 runs in 5
+    (worst error 0.002). if your |m| points are not on Yang, your PROTOCOL is
+    lying -- before you ever get to argue about your peak. K0d caught the
+    quench, and then it caught my own first draft. it earns its place. K0a checked the table. K0b checked
+    the acceptance. K0c checked the floor. NONE of them check whether the
+    state had finished becoming the state before you read a number off it.
+
+  THE GAP BETWEEN THE TWO CURVES IS NOT AN ERROR. IT IS THE PHYSICS.
+    annealed, measured |m| sits exactly on Yang below ~1.9, then falls
+    BELOW it from ~2.0 to T_c and cannot catch up. that lag is critical
+    slowing down -- tau ~ L^z, z ~ 2.17 -- diverging at T_c. the honest
+    picture is both curves and the gap between them, not a single number.
+
+  AND THEN THE PEAK IS HONEST AND, BETTER, IT IS STABLE: 2.36 2.36 2.40 2.36
+  2.40 across five runs. that is ~0.10 ABOVE Onsager, every time, in the same
+  direction. THAT IS NOT ERROR -- a finite lattice's chi peak sits above T_c
+  by a/L^(1/nu), and for L=128, nu=1 that is a shift of about +0.1. the bias
+  is systematic, one-sided and reproducible, which is exactly what a finite-
+  size shift looks like and exactly what noise does not.
+
+  so v1.1's K1 promise -- "a 128^2 lattice lands within a few percent and NOT
+  better" -- is TRUE. it was just never being tested, because the quench never
+  measured a susceptibility in the first place. 4.4%, and it will not improve,
+  and now the file can show you why. target, measured and gap, side by side,
+  always. said in advance so it cannot be spun after the fact.
+
+  d_f K-caveat, unchanged and still flagged: geometric spin clusters are
+  not Fortuin-Kasteleyn clusters in general; they coincide in 2D at T_c,
+  a theorem this file RELIES ON. box-counting on 128^2 buys ~2 decades.
+  expect 1.9 +/- 0.1. THE ERROR BAR IS THE LATTICE, NOT THE PHYSICS.
+  measured here, equilibrated: 1.83-1.95 run to run. inside the band. ok.
+
+  BUT ONE CLAIM IS DROPPED, BECAUSE IT DOES NOT SURVIVE ITS OWN CODE:
+    "below T_c: d = 2. above: d = 2. at T_c: 1.948."
+  below is fine -- measured 1.998 at T=1.60 and 1.996 at T=1.80, equilibrated.
+  ABOVE IS NOT. measured 1.621 at T=3.50 and 1.655 at T=3.00. and it should
+  not be 2: above T_c the largest same-sign cluster is not a compact blob,
+  it is SUB-CRITICAL PERCOLATION DEBRIS -- it does not span, and asymptotically
+  it is not a fractal at all, so the ~1.6 you read is a finite-box artefact of
+  measuring a small ragged object with boxes up to 32 wide. the true statement
+  is better anyway: 1.9479 does not sit BETWEEN two 2s. it stands alone, at one
+  temperature, and there is nothing on either side of it.
+
+  motion is opt-in (Path VIII): the file opens at VOID and still. you
+  drag. prefers-reduced-motion is honoured.
+
+  the machine below (idx/sweep/magnet/largestCluster/boxCount/expTab and
+  all three K0 checks) is ISINGIUM v1.1, verbatim. v1.1 is frozen and
+  untouched (Path X). this is a new artifact, not an edit.
+
+  Pure Canvas 2D. No deps. P=12 . chi=2 . always. 2026-07-17.
+-->
+<style>
+:root{ --bg:#050510; --purple:#cc44ff; --gold:#ffd700; --cyan:#00d4ff; --green:#00ffd5;
+  --red:#ff3355; --amber:#ffb454; --white:#ffffff; --dim:#6a6a82; --txt:#e8e0d0;
+  --rule:#20202e; --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--txt);font-family:var(--mono);overflow:hidden}
+canvas{display:block;position:fixed;top:0;left:0}
+
+#top{position:fixed;top:0;left:0;right:0;z-index:12;padding:7px 11px;display:flex;gap:9px;
+  align-items:center;pointer-events:none;flex-wrap:wrap}
+#top>*{pointer-events:auto}
+#brand{background:rgba(5,5,16,.9);border:1px solid var(--rule);border-radius:8px;padding:5px 9px}
+#brand .t{color:var(--purple);font-size:12px;letter-spacing:.12em}
+#brand .s{color:var(--dim);font-size:9px;margin-top:2px}
+#brand .s b{color:var(--gold);font-weight:normal}
+#verdict{flex:1;min-width:240px;max-width:520px;border-radius:8px;padding:5px 10px;
+  background:rgba(5,5,16,.9);border:1px solid var(--rule);display:flex;align-items:center;gap:9px}
+#verdict .vt{font-size:12px;font-weight:bold;letter-spacing:.05em;white-space:nowrap}
+#verdict .vs{font-size:9px;color:var(--dim);line-height:1.35}
+#verdict.crit{border-color:var(--gold);box-shadow:0 0 18px rgba(255,215,0,.25)}
+#verdict.crit .vt{color:var(--gold)}
+#verdict.ord{border-color:var(--cyan)} #verdict.ord .vt{color:var(--cyan)}
+#verdict.dis{border-color:var(--green)} #verdict.dis .vt{color:var(--green)}
+#verdict.sw{border-color:var(--purple)} #verdict.sw .vt{color:var(--purple)}
+#verdict.bad{border-color:var(--red);box-shadow:0 0 18px rgba(255,51,85,.3)} #verdict.bad .vt{color:var(--red)}
+.chips{display:flex;gap:4px;flex-wrap:wrap}
+.mc{background:rgba(5,5,16,.9);border:1px solid var(--rule);border-radius:6px;padding:3px 7px;min-width:46px}
+.mc .lab{font-size:7px;color:var(--dim);text-transform:uppercase;letter-spacing:.05em}
+.mc .val{font-size:12px;font-weight:bold;color:var(--gold)}
+.mc .val.cyan{color:var(--cyan)} .mc .val.green{color:var(--green)}
+
+#log{position:fixed;left:12px;bottom:140px;z-index:10;width:250px;max-height:120px;
+  background:rgba(5,5,16,.9);border:1px solid var(--rule);border-radius:5px;padding:6px 9px;
+  overflow-y:auto;font-size:8.5px;line-height:1.55;color:rgba(220,228,240,.4);
+  cursor:pointer;transition:opacity .25s}
+#log.hidden{opacity:0;pointer-events:none}
+#log .e{padding:1px 0;border-bottom:1px solid #14141f}
+#log .pur{color:var(--purple)} #log .ok{color:var(--green)} #log .bad{color:var(--red)}
+#log .gld{color:var(--gold)}
+
+#reveal{position:fixed;bottom:52px;left:50%;transform:translateX(-50%);z-index:11;
+  display:flex;flex-direction:column;align-items:center;gap:3px;width:min(620px,94vw)}
+#tag{font-size:9px;color:var(--dim);line-height:1.45;text-align:center;min-height:26px;
+  max-width:560px;padding:0 8px}
+#tag b{color:var(--gold);font-weight:normal}
+#rl{font-size:8px;color:rgba(204,68,255,.45);text-transform:uppercase;letter-spacing:.18em}
+#master{width:min(420px,88vw);height:6px;appearance:none;-webkit-appearance:none;
+  background:#1c1c2a;border-radius:3px;outline:none;cursor:pointer}
+#master::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;
+  background:var(--purple);cursor:pointer;box-shadow:0 0 8px rgba(204,68,255,.6)}
+#master::-moz-range-thumb{width:14px;height:14px;border:none;border-radius:50%;
+  background:var(--purple);box-shadow:0 0 8px rgba(204,68,255,.6);cursor:pointer}
+#master:focus-visible{box-shadow:0 0 0 2px var(--purple)}
+#mval{font-size:9.5px;color:var(--purple);font-weight:bold;letter-spacing:.14em}
+#ldots{display:flex;gap:4px;margin-top:1px}
+.ldot{width:6px;height:6px;border-radius:50%;background:#0d0d18;border:1px solid #23233a;transition:all .25s}
+.ldot.done{background:var(--purple);border-color:var(--purple);box-shadow:0 0 5px rgba(204,68,255,.5)}
+.ldot.active{background:#fff;border-color:#fff;box-shadow:0 0 8px rgba(255,255,255,.75)}
+
+#bar{position:fixed;left:50%;transform:translateX(-50%);bottom:8px;z-index:11;display:flex;
+  gap:5px 8px;align-items:center;background:rgba(5,5,16,.96);border:1px solid var(--rule);
+  border-radius:9px;padding:5px 10px;flex-wrap:wrap;max-width:96vw}
+button{background:#14141f;border:1px solid #2a2a3a;border-radius:5px;color:var(--purple);
+  font:9.5px var(--mono);padding:4px 8px;cursor:pointer;transition:all .12s;
+  text-transform:uppercase;letter-spacing:.06em}
+button:hover{border-color:var(--purple)}
+button.on{background:#1e0a28;border-color:var(--purple)}
+button:focus-visible{outline:2px solid var(--purple);outline-offset:1px}
+button.gld{color:var(--gold)} button.gld:hover{border-color:var(--gold)}
+button.gld.on{border-color:var(--gold);background:#1d1a0a}
+button.gn{color:var(--green)} button.gn:hover{border-color:var(--green)}
+button.gn.on{border-color:var(--green);background:#062522}
+button.rd{color:var(--red)} button.rd:hover{border-color:var(--red)}
+button.rd.on{border-color:var(--red);background:#2a0810;color:#fff}
+.ctl{display:flex;align-items:center;gap:4px}
+.klbl{color:var(--dim);font-size:8.5px;text-transform:uppercase;letter-spacing:.08em}
+.val2{color:var(--gold);font-size:10px;min-width:36px;text-align:right}
+input[type=range].t{appearance:none;-webkit-appearance:none;width:130px;height:4px;
+  background:#2a2a3a;border-radius:3px;outline:none}
+input[type=range].t::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;
+  border-radius:50%;background:var(--gold);cursor:pointer}
+input[type=range].t::-moz-range-thumb{width:12px;height:12px;border:none;border-radius:50%;
+  background:var(--gold);cursor:pointer}
+.sep{width:1px;height:15px;background:#2a2a3a}
+#stamp{position:fixed;bottom:52px;right:12px;z-index:10;pointer-events:none;text-align:right}
+#stamp .s{font-size:8px;color:rgba(204,68,255,.22);letter-spacing:.1em;line-height:1.9}
+@media (max-width:820px){ #log{display:none} .chips .opt{display:none} }
+</style></head>
+<body>
+
+<canvas id="cv"></canvas>
+
+<div id="top">
+  <div id="brand">
+    <div class="t">ISINGIUM ATELIER v1.0</div>
+    <div class="s">layer <b id="h-layer">0</b> / 12 &nbsp;·&nbsp; <span id="h-shell">void</span></div>
+  </div>
+  <div id="verdict" class="dis"><div class="vt" id="v-t">—</div><div class="vs" id="v-s">drag the slider. the machine is built from nothing, in twelve layers.</div></div>
+  <div class="chips">
+    <div class="mc"><div class="lab">kernel</div><div class="val green" id="m-k">—</div></div>
+    <div class="mc"><div class="lab">T</div><div class="val" id="m-t">—</div></div>
+    <div class="mc"><div class="lab">|m|</div><div class="val cyan" id="m-m">—</div></div>
+    <div class="mc"><div class="lab">accept</div><div class="val" id="m-a">—</div></div>
+    <div class="mc opt"><div class="lab">T_c exact</div><div class="val green">2.269185</div></div>
+    <div class="mc opt"><div class="lab">d_f</div><div class="val" id="m-df">off</div></div>
+  </div>
+</div>
+
+<div id="log" onclick="this.classList.toggle('hidden')" title="click to hide"></div>
+
+<div id="reveal">
+  <div id="tag">the file opens at <b>VOID</b>. nothing is drawn and nothing is claimed. drag right and the machine assembles itself, one shell at a time, outward from a single spin.</div>
+  <div id="rl">reveal the machine</div>
+  <input type="range" id="master" min="0" max="12" step="1" value="0"
+         aria-label="reveal layer" oninput="onMaster(+this.value)">
+  <div id="mval">VOID</div>
+  <div id="ldots"></div>
+</div>
+
+<div id="stamp">
+  <div class="s">Isingium Atelier v1.0</div>
+  <div class="s">P=12 . chi=2</div>
+  <div class="s">always</div>
+</div>
+
+<div id="bar">
+  <button class="gld" onclick="setPreset(0)">void</button>
+  <button class="gld" onclick="setPreset(6)">half</button>
+  <button class="gld" onclick="setPreset(12)">full</button>
+  <div class="sep"></div>
+  <div class="ctl"><span class="klbl">T</span>
+    <input id="sT" class="t" type="range" min="50" max="450" value="350" aria-label="temperature"
+           oninput="setT(+this.value/100)">
+    <span class="val2" id="v-t2">3.50</span></div>
+  <button class="gn" onclick="setT(2.269185)">&#8594; T_c</button>
+  <div class="sep"></div>
+  <button id="b-curse" class="rd" onclick="setCurse(!cursed)" title="cast the real bug on purpose">&#9760; curse 32</button>
+  <button id="b-run" class="gn on" onclick="run=!run;this.classList.toggle('on',run)">&#10022; run</button>
+  <button onclick="document.getElementById('log').classList.toggle('hidden')">log</button>
+</div>
+
+<script>
+"use strict";
+/* ══════════════════════════════════════════════════════════════════════════
+   THE MACHINE — ISINGIUM v1.1, verbatim. Do not improve it. It is correct
+   and it was correct expensively.
+   ══════════════════════════════════════════════════════════════════════════ */
+var N=128, J=1, T=3.50, s=new Int8Array(N*N), run=true, showClu=false;
+var TC_EXACT=2/Math.log(1+Math.SQRT2);   // Onsager 1944 · 2.2691853…
+var DF_EXACT=187/96;                     // 1.9479… exact
+var FOCUS_X=64, FOCUS_Y=64;
+
+var cursed=false;
+var expTab=new Float64Array(17), expOK=false;
+function buildExp(){
+  for(var d=-8;d<=8;d+=4) expTab[d+8] = d<=0 ? 1 : Math.exp(-d/T);
+  // K0a — the check that should have existed on line one.
+  expOK = isFinite(expTab[12]) && expTab[12]>0 && expTab[12]<=1 &&
+          isFinite(expTab[16]) && expTab[16]>0 && expTab[16]<=1;
+}
+/* THE CURSE, CAST ON PURPOSE. Float64Array(9) is the original sin, exactly.
+   Writes to 12 and 16 evaporate. No error. No warning. Nothing. */
+function setCurse(on){
+  cursed=!!on;
+  expTab = new Float64Array(cursed?9:17);
+  buildExp(); thSweeps=0;
+  document.getElementById("b-curse").classList.toggle("on",cursed);
+  if(cursed) lg("CURSE 32 CAST · expTab = new Float64Array(9). writes to 12 and 16 are silently gone. watch the render.","bad");
+  else       lg("curse lifted · Float64Array(17), K0a green. the stripes will melt.","ok");
+}
+
+function idx(x,y){ return ((y+N)%N)*N + ((x+N)%N); }
+function randomize(){ for(var i=0;i<N*N;i++) s[i]= Math.random()<0.5?-1:1; mAcc=m2Acc=nAcc=0; acc=att=0; thSweeps=0; }
+/* all +1. at T=1.6 this IS equilibrium — no quench, no coarsening, no stripe trap. */
+function align(){ for(var i=0;i<N*N;i++) s[i]=1; mAcc=m2Acc=nAcc=0; acc=att=0; thSweeps=0; }
+var flips=0, acc=0, att=0, accRate=0, lastT=performance.now();
+var mAcc=0, m2Acc=0, nAcc=0, dfMeas=0, sweepData=null, tcMeas=0;
+
+function sweep(n){
+  for(var k=0;k<n;k++){
+    var x=(Math.random()*N)|0, y=(Math.random()*N)|0, i=idx(x,y);
+    var nb = s[idx(x+1,y)]+s[idx(x-1,y)]+s[idx(x,y+1)]+s[idx(x,y-1)];
+    var dE = 2*J*s[i]*nb;
+    att++;
+    if(dE<=0 || Math.random()<expTab[dE+8]){ s[i]=-s[i]; acc++; }
+  }
+  flips+=n;
+}
+function magnet(){ var t=0; for(var i=0;i<N*N;i++) t+=s[i]; return t/(N*N); }
+
+/* Yang 1952 — the exact spontaneous magnetisation. The second closed form in
+   this file, and the one that catches a lying protocol. K0d. */
+function yang(t){
+  if(t>=TC_EXACT-0.02) return -1;              // the 1/8 power is a cliff at T_c; do not pretend
+  var v=1-Math.pow(Math.sinh(2/t),-4);
+  return v<=0? 0 : Math.pow(v,1/8);
+}
+/* K0e — the thermalisation clock. Every check in v1.1 asks whether the NUMBER
+   is right. None asks whether the STATE had finished becoming the state. */
+var thSweeps=0;
+function thNeed(){ return Math.abs(T-TC_EXACT)<0.35 ? 5000 : (T<TC_EXACT? 2500 : 400); }
+function thermalised(){ return thSweeps>=thNeed(); }
+
+var cluMask=null;
+function largestCluster(){
+  var n=N*N, lab=new Int32Array(n).fill(-1), best=[], stack=new Int32Array(n);
+  for(var st=0;st<n;st++){
+    if(lab[st]!==-1) continue;
+    var sp=0, cur=[], sv=s[st];
+    stack[sp++]=st; lab[st]=st;
+    while(sp>0){
+      var p=stack[--sp]; cur.push(p);
+      var x=p%N, y=(p/N)|0, nbs=[idx(x+1,y),idx(x-1,y),idx(x,y+1),idx(x,y-1)];
+      for(var q=0;q<4;q++){ var v=nbs[q]; if(lab[v]===-1 && s[v]===sv){ lab[v]=st; stack[sp++]=v; } }
+    }
+    if(cur.length>best.length) best=cur;
+  }
+  var mask=new Uint8Array(n);
+  for(var b=0;b<best.length;b++) mask[best[b]]=1;
+  return mask;
+}
+var bcPts=null, bcFit=null;
+function boxCount(mask){
+  var xs=[], ys=[], pts=[];
+  for(var box=1;box<=32;box*=2){
+    var seen={}, c=0, g=Math.ceil(N/box);
+    for(var y=0;y<N;y++) for(var x=0;x<N;x++){
+      if(!mask[y*N+x]) continue;
+      var k=((y/box)|0)*g+((x/box)|0);
+      if(!seen[k]){ seen[k]=1; c++; }
+    }
+    if(c>0){ xs.push(Math.log(1/box)); ys.push(Math.log(c)); pts.push({box:box,c:c}); }
+  }
+  bcPts=pts;
+  if(xs.length<3){ bcFit=null; return 0; }
+  var n2=xs.length, sx=0,sy=0,sxx=0,sxy=0;
+  for(var i=0;i<n2;i++){ sx+=xs[i]; sy+=ys[i]; sxx+=xs[i]*xs[i]; sxy+=xs[i]*ys[i]; }
+  var m=(n2*sxy-sx*sy)/((n2*sxx-sx*sx)||1);
+  bcFit={m:m, b:(sy-m*sx)/n2};
+  return m;
+}
+function measure(){ if(showClu){ cluMask=largestCluster(); dfMeas=boxCount(cluMask); } else { cluMask=null; bcPts=null; bcFit=null; } }
+
+/* THE PRICE, PAID ONE FRAME AT A TIME — AND PAID ON THE RIGHT PROTOCOL.
+   v1.1 blocked ~2s and randomize()d at every T. That is 41 quenches, and it
+   peaks at 1.68 no matter how much compute you throw at it. This ANNEALS:
+   one lattice, cooled 3.2 -> 1.6, carrying its own state. You watch it cool. */
+var sw=null;
+function startSweep(){
+  if(sw||sweepData) return;
+  var list=[]; for(var t=1.6;t<=3.2001;t+=0.04) list.push(+t.toFixed(2));
+  sw={list:list, i:0, out:[], saveT:T, saveS:new Int8Array(s), warm:false};
+  lg("chi(T) · MELTING 1.6 -> 3.2 from a perfectly ordered lattice. one state, carried. no quench anywhere.","pur");
+}
+function stepSweep(){
+  if(!sw) return;
+  if(!sw.warm){
+    // START ORDERED, AND GO UP. all +1 at T=1.6 IS equilibrium, so there is no
+    // coarsening to do and no stripe state to fall into. cool instead of heat and
+    // it lands in the stripes 4 runs in 5 — the SAME metastable object CURSE 32
+    // made. the direction of the anneal is the whole measurement.
+    T=sw.list[0]; buildExp(); align(); sweep(N*N*300); sw.warm=true; return;
+  }
+  var t=sw.list[sw.i];
+  T=t; buildExp();
+  sweep(N*N*50);                                 // the previous temperature did most of this work
+  var ma=0, m2=0, K=40;
+  for(var k=0;k<K;k++){ sweep(N*N*4); var m=Math.abs(magnet()); ma+=m; m2+=m*m; }
+  ma/=K; m2/=K;
+  sw.out.push({t:t, m:ma, x:(N*N)*(m2-ma*ma)/t, y:yang(t)});
+  if(++sw.i>=sw.list.length){
+    sweepData=sw.out;
+    var best=-1;
+    for(var j=0;j<sweepData.length;j++) if(sweepData[j].x>best){ best=sweepData[j].x; tcMeas=sweepData[j].t; }
+    // K0d — do the measured points lie on Yang where they are allowed to?
+    var worst=0;
+    for(var q2=0;q2<sweepData.length;q2++){
+      var o=sweepData[q2];
+      if(o.t<TC_EXACT-0.35 && o.y>=0) worst=Math.max(worst,Math.abs(o.m-o.y));
+    }
+    k0d=worst;
+    s.set(sw.saveS); T=sw.saveT; buildExp(); sw=null; acc=att=0; thSweeps=0;
+    lg("K0d · worst |m| vs Yang, below the critical window: "+worst.toFixed(4)+
+       (worst<0.03? "  ON THE EXACT CURVE. the protocol is sound." : "  OFF THE CURVE — the protocol is lying."),
+       worst<0.03?"ok":"bad");
+    lg("chi peak "+tcMeas.toFixed(3)+" · Onsager "+TC_EXACT.toFixed(3)+" · gap "+
+       Math.abs(tcMeas-TC_EXACT).toFixed(3)+" — ABOVE, and stably so. that is the finite-size shift T_c(L) = T_c + a/L, not error. a 128² lattice cannot do better.","gld");
+  }
+}
+var k0d=-1;
+
+/* ══════════════════════════════════════════════════════════════════════════
+   THE LOUPE — read-only. One proposal at site (64,64), slowed ~10^6×.
+   It never writes a spin. The bulk sweep does that, with the same line.
+   ══════════════════════════════════════════════════════════════════════════ */
+var mic={s:1,nbs:[1,1,1,1],nb:0,dE:0,p:1,r:0,accept:false};
+var phase=0, phaseT=0;
+var PH_DUR=0.42;                       // seconds per phase
+var PHASE_NAME=["look","neighbours","energy","lookup","coin","verdict"];
+function micSnap(){
+  var i=idx(FOCUS_X,FOCUS_Y);
+  var up=s[idx(FOCUS_X,FOCUS_Y-1)], rt=s[idx(FOCUS_X+1,FOCUS_Y)],
+      dn=s[idx(FOCUS_X,FOCUS_Y+1)], lf=s[idx(FOCUS_X-1,FOCUS_Y)];
+  var nb=up+rt+dn+lf;
+  var dE=2*J*s[i]*nb;
+  var p=expTab[dE+8];                  // ← undefined when cursed and dE>0. that is the whole curse.
+  var r=Math.random();
+  mic={ s:s[i], nbs:[up,rt,dn,lf], nb:nb, dE:dE, p:p, r:r,
+        accept:(dE<=0 || r<p) };       // identical expression to sweep(). including the NaN compare.
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   THE 12 LAYERS
+   ══════════════════════════════════════════════════════════════════════════ */
+var LAYERS=[
+ {k:"spin", col:"#00d4ff", name:"the spin &middot; s = &plusmn;1",
+  tag:"one cell of the real lattice, at (64,64). it is <b>+1</b> or <b>&minus;1</b>. that is its entire state. there is nothing else in it."},
+ {k:"nb",   col:"#00d4ff", name:"the neighbours &middot; nb",
+  tag:"four cells, and the edges wrap. <b>nb</b> = their sum, and it can only ever be &minus;4, &minus;2, 0, +2, +4. the cell cannot see further than this. it never will."},
+ {k:"ham",  col:"#00ffd5", name:"the hamiltonian &middot; H = &minus;J &sum; s s",
+  tag:"a bond is happy when the two agree. <b>E_local = &minus;J &middot; s &middot; nb</b>. that is rule 2, and <b>there is no rule 3</b>. count the red bonds: 0 red &rarr; dE = +8. 4 red &rarr; dE = &minus;8."},
+ {k:"de",   col:"#ffb454", name:"the energy &middot; dE &isin; {&minus;8,&minus;4,0,+4,+8}",
+  tag:"flip it and the energy moves by <b>dE = &minus;2 E_local</b>. five values. only five. ever. the three on the left are <b>free</b> &mdash; the two on the right must be <b>bought from a coin</b>."},
+ {k:"tab",  col:"#ffd700", name:"the boltzmann table &middot; 17 slots",
+  tag:"<b>p = e^(&minus;dE/T)</b>, read at index <b>dE+8</b> &isin; {0,4,8,12,16}. so the array must be <b>SEVENTEEN</b> long to hold five numbers. twelve slots are the price of the index scheme. <b>this ring is CURSE 32's grave &mdash; press the button.</b>"},
+ {k:"coin", col:"#cc44ff", name:"the coin &middot; rand &lt; p",
+  tag:"downhill: taken, always, and <b>the coin is never tossed</b> &mdash; the <b>||</b> short-circuits. uphill: only if the draw lands inside p. <b>nothing else ever happens.</b> that is the whole dynamics."},
+ {k:"lat",  col:"#00d4ff", name:"the lattice &middot; 128 &times; 128",
+  tag:"16384 of them. the same six shells, about <b>three million times a second</b>. the loupe stays on one cell &mdash; it is showing you <b>one</b> of the proposals in the picture on the right, slowed ~10&#8310;&times;."},
+ {k:"m",    col:"#00d4ff", name:"the order parameter &middot; |m|",
+  tag:"the average spin. above T_c it <b>must</b> sit inside the &plusmn;1/&radic;(N&sup2;) floor &mdash; that is not order, that is <b>arithmetic</b>. <b>K0c</b> watches this line and goes red. it is the check the curse bought."},
+ {k:"chi",  col:"#ffd700", name:"the susceptibility &middot; &chi;(T)",
+  tag:"the variance of m, scaled &mdash; and it is being <b>paid for right now</b>: the lattice starts <b>perfectly ordered</b> at 1.6 and <b>melts</b> upward, carrying its own state. <b>watch it melt.</b> quench each point instead and the peak lands at 1.68 &mdash; and <b>more compute will not save you</b>. cool it downward instead and it falls into <b>the stripe state</b>, 4 runs in 5."},
+ {k:"tc",   col:"#00ffd5", name:"T_c &middot; Onsager 1944",
+  tag:"<b>2/ln(1+&radic;2) = 2.2691853</b>, exact, infinite lattice. target, measured and gap: <b>side by side, always</b>. the dashed cyan is <b>Yang 1952</b>, also exact &mdash; the measurement lands <b>on it</b> below 1.9 (four decimals) and then <b>falls behind</b> near T_c. <b>that gap is not an error. it is &tau; ~ L^z.</b>"},
+ {k:"clu",  col:"#ffd700", name:"the largest cluster",
+  tag:"one connected sign, flood-filled. below T_c it is nearly everything. above, it is confetti. <b>at T_c it is neither</b>, and it touches every wall."},
+ {k:"df",   col:"#ffffff", name:"d_f = 187/96 &middot; the outermost &middot; always",
+  tag:"count the boxes the cluster touches, at every scale. <b>the slope is the dimension.</b> below T_c it is <b>2</b> (measured 1.998 &mdash; a blob). above T_c it is <b>not a fractal at all</b>, just sub-critical debris. at T_c, and <b>nowhere else</b>: <b>1.9479</b>. it does not sit between two 2s. <b>it stands alone, and nobody put it there.</b>"}
+];
+var LI={}; for(var q=0;q<LAYERS.length;q++) LI[LAYERS[q].k]=q;
+var currentLayer=-1;
+function has(k){ return currentLayer>=LI[k]; }
+
+/* ── canvas ─────────────────────────────────────────────────────────────── */
+var cv=document.getElementById("cv"), ctx=cv.getContext("2d");
+var off=document.createElement("canvas"); off.width=off.height=N;
+var ox=off.getContext("2d"), img=ox.createImageData(N,N);
+var W=0,H=0,DPR=1;
+var REDUCED = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+function resize(){
+  DPR=Math.min(2,window.devicePixelRatio||1);
+  W=innerWidth; H=innerHeight;
+  cv.width=W*DPR; cv.height=H*DPR; cv.style.width=W+"px"; cv.style.height=H+"px";
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+}
+addEventListener("resize",resize);
+
+var dock=0;                                   // 0 = loupe centred · 1 = loupe docked left
+var LP={x:0,y:0,r:0}, LAT={x:0,y:0,L:0}, MB={x:0,y:0,w:0,h:0}, CH={x:0,y:0,w:0,h:0}, LL={x:0,y:0,w:0,h:0};
+function layout(){
+  var y0=68, y1=H-136, sh=Math.max(180,y1-y0), cy=(y0+y1)/2;
+  var r0=Math.min(W*0.40, sh*0.47), r1=Math.min(W*0.165, sh*0.47);
+  LP.r = r0+(r1-r0)*dock;
+  LP.x = W*0.50 + (W*0.19 - W*0.50)*dock;
+  LP.y = cy;
+  var cx0=W*0.38, cx1=W-20, cw=Math.max(220,cx1-cx0);
+  var L=Math.min(cw*0.70, sh*0.60); L=Math.max(150,L);
+  LAT.L=L; LAT.x=cx0+(cw-L)/2; LAT.y=cy-(L+8+22+8+128)/2;
+  MB.x=LAT.x; MB.y=LAT.y+L+8; MB.w=L; MB.h=22;
+  CH.x=LAT.x; CH.y=MB.y+MB.h+8; CH.w=L; CH.h=128;
+  LL.w=Math.min(148,Math.max(0,cx1-(LAT.x+L)-14)); LL.h=CH.h; LL.x=LAT.x+L+14; LL.y=CH.y;
+}
+
+/* ── small painters ─────────────────────────────────────────────────────── */
+function sector(cx,cy,r,th,a0,a1){
+  ctx.beginPath();
+  ctx.arc(cx,cy,r+th/2,a0,a1);
+  ctx.arc(cx,cy,r-th/2,a1,a0,true);
+  ctx.closePath();
+}
+function txt(t,x,y,size,col,align,alpha){
+  ctx.font=size.toFixed(1)+"px ui-monospace,monospace";
+  ctx.textAlign=align||"center"; ctx.textBaseline="middle";
+  ctx.fillStyle=col; ctx.globalAlpha=alpha===undefined?1:alpha;
+  ctx.fillText(t,x,y); ctx.globalAlpha=1;
+}
+function plate(x,y,w,h,r,stroke){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath();
+  ctx.fillStyle="rgba(5,5,16,0.86)"; ctx.fill();
+  if(stroke){ ctx.strokeStyle=stroke; ctx.lineWidth=1; ctx.stroke(); }
+}
+function cellBox(cx,cy,sz,v,lit,col){
+  var h=sz/2;
+  ctx.fillStyle = v>0 ? "rgba(0,212,255,0.16)" : "rgba(10,10,22,0.9)";
+  ctx.fillRect(cx-h,cy-h,sz,sz);
+  ctx.strokeStyle = lit ? (col||"#00d4ff") : "rgba(0,212,255,0.28)";
+  ctx.lineWidth = lit?1.6:1;
+  ctx.strokeRect(cx-h,cy-h,sz,sz);
+  // the arrow IS the spin. drawn, not typed.
+  var a=sz*0.30, st=sz*0.30, d=v>0?-1:1;
+  ctx.strokeStyle=ctx.fillStyle = v>0 ? "#00d4ff" : "#6a6a82";
+  ctx.globalAlpha=lit?1:0.7;
+  ctx.lineWidth=Math.max(1.2,sz*0.075);
+  ctx.beginPath(); ctx.moveTo(cx,cy+st*d); ctx.lineTo(cx,cy-a*d*0.4); ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(cx,cy-st*d); ctx.lineTo(cx-a*0.5,cy-st*d+a*0.62*d); ctx.lineTo(cx+a*0.5,cy-st*d+a*0.62*d);
+  ctx.closePath(); ctx.fill();
+  ctx.globalAlpha=1;
+}
+
+/* ── THE LOUPE ──────────────────────────────────────────────────────────── */
+var UP=Math.PI/2;                       // canvas angle of "down"; -UP is up
+function A(u){ return -Math.PI/2 + u; }  // u measured clockwise from 12 o'clock
+function drawLoupe(){
+  if(currentLayer<0) return;
+  var R=LP.r, cx=LP.x, cy=LP.y;
+  var pulse = REDUCED ? 1 : (0.65+0.35*Math.sin(performance.now()/260));
+
+  // faint containing rim — the atelier circle
+  ctx.strokeStyle="rgba(204,68,255,0.10)"; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.arc(cx,cy,R*0.96,0,Math.PI*2); ctx.stroke();
+
+  var pc=(cx), pcy=cy-R*0.24, cs=R*0.105, dd=R*0.165;
+
+  // L3 · the bonds
+  if(has("ham")){
+    var pos=[[0,-1],[1,0],[0,1],[-1,0]];
+    for(var b=0;b<4;b++){
+      var agree = mic.nbs[b]===mic.s;
+      ctx.strokeStyle = agree ? "rgba(0,255,213,0.55)" : "rgba(255,51,85,0.85)";
+      ctx.lineWidth = agree ? Math.max(1,R*0.006) : Math.max(1.6,R*0.012);
+      ctx.beginPath();
+      ctx.moveTo(pc+pos[b][0]*cs*0.55, pcy+pos[b][1]*cs*0.55);
+      ctx.lineTo(pc+pos[b][0]*(dd-cs*0.55), pcy+pos[b][1]*(dd-cs*0.55));
+      ctx.stroke();
+    }
+  }
+  // L2 · the neighbours
+  if(has("nb")){
+    var P=[[0,-1],[1,0],[0,1],[-1,0]];
+    for(var n2=0;n2<4;n2++)
+      cellBox(pc+P[n2][0]*dd, pcy+P[n2][1]*dd, cs, mic.nbs[n2], phase>=1, "#00d4ff");
+  }
+  // L1 · the spin
+  cellBox(pc, pcy, cs*1.18, mic.s, true, phase===0?"#ffffff":"#00d4ff");
+  if(phase===0 && !REDUCED){
+    ctx.strokeStyle="rgba(255,255,255,"+(0.5*pulse).toFixed(3)+")"; ctx.lineWidth=1.4;
+    ctx.strokeRect(pc-cs*0.85, pcy-cs*0.85, cs*1.7, cs*1.7);
+  }
+
+  // L4 · the dE gauge — an arc, because dE is ordered and an array is not a wheel
+  if(has("de")){
+    var U=1.83, dEv=[-8,-4,0,4,8], dA=2*U/5;
+    for(var i=0;i<5;i++){
+      var a0=A(-U+i*dA+0.012), a1=A(-U+(i+1)*dA-0.012), on=(mic.dE===dEv[i] && phase>=2);
+      var free = dEv[i]<=0;
+      sector(cx,cy,R*0.42,R*0.072,a0,a1);
+      ctx.fillStyle = on ? (free?"#00ffd5":"#ffb454")
+                        : (free?"rgba(0,255,213,0.12)":"rgba(255,180,84,0.12)");
+      ctx.globalAlpha = on?(REDUCED?1:pulse):1; ctx.fill(); ctx.globalAlpha=1;
+      var am=A(-U+(i+0.5)*dA), tx=cx+Math.cos(am)*R*0.42, ty=cy+Math.sin(am)*R*0.42;
+      txt((dEv[i]>0?"+":"")+dEv[i], tx, ty, R*0.036, on?"#050510":(free?"rgba(0,255,213,0.5)":"rgba(255,180,84,0.5)"));
+    }
+    txt("free", cx+Math.cos(A(-U*0.72))*R*0.53, cy+Math.sin(A(-U*0.72))*R*0.53, R*0.028, "rgba(0,255,213,0.4)");
+    txt("costs", cx+Math.cos(A(U*0.80))*R*0.53, cy+Math.sin(A(U*0.80))*R*0.53, R*0.028, "rgba(255,180,84,0.4)");
+  }
+
+  // L5 · THE TABLE. seventeen slots. and when cursed, the ring ENDS at 8.
+  if(has("tab")){
+    var U2=2.53, dB=2*U2/17, live={0:1,4:1,8:1,12:1,16:1}, len=cursed?9:17;
+    for(var j=0;j<17;j++){
+      var b0=A(-U2+j*dB+0.008), b1=A(-U2+(j+1)*dB-0.008);
+      var exists=j<len, isLive=!!live[j], lit=(mic.dE+8===j && phase>=3);
+      sector(cx,cy,R*0.60,R*0.082,b0,b1);
+      if(!exists){
+        // the void past the end of the array. this is where the writes went.
+        ctx.fillStyle="rgba(255,51,85,0.05)"; ctx.fill();
+        ctx.setLineDash([2,3]); ctx.strokeStyle= isLive?"rgba(255,51,85,0.75)":"rgba(255,51,85,0.18)";
+        ctx.lineWidth=1; ctx.stroke(); ctx.setLineDash([]);
+      } else if(isLive){
+        ctx.fillStyle = lit ? "#ffd700" : "rgba(255,215,0,0.30)";
+        ctx.globalAlpha = lit?(REDUCED?1:pulse):1; ctx.fill(); ctx.globalAlpha=1;
+      } else {
+        ctx.fillStyle="rgba(120,120,150,0.10)"; ctx.fill();
+      }
+      if(isLive){
+        var bm=A(-U2+(j+0.5)*dB), bx=cx+Math.cos(bm)*R*0.60, by=cy+Math.sin(bm)*R*0.60;
+        txt(String(j), bx, by, R*0.030,
+            !exists?"#ff3355":(lit?"#050510":"rgba(255,215,0,0.75)"));
+      }
+    }
+    var eA=A(-U2+len*dB);
+    if(cursed){
+      ctx.strokeStyle="#ff3355"; ctx.lineWidth=1.6;
+      ctx.beginPath();
+      ctx.moveTo(cx+Math.cos(eA)*R*0.53, cy+Math.sin(eA)*R*0.53);
+      ctx.lineTo(cx+Math.cos(eA)*R*0.67, cy+Math.sin(eA)*R*0.67);
+      ctx.stroke();
+      txt("length 9 — the array ends here", cx+Math.cos(A(-U2+13*dB))*R*0.76,
+          cy+Math.sin(A(-U2+13*dB))*R*0.76, R*0.030, "rgba(255,51,85,0.9)");
+      txt("silent no-op", cx+Math.cos(A(-U2+13*dB))*R*0.76,
+          cy+Math.sin(A(-U2+13*dB))*R*0.76+R*0.042, R*0.028, "rgba(255,51,85,0.55)");
+    } else {
+      txt("expTab · Float64Array(17)", cx, cy-R*0.70, R*0.030, "rgba(255,215,0,0.35)");
+    }
+  }
+
+  // L6 · THE COIN. a probability is an angle. undefined is no angle at all.
+  if(has("coin")){
+    var rC=R*0.80;
+    ctx.strokeStyle="rgba(204,68,255,0.14)"; ctx.lineWidth=Math.max(1,R*0.05);
+    ctx.beginPath(); ctx.arc(cx,cy,rC,0,Math.PI*2); ctx.stroke();
+    if(phase>=4){
+      var down=mic.dE<=0, pv=mic.p, good=isFinite(pv);
+      if(down){
+        ctx.strokeStyle="rgba(0,255,213,0.55)"; ctx.lineWidth=Math.max(1,R*0.05);
+        ctx.beginPath(); ctx.arc(cx,cy,rC,0,Math.PI*2); ctx.stroke();
+        txt("|| short-circuit · the coin is never tossed", cx, cy+R*0.90, R*0.030, "rgba(0,255,213,0.6)");
+      } else if(good){
+        ctx.strokeStyle="rgba(255,215,0,0.75)"; ctx.lineWidth=Math.max(1,R*0.05);
+        ctx.beginPath(); ctx.arc(cx,cy,rC,A(0),A(pv*Math.PI*2)); ctx.stroke();
+        txt("p = "+pv.toFixed(4)+" of the circle", cx, cy+R*0.90, R*0.030, "rgba(255,215,0,0.6)");
+      } else {
+        ctx.setLineDash([3,4]); ctx.strokeStyle="rgba(255,51,85,0.8)"; ctx.lineWidth=1.4;
+        ctx.beginPath(); ctx.arc(cx,cy,rC,0,Math.PI*2); ctx.stroke(); ctx.setLineDash([]);
+        txt("p = undefined · there is no arc to land in", cx, cy+R*0.90, R*0.030, "rgba(255,51,85,0.85)");
+      }
+      var na=A(mic.r*Math.PI*2);
+      ctx.strokeStyle= mic.accept? "#00ffd5":"#ff3355"; ctx.lineWidth=Math.max(1.4,R*0.009);
+      ctx.beginPath();
+      ctx.moveTo(cx+Math.cos(na)*rC*0.88, cy+Math.sin(na)*rC*0.88);
+      ctx.lineTo(cx+Math.cos(na)*rC*1.10, cy+Math.sin(na)*rC*1.10);
+      ctx.stroke();
+      ctx.beginPath(); ctx.arc(cx+Math.cos(na)*rC, cy+Math.sin(na)*rC, Math.max(2,R*0.014),0,Math.PI*2);
+      ctx.fillStyle= mic.accept? "#00ffd5":"#ff3355"; ctx.fill();
+    }
+  }
+
+  // the receipt. every number read off the Int8Array you are looking at.
+  var lines=[], LH=R*0.050, F=R*0.038;
+  lines.push(["s (64,64)", (mic.s>0?"+1":"-1"), "#00d4ff"]);
+  if(has("nb"))  lines.push(["nb", (mic.nb>0?"+":"")+mic.nb, "#00d4ff"]);
+  if(has("ham")) lines.push(["E_local = -J s nb", (-mic.s*mic.nb>0?"+":"")+(-mic.s*mic.nb), "#00ffd5"]);
+  if(has("de"))  lines.push(["dE = -2 E_local", (mic.dE>0?"+":"")+mic.dE, mic.dE<=0?"#00ffd5":"#ffb454"]);
+  if(has("tab")) lines.push(["index dE+8", String(mic.dE+8), (cursed&&mic.dE+8>8)?"#ff3355":"#ffd700"]);
+  if(has("tab")) lines.push(["p = expTab[i]", mic.dE<=0?"not read":(isFinite(mic.p)?mic.p.toFixed(4):"undefined"),
+                             mic.dE<=0?"rgba(0,255,213,0.6)":(isFinite(mic.p)?"#ffd700":"#ff3355")]);
+  if(has("coin")) lines.push(["rand", mic.r.toFixed(4), "#cc44ff"]);
+  if(has("coin") && phase>=5) lines.push([ mic.dE<=0? "dE <= 0 || …" : ("rand < p  →  "+(mic.accept?"true":"false")),
+                                           mic.accept?"ACCEPT":"REJECT", mic.accept?"#00ffd5":"#ff3355"]);
+  var bw=R*0.62, bh=lines.length*LH+R*0.055, bx=cx-bw/2, by=cy+R*0.10;
+  plate(bx,by,bw,bh,4,"rgba(204,68,255,0.16)");
+  for(var li=0;li<lines.length;li++){
+    var yy=by+R*0.028+LH*(li+0.5);
+    txt(lines[li][0], bx+R*0.03, yy, F, "rgba(220,228,240,0.34)", "left");
+    txt(lines[li][1], bx+bw-R*0.03, yy, F, lines[li][2], "right");
+  }
+  txt("read-only · one proposal, slowed ~10⁶× · "+PHASE_NAME[Math.min(phase,5)],
+      cx, by+bh+R*0.045, R*0.030, "rgba(204,68,255,0.40)");
+}
+
+/* ── the stalk: this ring IS that pixel ─────────────────────────────────── */
+function drawStalk(){
+  if(!has("lat") || dock<0.15) return;
+  var fx=LAT.x+(FOCUS_X+0.5)/N*LAT.L, fy=LAT.y+(FOCUS_Y+0.5)/N*LAT.L, ph=Math.max(4,LAT.L*4/N);
+  ctx.globalAlpha=dock*0.5;
+  ctx.strokeStyle="rgba(204,68,255,0.55)"; ctx.lineWidth=1; ctx.setLineDash([3,4]);
+  var a1=A(1.05), a2=A(0.62);
+  ctx.beginPath(); ctx.moveTo(LP.x+Math.cos(a1)*LP.r*0.97, LP.y+Math.sin(a1)*LP.r*0.97); ctx.lineTo(fx-ph, fy+ph); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(LP.x+Math.cos(a2)*LP.r*0.97, LP.y+Math.sin(a2)*LP.r*0.97); ctx.lineTo(fx-ph, fy-ph); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.strokeStyle="#cc44ff"; ctx.lineWidth=1.2;
+  ctx.strokeRect(fx-ph,fy-ph,ph*2,ph*2);
+  ctx.globalAlpha=1;
+}
+
+/* ── L7 the lattice · L11 the cluster · L12 the boxes ───────────────────── */
+var BOXES=[2,4,8,16,32], boxI=0, boxT=0;
+function drawLattice(){
+  var d=img.data;
+  for(var i=0;i<N*N;i++){
+    var o=i*4;
+    if(cluMask && cluMask[i]){ d[o]=255; d[o+1]=215; d[o+2]=0; }
+    else if(s[i]>0){ d[o]=0; d[o+1]=212; d[o+2]=255; }
+    else { d[o]=12; d[o+1]=12; d[o+2]=24; }
+    d[o+3]=255;
+  }
+  ox.putImageData(img,0,0);
+  ctx.globalAlpha=Math.min(1,dock*1.4);
+  ctx.imageSmoothingEnabled=false;
+  ctx.drawImage(off, LAT.x, LAT.y, LAT.L, LAT.L);
+  ctx.imageSmoothingEnabled=true;
+  ctx.strokeStyle="#20202e"; ctx.lineWidth=1; ctx.strokeRect(LAT.x-0.5,LAT.y-0.5,LAT.L+1,LAT.L+1);
+  ctx.globalAlpha=1;
+  txt("the lattice · 128² · periodic", LAT.x, LAT.y-8, 9, "rgba(220,228,240,0.3)", "left");
+  if(sw) txt("scanning T = "+sw.list[Math.min(sw.i,sw.list.length-1)].toFixed(2), LAT.x+LAT.L, LAT.y-8, 9, "#cc44ff", "right");
+
+  // L12 · the boxes it counted. drawn, not asserted.
+  if(has("df") && cluMask){
+    var box=BOXES[boxI], g=LAT.L/N*box, gn=Math.ceil(N/box);
+    ctx.save(); ctx.beginPath(); ctx.rect(LAT.x,LAT.y,LAT.L,LAT.L); ctx.clip();
+    var occ={};
+    for(var y2=0;y2<N;y2++) for(var x2=0;x2<N;x2++)
+      if(cluMask[y2*N+x2]) occ[((y2/box)|0)*gn+((x2/box)|0)]=1;
+    ctx.fillStyle="rgba(255,255,255,0.16)";
+    for(var gy=0;gy<gn;gy++) for(var gx=0;gx<gn;gx++)
+      if(occ[gy*gn+gx]) ctx.fillRect(LAT.x+gx*g, LAT.y+gy*g, g, g);
+    ctx.strokeStyle="rgba(255,255,255,0.22)"; ctx.lineWidth=0.6;
+    ctx.beginPath();
+    for(var k2=0;k2<=gn;k2++){
+      ctx.moveTo(LAT.x+k2*g, LAT.y); ctx.lineTo(LAT.x+k2*g, LAT.y+LAT.L);
+      ctx.moveTo(LAT.x, LAT.y+k2*g); ctx.lineTo(LAT.x+LAT.L, LAT.y+k2*g);
+    }
+    ctx.stroke(); ctx.restore();
+    var cnt=0; for(var kk in occ) cnt++;
+    txt("box = "+box+" · touched "+cnt, LAT.x+4, LAT.y+LAT.L-9, 9, "#ffffff", "left");
+  }
+}
+
+/* ── L8 · |m| and the floor that is arithmetic, not physics ─────────────── */
+function drawMBar(){
+  var m=magnet(), fl=1/N, x=MB.x, y=MB.y, w=MB.w, h=MB.h;
+  var bad = (T>3.2 && Math.abs(m)>6*fl) || !expOK;
+  ctx.fillStyle="rgba(10,10,22,0.7)"; ctx.fillRect(x,y,w,h);
+  ctx.strokeStyle="#20202e"; ctx.lineWidth=1; ctx.strokeRect(x+0.5,y+0.5,w-1,h-1);
+  var fw=Math.max(2, 6*fl*w/2);
+  ctx.fillStyle= bad? "rgba(255,51,85,0.16)":"rgba(0,255,213,0.14)";
+  ctx.fillRect(x+w/2-fw, y+1, fw*2, h-2);
+  ctx.strokeStyle="rgba(106,106,130,0.5)"; ctx.beginPath();
+  ctx.moveTo(x+w/2,y); ctx.lineTo(x+w/2,y+h); ctx.stroke();
+  var nx=x+w/2+m*w/2;
+  ctx.fillStyle= bad? "#ff3355":"#00d4ff";
+  ctx.fillRect(nx-1.2, y+1, 2.4, h-2);
+  txt("−1", x+3, y+h/2, 8, "rgba(106,106,130,0.7)", "left");
+  txt("+1", x+w-3, y+h/2, 8, "rgba(106,106,130,0.7)", "right");
+  txt("m = "+m.toFixed(4)+"   floor ±1/√N² = ±"+fl.toFixed(4)+(bad?"   K0c · "+(Math.abs(m)/fl).toFixed(1)+"× TOO BIG":""),
+      x+w/2, y+h+7, 8, bad?"#ff3355":"rgba(220,228,240,0.35)");
+}
+
+/* ── L9/L10 · the curve and the honest gap ─────────────────────────────── */
+function drawChi(){
+  var x=CH.x, y=CH.y, w=CH.w, h=CH.h;
+  ctx.fillStyle="rgba(8,8,18,0.6)"; ctx.fillRect(x,y,w,h);
+  ctx.strokeStyle="#20202e"; ctx.strokeRect(x+0.5,y+0.5,w-1,h-1);
+  var data = sw? sw.out : sweepData;
+  if(!data || !data.length){ txt("paying…", x+w/2, y+h/2, 9, "#cc44ff"); return; }
+  var x0=x+24, x1=x+w-8, y0=y+16, y1=y+h-14, mx=0, mm=0;
+  for(var i=0;i<data.length;i++){ mx=Math.max(mx,data[i].x); mm=Math.max(mm,data[i].m); }
+  function PX(t){ return x0+((t-1.6)/1.6)*(x1-x0); }
+  function PY(v,M){ return y1-(v/(M||1))*(y1-y0); }
+  if(has("tc")){
+    ctx.strokeStyle="rgba(0,255,213,0.75)"; ctx.lineWidth=1.4; ctx.setLineDash([4,3]);
+    ctx.beginPath(); ctx.moveTo(PX(TC_EXACT),y0); ctx.lineTo(PX(TC_EXACT),y1); ctx.stroke(); ctx.setLineDash([]);
+    txt("Onsager "+TC_EXACT.toFixed(4), PX(TC_EXACT)+4, y0+5, 8, "rgba(0,255,213,0.9)", "left");
+    if(tcMeas){
+      ctx.strokeStyle="rgba(255,51,85,0.8)"; ctx.lineWidth=1.2;
+      ctx.beginPath(); ctx.moveTo(PX(tcMeas),y0); ctx.lineTo(PX(tcMeas),y1); ctx.stroke();
+      txt("measured "+tcMeas.toFixed(3), PX(tcMeas)-4, y1-6, 8, "rgba(255,51,85,0.9)", "right");
+      txt("gap +"+(tcMeas-TC_EXACT).toFixed(3)+" · above, and stably · finite-size shift a/L",
+          x+w-6, y0+5, 8, "rgba(255,180,84,0.8)", "right");
+    }
+  }
+  ctx.strokeStyle="rgba(255,215,0,0.95)"; ctx.lineWidth=1.6; ctx.beginPath();
+  for(var j=0;j<data.length;j++){ var a=PX(data[j].t), b=PY(data[j].x,mx); j?ctx.lineTo(a,b):ctx.moveTo(a,b); }
+  ctx.stroke();
+  // K0d — YANG 1952, EXACT. the target. drawn first so the measurement lands ON it.
+  ctx.strokeStyle="rgba(0,212,255,0.5)"; ctx.lineWidth=1.2; ctx.setLineDash([3,3]);
+  ctx.beginPath();
+  var started=false;
+  for(var yq=0;yq<=140;yq++){
+    var tq=1.6+(1.6*yq/140), yv=yang(tq);
+    if(yv<0){ started=false; continue; }
+    var ax=PX(tq), ay=PY(yv,mm);
+    started? ctx.lineTo(ax,ay) : ctx.moveTo(ax,ay); started=true;
+  }
+  ctx.stroke(); ctx.setLineDash([]);
+  // the measurement
+  ctx.strokeStyle="rgba(0,212,255,0.9)"; ctx.lineWidth=1.2; ctx.beginPath();
+  for(var k=0;k<data.length;k++){ var a2=PX(data[k].t), b2=PY(data[k].m,mm); k?ctx.lineTo(a2,b2):ctx.moveTo(a2,b2); }
+  ctx.stroke();
+  // the gap between them, from ~2.0 to T_c, IS critical slowing down. name it.
+  if(!sw && sweepData){
+    var lo=PX(TC_EXACT-0.30), hi=PX(TC_EXACT);
+    ctx.fillStyle="rgba(204,68,255,0.07)"; ctx.fillRect(lo,y0,hi-lo,y1-y0);
+    txt("τ ~ L^z", (lo+hi)/2, y1-6, 7.5, "rgba(204,68,255,0.8)");
+  }
+  txt("χ", x+6, y0+6, 9, "rgba(255,215,0,0.8)", "left");
+  txt("|m| measured", x+6, y0+18, 8, "rgba(0,212,255,0.9)", "left");
+  txt("Yang 1952 exact", x+6, y0+28, 8, "rgba(0,212,255,0.5)", "left");
+  if(k0d>=0) txt("K0d "+(k0d<0.03?"· on the exact curve · "+k0d.toFixed(4):"· OFF · "+k0d.toFixed(4)),
+                 x+6, y0+38, 8, k0d<0.03?"#00ffd5":"#ff3355", "left");
+  txt("T", x+w/2, y1+8, 8, "rgba(106,106,130,0.7)");
+  txt("1.6", x0, y1+8, 8, "rgba(106,106,130,0.7)");
+  txt("3.2", x1, y1+8, 8, "rgba(106,106,130,0.7)");
+}
+
+/* ── L12 · the receipt for the number ──────────────────────────────────── */
+function drawLogLog(){
+  if(LL.w<90) return;
+  var x=LL.x, y=LL.y, w=LL.w, h=LL.h;
+  plate(x,y,w,h,4,"rgba(255,255,255,0.14)");
+  txt("box count · log–log", x+w/2, y+10, 8, "rgba(255,255,255,0.5)");
+  if(!bcPts||!bcFit||bcPts.length<3){ txt("reveal the cluster", x+w/2, y+h/2, 8, "rgba(106,106,130,0.8)"); return; }
+  var x0=x+16, x1=x+w-8, y0=y+20, y1=y+h-24;
+  var lx0=Math.log(1/32), lx1=0, ly0=1e9, ly1=-1e9;
+  for(var i=0;i<bcPts.length;i++){ var ly=Math.log(bcPts[i].c); ly0=Math.min(ly0,ly); ly1=Math.max(ly1,ly); }
+  var pad=(ly1-ly0)*0.12+0.2; ly0-=pad; ly1+=pad;
+  function PX(v){ return x0+((v-lx0)/(lx1-lx0))*(x1-x0); }
+  function PY(v){ return y1-((v-ly0)/(ly1-ly0))*(y1-y0); }
+  ctx.strokeStyle="rgba(255,255,255,0.35)"; ctx.lineWidth=1; ctx.setLineDash([3,3]);
+  ctx.beginPath();
+  ctx.moveTo(PX(lx0), PY(bcFit.m*lx0+bcFit.b)); ctx.lineTo(PX(lx1), PY(bcFit.m*lx1+bcFit.b));
+  ctx.stroke(); ctx.setLineDash([]);
+  for(var p2=0;p2<bcPts.length;p2++){
+    var px=PX(Math.log(1/bcPts[p2].box)), py=PY(Math.log(bcPts[p2].c));
+    ctx.beginPath(); ctx.arc(px,py,2.2,0,Math.PI*2);
+    ctx.fillStyle = BOXES[boxI]===bcPts[p2].box? "#ffffff":"rgba(255,215,0,0.85)"; ctx.fill();
+  }
+  txt("log(1/box)", x+w/2, y1+8, 7, "rgba(106,106,130,0.9)");
+  var th=thermalised(), ok=Math.abs(dfMeas-DF_EXACT)<0.12 && th;
+  txt("slope = "+(dfMeas>0?dfMeas.toFixed(3):"—"), x+w/2, y+h-11, 9.5, ok?"#ffffff":"#ffb454");
+  if(th) txt("187/96 = "+DF_EXACT.toFixed(3), x+w/2, y+h-3, 7.5, "rgba(0,255,213,0.7)");
+  else   txt("K0e · not equilibrated: "+thSweeps+"/"+thNeed()+" sw", x+w/2, y+h-3, 7, "#ffb454");
+}
+
+/* ── verdict ───────────────────────────────────────────────────────────── */
+function set(id,v){ var e=document.getElementById(id); if(e)e.textContent=v; }
+function judge(){
+  var m=Math.abs(magnet()), ve=document.getElementById("verdict"), fl=1/N;
+  var dead=(!expOK) || (T>3.2 && m>6*fl);
+  var near=Math.abs(T-TC_EXACT)<0.06;
+  if(sw){ ve.className="sw"; set("v-t","◆ PAYING");
+    set("v-s","the χ curve is not free. 41 temperatures × ~2.3M flips, one per frame, and you are watching the lattice scan 1.6 → 3.2 to buy it. the price is always paid."); }
+  else if(dead){ ve.className="bad"; set("v-t","☠ PHYSICS DEAD");
+    set("v-s", !expOK ? "the Boltzmann table is not populated. uphill moves are being silently rejected — every one, at every temperature. that is T = 0 exactly, and the slider is decorative. THAT IS CURSE 32, and you cast it."
+      : "at T = "+T.toFixed(2)+" ≫ T_c, |m| should be ~"+fl.toFixed(4)+". it is "+m.toFixed(4)+", "+(m/fl).toFixed(1)+"× too big. something is eating the uphill moves."); }
+  else if(near){ ve.className="crit"; set("v-t","★ CRITICAL");
+    set("v-s","T = T_c. the correlation length has DIVERGED — the shells you just dragged through no longer have a largest one. clusters inside clusters, at every zoom. d_f = 187/96 = 1.948, and nobody put it there."); }
+  else if(T<TC_EXACT){
+    var yv=yang(T);
+    if(yv>0 && m<yv-0.08){                 // K0e · it has not chosen yet. do not say that it has.
+      ve.className="sw"; set("v-t","◷ COARSENING · |m| = "+m.toFixed(3));
+      set("v-s","below T_c, but NOT equilibrated. Yang 1952 says |m| must reach "+yv.toFixed(3)+" here and it is at "+m.toFixed(3)+". the picture is a domain mosaic — it has chosen many directions, not one. domains grow as L ~ √t; this needs ~2000 sweeps ≈ "+Math.max(1,Math.round((2500-thSweeps)/180))+"s more. the state has not finished becoming the state.");
+    } else {
+      ve.className="ord"; set("v-t","ORDERED · |m| = "+m.toFixed(3));
+      set("v-s","below T_c, and equilibrated: |m| = "+m.toFixed(3)+" against Yang's exact "+(yv>0?yv.toFixed(3):"—")+". the lattice CHOSE a direction and nobody told it which. the Z₂ symmetry is still in the Hamiltonian and the state broke it anyway — spontaneous symmetry breaking, the same mechanism that gives the W and Z their mass.");
+    } }
+  else { ve.className="dis"; set("v-t","DISORDERED · |m| ≈ "+m.toFixed(4));
+    set("v-s","above T_c. TV static, as it must be. |m| ≈ "+fl.toFixed(4)+" = 1/√N² — the finite-size floor, not order. the Z₂ symmetry is intact."); }
+  var ke=document.getElementById("m-k");
+  ke.textContent = (!expOK||dead)?"FAIL":"OK"; ke.style.color=(!expOK||dead)?"#ff3355":"#00ffd5";
+  set("m-t",T.toFixed(3)); set("m-m",m.toFixed(4));
+  set("m-a",(accRate*100).toFixed(1)+"%");
+  document.getElementById("m-a").style.color = accRate<0.505 && !sw ? "#ff3355":"#ffd700";
+  set("m-df", showClu?(!thermalised()?"wait":(dfMeas>0?dfMeas.toFixed(3):"—")):"off");
+  document.getElementById("m-df").style.color=
+    (showClu&&thermalised()&&Math.abs(dfMeas-DF_EXACT)<0.12)?"#00ffd5":(showClu&&!thermalised()?"#ffb454":"#ffd700");
+}
+
+/* ── the reveal ────────────────────────────────────────────────────────── */
+function onMaster(v){
+  var prev=currentLayer;
+  currentLayer=Math.max(-1,Math.min(LAYERS.length-1,v-1));
+  var wantClu = currentLayer>=LI.clu;
+  if(wantClu!==showClu){ showClu=wantClu; measure(); }
+  if(currentLayer>=LI.chi) startSweep();
+  if(currentLayer>prev && currentLayer>=0)
+    lg("layer "+(currentLayer+1)+" · "+LAYERS[currentLayer].name.replace(/&[a-z]+;/g,"·"),"pur");
+  if(currentLayer<prev && currentLayer>=0)
+    lg("back to layer "+(currentLayer+1),"");
+  ui();
+}
+function setPreset(v){ document.getElementById("master").value=v; onMaster(v); }
+function ui(){
+  var L=currentLayer>=0?LAYERS[currentLayer]:null;
+  set("h-layer", String(currentLayer+1));
+  document.getElementById("h-shell").innerHTML = L? L.name : "void";
+  document.getElementById("tag").innerHTML = L? L.tag
+    : "the file opens at <b>VOID</b>. nothing is drawn and nothing is claimed. drag right and the machine assembles itself, one shell at a time, outward from a single spin.";
+  set("mval", currentLayer<0?"VOID":(currentLayer===LAYERS.length-1?"FULL":(currentLayer+1)+" / 12"));
+  var bar=document.getElementById("ldots");
+  bar.innerHTML="";
+  for(var i=0;i<LAYERS.length;i++){
+    var d=document.createElement("div");
+    d.className="ldot"+(i<currentLayer?" done":"")+(i===currentLayer?" active":"");
+    bar.appendChild(d);
+  }
+}
+function lg(msg,cls){
+  var el=document.getElementById("log");
+  var d=document.createElement("div");
+  d.className="e"+(cls?" "+cls:""); d.textContent=msg;
+  el.insertBefore(d, el.firstChild);
+  while(el.children.length>24) el.removeChild(el.lastChild);
+}
+function setT(v){
+  T=v; buildExp();
+  document.getElementById("sT").value=Math.round(v*100);
+  set("v-t2",v.toFixed(2)); mAcc=m2Acc=nAcc=0; acc=att=0; thSweeps=0;
+}
+
+addEventListener("keydown",function(e){
+  var el=document.getElementById("master"), v=+el.value;
+  if(e.code==="ArrowRight"||e.code==="Space"){ e.preventDefault(); el.value=Math.min(12,v+1); onMaster(+el.value); }
+  else if(e.code==="ArrowLeft"){ e.preventDefault(); el.value=Math.max(0,v-1); onMaster(+el.value); }
+  else if(e.code==="KeyA") setPreset(12);
+  else if(e.code==="KeyR") setPreset(0);
+  else if(e.code==="KeyC") setCurse(!cursed);
+});
+
+/* ── the loop ──────────────────────────────────────────────────────────── */
+var frames=0, prevNow=performance.now();
+function loop(now){
+  requestAnimationFrame(loop);
+  var dt=Math.min(0.1,(now-prevNow)/1000); prevNow=now;
+
+  if(sw) stepSweep();
+  else if(run){ sweep(N*N*3); thSweeps+=3; }
+
+  // the loupe's heartbeat — only as deep as you have revealed
+  var maxPhase = currentLayer<LI.nb?0 : currentLayer<LI.de?1 : currentLayer<LI.tab?2 :
+                 currentLayer<LI.coin?3 : 5;
+  phaseT+=dt;
+  if(phaseT>=PH_DUR){
+    phaseT=0;
+    phase++;
+    if(phase>maxPhase){ phase=0; micSnap(); }
+  }
+  if(currentLayer<0){ phase=0; }
+
+  boxT+=dt; if(boxT>1.5){ boxT=0; boxI=(boxI+1)%BOXES.length; }
+  if(++frames%12===0 && showClu && !sw) measure();
+
+  var target=has("lat")?1:0;
+  dock = REDUCED? target : dock+(target-dock)*Math.min(1,dt*6);
+
+  layout();
+  ctx.fillStyle="#050510"; ctx.fillRect(0,0,W,H);
+  if(has("lat")) drawLattice();
+  if(has("m"))   drawMBar();
+  if(has("chi")) drawChi();
+  if(has("df"))  drawLogLog();
+  drawStalk();
+  drawLoupe();
+
+  if(now-lastT>400){
+    accRate = att>0? acc/att : 0; acc=0; att=0; flips=0; lastT=now;
+    judge();
+  }
+}
+
+resize(); buildExp(); randomize(); micSnap(); setT(3.50); ui();
+lg("Isingium Atelier v1.0 ready · VOID","ok");
+lg("SPACE / → next layer · A all · R void · C curse","pur");
+lg("the machine is ISINGIUM v1.1, verbatim. v1.1 stays frozen.","");
+sweep(N*N*40);            // thermalise in the dark, so layer 7 is honest when it arrives
+requestAnimationFrame(loop);
+</script>
+</body></html>
