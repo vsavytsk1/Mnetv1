@@ -1,0 +1,489 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>MAYERIUM v1.0 — the chart, the line, and the lock-in test</title>
+<!--
+  MAYERIUM v1.0 — DOES IT LOCK IN?
+  =================================================================
+  Named for MARIA GOEPPERT MAYER, who in 1949 answered exactly the question
+  being asked here — are the magic numbers real structure, or numerology? —
+  by DERIVING them from spin-orbit coupling. Nobel 1963, second woman ever in
+  physics. She worked UNPAID for most of her career because anti-nepotism rules
+  barred her from being hired where her husband taught. She did the thing Koide
+  never did: she found the WHY.
+
+  THE ASK: "map the nuclides against half-life on a line, try a fractal curve,
+  see if any lock in."
+
+  THE ANSWER, in three panels:
+
+  1 · THE CHART — computed, not looked up. Bethe–Weizsäcker liquid drop gives
+      binding energy, the valley of stability (∂B/∂Z = 0), both drip lines
+      (S_n = 0, S_p = 0), and the fissility x = (Z²/A)/(2a_S/a_C).
+
+  2 · THE LINE — and it EXISTS. It is the GEIGER–NUTTALL law:
+          log₁₀ t½  =  (aZ + b)/√Q  +  (cZ + d)          [Viola–Seaborg]
+      Real alpha emitters fall on a STRAIGHT LINE spanning ~24 orders of
+      magnitude of half-life. Four parameters. Thirty orders. Not a fractal —
+      a line. You asked for the line. Here it is, and it was found in 1911.
+
+  3 · THE LOCK-IN TEST — the whole question, settled in one plot.
+      A geometric / discretely self-similar ladder has a CONSTANT successive
+      ratio. That is what "fractal" MEANS for a sequence.
+        magic numbers  2, 8, 20, 28, 50, 82, 126
+        ratios         4.00, 2.50, 1.40, 1.79, 1.64, 1.54   ← NOT constant
+        Efimov states  ratio 22.694, 22.694, 22.694, …      ← CONSTANT
+      The Efimov effect (1970, seen in cold Cs 2006) is a GENUINE discrete
+      scale invariance in quantum mechanics: three-body bound states spaced by
+      exactly e^(π/s₀) ≈ 22.694. THAT is what locking in looks like.
+      The magic numbers do not do it. They are a SHELL, not a fractal.
+
+  HONESTY (K1–K7):
+   K1  every surface here is computed from Bethe–Weizsäcker + Viola–Seaborg.
+       The only lookup table is the 12 real validation nuclides, and they are
+       plotted so you can see where the model MISSES.
+   K2  ALPHA DECAY ONLY. Beta decay, spontaneous fission, and cluster decay are
+       not computed. Said, not hidden.
+   K3  NO SHELL CORRECTIONS. The liquid drop is the SMOOTH BACKGROUND. The
+       residual against real data IS the shell effect — that is why Po-210
+       (N=126, magic) sits ~1.6 decades above the line. The miss is the physics.
+   K4  the ratio test is the answer to "does it lock in". It can be read in
+       three seconds and it cannot be argued with.
+   K5  VON NEUMANN'S ELEPHANT: "with four parameters I can fit an elephant, and
+       with five I can make him wiggle his trunk." A log-periodic fractal fit
+       has 4 free parameters and there are 7 magic numbers. It will fit. That
+       is not evidence — that is arithmetic.
+   K6  the ISLAND OF STABILITY half-lives are MODEL PREDICTIONS, not
+       measurements. Modern calculations span seconds → maybe thousands of
+       years, with enormous model spread. The billion-year island is a 1960s
+       hope that current calculations do not support.
+   K7  WE CANNOT REACH IT. Fusion with stable beams makes neutron-POOR nuclei.
+       The island needs N=184. Best ever reached: N≈177. The island may be real
+       and we still have no boat.
+
+  Pure Canvas 2D. No deps. χ=2 · always. Built 2026-07-15.
+-->
+<style>
+:root{
+  --bg:#050508; --gold:#ffd700; --cyan:#00d4ff; --pink:#ff69b4; --green:#00ffd5;
+  --purple:#cc44ff; --red:#ff5470; --orange:#ff8c42; --dim:#6a6a82; --txt:#e8e0d0;
+  --rule:#20202e; --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--txt);font-family:var(--mono);overflow:hidden}
+#cv{position:fixed;top:0;left:0;display:block;cursor:crosshair}
+#hud{position:fixed;top:0;left:0;right:0;padding:9px 13px;display:flex;gap:10px;align-items:flex-start;
+  pointer-events:none;font-size:11px;z-index:10;flex-wrap:wrap}
+#hud>div{pointer-events:auto;background:rgba(8,8,16,.85);border:1px solid var(--rule);border-radius:8px;padding:7px 10px}
+#ttl{color:var(--gold);font-size:13px;letter-spacing:.05em}
+#sub{color:var(--dim);font-size:10px;margin-top:2px;max-width:430px;line-height:1.42}
+#sub b{color:var(--cyan)} #sub .g{color:var(--green)} #sub .n{color:var(--red)}
+#read{display:flex;gap:5px;flex-wrap:wrap}
+.mc{background:rgba(8,8,16,.86);border:1px solid var(--rule);border-radius:6px;padding:4px 8px;min-width:60px}
+.mc .lab{font-size:8px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em}
+.mc .val{font-size:13px;font-weight:bold;color:var(--gold)}
+.mc .val.cyan{color:var(--cyan)} .mc .val.green{color:var(--green)} .mc .val.red{color:var(--red)}
+#kpanel{position:fixed;bottom:50px;left:13px;z-index:10;background:rgba(8,8,16,.92);
+  border:1px solid var(--rule);border-radius:8px;padding:8px 10px;max-width:340px;max-height:42vh;overflow-y:auto}
+#kpanel .kt{font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.1em;margin-bottom:5px}
+#kpanel .kt b{color:var(--gold)}
+#klines{font-size:9.5px;line-height:1.7;color:var(--dim)}
+#klines b{color:var(--cyan)} #klines .g{color:var(--green)} #klines .n{color:var(--red)}
+#klines .kk{color:var(--gold)} #klines .sec{margin-top:7px;padding-top:5px;border-top:1px solid var(--rule)}
+#bar{position:fixed;left:50%;transform:translateX(-50%);bottom:8px;display:flex;flex-wrap:wrap;
+  gap:5px 9px;align-items:center;justify-content:center;background:rgba(8,8,16,.95);
+  border:1px solid var(--rule);border-radius:10px;padding:7px 12px;z-index:11;max-width:98vw}
+button{background:#14141f;border:1px solid #2a2a3a;border-radius:5px;color:var(--gold);
+  font:10px var(--mono);padding:4px 8px;cursor:pointer;transition:all .12s}
+button:hover{border-color:var(--gold)} button.on{background:#1d1a0a;border-color:var(--gold)}
+button.cyan{color:var(--cyan)} button.cyan.on{border-color:var(--cyan);background:#08222a}
+button.pu{color:var(--purple)} button.pu.on{border-color:var(--purple);background:#1e0a2a}
+button.gn{color:var(--green)} button.gn.on{border-color:var(--green);background:#062522}
+.klbl{color:var(--dim);font-size:9px;text-transform:uppercase;letter-spacing:.04em}
+.sep{width:1px;height:18px;background:#2a2a3a;margin:0 1px}
+#stamp{position:fixed;bottom:8px;right:13px;color:var(--dim);font-size:9px;text-align:right;z-index:9;line-height:1.5}
+#stamp b{color:var(--gold)}
+</style></head>
+<body>
+<canvas id="cv"></canvas>
+
+<div id="hud">
+  <div>
+    <div id="ttl">MAYERIUM v1.0 · does it lock in?</div>
+    <div id="sub">the line you asked for <b>exists</b> — it's Geiger–Nuttall, 1911, and it's <b>straight</b> over 24 decades. <span class="n">the magic numbers are not a fractal.</span> <span class="g">the ratio test says so in one plot.</span></div>
+  </div>
+  <div id="read">
+    <div class="mc"><div class="lab">nuclide</div><div class="val cyan" id="m-nuc">—</div></div>
+    <div class="mc"><div class="lab">B/A</div><div class="val" id="m-ba">—</div></div>
+    <div class="mc"><div class="lab">Q α</div><div class="val" id="m-q">—</div></div>
+    <div class="mc"><div class="lab">log t½ (s)</div><div class="val green" id="m-t">—</div></div>
+    <div class="mc"><div class="lab">fissility x</div><div class="val red" id="m-x">—</div></div>
+    <div class="mc"><div class="lab">bound?</div><div class="val" id="m-b">—</div></div>
+  </div>
+</div>
+
+<div id="kpanel"><div class="kt">prove by <b>measurement</b> · K1–K7</div><div id="klines"></div></div>
+
+<div id="bar">
+  <button id="b-magic" class="gn on" onclick="showMagic=!showMagic;this.classList.toggle('on',showMagic)">magic lines</button>
+  <button id="b-island" class="pu on" onclick="showIsland=!showIsland;this.classList.toggle('on',showIsland)">island of stability</button>
+  <button id="b-drip" class="cyan on" onclick="showDrip=!showDrip;this.classList.toggle('on',showDrip)">drip lines</button>
+  <button id="b-real" class="on" onclick="showReal=!showReal;this.classList.toggle('on',showReal)">real data</button>
+  <div class="sep"></div>
+  <span class="klbl">the fractal fit:</span>
+  <button id="b-frac" class="pu" onclick="fracFit=!fracFit;this.classList.toggle('on',fracFit)">log-periodic fit ⚠</button>
+  <button id="b-eff" class="gn on" onclick="showEfimov=!showEfimov;this.classList.toggle('on',showEfimov)">vs Efimov ladder</button>
+</div>
+
+<div id="stamp">
+  MAYERIUM v1.0 · Maria Goeppert Mayer, 1949 · <b>she found the WHY</b><br>
+  the magic numbers are a SHELL, not a fractal · Efimov is the real one (22.694)<br>
+  K5: four parameters fit an elephant · χ=2 · always
+</div>
+
+<script>
+"use strict";
+var cv=document.getElementById("cv"), ctx=cv.getContext("2d");
+var W=0,H=0,DPR=1;
+function resize(){
+  DPR=Math.min(window.devicePixelRatio||1,2);
+  W=window.innerWidth; H=window.innerHeight;
+  cv.style.width=W+"px"; cv.style.height=H+"px";
+  cv.width=Math.round(W*DPR); cv.height=Math.round(H*DPR);
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+}
+window.addEventListener("resize",resize); resize();
+
+var GOLD=[255,215,0],CYAN=[0,212,255],PINK=[255,105,180],GRN=[0,255,213],
+    PUR=[204,68,255],RED=[255,84,112],ORG=[255,140,66],WHT=[235,235,245],GRY=[130,135,155];
+function css(c,a){ return "rgba("+(c[0]|0)+","+(c[1]|0)+","+(c[2]|0)+","+a+")"; }
+function mix(a,b,t){ t=t<0?0:t>1?1:t; return [a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t]; }
+
+var showMagic=true, showIsland=true, showDrip=true, showReal=true, fracFit=false, showEfimov=true;
+var hover={A:238, Z:92};
+
+// =========================================================================
+// BETHE–WEIZSÄCKER — the liquid drop. Everything on the chart falls out of it.
+//   B = a_V·A − a_S·A^⅔ − a_C·Z(Z−1)/A^⅓ − a_A·(A−2Z)²/A + δ
+// The whole tragedy of the heavy elements is in two terms:
+//   the strong force is SHORT range   → attraction ∝ A      (linear)
+//   Coulomb is LONG range             → repulsion ∝ Z²/A^⅓  (quadratic)
+// Z² outruns A. That is the ceiling. There is no trick.
+// =========================================================================
+var aV=15.75, aS=17.8, aC=0.711, aA=23.7, aP=11.18;
+function BE(A,Z){
+  if(A<1||Z<0||Z>A) return -1e9;
+  var N=A-Z, d=0;
+  if(Z%2===0&&N%2===0) d= aP/Math.sqrt(A);
+  else if(Z%2===1&&N%2===1) d=-aP/Math.sqrt(A);
+  return aV*A - aS*Math.pow(A,2/3) - aC*Z*(Z-1)/Math.pow(A,1/3) - aA*Math.pow(A-2*Z,2)/A + d;
+}
+// the valley of stability: ∂B/∂Z = 0
+function Zopt(A){ return A/(2 + aC*Math.pow(A,2/3)/(2*aA)); }
+// fissility. x ≥ 1 ⇒ the liquid drop has NO fission barrier at all.
+function fissCrit(){ return 2*aS/aC; }                       // ≈ 50.1
+function fissility(A,Z){ return (Z*Z/A)/fissCrit(); }
+// separation energies → the drip lines (the edge of the nuclear landscape)
+function Sn(A,Z){ return BE(A,Z)-BE(A-1,Z); }
+function Sp(A,Z){ return BE(A,Z)-BE(A-1,Z-1); }
+function bound(A,Z){ return Sn(A,Z)>0 && Sp(A,Z)>0; }
+// Q of alpha decay, from the mass formula. B(He-4) = 28.296 MeV
+function Qalpha(A,Z){ return BE(A-4,Z-2) + 28.296 - BE(A,Z); }
+
+// =========================================================================
+// GEIGER–NUTTALL (1911) / VIOLA–SEABORG — THE LINE.
+//   log₁₀ t½ = (aZ + b)/√Q + (cZ + d)
+// Four parameters. It tracks half-life across ~24 ORDERS OF MAGNITUDE.
+// Gamow, 1928: the alpha rattles the barrier ~10²¹ times a second and tunnels
+// with probability T. λ = f·T. That exponential sensitivity to Q is why
+// half-lives span 30 decades while Q spans a factor of 2.
+// =========================================================================
+var vsA=1.66175, vsB=-8.5166, vsC=-0.20228, vsD=-33.9069;
+function logT12(Z,Q){
+  if(!(Q>0)) return null;                                     // alpha forbidden
+  return (vsA*Z+vsB)/Math.sqrt(Q) + (vsC*Z+vsD);
+}
+
+// K1/K3: the ONLY lookup table. Real alpha emitters — so you can see the MISS.
+// name, Z, A, Q_alpha (MeV), log10 t½ (s)
+var REAL=[
+  ["Th-232",90,232,4.082, 17.65],
+  ["U-238", 92,238,4.270, 17.15],
+  ["U-235", 92,235,4.678, 16.35],
+  ["Pu-239",94,239,5.245, 11.88],
+  ["Ra-226",88,226,4.871, 10.70],
+  ["Po-210",84,210,5.407,  7.08],   // N = 126 · MAGIC · sits ABOVE the line
+  ["Rn-222",86,222,5.590,  5.52],
+  ["Cn-285",112,285,9.32,  1.46],
+  ["Fl-289",114,289,9.96,  0.32],
+  ["Og-294",118,294,11.82,-3.15],
+  ["Po-212",84,212,8.954, -6.52],
+  ["Po-214",84,214,7.833, -3.79]
+];
+
+// =========================================================================
+// THE LOCK-IN TEST. This is the whole question, and it is three seconds long.
+// A geometric / discretely self-similar ladder has a CONSTANT successive ratio.
+// That is what "fractal" MEANS for a sequence. So: take the ratios.
+// =========================================================================
+var MAGIC=[2,8,20,28,50,82,126];
+var EFIMOV_RATIO=Math.exp(Math.PI/1.00624);                   // s₀ ≈ 1.00624 → 22.694
+function magicRatios(){ var r=[]; for(var i=1;i<MAGIC.length;i++) r.push(MAGIC[i]/MAGIC[i-1]); return r; }
+function stats(r){
+  var m=0; for(var i=0;i<r.length;i++) m+=r[i]; m/=r.length;
+  var v=0; for(var j=0;j<r.length;j++) v+=Math.pow(r[j]-m,2); v/=r.length;
+  return {mean:m, sd:Math.sqrt(v), cv:Math.sqrt(v)/m};
+}
+
+// ---------- layout ----------
+var TOP=92, BOT=46;
+function panels(){
+  var l=13, r=W-13, t=TOP, b=H-BOT;
+  var cw=(r-l)*0.55;
+  return {
+    CH:{x:l, y:t, w:cw, h:b-t},
+    P1:{x:l+cw+26, y:t, w:r-(l+cw+26), h:(b-t)*0.46},
+    P2:{x:l+cw+26, y:t+(b-t)*0.48, w:r-(l+cw+26), h:(b-t)*0.50}
+  };
+}
+function frame(R,label,col){
+  ctx.strokeStyle=css(col||GOLD,0.11); ctx.lineWidth=1; ctx.strokeRect(R.x,R.y,R.w,R.h);
+  ctx.fillStyle=css(WHT,0.45); ctx.font="9px ui-monospace,monospace";
+  ctx.textAlign="left"; ctx.textBaseline="alphabetic"; ctx.fillText(label,R.x+5,R.y-4);
+}
+
+// ---------- 1 · the chart of nuclides ----------
+var NMAX=200, ZMAX=130;
+function drawChart(R){
+  frame(R,"the chart of nuclides · every cell COMPUTED from Bethe–Weizsäcker (K1)");
+  var pad=24, x0=R.x+pad, x1=R.x+R.w-6, y0=R.y+6, y1=R.y+R.h-18;
+  function px(N){ return x0+N/NMAX*(x1-x0); }
+  function py(Z){ return y1-Z/ZMAX*(y1-y0); }
+  var cw=(x1-x0)/NMAX, ch=(y1-y0)/ZMAX;
+
+  for(var Z=1;Z<=ZMAX;Z++){
+    for(var N=0;N<=NMAX;N++){
+      var A=Z+N; if(A<2) continue;
+      if(!bound(A,Z)) continue;
+      var Q=Qalpha(A,Z), lt=logT12(Z,Q);
+      var dz=Math.abs(Z-Zopt(A));
+      var col, alpha;
+      if(dz<0.6 && (!(Q>0) || (lt!==null && lt>17.5))){ col=WHT; alpha=0.95; }   // ~stable
+      else if(lt===null){ col=[60,70,110]; alpha=0.35; }                          // no alpha channel
+      else {
+        var f=Math.max(0,Math.min(1,(lt+8)/26));
+        col=mix(mix(RED,ORG,f*2), mix(GRN,CYAN,Math.max(0,f-0.5)*2), f>0.5?1:0);
+        alpha=0.30+0.5*Math.exp(-dz*dz/18);
+      }
+      ctx.fillStyle=css(col,alpha);
+      ctx.fillRect(px(N)-cw/2, py(Z)-ch/2, Math.max(1.1,cw), Math.max(1.1,ch));
+    }
+  }
+  // the valley of stability, derived
+  ctx.strokeStyle=css(GOLD,0.5); ctx.lineWidth=1.3; ctx.setLineDash([4,3]); ctx.beginPath();
+  for(var A2=4;A2<=310;A2+=2){ var Zo=Zopt(A2), No=A2-Zo;
+    if(No<0||No>NMAX||Zo>ZMAX) continue;
+    var p=px(No), q=py(Zo); ctx.lineTo(p,q); }
+  ctx.stroke(); ctx.setLineDash([]);
+  // N = Z
+  ctx.strokeStyle=css(WHT,0.13); ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(px(0),py(0)); ctx.lineTo(px(ZMAX),py(ZMAX)); ctx.stroke();
+
+  if(showMagic){
+    ctx.font="8px ui-monospace,monospace";
+    for(var i=0;i<MAGIC.length;i++){
+      var m=MAGIC[i];
+      if(m<=NMAX){ ctx.strokeStyle=css(GRN,0.20); ctx.lineWidth=1;
+        ctx.beginPath(); ctx.moveTo(px(m),y0); ctx.lineTo(px(m),y1); ctx.stroke();
+        ctx.fillStyle=css(GRN,0.55); ctx.textAlign="center"; ctx.fillText(m, px(m), y1+10); }
+      if(m<=ZMAX){ ctx.strokeStyle=css(GRN,0.20);
+        ctx.beginPath(); ctx.moveTo(x0,py(m)); ctx.lineTo(x1,py(m)); ctx.stroke();
+        ctx.fillStyle=css(GRN,0.55); ctx.textAlign="right"; ctx.fillText(m, x0-3, py(m)+3); }
+    }
+    // the predicted proton magic number
+    ctx.strokeStyle=css(PUR,0.28); ctx.setLineDash([3,3]); ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(x0,py(114)); ctx.lineTo(x1,py(114)); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(px(184),y0); ctx.lineTo(px(184),y1); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle=css(PUR,0.6); ctx.textAlign="right"; ctx.fillText("114?", x0-3, py(114)+3);
+    ctx.textAlign="center"; ctx.fillText("184?", px(184), y1+10);
+  }
+  if(showIsland){
+    ctx.strokeStyle=css(PUR,0.8); ctx.lineWidth=1.6;
+    ctx.beginPath(); ctx.ellipse(px(184),py(118),22,20,0,0,6.2832); ctx.stroke();
+    ctx.fillStyle=css(PUR,0.85); ctx.font="9px ui-monospace,monospace"; ctx.textAlign="center";
+    ctx.fillText("island?", px(184), py(118)-24);
+    // the boat problem (K7)
+    ctx.strokeStyle=css(RED,0.55); ctx.lineWidth=1.2; ctx.setLineDash([3,2]);
+    ctx.beginPath(); ctx.moveTo(px(177),y0+8); ctx.lineTo(px(177),y1); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle=css(RED,0.7); ctx.font="8px ui-monospace,monospace"; ctx.textAlign="right";
+    ctx.fillText("N=177 · furthest ever reached →", px(177)-3, y0+16);
+  }
+  if(showReal){
+    for(var r=0;r<REAL.length;r++){
+      var d=REAL[r], N2=d[2]-d[1];
+      ctx.strokeStyle=css(WHT,0.85); ctx.lineWidth=1.2;
+      ctx.beginPath(); ctx.arc(px(N2),py(d[1]),3.4,0,6.2832); ctx.stroke();
+    }
+  }
+  // cursor
+  var hn=hover.A-hover.Z;
+  ctx.strokeStyle=css(PINK,0.9); ctx.lineWidth=1.6;
+  ctx.beginPath(); ctx.arc(px(hn),py(hover.Z),5,0,6.2832); ctx.stroke();
+  ctx.fillStyle=css(WHT,0.4); ctx.font="9px ui-monospace,monospace";
+  ctx.textAlign="center"; ctx.fillText("neutrons  N →", (x0+x1)/2, y1+20);
+  ctx.save(); ctx.translate(R.x+9, (y0+y1)/2); ctx.rotate(-Math.PI/2);
+  ctx.fillText("protons  Z →", 0, 0); ctx.restore();
+}
+
+// ---------- 2 · THE LINE (you asked for it — here it is) ----------
+function drawLine(R){
+  frame(R,"THE LINE · Geiger–Nuttall 1911 · log t½ vs Z/√Q · 24 decades, and it is STRAIGHT", CYAN);
+  var pad=30, x0=R.x+pad, x1=R.x+R.w-8, y0=R.y+8, y1=R.y+R.h-18;
+  var xmin=20, xmax=50, ymin=-10, ymax=22;
+  function px(v){ return x0+(v-xmin)/(xmax-xmin)*(x1-x0); }
+  function py(v){ return y1-(v-ymin)/(ymax-ymin)*(y1-y0); }
+  // grid
+  ctx.strokeStyle=css(WHT,0.06); ctx.lineWidth=1;
+  for(var g=-10;g<=20;g+=5){ ctx.beginPath(); ctx.moveTo(x0,py(g)); ctx.lineTo(x1,py(g)); ctx.stroke(); }
+  // the Viola–Seaborg prediction for each even-Z chain — a family of near-lines
+  for(var Z=84;Z<=118;Z+=4){
+    ctx.strokeStyle=css(mix(CYAN,PUR,(Z-84)/34),0.30); ctx.lineWidth=1;
+    ctx.beginPath(); var on=false;
+    for(var Q=3.5;Q<=13;Q+=0.1){
+      var lt=logT12(Z,Q); if(lt===null) continue;
+      var xv=Z/Math.sqrt(Q);
+      if(xv<xmin||xv>xmax||lt<ymin||lt>ymax){ on=false; continue; }
+      var p=px(xv), q=py(lt); if(!on){ ctx.moveTo(p,q); on=true; } else ctx.lineTo(p,q);
+    }
+    ctx.stroke();
+  }
+  // the real data — the point of the whole panel
+  for(var r=0;r<REAL.length;r++){
+    var d=REAL[r], xv=d[1]/Math.sqrt(d[3]), yv=d[4];
+    if(xv<xmin||xv>xmax) continue;
+    var pred=logT12(d[1],d[3]), miss=Math.abs(pred-yv);
+    ctx.fillStyle=css(miss>1.2?RED:GOLD,0.95);
+    ctx.beginPath(); ctx.arc(px(xv),py(yv),3.6,0,6.2832); ctx.fill();
+    ctx.fillStyle=css(WHT,0.5); ctx.font="7.5px ui-monospace,monospace"; ctx.textAlign="left";
+    ctx.fillText(d[0], px(xv)+5, py(yv)+2.5);
+    if(miss>1.2){                                   // K3: the MISS is the shell effect
+      ctx.strokeStyle=css(RED,0.5); ctx.lineWidth=1; ctx.setLineDash([2,2]);
+      ctx.beginPath(); ctx.moveTo(px(xv),py(yv)); ctx.lineTo(px(xv),py(pred)); ctx.stroke(); ctx.setLineDash([]);
+    }
+  }
+  ctx.fillStyle=css(WHT,0.38); ctx.font="8px ui-monospace,monospace"; ctx.textAlign="center";
+  for(var t2=20;t2<=50;t2+=10) ctx.fillText(t2, px(t2), y1+11);
+  ctx.textAlign="left"; ctx.fillStyle=css(GRN,0.55);
+  ctx.fillText("↑ log₁₀ t½ (s) · from 10⁻⁷ s to 10¹⁷ s", x0+3, y0+9);
+  ctx.fillStyle=css(RED,0.6);
+  ctx.fillText("red = the model MISSES → that gap IS the shell effect (K3)", x0+3, y1-4);
+}
+
+// ---------- 3 · THE LOCK-IN TEST ----------
+function drawLockIn(R){
+  frame(R,"THE LOCK-IN TEST · a fractal ladder has a CONSTANT ratio · take the ratios", PUR);
+  var pad=34, x0=R.x+pad, x1=R.x+R.w-8, y0=R.y+10, y1=R.y+R.h-40;
+  var mr=magicRatios(), st=stats(mr);
+  var ymax=26;
+  function py(v){ return y1-Math.min(1,v/ymax)*(y1-y0); }
+  function px(i,n){ return x0+(i+0.5)/n*(x1-x0); }
+
+  // the Efimov ladder — the real one
+  if(showEfimov){
+    ctx.strokeStyle=css(GRN,0.8); ctx.lineWidth=1.6; ctx.setLineDash([5,3]);
+    ctx.beginPath(); ctx.moveTo(x0,py(EFIMOV_RATIO)); ctx.lineTo(x1,py(EFIMOV_RATIO)); ctx.stroke(); ctx.setLineDash([]);
+    for(var e=0;e<6;e++){
+      ctx.fillStyle=css(GRN,0.9);
+      ctx.beginPath(); ctx.arc(px(e,6),py(EFIMOV_RATIO),3.4,0,6.2832); ctx.fill();
+    }
+    ctx.fillStyle=css(GRN,0.95); ctx.font="9px ui-monospace,monospace"; ctx.textAlign="left";
+    ctx.fillText("EFIMOV · ratio = e^(π/s₀) = "+EFIMOV_RATIO.toFixed(3)+" · CV = 0.000  ✓ LOCKED", x0+3, py(EFIMOV_RATIO)-7);
+  }
+  // the magic numbers
+  ctx.strokeStyle=css(GOLD,0.85); ctx.lineWidth=1.6; ctx.beginPath();
+  for(var i=0;i<mr.length;i++){ var p=px(i,mr.length), q=py(mr[i]); i?ctx.lineTo(p,q):ctx.moveTo(p,q); }
+  ctx.stroke();
+  for(var j=0;j<mr.length;j++){
+    var p2=px(j,mr.length), q2=py(mr[j]);
+    ctx.fillStyle=css(GOLD,1); ctx.beginPath(); ctx.arc(p2,q2,3.6,0,6.2832); ctx.fill();
+    ctx.fillStyle=css(WHT,0.75); ctx.font="8px ui-monospace,monospace"; ctx.textAlign="center";
+    ctx.fillText(mr[j].toFixed(2), p2, q2-7);
+    ctx.fillStyle=css(WHT,0.4); ctx.fillText(MAGIC[j+1]+"/"+MAGIC[j], p2, y1+11);
+  }
+  ctx.strokeStyle=css(GOLD,0.28); ctx.lineWidth=1; ctx.setLineDash([2,3]);
+  ctx.beginPath(); ctx.moveTo(x0,py(st.mean)); ctx.lineTo(x1,py(st.mean)); ctx.stroke(); ctx.setLineDash([]);
+  ctx.fillStyle=css(RED,0.95); ctx.font="9px ui-monospace,monospace"; ctx.textAlign="left";
+  ctx.fillText("MAGIC · ratios 4.00 → 1.40 · CV = "+st.cv.toFixed(3)+"  ✗ NOT LOCKED", x0+3, py(st.mean)-7);
+
+  // the verdict
+  ctx.font="9.5px ui-monospace,monospace"; ctx.textAlign="left";
+  ctx.fillStyle=css(WHT,0.72);
+  ctx.fillText("a geometric ladder has ONE ratio. Efimov: CV = 0. magic: CV = "+st.cv.toFixed(2)+".", x0, y1+28);
+  ctx.fillStyle=css(GRN,0.85);
+  ctx.fillText("the magic numbers are a SHELL — orbitals + spin–orbit. Mayer, 1949.", x0, y1+40);
+  if(fracFit){
+    ctx.fillStyle=css(RED,0.9);
+    ctx.fillText("⚠ log-periodic fit: 4 free parameters, 7 data points. it WILL fit.", x0, y1+52);
+    ctx.fillStyle=css(RED,0.65); ctx.font="8.5px ui-monospace,monospace";
+    ctx.fillText("\"with four parameters I can fit an elephant, and with five I can make", x0, y1+63);
+    ctx.fillText("him wiggle his trunk.\" — von Neumann.  that is not evidence. (K5)", x0, y1+73);
+  }
+}
+
+// ---------- HUD ----------
+function updateHUD(){
+  var A=hover.A, Z=hover.Z, N=A-Z;
+  var b=BE(A,Z), Q=Qalpha(A,Z), lt=logT12(Z,Q), x=fissility(A,Z), bd=bound(A,Z);
+  set("m-nuc","Z="+Z+" N="+N+" A="+A);
+  set("m-ba",(b/A).toFixed(3)+" MeV");
+  set("m-q",(Q>0?Q.toFixed(2):"—")+" MeV");
+  var te=document.getElementById("m-t");
+  te.textContent = lt===null ? "α forbidden" : lt.toFixed(2);
+  te.style.color = lt===null ? "#00ffd5" : (lt<0?"#ff5470":"#ffd700");
+  var xe=document.getElementById("m-x");
+  xe.textContent=x.toFixed(3); xe.style.color = x>=1 ? "#ff5470" : "#00ffd5";
+  var be=document.getElementById("m-b");
+  be.textContent = bd?"yes":"UNBOUND"; be.style.color = bd?"#00ffd5":"#ff5470";
+
+  var st=stats(magicRatios());
+  document.getElementById("klines").innerHTML=
+  '<div class="kk">THE ANSWER — the ratio test</div>'+
+  '<div>magic 2,8,20,28,50,82,126 → ratios <b>4.00 2.50 1.40 1.79 1.64 1.54</b></div>'+
+  '<div>coefficient of variation <b>'+st.cv.toFixed(3)+'</b> <span class="n">✗ not a geometric ladder</span></div>'+
+  '<div>Efimov ratio <b>'+EFIMOV_RATIO.toFixed(3)+'</b> · CV <b>0.000</b> <span class="g">✓ genuine discrete scale invariance</span></div>'+
+  '<div style="font-size:8.5px;line-height:1.5">Efimov 1970, seen in ultracold Cs 2006. THAT is what a quantum fractal ladder looks like: <b>one constant ratio, forever</b>. the magic numbers do not do it.</div>'+
+
+  '<div class="sec"><span class="kk">the WHY</span> · Mayer, 1949 — she derived them:'+
+  '<div style="font-size:8.5px;line-height:1.6">1s½(2)→<b>2</b> · +1p(6)→<b>8</b> · +1d,2s(12)→<b>20</b><br>'+
+  'then <b>SPIN–ORBIT</b> drops 1f7/2 down (8)→<b>28</b> · →<b>50</b> · →<b>82</b> · →<b>126</b></div>'+
+  '<span style="font-size:8.5px">orbitals and a coupling term. arithmetic, not self-similarity. she was told it was coincidence. she found the mechanism. <b>that is the move Koide never made.</b></span></div>'+
+
+  '<div class="sec"><span class="kk">K3</span> the liquid drop has NO shell correction. it is the smooth background. <b>Po-210 (N=126, magic) sits ~1.6 decades above the line</b> — that gap is the shell. <span class="g">the miss IS the physics.</span></div>'+
+
+  '<div class="sec"><span class="kk">the ceiling</span> strong force = SHORT range → attraction ∝ A. Coulomb = LONG range → repulsion ∝ Z²/A^⅓. <b>Z² outruns A.</b> fissility x = (Z²/A)/'+fissCrit().toFixed(1)+'; at <b>x ≥ 1 the liquid drop has no fission barrier at all</b>. everything above Z≈104 exists ONLY on a few MeV of shell correction. <span class="n">there is no trick. the repulsion is real.</span></div>'+
+
+  '<div class="sec"><span class="kk">K6</span> island half-lives are MODEL PREDICTIONS. modern calcs: seconds → maybe thousands of years, huge spread. <span class="n">the billion-year island is a 1960s hope current calculations do not support.</span><br>'+
+  '<span class="kk">K7</span> and we cannot GET there. fusion with stable beams makes neutron-POOR nuclei. island needs N=184. best ever: <b>N≈177</b>. <span class="n">the island may be real and we still have no boat.</span></div>'+
+
+  '<div class="sec" style="font-size:8.5px"><span class="kk">K2</span> ALPHA DECAY ONLY. beta decay, spontaneous fission, cluster decay not computed. <span class="kk">K5</span> a log-periodic fit has 4 free parameters against 7 points. it will fit. that is arithmetic, not evidence.</div>';
+}
+function set(id,v){ var e=document.getElementById(id); if(e)e.textContent=v; }
+
+function draw(){
+  requestAnimationFrame(draw);
+  ctx.fillStyle="#050508"; ctx.fillRect(0,0,W,H);
+  var P=panels();
+  drawChart(P.CH); drawLine(P.P1); drawLockIn(P.P2); updateHUD();
+}
+cv.addEventListener("mousemove",function(e){
+  var P=panels(), R=P.CH, pad=24;
+  var x0=R.x+pad, x1=R.x+R.w-6, y0=R.y+6, y1=R.y+R.h-18;
+  var mx=e.clientX, my=e.clientY;
+  if(mx<x0||mx>x1||my<y0||my>y1) return;
+  var N=Math.round((mx-x0)/(x1-x0)*NMAX), Z=Math.round((y1-my)/(y1-y0)*ZMAX);
+  if(Z<1) Z=1; if(N<0) N=0;
+  hover={A:Z+N, Z:Z};
+});
+requestAnimationFrame(draw);
+</script>
+</body></html>
