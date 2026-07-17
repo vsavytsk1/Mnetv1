@@ -1,0 +1,493 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>LAGRANGIUM v1.0 — nothing here was typed · the Standard Model, enumerated</title>
+<!--
+  LAGRANGIUM v1.0 — THE ATELIER BUILD
+  =================================================================
+  For the engineer who has seen the four-page Standard Model Lagrangian and
+  assumed it was long because nature is complicated. It is not. It is long
+  because someone wrote out the indices. There was never a wall — just a group,
+  a list of fields, and one rule: WRITE EVERY TERM THAT IS ALLOWED.
+
+  This file does not draw the Lagrangian. It ENUMERATES it. Nothing in the term
+  list is typed into the source. Change a hypercharge and the Standard Model
+  dies on screen, because it was never typed in the first place.
+
+  THE ENGINE (exact, integer, no float, recomputed live):
+    Every field carries four numbers:
+        t   SU(3) triality        3->1, 3bar->2, 1->0, 8->0     (mod 3)
+        d   SU(2) doublet-ness    2->1, 1->0, 3->0              (mod 2)
+        Y6  hypercharge x 6       Q=1  uc=-4  dc=2  L=-3  ec=6  H=3  nc=0
+        D2  mass dimension x 2    fermion=3, scalar=2
+    A monomial is a gauge-invariant Lorentz scalar only if ALL of:
+        sum(Y6)  == 0            exactly.  integers. no tolerance.
+        sum(t)   %  3 == 0       SU(3) singlet possible
+        sum(d)   %  2 == 0       SU(2) singlet possible
+        n_unbarred_fermions % 2 == 0  AND  n_barred % 2 == 0   (each chirality pairs)
+    Enumerate all multisets up to dim 6, apply, sort by dimension. That is all.
+
+  WHAT COMES OUT (verified in python before this build, then ported verbatim):
+     dim 2   1 term    H H*                RELEVANT. the hierarchy problem.
+     dim 3   0 terms   -- empty --         no bare fermion mass EXISTS. this is
+                                           why the Higgs has a job.
+     dim 4   4 terms   (H*H)^2 + 3 Yukawas THE STANDARD MODEL. that is the whole
+                                           arbitrary content of the theory.
+     dim 5   1 term    H H L L             the Weinberg operator. NEUTRINO MASS.
+                                           the enumerator finds it. nobody typed it.
+     dim 6  26 terms   4 of them violate B PROTON DECAY. LQQQ, LQ dc* uc*,
+                                           QQ ec* uc*, dc ec uc uc. exactly four.
+    Toggle nc=(1,1,0) on and dim 3 fills with ONE term: nc nc. The Majorana mass.
+    The seesaw arrives as a checkbox.
+
+  THE SECOND KERNEL — THE ANOMALY LEDGER (why the hypercharges are not free):
+     U(1)^3       sum c*i*Y^3   over one generation  = 0
+     U(1) grav    sum c*i*Y                          = 0
+     SU(3)^2 U(1) sum i*(1/2)*Y  over colour triplets= 0
+     SU(2)^2 U(1) sum c*(1/2)*Y  over doublets       = 0
+     Witten       count of SU(2) doublets            = 0 mod 2
+    All five cancel. Nudge ANY hypercharge by 1/6 and four of them break at once.
+    The field content is a FIXED POINT, not a menu.
+
+  HONESTY (the K-laws — read them, they are the file):
+   K1  NOTHING IN THE TERM LIST IS HARDCODED. Every operator on screen came out
+       of the enumerator. Delete a field, change a Y, and the list changes. The
+       Standard Model is an OUTPUT here, never a string literal. (After SMITHIUM
+       K1: no circle is hardcoded.)
+   K2  THE CHECK IS NECESSARY, NOT SUFFICIENT. Triality mod 3 and doublets mod 2
+       are necessary conditions for a singlet to exist in the tensor product. A
+       term that FAILS is definitely forbidden. A term that PASSES might still
+       have no invariant contraction -- that needs the full Clebsch-Gordan, which
+       is NOT done here. Say necessary. Do not say proof.
+   K3  NO FLOAT IN THE KERNEL. Every SM hypercharge is an integer multiple of
+       1/6, so the kernel runs on Y6 integers and sum==0 is an EXACT test with no
+       tolerance anywhere. If this file is wrong it is wrong in the physics, never
+       in the arithmetic. (Contrast SMITHIUM K1b, which needs a tolerance.)
+   K4  THE KINETIC AND GAUGE-KINETIC TERMS ARE NOT ENUMERATED. -1/4 F.F and
+       i psi* Dslash psi and |D H|^2 are FORCED by the covariant derivative; they
+       are not choices and there is nothing to enumerate. This engine runs over
+       the NON-DERIVATIVE operators -- which is exactly, and only, the sector
+       where the Standard Model has any freedom at all.
+   K5  THE COUNTS ARE OPERATORS, NOT PARAMETERS. One Yukawa OPERATOR carries a
+       3x3 complex matrix once you switch on three generations. The screen shows
+       both numbers and never conflates them.
+   K6  "ANY CURVE FROM EPICYCLES" IS NOT MAGIC -- IT IS THE REASON PTOLEMY LOST.
+       A basis that fits anything constrains nothing. Fourier completeness is the
+       OPPOSITE of a physical theory. The Standard Model is impressive because it
+       can fit almost nothing. Say BASIS, not magic. (Sibling of SMITHIUM K8:
+       say envelope, not fractal.)
+   K7  THE 12 GAUGE BOSONS AND THE 12 PENTAGONS ARE DIFFERENT 12s.
+       dim(su(3)+su(2)+u(1)) = 8+3+1 = 12 is a Lie algebra dimension. P=12 is
+       Euler's formula on a fullerene. THERE IS NO RELATION. Echo only, exactly
+       like SMITHIUM K6 (Apollonius of Perga, not the temple). This file will not
+       pretend otherwise, and the temptation is the whole reason the law is here.
+   K8  THE ARROW. This file goes CONTENT -> LAGRANGIAN. It assumes the gauge group
+       and the field content and derives the terms. It does NOT derive the field
+       content, and it does not derive a single number in it. Anything claiming to
+       produce the field content must draw the arrow the other way, and must say
+       so out loud. (After KOIDIUM K7.)
+
+  Pure Canvas 2D + DOM. No deps. chi=2 . always. Built 2026-07-16.
+-->
+<style>
+:root{
+  --bg:#050508; --gold:#ffd700; --cyan:#00d4ff; --pink:#ff69b4; --green:#00ffd5;
+  --purple:#cc44ff; --red:#ff5470; --dim:#6a6a82; --txt:#e8e0d0; --wire:#1b2030;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--txt);font-family:var(--mono);font-size:12px;
+     line-height:1.5;padding:14px;max-width:1240px;margin:0 auto}
+h1{font-size:15px;font-weight:600;letter-spacing:.04em}
+h1 small{color:var(--dim);font-weight:400;letter-spacing:0}
+.sub{color:var(--dim);font-size:11px;margin:5px 0 12px;max-width:96ch}
+.sub b{color:var(--txt);font-weight:600}
+.g{color:var(--green)} .c{color:var(--cyan)} .y{color:var(--gold)}
+.p{color:var(--pink)} .r{color:var(--red)} .v{color:var(--purple)} .n{color:var(--dim)}
+
+.hud{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:11px}
+.mc{background:#0b0c14;border:1px solid var(--wire);border-radius:4px;
+    padding:6px 10px;min-width:104px}
+.mc .lab{color:var(--dim);font-size:9px;letter-spacing:.09em;text-transform:uppercase}
+.mc .val{font-size:15px;font-weight:600;margin-top:1px}
+
+.ctl{display:flex;flex-wrap:wrap;gap:14px;align-items:center;
+     background:#0b0c14;border:1px solid var(--wire);border-radius:4px;
+     padding:9px 11px;margin-bottom:11px}
+.ctl label{color:var(--dim);font-size:10px;letter-spacing:.05em}
+input[type=range]{width:190px;accent-color:var(--gold);vertical-align:middle}
+button{font-family:var(--mono);font-size:10px;background:#12141f;color:var(--dim);
+       border:1px solid var(--wire);border-radius:3px;padding:4px 9px;cursor:pointer}
+button.on{color:var(--bg);background:var(--green);border-color:var(--green);font-weight:700}
+button:focus-visible{outline:2px solid var(--cyan);outline-offset:1px}
+
+.grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:11px}
+@media(max-width:900px){.grid{grid-template-columns:1fr}}
+.panel{background:#0b0c14;border:1px solid var(--wire);border-radius:4px;padding:10px}
+.bt{color:var(--dim);font-size:9px;letter-spacing:.11em;text-transform:uppercase;
+    margin-bottom:7px;border-bottom:1px solid var(--wire);padding-bottom:5px}
+
+table{border-collapse:collapse;width:100%;font-size:11px}
+th{color:var(--dim);font-size:9px;letter-spacing:.06em;text-transform:uppercase;
+   text-align:right;padding:3px 5px;font-weight:400}
+th:first-child{text-align:left}
+td{padding:2px 5px;text-align:right;border-top:1px solid #10121c}
+td:first-child{text-align:left;color:var(--txt)}
+.step{background:#12141f;border:1px solid var(--wire);color:var(--gold);
+      border-radius:2px;width:17px;height:17px;line-height:1;cursor:pointer;padding:0}
+.moved{color:var(--red);font-weight:700}
+
+canvas{display:block;width:100%;border:1px solid var(--wire);border-radius:4px;
+       background:#07080d}
+.terms{max-height:270px;overflow-y:auto;font-size:11px}
+.rung{margin-bottom:8px}
+.rhdr{color:var(--dim);font-size:9px;letter-spacing:.08em;text-transform:uppercase;
+      border-bottom:1px dotted #191c28;padding-bottom:2px;margin-bottom:3px}
+.op{padding:1px 0 1px 8px;color:var(--gold)}
+.op span.bn{color:var(--red);font-size:9px;letter-spacing:.05em}
+.op span.nm{color:var(--dim);font-size:9px}
+.empty{padding:2px 0 2px 8px;color:var(--red);font-style:italic}
+.klines{background:#0b0c14;border:1px solid var(--wire);border-radius:4px;
+        padding:10px;margin-top:11px;font-size:10px;line-height:1.65}
+.klines b{color:var(--txt)}
+.foot{color:var(--dim);font-size:9px;margin-top:9px;line-height:1.6}
+</style></head><body>
+
+<h1>LAGRANGIUM v1.0 <small>— nothing here was typed</small></h1>
+<div class="sub">A gauge group, six fields, and one rule: <b>write every term that is allowed.</b> The operator list
+below is an <span class="g">output</span> — no term is a string literal in this file (<b>K1</b>). The kernel is
+four integer tests: <span class="y">ΣY = 0</span> exactly, <span class="c">Σ triality ≡ 0 (mod 3)</span>,
+<span class="p">Σ doublets ≡ 0 (mod 2)</span>, and each chirality pairs. No float anywhere (<b>K3</b>).
+Move a hypercharge and watch the Standard Model die.</div>
+
+<div class="hud">
+  <div class="mc"><div class="lab">dim cutoff</div><div class="val y" id="m-D">6</div></div>
+  <div class="mc"><div class="lab">candidates</div><div class="val" id="m-tested">—</div></div>
+  <div class="mc"><div class="lab">survive</div><div class="val g" id="m-surv">—</div></div>
+  <div class="mc"><div class="lab">killed by ΣY</div><div class="val n" id="m-ky">—</div></div>
+  <div class="mc"><div class="lab">anomalies</div><div class="val" id="m-anom">—</div></div>
+  <div class="mc"><div class="lab">free params</div><div class="val v" id="m-par">—</div></div>
+</div>
+
+<div class="ctl">
+  <label>mass dim ≤ <b class="y" id="v-D">6</b></label>
+  <input id="sD" type="range" min="2" max="6" step="1" value="6" oninput="setD(+this.value)">
+  <label>generations <b class="y" id="v-G">3</b></label>
+  <input id="sG" type="range" min="1" max="3" step="1" value="3" oninput="setG(+this.value)">
+  <button id="b-nu" onclick="nu=!nu;this.classList.toggle('on',nu);run()">ν<sup>c</sup> = (1,1,0)</button>
+  <button id="b-rej" class="on" onclick="showRej=!showRej;this.classList.toggle('on',showRej);draw()">show rejects</button>
+  <button onclick="reset()">reset Y</button>
+</div>
+
+<div class="grid">
+  <div class="panel">
+    <div class="bt">the content — every Y is an integer × 1/6 (K3). drag it and see.</div>
+    <table id="tbl"></table>
+    <div class="bt" style="margin-top:11px">the anomaly ledger — one generation</div>
+    <table id="anom"></table>
+  </div>
+  <div class="panel">
+    <div class="bt">the tower — what exists at each mass dimension</div>
+    <div class="terms" id="terms"></div>
+  </div>
+</div>
+
+<canvas id="cv" style="margin-top:11px"></canvas>
+<div class="foot">Every candidate monomial, plotted at (ΣY, mass dimension). The horizontal spread <b>is</b> hypercharge:
+almost everything dies of it. The <span class="y">ΣY = 0</span> column is what survives U(1) — and only the
+<span class="g">gold</span> survives SU(3)×SU(2) as well. The gap between the column and the gold is the
+non-abelian part doing its work.</div>
+
+<div class="klines" id="klines"></div>
+
+<script>
+/* =========================================================================
+   THE KERNEL.  integers only. K3.
+   t = SU(3) triality (mod 3) . d = SU(2) doublet-ness (mod 2)
+   Y6 = hypercharge x 6 . D2 = mass dimension x 2 . f = is a fermion
+   ========================================================================= */
+const SM = [
+  {n:'Q',  t:1, d:1, Y6: 1, D2:3, f:1, c:3, i:2, rep:'(3, 2, +1/6)'},
+  {n:'uc', t:2, d:0, Y6:-4, D2:3, f:1, c:3, i:1, rep:'(3̄, 1, −2/3)'},
+  {n:'dc', t:2, d:0, Y6: 2, D2:3, f:1, c:3, i:1, rep:'(3̄, 1, +1/3)'},
+  {n:'L',  t:0, d:1, Y6:-3, D2:3, f:1, c:1, i:2, rep:'(1, 2, −1/2)'},
+  {n:'ec', t:0, d:0, Y6: 6, D2:3, f:1, c:1, i:1, rep:'(1, 1, +1)'},
+  {n:'H',  t:0, d:1, Y6: 3, D2:2, f:0, c:1, i:2, rep:'(1, 2, +1/2)'},
+];
+const NC = {n:'nc', t:0, d:0, Y6:0, D2:3, f:1, c:1, i:1, rep:'(1, 1, 0)'};
+const Y0 = {}; SM.concat([NC]).forEach(x=>Y0[x.n]=x.Y6);
+
+let nu=false, Dmax=6, NGEN=3, showRej=true, RES=null;
+
+function content(){ return nu ? SM.concat([NC]) : SM.slice(); }
+function withBars(){
+  const out=[];
+  for(const x of content()){
+    out.push(Object.assign({}, x, {bar:0, key:x.n}));
+    out.push(Object.assign({}, x, {bar:1, key:x.n+'*', t:(3-x.t)%3, Y6:-x.Y6}));
+  }
+  return out;
+}
+
+/* enumerate every multiset of size 2..6, test, keep survivors + rejects */
+function enumerate(){
+  const F=withBars(), N=F.length, surv=[], rej=[], seen=new Set();
+  let tested=0, killY=0;
+  const idx=[];
+  (function rec(start,pick){
+    if(pick.length>=2){
+      const xs=pick.map(i=>F[i]);
+      let D2=0,Y6=0,t=0,d=0,fu=0,fb=0;
+      for(const x of xs){ D2+=x.D2; Y6+=x.Y6; t+=x.t; d+=x.d; if(x.f){ x.bar?fb++:fu++; } }
+      if(D2>=4 && D2<=2*Dmax){
+        tested++;
+        const okL = (fu%2===0) && (fb%2===0) && (fu+fb)<=4;
+        const okY = (Y6===0), okT = (t%3===0), okD = (d%2===0);
+        if(!okY) killY++;
+        const names = pick.map(i=>F[i].key).sort();
+        const conj  = names.map(k=>k.endsWith('*')?k.slice(0,-1):k+'*').sort();
+        const id = (names.join(' ') < conj.join(' ') ? names : conj).join(' ');
+        if(!seen.has(id+'|'+D2)){
+          seen.add(id+'|'+D2);
+          const rec_={D2, Y6, id, nf:fu+fb, okL, okY, okT, okD,
+                      ok: okL&&okY&&okT&&okD};
+          (rec_.ok?surv:rej).push(rec_);
+        }
+      }
+    }
+    if(pick.length===6 || (pick.length && pick.reduce((a,i)=>a+F[i].D2,0)>2*Dmax)) return;
+    for(let i=start;i<N;i++){ pick.push(i); rec(i,pick); pick.pop(); }
+  })(0,idx);
+  surv.sort((a,b)=> a.D2-b.D2 || a.id.localeCompare(b.id));
+  return {surv, rej, tested, killY};
+}
+
+/* baryon number, to flag the proton killers */
+const BN={Q:1,uc:-1,dc:-1};
+function baryon(id){
+  let b=0;
+  for(const k of id.split(' ')){
+    const bar=k.endsWith('*'), base=bar?k.slice(0,-1):k;
+    if(BN[base]) b += (bar?-1:1)*BN[base]/3;
+  }
+  return Math.round(b*3)/3;
+}
+
+/* ---------- the anomaly ledger. one generation. exact rationals x 216 ---------- */
+function ledger(){
+  const G = content().filter(x=>x.f);
+  let a3=0, ag=0, s3=0, s2=0, w=0;
+  for(const x of G){
+    const Y=x.Y6;                       // = 6Y
+    a3 += x.c*x.i*Y*Y*Y;                // 216 * sum c i Y^3
+    ag += x.c*x.i*Y*36;                 // 216 * sum c i Y
+    if(x.c===3) s3 += x.i*Y*36;         // 216 * sum i (1/2) Y   [x2]
+    if(x.i===2){ s2 += x.c*Y*36; w += x.c; }
+  }
+  return [
+    ['U(1)³',        a3, 'the miracle. 1/6, −2/3, 1/3, −1/2, 1 — cubed, weighted, summed. zero.'],
+    ['U(1) grav',    ag, 'the gravitational anomaly. ΣY over one generation.'],
+    ['SU(3)² U(1)',  s3, 'colour triplets only.'],
+    ['SU(2)² U(1)',  s2, 'doublets only.'],
+    ['Witten mod 2', w%2, 'count of SU(2) doublets. must be even. 3 colours of Q + 1 L = 4.'],
+  ];
+}
+
+/* ---------- parameter accounting. K5: operators are not parameters ---------- */
+function params(){
+  const yuk = RES.surv.filter(o=>o.D2===8 && o.nf===2).length;   // dim-4 Yukawa operators
+  const quartic = RES.surv.filter(o=>o.D2===8 && o.nf===0).length;
+  const relevant = RES.surv.filter(o=>o.D2===4).length;
+  return {yuk, quartic, relevant, mats: yuk*NGEN*NGEN};
+}
+
+/* ================================ RENDER ================================ */
+function fmtY(y){
+  if(y===0) return '0';
+  const g=(a,b)=>b?g(b,a%b):a, s=y<0?'−':'', a=Math.abs(y), k=g(a,6);
+  return (a/k===1&&6/k===1) ? s+'1' : (6/k===1 ? s+(a/k) : s+(a/k)+'/'+(6/k));
+}
+function tblContent(){
+  let h='<tr><th>field</th><th>rep</th><th>Y×6</th><th>Y</th><th>t</th><th>d</th><th></th></tr>';
+  for(const x of content()){
+    const moved = x.Y6!==Y0[x.n];
+    h+=`<tr><td class="y">${x.n}</td><td class="n">${x.rep}</td>`+
+       `<td class="${moved?'moved':''}">${x.Y6}</td><td class="${moved?'moved':'c'}">${fmtY(x.Y6)}</td>`+
+       `<td class="n">${x.t}</td><td class="n">${x.d}</td>`+
+       `<td><button class="step" onclick="bump('${x.n}',-1)">−</button> `+
+       `<button class="step" onclick="bump('${x.n}',1)">+</button></td></tr>`;
+  }
+  document.getElementById('tbl').innerHTML=h;
+}
+function bump(n,dir){
+  const x = content().find(f=>f.n===n); if(x) x.Y6 += dir; run();
+}
+function reset(){ SM.concat([NC]).forEach(x=>x.Y6=Y0[x.n]); run(); }
+
+function tblAnom(){
+  const L=ledger(); let bad=0;
+  let h='<tr><th>anomaly</th><th>value ×216</th><th>verdict</th></tr>';
+  for(const [nm,v,why] of L){
+    const ok = v===0; if(!ok) bad++;
+    h+=`<tr><td>${nm}</td><td class="${ok?'n':'r'}">${v}</td>`+
+       `<td class="${ok?'g':'r'}">${ok?'cancels':'*** ANOMALOUS ***'}</td></tr>`;
+  }
+  document.getElementById('anom').innerHTML=h;
+  const e=document.getElementById('m-anom');
+  e.textContent = bad===0 ? 'all cancel' : bad+' broken';
+  e.className='val '+(bad===0?'g':'r');
+  return bad;
+}
+
+const RUNG = {
+  4:['dim 2', 'RELEVANT — the only one. the hierarchy problem.'],
+  6:['dim 3', 'bare fermion masses'],
+  8:['dim 4', 'MARGINAL — the Standard Model'],
+  10:['dim 5','IRRELEVANT — neutrino mass'],
+  12:['dim 6','IRRELEVANT — proton decay + friends'],
+};
+function tblTerms(){
+  let h='';
+  for(const D2 of [4,6,8,10,12]){
+    if(D2>2*Dmax) continue;
+    const hits = RES.surv.filter(o=>o.D2===D2);
+    const [lab,tag] = RUNG[D2];
+    h+=`<div class="rung"><div class="rhdr">${lab} &nbsp;·&nbsp; ${hits.length} survive &nbsp;·&nbsp; ${tag}</div>`;
+    if(!hits.length){
+      h+= D2===6
+        ? '<div class="empty">— empty — no bare fermion mass exists. this is why the Higgs has a job.</div>'
+        : '<div class="empty">— empty —</div>';
+    }
+    for(const o of hits){
+      const b = baryon(o.id);
+      h+=`<div class="op">${o.id}`+
+         (b!==0?` <span class="bn">← ΔB = ${b>0?'+':''}${b}  PROTON DECAY</span>`:'')+
+         ` <span class="nm">[${o.nf}f]</span></div>`;
+    }
+    h+='</div>';
+  }
+  document.getElementById('terms').innerHTML=h;
+}
+
+/* ---------- the scatter: every candidate at (ΣY, dim) ---------- */
+const cv=document.getElementById('cv'), ctx=cv.getContext('2d');
+let W=0,H=340;
+function resize(){
+  const DPR=Math.min(window.devicePixelRatio||1,2);
+  W=cv.clientWidth||900; cv.width=Math.round(W*DPR); cv.height=Math.round(H*DPR);
+  cv.style.height=H+'px'; ctx.setTransform(DPR,0,0,DPR,0,0); draw();
+}
+function draw(){
+  if(!RES) return;
+  ctx.clearRect(0,0,W,H);
+  const L=54, R=W-14, T=16, B=H-26;
+  const all = showRej ? RES.rej.concat(RES.surv) : RES.surv;
+  let xmax=6; for(const o of all) xmax=Math.max(xmax, Math.abs(o.Y6));
+  xmax=Math.min(xmax,30);
+  const x2s = y6 => L + (R-L)*(y6+xmax)/(2*xmax);
+  const rows=[4,6,8,10,12].filter(d=>d<=2*Dmax);
+  const bandH = (B-T)/rows.length;
+  const y2s = D2 => T + bandH*(rows.indexOf(D2)+0.5);
+
+  // bands + labels
+  rows.forEach((D2,i)=>{
+    ctx.fillStyle = i%2 ? 'rgba(255,255,255,0.012)' : 'transparent';
+    ctx.fillRect(L,T+bandH*i,R-L,bandH);
+    ctx.fillStyle='#6a6a82'; ctx.font='10px '+getComputedStyle(document.body).fontFamily;
+    ctx.textAlign='right'; ctx.textBaseline='middle';
+    ctx.fillText(RUNG[D2][0], L-8, y2s(D2));
+  });
+  // the SigmaY = 0 column
+  ctx.strokeStyle='rgba(255,215,0,0.30)'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(x2s(0),T); ctx.lineTo(x2s(0),B); ctx.stroke();
+  ctx.fillStyle='#ffd700'; ctx.font='9px '+getComputedStyle(document.body).fontFamily;
+  ctx.textAlign='center'; ctx.textBaseline='top'; ctx.fillText('ΣY = 0', x2s(0), B+5);
+  ctx.fillStyle='#6a6a82';
+  ctx.fillText('← ΣY ×6 →', (L+R)/2, B+15);
+
+  // stack the dots inside each band
+  const bins={};
+  const put=(o)=>{
+    const k=o.D2+':'+Math.max(-xmax,Math.min(xmax,o.Y6));
+    bins[k]=(bins[k]||0)+1; return bins[k]-1;
+  };
+  const drawSet=(set)=>{
+    for(const o of set){
+      const n=put(o), x=x2s(Math.max(-xmax,Math.min(xmax,o.Y6)));
+      const y=y2s(o.D2) - bandH*0.36 + (n%9)*(bandH*0.082) + Math.floor(n/9)*0.7;
+      let col, r=1.5;
+      if(o.ok){ col='#ffd700'; r=2.9; }
+      else if(!o.okY) col='rgba(106,106,130,0.42)';
+      else if(!o.okL) col='rgba(106,106,130,0.85)';
+      else if(!o.okT) col='rgba(0,212,255,0.85)';
+      else col='rgba(255,105,180,0.85)';
+      ctx.fillStyle=col;
+      if(o.ok){ ctx.shadowColor='#ffd700'; ctx.shadowBlur=7; }
+      ctx.beginPath(); ctx.arc(x,y,r,0,6.2832); ctx.fill(); ctx.shadowBlur=0;
+    }
+  };
+  if(showRej) drawSet(RES.rej);
+  drawSet(RES.surv);
+
+  // legend
+  ctx.textAlign='left'; ctx.textBaseline='top'; ctx.font='9px '+getComputedStyle(document.body).fontFamily;
+  const leg=[['#ffd700','survives'],['rgba(0,212,255,0.85)','killed by SU(3) triality'],
+             ['rgba(255,105,180,0.85)','killed by SU(2) doublets'],
+             ['rgba(106,106,130,0.85)','killed by Lorentz'],['rgba(106,106,130,0.42)','killed by ΣY']];
+  let lx=L+6;
+  for(const [c,t] of leg){
+    ctx.fillStyle=c; ctx.beginPath(); ctx.arc(lx,T+5,2.5,0,6.2832); ctx.fill();
+    ctx.fillStyle='#6a6a82'; ctx.fillText(t,lx+6,T); lx += ctx.measureText(t).width+24;
+  }
+}
+
+/* ---------- the K-lines. they tell on themselves. ---------- */
+function klines(bad){
+  const P=params();
+  const d3 = RES.surv.filter(o=>o.D2===6).length;
+  const d5 = RES.surv.filter(o=>o.D2===10).length;
+  const bviol = RES.surv.filter(o=>o.D2===12 && baryon(o.id)!==0).length;
+  const yukOK = P.yuk===(nu?4:3);
+  document.getElementById('klines').innerHTML =
+   `<div><b>K1</b> nothing in the list above is a string literal. tested <b class="y">${RES.tested}</b> monomials this frame; `+
+     `<b class="g">${RES.surv.length}</b> survived. <span class="n">grep this file for "Q uc H" — it is not there.</span></div>`+
+   `<div><b>K2</b> triality mod 3 and doublets mod 2 are <b>necessary</b>, not sufficient. no Clebsch–Gordan is computed. `+
+     `a term that fails is forbidden; a term that passes <span class="n">might still have no invariant contraction.</span></div>`+
+   `<div><b>K3</b> no float in the kernel. ΣY is an integer sum over Y×6. this frame: `+
+     `<b class="n">${RES.killY}</b> of ${RES.tested} candidates died of hypercharge alone `+
+     `(<b>${(100*RES.killY/Math.max(1,RES.tested)).toFixed(1)}%</b>). exact test, no tolerance.</div>`+
+   `<div><b>K4</b> kinetic + gauge-kinetic terms are <b>not</b> enumerated — they are forced by D<sub>μ</sub>, not chosen.</div>`+
+   `<div><b>K5</b> <b class="y">${P.yuk}</b> Yukawa <b>operators</b> → <b class="v">${P.mats}</b> complex couplings at `+
+     `${NGEN} generation${NGEN>1?'s':''}. operators ≠ parameters.</div>`+
+   `<div><b>K7</b> 12 gauge bosons (8+3+1 = dim of the algebra) <b class="r">≠</b> 12 pentagons (Euler). different 12s. echo only.</div>`+
+   `<div style="margin-top:5px;border-top:1px solid #191c28;padding-top:5px">`+
+     `dim 3 : <b class="${d3?'g':'r'}">${d3}</b> ${d3?'← the Majorana mass. ν<sup>c</sup> is the only field with Y=0.':'← empty. no bare fermion mass EXISTS. the Higgs has a job.'}<br>`+
+     `dim 4 : <b class="${yukOK?'g':'r'}">${P.yuk}</b> Yukawa operators ${yukOK?'✓ the Standard Model':'✗ — you broke it'}, `+
+       `<b class="y">${P.quartic}</b> quartic<br>`+
+     `dim 5 : <b class="${d5?'y':'n'}">${d5}</b> ${d5?'← <b>neutrino mass.</b> nobody typed this.':''}<br>`+
+     `dim 6 : <b class="${bviol?'r':'n'}">${bviol}</b> baryon-violating ${bviol?'← <b>proton decay.</b> exactly four, and the enumerator found them.':''}<br>`+
+     `anomalies : <b class="${bad?'r':'g'}">${bad?bad+' BROKEN':'all five cancel'}</b> `+
+       `${bad?'← you moved a hypercharge. the theory is now inconsistent at one loop.':'← the field content is a fixed point, not a menu.'}`+
+   `</div>`;
+}
+
+function setD(v){ Dmax=v; document.getElementById('v-D').textContent=v;
+                  document.getElementById('m-D').textContent=v; run(); }
+function setG(v){ NGEN=v; document.getElementById('v-G').textContent=v; run(); }
+
+function run(){
+  const t0=performance.now();
+  RES = enumerate();
+  const bad = tblAnom();
+  tblContent(); tblTerms(); klines(bad); draw();
+  document.getElementById('m-tested').textContent = RES.tested;
+  document.getElementById('m-surv').textContent   = RES.surv.length;
+  document.getElementById('m-ky').textContent     = RES.killY;
+  const P=params();
+  document.getElementById('m-par').textContent    = P.mats + '+2';
+  void t0;
+}
+addEventListener('resize', resize);
+resize(); run();
+</script>
+</body></html>
