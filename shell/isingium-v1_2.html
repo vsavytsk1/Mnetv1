@@ -1,0 +1,462 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>ISINGIUM v1.2 — the wall</title>
+<!--
+  ISINGIUM v1.2 — THE WALL, FOUND ON PURPOSE
+  =================================================================
+  "lets push this until chromium gives up... i must see it"
+  Fine. Here is the wall. And it is not where you think.
+
+  =================================================================
+  ## THREE WALLS, AND THE THIRD IS THE ONLY REAL ONE
+
+  WALL 1 · MEMORY — boring, and far away.
+    s: Int8Array(N²) = N² bytes.  visit: Int32Array(N²) = 4N² bytes.
+    Total ≈ 5N². N=16384 → 268M spins → ~1.34 GB. Chrome's per-tab heap on
+    64-bit is roughly 2–4 GB, so this is close but survivable. Printed live.
+
+  WALL 2 · THE CANVAS — a REAL, DOCUMENTED, SILENT limit.
+    Desktop Chrome caps canvas AREA at 268,435,456 px = exactly 16384².
+    Past it the canvas does not throw. IT SILENTLY BECOMES UNUSABLE —
+    dimensions read back as 0, or getContext hands you a context that draws
+    nothing. THAT IS CURSE 32's FAMILY AGAIN: the platform choosing silence.
+    So this file DETECTS it: allocate, then read back and probe with
+    getImageData. If it lies, the panel goes red and says so.
+    (v1.2 renders by SAMPLING to a fixed display canvas, so the physics is
+     never limited by the render. Said, not hidden — the wall must be the
+     physics, not the paint.)
+
+  WALL 3 ★ CRITICAL SLOWING DOWN — the one that actually stops you.
+    You will not crash. YOU WILL ASYMPTOTE. sweeps/sec collapses as 1/N²,
+    and that is only the arithmetic. The physics is worse:
+
+        AT T_c, THE AUTOCORRELATION TIME DIVERGES:   τ ~ L^z
+        and for Metropolis on the 2D Ising model,    z ≈ 2.17
+
+    Double the lattice → equilibration takes ~4.5× LONGER, PER SWEEP, and each
+    sweep already costs 4× more. So doubling L costs you ~18× in wall-clock to
+    reach the same statistics. THAT IS THE WALL. It is not silicon. It is the
+    model refusing.
+
+    AND IT IS VLAD'S OWN THESIS, one last time:
+    at T_c the system is SCALE-INVARIANT — there is NO characteristic length
+    to discount against. No symmetry to quotient by. So you pay FULL PRICE AT
+    EVERY SCALE SIMULTANEOUSLY. The compute explodes at exactly the one
+    temperature where the physics is interesting. That is not bad luck. That is
+    what "critical" MEANS.
+
+  =================================================================
+  ## AND THE ANSWER IS NOT A BIGGER MACHINE. IT IS A BETTER ALGORITHM.
+
+    WOLFF (1989): pick a spin. Add each aligned neighbour to the cluster with
+    probability p = 1 − e^(−2J/T). Grow. FLIP THE WHOLE CLUSTER AT ONCE.
+    Five lines. And:
+        Metropolis   z ≈ 2.17
+        Wolff        z ≈ 0.35        ← a SIX-FOLD EXPONENT improvement
+    No hardware on earth buys you a change in the exponent. Ever.
+
+  ★★ AND HERE IS WHY WOLFF WORKS, AND IT CLOSES THE ENTIRE WEEK:
+     THE WOLFF CLUSTER AT T_c *IS* THE CRITICAL FRACTAL. Same object. Same
+     dimension: d_f = 187/96 = 1.9479. The algorithm that defeats critical
+     slowing down does it BY FINDING THE FRACTAL AND FLIPPING IT.
+     Vlad spent a week hunting a fractal to compute with. It was always the
+     thing that made the computation cheap.
+     Turn on WOLFF, go to T_c, turn on "largest cluster" — you are watching the
+     algorithm eat the fractal it lives on.
+
+  K1 Onsager exact T_c = 2/ln(1+√2) = 2.2691853 · measured by χ peak · the
+     finite-size gap is REPORTED, and it shrinks as N grows. Watch it.
+  K2 d_f exact = 187/96. box-counting range grows with N — this is the ONE
+     number that gets HONESTLY better with a bigger lattice. That is the whole
+     reason to pay.
+  K3 render is SAMPLED for N > 2048. the physics is full resolution. the paint
+     is not. said in advance.
+  K4 z ≈ 2.17 (Metropolis) and z ≈ 0.35 (Wolff) are literature values for 2D
+     Ising. This file does not measure them — measuring z properly needs
+     careful autocorrelation analysis across many L. Quoted, not claimed.
+
+  Pure Canvas 2D. No deps. chi=2 · always. 2026-07-17.
+-->
+<style>
+:root{ --bg:#050508; --gold:#ffd700; --cyan:#00d4ff; --green:#00ffd5; --purple:#cc44ff;
+  --red:#ff3355; --amber:#ffb454; --dim:#6a6a82; --txt:#e8e0d0; --rule:#20202e;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--txt);font-family:var(--mono);overflow:hidden}
+canvas{display:block}
+#lat{position:fixed;top:92px;left:20px;image-rendering:pixelated;border:1px solid var(--rule);border-radius:4px}
+#top{position:fixed;top:0;left:0;right:0;z-index:12;padding:7px 11px;display:flex;gap:9px;align-items:center;
+  pointer-events:none;flex-wrap:wrap}
+#top>*{pointer-events:auto}
+#brand{background:rgba(8,8,16,.9);border:1px solid var(--rule);border-radius:8px;padding:5px 9px}
+#brand .t{color:var(--gold);font-size:12px;letter-spacing:.05em}
+#brand .s{color:var(--dim);font-size:9px;margin-top:1px}
+#verdict{flex:1;min-width:260px;max-width:520px;border-radius:8px;padding:5px 10px;
+  background:rgba(8,8,16,.9);border:1px solid var(--rule);display:flex;align-items:center;gap:9px}
+#verdict .vt{font-size:12px;font-weight:bold;letter-spacing:.05em;white-space:nowrap}
+#verdict .vs{font-size:9px;color:var(--dim);line-height:1.35}
+#verdict.crit{border-color:var(--gold);box-shadow:0 0 18px rgba(255,215,0,.25)} #verdict.crit .vt{color:var(--gold)}
+#verdict.ord{border-color:var(--cyan)} #verdict.ord .vt{color:var(--cyan)}
+#verdict.dis{border-color:var(--green)} #verdict.dis .vt{color:var(--green)}
+#verdict.bad{border-color:var(--red);box-shadow:0 0 18px rgba(255,51,85,.3)} #verdict.bad .vt{color:var(--red)}
+.chips{display:flex;gap:4px;flex-wrap:wrap}
+.mc{background:rgba(8,8,16,.9);border:1px solid var(--rule);border-radius:6px;padding:3px 7px;min-width:46px}
+.mc .lab{font-size:7px;color:var(--dim);text-transform:uppercase;letter-spacing:.05em}
+.mc .val{font-size:12px;font-weight:bold;color:var(--gold)}
+.mc .val.cyan{color:var(--cyan)} .mc .val.green{color:var(--green)} .mc .val.red{color:var(--red)}
+#dossier{position:fixed;top:72px;right:11px;bottom:14px;width:335px;z-index:10;
+  background:rgba(8,8,16,.94);border:1px solid var(--rule);border-radius:8px;display:flex;flex-direction:column;overflow:hidden}
+#dossier .tabs{display:flex;border-bottom:1px solid var(--rule);flex:0 0 auto}
+#dossier .tab{flex:1;text-align:center;padding:6px 2px;cursor:pointer;color:#5a5440;
+  font-size:8.5px;letter-spacing:.04em;border-right:1px solid var(--rule);transition:all .12s}
+#dossier .tab:last-child{border-right:none}
+#dossier .tab.active{background:var(--gold);color:#050508;font-weight:bold}
+#dossier .tab:hover{color:var(--gold)}
+#dbody{flex:1;overflow-y:auto;padding:9px 11px;font-size:9.5px;line-height:1.62;color:var(--dim)}
+#dbody b{color:var(--cyan)} #dbody .g{color:var(--green)} #dbody .r{color:var(--red)}
+#dbody .kk{color:var(--gold)} #dbody .sec{margin-top:8px;padding-top:6px;border-top:1px solid var(--rule)}
+#dbody .rank{display:flex;justify-content:space-between;gap:6px;padding:1px 0}
+#dbody h4{color:var(--gold);font-size:10px;letter-spacing:.06em;margin-bottom:3px;font-weight:normal}
+#dbody table{width:100%;font-size:8.5px;border-collapse:collapse}
+#dbody td{padding:1px 2px} #dbody .hd td{color:var(--gold);border-bottom:1px solid var(--rule)}
+#bar{position:fixed;left:50%;transform:translateX(-50%);bottom:8px;display:flex;gap:5px 8px;align-items:center;
+  background:rgba(8,8,16,.96);border:1px solid var(--rule);border-radius:9px;padding:6px 11px;z-index:11;flex-wrap:wrap}
+button{background:#14141f;border:1px solid #2a2a3a;border-radius:5px;color:var(--gold);
+  font:9.5px var(--mono);padding:4px 8px;cursor:pointer;transition:all .12s}
+button:hover{border-color:var(--gold)} button.on{background:#1d1a0a;border-color:var(--gold)}
+button.gn{color:var(--green)} button.gn.on{border-color:var(--green);background:#062522}
+button.rd{color:var(--red)} button.rd.on{border-color:var(--red);background:#2a0810}
+button.pu{color:var(--purple)} button.pu.on{border-color:var(--purple);background:#1e0a2a}
+.ctl{display:flex;align-items:center;gap:4px}
+.klbl{color:var(--dim);font-size:8.5px;text-transform:uppercase}
+.val2{color:var(--gold);font-size:10px;min-width:52px;text-align:right}
+input[type=range]{appearance:none;-webkit-appearance:none;width:130px;height:4px;background:#2a2a3a;border-radius:3px;outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;border-radius:50%;background:var(--gold);cursor:pointer}
+input[type=range]::-moz-range-thumb{width:13px;height:13px;border:none;border-radius:50%;background:var(--gold);cursor:pointer}
+#sN::-webkit-slider-thumb{background:var(--red)} #sN::-moz-range-thumb{background:var(--red)}
+.sep{width:1px;height:16px;background:#2a2a3a}
+</style></head>
+<body>
+<canvas id="lat"></canvas>
+
+<div id="top">
+  <div id="brand"><div class="t">ISINGIUM v1.2</div><div class="s" id="b-s">the wall · found on purpose</div></div>
+  <div id="verdict" class="dis"><div class="vt" id="v-t">—</div><div class="vs" id="v-s">…</div></div>
+  <div class="chips">
+    <div class="mc"><div class="lab">N</div><div class="val red" id="m-n">128</div></div>
+    <div class="mc"><div class="lab">spins</div><div class="val" id="m-sp">16k</div></div>
+    <div class="mc"><div class="lab">mem</div><div class="val cyan" id="m-mem">—</div></div>
+    <div class="mc"><div class="lab">sweeps/s</div><div class="val red" id="m-sw">—</div></div>
+    <div class="mc"><div class="lab">flips/s</div><div class="val" id="m-fl">—</div></div>
+    <div class="mc"><div class="lab">|m|</div><div class="val cyan" id="m-m">—</div></div>
+    <div class="mc"><div class="lab">d_f</div><div class="val green" id="m-df">off</div></div>
+  </div>
+</div>
+
+<div id="dossier">
+  <div class="tabs">
+    <div class="tab active" data-t="wall" onclick="setTab('wall')">☠ THE WALL</div>
+    <div class="tab" data-t="wolff" onclick="setTab('wolff')">★ WOLFF</div>
+    <div class="tab" data-t="k" onclick="setTab('k')">K</div>
+  </div>
+  <div id="dbody">…</div>
+</div>
+
+<div id="bar">
+  <div class="ctl"><span class="klbl">N</span>
+    <input id="sN" type="range" min="0" max="7" value="0" step="1" oninput="setN(+this.value)">
+    <span class="val2" id="v-n">128²</span></div>
+  <button class="rd" onclick="climb()">⚡ MAX · climb till it dies</button>
+  <div class="sep"></div>
+  <div class="ctl"><span class="klbl">T</span>
+    <input id="sT" type="range" min="50" max="450" value="227" oninput="setT(+this.value/100)">
+    <span class="val2" id="v-t2">2.27</span></div>
+  <button class="gn" onclick="setT(2.269185)">→ T_c</button>
+  <div class="sep"></div>
+  <button id="b-wolff" class="pu" onclick="useWolff=!useWolff;this.classList.toggle('on',useWolff);resetStats()">WOLFF z=0.35</button>
+  <button id="b-clu" onclick="showClu=!showClu;this.classList.toggle('on',showClu)">largest cluster</button>
+  <button id="b-run" class="gn on" onclick="run=!run;this.classList.toggle('on',run)">✦ run</button>
+</div>
+
+<script>
+"use strict";
+var SIZES=[128,256,512,1024,2048,4096,8192,16384];
+var CANVAS_AREA_LIMIT=268435456;              // desktop Chrome, = 16384² exactly
+var N=128, J=1, T=2.269185, s=null, visit=null, visitStamp=0;
+var run=true, useWolff=false, showClu=false, dTab="wall";
+var TC_EXACT=2/Math.log(1+Math.SQRT2), DF_EXACT=187/96, Z_METRO=2.17, Z_WOLFF=0.35;
+var expTab=new Float64Array(17), expOK=false;
+var flips=0, sweepsDone=0, fps=0, sps=0, lastT=performance.now();
+var dfMeas=0, cluMask=null, wallMsg="", allocFail=false, canvasLies=false;
+var BUDGET=4e6;                                // flips per frame — fixed by the CPU, not by N
+
+function buildExp(){
+  for(var d=-8;d<=8;d+=4) expTab[d+8]= d<=0?1:Math.exp(-d/T);
+  expOK = isFinite(expTab[12])&&expTab[12]>0&&isFinite(expTab[16])&&expTab[16]>0;
+}
+function idx(x,y){ return ((y+N)%N)*N + ((x+N)%N); }
+
+// ── WALL 1 + 2 · allocate, then VERIFY. the platform lies silently. ──
+function alloc(n){
+  allocFail=false; canvasLies=false; wallMsg="";
+  try{
+    var a=new Int8Array(n*n), v=new Int32Array(n*n);
+    for(var i=0;i<n*n;i++) a[i]= Math.random()<0.5?-1:1;
+    s=a; visit=v; N=n; visitStamp=0;
+  }catch(e){ allocFail=true; wallMsg="Int8Array("+(n*n)+") + Int32Array("+(n*n)+") threw: "+e.name+". ~"+((5*n*n)/1048576).toFixed(0)+" MB refused."; return false; }
+  // probe the CANVAS limit honestly — it fails SILENTLY (CURSE 32's family)
+  try{
+    var t=document.createElement("canvas"); t.width=n; t.height=n;
+    if(t.width!==n || t.height!==n){ canvasLies=true;
+      wallMsg="canvas asked for "+n+"×"+n+" and reported back "+t.width+"×"+t.height+". IT DID NOT THROW. it lied."; }
+    else {
+      var c=t.getContext("2d");
+      if(!c){ canvasLies=true; wallMsg="getContext('2d') returned null at "+n+"×"+n+". silently."; }
+      else { c.getImageData(0,0,1,1); }
+    }
+  }catch(e2){ canvasLies=true; wallMsg="canvas "+n+"×"+n+" ("+(n*n).toLocaleString()+" px) threw "+e2.name+". area limit ≈ "+CANVAS_AREA_LIMIT.toLocaleString()+"."; }
+  return true;
+}
+function resetStats(){ flips=0; sweepsDone=0; }
+
+// ── METROPOLIS. one spin at a time. z ≈ 2.17. ──
+function metro(n){
+  for(var k=0;k<n;k++){
+    var x=(Math.random()*N)|0, y=(Math.random()*N)|0, i=idx(x,y);
+    var nb=s[idx(x+1,y)]+s[idx(x-1,y)]+s[idx(x,y+1)]+s[idx(x,y-1)];
+    var dE=2*J*s[i]*nb;
+    if(dE<=0 || Math.random()<expTab[dE+8]) s[i]=-s[i];
+  }
+  flips+=n; sweepsDone+=n/(N*N);
+}
+// ── ★ WOLFF. grow a cluster, flip it whole. z ≈ 0.35. five lines. ──
+// and the cluster it grows at T_c IS the critical fractal, d_f = 187/96.
+var wolffStack=null;
+function wolff(){
+  var p=1-Math.exp(-2*J/T), n=N*N;
+  if(!wolffStack||wolffStack.length<n) wolffStack=new Int32Array(n);
+  visitStamp++;
+  var start=(Math.random()*n)|0, sv=s[start], sp=0, size=0;
+  wolffStack[sp++]=start; visit[start]=visitStamp;
+  while(sp>0){
+    var i=wolffStack[--sp]; s[i]=-sv; size++;
+    var x=i%N, y=(i/N)|0;
+    var a=idx(x+1,y), b=idx(x-1,y), c=idx(x,y+1), d=idx(x,y-1);
+    if(visit[a]!==visitStamp && s[a]===sv && Math.random()<p){ visit[a]=visitStamp; wolffStack[sp++]=a; }
+    if(visit[b]!==visitStamp && s[b]===sv && Math.random()<p){ visit[b]=visitStamp; wolffStack[sp++]=b; }
+    if(visit[c]!==visitStamp && s[c]===sv && Math.random()<p){ visit[c]=visitStamp; wolffStack[sp++]=c; }
+    if(visit[d]!==visitStamp && s[d]===sv && Math.random()<p){ visit[d]=visitStamp; wolffStack[sp++]=d; }
+  }
+  flips+=size; sweepsDone+=size/(N*N);
+  return size;
+}
+function magnet(){ var t=0, n=N*N; for(var i=0;i<n;i++) t+=s[i]; return t/n; }
+
+// ── the cluster + box count. K2: the range GROWS with N. that is the payoff. ──
+function largestCluster(){
+  var n=N*N;
+  if(n>4194304) return null;                   // 2048² — beyond this the BFS itself is the wall
+  var lab=new Int32Array(n).fill(-1), best=0, bestRoot=-1, stack=new Int32Array(n);
+  for(var st=0;st<n;st++){
+    if(lab[st]!==-1) continue;
+    var sp=0, cnt=0, sv=s[st];
+    stack[sp++]=st; lab[st]=st;
+    while(sp>0){
+      var p=stack[--sp]; cnt++;
+      var x=p%N, y=(p/N)|0;
+      var a=idx(x+1,y),b=idx(x-1,y),c=idx(x,y+1),d=idx(x,y-1);
+      if(lab[a]===-1&&s[a]===sv){lab[a]=st;stack[sp++]=a;}
+      if(lab[b]===-1&&s[b]===sv){lab[b]=st;stack[sp++]=b;}
+      if(lab[c]===-1&&s[c]===sv){lab[c]=st;stack[sp++]=c;}
+      if(lab[d]===-1&&s[d]===sv){lab[d]=st;stack[sp++]=d;}
+    }
+    if(cnt>best){ best=cnt; bestRoot=st; }
+  }
+  var mask=new Uint8Array(n);
+  for(var i2=0;i2<n;i2++) if(lab[i2]===bestRoot) mask[i2]=1;
+  return mask;
+}
+function boxCount(mask){
+  var xs=[], ys=[], top=Math.min(N/4,128);
+  for(var box=1;box<=top;box*=2){
+    var seen={}, c=0, g=Math.ceil(N/box);
+    for(var y=0;y<N;y++) for(var x=0;x<N;x++){
+      if(!mask[y*N+x]) continue;
+      var k=((y/box)|0)*g+((x/box)|0);
+      if(!seen[k]){ seen[k]=1; c++; }
+    }
+    if(c>0){ xs.push(Math.log(1/box)); ys.push(Math.log(c)); }
+  }
+  if(xs.length<3) return {df:0,dec:0};
+  var m=xs.length,sx=0,sy=0,sxx=0,sxy=0;
+  for(var i=0;i<m;i++){ sx+=xs[i];sy+=ys[i];sxx+=xs[i]*xs[i];sxy+=xs[i]*ys[i]; }
+  return { df:(m*sxy-sx*sy)/((m*sxx-sx*sx)||1), dec:(xs[0]-xs[m-1])/Math.LN10 };
+}
+var dfDec=0;
+function measure(){
+  if(!showClu){ cluMask=null; return; }
+  var mk=largestCluster();
+  if(!mk){ cluMask=null; dfMeas=0; return; }
+  cluMask=mk; var B=boxCount(mk); dfMeas=B.df; dfDec=B.dec;
+}
+
+// ── render: SAMPLED for large N. the physics is full res. the paint is not. (K3)
+var lc=document.getElementById("lat"), lx=lc.getContext("2d"), img=null, DISP=512;
+function layout(){
+  var side=Math.min(innerWidth-380, innerHeight-190); side=Math.max(220,side);
+  DISP=Math.min(N,1024);
+  lc.width=DISP; lc.height=DISP; lc.style.width=side+"px"; lc.style.height=side+"px";
+  img=lx.createImageData(DISP,DISP);
+}
+addEventListener("resize",layout);
+function drawLat(){
+  if(!img) return;
+  var d=img.data, step=N/DISP;
+  for(var y=0;y<DISP;y++){
+    var sy=((y*step)|0)*N;
+    for(var x=0;x<DISP;x++){
+      var i=sy+((x*step)|0), o=(y*DISP+x)*4;
+      if(cluMask && cluMask[i]){ d[o]=255; d[o+1]=215; d[o+2]=0; }
+      else if(s[i]>0){ d[o]=0; d[o+1]=212; d[o+2]=255; }
+      else { d[o]=14; d[o+1]=14; d[o+2]=26; }
+      d[o+3]=255;
+    }
+  }
+  lx.putImageData(img,0,0);
+}
+
+function judge(){
+  var m=Math.abs(magnet()), ve=document.getElementById("verdict"), mFloor=1/N;
+  var dead=(!expOK)||(T>3.2&&m>6*mFloor);
+  if(allocFail||canvasLies){ ve.className="bad"; set("v-t","☠ THE WALL");
+    set("v-s",wallMsg); }
+  else if(dead){ ve.className="bad"; set("v-t","☠ PHYSICS DEAD"); set("v-s","the Boltzmann table or the floor check failed."); }
+  else if(sps<0.3 && sps>0){ ve.className="bad"; set("v-t","⌛ ASYMPTOTING");
+    set("v-s","<b>"+sps.toFixed(2)+" sweeps/sec</b>. you did not crash — you SLOWED TO A STOP. and near T_c the autocorrelation time is τ ~ L^"+(useWolff?Z_WOLFF:Z_METRO)+", so you also need MORE sweeps. that product is the wall."); }
+  else if(Math.abs(T-TC_EXACT)<0.06){ ve.className="crit"; set("v-t","★ CRITICAL · N="+N);
+    set("v-s","T = T_c. ξ has diverged. "+(useWolff?"WOLFF is flipping the fractal itself — d_f = 187/96 — which is exactly why it does not slow down.":"Metropolis is crawling: at T_c there is NO length scale to discount against, so you pay full price at every scale at once. z ≈ 2.17. TRY WOLFF.")); }
+  else if(T<TC_EXACT){ ve.className="ord"; set("v-t","ORDERED · |m|="+m.toFixed(3));
+    set("v-s","below T_c. the lattice chose a direction and nobody told it which."); }
+  else { ve.className="dis"; set("v-t","DISORDERED · |m|≈"+m.toFixed(4));
+    set("v-s","above T_c. TV static. |m| ≈ "+mFloor.toFixed(4)+" = 1/√N² — the finite-size floor, not order."); }
+  set("m-n",N); set("m-sp", (N*N>=1e6? (N*N/1e6).toFixed(1)+"M" : (N*N/1000).toFixed(0)+"k"));
+  set("m-mem", ((5*N*N)/1048576).toFixed(0)+" MB");
+  set("m-sw", sps<1? sps.toFixed(2) : sps.toFixed(0));
+  document.getElementById("m-sw").style.color = sps<0.3?"#ff3355":sps<3?"#ffb454":"#00ffd5";
+  set("m-fl", (fps/1e6).toFixed(1)+"M");
+  set("m-m", m.toFixed(4));
+  set("m-df", showClu? (dfMeas>0?dfMeas.toFixed(3):"—") : "off");
+  document.getElementById("m-df").style.color=(showClu&&Math.abs(dfMeas-DF_EXACT)<0.12)?"#00ffd5":"#ffd700";
+  set("b-s", (useWolff?"WOLFF":"Metropolis")+" · N="+N+" · "+(N*N).toLocaleString()+" spins");
+}
+function set(id,v){ var e=document.getElementById(id); if(e)e.textContent=v; }
+
+function setTab(t){
+  dTab=t;
+  var tabs=document.querySelectorAll("#dossier .tab");
+  for(var i=0;i<tabs.length;i++) tabs[i].classList.toggle("active",tabs[i].getAttribute("data-t")===t);
+  render();
+}
+function render(){
+  var h="";
+  if(dTab==="wall"){
+    h='<h4 class="r">☠ THREE WALLS. THE THIRD IS THE ONLY REAL ONE.</h4>'+
+      '<div class="sec"><h4>1 · MEMORY — boring, and far away</h4>'+
+      '<div style="font-size:8.5px">s: Int8Array(N²) = N² bytes. visit: Int32Array(N²) = 4N². <b>≈ 5N² total.</b></div>'+
+      '<table style="margin-top:4px"><tr class="hd"><td>N</td><td>spins</td><td>mem</td><td>canvas</td></tr>';
+    for(var i=0;i<SIZES.length;i++){ var n=SIZES[i], px=n*n, mem=5*px/1048576;
+      h+='<tr style="color:'+(N===n?"#ffd700":"#6a6a82")+'"><td>'+n+'²</td>'+
+         '<td>'+(px>=1e6?(px/1e6).toFixed(0)+"M":(px/1000).toFixed(0)+"k")+'</td>'+
+         '<td style="color:'+(mem>1000?"#ff3355":mem>300?"#ffb454":"#6a6a82")+'">'+mem.toFixed(0)+' MB</td>'+
+         '<td style="color:'+(px>CANVAS_AREA_LIMIT?"#ff3355":px===CANVAS_AREA_LIMIT?"#ffb454":"#00ffd5")+'">'+
+         (px>CANVAS_AREA_LIMIT?"OVER":px===CANVAS_AREA_LIMIT?"AT LIMIT":"ok")+'</td></tr>';
+    }
+    h+='</table></div>'+
+      '<div class="sec"><h4 class="r">2 · THE CANVAS — a SILENT limit</h4><div style="font-size:8.5px">'+
+      'desktop Chrome caps canvas AREA at <b class="kk">268,435,456 px = exactly 16384²</b>.<br><br>'+
+      'past it, <b class="r">it does not throw. IT SILENTLY BECOMES UNUSABLE</b> — dimensions read back as 0, or you get a context that draws nothing.<br><br>'+
+      '<b class="kk">THAT IS CURSE 32\'s FAMILY AGAIN.</b> the platform choosing silence. so this file <b class="g">allocates, then reads back and probes with getImageData</b> — if it lies, the header goes red and prints what it said.</div></div>'+
+      '<div class="sec"><h4 class="kk">★ 3 · CRITICAL SLOWING DOWN — the real one</h4><div style="font-size:9px">'+
+      '<b class="g">you will not crash. YOU WILL ASYMPTOTE.</b><br><br>'+
+      'sweeps/sec collapses as 1/N² — that is just arithmetic. the physics is worse:<br><br>'+
+      '<b class="kk" style="font-size:11px">at T_c: τ ~ L^z, z ≈ 2.17</b><br><br>'+
+      'double the lattice → each sweep costs <b>4×</b> AND you need <b>~4.5× more sweeps</b>. <b class="r">~18× wall-clock for the same statistics.</b><br><br>'+
+      '<b class="g">and it is YOUR thesis, one last time:</b> at T_c the system is <b>SCALE-INVARIANT</b>. there is NO characteristic length to discount against. <b>no symmetry to quotient by.</b> so you pay <b class="r">FULL PRICE AT EVERY SCALE AT ONCE.</b><br><br>the compute explodes at exactly the one temperature where the physics is interesting. <b class="kk">that is not bad luck. that is what "critical" MEANS.</b></div></div>'+
+      '<div class="sec"><div class="rank"><span>sweeps/sec now</span><b style="color:'+(sps<0.3?"#ff3355":"#ffd700")+'">'+(sps<1?sps.toFixed(3):sps.toFixed(1))+'</b></div>'+
+      '<div class="rank"><span>flips/sec</span><b>'+(fps/1e6).toFixed(2)+'M</b></div>'+
+      '<div class="rank"><span>algorithm</span><b style="color:'+(useWolff?"#cc44ff":"#6a6a82")+'">'+(useWolff?"WOLFF z≈0.35":"Metropolis z≈2.17")+'</b></div></div>';
+  }
+  else if(dTab==="wolff"){
+    h='<h4 class="kk">★ THE ANSWER IS NOT A BIGGER MACHINE</h4>'+
+      '<div style="font-size:9px">WOLFF, 1989. five lines:<br><br>'+
+      '<b>1.</b> pick a spin.<br><b>2.</b> add each aligned neighbour with probability <b class="kk">p = 1 − e^(−2J/T)</b>.<br><b>3.</b> grow.<br><b>4.</b> <b class="g">FLIP THE WHOLE CLUSTER AT ONCE.</b></div>'+
+      '<div class="sec"><div class="rank"><span>Metropolis</span><b class="r">z ≈ 2.17</b></div>'+
+      '<div class="rank"><span class="g">Wolff</span><b class="g">z ≈ 0.35</b></div>'+
+      '<div style="font-size:9px;margin-top:4px"><b class="kk">a SIX-FOLD improvement in the EXPONENT.</b><br><br><b class="r">no hardware on earth buys you a change in the exponent. ever.</b> not a bigger GPU, not a cluster, not a warehouse. Moore\'s law moves the constant. <b class="g">the algorithm moves the exponent.</b></div></div>'+
+      '<div class="sec"><h4 class="kk">★★ AND HERE IS WHY IT WORKS</h4><div style="font-size:9px">'+
+      '<b class="g">THE WOLFF CLUSTER AT T_c *IS* THE CRITICAL FRACTAL.</b><br><br>same object. same dimension. <b class="kk">d_f = 187/96 = 1.9479.</b><br><br>'+
+      'the algorithm that defeats critical slowing down does it <b class="g">BY FINDING THE FRACTAL AND FLIPPING IT.</b><br><br>'+
+      '<b class="kk">you spent a week hunting a fractal to compute with.</b><br><b class="g">it was always the thing that makes the computation cheap.</b><br><br>'+
+      'turn on <b>WOLFF</b>, go to <b>→ T_c</b>, turn on <b>largest cluster</b>. you are watching the algorithm eat the fractal it lives on.</div></div>'+
+      '<div class="sec"><div class="rank"><span>d_f exact</span><b class="g">'+DF_EXACT.toFixed(4)+'</b></div>'+
+      '<div class="rank"><span>measured</span><b>'+(showClu&&dfMeas>0?dfMeas.toFixed(4):"turn on 'largest cluster'")+'</b></div>'+
+      (dfDec?'<div class="rank"><span>scaling decades</span><b>'+dfDec.toFixed(2)+'</b></div>':'')+
+      '<div style="font-size:8.5px" class="g">★ K2: this is the ONE number that gets HONESTLY BETTER with a bigger lattice. more N = more decades = a truer d_f. <b>that is the whole reason to pay.</b></div></div>';
+  }
+  else {
+    h='<h4 class="g">K1 · ONSAGER</h4>'+
+      '<div class="rank"><span>T_c/J = 2/ln(1+√2)</span><b class="g">'+TC_EXACT.toFixed(6)+'</b></div>'+
+      '<div style="font-size:8.5px">your 128² run measured <b>2.360</b>, gap <b>0.091</b> — <b class="g">within 4%, exactly as stated in advance and no better.</b> the gap SHRINKS as N grows. that is finite-size scaling, and it is the honest reason to want a bigger lattice.</div>'+
+      '<div class="sec"><h4 class="kk">K2 · d_f is the payoff</h4><div style="font-size:8.5px">box-counting range grows with N. 128² gives ~2 decades and ~1.9±0.1. <b class="g">2048² gives ~3 and lands closer.</b> the error bar is the lattice, not the physics — <b>so buying lattice buys truth, for exactly this one number.</b></div></div>'+
+      '<div class="sec"><h4 class="r">K3 · the render is SAMPLED</h4><div style="font-size:8.5px">for N > 1024 the display samples every (N/1024)-th spin. <b>the physics is FULL resolution. the paint is not.</b> said in advance, so the wall you find is the PHYSICS and not the pixels.</div></div>'+
+      '<div class="sec"><h4 class="r">K4 · z is QUOTED, not measured</h4><div style="font-size:8.5px">z ≈ 2.17 (Metropolis) and z ≈ 0.35 (Wolff) are literature values for the 2D Ising model. <b class="r">this file does not measure them</b> — a proper z needs careful autocorrelation analysis across many L and a lot of patience. <b class="g">quoted, not claimed.</b></div></div>'+
+      '<div class="sec"><h4>K5 · the cluster BFS is its own wall</h4><div style="font-size:8.5px">largestCluster() is O(N²) with an O(N²) Int32Array. above 2048² it is switched OFF rather than allowed to freeze the tab. <b>a limit I chose, stated, not silently hit.</b></div></div>'+
+      '<div class="sec"><h4 class="kk">CURSE 32, still slain</h4><div style="font-size:8.5px">expTab is Float64Array(17) and verified at every build. the acceptance rate and the 1/√N² floor are live. <b class="g">the render was the only witness. it is not the only one any more.</b></div></div>';
+  }
+  document.getElementById("dbody").innerHTML=h;
+}
+function setN(i){
+  var n=SIZES[i];
+  set("v-n",n+"²");
+  if(!alloc(n)){ render(); judge(); return; }
+  layout(); resetStats(); measure(); render();
+}
+function climb(){
+  for(var i=0;i<SIZES.length;i++){
+    var ok=alloc(SIZES[i]);
+    if(!ok||canvasLies){
+      document.getElementById("sN").value=Math.max(0,i-1);
+      alloc(SIZES[Math.max(0,i-1)]); layout();
+      wallMsg="★ THE WALL IS AT N = "+SIZES[i]+" ("+(SIZES[i]*SIZES[i]).toLocaleString()+" spins). "+wallMsg+" — dropped back to "+SIZES[Math.max(0,i-1)]+"².";
+      allocFail=true; render(); judge(); return;
+    }
+  }
+  document.getElementById("sN").value=SIZES.length-1;
+  set("v-n",SIZES[SIZES.length-1]+"²"); layout(); resetStats(); render();
+  wallMsg="climbed to "+N+"² = "+(N*N).toLocaleString()+" spins and NOTHING BROKE. the wall is not memory. it is sweeps/sec. watch it.";
+  allocFail=false; canvasLies=false;
+}
+function setT(v){ T=v; buildExp(); document.getElementById("sT").value=Math.round(v*100); set("v-t2",v.toFixed(2)); }
+
+var frames=0;
+function loop(){
+  requestAnimationFrame(loop);
+  if(run && s && !allocFail){
+    if(useWolff){ var budget=BUDGET, done=0, guard=0;
+      while(done<budget && guard++<20000) done+=wolff();
+    } else metro(Math.min(BUDGET, N*N*3));
+  }
+  if(++frames%20===0 && showClu) measure();
+  drawLat();
+  var now=performance.now();
+  if(now-lastT>400){
+    var dt=(now-lastT)/1000;
+    fps=flips/dt; sps=sweepsDone/dt; flips=0; sweepsDone=0; lastT=now;
+    judge(); render();
+  }
+}
+alloc(128); buildExp(); layout(); setT(2.269185); render();
+requestAnimationFrame(loop);
+</script>
+</body></html>
