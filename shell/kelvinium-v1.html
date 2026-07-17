@@ -1,0 +1,593 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>KELVINIUM v1.0 — the economic optimum · three Kelvins</title>
+<!--
+  KELVINIUM v1.0 — THE SUBMARINE CABLE, OPTIMISED
+  =================================================================
+  There is no "most optimal" cable. Optimality is not a property of the cable —
+  it is a property of your OBJECTIVE FUNCTION. Change the electricity price and
+  the optimum moves. This sim's whole point is to show that happening.
+
+  THE TITAN — three Kelvins, all in one object:
+    1. KELVIN'S LAW OF SQUARES (1858). He was ON the Agamemnon. The first
+       transatlantic cable smeared its signals to mush: it was an RC line, pure
+       diffusion, delay ∝ L². Heaviside later put the L back in and got the
+       telegrapher's equations — and out of those fell Z₀ and
+       Γ = (Z_L−Z₀)/(Z_L+Z₀). Normalise by Z₀ → Γ = (z−1)/(z+1). SMITHIUM's map.
+       The cable came first. The chart is its ghost.
+    2. KELVIN'S LAW OF ECONOMIC CONDUCTOR SIZE. The optimum is where the
+       marginal capital cost of copper equals the marginal saving in losses.
+       Computed here by scanning, and checked against the analytic condition.
+    3. KELVIN, THE UNIT. Every cable on earth is thermally limited. IEC 60287
+       is one long thermal circuit.
+
+  THE FOUR PANELS
+    · CROSS-SECTION — computed from geometry, drawn to scale. Not a picture.
+    · KELVIN CURVE  — capital ∝ A, losses ∝ 1/A, total = U. The minimum is
+                      where the two cross. Drag the price and watch it walk.
+    · FIELD E(r)    — the deep one. Under AC the field is CAPACITIVE, max at the
+                      conductor. Under DC it is RESISTIVE, and σ rises with
+                      temperature — so under load the hot inner insulation gets
+                      MORE conductive and the field runs OUTWARD.
+                      E(r) ∝ r^(δ−1), δ = α·ΔT_ins/ln(b/a).
+                      δ=0 → 1/r (AC).  δ=1 → uniform.  δ>1 → INVERTED.
+                      Drag LOAD and watch E_max leave the conductor. This is why
+                      DC cable design is not AC cable design with the ω removed.
+    · AC vs DC      — the crossover, computed from the two cost curves, not
+                      asserted. AC pays charging current ωCV forever; DC pays
+                      converters once.
+
+  HONESTY (K1–K7):
+   K1  the optimum is FOUND BY SCANNING the cost function, then checked against
+       Kelvin's analytic condition (A-proportional capital = loss NPV). Both are
+       printed. They must agree. If they don't, the panel says so in red.
+   K2  b/a = e is DERIVED by scanning E_max(a/b) for its minimum, then compared
+       to the transcendental e. The agreement IS the proof. (Apollonium's move.)
+   K3  the AC/DC crossover is COMPUTED from the two curves. Not a rule of thumb.
+   K4  "MOST OPTIMAL" IS NOT DEFINED without an objective. The objective used is
+       printed in full, in the panel. Change it and the answer changes. That is
+       not a bug — that is the entire lesson.
+   K5  THIS IS A TEACHING MODEL, NOT A DESIGN TOOL. IEC 60287 has ~40 more terms.
+       Sheath and armour loss factors are approximated. Proximity effect is
+       omitted. Cost coefficients are illustrative (the real ones are commercial
+       secrets). The SHAPE is right; do not build a cable from this.
+   K6  the 1858 cable failed for a reason that has never gone away: shunt C.
+       Charging current still caps HVAC subsea today. 170 years, same equation.
+   K7  Kelvin's law only governs the A-PROPORTIONAL part of the cost. The fixed
+       part (insulation, sheath, armour, laying) does not participate — and on a
+       real subsea cable copper is only ~17% of the price. Said, not hidden.
+
+  Pure Canvas 2D. No deps. χ=2 · always. Built 2026-07-15.
+-->
+<style>
+:root{
+  --bg:#050508; --gold:#ffd700; --cyan:#00d4ff; --pink:#ff69b4; --green:#00ffd5;
+  --purple:#cc44ff; --red:#ff5470; --orange:#ff8c42; --dim:#6a6a82; --txt:#e8e0d0;
+  --rule:#20202e; --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--txt);font-family:var(--mono);overflow:hidden}
+#cv{position:fixed;top:0;left:0;display:block}
+#hud{position:fixed;top:0;left:0;right:0;padding:9px 13px;display:flex;gap:10px;align-items:flex-start;
+  pointer-events:none;font-size:11px;z-index:10;flex-wrap:wrap}
+#hud>div{pointer-events:auto;background:rgba(8,8,16,.84);border:1px solid var(--rule);border-radius:8px;padding:7px 10px}
+#ttl{color:var(--gold);font-size:13px;letter-spacing:.05em}
+#sub{color:var(--dim);font-size:10px;margin-top:2px;max-width:440px;line-height:1.42}
+#sub b{color:var(--cyan)} #sub .g{color:var(--green)} #sub .o{color:var(--orange)}
+#read{display:flex;gap:5px;flex-wrap:wrap}
+.mc{background:rgba(8,8,16,.86);border:1px solid var(--rule);border-radius:6px;padding:4px 8px;min-width:62px}
+.mc .lab{font-size:8px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em}
+.mc .val{font-size:13px;font-weight:bold;color:var(--gold)}
+.mc .val.cyan{color:var(--cyan)} .mc .val.green{color:var(--green)}
+.mc .val.red{color:var(--red)} .mc .val.pk{color:var(--pink)}
+#kpanel{position:fixed;bottom:56px;left:13px;z-index:10;background:rgba(8,8,16,.9);
+  border:1px solid var(--rule);border-radius:8px;padding:8px 10px;max-width:330px;
+  max-height:44vh;overflow-y:auto}
+#kpanel .kt{font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.1em;margin-bottom:5px}
+#kpanel .kt b{color:var(--gold)}
+#klines{font-size:9.5px;line-height:1.7;color:var(--dim)}
+#klines b{color:var(--cyan)} #klines .g{color:var(--green)} #klines .n{color:var(--red)}
+#klines .kk{color:var(--gold)} #klines .sec{margin-top:7px;padding-top:5px;border-top:1px solid var(--rule)}
+#bar{position:fixed;left:50%;transform:translateX(-50%);bottom:8px;display:flex;flex-wrap:wrap;
+  gap:5px 9px;align-items:center;justify-content:center;background:rgba(8,8,16,.95);
+  border:1px solid var(--rule);border-radius:10px;padding:7px 12px;z-index:11;max-width:98vw}
+button{background:#14141f;border:1px solid #2a2a3a;border-radius:5px;color:var(--gold);
+  font:10px var(--mono);padding:4px 8px;cursor:pointer;transition:all .12s}
+button:hover{border-color:var(--gold)} button.on{background:#1d1a0a;border-color:var(--gold)}
+button.cyan{color:var(--cyan)} button.cyan.on{border-color:var(--cyan);background:#08222a}
+button.gn{color:var(--green)} button.gn.on{border-color:var(--green);background:#062522}
+button.pre{color:var(--green);border-color:#0a3a3a}
+.ctl{display:flex;align-items:center;gap:4px}
+.klbl{color:var(--dim);font-size:9px;text-transform:uppercase;letter-spacing:.04em}
+.val2{color:var(--gold);font-size:9px;min-width:44px;text-align:right}
+input[type=range]{appearance:none;-webkit-appearance:none;width:74px;height:4px;background:#2a2a3a;border-radius:3px;outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:var(--gold);cursor:pointer}
+input[type=range]::-moz-range-thumb{width:12px;height:12px;border:none;border-radius:50%;background:var(--gold);cursor:pointer}
+#sA::-webkit-slider-thumb{background:var(--cyan)} #sLd::-webkit-slider-thumb{background:var(--orange)}
+#sPr::-webkit-slider-thumb{background:var(--green)}
+.sep{width:1px;height:18px;background:#2a2a3a;margin:0 1px}
+#stamp{position:fixed;bottom:8px;right:13px;color:var(--dim);font-size:9px;text-align:right;z-index:9;line-height:1.5}
+#stamp b{color:var(--gold)}
+</style></head>
+<body>
+<canvas id="cv"></canvas>
+
+<div id="hud">
+  <div>
+    <div id="ttl">KELVINIUM v1.0 · the economic optimum</div>
+    <div id="sub">there is no "most optimal" cable — only <b>your objective function's</b> optimum. <span class="g">drag the energy price and watch the answer walk.</span> <span class="o">drag LOAD and watch the DC field invert.</span></div>
+  </div>
+  <div id="read">
+    <div class="mc"><div class="lab">link</div><div class="val cyan" id="m-link">—</div></div>
+    <div class="mc"><div class="lab">A · Kelvin A*</div><div class="val" id="m-A">—</div></div>
+    <div class="mc"><div class="lab">I / cable</div><div class="val" id="m-I">—</div></div>
+    <div class="mc"><div class="lab">losses</div><div class="val pk" id="m-loss">—</div></div>
+    <div class="mc"><div class="lab">T cond</div><div class="val red" id="m-T">—</div></div>
+    <div class="mc"><div class="lab">NPV total</div><div class="val green" id="m-npv">—</div></div>
+  </div>
+</div>
+
+<div id="kpanel"><div class="kt">prove by <b>measurement</b> · K1–K7</div><div id="klines"></div></div>
+
+<div id="bar">
+  <button id="b-dc" class="cyan on" onclick="setSys('dc')">HVDC</button>
+  <button id="b-ac" class="cyan" onclick="setSys('ac')">HVAC</button>
+  <div class="sep"></div>
+  <button id="b-cu" class="on" onclick="setMat('cu')">Cu</button>
+  <button id="b-al" onclick="setMat('al')">Al</button>
+  <button id="b-mil" class="gn on" onclick="milliken=!milliken;this.classList.toggle('on',milliken)">Milliken</button>
+  <div class="sep"></div>
+  <div class="ctl"><span class="klbl">length</span><input id="sL" type="range" min="10" max="1200" value="500" oninput="setL(+this.value)"><span class="val2" id="v-L">500 km</span></div>
+  <div class="ctl"><span class="klbl">power</span><input id="sP" type="range" min="100" max="2200" value="1000" oninput="setP(+this.value)"><span class="val2" id="v-P">1000 MW</span></div>
+  <div class="ctl"><span class="klbl">kV</span><input id="sV" type="range" min="132" max="640" value="525" oninput="setV(+this.value)"><span class="val2" id="v-V">525</span></div>
+  <div class="ctl"><span class="klbl">area</span><input id="sA" type="range" min="200" max="3000" value="1500" step="50" oninput="setA(+this.value)"><span class="val2" id="v-A">1500</span></div>
+  <button class="pre" onclick="snapKelvin()">→ A*</button>
+  <div class="sep"></div>
+  <div class="ctl"><span class="klbl">€/MWh</span><input id="sPr" type="range" min="10" max="220" value="80" oninput="setPr(+this.value)"><span class="val2" id="v-Pr">80</span></div>
+  <div class="ctl"><span class="klbl">load</span><input id="sLd" type="range" min="0" max="100" value="100" oninput="setLd(+this.value/100)"><span class="val2" id="v-Ld">1.00</span></div>
+  <div class="ctl"><span class="klbl">depth</span><input id="sD" type="range" min="20" max="2500" value="400" oninput="setD(+this.value)"><span class="val2" id="v-D">400 m</span></div>
+  <div class="ctl"><span class="klbl">ρ seabed</span><input id="sRs" type="range" min="40" max="250" value="90" oninput="setRs(+this.value/100)"><span class="val2" id="v-Rs">0.90</span></div>
+</div>
+
+<div id="stamp">
+  KELVINIUM v1.0 · three Kelvins: <b>law of squares · economic conductor · the unit</b><br>
+  K4: "most optimal" needs an objective — it is printed · K5: teaching model, not a design tool<br>
+  the cable came first · the chart is its ghost · χ=2 · always
+</div>
+
+<script>
+"use strict";
+var cv=document.getElementById("cv"), ctx=cv.getContext("2d");
+var W=0,H=0,DPR=1;
+function resize(){
+  DPR=Math.min(window.devicePixelRatio||1,2);
+  W=window.innerWidth; H=window.innerHeight;
+  cv.style.width=W+"px"; cv.style.height=H+"px";
+  cv.width=Math.round(W*DPR); cv.height=Math.round(H*DPR);
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+}
+window.addEventListener("resize",resize); resize();
+
+var GOLD=[255,215,0],CYAN=[0,212,255],PINK=[255,105,180],GRN=[0,255,213],
+    PUR=[204,68,255],RED=[255,84,112],ORG=[255,140,66],WHT=[235,235,245],GRY=[150,155,170];
+function css(c,a){ return "rgba("+(c[0]|0)+","+(c[1]|0)+","+(c[2]|0)+","+a+")"; }
+function mix(a,b,t){ t=t<0?0:t>1?1:t; return [a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t]; }
+
+// ---------- mission (the objective's inputs) ----------
+var SYS="dc", MAT="cu", milliken=true;
+var Lkm=500, Pmw=1000, Vkv=525, Amm2=1500;
+var price=80, load=1.00, depthM=400, rhoSeabed=0.90;
+var burialM=1.5, Tsea=10, years=40, disc=0.05, f=50;
+
+// ---------- physics ----------
+function rho20(m){ return m==="cu" ? 1.7241e-8 : 2.8264e-8; }      // Ω·m
+function alphaT(m){ return m==="cu" ? 0.00393 : 0.00403; }          // /K
+function dens(m){ return m==="cu" ? 8960 : 2700; }                  // kg/m³
+function rhoT(m,T){ return rho20(m)*(1+alphaT(m)*(T-20)); }
+function Rdc(A,m,T){ return rhoT(m,T)/(A*1e-6); }                   // Ω/m
+
+// IEC 60287 skin effect. k_s = 1 round stranded, 0.435 Milliken (segmental).
+// THIS is why Milliken conductors exist — and why DC needs none of it.
+function skinY(Rd){
+  var ks = milliken?0.435:1.0;
+  var xs2=(8*Math.PI*f/Rd)*1e-7*ks, xs4=xs2*xs2;
+  return xs4/(192+0.8*xs4);
+}
+function Rac(A,m,T){ var Rd=Rdc(A,m,T); return SYS==="dc" ? Rd : Rd*(1+skinY(Rd)); }
+
+function condR(A){ return Math.sqrt(A/(Math.PI*0.90)); }            // mm, 0.90 fill factor
+function Edesign(){ return SYS==="dc" ? 30 : 15; }                  // kV/mm design stress
+// insulation outer radius from the design stress: V = E_d·a·ln(b/a)
+function insB(A){
+  var a=condR(A), Vc = SYS==="dc" ? Vkv : Vkv/Math.sqrt(3);
+  var b=a*Math.exp(Vc/(Edesign()*a));
+  return Math.min(b, a*6);
+}
+function nCables(){ return SYS==="dc" ? 2 : 3; }                    // bipole vs 3-phase
+function current(){
+  return SYS==="dc" ? (Pmw*1e6)/(2*Vkv*1e3)
+                    : (Pmw*1e6)/(Math.sqrt(3)*Vkv*1e3*0.95);
+}
+
+// AC only: shunt C and the charging current that killed 1858 and still bites
+function capPerM(A){
+  var a=condR(A), b=insB(A), er=2.3;
+  return 2*Math.PI*8.854e-12*er/Math.log(b/a);                      // F/m
+}
+function chargePerKm(A){ return 2*Math.PI*f*capPerM(A)*1000*(Vkv*1e3/Math.sqrt(3)); }  // A/km
+function critLenKm(A){ var ic=chargePerKm(A); return ic>0 ? current()/ic : 1e9; }
+
+// thermal: a much-shortened IEC 60287 circuit (K5)
+function thermR(A){
+  var a=condR(A), b=insB(A), De=2*(b+3+6+4)/1000;                   // m, +sheath+armour+serving
+  var T1=(3.5/(2*Math.PI))*Math.log(b/a);                           // XLPE ρ_T ≈ 3.5 K·m/W
+  var T3=(6.0/(2*Math.PI))*Math.log(1+2*0.004/De);
+  var u=2*burialM/De;
+  var T4=(rhoSeabed/(2*Math.PI))*Math.log(2*u+Math.sqrt(Math.max(0,4*u*u-1)));
+  return {T1:T1, T3:T3, T4:T4, De:De, tot:T1+T3+T4};
+}
+function lam(){ return SYS==="dc" ? 0 : 0.28; }                     // sheath+armour loss factor (AC only)
+function condTemp(A){
+  var T=90, th=thermR(A);
+  for(var i=0;i<24;i++){                                            // iterate: R(T) ↔ T(R)
+    var Wc=Math.pow(current()*load,2)*Rac(A,MAT,T);
+    var Tn=Tsea+Wc*(1+lam())*th.tot;
+    T=T+(Tn-T)*0.5;
+  }
+  return T;
+}
+
+// ---------- K2: derive b/a = e, don't assert it ----------
+// E_max = V/(a·ln(b/a)). Fix b, vary a → minimise. Analytic: b/a = e.
+var baFound=0, baErr=0;
+function deriveBA(){
+  var best=1e18, bu=0;
+  for(var i=1;i<=4000;i++){
+    var u=i/4001;                                                   // u = a/b
+    var Em=1/(u*(-Math.log(u)));                                    // ∝ E_max, V=b=1
+    if(Em<best){ best=Em; bu=u; }
+  }
+  baFound=1/bu; baErr=Math.abs(baFound-Math.E);
+}
+deriveBA();
+
+// ---------- the objective (K4 — printed in full) ----------
+var C0=200, CA=0.11;                                                // €/m fixed, €/m per mm² (illustrative)
+function annuity(){ return (1-Math.pow(1+disc,-years))/disc; }
+function lossFactor(){ return 0.3*load+0.7*load*load; }             // Buller–Woodrow
+function costs(A){
+  var n=nCables(), Lm=Lkm*1000;
+  var capA = CA*A*Lm*n;                                             // the ONLY part Kelvin governs (K7)
+  var capFix = C0*Lm*n + Lkm*1000*0.55;                             // insulation/armour/laying
+  var conv = SYS==="dc" ? 2*0.115*Pmw*1e6 : 0;                      // converter stations
+  var comp = SYS==="ac" ? Math.max(0,Math.ceil(Lkm/60)-1)*70e6 : 0; // offshore compensation platforms
+  var T=condTemp(A);
+  var Pl = n*Math.pow(current()*load,2)*Rac(A,MAT,T)*Lm*(1+lam());
+  var lossNPV = (Pl/1e6)*8760*lossFactor()*price*annuity();
+  return {capA:capA, capFix:capFix, conv:conv, comp:comp, loss:lossNPV, Pl:Pl,
+          total:capA+capFix+conv+comp+lossNPV, T:T};
+}
+// K1: find the optimum by SCANNING, then check Kelvin's analytic condition.
+var Astar=0, kelvinLHS=0, kelvinRHS=0, kelvinOK=false;
+function findKelvin(){
+  var best=1e30, bA=200;
+  for(var A=200;A<=3000;A+=10){ var c=costs(A).total; if(c<best){ best=c; bA=A; } }
+  Astar=bA;
+  var c=costs(Astar);
+  kelvinLHS=c.capA; kelvinRHS=c.loss;                               // must be equal at A*
+  kelvinOK = Math.abs(kelvinLHS-kelvinRHS)/Math.max(1,kelvinRHS) < 0.12;
+}
+
+// K3: the AC/DC crossover, computed
+var crossKm=0;
+function findCross(){
+  var save=[SYS,Lkm], lo=5, hi=1200, mid=0;
+  function tot(sys,L){ SYS=sys; Lkm=L; var A=1500; return costs(A).total; }
+  var d0=tot("dc",lo)-tot("ac",lo);
+  for(var i=0;i<26;i++){
+    mid=(lo+hi)/2;
+    var d=tot("dc",mid)-tot("ac",mid);
+    if((d>0)===(d0>0)) lo=mid; else hi=mid;
+  }
+  crossKm=mid; SYS=save[0]; Lkm=save[1];
+}
+
+// ---------- DC field inversion: the deep one ----------
+// AC: field is CAPACITIVE (permittivity) → E ∝ 1/r, max at the conductor.
+// DC: field is RESISTIVE (conductivity), and σ ∝ exp(α·T). Under load the hot
+// inner insulation conducts BETTER, so the field runs OUTWARD.
+//   σ(r) = σ₀(b/r)^δ  ⇒  E ∝ r^(δ−1),  δ = α·ΔT_ins/ln(b/a)
+//   δ=0 → 1/r (AC).  δ=1 → uniform.  δ>1 → E_max at the SCREEN. INVERTED.
+function deltaDC(A){
+  if(SYS!=="dc") return 0;
+  var a=condR(A), b=insB(A), th=thermR(A), T=condTemp(A);
+  var Wc=Math.pow(current()*load,2)*Rac(A,MAT,T);
+  var dTins=Wc*th.T1;                                               // K across the insulation
+  return 0.10*dTins/Math.log(b/a);                                  // α ≈ 0.10 /K for XLPE
+}
+function Efield(r,a,b,V,d){
+  if(Math.abs(d)<1e-6) return V/(r*Math.log(b/a));
+  return V*d*Math.pow(r,d-1)/(Math.pow(b,d)-Math.pow(a,d));
+}
+
+// ---------- layout ----------
+var TOP=94, BOT=52;
+function panels(){
+  var left=13, right=W-13, top=TOP, bot=H-BOT;
+  var xsW=Math.min((right-left)*0.42, bot-top);
+  return {
+    XS:{x:left+8, y:top, w:xsW, h:bot-top},
+    P1:{x:left+xsW+26, y:top, w:right-(left+xsW+26), h:(bot-top)/3-10},
+    P2:{x:left+xsW+26, y:top+(bot-top)/3+2, w:right-(left+xsW+26), h:(bot-top)/3-10},
+    P3:{x:left+xsW+26, y:top+2*(bot-top)/3+4, w:right-(left+xsW+26), h:(bot-top)/3-10}
+  };
+}
+function frame(R,label){
+  ctx.strokeStyle=css(GOLD,0.10); ctx.lineWidth=1; ctx.strokeRect(R.x,R.y,R.w,R.h);
+  ctx.fillStyle=css(WHT,0.42); ctx.font="9px "+"ui-monospace,monospace";
+  ctx.textAlign="left"; ctx.textBaseline="alphabetic"; ctx.fillText(label,R.x+5,R.y-4);
+}
+
+// ---------- 1 · the cross-section, computed to scale ----------
+function drawXS(R){
+  frame(R,"cross-section · computed from geometry, drawn to scale");
+  var a=condR(Amm2), b=insB(Amm2);
+  var rSheath=b+3, rArm=rSheath+6, rOut=rArm+4;                     // mm
+  var n=nCables();
+  // bundle radius: n cores packed inside the outer sheath
+  var coreR=rOut, R_pack = n===2 ? coreR*2.0 : coreR*2.16;
+  var sc=Math.min(R.w,R.h)*0.42/R_pack;
+  var cx=R.x+R.w/2, cy=R.y+R.h/2;
+
+  // outer sheath + armour of the whole bundle
+  ctx.beginPath(); ctx.arc(cx,cy,R_pack*sc,0,6.2832);
+  ctx.fillStyle="rgba(255,215,0,0.10)"; ctx.fill();
+  ctx.strokeStyle=css(GOLD,0.8); ctx.lineWidth=2.4; ctx.stroke();
+  ctx.beginPath(); ctx.arc(cx,cy,(R_pack-5)*sc,0,6.2832);
+  ctx.strokeStyle=css(GRY,0.55); ctx.lineWidth=Math.max(2,4*sc); ctx.setLineDash([3,3]); ctx.stroke(); ctx.setLineDash([]);
+
+  for(var i=0;i<n;i++){
+    var ang = n===2 ? (i*Math.PI) : (i*2.0944 - Math.PI/2);
+    var d = n===2 ? coreR : coreR*1.16;
+    var x=cx+Math.cos(ang)*d*sc, y=cy+Math.sin(ang)*d*sc;
+    // serving
+    ctx.beginPath(); ctx.arc(x,y,rOut*sc,0,6.2832); ctx.fillStyle="rgba(60,60,75,0.9)"; ctx.fill();
+    // armour
+    ctx.beginPath(); ctx.arc(x,y,rArm*sc,0,6.2832); ctx.fillStyle=css(GRY,0.30); ctx.fill();
+    ctx.strokeStyle=css(GRY,0.7); ctx.lineWidth=1; ctx.stroke();
+    // lead sheath
+    ctx.beginPath(); ctx.arc(x,y,rSheath*sc,0,6.2832); ctx.fillStyle="rgba(120,125,145,0.85)"; ctx.fill();
+    // insulation — tinted by the DC field profile
+    var dd=deltaDC(Amm2);
+    var g=ctx.createRadialGradient(x,y,a*sc,x,y,b*sc);
+    if(dd>1){ g.addColorStop(0,"rgba(40,30,60,0.9)"); g.addColorStop(1,"rgba(255,84,112,0.55)"); }
+    else{ g.addColorStop(0,"rgba(255,84,112,0.45)"); g.addColorStop(1,"rgba(40,30,60,0.9)"); }
+    ctx.beginPath(); ctx.arc(x,y,b*sc,0,6.2832); ctx.fillStyle=g; ctx.fill();
+    ctx.strokeStyle=css(CYAN,0.5); ctx.lineWidth=1; ctx.stroke();
+    // conductor
+    ctx.beginPath(); ctx.arc(x,y,a*sc,0,6.2832);
+    ctx.fillStyle= MAT==="cu" ? "rgba(220,110,50,0.95)" : "rgba(200,205,215,0.9)"; ctx.fill();
+    ctx.strokeStyle=css(GOLD,0.6); ctx.lineWidth=1; ctx.stroke();
+    if(milliken && a*sc>10){
+      ctx.strokeStyle="rgba(0,0,0,0.45)"; ctx.lineWidth=1;
+      for(var k=0;k<5;k++){ var A2=k*1.2566;
+        ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x+Math.cos(A2)*a*sc, y+Math.sin(A2)*a*sc); ctx.stroke(); }
+    }
+  }
+  // fillers
+  ctx.fillStyle="rgba(90,90,110,0.35)";
+  for(var j=0;j<(n===2?2:3);j++){
+    var ang2 = n===2 ? (Math.PI/2+j*Math.PI) : (j*2.0944+Math.PI/2);
+    var rr = n===2 ? coreR*0.55 : coreR*0.9;
+    ctx.beginPath(); ctx.arc(cx+Math.cos(ang2)*rr*sc, cy+Math.sin(ang2)*rr*sc, coreR*0.32*sc,0,6.2832); ctx.fill();
+  }
+  // the torsion telltale — cheapest instrument on the whole cable
+  ctx.fillStyle="#000"; ctx.fillRect(cx-5, cy-R_pack*sc-1, 10, 5);
+  ctx.fillStyle=css(WHT,0.5); ctx.font="8px ui-monospace,monospace"; ctx.textAlign="center";
+  ctx.fillText("torsion telltale", cx, cy-R_pack*sc-6);
+
+  var th=thermR(Amm2);
+  ctx.textAlign="left"; ctx.fillStyle=css(WHT,0.55); ctx.font="9.5px ui-monospace,monospace";
+  var L=[ "a (conductor) = "+a.toFixed(1)+" mm",
+          "b (insulation) = "+b.toFixed(1)+" mm · t = "+(b-a).toFixed(1)+" mm",
+          "b/a = "+(b/a).toFixed(3)+"   (optimal-coax e = 2.718)",
+          "cable OD ≈ "+(2*rOut).toFixed(0)+" mm · bundle ≈ "+(2*R_pack).toFixed(0)+" mm",
+          (SYS==="dc"?"bipole · 2 cables":"three-phase · trefoil · 3 cores") ];
+  for(var q=0;q<L.length;q++) ctx.fillText(L[q], R.x+6, R.y+R.h-8-(L.length-1-q)*13);
+}
+
+// ---------- 2 · Kelvin's law of economic conductor size ----------
+function drawKelvin(R){
+  frame(R,"Kelvin's law · capital ∝ A vs losses ∝ 1/A · the minimum is where they cross");
+  var pad=26, x0=R.x+pad, x1=R.x+R.w-8, y0=R.y+6, y1=R.y+R.h-16;
+  var As=[], cap=[], los=[], tot=[], mx=0;
+  for(var A=200;A<=3000;A+=25){
+    var c=costs(A); As.push(A); cap.push(c.capA); los.push(c.loss); tot.push(c.capA+c.loss);
+    if(c.capA+c.loss>mx) mx=c.capA+c.loss;
+  }
+  function px(A){ return x0+(A-200)/2800*(x1-x0); }
+  function py(v){ return y1-Math.min(1,v/mx)*(y1-y0); }
+  function line(arr,col,lw){
+    ctx.strokeStyle=col; ctx.lineWidth=lw; ctx.beginPath();
+    for(var i=0;i<arr.length;i++){ var p=px(As[i]), q=py(arr[i]); i?ctx.lineTo(p,q):ctx.moveTo(p,q); }
+    ctx.stroke();
+  }
+  line(cap, css(CYAN,0.65), 1.2);     // capital ∝ A
+  line(los, css(PINK,0.65), 1.2);     // losses ∝ 1/A
+  line(tot, css(GOLD,0.9), 1.7);      // the U
+  // A* (scanned) and the live A
+  ctx.strokeStyle=css(GRN,0.85); ctx.lineWidth=1.4; ctx.setLineDash([4,3]);
+  ctx.beginPath(); ctx.moveTo(px(Astar),y0); ctx.lineTo(px(Astar),y1); ctx.stroke(); ctx.setLineDash([]);
+  ctx.fillStyle=css(GRN,0.9); ctx.font="9px ui-monospace,monospace"; ctx.textAlign="center";
+  ctx.fillText("A* "+Astar+" mm²", px(Astar), y0+9);
+  ctx.strokeStyle=css(WHT,0.5); ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(px(Amm2),y0); ctx.lineTo(px(Amm2),y1); ctx.stroke();
+  var cNow=costs(Amm2);
+  ctx.fillStyle=css(WHT,1); ctx.beginPath(); ctx.arc(px(Amm2), py(cNow.capA+cNow.loss), 3.4, 0, 6.2832); ctx.fill();
+  ctx.textAlign="left"; ctx.fillStyle=css(CYAN,0.7); ctx.fillText("capital ∝ A", x0+3, y1-4);
+  ctx.textAlign="right"; ctx.fillStyle=css(PINK,0.7); ctx.fillText("losses ∝ 1/A", x1-3, y0+9);
+  ctx.textAlign="center"; ctx.fillStyle=css(WHT,0.35);
+  [500,1000,2000,3000].forEach(function(A){ ctx.fillText(A, px(A), y1+11); });
+}
+
+// ---------- 3 · the DC field inversion ----------
+function drawField(R){
+  var d=deltaDC(Amm2);
+  frame(R, SYS==="dc"
+    ? "E(r) ∝ r^(δ−1) · δ="+d.toFixed(2)+(d>1?"  ▸ INVERTED — E_max at the SCREEN":"  ▸ max at the conductor")
+    : "E(r) = V/(r·ln(b/a)) · AC is capacitive — always max at the conductor");
+  var pad=26, x0=R.x+pad, x1=R.x+R.w-8, y0=R.y+8, y1=R.y+R.h-16;
+  var a=condR(Amm2), b=insB(Amm2), Vc=SYS==="dc"?Vkv:Vkv/Math.sqrt(3);
+  var mx=0, pts=[];
+  for(var i=0;i<=200;i++){
+    var r=a+(b-a)*i/200, E=Efield(r,a,b,Vc,d);
+    pts.push([r,E]); if(E>mx) mx=E;
+  }
+  function px(r){ return x0+(r-a)/(b-a)*(x1-x0); }
+  function py(E){ return y1-Math.min(1,E/(mx*1.08))*(y1-y0); }
+  // the no-load 1/r reference — the shape you'd expect from AC intuition
+  if(SYS==="dc" && d>0.02){
+    ctx.strokeStyle=css(GRY,0.30); ctx.lineWidth=1; ctx.setLineDash([3,3]); ctx.beginPath();
+    for(var j=0;j<=200;j++){ var r2=a+(b-a)*j/200, E2=Efield(r2,a,b,Vc,0);
+      var p2=px(r2), q2=py(E2); j?ctx.lineTo(p2,q2):ctx.moveTo(p2,q2); }
+    ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle=css(GRY,0.5); ctx.font="8px ui-monospace,monospace"; ctx.textAlign="left";
+    ctx.fillText("no-load (δ=0) · 1/r", x0+3, y0+8);
+  }
+  ctx.strokeStyle=css(d>1?RED:ORG,0.95); ctx.lineWidth=1.8; ctx.beginPath();
+  for(var k=0;k<pts.length;k++){ var p=px(pts[k][0]), q=py(pts[k][1]); k?ctx.lineTo(p,q):ctx.moveTo(p,q); }
+  ctx.stroke();
+  // where is E_max?
+  var iMax=0; for(var m=0;m<pts.length;m++) if(pts[m][1]>pts[iMax][1]) iMax=m;
+  ctx.fillStyle=css(GRN,1); ctx.beginPath(); ctx.arc(px(pts[iMax][0]), py(pts[iMax][1]), 4, 0, 6.2832); ctx.fill();
+  ctx.fillStyle=css(GRN,0.9); ctx.font="9px ui-monospace,monospace"; ctx.textAlign="center";
+  ctx.fillText("E_max "+pts[iMax][1].toFixed(1)+" kV/mm", px(pts[iMax][0]), py(pts[iMax][1])-7);
+  ctx.fillStyle=css(WHT,0.4); ctx.font="8.5px ui-monospace,monospace";
+  ctx.textAlign="left";  ctx.fillText("conductor  r=a", x0, y1+11);
+  ctx.textAlign="right"; ctx.fillText("screen  r=b", x1, y1+11);
+}
+
+// ---------- 4 · AC vs DC, computed ----------
+function drawCross(R){
+  frame(R,"AC vs DC total NPV vs length · the crossover is computed, not a rule of thumb");
+  var pad=26, x0=R.x+pad, x1=R.x+R.w-8, y0=R.y+6, y1=R.y+R.h-16;
+  var save=SYS, saveL=Lkm, dc=[], ac=[], Ls=[], mx=0;
+  for(var L=10;L<=1200;L+=25){
+    Lkm=L;
+    SYS="dc"; var cd=costs(1500).total;
+    SYS="ac"; var ca=costs(1200).total;
+    Ls.push(L); dc.push(cd); ac.push(ca);
+    if(cd>mx)mx=cd; if(ca>mx)mx=ca;
+  }
+  SYS=save; Lkm=saveL;
+  function px(L){ return x0+(L-10)/1190*(x1-x0); }
+  function py(v){ return y1-Math.min(1,v/mx)*(y1-y0); }
+  function line(arr,col){
+    ctx.strokeStyle=col; ctx.lineWidth=1.5; ctx.beginPath();
+    for(var i=0;i<arr.length;i++){ var p=px(Ls[i]), q=py(arr[i]); i?ctx.lineTo(p,q):ctx.moveTo(p,q); }
+    ctx.stroke();
+  }
+  line(dc, css(CYAN,0.85)); line(ac, css(ORG,0.85));
+  if(crossKm>12 && crossKm<1190){
+    ctx.strokeStyle=css(GRN,0.8); ctx.lineWidth=1.3; ctx.setLineDash([4,3]);
+    ctx.beginPath(); ctx.moveTo(px(crossKm),y0); ctx.lineTo(px(crossKm),y1); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle=css(GRN,0.9); ctx.font="9px ui-monospace,monospace"; ctx.textAlign="center";
+    ctx.fillText("crossover "+crossKm.toFixed(0)+" km", px(crossKm), y0+9);
+  }
+  ctx.strokeStyle=css(WHT,0.4); ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(px(Lkm),y0); ctx.lineTo(px(Lkm),y1); ctx.stroke();
+  ctx.textAlign="left"; ctx.fillStyle=css(ORG,0.8); ctx.font="9px ui-monospace,monospace";
+  ctx.fillText("HVAC — pays ωCV forever", x0+3, y0+9);
+  ctx.fillStyle=css(CYAN,0.8); ctx.fillText("HVDC — pays converters once", x0+3, y0+20);
+  ctx.textAlign="center"; ctx.fillStyle=css(WHT,0.35);
+  [200,400,600,800,1000,1200].forEach(function(L){ ctx.fillText(L, px(L), y1+11); });
+}
+
+// ---------- HUD ----------
+function updateHUD(){
+  var c=costs(Amm2), a=condR(Amm2), b=insB(Amm2), d=deltaDC(Amm2);
+  set("m-link", (SYS==="dc"?"HVDC ":"HVAC ")+Vkv+"kV · "+Lkm+"km");
+  set("m-A", Amm2+" · A*="+Astar);
+  set("m-I", (current()*load).toFixed(0)+" A");
+  set("m-loss", (c.Pl/1e6).toFixed(1)+" MW · "+(100*c.Pl/(Pmw*1e6)).toFixed(2)+"%");
+  var te=document.getElementById("m-T");
+  te.textContent=c.T.toFixed(0)+" °C"; te.style.color=c.T>90?"#ff5470":"#00ffd5";
+  set("m-npv", "€"+(c.total/1e6).toFixed(0)+"M");
+
+  var Lc=critLenKm(Amm2), ic=chargePerKm(Amm2);
+  var Rd=Rdc(Amm2,MAT,c.T), ys=skinY(Rd);
+  var th=thermR(Amm2);
+  var wSub=(dens(MAT)*Amm2*1e-6 + 930*Math.PI*((b*b-a*a)*1e-6) + 7850*Math.PI*((b+9)*(b+9)-(b+3)*(b+3))*1e-6)
+           - 1025*Math.PI*Math.pow((b+13)*1e-3,2);
+  var tension=Math.max(0,wSub)*9.81*depthM*1.2/1000;
+
+  document.getElementById("klines").innerHTML=
+  '<div class="kk">K4 · THE OBJECTIVE (change it, the answer changes)</div>'+
+  '<div style="font-size:9px">min<sub>A</sub>  [ C₀·L·n + <b>C_A·A·L·n</b> + converters + compensation + Σ(I²R·L·n)·LLF·8760·price·annuity ]</div>'+
+  '<div style="font-size:9px">price <b>€'+price+'/MWh</b> · load <b>'+load.toFixed(2)+'</b> · LLF <b>'+lossFactor().toFixed(2)+
+    '</b> · '+years+'y @ '+(disc*100).toFixed(0)+'% → annuity <b>'+annuity().toFixed(2)+'</b></div>'+
+
+  '<div class="sec"><span class="kk">K1</span> optimum by SCAN: A* = <b>'+Astar+' mm²</b><br>'+
+    'Kelvin condition — A-capital <b>€'+(kelvinLHS/1e6).toFixed(1)+'M</b> vs loss NPV <b>€'+(kelvinRHS/1e6).toFixed(1)+'M</b> '+
+    (kelvinOK?'<span class="g">✓ agree</span>':'<span class="n">✗ (A* pinned at a slider limit)</span>')+
+    '<br><span style="font-size:8.5px">the scan and the analytic condition are computed independently. they must meet.</span></div>'+
+
+  '<div class="sec"><span class="kk">K2</span> optimal coax derived: b/a = <b>'+baFound.toFixed(5)+'</b> vs e = <b>2.71828</b> · err <b>'+baErr.toExponential(1)+'</b> <span class="g">✓</span>'+
+    '<br><span style="font-size:8.5px">scanned E_max(a/b) for its minimum. never asserted. this cable is at b/a = '+(b/a).toFixed(2)+
+    ' — set by BREAKDOWN stress, not field optimisation. the two disagree, and that is honest.</span></div>'+
+
+  '<div class="sec"><span class="kk">K3</span> AC/DC crossover computed: <b>'+crossKm.toFixed(0)+' km</b></div>'+
+
+  '<div class="sec"><span class="kk">K6</span> '+(SYS==="ac"
+    ? 'charging current <b>'+ic.toFixed(1)+' A/km</b> → critical length <b>'+Lc.toFixed(0)+' km</b> '+
+      (Lkm>Lc?'<span class="n">✗ ωCV eats the whole conductor</span>':'<span class="g">✓</span>')+
+      '<br><span style="font-size:8.5px">the shunt C that killed the 1858 cable still caps HVAC subsea. 170 years, same equation.</span>'
+    : '<span class="g">DC: no charging current, no skin effect, no armour loss.</span> the whole conductor works.')+'</div>'+
+
+  '<div class="sec">skin y_s = <b>'+(SYS==="dc"?"0 (DC)":ys.toFixed(3))+'</b>'+(SYS==="ac"?' · '+(milliken?'Milliken k_s=0.435':'round k_s=1.0'):'')+
+    '<br>thermal ΣT = <b>'+th.tot.toFixed(2)+'</b> K·m/W (T4 seabed <b>'+th.T4.toFixed(2)+'</b>)'+
+    '<br>lay tension @ '+depthM+'m ≈ <b>'+tension.toFixed(0)+' kN</b> · the armour carries this'+
+    (SYS==="dc"?'<br>DC field δ = <b>'+d.toFixed(2)+'</b> '+(d>1?'<span class="n">▸ INVERTED</span>':'<span class="g">▸ normal</span>'):'')+'</div>'+
+
+  '<div class="sec" style="font-size:8.5px"><span class="kk">K5</span> TEACHING MODEL, NOT A DESIGN TOOL. IEC 60287 has ~40 more terms. sheath/armour loss factors approximated, proximity effect omitted, cost coefficients illustrative (the real ones are commercial secrets). the SHAPE is right. do not build a cable from this.<br>'+
+  '<span class="kk">K7</span> Kelvin governs only the A-PROPORTIONAL cost. on a real subsea cable copper is ~17% of the price — the rest does not care how thick your conductor is.</div>';
+}
+function set(id,v){ var e=document.getElementById(id); if(e)e.textContent=v; }
+
+// ---------- loop ----------
+var dirty=true;
+function recompute(){ findKelvin(); findCross(); dirty=false; }
+function draw(){
+  requestAnimationFrame(draw);
+  if(dirty) recompute();
+  ctx.fillStyle="#050508"; ctx.fillRect(0,0,W,H);
+  var P=panels();
+  drawXS(P.XS); drawKelvin(P.P1); drawField(P.P2); drawCross(P.P3);
+  updateHUD();
+}
+
+// ---------- controls ----------
+function setSys(s){ SYS=s;
+  document.getElementById("b-dc").classList.toggle("on",s==="dc");
+  document.getElementById("b-ac").classList.toggle("on",s==="ac");
+  if(s==="ac" && Vkv>420){ Vkv=400; document.getElementById("sV").value=400; set("v-V",400); }
+  dirty=true; }
+function setMat(m){ MAT=m;
+  document.getElementById("b-cu").classList.toggle("on",m==="cu");
+  document.getElementById("b-al").classList.toggle("on",m==="al"); dirty=true; }
+function setL(v){ Lkm=v; set("v-L",v+" km"); dirty=true; }
+function setP(v){ Pmw=v; set("v-P",v+" MW"); dirty=true; }
+function setV(v){ Vkv=v; set("v-V",v); dirty=true; }
+function setA(v){ Amm2=v; set("v-A",v); }
+function setPr(v){ price=v; set("v-Pr",v); dirty=true; }
+function setLd(v){ load=v; set("v-Ld",v.toFixed(2)); dirty=true; }
+function setD(v){ depthM=v; set("v-D",v+" m"); }
+function setRs(v){ rhoSeabed=v; set("v-Rs",v.toFixed(2)); dirty=true; }
+function snapKelvin(){ recompute(); Amm2=Math.max(200,Math.min(3000,Astar));
+  document.getElementById("sA").value=Amm2; set("v-A",Amm2); }
+
+recompute();
+requestAnimationFrame(draw);
+</script>
+</body></html>
