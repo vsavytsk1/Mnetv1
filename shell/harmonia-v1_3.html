@@ -1,0 +1,357 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>HARMONIA v1.3 — source × filter · the fractal buzz becomes a Greek vowel</title>
+<!--
+  HARMONIA v1.3 — THE VOICE = SOURCE × FILTER
+  ================================================================
+  v1.2 spun the fractal buzz. v1.3 gives it a throat.
+
+  THE HONEST CORRECTION to "more fractal = clearer voice":
+    a voice is SOURCE × FILTER.
+      SOURCE  = the glottal buzz: a harmonic stack, f_k = k·f0, rolling off as
+                1/f^(β/2). realistic voice source ≈ β 2–4. (your fractal instinct,
+                correct — for the SOURCE.)
+      FILTER  = the vocal tract: 3–5 FORMANT resonances (peaks) that carve the
+                buzz into a vowel. THIS is what makes it a voice, not the partial
+                count. a pure fractal stack with no formants is a BUZZ, forever.
+    fractalizing enriches the source; the FORMANTS make the word. drag "voice"
+    from raw→1 and hear the drone become a vowel — that IS the proof.
+
+  MINIMUM PARTIALS (the question, answered live): you need harmonics dense enough
+  to reach the top formant F3 (~2.6–3.3 kHz). the HUD shows "reaches F3?". below
+  that the vowel goes thin/buzzy. for female f0≈210 Hz that's ~14–16 harmonics.
+  more than that adds brightness, not clarity — there is a floor, not "more is
+  always clearer."
+
+  THE GREEK NOTE (honest): the presets are the five Greek vowels Α Ε Ι Ο Υ, and
+  that's a REAL milestone — Greek was the first alphabet to give VOWELS their own
+  letters (from Phoenician, ~8th c. BCE), which is literally what we're
+  synthesizing. "most symmetric language" is love talking, not linguistics — but
+  the vowel alphabet is the genuine thing worth the awe.
+
+  carried honest: β measured back = TETRA GENESIS · self-affine not infinite
+  fractal · partials above Nyquist dropped. as above, so below · χ=2 · always.
+  Pure Canvas 2D + Web Audio. No deps. Built 2026-07-14.
+-->
+<style>
+:root{
+  --bg:#050508; --gold:#ffd700; --cyan:#00d4ff; --pink:#ff69b4; --green:#00ffd5;
+  --dim:#6a6a82; --txt:#e8e0d0; --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--txt);font-family:var(--mono);overflow:hidden}
+#cv{position:fixed;inset:0;display:block}
+#hud{position:fixed;top:0;left:0;right:0;padding:10px 14px;display:flex;gap:12px;align-items:flex-start;
+  pointer-events:none;font-size:11px;z-index:10;flex-wrap:wrap}
+#hud>div{pointer-events:auto;background:rgba(8,8,16,.78);border:1px solid #20202e;border-radius:8px;padding:8px 11px}
+#ttl{color:var(--gold);font-size:14px;letter-spacing:.05em}
+#sub{color:var(--dim);font-size:10px;margin-top:2px;max-width:540px;line-height:1.45}
+#sub b{color:var(--cyan)} #sub .g{color:var(--green)}
+#read{display:flex;gap:6px;flex-wrap:wrap}
+.mc{background:rgba(8,8,16,.85);border:1px solid #20202e;border-radius:6px;padding:5px 9px;min-width:66px}
+.mc .lab{font-size:8px;color:var(--dim);text-transform:uppercase;letter-spacing:.07em}
+.mc .val{font-size:14px;font-weight:bold;color:var(--gold)}
+.mc .val.cyan{color:var(--cyan)} .mc .val.green{color:var(--green)} .mc .val.pink{color:var(--pink)}
+#bar{position:fixed;left:50%;transform:translateX(-50%);bottom:10px;display:flex;flex-wrap:wrap;
+  gap:7px 10px;align-items:center;justify-content:center;background:rgba(8,8,16,.92);
+  border:1px solid #20202e;border-radius:10px;padding:9px 13px;z-index:10;max-width:98vw}
+button{background:#14141f;border:1px solid #2a2a3a;border-radius:6px;color:var(--gold);
+  font:11px var(--mono);padding:5px 9px;cursor:pointer;transition:all .12s}
+button:hover{border-color:var(--gold)} button.on{background:#1d1a0a;border-color:var(--gold)}
+button.cyan{color:var(--cyan)} button.cyan.on{border-color:var(--cyan);background:#08222a}
+button.vw{color:var(--pink);border-color:#3a0a24;font-size:14px;min-width:30px} button.vw:hover{border-color:var(--pink)}
+button.vw.on{background:#2a0a1a;border-color:var(--pink)}
+.ctl{display:flex;align-items:center;gap:5px}
+.klbl{color:var(--dim);font-size:10px;text-transform:uppercase;letter-spacing:.05em}
+.val2{color:var(--gold);font-size:10px;min-width:34px;text-align:right}
+input[type=range]{appearance:none;-webkit-appearance:none;width:72px;height:4px;background:#2a2a3a;border-radius:3px;outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;border-radius:50%;background:var(--gold);cursor:pointer}
+input[type=range]::-moz-range-thumb{width:13px;height:13px;border:none;border-radius:50%;background:var(--gold);cursor:pointer}
+#bvoice{width:110px} #bvoice::-webkit-slider-thumb{background:var(--pink)}
+#bbeta::-webkit-slider-thumb{background:var(--cyan)}
+#bspin::-webkit-slider-thumb{background:var(--green)}
+.sep{width:1px;height:20px;background:#2a2a3a;margin:0 2px}
+#gate{position:fixed;inset:0;z-index:40;display:flex;align-items:center;justify-content:center;flex-direction:column;
+  background:rgba(5,5,8,.86);backdrop-filter:blur(4px);cursor:pointer;text-align:center;padding:20px}
+#gate .big{font-size:20px;color:var(--gold);letter-spacing:.12em;margin-bottom:8px}
+#gate .g2{font-size:12px;color:var(--dim);line-height:1.7;max-width:450px}
+#gate .g2 b{color:var(--cyan)} #gate .g2 .pk{color:var(--pink)}
+#gate .go{margin-top:16px;font-size:12px;color:var(--green);border:1px solid #0a3a3a;border-radius:8px;padding:9px 18px}
+#stamp{position:fixed;bottom:10px;right:14px;color:var(--dim);font-size:9px;text-align:right;z-index:9;line-height:1.5}
+#stamp b{color:var(--gold)}
+</style></head>
+<body>
+<canvas id="cv"></canvas>
+
+<div id="hud">
+  <div>
+    <div id="ttl">HARMONIA v1.3 · source × filter</div>
+    <div id="sub">the glottal <b>buzz</b> (1/fᵝ harmonic stack) carved by the <b>vocal tract</b> (formants) into a vowel. <span class="g">clarity is the formants, not the fractal depth — drag "voice" and hear it.</span></div>
+  </div>
+  <div id="read">
+    <div class="mc"><div class="lab">vowel</div><div class="val pink" id="m-vw">Α</div></div>
+    <div class="mc"><div class="lab">voice</div><div class="val" id="m-voiced">1.0</div></div>
+    <div class="mc"><div class="lab">F1·F2·F3</div><div class="val cyan" id="m-form">—</div></div>
+    <div class="mc"><div class="lab">partials</div><div class="val" id="m-parts">—</div></div>
+    <div class="mc"><div class="lab">reaches F3</div><div class="val green" id="m-f3">—</div></div>
+    <div class="mc"><div class="lab">β measured</div><div class="val green" id="m-bmeas">—</div></div>
+  </div>
+</div>
+
+<div id="bar">
+  <span class="klbl">vowel</span>
+  <button class="vw on" id="vw-A" onclick="setVowel('A')">Α</button>
+  <button class="vw" id="vw-E" onclick="setVowel('E')">Ε</button>
+  <button class="vw" id="vw-I" onclick="setVowel('I')">Ι</button>
+  <button class="vw" id="vw-O" onclick="setVowel('O')">Ο</button>
+  <button class="vw" id="vw-U" onclick="setVowel('U')">Υ</button>
+  <div class="sep"></div>
+  <div class="ctl"><span class="klbl">raw→voice</span><input id="bvoice" type="range" min="0" max="140" value="100" oninput="setVoiced(+this.value/100)"><span class="val2" id="v-voiced">1.00</span></div>
+  <div class="ctl"><span class="klbl">β src</span><input id="bbeta" type="range" min="0" max="400" value="250" oninput="setBeta(+this.value/100)"><span class="val2" id="v-beta">2.50</span></div>
+  <div class="ctl"><span class="klbl">f0</span><input id="bf0" type="range" min="80" max="400" value="210" oninput="setF0(+this.value)"><span class="val2" id="v-f0">210</span></div>
+  <div class="ctl"><span class="klbl">N</span><input id="bN" type="range" min="1" max="48" value="32" oninput="setN(+this.value)"><span class="val2" id="v-N">32</span></div>
+  <div class="ctl"><span class="klbl">spin</span><input id="bspin" type="range" min="0" max="40" value="9" oninput="setSpin(+this.value)"><span class="val2" id="v-spin">0.9</span></div>
+  <div class="sep"></div>
+  <button id="b-play" class="cyan" onclick="togglePlay()">▶ play</button>
+</div>
+
+<div id="stamp">
+  HARMONIA v1.3 · voice = source × filter<br>
+  <b>formants</b> make the word, not fractal depth · self-affine, not infinite fractal<br>
+  Α Ε Ι Ο Υ · χ=2 · always
+</div>
+
+<div id="gate" onclick="startFromGate()">
+  <div class="big">HARMONIA · the throat</div>
+  <div class="g2">start on <b>Α</b>. then drag <span class="pk">raw→voice</span> down to 0 and back: the vowel dissolves into a fractal buzz and re-forms. <b>the formants are the voice.</b></div>
+  <div class="go">▶ click for sound</div>
+</div>
+
+<script>
+"use strict";
+var cv=document.getElementById("cv"), ctx=cv.getContext("2d");
+var W=0,H=0,DPR=1;
+function resize(){ DPR=Math.min(window.devicePixelRatio||1,2); W=window.innerWidth; H=window.innerHeight;
+  cv.width=Math.round(W*DPR); cv.height=Math.round(H*DPR); ctx.setTransform(DPR,0,0,DPR,0,0); }
+window.addEventListener("resize",resize); resize();
+
+// ---------- params ----------
+var beta=2.5, f0=210, N=32, vol=0.55, voiced=1.0;
+var spin=0, spinSpeed=0.0009*10, penTheta=0, penSpeed=0.02;   // spinSpeed set via slider
+spinSpeed=9/10000;
+var muted=false, lastCloses=true, lastT=1;
+
+// female-ish vowel formants: [F(Hz), BW(Hz), amp]
+var VOWELS={
+  A:{name:"Α", F:[[850,90,1.0],[1250,100,0.7],[2800,150,0.42],[3600,220,0.16]]},
+  E:{name:"Ε", F:[[550,80,1.0],[2100,110,0.62],[2750,140,0.4],[3600,220,0.15]]},
+  I:{name:"Ι", F:[[320,70,1.0],[2700,120,0.55],[3300,150,0.42],[4000,240,0.14]]},
+  O:{name:"Ο", F:[[480,80,1.0],[850,90,0.72],[2650,150,0.32],[3500,220,0.12]]},
+  U:{name:"Υ", F:[[330,70,1.0],[700,90,0.6],[2600,150,0.24],[3400,220,0.1]]}
+};
+var vowelKey="A", formants=VOWELS.A.F, vowelName="Α";
+
+// ---------- colours ----------
+var GOLD=[255,215,0], CYAN=[0,212,255], PINK=[255,105,180], GRN=[0,255,213];
+function css(c,a){ return "rgba("+(c[0]|0)+","+(c[1]|0)+","+(c[2]|0)+","+a+")"; }
+function mix(a,b,t){ t=t<0?0:t>1?1:t; return [a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t, a[2]+(b[2]-a[2])*t]; }
+
+// ---------- audio ----------
+var actx=null, master=null, analyser=null, started=false;
+var voice=[], freqData=null, timeData=null, CAP=20000;
+function nyqCap(){ return Math.min(CAP, actx ? actx.sampleRate/2 : 22050); }
+
+// vocal-tract formant magnitude (parallel 2-pole resonators) — same maths as the resonance curve
+function formEnv(f){
+  var g=0;
+  for(var i=0;i<formants.length;i++){
+    var F=formants[i][0], BW=formants[i][1], A=formants[i][2], Q=F/BW, x=f/F;
+    var R=1/Math.sqrt((1-x*x)*(1-x*x)+(x/Q)*(x/Q));
+    g+=A*R;
+  }
+  return g;
+}
+function partials(){
+  var raw=[], cap=nyqCap();
+  for(var k=0;k<N;k++){ var n=k+1, f=n*f0; if(f>cap||f<15) continue;
+    raw.push({ f:f, aSrc:Math.pow(n,-beta/2) }); }
+  var envMax=1e-6;
+  for(var i=0;i<raw.length;i++){ raw[i].env=formEnv(raw[i].f); if(raw[i].env>envMax)envMax=raw[i].env; }
+  for(var m=0;m<formants.length;m++){ var e=formEnv(formants[m][0]); if(e>envMax)envMax=e; }
+  var s=0;
+  for(var j=0;j<raw.length;j++){ var shape=Math.pow(raw[j].env/envMax, voiced);
+    raw[j].a=raw[j].aSrc*shape; s+=raw[j].a; }
+  if(s<=0)s=1;
+  for(var q=0;q<raw.length;q++) raw[q].aN=raw[q].a/s;
+  return raw;
+}
+function ensureSize(n){
+  while(voice.length<n){ var o=actx.createOscillator(); o.type="sine";
+    var g=actx.createGain(); g.gain.value=0; o.connect(g); g.connect(master); o.start(); voice.push({osc:o,gain:g}); }
+  while(voice.length>n){ var v=voice.pop();
+    try{ v.gain.gain.setTargetAtTime(0,actx.currentTime,0.02); v.osc.stop(actx.currentTime+0.12); }catch(e){} }
+}
+function syncVoice(){
+  if(!started) return;
+  var ps=partials(); ensureSize(ps.length); var t=actx.currentTime;
+  for(var i=0;i<ps.length;i++){ voice[i].osc.frequency.setTargetAtTime(ps[i].f, t, 0.02);
+    voice[i].gain.gain.setTargetAtTime(ps[i].aN*0.9, t, 0.03); }
+  master.gain.setTargetAtTime(muted?0:vol, t, 0.05);
+}
+function start(){
+  if(started) return;
+  actx=new (window.AudioContext||window.webkitAudioContext)();
+  master=actx.createGain(); master.gain.value=0;
+  analyser=actx.createAnalyser(); analyser.fftSize=4096; analyser.smoothingTimeConstant=0.5;
+  analyser.minDecibels=-100; analyser.maxDecibels=-12;
+  master.connect(analyser); analyser.connect(actx.destination);
+  freqData=new Float32Array(analyser.frequencyBinCount); timeData=new Float32Array(analyser.fftSize);
+  started=true; muted=false; if(actx.state==="suspended") actx.resume();
+  syncVoice(); master.gain.setTargetAtTime(vol, actx.currentTime, 0.12); setPlayLabel(true);
+}
+function startFromGate(){ document.getElementById("gate").style.display="none"; start(); }
+function togglePlay(){ if(!started){ start(); return; }
+  muted=!muted; master.gain.setTargetAtTime(muted?0:vol, actx.currentTime, 0.05); setPlayLabel(!muted); }
+function setPlayLabel(on){ var b=document.getElementById("b-play"); b.textContent=on?"⏸ pause":"▶ play"; b.classList.toggle("on",on); }
+function measuredBeta(){
+  if(!started) return null;
+  var binHz=actx.sampleRate/analyser.fftSize;
+  var lo=Math.max(1,Math.floor(80/binHz)), hi=Math.min(freqData.length-1,Math.ceil(8000/binHz));
+  var n=0,sx=0,sy=0,sxx=0,sxy=0;
+  for(var i=lo;i<=hi;i++){ var dB=freqData[i]; if(dB<=-100) continue; var P=Math.pow(10,dB/10); if(P<=0) continue;
+    var x=Math.log10(i*binHz), y=Math.log10(P); n++; sx+=x; sy+=y; sxx+=x*x; sxy+=x*y; }
+  if(n<3) return null; var den=n*sxx-sx*sx; if(Math.abs(den)<1e-12) return null;
+  return -((n*sxy-sx*sy)/den);
+}
+function findPeriod(ratios){
+  for(var T=1;T<=120;T++){ var ok=true;
+    for(var i=0;i<ratios.length;i++){ var v=ratios[i]*T; if(Math.abs(v-Math.round(v))>1e-4){ ok=false; break; } }
+    if(ok) return T; } return null;
+}
+
+// ---------- the spinning voice-rose ----------
+function drawMandala(ps){
+  var cx=W/2, cy=H*0.42, base=Math.min(W*0.86, H*0.66);
+  var ratios=[], amps=[], sumA=0, maxA=0;
+  for(var i=0;i<ps.length;i++){ var r=ps[i].f/f0, a=ps[i].a; ratios.push(r); amps.push(a); sumA+=a; if(a>maxA)maxA=a; }
+  if(sumA<=0)sumA=1; if(maxA<=0)maxA=1;
+  var roseScale=base*0.34/sumA, cS=Math.cos(spin), sN=Math.sin(spin), P=ps.length;
+  var T=findPeriod(ratios); lastCloses=(T!==null); lastT=T;
+
+  ctx.lineCap="round"; ctx.lineJoin="round"; ctx.globalCompositeOperation="screen";
+
+  // outer ornament star
+  if(P>=3){
+    var Ro=base*0.52, pts=[];
+    for(var o=0;o<P;o++){ var a=o/P*6.2832+spin*0.6; pts.push([cx+Math.cos(a)*Ro, cy+Math.sin(a)*Ro]); }
+    var skip=Math.max(2,Math.min(P-1,Math.round(P*0.4)));
+    ctx.strokeStyle=css(GOLD,0.12); ctx.lineWidth=1; ctx.beginPath();
+    for(var s0=0;s0<P;s0++){ var j=(s0+skip)%P; ctx.moveTo(pts[s0][0],pts[s0][1]); ctx.lineTo(pts[j][0],pts[j][1]); }
+    ctx.stroke();
+  }
+  // spectrum petals
+  var Rin=base*0.37, Rlen=base*0.12;
+  ctx.strokeStyle=css(GOLD,0.09); ctx.lineWidth=1; ctx.beginPath(); ctx.arc(cx,cy,Rin,0,6.2832); ctx.stroke();
+  for(var k=0;k<P;k++){ var ang=k/P*6.2832+spin, rel=amps[k]/maxA, r1=Rin+rel*Rlen, col=mix(GOLD,CYAN,P>1?k/(P-1):0);
+    ctx.strokeStyle=css(col,0.6); ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.moveTo(cx+Math.cos(ang)*Rin, cy+Math.sin(ang)*Rin); ctx.lineTo(cx+Math.cos(ang)*r1, cy+Math.sin(ang)*r1); ctx.stroke();
+    ctx.fillStyle=css(col,0.9); ctx.beginPath(); ctx.arc(cx+Math.cos(ang)*r1, cy+Math.sin(ang)*r1, 2.2, 0, 6.2832); ctx.fill(); }
+
+  // voice rose
+  var turns=lastCloses?Math.min(T,24):14, STEPS=Math.min(6000,Math.max(500,turns*300));
+  ctx.strokeStyle=css(PINK,0.5); ctx.lineWidth=1.2; ctx.beginPath();
+  for(var s=0;s<=STEPS;s++){ var th=s/STEPS*6.2832*turns, x=0, y=0;
+    for(var m=0;m<ratios.length;m++){ x+=amps[m]*Math.cos(ratios[m]*th); y+=amps[m]*Math.sin(ratios[m]*th); }
+    var X=cx+(x*cS-y*sN)*roseScale, Y=cy+(x*sN+y*cS)*roseScale; s?ctx.lineTo(X,Y):ctx.moveTo(X,Y); }
+  ctx.stroke();
+  // epicycle pen
+  var px=0, py=0;
+  for(var m2=0;m2<ratios.length;m2++){
+    var CXc=cx+(px*cS-py*sN)*roseScale, CYc=cy+(px*sN+py*cS)*roseScale, rad=amps[m2]*roseScale;
+    if(rad>1.6){ ctx.strokeStyle=css(mix(CYAN,GOLD,ratios.length>1?m2/(ratios.length-1):0),0.14); ctx.lineWidth=0.7;
+      ctx.beginPath(); ctx.arc(CXc,CYc,rad,0,6.2832); ctx.stroke(); }
+    px+=amps[m2]*Math.cos(ratios[m2]*penTheta); py+=amps[m2]*Math.sin(ratios[m2]*penTheta); }
+  var PX=cx+(px*cS-py*sN)*roseScale, PY=cy+(px*sN+py*cS)*roseScale;
+  ctx.fillStyle=css(GRN,0.95); ctx.shadowColor=css(GRN,1); ctx.shadowBlur=9; ctx.beginPath(); ctx.arc(PX,PY,3.4,0,6.2832); ctx.fill(); ctx.shadowBlur=0;
+
+  ctx.globalCompositeOperation="source-over";
+  // gate
+  var pulse=0.5+0.5*Math.sin(performance.now()*0.002);
+  ctx.strokeStyle=css(CYAN,0.3+pulse*0.28); ctx.lineWidth=2; ctx.beginPath(); ctx.arc(cx,cy,11+pulse*3,0,6.2832); ctx.stroke();
+  ctx.fillStyle=css(GOLD,1); ctx.shadowColor=css(GOLD,1); ctx.shadowBlur=9; ctx.beginPath(); ctx.arc(cx,cy,5,0,6.2832); ctx.fill(); ctx.shadowBlur=0;
+}
+
+// ---------- the vocal-tract panel (the evidence) ----------
+function drawFormantPanel(ps){
+  var w=Math.min(300,W-28), h=118, R={x:14,y:H-h-104,w:w,h:h};
+  if(R.y<H*0.6) R.y=H*0.6;
+  ctx.fillStyle="rgba(8,8,16,0.72)"; ctx.fillRect(R.x,R.y,R.w,R.h);
+  ctx.strokeStyle="rgba(255,215,0,0.14)"; ctx.lineWidth=1; ctx.strokeRect(R.x,R.y,R.w,R.h);
+  ctx.fillStyle="rgba(232,224,208,0.5)"; ctx.font="9px ui-monospace,monospace"; ctx.textAlign="left"; ctx.textBaseline="alphabetic";
+  ctx.fillText("vocal tract · formants carve the buzz (the real voice)", R.x+7, R.y-5);
+  var FMAX=4200, pad=8;
+  function fx(f){ return R.x+pad+Math.min(1,f/FMAX)*(R.w-2*pad); }
+  // envelope max for scaling
+  var envMax=1e-6; for(var f=60;f<=FMAX;f+=40){ var e=formEnv(f); if(e>envMax)envMax=e; }
+  // partials (shaped)
+  var maxA=1e-6; for(var i=0;i<ps.length;i++) if(ps[i].a>maxA) maxA=ps[i].a;
+  for(var j=0;j<ps.length;j++){ if(ps[j].f>FMAX) continue;
+    var x=fx(ps[j].f), hh=(ps[j].a/maxA)*(R.h-30);
+    ctx.strokeStyle="rgba(255,215,0,0.7)"; ctx.lineWidth=1.3;
+    ctx.beginPath(); ctx.moveTo(x,R.y+R.h-14); ctx.lineTo(x,R.y+R.h-14-hh); ctx.stroke(); }
+  // formant envelope curve
+  ctx.strokeStyle="rgba(0,212,255,0.7)"; ctx.lineWidth=1.3; ctx.beginPath(); var first=true;
+  for(var f2=60;f2<=FMAX;f2+=18){ var yv=(formEnv(f2)/envMax)*(R.h-30), x=fx(f2), y=R.y+R.h-14-yv;
+    first?(ctx.moveTo(x,y),first=false):ctx.lineTo(x,y); }
+  ctx.stroke();
+  // formant markers
+  for(var m=0;m<Math.min(3,formants.length);m++){ var Fc=formants[m][0]; if(Fc>FMAX) continue; var x=fx(Fc);
+    ctx.strokeStyle="rgba(255,105,180,0.55)"; ctx.setLineDash([3,3]); ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(x,R.y+6); ctx.lineTo(x,R.y+R.h-14); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle="rgba(255,105,180,0.85)"; ctx.font="8px ui-monospace,monospace"; ctx.textAlign="center";
+    ctx.fillText("F"+(m+1), x, R.y+R.h-4); }
+  // axis
+  ctx.fillStyle="rgba(232,224,208,0.3)"; ctx.font="8px ui-monospace,monospace"; ctx.textAlign="center";
+  [1000,2000,3000,4000].forEach(function(f){ ctx.fillText((f/1000)+"k", fx(f), R.y+R.h-4); });
+}
+
+function updateHUD(ps){
+  set("m-vw", vowelName);
+  set("m-voiced", voiced.toFixed(1));
+  set("m-form", Math.round(formants[0][0])+"·"+Math.round(formants[1][0])+"·"+Math.round(formants[2][0]));
+  set("m-parts", ps.length+" / "+N);
+  var top = ps.length?ps[ps.length-1].f:0, F3=formants[2][0];
+  var reaches = top>=F3;
+  var el=document.getElementById("m-f3"); el.textContent=reaches?"yes":"NO — thin";
+  el.style.color=reaches?"#00ffd5":"#ff5470";
+  var mb=measuredBeta(); set("m-bmeas", mb==null?"—":mb.toFixed(2));
+}
+function set(id,v){ var e=document.getElementById(id); if(e)e.textContent=v; }
+
+function draw(){
+  requestAnimationFrame(draw);
+  spin+=spinSpeed; penTheta+=penSpeed;
+  if(started){ analyser.getFloatFrequencyData(freqData); analyser.getFloatTimeDomainData(timeData); }
+  ctx.globalCompositeOperation="source-over";
+  ctx.fillStyle="rgba(5,5,8,0.30)"; ctx.fillRect(0,0,W,H);
+  var ps=partials();
+  drawMandala(ps); drawFormantPanel(ps); updateHUD(ps);
+}
+
+// ---------- controls ----------
+function setVowel(key){
+  vowelKey=key; formants=VOWELS[key].F; vowelName=VOWELS[key].name;
+  ["A","E","I","O","U"].forEach(function(k){ document.getElementById("vw-"+k).classList.toggle("on",k===key); });
+  syncVoice();
+}
+function setVoiced(v){ voiced=v; set("v-voiced",v.toFixed(2)); syncVoice(); }
+function setBeta(v){ beta=v; set("v-beta",v.toFixed(2)); syncVoice(); }
+function setF0(v){ f0=v; set("v-f0",Math.round(v)); syncVoice(); }
+function setN(v){ N=v; set("v-N",v); syncVoice(); }
+function setSpin(v){ spinSpeed=v/10000; set("v-spin",(v/10).toFixed(1)); }
+
+cv.addEventListener("click", function(){ if(!started) startFromGate(); });
+requestAnimationFrame(draw);
+</script>
+</body></html>
