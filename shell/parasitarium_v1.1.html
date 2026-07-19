@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>PARASITARIUM v1.1 — the host as a flow system</title>
+<style>
+  :root{
+    --bg:#050508; --gold:#ffd700; --cyan:#00d4ff; --pink:#ff69b4; --green:#00ffd5;
+    --esp:#c7894a; --red:#ff5470; --dim:#6a6a82; --txt:#e8e0d0;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;background:var(--bg);color:var(--txt);font-family:var(--mono);overflow:hidden;touch-action:none}
+  #cv{position:fixed;inset:0;display:block;width:100vw;height:100vh}
+  #top{position:fixed;top:8px;left:8px;right:8px;z-index:6;display:flex;gap:10px;align-items:flex-start;pointer-events:none;flex-wrap:wrap}
+  #ttlbox{background:rgba(8,8,16,.82);border:1px solid #20202e;border-radius:8px;padding:7px 11px;max-width:560px}
+  #ttl{color:var(--gold);font-size:13px;letter-spacing:.05em}
+  #sub{color:var(--dim);font-size:9.5px;margin-top:2px;line-height:1.4}
+  #bott{margin-left:auto;background:rgba(8,8,16,.9);border:1px solid #20202e;border-radius:8px;padding:7px 12px;min-width:250px}
+  #bott .lab{font-size:8px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em}
+  #bott .v{font-size:13px;font-weight:bold;margin-top:1px;line-height:1.25}
+  #bott .sub2{font-size:8.5px;color:var(--dim);margin-top:4px;line-height:1.35}
+  #cards{position:fixed;top:70px;left:8px;z-index:6;display:grid;grid-template-columns:repeat(2,1fr);gap:5px;width:214px}
+  .mc{background:rgba(8,8,16,.86);border:1px solid #20202e;border-radius:6px;padding:5px 8px}
+  .mc .lab{font-size:7.5px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em}
+  .mc .val{font-size:14px;font-weight:bold;color:var(--gold)}
+  .mc .val.cy{color:var(--cyan)} .mc .val.gn{color:var(--green)} .mc .val.pk{color:var(--pink)} .mc .val.rd{color:var(--red)}
+  /* R0 phase panel */
+  #phase{position:fixed;top:70px;right:8px;z-index:6;background:rgba(8,8,16,.86);border:1px solid #20202e;border-radius:8px;padding:6px 8px 4px}
+  #phase .lab{font-size:8px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px}
+  #pcv{display:block}
+  #phase .leg{font-size:7.5px;color:var(--dim);margin-top:2px;line-height:1.35}
+  #phase .leg b{color:var(--gold)} #phase .leg i{color:var(--pink);font-style:normal}
+  .wip{position:fixed;bottom:calc(var(--barH,150px) + 8px);left:8px;z-index:8;background:rgba(8,8,16,.94);border:1px solid var(--esp);border-radius:8px;
+    padding:8px 10px;font-size:8.7px;color:var(--esp);max-width:360px;line-height:1.55;display:none;max-height:52vh;overflow-y:auto}
+  .wip.show{display:block} .wip b{color:var(--gold)} .wip u{color:var(--cyan);text-decoration:none}
+  #khint{position:fixed;bottom:calc(var(--barH,150px) + 8px);right:8px;z-index:8}
+  button#kbtn{font-size:9px;color:var(--esp);border-color:#3a2a1a}
+  .stamp{position:fixed;bottom:calc(var(--barH,150px) + 10px);left:50%;transform:translateX(-50%);z-index:5;font-size:8px;color:rgba(0,212,255,.28);letter-spacing:.08em;text-align:center;pointer-events:none;white-space:nowrap}
+  #bar{position:fixed;bottom:0;left:0;right:0;z-index:10;background:rgba(8,8,16,.96);border-top:1px solid #20202e;
+    padding:7px 9px;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:7px 14px;align-items:center}
+  .sl{display:flex;flex-direction:column;gap:1px}
+  .sl .t{display:flex;justify-content:space-between;align-items:baseline}
+  .sl label{font-size:8px;color:var(--dim);text-transform:uppercase;letter-spacing:.05em}
+  .sl .v{font-size:10px;color:var(--gold);font-weight:bold;text-align:right}
+  input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:4px;background:#2a2a3a;border-radius:3px;outline:none}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:15px;height:15px;border-radius:50%;background:var(--gold);cursor:pointer;border:2px solid #050508}
+  input[type=range]::-moz-range-thumb{width:15px;height:15px;border-radius:50%;background:var(--gold);cursor:pointer;border:2px solid #050508}
+  #btns{grid-column:1/-1;display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin-top:1px}
+  button{background:#14141f;border:1px solid #2a2a3a;border-radius:5px;color:var(--cyan);font:11px var(--mono);padding:5px 11px;cursor:pointer}
+  button:hover{border-color:var(--cyan)}
+  button.pre{color:var(--txt);border-color:#33333f;font-size:10px;padding:5px 9px}
+  button.pre:hover{border-color:var(--gold);color:var(--gold)}
+  #b-go{color:#050508;background:var(--green);border-color:var(--green);font-weight:bold}
+  #b-go.on{color:var(--cyan);background:#14141f;border-color:#2a2a3a;font-weight:normal}
+  @media (max-width:560px){ #cards{width:158px;grid-template-columns:repeat(2,1fr)} .mc .val{font-size:12px} #bott{min-width:172px} }
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+
+<div id="top">
+  <div id="ttlbox">
+    <div id="ttl">PARASITARIUM v1.1 — the host as a flow system</div>
+    <div id="sub">same skeleton as the pizzeria: a finite resource (the host), a drain (the parasite), a regulator (immunity + flora). move <b>virulence</b> and watch the regime cross guest → tenant → killer → the parasite paying its own price. motion is opt-in — press begin.</div>
+  </div>
+  <div id="bott">
+    <div class="lab">regime right now</div>
+    <div class="v" id="reg-v" style="color:var(--dim)">still — press ▶ begin</div>
+    <div class="sub2" id="reg-why">the host starts healthy, sterile-ish, unpressed. choose a transmission mode and a virulence, then let it run.</div>
+  </div>
+</div>
+
+<div id="cards">
+  <div class="mc"><div class="lab">host vitality</div><div class="val gn" id="m-H">100%</div></div>
+  <div class="mc"><div class="lab">parasite load</div><div class="val pk" id="m-P">0.00</div></div>
+  <div class="mc"><div class="lab">microbiome</div><div class="val cy" id="m-M">88%</div></div>
+  <div class="mc"><div class="lab">immune activation</div><div class="val" id="m-I">4%</div></div>
+  <div class="mc"><div class="lab">R₀ at current v</div><div class="val gn" id="m-R">–</div></div>
+  <div class="mc"><div class="lab">ESS optimum v*</div><div class="val" id="m-vs">–</div></div>
+</div>
+
+<div id="phase">
+  <div class="lab">R₀ vs virulence — the trade-off</div>
+  <canvas id="pcv" width="188" height="96"></canvas>
+  <div class="leg"><b>◆ v*</b> peak (what selection favors) · <i>▮ your v</i>. change the transmission mode → the peak <b>moves</b>.</div>
+</div>
+
+<div class="wip" id="wip">
+  <b>honesty (K1–K8) — real theory, honest limits:</b><br>
+  <b>K1</b> this is a coupled-ODE toy (host H, parasite P, flora M, immunity I) + a between-host R₀ readout. it reproduces the <u>shape</u> of the standard theory, not any specific pathogen's numbers.<br>
+  <b>K2</b> the engine is the <u>transmission–virulence trade-off</u> (Anderson &amp; May 1982; Ewald 1983/94; Frank 1996; Alizon et al. 2009). R₀ = β(v)/(α(v)+γ+μ). β saturates in replication; α (host death) rises with it → an <u>interior</u> optimum v* &gt; 0. Evolution does NOT drive virulence to zero. "A good parasite spares its host" is folklore, not law.<br>
+  <b>K3</b> the transmission mode <u>moves</u> v*: needs-a-mobile-host (respiratory) → low v*; waterborne/durable &amp; vector-borne → high v* (an immobilised host still spreads / is bitten more); <u>vertical</u> (parent→child) → v*≈0 → mutualism; <u>manipulate/parasitoid</u> → host death IS the transmission event → v* maxes.<br>
+  <b>K4</b> restraint is mostly <u>selected, not chosen</u>. Kinship (rel): one clonal lineage = prudent (kin selection); many strains = tragedy of the commons → over-exploitation. Quorum/latency = hold virulence off until it pays (QS, lysogeny). Nutritional immunity (iron) &amp; colonization resistance = restraint imposed from <u>outside</u> the parasite.<br>
+  <b>K5</b> much "virulence" is <u>immunopathology</u> — your own response, not the bug (sepsis, cytokine storm, cerebral malaria). Tolerance (Medzhitov, Soares, Schneider) caps damage-per-parasite without clearing it → peaceful coexistence. Resistance clears harder but fuels the arms race &amp; self-damage.<br>
+  <b>K6</b> the microbial "kg": the honest figure is ≈0.2 kg of bacteria (~3.8×10¹³ cells, ~1.3:1 vs human cells — Sender, Fuchs &amp; Milo 2016), plus ~10¹³⁺ virus particles, mostly <u>bacteriophages</u> policing the bacteria (kill-the-winner). The famous "1–2 kg" is an overestimate. target ≠ result.<br>
+  <b>K7</b> outcomes are <u>illustrative regimes</u>, not predictions. bistability (controlled vs runaway load) and the epidemic threshold R₀=1 are real bifurcations; the exact tipping points here are tuned for legibility.<br>
+  <b>K8</b> motion is opt-in (Curse 13): it starts still; you press begin. the price is always paid — over-extraction self-terminates (host dies → parasite dies with it) unless the mode lets it cash out at death.
+</div>
+<div id="khint"><button id="kbtn">honesty K1–K8 ▸</button></div>
+<div class="stamp">PARASITARIUM v1.1 · MNet palette · the price is always paid</div>
+
+<div id="bar">
+  <div class="sl"><div class="t"><label>virulence (exploitation)</label><span class="v" id="v-vir">30%</span></div><input id="s-vir" type="range" min="0" max="100" step="1" value="30"></div>
+  <div class="sl"><div class="t"><label>transmission mode</label><span class="v" id="v-mode">direct · needs mobile host</span></div><input id="s-mode" type="range" min="0" max="4" step="1" value="0"></div>
+  <div class="sl"><div class="t"><label>parasite kinship</label><span class="v" id="v-rel">mixed</span></div><input id="s-rel" type="range" min="0" max="100" step="1" value="55"></div>
+  <div class="sl"><div class="t"><label>host strategy</label><span class="v" id="v-host">balanced</span></div><input id="s-host" type="range" min="0" max="100" step="1" value="55"></div>
+  <div class="sl"><div class="t"><label>colonization resistance</label><span class="v" id="v-col">55%</span></div><input id="s-col" type="range" min="0" max="100" step="1" value="55"></div>
+  <div class="sl"><div class="t"><label>nutritional immunity (iron)</label><span class="v" id="v-iron">40%</span></div><input id="s-iron" type="range" min="0" max="100" step="1" value="40"></div>
+  <div class="sl"><div class="t"><label>quorum / latency</label><span class="v" id="v-q">45%</span></div><input id="s-q" type="range" min="0" max="100" step="1" value="45"></div>
+  <div class="sl"><div class="t"><label>sim speed</label><span class="v" id="v-spd">18×</span></div><input id="s-spd" type="range" min="1" max="60" step="1" value="18"></div>
+  <div id="btns">
+    <button id="b-go">▶ begin</button>
+    <button id="b-reset">reset</button>
+    <button class="pre" data-p="tape">🪱 tapeworm</button>
+    <button class="pre" data-p="chol">🦠 cholera</button>
+    <button class="pre" data-p="cord">🧟 cordyceps</button>
+    <button class="pre" data-p="mut">🤝 mutualist</button>
+    <button class="pre" data-p="spill">⚔ spillover</button>
+  </div>
+</div>
+
+<script>
+"use strict";
+(function(){
+const cv=document.getElementById('cv'), ctx=cv.getContext('2d');
+const pcv=document.getElementById('pcv'), pctx=pcv.getContext('2d');
+let W,H,DPR,CX,CY,R;
+let rot=0;   // host rotation (spin) — advances only while running (Curse 13: opt-in)
+function resize(){
+  DPR=Math.min(devicePixelRatio||1,2); W=innerWidth; H=innerHeight;
+  cv.style.width=W+'px'; cv.style.height=H+'px';                 // lock CSS box to viewport (replaced-element fix)
+  cv.width=Math.round(W*DPR); cv.height=Math.round(H*DPR); ctx.setTransform(DPR,0,0,DPR,0,0);
+  measureBar();
+  const barH=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--barH'))||150;
+  const topInset=84, bottomInset=barH+10;                        // clear the title box and the control bar
+  CX=W/2;
+  CY=topInset + (H - topInset - bottomInset)/2;                  // centre in the free vertical band
+  R=Math.min((H - topInset - bottomInset)/2 - 12, W/2 - 24, 340);
+  R=Math.max(70,R);
+  // phase canvas hidpi
+  pcv.width=Math.round(188*DPR); pcv.height=Math.round(96*DPR); pctx.setTransform(DPR,0,0,DPR,0,0);
+}
+function measureBar(){ const b=document.getElementById('bar'); if(b) document.documentElement.style.setProperty('--barH', b.offsetHeight+'px'); }
+addEventListener('resize',resize);
+
+const GOLD='#ffd700',CYAN='#00d4ff',PK='#ff69b4',GN='#00ffd5',RED='#ff5470',DIM='#6a6a82',ESP='#c7894a';
+const clamp=(x,a,b)=>x<a?a:x>b?b:x;
+const smooth=(a,b,x)=>{ if(a===b) return x<a?0:1; const t=clamp((x-a)/(b-a),0,1); return t*t*(3-2*t); };
+const lerp=(a,b,t)=>a+(b-a)*t;
+const MODES=['direct · needs mobile host','waterborne · durable','vector-borne','vertical · parent→child','manipulate · death = payoff'];
+
+// ---------- params ----------
+const P={ vir:30, mode:0, rel:55, host:55, col:55, iron:40, q:45, spd:18, running:false };
+
+// ---------- state ----------
+let S; // {H,P,M,I}
+let dHw=0;            // running avg of dH/dt (for chronic vs declining)
+let hostDead=false, deadAt=0, emerge=0, transmittedAtDeath=false;
+let tSim=0;          // sim seconds elapsed
+function reset(){
+  S={H:1.0, P:0.02, M:0.88, I:0.04};
+  dHw=0; hostDead=false; deadAt=0; emerge=0; transmittedAtDeath=false; tSim=0;
+  seedParticles();
+}
+
+// ---------- derived rates ----------
+// realized DAMAGING exploitation (quorum/latency-gated, kinship-inflated). NOT the same as replication.
+function eDamNow(){
+  const rel=P.rel/100, qthr=P.q/100;
+  const rawVir = (P.vir/100) * (1 + 1.15*(1-rel));       // virulence potential, inflated by low kinship (defection)
+  const qgate  = smooth(qthr-0.05, qthr+0.18, S.P);       // damage switches on above quorum / latency load
+  return rawVir*qgate;
+}
+// instantaneous host cost, for the regime classifier & worm colour
+function harmNow(){
+  const res=P.host/100, tol=1-res;
+  const eDam=eDamNow();
+  const drain=1.3*eDam*S.P*(1-0.72*tol);
+  const immunopath=0.85*S.I*S.I*(1-0.85*tol)*(0.4+0.9*res);
+  return {harm:drain+immunopath, drain, immunopath, eDam};
+}
+function derivs(){
+  const rel=P.rel/100, res=P.host/100, tol=1-res, col=P.col/100, iron=P.iron/100;
+  const qthr=P.q/100;
+  const rawVir = (P.vir/100) * (1 + 1.15*(1-rel));
+  const qgate  = smooth(qthr-0.05, qthr+0.18, S.P);
+  const eDam   = rawVir*qgate;                             // realized damage exploitation
+  const Kp     = 1.30 * (1 - 0.72*col*S.M);                // within-host carrying capacity (flora lowers it)
+  const ironThr= 1 - 0.55*iron*S.I;                        // iron sequestration caps growth when immune active
+  const clear  = S.I * (0.75 + 1.7*res);                   // resistance strategy → harder clearance
+  const gr     = 0.85 + 1.9*rawVir;                        // replication speed rises with virulence (within-host competition)
+  // parasite — replicates on baseline uptake (can colonize even when peaceful); dies to baseline + immune clearance
+  const dP = S.P * ( gr*S.H*ironThr*(1 - S.P/Math.max(0.05,Kp)) - 0.18 - clear );
+  // microbiome (logistic; parasite competition; immune collateral = dysbiosis)
+  const dM = 0.95*S.M*(1-S.M) - 0.55*S.P*S.M - 0.42*S.I*S.M;
+  // immunity — responds to invasiveness (presence weighted by damage) + dysbiosis; tolerated commensals barely register
+  const dysb = Math.max(0, 0.45 - S.M);
+  const dI = (S.P*(0.45+1.7*eDam) + 1.3*dysb)*(1-S.I) - 1.1*S.I;
+  // host vitality — parasite drain (softened by tolerance) + immunopathology (worse with resistance) vs repair
+  const drain = 1.3*eDam*S.P*(1 - 0.72*tol);
+  const immunopath = 0.85*S.I*S.I*(1 - 0.85*tol)*(0.4 + 0.9*res);
+  const repair = 0.40*(1-S.H)*clamp(1 - 2.2*(drain+immunopath),0,1);
+  const dH = repair - drain - immunopath;
+  return {dP,dM,dI,dH,Kp};
+}
+function step(dt){
+  if(hostDead){ emerge = Math.min(1, emerge + dt*0.5); return; }
+  const d=derivs();
+  S.P = clamp(S.P + d.dP*dt, 0, 1.6);
+  S.M = clamp(S.M + d.dM*dt, 0, 1);
+  S.I = clamp(S.I + d.dI*dt, 0, 1);
+  S.H = clamp(S.H + d.dH*dt, 0, 1);
+  dHw = lerp(dHw, d.dH, clamp(dt*0.7,0,1));
+  tSim += dt;
+  if(S.H<=0.0009 && !hostDead){
+    hostDead=true; deadAt=tSim;
+    const m=P.mode; transmittedAtDeath = (m===1||m===2||m===4) && S.P>0.25; // durable/vector/manipulate cash out at death
+  }
+}
+
+// ---------- between-host R0(x) over the trade-off ----------
+function R0of(x){
+  const gamma=0.25, mu=0.02;
+  const betaInt = x*x/(x*x+0.10);          // transmissibility saturates in replication
+  const alpha   = 0.05 + 1.95*Math.pow(x,1.6);
+  let beta;
+  switch(P.mode){
+    case 0: beta = betaInt * clamp(1-1.35*x,0.02,1); break;   // needs mobile host: debilitation kills spread
+    case 1: beta = betaInt * 1.0; break;                       // waterborne/durable: decoupled
+    case 2: beta = betaInt * (1 + 0.65*x); break;              // vector: immobile host bitten more
+    case 3: beta = 1.7*Math.pow(1-x,1.5); break;               // vertical: spread needs a healthy reproducing host
+    case 4: beta = betaInt*0.55 + 1.5*Math.pow(x,1.8); break;  // manipulate/parasitoid: death is the payoff
+    default: beta=betaInt;
+  }
+  return beta/(alpha+gamma+mu);
+}
+function essAndCurve(){
+  const N=64; const xs=new Array(N), ys=new Array(N);
+  let best=-1,bx=0,maxY=1e-9;
+  for(let i=0;i<N;i++){ const x=i/(N-1); const y=R0of(x); xs[i]=x; ys[i]=y; if(y>best){best=y;bx=x;} if(y>maxY)maxY=y; }
+  return {xs,ys,vstar:bx,r0star:best,maxY};
+}
+
+// ---------- particles (flora, immune, phages, worm) ----------
+let flora=[], immune=[], phages=[];
+function seedParticles(){
+  flora=[]; immune=[]; phages=[];
+  for(let i=0;i<96;i++){ const a=Math.random()*Math.PI*2, rr=Math.sqrt(Math.random())*0.86; flora.push({a,rr,ph:Math.random()*6.28,sp:0.2+Math.random()*0.5}); }
+  for(let i=0;i<34;i++){ const a=Math.random()*Math.PI*2, rr=Math.sqrt(Math.random())*0.9; immune.push({x:0,y:0,a,rr,tx:0,ty:0}); }
+  for(let i=0;i<14;i++){ phages.push({a:Math.random()*6.28,rr:0.3+Math.random()*0.6,sp:1.5+Math.random()*2}); }
+}
+seedParticles();
+
+// worm geometry: a coil whose visible length ∝ P
+function wormPath(t){
+  // returns array of points for a coiled worm centred at host, scaled by load
+  const load=clamp(S.P/1.3,0,1.2);
+  const segs=Math.max(6, Math.floor(10+load*46));
+  const pts=[];
+  const turns=1.4+load*2.2;
+  const baseR=R*(0.10+0.34*Math.min(1,load));
+  for(let i=0;i<segs;i++){
+    const u=i/(segs-1);
+    const ang=u*turns*Math.PI*2 + t*0.25 + rot;
+    const rad=baseR*(0.25+0.75*u) + 3*Math.sin(t*2+u*8);
+    let px=CX + Math.cos(ang)*rad;
+    let py=CY + Math.sin(ang)*rad;
+    pts.push([px,py,u]);
+  }
+  // emergence in manipulate mode / at death: extend the head outward beyond the rim
+  if(emerge>0){
+    const head=pts[pts.length-1];
+    const dirA=Math.atan2(head[1]-CY, head[0]-CX);
+    const ext=6+Math.floor(emerge*14);
+    for(let i=1;i<=ext;i++){
+      const u=1+i*0.06;
+      const rad=R*(0.55) + i*(R*0.05)*emerge;
+      const wob=Math.sin(t*3+i*0.7)*8*emerge;
+      pts.push([CX+Math.cos(dirA)*rad+Math.cos(dirA+1.57)*wob, CY+Math.sin(dirA)*rad+Math.sin(dirA+1.57)*wob, u]);
+    }
+  }
+  return pts;
+}
+
+// ---------- draw ----------
+function regimeColor(reg){ return reg.col; }
+function classify(){
+  const {harm}=harmNow();
+  if(hostDead){
+    if(transmittedAtDeath) return {txt:'☠ HOST DEAD — parasite cashed out at death', col:RED,
+      why:'in this mode the death IS the transmission event (durable / vector / manipulate). the parasite "won" — it offloaded the whole price onto the host and left before the bill came. this is exactly why selection tolerates lethal virulence here.'};
+    return {txt:'☠ THE PRICE IS PAID — host dead, parasite dead with it', col:RED,
+      why:'over-extraction with no way to cash out at death: the drain killed its own source and went down with it. equivalent exchange — the branch never returned to main. this is why naïve spillovers burn out.'};
+  }
+  if(harm<0.02 && S.H>0.8 && S.I<0.35) return {txt:'🤝 COMMENSAL / MUTUALIST', col:GN,
+    why:'the population may be large, but it costs the host almost nothing and the immune system tolerates it. with vertical transmission this is where symbionts are born — restraint is total because the parasite\'s future IS the host\'s future.'};
+  if(S.H<=0.15) return {txt:'☠ COLLAPSING — host failing', col:RED,
+    why:'vitality near zero. the trajectory is over the fold; watch whether the mode lets the parasite cash out (durable/vector/manipulate) or whether it pays its own price (direct/vertical).'};
+  if(dHw<-0.008) return {txt:'🦠 VIRULENT — going overboard', col:GOLD,
+    why:'vitality is falling: drain + immunopathology now exceed repair. you have crossed past the prudent band. much of this damage is your own immune response, not the bug.'};
+  if(S.H<0.42 && harm>0.10) return {txt:'🦠 VIRULENT — severe, host holding', col:GOLD,
+    why:'a hard chronic infection sitting at a badly-lowered set point. the host survives but pays heavily; nudge tolerance up or virulence down and watch the set point rise.'};
+  if(S.H>0.35 && Math.abs(dHw)<0.02 && S.P>0.05) return {txt:'🪱 PRUDENT PARASITE — chronic, host survives', col:GN,
+    why:'a standing draw the host can pay indefinitely. this is the tapeworm equilibrium: transmission needs a living, shedding host, so low virulence is what wins.'};
+  return {txt:'… settling', col:DIM, why:'the system is finding its attractor. give it a moment, or push a slider.'};
+}
+
+function draw(t){
+  ctx.clearRect(0,0,W,H);
+  // ---- host vessel (the circle) ----
+  const hcol = S.H>0.66?GN : S.H>0.33?GOLD : RED;
+  // faint fill by vitality
+  const g=ctx.createRadialGradient(CX,CY,R*0.1,CX,CY,R);
+  g.addColorStop(0, `rgba(${S.H>0.5?'0,255,213':'255,84,112'},${0.05+0.08*S.H})`);
+  g.addColorStop(1,'rgba(8,8,16,0)');
+  ctx.fillStyle=g; ctx.beginPath(); ctx.arc(CX,CY,R,0,7); ctx.fill();
+  // vitality arc ring
+  ctx.lineWidth=3; ctx.strokeStyle='rgba(40,40,58,.9)'; ctx.beginPath(); ctx.arc(CX,CY,R+10,0,Math.PI*2); ctx.stroke();
+  ctx.strokeStyle=hcol; ctx.shadowColor=hcol; ctx.shadowBlur=10;
+  ctx.beginPath(); ctx.arc(CX,CY,R+10,-Math.PI/2,-Math.PI/2+Math.PI*2*S.H); ctx.stroke(); ctx.shadowBlur=0;
+  // vessel outline
+  ctx.lineWidth=1.4; ctx.strokeStyle='rgba(120,120,150,.5)'; ctx.beginPath(); ctx.arc(CX,CY,R,0,7); ctx.stroke();
+  // 12 organ nodes (P=12 wink) — glow with vitality
+  for(let i=0;i<12;i++){
+    const a=-Math.PI/2 + i/12*Math.PI*2 + rot;
+    const ox=CX+Math.cos(a)*R, oy=CY+Math.sin(a)*R;
+    ctx.fillStyle=hcol; ctx.globalAlpha=0.20+0.6*S.H; ctx.beginPath(); ctx.arc(ox,oy,2.4,0,7); ctx.fill(); ctx.globalAlpha=1;
+  }
+
+  // ---- microbiome (teal dots, count ∝ M) ----
+  const nF=Math.floor(flora.length*S.M);
+  for(let i=0;i<nF;i++){
+    const f=flora[i]; f.a += f.sp*0.0016*(1+P.spd*0.02);
+    const rr=f.rr*R*0.9 + 3*Math.sin(t*f.sp+f.ph);
+    const x=CX+Math.cos(f.a+rot)*rr, y=CY+Math.sin(f.a+rot)*rr;
+    ctx.fillStyle='rgba(0,212,255,.55)'; ctx.beginPath(); ctx.arc(x,y,1.5,0,7); ctx.fill();
+    f._x=x; f._y=y;
+  }
+  // dysbiosis haze when flora collapses
+  if(S.M<0.35){ ctx.fillStyle=`rgba(199,137,74,${0.05+0.12*(0.35-S.M)})`; ctx.beginPath(); ctx.arc(CX,CY,R*0.9,0,7); ctx.fill(); }
+
+  // ---- phages (kill-the-winner specks) ----
+  for(const ph of phages){ ph.a += ph.sp*0.004*(1+P.spd*0.02);
+    const rr=ph.rr*R*0.88; const x=CX+Math.cos(ph.a+rot)*rr, y=CY+Math.sin(ph.a+rot)*rr;
+    ctx.fillStyle='rgba(150,150,190,.5)'; ctx.fillRect(x,y,1.4,1.4);
+  }
+
+  // ---- the parasite worm (segmented coil) ----
+  const eff=eDamNow();
+  const wcol = eff>0.75?RED : eff>0.35?PK : GN;   // colour by how hard it's exploiting
+  if(S.P>0.01){
+    const pts=wormPath(t);
+    ctx.lineJoin='round'; ctx.lineCap='round';
+    // glow underlay
+    ctx.strokeStyle=wcol; ctx.shadowColor=wcol; ctx.shadowBlur=8;
+    for(let pass=0; pass<2; pass++){
+      ctx.beginPath();
+      for(let i=0;i<pts.length;i++){ const p=pts[i]; if(i===0)ctx.moveTo(p[0],p[1]); else ctx.lineTo(p[0],p[1]); }
+      ctx.lineWidth = pass===0? (2.5+3.5*clamp(S.P/1.3,0,1)) : 1.2;
+      ctx.strokeStyle = pass===0? wcol : 'rgba(255,255,255,.35)';
+      ctx.stroke();
+    }
+    ctx.shadowBlur=0;
+    // segment ticks (proglottids)
+    for(let i=0;i<pts.length;i+=3){ const p=pts[i]; ctx.fillStyle='rgba(8,8,16,.7)'; ctx.beginPath(); ctx.arc(p[0],p[1],1.1,0,7); ctx.fill(); }
+    // head
+    const head=pts[pts.length-1];
+    ctx.fillStyle=wcol; ctx.shadowColor=wcol; ctx.shadowBlur=10; ctx.beginPath(); ctx.arc(head[0],head[1],3.4,0,7); ctx.fill(); ctx.shadowBlur=0;
+  }
+
+  // ---- immune cells (gold, count ∝ I, dart toward worm) ----
+  const nI=Math.floor(immune.length*S.I);
+  const wp = S.P>0.05 ? wormPath(t) : null;
+  for(let i=0;i<nI;i++){
+    const m=immune[i];
+    // target: a random-ish worm segment, else drift
+    let tx,ty;
+    if(wp){ const seg=wp[(i*7)%wp.length]; tx=seg[0]; ty=seg[1]; }
+    else { tx=CX+Math.cos(m.a)*m.rr*R*0.8; ty=CY+Math.sin(m.a)*m.rr*R*0.8; }
+    if(!m.px){ m.px=CX+Math.cos(m.a)*m.rr*R*0.8; m.py=CY+Math.sin(m.a)*m.rr*R*0.8; }
+    m.px += (tx-m.px)*0.03*(1+P.spd*0.015);
+    m.py += (ty-m.py)*0.03*(1+P.spd*0.015);
+    ctx.fillStyle=GOLD; ctx.shadowColor=GOLD; ctx.shadowBlur=6; ctx.beginPath(); ctx.arc(m.px,m.py,2.1,0,7); ctx.fill(); ctx.shadowBlur=0;
+  }
+
+  // ---- death mark ----
+  if(hostDead){
+    ctx.fillStyle=`rgba(255,84,112,${0.10+0.10*Math.sin(t*3)})`; ctx.beginPath(); ctx.arc(CX,CY,R,0,7); ctx.fill();
+  }
+  // center is held, not shown (Path II) — a quiet unrendered anchor. we assert it, we do not display it.
+}
+
+// ---------- phase panel ----------
+function drawPhase(ess){
+  pctx.clearRect(0,0,188,96);
+  const w=188,h=96,pad=6, x0=pad, y0=h-14, x1=w-pad, y1=8;
+  // axes
+  pctx.strokeStyle='#20202e'; pctx.lineWidth=1;
+  pctx.beginPath(); pctx.moveTo(x0,y1); pctx.lineTo(x0,y0); pctx.lineTo(x1,y0); pctx.stroke();
+  // R0=1 line
+  const yR1 = y0 - (1/ess.maxY)*(y0-y1);
+  if(yR1>y1 && yR1<y0){ pctx.strokeStyle='rgba(0,212,255,.35)'; pctx.setLineDash([3,3]); pctx.beginPath(); pctx.moveTo(x0,yR1); pctx.lineTo(x1,yR1); pctx.stroke(); pctx.setLineDash([]);
+    pctx.fillStyle='rgba(0,212,255,.55)'; pctx.font='7px ui-monospace,monospace'; pctx.fillText('R₀=1',x1-24,yR1-2); }
+  // curve
+  pctx.strokeStyle=GOLD; pctx.lineWidth=1.5; pctx.beginPath();
+  for(let i=0;i<ess.xs.length;i++){ const px=lerp(x0,x1,ess.xs[i]); const py=y0-(ess.ys[i]/ess.maxY)*(y0-y1); if(i===0)pctx.moveTo(px,py); else pctx.lineTo(px,py); }
+  pctx.stroke();
+  // v* marker
+  const vx=lerp(x0,x1,ess.vstar), vy=y0-(ess.r0star/ess.maxY)*(y0-y1);
+  pctx.fillStyle=GOLD; pctx.beginPath(); pctx.moveTo(vx,vy-4); pctx.lineTo(vx+4,vy); pctx.lineTo(vx,vy+4); pctx.lineTo(vx-4,vy); pctx.closePath(); pctx.fill();
+  // current v bar
+  const cvx=lerp(x0,x1,P.vir/100);
+  pctx.strokeStyle=PK; pctx.lineWidth=1.5; pctx.beginPath(); pctx.moveTo(cvx,y1); pctx.lineTo(cvx,y0); pctx.stroke();
+  // labels
+  pctx.fillStyle=DIM; pctx.font='7px ui-monospace,monospace';
+  pctx.fillText('0',x0-1,y0+10); pctx.fillText('virulence →',x0+40,y0+10);
+}
+
+// ---------- readouts ----------
+function pct(x){ return Math.round(clamp(x,0,1)*100)+'%'; }
+function set(id,v,c){ const el=document.getElementById(id); el.textContent=v; if(c)el.style.color=c; }
+function readouts(ess){
+  const hc=S.H>0.66?GN:S.H>0.33?GOLD:RED;
+  set('m-H',pct(S.H),hc);
+  set('m-P',S.P.toFixed(2), S.P>0.9?RED:S.P>0.4?PK:GN);
+  set('m-M',pct(S.M), S.M<0.35?ESP:CYAN);
+  set('m-I',pct(S.I), S.I>0.7?RED:S.I>0.4?GOLD:DIM);
+  const r0=R0of(P.vir/100);
+  set('m-R',r0.toFixed(2), r0>=1?GN:RED);
+  set('m-vs',(ess.vstar*100).toFixed(0)+'%', GOLD);
+  const reg=classify();
+  set('reg-v',reg.txt,reg.col);
+  document.getElementById('reg-why').textContent=reg.why;
+}
+
+// ---------- loop ----------
+let last=null;
+function frame(now){
+  if(last==null)last=now;
+  let dt=(now-last)/1000; last=now; if(dt<0)dt=0; if(dt>0.05)dt=0.05;
+  if(P.running){
+    rot += dt*0.22;                                   // gentle host spin, only while running
+    const simDt=dt*P.spd;
+    const n=Math.max(1,Math.ceil(simDt/0.02));
+    for(let i=0;i<n;i++) step(simDt/n);
+  } else if(emerge>0){ emerge=Math.min(1,emerge+dt*0.5); }
+  const ess=essAndCurve();
+  draw(now/1000); drawPhase(ess); readouts(ess);
+  requestAnimationFrame(frame);
+}
+
+// ---------- controls ----------
+function bindNum(id,key,fmt,after){
+  const el=document.getElementById('s-'+id), out=document.getElementById('v-'+id);
+  const upd=()=>{ P[key]=+el.value; out.textContent=fmt(P[key]); if(after)after(); };
+  el.addEventListener('input',upd); upd();
+}
+bindNum('vir','vir',v=>v+'%');
+bindNum('mode','mode',v=>MODES[v]);
+bindNum('rel','rel',v=>v>75?'clonal (prudent)':v>40?'mixed':'scramble');
+bindNum('host','host',v=>v>72?'resist':v>40?'balanced':'tolerate');
+bindNum('col','col',v=>v+'%');
+bindNum('iron','iron',v=>v+'%');
+bindNum('q','q',v=>v+'%');
+bindNum('spd','spd',v=>v+'×');
+
+const goBtn=document.getElementById('b-go');
+goBtn.onclick=function(){
+  P.running=!P.running;
+  if(P.running){ this.textContent='⏸ pause'; this.classList.add('on'); }
+  else { this.textContent='▶ resume'; this.classList.remove('on'); }
+};
+document.getElementById('b-reset').onclick=function(){
+  reset(); P.running=false; goBtn.textContent='▶ begin'; goBtn.classList.remove('on');
+};
+
+function setSliders(o){ for(const k in o){ const el=document.getElementById('s-'+k); if(el){ el.value=o[k]; el.dispatchEvent(new Event('input')); } } }
+const PRESETS={
+  // vir, mode, rel, host, col, iron, q, spd
+  tape:  {vir:14, mode:0, rel:90, host:28, col:62, iron:42, q:52, spd:9},   // prudent chronic gut adult — needs a living, shedding host
+  chol:  {vir:86, mode:1, rel:52, host:52, col:30, iron:28, q:26, spd:5},   // waterborne → high v*, kills host but transmits from the sickbed (cashes out)
+  cord:  {vir:98, mode:4, rel:46, host:44, col:14, iron:18, q:34, spd:5},   // manipulate → host driven to death, worm emerges (cashes out at death)
+  mut:   {vir:5,  mode:3, rel:95, host:15, col:85, iron:22, q:62, spd:9},   // vertical → symbiont / mutualist, v*≈0
+  spill: {vir:90, mode:0, rel:40, host:86, col:32, iron:30, q:16, spd:5}    // novel host: virulence mismatched to a mobile-host mode → host dies AND parasite dies (price paid)
+};
+document.querySelectorAll('button.pre').forEach(b=>{
+  b.onclick=()=>{ setSliders(PRESETS[b.dataset.p]); reset(); P.running=true; goBtn.textContent='⏸ pause'; goBtn.classList.add('on'); };
+});
+
+document.getElementById('kbtn').onclick=function(){
+  const w=document.getElementById('wip'); w.classList.toggle('show');
+  this.textContent=w.classList.contains('show')?'honesty K1–K8 ▾':'honesty K1–K8 ▸';
+};
+
+reset(); resize();
+requestAnimationFrame(frame);
+})();
+</script>
+</body></html>
