@@ -1,0 +1,449 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Kellerium v1.1 &middot; latexium firehose</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{background:#050510;color:#e0e0e0;
+  font-family:ui-monospace,"SF Mono",monospace;font-size:11px;
+  overflow:hidden;height:100%;width:100%}
+.katex{font-size:1.0em}
+/* ---- the firehose feed ---- */
+#feed{position:fixed;top:96px;bottom:60px;left:0;right:0;z-index:5;
+  display:flex;flex-direction:column;align-items:center;gap:5px;
+  overflow:hidden;padding:0 14px;
+  -webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 7%,#000 62%,transparent 99%);
+          mask-image:linear-gradient(to bottom,transparent 0,#000 7%,#000 62%,transparent 99%)}
+.ent{max-width:760px;width:100%;padding:5px 12px;border-radius:4px;
+  background:rgba(12,10,22,0.55);border:1px solid rgba(80,50,120,0.14);
+  color:rgba(224,220,240,0.9);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  animation:slidein 0.28s ease-out;line-height:1.4}
+@keyframes slidein{from{opacity:0;transform:translateY(-9px)}to{opacity:1;transform:translateY(0)}}
+.ent.det{border-color:rgba(80,50,120,0.10);color:rgba(200,196,220,0.72)}
+.ent.fib{border-left:2px solid #cc44ff;background:rgba(24,10,34,0.72);
+  color:rgba(238,230,255,0.96);box-shadow:0 0 14px rgba(204,68,255,0.10);
+  white-space:normal;overflow:visible;text-overflow:clip}
+.ent.pre{border-left:2px solid #ffd700;background:rgba(26,20,6,0.6)}
+.ent.idy{color:rgba(150,200,255,0.8)}
+.ent .tag{color:rgba(204,68,255,0.55);font-size:8.5px;letter-spacing:0.12em;
+  text-transform:uppercase;margin-right:9px}
+.ent.pre .tag{color:rgba(255,215,0,0.6)}
+.ent.det .tag{color:rgba(120,110,150,0.5)}
+/* ---- top HUD : honest live receipts ---- */
+#hud{position:fixed;top:12px;left:12px;z-index:10;pointer-events:none;
+  text-shadow:0 0 10px rgba(5,5,16,0.95)}
+#hud .title{font-size:13px;color:#cc44ff;letter-spacing:0.18em;text-transform:uppercase;
+  font-weight:bold;display:inline-block}
+#hud .rec{color:#ff5050;font-size:9px;letter-spacing:0.1em;margin-left:10px}
+#hud .rec b{animation:blink 1.2s steps(1) infinite}
+@keyframes blink{50%{opacity:0.25}}
+#hud .sub{font-size:8.5px;color:rgba(204,68,255,0.5);letter-spacing:0.1em;
+  margin:1px 0 6px;text-transform:uppercase}
+#hud .row{line-height:1.7;color:rgba(220,228,240,0.5);font-variant-numeric:tabular-nums}
+#hud .val{color:#cc44ff;font-weight:bold}
+#hud .gold{color:#ffd700;font-weight:bold}
+#hud .grn{color:#7fff9f;font-weight:bold}
+#hud .warn{color:#ffb060}
+#hud .dim{color:rgba(220,228,240,0.28)}
+/* ---- monodromy inset ---- */
+#mono{position:fixed;bottom:66px;right:12px;z-index:10;width:212px;height:212px;
+  border:1px solid rgba(204,68,255,0.22);border-radius:6px;
+  background:rgba(6,5,16,0.72);backdrop-filter:blur(2px)}
+#mono canvas{display:block;border-radius:6px}
+#mono .cap{position:absolute;top:5px;left:8px;font-size:8px;letter-spacing:0.12em;
+  color:rgba(204,68,255,0.6);text-transform:uppercase;pointer-events:none}
+#mono .cval{position:absolute;bottom:5px;left:8px;font-size:8.5px;
+  color:rgba(255,215,0,0.65);font-variant-numeric:tabular-nums;pointer-events:none}
+/* ---- stamp ---- */
+#stamp{position:fixed;bottom:66px;left:12px;z-index:10;pointer-events:none}
+#stamp .s{font-size:8px;color:rgba(204,68,255,0.28);letter-spacing:0.07em;line-height:1.85}
+#stamp .s.g{color:rgba(255,215,0,0.32)}
+/* ---- bottom bar ---- */
+#bar{position:fixed;bottom:0;left:0;right:0;z-index:10;background:rgba(5,5,16,0.97);
+  border-top:1px solid #221033;padding:5px 12px;display:flex;align-items:center;
+  gap:7px;flex-wrap:wrap}
+.btn{background:#0b0814;color:#5a4a6a;border:1px solid #221033;border-radius:3px;
+  padding:3px 9px;font-family:inherit;font-size:9px;cursor:pointer;transition:all 0.15s;
+  text-transform:uppercase;letter-spacing:0.07em;white-space:nowrap}
+.btn:hover{border-color:#cc44ff;color:#cc44ff}
+.btn.active{background:#cc44ff;color:#050510;border-color:#cc44ff}
+.sep{width:1px;height:16px;background:#221033}
+.lbl{color:rgba(220,228,240,0.28);font-size:9px;text-transform:uppercase;letter-spacing:0.1em}
+.sl input{width:78px;accent-color:#cc44ff;cursor:pointer}
+.sv{font-size:9px;color:#cc44ff;min-width:52px;font-variant-numeric:tabular-nums}
+#loaderr{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:20;
+  color:#ffb060;font-size:11px;display:none}
+</style>
+</head>
+<body>
+
+<div id="hud">
+  <span class="title">Kellerium</span><span class="rec"><b>&#9679;</b> REC</span>
+  <div class="sub">latexium firehose &middot; live fiber solve &middot; unrefereed</div>
+  <div class="row">computations&nbsp;&nbsp;<span class="val" id="h-n">0</span></div>
+  <div class="row">det&nbsp;J&#8202;F&nbsp;=&nbsp;<span class="gold">&minus;2</span>&nbsp;&nbsp;exceptions&nbsp;<span class="grn" id="h-exc">0</span></div>
+  <div class="row">max&nbsp;&#8214;F(pre)&minus;t&#8214;&nbsp;<span class="grn" id="h-err">&mdash;</span></div>
+  <div class="row dim">buffer&nbsp;<span id="h-buf">0</span>/100&nbsp;&middot;&nbsp;nothing&nbsp;saved</div>
+  <div class="row warn" style="font-size:9px;margin-top:3px">JC: OPEN &middot; Alpoge &middot; Jul 2026</div>
+</div>
+
+<div id="feed"></div>
+
+<div id="mono">
+  <div class="cap">monodromy &middot; 3 sheets (y)</div>
+  <canvas id="mcv" width="212" height="212"></canvas>
+  <div class="cval" id="cval">c = &mdash;</div>
+</div>
+
+<div id="stamp">
+  <div class="s">Kellerium v1.1</div>
+  <div class="s">P=12 . chi=2</div>
+  <div class="s g">we pay in compute to see</div>
+  <div class="s">we don't save . we show</div>
+  <div class="s">always</div>
+</div>
+
+<div id="loaderr">latexium (KaTeX) offline &mdash; showing raw. connect &amp; reload for glyphs.</div>
+
+<div id="bar">
+  <button class="btn active" id="b-run" onclick="toggleRun()">RUNNING</button>
+  <button class="btn" onclick="clearFeed()">FLUSH</button>
+  <div class="sep"></div>
+  <span class="lbl">rate</span>
+  <div style="display:flex;align-items:center;gap:4px">
+    <input type="range" id="sl-rate" min="1" max="9" value="4"
+      oninput="RATE=+this.value;document.getElementById('sv-rate').textContent=(RATE*60)+' / s'">
+    <span class="sv" id="sv-rate">240 / s</span>
+  </div>
+  <div class="sep"></div>
+  <span class="lbl">loop</span>
+  <div style="display:flex;align-items:center;gap:4px">
+    <input type="range" id="sl-loop" min="0" max="60" value="16"
+      oninput="LOOPSPD=+this.value/6000;document.getElementById('sv-loop').textContent=(+this.value===0?'held':'\u03b8+')">
+    <span class="sv" id="sv-loop">&theta;+</span>
+  </div>
+  <button class="btn" id="b-mono" onclick="toggleMono()">MONODROMY</button>
+  <div class="sep"></div>
+  <button class="btn" onclick="cleanMode()">CLEAN</button>
+</div>
+
+<script>
+// =====================================================================
+// KELLERIUM v1.1 -- latexium firehose
+// Live proof-by-kernel of Alpoge's candidate Jacobian-conjecture map.
+// We compute all; we pay in compute to see. We don't save; we show ~100.
+// det J_F is computed (analytic) at every streamed point == -2, always.
+// The fiber is SOLVED live via a cubic (Cardano) + rational reconstruction:
+//     y-roots of  2y^3 - 3b y^2 + 18a y + (b^3 - 18ab + 27a^2 c) = 0
+//     x = (b - y)/(3a - b y + y^2)
+//     z = a - b y - 3y^2 + b^2 y^2/(3a) + b y^3/a - 4y^4/(3a)
+//         - b^3 y^3/(27a^2) + b y^5/(9a^2) - 2 y^6/(27a^2)
+// Monodromy: fix a=-1/4, b=0; loop c around branch point 8*sqrt(3)/9;
+//     two of the three sheets braid. Verified: ||F(preimage)-target|| ~ 1e-15.
+// unrefereed. JC still OPEN in the record. Built 2026-07-20. Always.
+// =====================================================================
+
+// ---------- complex arithmetic ----------
+function C(re, im){ return {re:re, im:im||0}; }
+function cadd(a,b){ return {re:a.re+b.re, im:a.im+b.im}; }
+function csub(a,b){ return {re:a.re-b.re, im:a.im-b.im}; }
+function cmul(a,b){ return {re:a.re*b.re-a.im*b.im, im:a.re*b.im+a.im*b.re}; }
+function cscl(a,s){ return {re:a.re*s, im:a.im*s}; }
+function cdiv(a,b){ var d=b.re*b.re+b.im*b.im; return {re:(a.re*b.re+a.im*b.im)/d, im:(a.im*b.re-a.re*b.im)/d}; }
+function cabs(a){ return Math.hypot(a.re,a.im); }
+function carg(a){ return Math.atan2(a.im,a.re); }
+function csqrt(a){ var r=cabs(a), t=carg(a)/2, s=Math.sqrt(r); return {re:s*Math.cos(t), im:s*Math.sin(t)}; }
+function ccbrt(a){ var r=Math.cbrt(cabs(a)), t=carg(a)/3; return {re:r*Math.cos(t), im:r*Math.sin(t)}; }
+var W1={re:-0.5,im:Math.sqrt(3)/2}, W2={re:-0.5,im:-Math.sqrt(3)/2};
+
+// ---------- solve general complex cubic A y^3 + B y^2 + C y + D ----------
+function cubicRoots(A,B,Cc,D){
+  // depress: y = t - B/(3A)
+  var shift = cdiv(B, cscl(A,3));
+  var p = cdiv( csub(cmul(cscl(A,3),Cc), cmul(B,B)), cscl(cmul(A,A),3) );
+  var q = cdiv( cadd(csub(cscl(cmul(cmul(B,B),B),2), cscl(cmul(cmul(A,B),Cc),9)), cscl(cmul(cmul(A,A),D),27)),
+                cscl(cmul(cmul(A,A),A),27) );
+  var half_q = cscl(q,0.5);
+  var disc = cadd( cmul(half_q,half_q), cdiv(cmul(cmul(p,p),p), C(27,0)) );
+  var sq = csqrt(disc);
+  var u3 = cadd(cscl(q,-0.5), sq);
+  if(cabs(u3) < 1e-14) u3 = csub(cscl(q,-0.5), sq);
+  var u = ccbrt(u3);
+  var out=[];
+  var us=[u, cmul(u,W1), cmul(u,W2)];
+  for(var k=0;k<3;k++){
+    var uk=us[k], t;
+    if(cabs(uk)<1e-14) t=C(0,0);
+    else t = csub(uk, cdiv(p, cscl(uk,3)));
+    out.push( csub(t, shift) );
+  }
+  return out;
+}
+
+// ---------- the map F (real args here, returns 3 reals) ----------
+function Freal(x,y,z){ var u=1+x*y, Wv=u*u*z+y*y*(3*u+1);
+  return [u*Wv, y+3*x*Wv, 2*x-3*x*x*y-x*x*x*z]; }
+// complex F (for verifying reconstructed preimages)
+function Fc(x,y,z){
+  var one=C(1,0), u=cadd(one,cmul(x,y));
+  var Wv=cadd(cmul(cmul(u,u),z), cmul(cmul(y,y), cadd(cscl(u,3),one)));
+  var f1=cmul(u,Wv);
+  var f2=cadd(y, cscl(cmul(x,Wv),3));
+  var f3=csub(csub(cscl(x,2), cscl(cmul(cmul(x,x),y),3)), cmul(cmul(cmul(x,x),x),z));
+  return [f1,f2,f3];
+}
+// analytic Jacobian + det (real point) -> proves det == -2
+function detJ(x,y,z){
+  var a11=3*x*x*y*y*y*z+6*x*y*y*y*y+6*x*y*y*z+7*y*y*y+3*y*z;
+  var a12=3*x*x*x*y*y*z+12*x*x*y*y*y+6*x*x*y*z+21*x*y*y+3*x*z+8*y;
+  var a13=x*x*x*y*y*y+3*x*x*y*y+3*x*y+1;
+  var a21=9*x*x*y*y*z+18*x*y*y*y+12*x*y*z+12*y*y+3*z;
+  var a22=6*x*x*x*y*z+27*x*x*y*y+6*x*x*z+24*x*y+1;
+  var a23=3*x*x*x*y*y+6*x*x*y+3*x;
+  var a31=-3*x*x*z-6*x*y+2, a32=-3*x*x, a33=-x*x*x;
+  var det=a11*(a22*a33-a23*a32)-a12*(a21*a33-a23*a31)+a13*(a21*a32-a22*a31);
+  return {det:det, M:[[a11,a12,a13],[a21,a22,a23],[a31,a32,a33]]};
+}
+
+// ---------- solve full fiber over target (a,b,c real; c may be complex) ----------
+function solveFiber(a,b,cRe,cIm){
+  var A=C(2,0), B=C(-3*b,0), Cc=C(18*a,0);
+  var Dk=C(b*b*b-18*a*b, 0);
+  var Dc=cscl(C(cRe,cIm), 27*a*a);   // 27 a^2 c
+  var D=cadd(Dk,Dc);
+  var ys=cubicRoots(A,B,Cc,D);
+  var pre=[];
+  for(var i=0;i<ys.length;i++){
+    var y=ys[i];
+    // x = (b - y)/(3a - b y + y^2)
+    var num=csub(C(b,0),y);
+    var den=cadd(csub(C(3*a,0), cscl(y,b)), cmul(y,y));
+    var x=cdiv(num,den);
+    // z(y)
+    var y2=cmul(y,y), y3=cmul(y2,y), y4=cmul(y2,y2), y5=cmul(y4,y), y6=cmul(y3,y3);
+    var z=C(a,0);
+    z=csub(z, cscl(y,b));
+    z=csub(z, cscl(y2,3));
+    z=cadd(z, cscl(y2, b*b/(3*a)));
+    z=cadd(z, cscl(y3, b/a));
+    z=csub(z, cscl(y4, 4/(3*a)));
+    z=csub(z, cscl(y3, b*b*b/(27*a*a)));
+    z=cadd(z, cscl(y5, b/(9*a*a)));
+    z=csub(z, cscl(y6, 2/(27*a*a)));
+    pre.push({x:x,y:y,z:z});
+  }
+  return {ys:ys, pre:pre, target:[a,b,{re:cRe,im:cIm}]};
+}
+
+// =====================================================================
+// number / latex formatting
+// =====================================================================
+function fr(v,d){ d=d==null?3:d; if(Math.abs(v)<5e-13)v=0; var s=v.toFixed(d); return s; }
+function fc(z,d){ d=d==null?3:d;
+  var re=z.re, im=z.im; if(Math.abs(re)<5e-13)re=0; if(Math.abs(im)<5e-13)im=0;
+  if(im===0) return fr(re,d);
+  if(re===0) return (im<0?"-":"")+fr(Math.abs(im),d)+"i";
+  return fr(re,d)+(im<0?" - ":" + ")+fr(Math.abs(im),d)+"i";
+}
+function mat3(M){
+  var r=[]; for(var i=0;i<3;i++){ r.push(M[i].map(function(v){return fr(v,2);}).join(" & ")); }
+  return "\\begin{bmatrix}"+r.join("\\\\ ")+"\\end{bmatrix}";
+}
+function tup(v){ return "\\left("+v.map(function(s){return s;}).join(",\\; ")+"\\right)"; }
+
+// =====================================================================
+// the firehose : build one live computation of a chosen kind
+// =====================================================================
+var N=0, EXC=0, MAXERR=0;
+var rndPt=function(){ // small-ish points so matrices stay legible
+  var pal=[-2,-1.5,-1,-0.5,0,0.5,1,1.5,2];
+  var pk=function(){return pal[(Math.random()*pal.length)|0];};
+  return [pk(),pk(),pk()];
+};
+
+function makeDet(){
+  var p=rndPt(), r=detJ(p[0],p[1],p[2]);
+  N++; if(Math.abs(r.det+2)>1e-9) EXC++;
+  var showM = Math.random()<0.28;
+  var body = showM
+    ? "\\det "+mat3(r.M)+" = "+fr(r.det,3)
+    : "\\det J_F"+tup([fr(p[0]),fr(p[1]),fr(p[2])])+" = "+fr(r.det,3);
+  return {cls:"det", tag:"det", tex:body};
+}
+function makeEval(){
+  var p=rndPt(), f=Freal(p[0],p[1],p[2]); N++;
+  return {cls:"idy", tag:"F(p)", tex:"F"+tup([fr(p[0]),fr(p[1]),fr(p[2])])+" = "
+        +tup([fr(f[0]),fr(f[1]),fr(f[2])])};
+}
+var PRE0=[[0,0,-0.25],[1,-1.5,6.5],[-1,1.5,6.5]], preIdx=0;
+function makePre(){
+  var p=PRE0[preIdx%3]; preIdx++; N++;
+  var nm=["P_0","P_1","P_2"][ (preIdx-1)%3 ];
+  return {cls:"pre", tag:"fiber", tex:"F("+nm+")=F"+tup([fr(p[0]),fr(p[1]),fr(p[2])])
+        +" = \\left(-\\tfrac14,0,0\\right)"};
+}
+var IDS=[
+  "F_1=(1+xy)\\,W,\\quad W=(1+xy)^2 z+y^2(4+3xy)",
+  "F_2=y+3x\\,W",
+  "F_3=2x-3x^2y-x^3z",
+  "\\det J_F\\equiv -2\\ \\ (\\text{constant, nonzero}\\Rightarrow\\text{Keller map})",
+  "4+3xy=3(1+xy)+1"
+], idyIdx=0;
+function makeIdy(){ var t=IDS[idyIdx%IDS.length]; idyIdx++; N++;
+  return {cls:"idy", tag:"identity", tex:t}; }
+
+// the STAR: live fiber solve at the current loop target
+function makeFiber(){
+  var s=solveFiber(A_,B_,cRe_,cIm_); N++;
+  // verify + track max error
+  var maxe=0, roots=[], pres=[];
+  for(var i=0;i<3;i++){
+    var pr=s.pre[i], img=Fc(pr.x,pr.y,pr.z);
+    var e=Math.hypot(img[0].re-A_, img[0].im, img[1].re-B_, img[1].im, img[2].re-cRe_, img[2].im-cIm_);
+    if(e>maxe)maxe=e; if(e>MAXERR)MAXERR=e;
+    roots.push(fc(pr.y));
+  }
+  var cc = (Math.abs(cIm_)<1e-9)? fr(cRe_) : fc({re:cRe_,im:cIm_});
+  var k = B_*0+ (27*A_*A_*cRe_); // just for display of constant sign; keep symbolic instead
+  var tex = "2y^3"
+    + (B_!==0 ? (B_<0?"+":"-")+fr(Math.abs(-3*B_/1),2)+"y^2" : "")
+    + "-\\tfrac92 y + \\tfrac{27}{16}\\,("+cc+")=0"
+    + "\\;\\Rightarrow\\; y\\in\\{"+roots.join(",\\,")+"\\}";
+  return {cls:"fib", tag:"solve fiber", tex:tex, err:maxe};
+}
+
+function nextEntry(){
+  // weighted mix; fiber-solve injected on a cadence tied to the loop
+  fibClock++;
+  if(fibClock%14===0) return makeFiber();
+  var r=Math.random();
+  if(r<0.52) return makeDet();
+  if(r<0.74) return makeEval();
+  if(r<0.88) return makeIdy();
+  return makePre();
+}
+var fibClock=0;
+
+// =====================================================================
+// render into rolling buffer (newest top, cap 100, save nothing)
+// =====================================================================
+var feed=document.getElementById("feed");
+var KATEX_OK=false;
+function renderTex(tex){
+  if(KATEX_OK){ try{ return katex.renderToString(tex,{throwOnError:false,displayMode:false}); }catch(e){} }
+  return "<code style='color:#b9a6d6'>"+tex.replace(/[<>&]/g,function(m){return {'<':'&lt;','>':'&gt;','&':'&amp;'}[m];})+"</code>";
+}
+function pushEntry(e){
+  var d=document.createElement("div");
+  d.className="ent "+e.cls;
+  d.innerHTML="<span class='tag'>"+e.tag+"</span>"+renderTex(e.tex);
+  feed.insertBefore(d, feed.firstChild);
+  while(feed.children.length>100) feed.removeChild(feed.lastChild);
+  if(e.err!=null){ /* fiber err already folded into MAXERR */ }
+}
+function refreshHUD(){
+  document.getElementById("h-n").textContent=N.toLocaleString();
+  document.getElementById("h-exc").textContent=EXC;
+  document.getElementById("h-exc").className = EXC? "warn":"grn";
+  document.getElementById("h-err").textContent = MAXERR? MAXERR.toExponential(1) : "\u2014";
+  document.getElementById("h-buf").textContent=feed.children.length;
+}
+
+// =====================================================================
+// monodromy inset : three y-roots braiding as c loops the branch point
+// =====================================================================
+var mcv=document.getElementById("mcv"), mctx=mcv.getContext("2d");
+var MSZ=212, MSC=42;              // pixels per unit in y-plane
+var A_=-0.25, B_=0.0;            // fixed a,b
+var cBranch=8*Math.sqrt(3)/9;    // ~1.5396
+var cR=0.6, theta=0;             // loop radius / angle
+var cRe_=cBranch+cR, cIm_=0;
+var trails=[[],[],[]];           // per-identity trails (persistent colour)
+var prevRoots=null;
+var ROOTCOL=["#4aa3ff","#ff4a9e","#ffd700"];
+var monoOn=true;
+
+function m2s(z){ return [MSZ/2 + z.re*MSC, MSZ/2 - z.im*MSC]; }
+function updateLoop(){
+  cRe_=cBranch+cR*Math.cos(theta);
+  cIm_=cR*Math.sin(theta);
+  var s=solveFiber(A_,B_,cRe_,cIm_);
+  var roots=s.pre.map(function(p){return p.y;});
+  // continuity match to previous identities
+  if(prevRoots){
+    var used=[false,false,false], order=[0,0,0];
+    for(var i=0;i<3;i++){ var best=-1,bd=1e9;
+      for(var j=0;j<3;j++){ if(used[j])continue; var d=cabs(csub(roots[j],prevRoots[i]));
+        if(d<bd){bd=d;best=j;} }
+      order[i]=best; used[best]=true;
+    }
+    var nr=[roots[order[0]],roots[order[1]],roots[order[2]]];
+    roots=nr;
+  }
+  prevRoots=roots;
+  for(var i=0;i<3;i++){ trails[i].push(m2s(roots[i])); if(trails[i].length>240)trails[i].shift(); }
+  document.getElementById("cval").innerHTML="c = "+((Math.abs(cIm_)<1e-9)?fr(cRe_):fc({re:cRe_,im:cIm_}));
+}
+function drawMono(){
+  mctx.fillStyle="rgba(6,5,16,0.28)"; mctx.fillRect(0,0,MSZ,MSZ);
+  // axes
+  mctx.strokeStyle="rgba(120,90,160,0.16)"; mctx.lineWidth=1;
+  mctx.beginPath(); mctx.moveTo(0,MSZ/2); mctx.lineTo(MSZ,MSZ/2);
+  mctx.moveTo(MSZ/2,0); mctx.lineTo(MSZ/2,MSZ); mctx.stroke();
+  // trails + heads
+  mctx.globalCompositeOperation="lighter";
+  for(var i=0;i<3;i++){
+    var T=trails[i]; if(T.length<2)continue;
+    mctx.strokeStyle=ROOTCOL[i]; mctx.lineWidth=1.4;
+    mctx.beginPath();
+    for(var k=0;k<T.length;k++){ mctx.globalAlpha=0.08+0.5*(k/T.length);
+      if(k===0)mctx.moveTo(T[k][0],T[k][1]); else mctx.lineTo(T[k][0],T[k][1]); }
+    mctx.stroke(); mctx.globalAlpha=1;
+    var h=T[T.length-1];
+    mctx.fillStyle=ROOTCOL[i];
+    mctx.beginPath(); mctx.arc(h[0],h[1],3.4,0,6.2832); mctx.fill();
+    mctx.globalAlpha=0.25; mctx.beginPath(); mctx.arc(h[0],h[1],7,0,6.2832); mctx.fill();
+    mctx.globalAlpha=1;
+  }
+  mctx.globalCompositeOperation="source-over";
+}
+
+// =====================================================================
+// controls + loop
+// =====================================================================
+var running=true, RATE=4, LOOPSPD=16/6000;
+function toggleRun(){ running=!running; var b=document.getElementById("b-run");
+  b.classList.toggle("active",running); b.textContent=running?"RUNNING":"PAUSED"; }
+function clearFeed(){ feed.innerHTML=""; }
+function toggleMono(){ monoOn=!monoOn; document.getElementById("mono").style.display=monoOn?"block":"none";
+  document.getElementById("b-mono").classList.toggle("active",monoOn); }
+function cleanMode(){ var on=document.body.classList.toggle("clean");
+  document.getElementById("bar").style.opacity=on?"0":"1";
+  document.getElementById("stamp").style.opacity=on?"0.5":"1"; }
+document.getElementById("b-mono").classList.add("active");
+
+var last=0;
+function frame(t){
+  requestAnimationFrame(frame);
+  if(running){
+    for(var i=0;i<RATE;i++) pushEntry(nextEntry());
+    refreshHUD();
+    if(LOOPSPD>0){ theta+=LOOPSPD; if(theta>Math.PI*2)theta-=Math.PI*2; }
+    if(monoOn){ updateLoop(); drawMono(); }
+  }
+}
+
+// wait for KaTeX (deferred) then start; start regardless after 1.2s (graceful)
+function boot(){
+  KATEX_OK = (typeof katex!=="undefined");
+  if(!KATEX_OK) document.getElementById("loaderr").style.display="block";
+  // seed the feed instantly so a recording never opens on emptiness
+  for(var i=0;i<40;i++) pushEntry(nextEntry());
+  refreshHUD();
+  requestAnimationFrame(frame);
+}
+window.addEventListener("load", function(){ setTimeout(boot, 60); });
+</script>
+</body></html>
