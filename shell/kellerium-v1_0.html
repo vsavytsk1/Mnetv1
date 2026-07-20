@@ -1,0 +1,491 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Kellerium v1.0</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{background:#050510;color:#e0e0e0;
+  font-family:ui-monospace,"SF Mono",monospace;font-size:11px;
+  overflow:hidden;height:100%;width:100%}
+canvas{display:block;touch-action:none}
+/* ---- HUD : the honest receipts ---- */
+#hud{position:fixed;top:12px;left:12px;z-index:10;pointer-events:none;
+  text-shadow:0 0 8px rgba(5,5,16,0.9)}
+#hud .title{font-size:13px;color:#cc44ff;margin-bottom:2px;
+  letter-spacing:0.18em;text-transform:uppercase;font-weight:bold}
+#hud .sub{font-size:8.5px;color:rgba(204,68,255,0.5);letter-spacing:0.1em;
+  margin-bottom:7px;text-transform:uppercase}
+#hud .row{line-height:1.75;color:rgba(220,228,240,0.5)}
+#hud .val{color:#cc44ff;font-weight:bold}
+#hud .gold{color:#ffd700;font-weight:bold}
+#hud .grn{color:#7fff9f}
+#hud .red{color:#ff7f7f}
+#hud .hr{height:1px;background:rgba(204,68,255,0.15);margin:5px 0;width:150px}
+#hud .dim{color:rgba(220,228,240,0.28);font-size:9.5px}
+#hud .mono{font-variant-numeric:tabular-nums}
+/* ---- log ---- */
+#log{position:fixed;top:270px;left:12px;z-index:10;
+  background:rgba(5,5,16,0.9);border:1px solid #221033;
+  border-radius:4px;padding:7px 11px;max-width:255px;
+  max-height:150px;overflow-y:auto;font-size:9px;line-height:1.55;
+  color:rgba(220,200,255,0.75);cursor:pointer;transition:opacity 0.3s}
+#log.hidden{opacity:0;pointer-events:none}
+#log .e{border-bottom:1px solid #140820;padding:1px 0}
+#log .ok{color:#7fff9f}
+#log .pur{color:#cc66ff}
+#log .gold{color:#ffd700}
+#log .warn{color:#ffb060}
+/* ---- master reveal ---- */
+#master-wrap{position:fixed;bottom:52px;left:50%;transform:translateX(-50%);
+  z-index:10;display:flex;flex-direction:column;align-items:center;gap:4px;
+  pointer-events:none}
+#master-wrap .ml{font-size:9px;color:rgba(204,68,255,0.45);
+  text-transform:uppercase;letter-spacing:0.18em}
+#sl-master{width:320px;max-width:70vw;height:6px;accent-color:#cc44ff;
+  cursor:pointer;pointer-events:auto}
+#master-val{font-size:10px;color:#cc44ff;font-weight:bold;letter-spacing:0.12em}
+#ldots{display:flex;gap:4px;margin-top:1px}
+.ldot{width:6px;height:6px;border-radius:50%;background:#120a1c;
+  border:1px solid #2a1840;transition:all 0.3s}
+.ldot.done{background:#cc44ff;border-color:#cc44ff;
+  box-shadow:0 0 5px rgba(204,68,255,0.5)}
+.ldot.active{background:#fff;border-color:#fff;
+  box-shadow:0 0 8px rgba(255,255,255,0.8)}
+/* ---- stamp ---- */
+#stamp{position:fixed;bottom:52px;right:12px;z-index:10;
+  pointer-events:none;text-align:right}
+#stamp .s{font-size:8px;color:rgba(204,68,255,0.28);
+  letter-spacing:0.07em;line-height:1.85}
+#stamp .s.g{color:rgba(255,215,0,0.32)}
+/* ---- bottom bar ---- */
+#bar{position:fixed;bottom:0;left:0;right:0;z-index:10;
+  background:rgba(5,5,16,0.97);border-top:1px solid #221033;
+  padding:5px 12px;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.btn{background:#0b0814;color:#5a4a6a;border:1px solid #221033;border-radius:3px;
+  padding:3px 9px;font-family:inherit;font-size:9px;cursor:pointer;
+  transition:all 0.15s;text-transform:uppercase;letter-spacing:0.07em;white-space:nowrap}
+.btn:hover{border-color:#cc44ff;color:#cc44ff}
+.btn.active{background:#cc44ff;color:#050510;border-color:#cc44ff}
+.btn.gold{color:#b89020;border-color:#3a2c08}
+.btn.gold:hover,.btn.gold.active{background:#ffd700;color:#050510;border-color:#ffd700}
+.sep{width:1px;height:16px;background:#221033}
+.lbl{color:rgba(220,228,240,0.28);font-size:9px;text-transform:uppercase;
+  letter-spacing:0.1em}
+.sl{display:flex;align-items:center;gap:4px}
+.sl input{width:66px;accent-color:#cc44ff;cursor:pointer}
+.sv{font-size:9px;color:#cc44ff;min-width:30px;font-variant-numeric:tabular-nums}
+#hint{position:fixed;bottom:52px;left:50%;transform:translate(-50%,140%);
+  font-size:8.5px;color:rgba(220,228,240,0.22);z-index:9;pointer-events:none;
+  letter-spacing:0.08em;white-space:nowrap}
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+
+<div id="hud">
+  <div class="title">Kellerium</div>
+  <div class="sub">Alpoge counterexample &middot; unrefereed</div>
+  <div class="row">layer <span class="val" id="h-layer">12</span><span class="dim"> / 12</span></div>
+  <div class="hr"></div>
+  <div class="row">det&nbsp;JF&nbsp;&nbsp;<span class="gold" id="h-det">&minus;2</span><span class="dim"> the invariant</span></div>
+  <div class="row">|F&#8315;&sup1;(Q)|&nbsp;&nbsp;<span class="val" id="h-fib">3</span><span class="dim"> the anomaly</span></div>
+  <div class="row">degree&nbsp;&nbsp;&nbsp;<span class="val">3</span><span class="dim"> generically 3&#8594;1</span></div>
+  <div class="hr"></div>
+  <div class="row mono">probe&nbsp;p&nbsp;&nbsp;<span class="dim" id="h-p">&mdash;</span></div>
+  <div class="row mono">F(p)&nbsp;&nbsp;&nbsp;&nbsp;<span class="dim" id="h-fp">&mdash;</span></div>
+  <div class="row mono">err&nbsp;|F&minus;Q|&nbsp;<span id="h-err" class="red">&mdash;</span></div>
+  <div class="dim" style="margin-top:3px">Q = (&minus;1/4, 0, 0) &middot; <span style="color:rgba(255,215,0,0.55)">center</span></div>
+</div>
+
+<div id="log" onclick="this.classList.toggle('hidden')">
+  <div class="e pur">DRAG rotate &middot; WHEEL zoom &middot; SPACE step</div>
+</div>
+
+<div id="master-wrap">
+  <div class="ml">reveal the fold</div>
+  <input type="range" id="sl-master" min="0" max="100" value="100" oninput="onMaster(+this.value)">
+  <div id="master-val">FULL</div>
+  <div id="ldots"></div>
+</div>
+
+<div id="hint">three distinct points &nbsp;&#8594;&nbsp; one point &nbsp;&middot;&nbsp; determinant &minus;2 everywhere</div>
+
+<div id="stamp">
+  <div class="s">Kellerium v1.0</div>
+  <div class="s">P=12 . chi=2</div>
+  <div class="s g">det=&minus;2 . deg 3</div>
+  <div class="s">receipt real . proof not (yet)</div>
+  <div class="s">always</div>
+</div>
+
+<div id="bar">
+  <button class="btn gold" onclick="setPreset(0)">VOID</button>
+  <button class="btn" onclick="setPreset(58)">FRAMES</button>
+  <button class="btn active" id="b-full" onclick="setPreset(100)">FULL</button>
+  <div class="sep"></div>
+  <span class="lbl">spin</span>
+  <div class="sl">
+    <input type="range" id="sl-spin" min="0" max="120" value="35"
+      oninput="SPIN=+this.value/10000;document.getElementById('sv-spin').textContent=(SPIN>0?'on':'0')">
+    <span class="sv" id="sv-spin">on</span>
+  </div>
+  <div class="sep"></div>
+  <span class="lbl">fold</span>
+  <div class="sl">
+    <input type="range" id="sl-fold" min="0" max="100" value="0"
+      oninput="setFold(+this.value/100)">
+    <span class="sv" id="sv-fold">0.00</span>
+  </div>
+  <button class="btn" id="b-collapse" onclick="toggleCollapse()">COLLAPSE &#9654;</button>
+  <div class="sep"></div>
+  <button class="btn" onclick="toggleLog()">LOG</button>
+</div>
+
+<script>
+// =====================================================================
+// KELLERIUM v1.0  --  the atelier of the counterexample
+// ---------------------------------------------------------------------
+// The map (Alpoge, C^3 -> C^3, announced 2026-07-20, unrefereed):
+//     F1 = (1+xy)^3 z + y^2 (1+xy)(4+3xy)
+//     F2 = y + 3x (1+xy)^2 z + 3x y^2 (4+3xy)
+//     F3 = 2x - 3x^2 y - x^3 z
+// Verified receipts (sympy, exact):
+//     det(JF) == -2   (a nonzero CONSTANT -> Keller map, etale everywhere)
+//     F^-1(-1/4,0,0)  == { P0, P1, P2 }   (three DISTINCT points)
+//     generic degree  == 3
+// A polynomial Keller map that is not injective is exactly what the
+// Jacobian Conjecture forbids over C. The conjecture is still OPEN in
+// the official record. We show the arithmetic, honestly. Target != result.
+// Built 2026-07-20. For the next mage. Always.
+// =====================================================================
+
+var cv = document.getElementById("cv");
+var ctx = cv.getContext("2d");
+var W, H, DPR;
+
+// -------- the map, exact (structural form: F1=u*Wv, F2=y+3x*Wv) --------
+function F(x, y, z) {
+  var u = 1 + x * y;
+  var Wv = u * u * z + y * y * (3 * u + 1);   // == (1+xy)^2 z + y^2(4+3xy)
+  return [u * Wv, y + 3 * x * Wv, 2 * x - 3 * x * x * y - x * x * x * z];
+}
+
+// -------- the exact skeleton (from sympy) --------
+var Q = [-0.25, 0, 0];                          // the center: all three land here
+var PRE = [
+  { name: "P0", p: [0, 0, -0.25], col: [74, 163, 255],
+    J: [[0, 0, 1], [-0.75, 1, 0], [2, 0, 0]] },
+  { name: "P1", p: [1, -1.5, 6.5], col: [255, 74, 158],
+    J: [[-0.5625, -0.375, -0.125], [0.375, 6.25, 0.75], [-8.5, -3, -1]] },
+  { name: "P2", p: [-1, 1.5, 6.5], col: [53, 224, 200],
+    J: [[0.5625, 0.375, -0.125], [0.375, 6.25, -0.75], [-8.5, -3, 1]] }
+];
+var GOLD = [255, 215, 0];
+
+// -------- world framing --------
+var CENTER = [-0.0625, 0, 3.1875];   // centroid of {P0,P1,P2,Q}
+var WSCALE = 0.30;                   // world units -> normalized
+var camDist = 5.0;
+var SS;                              // pixels per normalized unit (set on resize)
+var FS = 0.06;                       // Jacobian-frame vector scale
+
+// -------- camera --------
+var yaw = 0.6, pitch = -0.35;
+var SPIN = 0.0035;                   // requested "spini spini", zeroable
+var zoom = 1.0;
+
+// -------- reveal / fold --------
+var LAYERS = 12;                     // P = 12
+var currentLayer = LAYERS - 1;       // -1 = void .. 11 = full
+var fold = 0;                        // 0 = domain spread, 1 = collapsed onto Q
+var collapseAnim = false, collapseDir = 1;
+
+// -------- probe (self-demonstrating: loops P0->P1->P2->P0) --------
+var tau = 0;                         // in [0,3)
+
+// -------- clouds around each preimage (seeded, reproducible) --------
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;var t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+var rnd = mulberry32(1337);
+var CLOUD_N = 30, CLOUD_R = 0.26;
+for (var s = 0; s < PRE.length; s++) {
+  var pts = [];
+  for (var i = 0; i < CLOUD_N; i++) {
+    var g = [ (rnd()*2-1), (rnd()*2-1), (rnd()*2-1) ];
+    var d = [ PRE[s].p[0] + g[0]*CLOUD_R,
+              PRE[s].p[1] + g[1]*CLOUD_R,
+              PRE[s].p[2] + g[2]*CLOUD_R ];
+    pts.push({ d: d, i: F(d[0], d[1], d[2]) });   // domain pt + its image
+  }
+  PRE[s].cloud = pts;
+}
+
+// -------- sparse lattice for spatial context --------
+var LAT = [];
+for (var lx = -1; lx <= 1; lx++)
+  for (var ly = -2; ly <= 2; ly++)
+    for (var lz = 0; lz <= 6; lz += 2) {
+      if (lx === 0 && ly === 0) continue;
+      LAT.push([lx, ly * 0.9, lz]);
+    }
+
+// =====================================================================
+// projection
+// =====================================================================
+function project(wx, wy, wz) {
+  var x = (wx - CENTER[0]) * WSCALE * zoom;
+  var y = (wy - CENTER[1]) * WSCALE * zoom;
+  var z = (wz - CENTER[2]) * WSCALE * zoom;
+  // yaw about Y
+  var cy = Math.cos(yaw), sy = Math.sin(yaw);
+  var x1 = x * cy + z * sy;
+  var z1 = -x * sy + z * cy;
+  // pitch about X
+  var cp = Math.cos(pitch), sp = Math.sin(pitch);
+  var y1 = y * cp - z1 * sp;
+  var z2 = y * sp + z1 * cp;
+  var persp = camDist / (camDist - z2);
+  return { x: W/2 + x1 * persp * SS, y: H/2 - y1 * persp * SS, z: z2, s: persp };
+}
+function lerp3(a, b, t){ return [a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t, a[2]+(b[2]-a[2])*t]; }
+function depthAlpha(z){ return 0.2 + 0.8 * Math.max(0, Math.min(1, (z + 1.3) / 2.6)); }
+function rgba(c, a){ return "rgba(" + c[0] + "," + c[1] + "," + c[2] + "," + a + ")"; }
+
+// =====================================================================
+// draw
+// =====================================================================
+function draw() {
+  // trails
+  ctx.globalCompositeOperation = "source-over";
+  ctx.fillStyle = "rgba(5,5,16,0.30)";
+  ctx.fillRect(0, 0, W, H);
+  ctx.globalCompositeOperation = "lighter";
+
+  var prims = [];   // collect, then depth-sort
+
+  function point(w, col, a, r, glow) {
+    var p = project(w[0], w[1], w[2]);
+    prims.push({ t: 0, x: p.x, y: p.y, z: p.z, c: col, a: a * depthAlpha(p.z),
+                 r: r * p.s, glow: glow });
+  }
+  function seg(w1, w2, col, a, lw) {
+    var p1 = project(w1[0], w1[1], w1[2]);
+    var p2 = project(w2[0], w2[1], w2[2]);
+    prims.push({ t: 1, x1: p1.x, y1: p1.y, x2: p2.x, y2: p2.y,
+                 z: (p1.z + p2.z) / 2, c: col, a: a * depthAlpha((p1.z+p2.z)/2), lw: lw });
+  }
+  function gradSeg(w1, w2, c1, c2, a, lw) {   // fade colour along a thread
+    var N = 10;
+    for (var k = 0; k < N; k++) {
+      var t1 = k / N, t2 = (k + 1) / N;
+      var A = lerp3(w1, w2, t1), B = lerp3(w1, w2, t2);
+      var cc = [Math.round(c1[0]+(c2[0]-c1[0])*t1), Math.round(c1[1]+(c2[1]-c1[1])*t1),
+                Math.round(c1[2]+(c2[2]-c1[2])*t1)];
+      seg(A, B, cc, a, lw);
+    }
+  }
+
+  var shown = function(L){ return currentLayer >= L; };
+
+  // ---- context lattice (layer 10) ----
+  if (shown(10)) for (var i = 0; i < LAT.length; i++) point(LAT[i], [120,110,150], 0.10, 1.3, false);
+
+  // ---- the center Q : honored, steady, never a spectacle (Path II) ----
+  if (shown(0)) {
+    point(Q, GOLD, 0.9, 4.0, true);
+    point(Q, GOLD, 0.35, 8.0, false);
+  }
+
+  // ---- per-sheet: preimage node, collapse thread, Jacobian frame, cloud ----
+  for (var s = 0; s < PRE.length; s++) {
+    var P = PRE[s];
+    var Lnode = 1 + s, Lframe = 4 + s, Lcloud = 7 + s;
+
+    if (shown(Lnode)) {
+      // collapse thread: preimage -> Q, fading sheet-colour into gold
+      gradSeg(P.p, Q, P.col, GOLD, 0.5, 1.1);
+      // the preimage itself
+      var pulse = 0.7 + 0.3 * Math.sin(performance.now() * 0.003 + s * 2);
+      point(P.p, P.col, 0.95 * pulse, 4.2, true);
+      point(P.p, P.col, 0.3, 8.0, false);
+    }
+
+    if (shown(Lframe)) {
+      // parallelepiped = image of the unit cube under JF(P). Volume = FS^3 * (-2).
+      var c1 = P.J.map(function(r){ return r[0]; });
+      var c2 = P.J.map(function(r){ return r[1]; });
+      var c3 = P.J.map(function(r){ return r[2]; });
+      function corner(a,b,d){ return [ P.p[0]+FS*(a*c1[0]+b*c2[0]+d*c3[0]),
+                                        P.p[1]+FS*(a*c1[1]+b*c2[1]+d*c3[1]),
+                                        P.p[2]+FS*(a*c1[2]+b*c2[2]+d*c3[2]) ]; }
+      var V = [corner(0,0,0),corner(1,0,0),corner(0,1,0),corner(0,0,1),
+               corner(1,1,0),corner(1,0,1),corner(0,1,1),corner(1,1,1)];
+      var E = [[0,1],[0,2],[0,3],[1,4],[1,5],[2,4],[2,6],[3,5],[3,6],[4,7],[5,7],[6,7]];
+      for (var e = 0; e < E.length; e++) seg(V[E[e][0]], V[E[e][1]], P.col, 0.28, 0.8);
+      // the three column axes, brighter -> the "different shape, same det" tell
+      seg(P.p, V[1], P.col, 0.7, 1.3);
+      seg(P.p, V[2], P.col, 0.7, 1.3);
+      seg(P.p, V[3], P.col, 0.7, 1.3);
+    }
+
+    if (shown(Lcloud)) {
+      // neighbourhood of P swept from domain (fold=0) toward image (fold=1).
+      // At fold=1 all three clouds pile onto Q: three sheets, one point.
+      for (var i = 0; i < P.cloud.length; i++) {
+        var w = lerp3(P.cloud[i].d, P.cloud[i].i, fold);
+        point(w, P.col, 0.5, 1.7, false);
+      }
+    }
+  }
+
+  // ---- the probe: loops the three preimages, err dips to 0 only at them ----
+  if (shown(10)) {
+    var A = PRE[Math.floor(tau)].p;
+    var B = PRE[(Math.floor(tau) + 1) % 3].p;
+    var fr = tau - Math.floor(tau);
+    var pr = lerp3(A, B, fr);
+    var im = F(pr[0], pr[1], pr[2]);
+    // thread from probe to its image (sweeps through Q at each preimage)
+    gradSeg(pr, im, [255,255,255], GOLD, 0.4, 0.9);
+    point(im, GOLD, 0.7, 2.6, true);      // the moving image
+    point(pr, [255,255,255], 0.95, 3.2, true); // the probe
+    updateProbe(pr, im);
+  }
+
+  // ---- render, far -> near ----
+  prims.sort(function(a, b){ return a.z - b.z; });
+  for (var i = 0; i < prims.length; i++) {
+    var d = prims[i];
+    if (d.t === 0) {
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = rgba(d.c, d.a);
+      ctx.beginPath(); ctx.arc(d.x, d.y, Math.max(0.5, d.r), 0, 6.2832); ctx.fill();
+      if (d.glow) {
+        ctx.fillStyle = rgba(d.c, d.a * 0.25);
+        ctx.beginPath(); ctx.arc(d.x, d.y, d.r * 2.4, 0, 6.2832); ctx.fill();
+      }
+    } else {
+      ctx.strokeStyle = rgba(d.c, d.a);
+      ctx.lineWidth = d.lw;
+      ctx.beginPath(); ctx.moveTo(d.x1, d.y1); ctx.lineTo(d.x2, d.y2); ctx.stroke();
+    }
+  }
+  ctx.globalCompositeOperation = "source-over";
+  ctx.globalAlpha = 1;
+}
+
+// =====================================================================
+// HUD updates
+// =====================================================================
+var fmt = function(v){ return (v>=0?" ":"") + v.toFixed(3); };
+function updateProbe(p, fp) {
+  document.getElementById("h-p").textContent  = "("+fmt(p[0])+","+fmt(p[1])+","+fmt(p[2])+")";
+  document.getElementById("h-fp").textContent = "("+fmt(fp[0])+","+fmt(fp[1])+","+fmt(fp[2])+")";
+  var err = Math.hypot(fp[0]-Q[0], fp[1]-Q[1], fp[2]-Q[2]);
+  var el = document.getElementById("h-err");
+  el.textContent = err.toExponential(2);
+  if (err < 1e-6) { el.className = "grn"; el.textContent = err.toExponential(2) + "  \u2192 preimage"; }
+  else if (err < 0.5) { el.className = "gold"; }
+  else { el.className = "red"; }
+}
+
+// =====================================================================
+// controls
+// =====================================================================
+function onMaster(v) {
+  currentLayer = Math.max(-1, Math.min(LAYERS - 1, Math.round((v/100)*LAYERS) - 1));
+  document.getElementById("h-layer").textContent = currentLayer + 1;
+  document.getElementById("master-val").textContent =
+    currentLayer < 0 ? "VOID" : currentLayer === LAYERS - 1 ? "FULL" : Math.round(v) + "%";
+  document.getElementById("b-full").classList.toggle("active", currentLayer === LAYERS - 1);
+  var bar = document.getElementById("ldots"); bar.innerHTML = "";
+  for (var i = 0; i < LAYERS; i++) {
+    var d = document.createElement("div");
+    d.className = "ldot" + (i < currentLayer ? " done" : "") + (i === currentLayer ? " active" : "");
+    bar.appendChild(d);
+  }
+}
+function setPreset(v) { document.getElementById("sl-master").value = v; onMaster(v); }
+function setFold(v) {
+  fold = v;
+  document.getElementById("sl-fold").value = Math.round(v * 100);
+  document.getElementById("sv-fold").textContent = v.toFixed(2);
+}
+function toggleCollapse() {
+  collapseAnim = !collapseAnim; collapseDir = (fold < 0.5) ? 1 : -1;
+  document.getElementById("b-collapse").classList.toggle("active", collapseAnim);
+  if (collapseAnim && currentLayer < 9) setPreset(100);  // need the clouds to see it
+}
+function toggleLog() { document.getElementById("log").classList.toggle("hidden"); }
+function lg(msg, cls) {
+  var el = document.getElementById("log");
+  var d = document.createElement("div");
+  d.className = "e" + (cls ? " " + cls : "");
+  d.innerHTML = msg;
+  el.insertBefore(d, el.children[0]);
+  while (el.children.length > 22) el.removeChild(el.lastChild);
+}
+
+// pointer rotate + wheel zoom
+var dragging = false, lx = 0, ly = 0;
+cv.addEventListener("pointerdown", function(e){ dragging = true; lx = e.clientX; ly = e.clientY; cv.setPointerCapture(e.pointerId); });
+cv.addEventListener("pointermove", function(e){
+  if (!dragging) return;
+  yaw += (e.clientX - lx) * 0.008;
+  pitch += (e.clientY - ly) * 0.006;
+  pitch = Math.max(-1.15, Math.min(1.15, pitch));   // lock excess tilt (no corkscrew)
+  lx = e.clientX; ly = e.clientY;
+});
+cv.addEventListener("pointerup", function(){ dragging = false; });
+cv.addEventListener("wheel", function(e){ e.preventDefault(); zoom *= (e.deltaY > 0 ? 0.93 : 1.07); zoom = Math.max(0.4, Math.min(3, zoom)); }, {passive:false});
+window.addEventListener("keydown", function(e){
+  var v = +document.getElementById("sl-master").value;
+  if (e.code === "Space" || e.code === "ArrowRight") { e.preventDefault();
+    v = Math.min(100, v + Math.round(100 / LAYERS)); setPreset(v);
+    lg("layer " + (currentLayer + 1) + " revealed", "pur"); }
+  if (e.code === "ArrowLeft") { e.preventDefault();
+    v = Math.max(0, v - Math.round(100 / LAYERS)); setPreset(v); }
+  if (e.code === "KeyA") setPreset(100);
+  if (e.code === "KeyR") setPreset(0);
+  if (e.code === "KeyC") toggleCollapse();
+});
+
+// =====================================================================
+// loop
+// =====================================================================
+function resize() {
+  DPR = Math.min(2, window.devicePixelRatio || 1);
+  W = window.innerWidth; H = window.innerHeight;
+  cv.width = W * DPR; cv.height = H * DPR;
+  cv.style.width = W + "px"; cv.style.height = H + "px";
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  SS = Math.min(W, H) * 0.44;
+}
+window.addEventListener("resize", resize);
+
+function animate() {
+  requestAnimationFrame(animate);
+  if (!dragging) yaw += SPIN;
+  tau = (tau + 0.007) % 3;
+  if (collapseAnim) {
+    fold += 0.006 * collapseDir;
+    if (fold >= 1) { fold = 1; collapseAnim = false; document.getElementById("b-collapse").classList.remove("active"); }
+    if (fold <= 0) { fold = 0; collapseAnim = false; document.getElementById("b-collapse").classList.remove("active"); }
+    setFold(fold);
+  }
+  draw();
+}
+
+resize();
+onMaster(100);
+lg("Kellerium v1.0 ready", "ok");
+lg("det(JF) &equiv; &minus;2 &nbsp; verified (exact)", "ok");
+lg("F&#8315;&sup1;(&minus;1/4,0,0) = {P0,P1,P2}", "ok");
+lg("three distinct points, one image", "gold");
+lg("generic degree = 3 (3&#8594;1 map)", "ok");
+lg("polynomial, everywhere-defined", "ok");
+lg("this is what JC forbids over &#8450;", "pur");
+lg("conjecture: OPEN, pending review", "warn");
+lg("Alpoge / Fable-5 assisted / Jul 2026", "warn");
+animate();
+</script>
+</body></html>
