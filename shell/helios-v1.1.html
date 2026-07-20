@@ -1,0 +1,993 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>HELIOS v1.1 — The Sun–Earth Line</title>
+<!--
+  HELIOS v1.1 — THE SUN–EARTH LINE   (successor to helios-flare v1.0; v1.0 frozen)
+  =============================================================================
+  v1.0 was the Sun alone: a flux rope loses equilibrium, reconnects, erupts.
+  v1.1 follows the storm to Earth. The Sun drives; the magnetosphere answers.
+
+  Everything visible is computed each frame from analytic space-weather physics:
+    - Earth's DIPOLE field, tilted, spinning — field lines r = L·sin²θ.
+      Closed loops, ∇·B = 0. The loop IS the magnet. (Path I.)
+    - CHAPMAN–FERRARO magnetopause standoff from live solar-wind pressure:
+      R_mp = R0·(P0/P_dyn)^(1/6),  P_dyn[nPa] = 1.6726e-6·n·v²  (n cm⁻³, v km/s).
+    - SHUE et al. (1997) magnetopause surface r(θ)=R_mp·(2/(1+cosθ))^α, + bow shock.
+    - The DUNGEY cycle: dayside reconnection rate keyed to the IMF CLOCK ANGLE —
+      coupling ∝ v·B_t·sin⁴(θ_c/2). Turn Bz SOUTH and the fields break & reconnect;
+      open flux peels over the poles into the tail, loads, then unloads (substorm).
+    - BURTON equation ring current: dDst*/dt = Q(coupling) − Dst*/τ  → Dst, Kp.
+    - Ground dB/dt → GEOMAGNETICALLY INDUCED CURRENTS → a grid-risk gauge.
+    - Auroral oval that expands equatorward as the storm deepens.
+
+  HONESTY (Path IV): Earth is drawn ×3 and the Sun–Earth gap is compressed ~1000×
+  so both fit one frame — flagged, not hidden. The distorted magnetosphere is a
+  schematic of the real MHD field, not a full solution. The FORECAST panel shows
+  the coupling vs threshold with an ensemble spread and states plainly that a real
+  forecast needs enormous compute and still misses. Target ≠ result. (Path III.)
+
+  SHELL: Atelier conventions. Pure Canvas2D, zero deps. LOOP LAW dt=1/120.
+  prefers-reduced-motion honoured — motion is opt-in, zero is always reachable
+  (Curse 13). Drag to orbit. Bow to the titans. ∇·B=0 · χ=2 · P=12 · always.
+  Built 2026-07-20.
+-->
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%}
+body{background:#050510;color:#e8e0d0;
+  font-family:ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+  font-size:11px;overflow:hidden;height:100vh}
+canvas{display:block;touch-action:none}
+
+#hud{position:fixed;top:12px;left:12px;z-index:10;pointer-events:none;max-width:340px}
+#hud .title{font-size:12px;color:#ffd700;margin-bottom:1px;
+  letter-spacing:0.16em;text-transform:uppercase}
+#hud .sub{font-size:9px;color:rgba(232,224,208,0.4);margin-bottom:6px;letter-spacing:0.06em}
+#hud .row{line-height:1.85;color:rgba(232,224,208,0.5)}
+#hud .val{color:#00d4ff;font-weight:bold}
+#hud .gold{color:#ffd700;font-weight:bold}
+#hud .pur{color:#cc44ff;font-weight:bold}
+#hud .grn{color:#54f7b0;font-weight:bold}
+#hud .red{color:#ff5555;font-weight:bold}
+#hud .dim{color:rgba(232,224,208,0.24);font-size:10px}
+#badge{display:inline-block;padding:0 7px;border:1px solid #3a3526;border-radius:3px;
+  color:#7a7256;transition:all 0.4s;letter-spacing:0.05em}
+#badge.warn{color:#050510;background:#ffb020;border-color:#ffb020;
+  box-shadow:0 0 12px rgba(255,176,32,0.5)}
+#badge.sev{color:#050510;background:#ff4444;border-color:#ff4444;
+  box-shadow:0 0 16px rgba(255,68,68,0.65)}
+
+#log{position:fixed;top:212px;left:12px;z-index:10;
+  background:rgba(6,6,15,0.9);border:1px solid #24203a;border-radius:4px;
+  padding:7px 11px;max-width:292px;max-height:168px;overflow-y:auto;
+  font-size:9px;line-height:1.55;color:rgba(232,224,208,0.72);
+  cursor:pointer;transition:opacity 0.3s}
+#log.hidden{opacity:0;pointer-events:none}
+#log .e{border-bottom:1px solid #16132a;padding:1px 0}
+#log .ok{color:#9be89b}#log .cy{color:#00d4ff}#log .gd{color:#ffd700}
+#log .pu{color:#cc44ff}#log .rd{color:#ff6a6a}#log .src{color:rgba(232,224,208,0.4)}
+
+#master-wrap{position:fixed;bottom:52px;left:50%;transform:translateX(-50%);
+  z-index:10;display:flex;flex-direction:column;align-items:center;gap:4px;width:min(360px,86vw)}
+#master-wrap .ml{font-size:9px;color:rgba(255,215,0,0.5);
+  text-transform:uppercase;letter-spacing:0.15em;text-align:center}
+#sl-master{width:100%;height:6px;accent-color:#cc44ff;cursor:pointer}
+#master-val{font-size:10px;color:#cc44ff;font-weight:bold;letter-spacing:0.08em}
+#kdots{display:flex;gap:4px;margin-top:1px}
+.kdot{width:6px;height:6px;border-radius:50%;background:#0d1520;border:1px solid #1a2a3a;transition:all .3s}
+.kdot.on{background:#cc44ff;border-color:#cc44ff;box-shadow:0 0 6px rgba(204,68,255,0.6)}
+
+#stamp{position:fixed;bottom:52px;right:12px;z-index:10;pointer-events:none;text-align:right}
+#stamp .s{font-size:8px;color:rgba(204,68,255,0.28);letter-spacing:0.06em;line-height:1.8}
+
+#bar{position:fixed;bottom:0;left:0;right:0;z-index:10;background:rgba(6,6,15,0.97);
+  border-top:1px solid #24203a;padding:5px 12px;display:flex;align-items:center;
+  gap:6px;flex-wrap:wrap}
+.btn{background:#0c0c16;color:#5a5470;border:1px solid #24203a;border-radius:3px;
+  padding:3px 8px;font-family:inherit;font-size:9px;cursor:pointer;
+  transition:all 0.15s;text-transform:uppercase;letter-spacing:0.06em;white-space:nowrap}
+.btn:hover{border-color:#00d4ff;color:#00d4ff}
+.btn.active{background:#00d4ff;color:#050510;border-color:#00d4ff}
+.btn.pur{color:#cc44ff;border-color:#3a2050}
+.btn.pur:hover,.btn.pur.active{background:#cc44ff;color:#050510;border-color:#cc44ff}
+.btn.gold{color:#ffd700;border-color:#3a2e0a}
+.btn.gold:hover,.btn.gold.active{background:#ffd700;color:#050510;border-color:#ffd700}
+.sep{width:1px;height:16px;background:#24203a}
+.lbl{color:rgba(232,224,208,0.28);font-size:9px;text-transform:uppercase;
+  letter-spacing:0.09em;text-align:right}
+.sl{display:flex;align-items:center;gap:3px}
+.sl input{width:66px;accent-color:#00d4ff;cursor:pointer}
+.sl.pur input{accent-color:#cc44ff}
+.sv{font-size:9px;color:#00d4ff;min-width:30px}
+.sv.pur{color:#cc44ff}
+
+#panel{position:fixed;top:12px;right:12px;z-index:11;width:312px;max-height:78vh;
+  background:rgba(6,6,15,0.95);border:1px solid #24203a;border-radius:6px;
+  display:none;flex-direction:column;overflow:hidden;box-shadow:0 6px 30px rgba(0,0,0,0.55)}
+#panel.open{display:flex}
+#panel .tabs{display:flex;border-bottom:1px solid #24203a;flex:0 0 auto}
+#panel .tab{flex:1;text-align:center;padding:7px 2px;cursor:pointer;color:#5a5470;
+  text-transform:uppercase;letter-spacing:0.04em;font-size:8.5px;
+  border-right:1px solid #24203a;transition:all 0.15s}
+#panel .tab:last-child{border-right:none}
+#panel .tab.active{background:#cc44ff;color:#050510;font-weight:bold}
+#panel .tab:hover{color:#cc44ff}
+#panel .body{padding:10px 12px;overflow-y:auto;line-height:1.55;color:rgba(232,224,208,0.82);font-size:10px}
+#panel .tabc{display:none}
+#panel .tabc.active{display:block}
+#panel h4{color:#cc44ff;font-size:10px;margin:9px 0 3px;letter-spacing:0.04em;text-transform:uppercase}
+#panel h4:first-child{margin-top:0}
+#panel .k{color:#00d4ff;font-weight:bold}
+#panel .g{color:#ffd700;font-weight:bold}
+#panel .p{color:#cc44ff;font-weight:bold}
+#panel .s{color:rgba(232,224,208,0.44);font-size:9px;line-height:1.5}
+#panel .li{padding:2px 0;border-bottom:1px solid #14112a}
+#panel .nm{color:#f0e8d4;font-weight:bold}
+.gbar{height:9px;background:#14112a;border-radius:2px;overflow:hidden;margin:2px 0 5px}
+.gbar>div{height:100%;transition:width .2s}
+.crow{display:flex;justify-content:space-between;font-size:9px;margin-top:5px}
+
+#banner{position:fixed;top:13px;left:50%;transform:translateX(-50%);z-index:9;
+  max-width:46vw;text-align:center;color:rgba(204,68,255,0);font-size:10px;
+  letter-spacing:0.05em;transition:color 1.1s;pointer-events:none;
+  text-shadow:0 0 12px rgba(0,0,0,0.95),0 0 3px rgba(0,0,0,0.9)}
+#banner.show{color:rgba(204,68,255,0.85)}
+@media (max-width:720px){
+  #panel{width:min(94vw,320px)}
+  #hud{max-width:60vw}
+  #log{max-width:60vw}
+}
+</style>
+</head>
+<body>
+<canvas id="cv" width="1440" height="900"></canvas>
+
+<div id="hud">
+  <div class="title">HELIOS · The Sun–Earth Line</div>
+  <div class="sub">space weather, computed · v1.1 · successor to flare v1.0</div>
+  <div class="row">storm <span id="badge">QUIET</span> <span class="dim" id="h-phase">· nominal solar wind</span></div>
+  <div class="row">solar wind <span class="val" id="h-v">400</span> km/s &nbsp;n <span class="val" id="h-n">6.0</span> cm⁻³</div>
+  <div class="row">P<span class="dim">dyn</span> <span class="val" id="h-p">1.6</span> nPa &nbsp;magnetopause <span class="val" id="h-rmp">10.6</span> R<span class="dim">E</span></div>
+  <div class="row">IMF B<span class="dim">z</span> <span class="pur" id="h-bz">+0.0</span> nT &nbsp;clock <span class="pur" id="h-clk">0°</span></div>
+  <div class="row">coupling <span class="pur" id="h-eps">0.00</span> &nbsp;<span class="dim">reconnection</span> <span class="pur" id="h-rec">off</span></div>
+  <div class="row">Dst <span class="val" id="h-dst">−18</span> nT &nbsp;Kp <span class="val" id="h-kp">1</span><span class="dim">−</span> &nbsp;aurora <span class="grn" id="h-lat">67°</span></div>
+  <div class="row">dB/dt <span class="red" id="h-dbdt">4</span> nT/min &nbsp;grid <span class="red" id="h-grid">nominal</span></div>
+</div>
+
+<div id="log" onclick="toggleLog()"></div>
+
+<div id="master-wrap">
+  <div class="ml" id="ml-label">drive the storm — quiet sun → carrington-class</div>
+  <input type="range" id="sl-master" min="0" max="100" value="14" step="1" oninput="onMaster(+this.value)">
+  <div id="master-val">QUIET SUN</div>
+  <div id="kdots"></div>
+</div>
+
+<div id="stamp">
+  <div class="s">the loop is the magnet · ∇·B = 0</div>
+  <div class="s">turn Bz south and watch the fields break</div>
+  <div class="s">χ=2 · P=12 · always</div>
+</div>
+
+<div id="panel">
+  <div class="tabs">
+    <div class="tab active" data-t="titans" onclick="setTab('titans')">Titans</div>
+    <div class="tab" data-t="physics" onclick="setTab('physics')">Physics</div>
+    <div class="tab" data-t="grid" onclick="setTab('grid')">Grid</div>
+    <div class="tab" data-t="forecast" onclick="setTab('forecast')">Forecast</div>
+    <div class="tab" data-t="receipts" onclick="setTab('receipts')">Receipts</div>
+  </div>
+  <div class="body">
+    <div class="tabc active" id="tc-titans">
+      <h4>Bow to the titans of the sun</h4>
+      <div class="li"><span class="nm">Richard Carrington</span> — 1859. Saw the first solar flare in white light; 17 h later the sky burned to the tropics. The event bears his name.</div>
+      <div class="li"><span class="nm">Kristian Birkeland</span> — the terrella. Argued currents flow down the field into the poles. Mocked for decades; the currents are now his.</div>
+      <div class="li"><span class="nm">Chapman &amp; Ferraro</span> — 1931. A cloud of solar plasma carves a cavity in Earth's field. The magnetopause, and its current, are theirs.</div>
+      <div class="li"><span class="nm">Hannes Alfvén</span> — magnetohydrodynamics; the wave that carries tension along a field line. Nobel 1970. The plasma and the field move as one.</div>
+      <div class="li"><span class="nm">Eugene Parker</span> — 1958. Predicted a supersonic solar wind and its spiral when everyone said the space between worlds was empty. The Probe that touched the Sun is his.</div>
+      <div class="li"><span class="nm">James Dungey</span> — 1961. Southward IMF reconnects on the dayside, opens the field, and closes it again down the tail. The master key of this whole sim.</div>
+      <div class="li"><span class="nm">Syun-Ichi Akasofu</span> — read the auroral substorm as one machine: growth, onset, expansion, recovery. The lights are a readout.</div>
+      <h4>The honest debt</h4>
+      <div class="s">a flare is a magnetic reconnection nobody can yet predict from first principles — it takes an absurd amount of compute to even try, and the sun still surprises us. these minds spent lifetimes on the bonkers magneto-fusion dynamics of one ordinary star. this render bows to them.</div>
+    </div>
+
+    <div class="tabc" id="tc-physics">
+      <h4>The chain, link by link</h4>
+      <div class="li"><span class="p">1</span> the sun erupts — a CME: a magnetized plasma cloud, launched with its own frozen-in Bz.</div>
+      <div class="li"><span class="p">2</span> it arrives — density &amp; speed jump. P<span class="s">dyn</span>=1.6726e-6·n·v² rises; the magnetopause is crushed sunward.</div>
+      <div class="li"><span class="p">3</span> the clock angle decides. θ<span class="s">c</span>=atan2(By,Bz) from north. South = 180°.</div>
+      <div class="li"><span class="p">4</span> coupling ∝ v·B<span class="s">t</span>·sin⁴(θ<span class="s">c</span>/2). Northward → the door is shut. Southward → it opens.</div>
+      <div class="li"><span class="p">5</span> dayside flux reconnects, peels over the poles, loads the tail (Dungey).</div>
+      <div class="li"><span class="p">6</span> the tail snaps — substorm. Dipolarization. The oval floods equatorward.</div>
+      <div class="li"><span class="p">7</span> the ring current grows: dDst*/dt = Q − Dst*/τ (Burton 1975). Dst plunges.</div>
+      <div class="li"><span class="p">8</span> the ground field lurches. dB/dt drives currents in anything long and conducting.</div>
+      <h4>What is real vs schematic</h4>
+      <div class="s">the dipole, r=L·sin²θ, is exact and closed (∇·B=0). the standoff (Chapman–Ferraro) and the boundary (Shue 1997) are the cited models, computed live. the compression &amp; tail are a schematic of the true distorted field — flagged, not faked.</div>
+    </div>
+
+    <div class="tabc" id="tc-grid">
+      <h4>When a star breaks the grid</h4>
+      <div class="crow"><span>1859 · Carrington</span><span class="p" id="g-carr">—</span></div><div class="gbar"><div id="gb-carr" style="width:100%;background:linear-gradient(90deg,#6a1616,#ff4444)"></div></div>
+      <div class="crow"><span>1989 · Québec</span><span class="k" id="g-queb">—</span></div><div class="gbar"><div id="gb-queb" style="width:62%;background:linear-gradient(90deg,#6a4e16,#ffd700)"></div></div>
+      <div class="crow"><span>2003 · Halloween</span><span class="k" id="g-hall">—</span></div><div class="gbar"><div id="gb-hall" style="width:54%;background:linear-gradient(90deg,#6a4e16,#ffd700)"></div></div>
+      <div class="li" style="margin-top:6px"><span class="nm">Québec, 13 Mar 1989</span> — dB/dt spiked; induced currents saturated the Hydro-Québec grid. 6 million people, 9 hours dark, in 92 seconds.</div>
+      <div class="li"><span class="nm">Carrington, 1859</span> — telegraph lines arced; operators worked on aurora-current alone. A repeat on today's grid is a trillion-dollar question.</div>
+      <div class="li"><span class="nm">The mechanism</span> — a long conductor (a power line, a pipeline, a telegraph) sees a changing B. Faraday: an EMF appears. GIC ∝ dB/dt · ground response. Transformers run hot, saturate, and can fail.</div>
+      <div class="s">this is why dB/dt, not the pretty aurora, is the number the grid operator watches.</div>
+    </div>
+
+    <div class="tabc" id="tc-forecast">
+      <h4>The honest forecast (target ≠ result)</h4>
+      <div class="crow"><span>coupling now</span><span class="p" id="f-now">0.00</span></div>
+      <div class="crow"><span>substorm threshold</span><span class="g" id="f-thr">1.00</span></div>
+      <div class="crow"><span>err = |now − thr|</span><span class="k" id="f-err">1.00</span></div>
+      <div class="gbar" style="margin-top:4px"><div id="fb" style="width:0%;background:linear-gradient(90deg,#2a1050,#cc44ff)"></div></div>
+      <div class="li"><span class="nm">forecast confidence</span> <span class="k" id="f-conf">low</span> <span class="s" id="f-spread">± wide</span></div>
+      <h4>Why this stays hard</h4>
+      <div class="s">a flare's trigger is a reconnection in a field we can't measure inside the sun. the arrival time of a CME has a real uncertainty of ±6–12 hours even with today's models; whether it does damage rides on a single number — the sign of Bz — which we usually only learn ~30–60 minutes ahead, when the cloud reaches L1. running the coupled sun→heliosphere→magnetosphere→ground chain as an ensemble costs a stupid amount of compute, and the sun still surprises us. so this panel shows the spread and refuses to print a single confident hour. that refusal is the honest part.</div>
+      <div class="s" style="margin-top:5px">bow to the difficulty. that is the whole ethic: pay the price in compute to see, and never fake the receipt.</div>
+    </div>
+
+    <div class="tabc" id="tc-receipts">
+      <h4>The kernel (cited)</h4>
+      <div class="li">dipole field line <span class="k">r = L·sin²θ</span> — closed, ∇·B=0</div>
+      <div class="li">standoff <span class="k">R_mp = R0·(P0/P_dyn)^(1/6)</span> — Chapman &amp; Ferraro 1931</div>
+      <div class="li">P<span class="s">dyn</span>[nPa] = <span class="k">1.6726e-6·n·v²</span> (n cm⁻³, v km/s)</div>
+      <div class="li">boundary <span class="k">r(θ)=R_mp·(2/(1+cosθ))^α</span> — Shue et al. 1997</div>
+      <div class="li">coupling <span class="k">∝ v·B_t·sin⁴(θc/2)</span> — Dungey 1961 · Newell 2007</div>
+      <div class="li">ring current <span class="k">dDst*/dt = Q − Dst*/τ</span> — Burton et al. 1975</div>
+      <div class="li">dipole tilt <span class="k">11.5°</span> · magnetopause quiet <span class="k">~10–11 R_E</span></div>
+      <h4>Honesty flags</h4>
+      <div class="s">Earth drawn to scale with its magnetosphere (it really is ~1:10) · Sun–Earth gap compressed ~780× · Sun stylized as a driver · travel time compressed to seconds (real: 1–3 days) · distorted field is schematic. all flagged, per Path IV.</div>
+      <h4>Sources</h4>
+      <div class="s">Chapman &amp; Ferraro (1931) · Parker (1958) · Dungey (1961) · Burton, McPherron &amp; Russell (1975) · Shue et al. (1997) · Newell et al. (2007) · Akasofu (1964) · NOAA SWPC scales.</div>
+    </div>
+  </div>
+</div>
+
+<div id="banner" class="show">THE SUN–EARTH LINE · ∇·B = 0 · ALWAYS</div>
+
+<div id="bar">
+  <button class="btn pur" id="b-cme" onclick="fireCME()">◄ LAUNCH CME</button>
+  <div class="sep"></div>
+  <span class="lbl">view</span>
+  <button class="btn" onclick="viewSun()">SUNWARD</button>
+  <button class="btn" onclick="viewPolar()">POLAR</button>
+  <button class="btn" onclick="viewTail()">TAIL</button>
+  <div class="sep"></div>
+  <button class="btn active" id="t-field" onclick="tog('field',this)">FIELD</button>
+  <button class="btn active" id="t-wind" onclick="tog('wind',this)">WIND</button>
+  <button class="btn active" id="t-aur" onclick="tog('aur',this)">AURORA</button>
+  <button class="btn active" id="t-shock" onclick="tog('shock',this)">BOW SHOCK</button>
+  <button class="btn active" id="t-rec" onclick="tog('rec',this)">RECONNECT</button>
+  <button class="btn active" id="t-mp" onclick="tog('mp',this)">MAGNETOPAUSE</button>
+  <div class="sep"></div>
+  <span class="lbl">IMF Bz<br>N ◄ ► S</span>
+  <div class="sl pur"><input type="range" id="sl-bz" min="-100" max="100" value="0" oninput="setBz(+this.value)"><span class="sv pur" id="sv-bz">0</span></div>
+  <span class="lbl">wind</span>
+  <div class="sl"><input type="range" id="sl-wind" min="250" max="1200" value="400" oninput="setWind(+this.value)"><span class="sv" id="sv-wind">400</span></div>
+  <span class="lbl">spin</span>
+  <div class="sl"><input type="range" id="sl-spin" min="0" max="60" value="10" oninput="setSpin(+this.value)"><span class="sv" id="sv-spin">0.10</span></div>
+  <span class="lbl">zoom</span>
+  <div class="sl"><input type="range" id="sl-zoom" min="55" max="220" value="105" oninput="setZoom(+this.value)"><span class="sv" id="sv-zoom">1.05</span></div>
+  <div class="sep"></div>
+  <button class="btn" id="b-pause" onclick="togglePause()">PAUSE</button>
+  <button class="btn pur" id="b-panel" onclick="togglePanel()">DOSSIER</button>
+  <button class="btn active" id="b-banner" onclick="toggleBanner()">BANNERS</button>
+  <button class="btn" onclick="toggleLog()">LOG</button>
+</div>
+
+<script>
+"use strict";
+/* ===========================================================================
+   HELIOS v1.1 — THE SUN–EARTH LINE.  Pure Canvas2D, zero deps.
+   Everything is computed: dipole field, magnetopause standoff, reconnection
+   coupling, ring current, dB/dt, aurora. The center holds and is not shown.
+   =========================================================================== */
+var RM=false; try{RM=window.matchMedia('(prefers-reduced-motion: reduce)').matches;}catch(e){}
+
+var cv=document.getElementById('cv'), ctx=cv.getContext('2d',{alpha:false});
+var W=0,H=0,CX=0,CY=0,DPR=1;
+
+/* ---------- camera (orbit) ---------- */
+var yaw=0.62, pitch=0.20, ZOOM=1.05, spin=RM?0:0.10;
+var CAMD=190;            // perspective camera distance in R_E (mild foreshortening, far enough that Sun@-46 never clips)
+var dragging=false, lastX=0, lastY=0;
+
+/* ---------- cited constants / dials ---------- */
+var RE_PX=22.0;          // pixels per Earth radius at unit zoom
+var EARTH_DRAW=1.0;      // Earth drawn to scale with its magnetosphere (honest — it really is ~1:10)
+var TILT=11.5*Math.PI/180;  // magnetic dipole tilt from spin axis
+var AXIS_TILT=18*Math.PI/180; // spin axis lean in world (aesthetic + seasonal feel)
+var R0_MP=10.6;          // quiet subsolar magnetopause standoff, R_E
+var P0=1.6;              // reference dynamic pressure, nPa (n=6,v=400)
+var TAU_DST=64.0;        // ring-current recovery timescale (sim seconds ~ hours)
+var SUNX=-30;            // Sun anchor, in R_E along the Sun–Earth line (real 1 AU ≈ 23,500 R_E → gap compressed ~780×)
+
+/* ---------- live state ---------- */
+var st={
+  running:true, t:0,
+  vsw:400, nsw:6.0, Bz:0.0, By:2.0,   // solar wind + IMF (nT)
+  Pdyn:1.6, Rmp:10.6, alpha:0.58,     // pressure, standoff, Shue flaring
+  eps:0.0, clock:0, rec:0,            // coupling, clock angle, reconnection rate
+  openFlux:0.0,                       // Dungey open-flux content (0..1)
+  Dst:-18, Kp:1.0, dBdt:4, gicRisk:0, // indices + grid
+  auroraLat:67, auroraGlow:0.15,      // oval colatitude edge, brightness
+  sub:'quiet', subTimer:0, dipol:0,   // substorm state machine, dipolarization pulse
+  master:0.14,
+  // CME in flight
+  cme:{active:false, x:0, v:0, n:0, Bz:0, life:0, arrived:false},
+  // Sun flare engine (compact echo of v1.0)
+  sunI:0.12, sunFlash:0, sunHXR:0, sunSXR:0,
+  spin:0,
+  banners:true, panelOpen:false, logHidden:false,
+  show:{field:true,wind:true,aur:true,shock:true,rec:true,mp:true},
+};
+
+/* ---------- vector helpers ---------- */
+function project(x,y,z){
+  var cyw=Math.cos(yaw),syw=Math.sin(yaw),cp=Math.cos(pitch),sp=Math.sin(pitch);
+  var x1=x*cyw+z*syw, z1=-x*syw+z*cyw;
+  var y2=y*cp-z1*sp, z2=y*sp+z1*cp;
+  var f=CAMD/(CAMD - z2);                        // mild perspective; CAMD>>|z| so nothing clips
+  return {sx:CX+x1*RE_PX*ZOOM*f, sy:CY-y2*RE_PX*ZOOM*f, dz:z2, f:f};
+}
+
+/* light for shading: from the Sun (−X) */
+var SUNDIR=(function(){var v=[-1,0.12,0.10];var m=Math.hypot(v[0],v[1],v[2]);return [v[0]/m,v[1]/m,v[2]/m];})();
+
+/* ---------- dipole field-line geometry (cached in dipole frame) ---------- */
+var FIELD=[];        // array of lines; each = {L, pts:[[x,y,z]...], open:false}
+function buildField(){
+  FIELD=[];
+  var Ls=[2.2,3.1,4.3,6.0,8.4,11.5];     // equatorial crossing distances (R_E)
+  var az=[0,60,120,180,240,300];         // longitudes around the axis (deg)
+  for(var li=0;li<Ls.length;li++){
+    for(var ai=0;ai<az.length;ai++){
+      var L=Ls[li], psi=az[ai]*Math.PI/180;
+      var pts=[];
+      var tmin=Math.asin(Math.sqrt(1.0/Math.max(L,1.02))); // foot at r=1 (surface)
+      var N=46;
+      for(var i=0;i<=N;i++){
+        var th=tmin+(Math.PI-2*tmin)*(i/N);
+        var r=L*Math.sin(th)*Math.sin(th);
+        var rho=r*Math.sin(th), zd=r*Math.cos(th);
+        pts.push([rho*Math.cos(psi), rho*Math.sin(psi), zd]);  // dipole frame
+      }
+      FIELD.push({L:L, psi:psi, pts:pts, open:(L>=8.0)});
+    }
+  }
+}
+
+/* rotate a dipole-frame point into world:
+   dipole axis = spin axis tilted by TILT (wobbling with spin), then axis leaned AXIS_TILT.
+   world axes: +X sunward-opposite (Sun at −X), +Y up, +Z toward viewer-ish. */
+function dipoleToWorld(p, out){
+  // 1) tilt dipole from spin axis by TILT, wobble around spin axis by st.spin
+  var w=st.spin;
+  var cw=Math.cos(w), sw=Math.sin(w), ct=Math.cos(TILT), stt=Math.sin(TILT);
+  // dipole axis expressed in spin frame: (stt*cos w, stt*sin w, ct). Build rotation
+  // that maps spin-frame z (0,0,1) to that axis. Use simple compose: first tilt about X by TILT, then spin about Z by w.
+  var x=p[0], y=p[1], z=p[2];
+  // tilt about X (spin-frame) by TILT
+  var y1=y*ct - z*stt, z1=y*stt + z*ct, x1=x;
+  // spin about Z by w
+  var x2=x1*cw - y1*sw, y2=x1*sw + y1*cw, z2=z1;
+  // 2) lean the whole spin axis in world by AXIS_TILT about X-world (dipole z -> world)
+  var ca=Math.cos(AXIS_TILT), sa=Math.sin(AXIS_TILT);
+  // map spin-frame (x2,y2,z2) where z2 is spin axis -> world where spin axis leans toward +X
+  // world: Xw, Yw(up)=spin z leaned, ...
+  var Xw = x2*ca + z2*sa;
+  var Yw = z2*ca - x2*sa;   // up
+  var Zw = y2;
+  out[0]=Xw; out[1]=Yw; out[2]=Zw;
+  return out;
+}
+
+/* ---------- Shue (1997) magnetopause + bow shock surfaces ---------- */
+function shueR(theta, rmp, alpha){  // theta from sunward (+? ) axis; sunward = 0
+  var c=Math.cos(theta);
+  if(c<=-0.999) c=-0.999;
+  return rmp*Math.pow(2.0/(1.0+c), alpha);
+}
+/* sunward direction in world = −X. Build boundary as meridian curves rotated about the Sun–Earth axis. */
+function boundaryPts(rmp, alpha, thetaMax, nA, nTheta){
+  // returns array of polylines (each a meridian), in world coords
+  var lines=[];
+  for(var a=0;a<nA;a++){
+    var phi=(a/nA)*Math.PI*2;   // roll about Sun–Earth (X) axis
+    var poly=[];
+    for(var i=0;i<=nTheta;i++){
+      var th=(i/nTheta)*thetaMax;
+      var r=shueR(th, rmp, alpha);
+      // sunward axis is −X: point along axis at angle th, rolled by phi
+      var xs=-r*Math.cos(th);           // sunward (−X) when th=0
+      var rr=r*Math.sin(th);
+      var ys=rr*Math.cos(phi), zs=rr*Math.sin(phi);
+      poly.push([xs, ys, zs]);
+    }
+    lines.push(poly);
+  }
+  return lines;
+}
+function ringPts(rmp, alpha, theta, nA){
+  var poly=[];
+  var r=shueR(theta, rmp, alpha);
+  var xs=-r*Math.cos(theta), rr=r*Math.sin(theta);
+  for(var a=0;a<=nA;a++){
+    var phi=(a/nA)*Math.PI*2;
+    poly.push([xs, rr*Math.cos(phi), rr*Math.sin(phi)]);
+  }
+  return poly;
+}
+
+/* ---------- solar-wind + CME particles ---------- */
+var WIND=[];
+function seedWind(){
+  WIND=[];
+  for(var i=0;i<220;i++) WIND.push(newWindP(true));
+}
+function newWindP(spread){
+  var y=(Math.random()*2-1)*14, z=(Math.random()*2-1)*14;
+  var x=spread? (SUNX+Math.random()*(0-SUNX)) : SUNX+ (Math.random()*4);
+  return {x:x,y:y,z:z, spd:0.5+Math.random()*0.5, cme:false, life:1};
+}
+
+/* ---------- aurora oval sample points (magnetic colatitude ring) ---------- */
+function auroraRing(colatDeg, nA){
+  var poly=[], cc=colatDeg*Math.PI/180;
+  for(var a=0;a<=nA;a++){
+    var lon=(a/nA)*Math.PI*2;
+    // point on unit sphere (surface) at colatitude cc from dipole axis (dipole frame z)
+    var st_=Math.sin(cc), ct_=Math.cos(cc);
+    var p=[st_*Math.cos(lon), st_*Math.sin(lon), ct_];
+    var out=[0,0,0]; dipoleToWorld(p,out);
+    poly.push(out.slice());
+  }
+  return poly;
+}
+
+/* ===========================================================================
+   PHYSICS STEP
+   =========================================================================== */
+function stepPhysics(dt){
+  st.t+=dt;
+  st.spin += (RM?0:spin)*dt;
+
+  // ---- CME in flight ----
+  var c=st.cme;
+  if(c.active){
+    c.x += c.v*dt;
+    if(!c.arrived && c.x>=-0.5){
+      c.arrived=true; c.life=3.4;
+      lg('CME impact — shock front hits the magnetopause','pu');
+    }
+    if(c.arrived){
+      c.life-=dt;
+      // sheath + cloud: elevated density & speed, and the cloud's frozen-in Bz, all fading over the passage
+      var env=Math.max(0,Math.min(1,c.life/3.4));
+      st.nsw = baseN() + c.n*env;
+      st.vsw = Math.max(baseV(), 400 + c.v*90*env);
+      st.Bz  = c.Bz*env + baseBz()*(1-env);
+      if(c.life<=0){ c.active=false; c.arrived=false; st.nsw=baseN(); st.vsw=baseV(); st.Bz=baseBz(); lg('CME cloud passed — recovery begins','cy'); }
+    }
+  }
+
+  // ---- dynamic pressure & Chapman–Ferraro standoff ----
+  st.Pdyn = 1.6726e-6 * st.nsw * st.vsw * st.vsw;    // nPa
+  var target=R0_MP*Math.pow(P0/Math.max(st.Pdyn,0.05), 1/6);
+  st.Rmp += (target-st.Rmp)*Math.min(1,dt*3.0);
+  st.Rmp=Math.max(4.2,Math.min(14,st.Rmp));
+  st.alpha=0.58 + 0.006*(st.vsw-400)/50;             // tail flares with speed
+
+  // ---- clock angle & Dungey coupling ----
+  var Bt=Math.hypot(st.By, st.Bz);
+  st.clock=Math.atan2(st.By, st.Bz);                 // 0=north, π=south
+  var s2=Math.sin(st.clock/2); var half=s2*s2;       // sin²
+  var newell = (st.vsw) * Bt * half*half;            // v·Bt·sin⁴(θc/2)  (Newell)
+  st.eps = newell/9000;                              // normalized coupling
+  var southward = st.Bz<0;
+  st.rec = southward ? Math.min(1, st.eps*1.3) : Math.max(0, st.eps*0.06);
+
+  // ---- open flux (Dungey): loads under southward Bz, erodes otherwise ----
+  var load = st.rec*0.9;
+  var unload = 0.12 + (st.dipol>0?1.6:0.0);
+  st.openFlux += (load - unload*Math.max(0.05,st.openFlux))*dt;
+  st.openFlux=Math.max(0,Math.min(1.2,st.openFlux));
+
+  // ---- substorm state machine ----
+  st.dipol=Math.max(0, st.dipol - dt/0.5);
+  if(st.sub==='quiet' || st.sub==='recovery'){
+    if(st.rec>0.18){ st.sub='growth'; st.subTimer=0; lg('southward turning — the tail begins to load','pu'); }
+    else st.sub='quiet';
+  }
+  if(st.sub==='growth'){
+    st.subTimer+=dt;
+    if(st.openFlux>0.62 || st.subTimer>7.0){
+      st.sub='onset'; st.subTimer=0; st.dipol=1.0;
+      lg('SUBSTORM ONSET — dipolarization, the oval floods','rd');
+      banner('SUBSTORM · the tail snaps · aurora surges');
+    }
+    if(st.rec<0.1){ st.sub='recovery'; }
+  }
+  if(st.sub==='onset'){
+    st.subTimer+=dt;
+    if(st.subTimer>1.4){ st.sub='recovery'; }
+  }
+  if(st.sub==='recovery'){
+    st.subTimer+=dt;
+    if(st.subTimer>3 && st.rec>0.2){ st.sub='growth'; st.subTimer=0; }
+  }
+
+  // ---- ring current / Dst (Burton) ----
+  var Q = -4.0*st.rec*(1+0.3*(st.vsw-400)/200);      // injection (negative)
+  st.Dst += (Q - (st.Dst+18)/TAU_DST)*dt;            // relax toward −18 quiet
+  var mfloor=-40 - st.master*1600;                   // master unlocks Carrington depth
+  st.Dst=Math.max(mfloor, Math.min(20, st.Dst));
+
+  // ---- Kp from coupling+Dst ----
+  var kp = 0.9 + 3.2*st.eps + Math.max(0,(-st.Dst-20))/60;
+  st.Kp=Math.max(0,Math.min(9,kp));
+
+  // ---- dB/dt (grid driver): substorm onset & fast Dst change ----
+  var baseDb=3 + 40*st.rec;
+  var onset=st.dipol*(260 + 1500*st.master);          // substorm-onset spike scales with severity
+  st.dBdt += ((baseDb+onset) - st.dBdt)*Math.min(1,dt*12);
+  // grid risk gauge (0..1) from dB/dt
+  st.gicRisk = Math.min(1, st.dBdt/1400);
+
+  // ---- aurora oval: expands EQUATORWARD as Dst deepens / open flux grows ----
+  var oval = 22 + 0.045*(-st.Dst) + 8*st.openFlux;   // colatitude from pole; larger = further from pole = lower latitude
+  oval=Math.max(16,Math.min(58,oval));               // Carrington-class pushes the oval into the tropics
+  st.auroraLat += ( (90-oval) - st.auroraLat)*Math.min(1,dt*2);
+  var glowT=0.12 + 0.7*st.rec + st.dipol*0.6;
+  st.auroraGlow += (glowT-st.auroraGlow)*Math.min(1,dt*4);
+
+  // ---- Sun flare engine (compact): builds, erupts on its own occasionally ----
+  st.sunFlash*=Math.pow(0.5,dt/0.4);
+  st.sunHXR = 0.5*st.rec;   // echo
+  st.sunSXR += (1.4*st.sunHXR - st.sunSXR/6)*dt; st.sunSXR=Math.max(0,st.sunSXR);
+}
+function baseBz(){ return (+document.getElementById('sl-bz').value)/10; }
+function baseN(){ return 6.0; }
+function baseV(){ return (+document.getElementById('sl-wind').value); }
+
+/* ===========================================================================
+   RENDER
+   =========================================================================== */
+var stars=null;
+function makeStars(){ stars=[]; for(var i=0;i<220;i++) stars.push([Math.random()*W,Math.random()*H,Math.random()*1.4+0.2,Math.random()*0.5+0.3]); }
+
+function render(){
+  // space
+  ctx.fillStyle='#050510'; ctx.fillRect(0,0,W,H);
+  if(stars) for(var i=0;i<stars.length;i++){var s=stars[i]; ctx.globalAlpha=s[3]; ctx.fillStyle='#8090b0'; ctx.fillRect(s[0],s[1],s[2],s[2]);} ctx.globalAlpha=1;
+
+  drawSun();
+
+  // build a depth-sorted list of drawable strokes for the magnetosphere
+  var jobs=[];
+  var wp=[0,0,0];
+
+  // solar wind particles (behind/around)
+  if(st.show.wind) drawWind();
+
+  // bow shock (behind)
+  if(st.show.shock){
+    var bs=boundaryPts(st.Rmp*1.32, st.alpha*0.92, Math.PI*0.72, 10, 26);
+    for(var b=0;b<bs.length;b++) jobs.push({type:'poly',pts:bs[b],col:'rgba(120,200,255,0.10)',w:1,glow:st.Pdyn>3?0.4:0});
+  }
+  // magnetopause (Shue)
+  if(st.show.mp){
+    var mp=boundaryPts(st.Rmp, st.alpha, Math.PI*0.82, 12, 30);
+    for(var m=0;m<mp.length;m++) jobs.push({type:'poly',pts:mp[m],col:'rgba(0,212,255,0.16)',w:1,glow:0});
+    jobs.push({type:'poly',pts:ringPts(st.Rmp,st.alpha,Math.PI/2,48),col:'rgba(0,212,255,0.22)',w:1.2,glow:0});
+  }
+
+  // dipole field lines (world)
+  if(st.show.field){
+    for(var li=0;li<FIELD.length;li++){
+      var F=FIELD[li];
+      var poly=[]; var open=F.open && st.openFlux>0.25 && F.L>=8;
+      for(var pi=0;pi<F.pts.length;pi++){
+        dipoleToWorld(F.pts[pi], wp);
+        var x=wp[0],y=wp[1],z=wp[2];
+        // dayside compression: clip sunward extent to magnetopause; peel open lines to tail
+        if(x<0){
+          var rr=Math.hypot(x,y,z);
+          if(rr>st.Rmp){ var k=st.Rmp/rr; x*=k; y*=k; z*=k; }
+          if(open){
+            // drag the sunward foot antisunward (open flux swept into tail)
+            var drag=st.openFlux*1.4;
+            x += (-x)* Math.min(0.95,drag) + drag*6;   // push toward +X (tail)
+          }
+        } else if(open){
+          x += st.openFlux*8;                          // stretch nightside tail
+        }
+        poly.push([x,y,z]);
+      }
+      var t=(F.L-2)/10;
+      var col = open ? 'rgba(204,68,255,'+(0.5)+')'
+                     : 'rgba('+Math.round(80+120*(1-t))+','+Math.round(200-40*t)+',255,'+(0.42+0.25*(1-t))+')';
+      jobs.push({type:'poly',pts:poly,col:col,w: open?1.2:1.0, glow: open?0.3:0});
+    }
+  }
+
+  // reconnection X-line marker on the dayside magnetopause when coupling on
+  if(st.show.rec && st.rec>0.12){
+    var xr=[-st.Rmp,0,0], p=project(xr[0],xr[1],xr[2]);
+    var pulse=0.5+0.5*Math.sin(st.t*7);
+    jobs.push({type:'xline', at:p, r:14+10*st.rec, a:(0.5+0.5*st.rec)*pulse});
+  }
+
+  // sort back-to-front by mean depth and draw
+  for(var j=0;j<jobs.length;j++){
+    var job=jobs[j];
+    if(job.type==='poly'){ var d=0,n=job.pts.length; for(var q=0;q<n;q++){var pp=project(job.pts[q][0],job.pts[q][1],job.pts[q][2]); job.pts[q]._p=pp; d+=pp.dz;} job._d=d/n; }
+    else if(job.type==='xline'){ job._d=job.at.dz; }
+  }
+  jobs.sort(function(a,b){return a._d-b._d;});
+  for(var j2=0;j2<jobs.length;j2++){
+    var jb=jobs[j2];
+    if(jb.type==='poly') strokePoly(jb);
+    else if(jb.type==='xline') drawXline(jb);
+  }
+
+  drawEarth();
+  if(st.show.aur) drawAurora();
+
+  drawFPS();
+}
+
+function strokePoly(job){
+  var pts=job.pts; if(pts.length<2) return;
+  ctx.beginPath();
+  for(var i=0;i<pts.length;i++){ var p=pts[i]._p||project(pts[i][0],pts[i][1],pts[i][2]); i?ctx.lineTo(p.sx,p.sy):ctx.moveTo(p.sx,p.sy); }
+  ctx.strokeStyle=job.col; ctx.lineWidth=job.w||1;
+  if(job.glow>0){ ctx.shadowColor=job.col; ctx.shadowBlur=10*job.glow; }
+  ctx.stroke();
+  ctx.shadowBlur=0;
+}
+function drawXline(job){
+  var p=job.at;
+  ctx.save();
+  ctx.globalAlpha=job.a;
+  var g=ctx.createRadialGradient(p.sx,p.sy,0,p.sx,p.sy,job.r);
+  g.addColorStop(0,'rgba(255,255,255,0.9)'); g.addColorStop(0.4,'rgba(204,68,255,0.7)'); g.addColorStop(1,'rgba(204,68,255,0)');
+  ctx.fillStyle=g; ctx.beginPath(); ctx.arc(p.sx,p.sy,job.r,0,Math.PI*2); ctx.fill();
+  ctx.restore();
+}
+
+/* Sun: glowing disk at the sunward edge, flaring */
+function drawSun(){
+  var p=project(SUNX,0,0);
+  var R=RE_PX*ZOOM*p.f*2.2;
+  // corona glow
+  var g=ctx.createRadialGradient(p.sx,p.sy,R*0.3,p.sx,p.sy,R*3.2);
+  var flare=st.sunFlash;
+  g.addColorStop(0,'rgba(255,230,150,'+(0.9)+')');
+  g.addColorStop(0.18,'rgba(255,170,60,'+(0.5+0.4*flare)+')');
+  g.addColorStop(0.5,'rgba(255,110,40,'+(0.14+0.2*flare)+')');
+  g.addColorStop(1,'rgba(255,90,30,0)');
+  ctx.fillStyle=g; ctx.beginPath(); ctx.arc(p.sx,p.sy,R*3.2,0,Math.PI*2); ctx.fill();
+  // body
+  var b=ctx.createRadialGradient(p.sx-R*0.3,p.sy-R*0.3,R*0.1,p.sx,p.sy,R);
+  b.addColorStop(0,'#fff6d8'); b.addColorStop(0.6,'#ffd23a'); b.addColorStop(1,'#ff8a1e');
+  ctx.fillStyle=b; ctx.beginPath(); ctx.arc(p.sx,p.sy,R,0,Math.PI*2); ctx.fill();
+  // label
+  ctx.fillStyle='rgba(255,215,0,0.55)'; ctx.font='9px ui-monospace,monospace'; ctx.textAlign='center';
+  ctx.fillText('SUN', p.sx, p.sy+R+13);
+  ctx.fillStyle='rgba(232,224,208,0.28)'; ctx.font='8px ui-monospace,monospace';
+  ctx.fillText('gap compressed ~780×', p.sx, p.sy+R+24);
+  ctx.textAlign='left';
+}
+
+/* geographic point (lat,lon) on the spinning globe → world, rotating about the spin axis */
+function geoToWorld(lat, lon, r, out){
+  var cl=Math.cos(lat), sl=Math.sin(lat);
+  var gx=cl*Math.cos(lon+st.spin), gy=cl*Math.sin(lon+st.spin), gz=sl;   // spin-frame, gz = spin axis
+  var ca=Math.cos(AXIS_TILT), sa=Math.sin(AXIS_TILT);
+  out[0]=(gx*ca+gz*sa)*r; out[1]=(gz*ca-gx*sa)*r; out[2]=gy*r;           // lean spin axis into world
+  return out;
+}
+/* near-hemisphere lat/long wireframe — this is what makes the spin visible */
+function drawGlobeGrid(){
+  var out=[0,0,0], pr, pen, i;
+  ctx.strokeStyle='rgba(150,205,245,0.15)'; ctx.lineWidth=0.7;
+  for(var m=0;m<8;m++){                          // meridians
+    var lon=m/8*Math.PI*2; ctx.beginPath(); pen=false;
+    for(i=0;i<=24;i++){
+      geoToWorld(-Math.PI/2+Math.PI*(i/24), lon, EARTH_DRAW, out); pr=project(out[0],out[1],out[2]);
+      if(pr.dz>0){ if(!pen){ctx.moveTo(pr.sx,pr.sy);pen=true;} else ctx.lineTo(pr.sx,pr.sy);} else pen=false;
+    }
+    ctx.stroke();
+  }
+  for(var q=1;q<6;q++){                           // parallels
+    var lat=-Math.PI/2+Math.PI*(q/6); ctx.beginPath(); pen=false;
+    for(i=0;i<=32;i++){
+      geoToWorld(lat, i/32*Math.PI*2, EARTH_DRAW, out); pr=project(out[0],out[1],out[2]);
+      if(pr.dz>0){ if(!pen){ctx.moveTo(pr.sx,pr.sy);pen=true;} else ctx.lineTo(pr.sx,pr.sy);} else pen=false;
+    }
+    ctx.stroke();
+  }
+}
+
+/* Earth: shaded sphere with day/night terminator toward the Sun, spin axis leaning */
+function drawEarth(){
+  var p=project(0,0,0);
+  var R=RE_PX*ZOOM*p.f*EARTH_DRAW;
+  // ocean base
+  var b=ctx.createRadialGradient(p.sx-R*0.35,p.sy-R*0.35,R*0.1,p.sx,p.sy,R);
+  b.addColorStop(0,'#3a6ea8'); b.addColorStop(0.7,'#183a68'); b.addColorStop(1,'#0a1c38');
+  ctx.fillStyle=b; ctx.beginPath(); ctx.arc(p.sx,p.sy,R,0,Math.PI*2); ctx.fill();
+  // day/night terminator: shade the anti-sunward half. Sun is at −X (screen: project sun dir)
+  var sd=project(SUNDIR[0]*3,SUNDIR[1]*3,SUNDIR[2]*3), c0=project(0,0,0);
+  var ang=Math.atan2(sd.sy-c0.sy, sd.sx-c0.sx);
+  ctx.save();
+  ctx.beginPath(); ctx.arc(p.sx,p.sy,R,0,Math.PI*2); ctx.clip();
+  var tg=ctx.createLinearGradient(p.sx+Math.cos(ang)*R,p.sy+Math.sin(ang)*R, p.sx-Math.cos(ang)*R,p.sy-Math.sin(ang)*R);
+  tg.addColorStop(0,'rgba(255,240,200,0.10)'); tg.addColorStop(0.5,'rgba(5,5,16,0.0)'); tg.addColorStop(0.62,'rgba(5,5,16,0.55)'); tg.addColorStop(1,'rgba(5,5,16,0.85)');
+  ctx.fillStyle=tg; ctx.fillRect(p.sx-R,p.sy-R,R*2,R*2);
+  ctx.restore();
+  // atmosphere rim
+  ctx.strokeStyle='rgba(120,200,255,0.35)'; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.arc(p.sx,p.sy,R+1.5,0,Math.PI*2); ctx.stroke();
+  // rotating geographic graticule (clipped to the globe) — this is what shows the spin
+  ctx.save();
+  ctx.beginPath(); ctx.arc(p.sx,p.sy,R,0,Math.PI*2); ctx.clip();
+  drawGlobeGrid();
+  ctx.restore();
+  // dipole axis stub (N red / S blue) — the magnetic axis, tilted ~11.5° from the spin axis
+  var pn=[0,0,0],ps=[0,0,0]; dipoleToWorld([0,0,1.9],pn); dipoleToWorld([0,0,-1.9],ps);
+  var Pn=project(pn[0],pn[1],pn[2]), Ps=project(ps[0],ps[1],ps[2]);
+  ctx.strokeStyle='rgba(200,200,220,0.28)'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(Pn.sx,Pn.sy); ctx.lineTo(Ps.sx,Ps.sy); ctx.stroke();
+  ctx.fillStyle='#ff5555'; ctx.beginPath(); ctx.arc(Pn.sx,Pn.sy,3,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#4488ff'; ctx.beginPath(); ctx.arc(Ps.sx,Ps.sy,3,0,Math.PI*2); ctx.fill();
+  // label
+  ctx.fillStyle='rgba(0,212,255,0.6)'; ctx.font='9px ui-monospace,monospace'; ctx.textAlign='center';
+  ctx.fillText('EARTH · to scale with its field', p.sx, p.sy+R+15); ctx.textAlign='left';
+}
+
+/* Aurora ovals at both poles (rings near the magnetic axis on the surface) */
+function drawAurora(){
+  var colat=Math.max(8, 90-st.auroraLat);   // degrees from pole
+  var poles=[colat, 180-colat];
+  for(var pi=0;pi<poles.length;pi++){
+    var ring=auroraRing(poles[pi], 40);
+    ctx.beginPath();
+    for(var i=0;i<ring.length;i++){ var p=project(ring[i][0]*EARTH_DRAW,ring[i][1]*EARTH_DRAW,ring[i][2]*EARTH_DRAW); i?ctx.lineTo(p.sx,p.sy):ctx.moveTo(p.sx,p.sy); }
+    var a=Math.min(0.9,st.auroraGlow);
+    ctx.strokeStyle='rgba(84,247,176,'+a+')'; ctx.lineWidth=2.4;
+    ctx.shadowColor='rgba(84,247,176,'+a+')'; ctx.shadowBlur=12*st.auroraGlow;
+    ctx.stroke();
+    // inner red curtain for strong storms
+    if(st.auroraGlow>0.5){ ctx.strokeStyle='rgba(255,90,120,'+(st.auroraGlow-0.4)*0.6+')'; ctx.lineWidth=1.2; ctx.stroke(); }
+    ctx.shadowBlur=0;
+  }
+}
+
+/* solar wind: dots streaming Sun→Earth; CME sheath is purple & dense */
+function drawWind(){
+  for(var i=0;i<WIND.length;i++){
+    var p=WIND[i];
+    if(st.running) p.x += (st.vsw/400)*p.spd*0.10*(RM?0.4:1);
+    var isCME = st.cme.active && st.cme.arrived && p.x>-6 && p.x<10;
+    if(p.x>12){ WIND[i]=newWindP(false); continue; }
+    var pr=project(p.x,p.y,p.z);
+    var southward=st.Bz<0;
+    ctx.globalAlpha=0.5*pr.f;
+    if(isCME){ ctx.fillStyle= southward? 'rgba(204,68,255,0.8)':'rgba(120,180,255,0.7)'; }
+    else{ ctx.fillStyle= southward? 'rgba(180,120,255,0.5)':'rgba(90,150,220,0.45)'; }
+    var sz=(isCME?2.0:1.3)*pr.f;
+    ctx.fillRect(pr.sx,pr.sy,sz,sz);
+  }
+  ctx.globalAlpha=1;
+  // IMF Bz arrow near the wind (little indicator of the field the cloud carries)
+}
+
+var fpsEMA=60;
+function drawFPS(){
+  ctx.fillStyle='rgba(232,224,208,0.22)'; ctx.font='9px ui-monospace,monospace'; ctx.textAlign='right';
+  ctx.fillText(Math.round(fpsEMA)+' fps · '+(st.running?'live':'paused'), W-12, H-64);
+  ctx.textAlign='left';
+}
+
+/* ===========================================================================
+   HUD / DOSSIER / LOG / BANNERS
+   =========================================================================== */
+function el(id){return document.getElementById(id);}
+function fmt(x,d){return (x>=0?'+':'')+x.toFixed(d===undefined?0:d);}
+
+function updateHUD(){
+  el('h-v').textContent=Math.round(st.vsw);
+  el('h-n').textContent=st.nsw.toFixed(1);
+  el('h-p').textContent=st.Pdyn.toFixed(2);
+  el('h-rmp').textContent=st.Rmp.toFixed(1);
+  el('h-bz').textContent=fmt(st.Bz,1);
+  el('h-bz').style.color= st.Bz<0?'#cc44ff':'#00d4ff';
+  var clkDeg=Math.round(Math.abs(st.clock)*180/Math.PI);
+  el('h-clk').textContent=clkDeg+'°';
+  el('h-eps').textContent=st.eps.toFixed(2);
+  el('h-rec').textContent= st.rec>0.12? 'ON · '+Math.round(st.rec*100)+'%' : 'off';
+  el('h-rec').style.color= st.rec>0.12?'#cc44ff':'rgba(232,224,208,0.4)';
+  el('h-dst').textContent='−'+Math.abs(Math.round(st.Dst));
+  el('h-kp').textContent=Math.floor(st.Kp);
+  el('h-lat').textContent=Math.round(st.auroraLat)+'°';
+  el('h-dbdt').textContent=Math.round(st.dBdt);
+  // grid label + badge
+  var grid, gcol, badge, bcls, phase;
+  if(st.gicRisk>0.66){ grid='SEVERE'; gcol='#ff4444'; }
+  else if(st.gicRisk>0.33){ grid='ELEVATED'; gcol='#ffb020'; }
+  else if(st.gicRisk>0.12){ grid='WATCH'; gcol='#ffd700'; }
+  else { grid='nominal'; gcol='rgba(232,224,208,0.4)'; }
+  el('h-grid').textContent=grid; el('h-grid').style.color=gcol;
+  // storm badge from Dst
+  var D=-st.Dst;
+  if(D>250){ badge='EXTREME'; bcls='sev'; phase='· Carrington-class'; }
+  else if(D>100){ badge='SEVERE'; bcls='sev'; phase='· intense storm'; }
+  else if(D>50){ badge='STORM'; bcls='warn'; phase='· moderate storm'; }
+  else if(D>30){ badge='ACTIVE'; bcls='warn'; phase='· unsettled'; }
+  else { badge='QUIET'; bcls=''; phase='· nominal solar wind'; }
+  var bd=el('badge'); bd.textContent=badge; bd.className=''; if(bcls) bd.classList.add(bcls);
+  el('h-phase').textContent=phase+' · '+st.sub;
+
+  // forecast tab (honest)
+  var thr=1.0;
+  el('f-now').textContent=st.eps.toFixed(2);
+  el('f-thr').textContent=thr.toFixed(2);
+  el('f-err').textContent=Math.abs(st.eps-thr).toFixed(2);
+  el('fb').style.width=Math.min(100,st.eps*100)+'%';
+  var conf = st.eps>0.6?'moderate':'low';
+  el('f-conf').textContent=conf;
+  el('f-spread').textContent= st.eps>0.6?'± 6 h arrival':'± 12 h arrival · sign of Bz unknown until L1';
+  // grid receipts live compare
+  el('g-carr').textContent = (D>250?'you are here':'~ −850 nT');
+  el('g-queb').textContent = '~600 nT/min';
+  el('g-hall').textContent = '~ −383 nT';
+}
+
+var LOGMSGS=[
+  ['HELIOS v1.1 — the Sun–Earth Line. always.','ok'],
+  ['drag to orbit · slide to drive the storm · turn Bz south','cy'],
+  ['--- the kernel ---','cy'],
+  ['dipole r=L·sin²θ · closed loops · ∇·B=0','gd'],
+  ['standoff R_mp=R0·(P0/Pdyn)^(1/6) — Chapman & Ferraro 1931','src'],
+  ['coupling ∝ v·Bt·sin⁴(θc/2) — Dungey 1961','src'],
+  ['Dst: dDst*/dt=Q−Dst*/τ — Burton 1975','src'],
+  ['Québec 1989: 6M dark in 92 seconds','rd'],
+  ['southward Bz is the door. this is the whole game.','pu'],
+];
+function initLog(){ var e=el('log'); e.innerHTML=''; for(var i=LOGMSGS.length-1;i>=0;i--){ var m=LOGMSGS[i]; var d=document.createElement('div'); d.className='e '+m[1]; d.textContent=m[0]; e.appendChild(d);} }
+function lg(msg,cls){ var e=el('log'); var d=document.createElement('div'); d.className='e'+(cls?' '+cls:''); d.textContent=msg; e.insertBefore(d,e.firstChild); while(e.children.length>40) e.removeChild(e.lastChild); }
+function toggleLog(){ st.logHidden=!st.logHidden; el('log').classList.toggle('hidden',st.logHidden); }
+
+var BANNERS=[
+  'PARKER · the wind was there all along',
+  'DUNGEY · south opens the door, the tail closes it',
+  'ALFVÉN · the plasma and the field move as one',
+  'CHAPMAN & FERRARO · the cloud carves the cavity',
+  'BIRKELAND · the current runs down the field',
+  'CARRINGTON 1859 · the sky burned to the tropics',
+  'THE SUN–EARTH LINE · ∇·B = 0 · always',
+];
+var bIdx=0, bTimer=0;
+function banner(txt){ var b=el('banner'); b.textContent=txt; b.classList.add('show'); bTimer=0; }
+function cycleBanner(dt){
+  if(!st.banners) return;
+  bTimer+=dt;
+  if(bTimer>5.5){ bTimer=0; bIdx=(bIdx+1)%BANNERS.length; banner(BANNERS[bIdx]); }
+}
+
+/* ===========================================================================
+   CONTROLS
+   =========================================================================== */
+function setTab(t){ var tabs=document.querySelectorAll('#panel .tab'); tabs.forEach(function(x){x.classList.toggle('active',x.dataset.t===t);}); var cs=document.querySelectorAll('#panel .tabc'); cs.forEach(function(x){x.classList.toggle('active',x.id==='tc-'+t);}); }
+function togglePanel(){ st.panelOpen=!st.panelOpen; el('panel').classList.toggle('open',st.panelOpen); el('b-panel').classList.toggle('active',st.panelOpen); }
+function toggleBanner(){ st.banners=!st.banners; el('b-banner').classList.toggle('active',st.banners); if(!st.banners) el('banner').classList.remove('show'); else banner(BANNERS[bIdx]); }
+function togglePause(){ st.running=!st.running; el('b-pause').textContent=st.running?'PAUSE':'RESUME'; el('b-pause').classList.toggle('active',!st.running); }
+function tog(k,btn){ st.show[k]=!st.show[k]; btn.classList.toggle('active',st.show[k]); }
+
+function setBz(v){ // slider −100..100 -> nT −10..10, sets baseline (unless CME overrides)
+  var bz=v/10; el('sv-bz').textContent=(v/10).toFixed(0);
+  if(!(st.cme.active&&st.cme.arrived)) st.Bz=bz;
+  el('sv-bz').style.color= v<0?'#cc44ff':'#00d4ff';
+}
+function setWind(v){ st.vsw=v; el('sv-wind').textContent=v; }
+function setSpin(v){ spin=v/100; el('sv-spin').textContent=(v/100).toFixed(2); }
+function setZoom(v){ ZOOM=Math.max(0.55,Math.min(2.2,v/100)); el('sv-zoom').textContent=ZOOM.toFixed(2); }
+
+var KDOTS=6;
+function onMaster(v){
+  st.master=v/100;
+  // master maps to storm severity: wind speed, density baseline, and southward push
+  var sev=st.master;
+  var vw=350+sev*760; st.vsw=vw; el('sl-wind').value=Math.round(vw); el('sv-wind').textContent=Math.round(vw);
+  st.nsw=4+sev*24;
+  // push Bz southward as severity climbs (but leave user override headroom)
+  var bz=-(sev*9); el('sl-bz').value=Math.round(bz*10); setBz(Math.round(bz*10));
+  var label = sev<0.14?'QUIET SUN': sev<0.30?'BREEZY': sev<0.5?'ACTIVE': sev<0.72?'STORM': sev<0.9?'SEVERE':'CARRINGTON-CLASS';
+  el('master-val').textContent=label;
+  updateKdots();
+}
+function updateKdots(){
+  var box=el('kdots'); box.innerHTML='';
+  var lit=Math.round(st.master*KDOTS);
+  for(var i=0;i<KDOTS;i++){ var d=document.createElement('div'); d.className='kdot'+(i<lit?' on':''); box.appendChild(d); }
+}
+
+function fireCME(){
+  if(st.cme.active) return;
+  var sev=Math.max(0.35,st.master);
+  st.cme={active:true, arrived:false, x:SUNX+2, v:6+sev*10, n:10+sev*40, Bz: -(4+sev*14), life:0};
+  st.sunFlash=1.0;
+  lg('◄ CME launched — magnetized cloud, Bz '+st.cme.Bz.toFixed(0)+' nT','pu');
+  banner('CME EN ROUTE · watch the sign of Bz');
+}
+
+/* view presets */
+function viewSun(){ yaw=0.0; pitch=0.05; }
+function viewPolar(){ yaw=0.5; pitch=1.15; }
+function viewTail(){ yaw=Math.PI; pitch=0.15; }
+
+/* ---------- orbit (drag) + zoom ---------- */
+cv.addEventListener('pointerdown',function(e){ dragging=true; lastX=e.clientX; lastY=e.clientY; cv.setPointerCapture&&cv.setPointerCapture(e.pointerId); });
+window.addEventListener('pointermove',function(e){ if(!dragging) return; yaw+=(e.clientX-lastX)*0.006; pitch+=(e.clientY-lastY)*0.004; pitch=Math.max(-0.4,Math.min(1.35,pitch)); lastX=e.clientX; lastY=e.clientY; });
+window.addEventListener('pointerup',function(){ dragging=false; });
+window.addEventListener('pointercancel',function(){ dragging=false; });
+cv.addEventListener('wheel',function(e){ e.preventDefault(); ZOOM*=(1-Math.sign(e.deltaY)*0.08); ZOOM=Math.max(0.55,Math.min(2.2,ZOOM)); el('sl-zoom').value=Math.round(ZOOM*100); el('sv-zoom').textContent=ZOOM.toFixed(2); },{passive:false});
+// pinch
+var pinchD=0;
+cv.addEventListener('touchstart',function(e){ if(e.touches.length===2){ dragging=false; pinchD=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);} },{passive:false});
+cv.addEventListener('touchmove',function(e){ if(e.touches.length===2){ e.preventDefault(); var d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY); if(pinchD){ ZOOM*=d/pinchD; ZOOM=Math.max(0.55,Math.min(2.2,ZOOM)); el('sl-zoom').value=Math.round(ZOOM*100); el('sv-zoom').textContent=ZOOM.toFixed(2);} pinchD=d; } },{passive:false});
+
+window.addEventListener('keydown',function(e){
+  if(e.code==='Space'){ e.preventDefault(); togglePause(); }
+  if(e.code==='KeyC'){ fireCME(); }
+  if(e.code==='KeyD'){ togglePanel(); }
+  if(e.code==='ArrowUp'){ var s=el('sl-master'); s.value=Math.min(100,+s.value+6); onMaster(+s.value); }
+  if(e.code==='ArrowDown'){ var s2=el('sl-master'); s2.value=Math.max(0,+s2.value-6); onMaster(+s2.value); }
+});
+
+/* ---------- resize ---------- */
+function resize(){
+  DPR=Math.min(2,window.devicePixelRatio||1);
+  W=window.innerWidth; H=window.innerHeight;
+  cv.width=Math.round(W*DPR); cv.height=Math.round(H*DPR);
+  cv.style.width=W+'px'; cv.style.height=H+'px';
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+  CX=W*0.50; CY=H*0.47;
+  makeStars();
+}
+window.addEventListener('resize',resize);
+
+/* ---------- loop (fixed dt) ---------- */
+var last=performance.now(), acc=0, DT=1/120;
+function frame(now){
+  var real=(now-last)/1000; last=now; if(real>0.1) real=0.1;
+  fpsEMA=fpsEMA*0.92 + (1/Math.max(1e-3,real))*0.08;
+  if(st.running){
+    acc+=real;
+    var guard=0;
+    while(acc>=DT && guard<8){ stepPhysics(DT); acc-=DT; guard++; }
+  }
+  cycleBanner(real);
+  render();
+  updateHUD();
+  requestAnimationFrame(frame);
+}
+
+/* ---------- init ---------- */
+function init(){
+  resize();
+  buildField(); seedWind(); initLog();
+  onMaster(+el('sl-master').value);
+  setBz(+el('sl-bz').value); setWind(+el('sl-wind').value); setSpin(+el('sl-spin').value); setZoom(+el('sl-zoom').value);
+  if(RM){ spin=0; el('sl-spin').value=0; el('sv-spin').textContent='0.00'; lg('reduced-motion on — spin parked at zero (opt-in)','cy'); }
+  banner(BANNERS[0]);
+  requestAnimationFrame(frame);
+}
+init();
+</script>
+</body></html>
