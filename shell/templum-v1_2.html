@@ -1,0 +1,552 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>TEMPLUM v1.2 &middot; the fractal voice, poured into the cathedral &middot; 1/f&#946; carved into a vowel</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{background:#050510;color:#e0e0e0;font-family:ui-monospace,"SF Mono",Menlo,monospace;
+  font-size:11px;overflow:hidden;height:100%;width:100%}
+canvas{display:block}
+#cv{position:fixed;inset:0;z-index:1}
+#rail{position:fixed;top:0;bottom:54px;left:0;width:296px;z-index:5;display:flex;flex-direction:column;
+  background:linear-gradient(to right,rgba(5,5,16,0.92) 0,rgba(5,5,16,0.8) 76%,rgba(5,5,16,0) 100%);
+  border-right:1px solid rgba(80,50,120,0.12);pointer-events:none}
+#hud{padding:11px 14px 5px;text-shadow:0 0 10px rgba(5,5,16,0.95)}
+#hud .title{font-size:13px;color:#cc44ff;letter-spacing:.16em;text-transform:uppercase;font-weight:bold}
+#hud .sub{font-size:8px;color:rgba(204,68,255,.55);letter-spacing:.05em;margin:2px 0 6px;text-transform:uppercase}
+#hud .fps{font-size:15px;font-weight:bold;font-variant-numeric:tabular-nums}
+#hud .fok{color:#7fff9f}#hud .fmid{color:#ffd700}#hud .fbad{color:#ff6a5c}
+#hud .row{line-height:1.5;color:rgba(220,228,240,.5);font-size:10px;font-variant-numeric:tabular-nums}
+#hud .v{color:#cc44ff;font-weight:bold}#hud .g{color:#ffd700;font-weight:bold}#hud .t{color:#35e0c8;font-weight:bold}
+#hud .dim{color:rgba(220,228,240,.3)}
+#hud .hr{height:1px;background:rgba(204,68,255,.14);margin:5px 0}
+#modes{padding:0 14px 4px}
+#modes .mh{font-size:8px;text-transform:uppercase;letter-spacing:.1em;color:rgba(53,224,200,.6);margin:3px 0 2px}
+#modes .mrow{display:flex;justify-content:space-between;font-size:9px;line-height:1.5;color:rgba(220,228,240,.62);font-variant-numeric:tabular-nums}
+#modes .mrow .idx{color:rgba(220,228,240,.35)}
+#modes .mrow .hz{color:#ffd700;font-weight:bold}
+#modes .mrow .ax{color:#35e0c8}#modes .mrow .tg{color:#cc44ff}#modes .mrow .ob{color:#ff6a9e}
+#voicepanel{padding:4px 14px 2px;pointer-events:none}
+#voicepanel .sh{font-size:8px;text-transform:uppercase;letter-spacing:.1em;color:rgba(220,228,240,.4);margin-bottom:3px}
+#voicepanel .sh .g{color:#ffd700}
+#vcv{width:268px;height:66px;display:block;background:rgba(10,6,20,0.5);border:1px solid rgba(80,50,120,0.2);border-radius:3px}
+.vpr{font-size:7.5px;color:rgba(220,228,240,.4);margin-top:3px;line-height:1.4}
+.vpr .pur{color:#cc44ff}.vpr .t{color:#35e0c8}.vpr .g{color:#ffd700}
+#vp-f3.no{color:#ff6a5c}#vp-f3.yes{color:#7fff9f}
+.vowbtn{padding:3px 6px!important;min-width:20px}
+#klaws{flex:1;overflow-y:auto;padding:6px 14px 12px;pointer-events:auto;
+  -webkit-mask-image:linear-gradient(to bottom,#000 92%,transparent);mask-image:linear-gradient(to bottom,#000 92%,transparent)}
+#klaws .kh{font-size:8.5px;color:#35e0c8;text-transform:uppercase;letter-spacing:.12em;margin:7px 0 3px}
+#klaws p{font-size:8.5px;color:rgba(220,228,240,.42);line-height:1.5;margin-bottom:4px}
+#klaws b{color:#ffd700}#klaws .pur{color:#cc44ff}
+#stamp{position:fixed;bottom:60px;right:12px;z-index:6;pointer-events:none;text-align:right}
+#stamp .s{font-size:8px;color:rgba(204,68,255,.26);letter-spacing:.07em;line-height:1.8}
+#stamp .s.g{color:rgba(255,215,0,.3)}
+#bar{position:fixed;bottom:0;left:0;right:0;z-index:10;background:rgba(5,5,16,0.97);
+  border-top:1px solid #221033;padding:5px 9px;display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.btn{background:#0b0814;color:#5a4a6a;border:1px solid #221033;border-radius:3px;padding:3px 8px;
+  font-family:inherit;font-size:9px;cursor:pointer;transition:.12s;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+.btn:hover{border-color:#cc44ff;color:#cc44ff}.btn.active{background:#cc44ff;color:#050510;border-color:#cc44ff}
+.btn.tg.active{background:#35e0c8;border-color:#35e0c8}
+.btn.play{background:#ffd700;color:#050510;border-color:#ffd700;font-weight:bold}
+.sep{width:1px;height:15px;background:#221033}
+.lbl{color:rgba(220,228,240,.28);font-size:8px;text-transform:uppercase;letter-spacing:.05em}
+.slw{display:flex;align-items:center;gap:3px}
+.slw input{accent-color:#cc44ff;cursor:pointer;width:50px}
+#sl-res{accent-color:#ff6a5c}
+.sv{font-size:8.5px;color:#cc44ff;min-width:26px;font-variant-numeric:tabular-nums;text-transform:none}
+input[type=file]{display:none}
+</style></head><body>
+<canvas id="cv"></canvas>
+
+<div id="rail">
+  <div id="hud">
+    <span class="title">Templum &middot; voice</span>
+    <div class="sub">a fractal voice, built in Fourier, poured into the room</div>
+    <div class="fps"><span id="h-fps" class="fok">60</span><span class="dim" style="font-size:9px"> fps &middot; the field is 3D &middot; paid per voxel</span></div>
+    <div class="hr"></div>
+    <div class="row">plan&nbsp;<span class="v" id="h-dim">—</span> &middot; H&nbsp;<span class="g" id="h-ht">—</span> m</div>
+    <div class="row">volume&nbsp;<span class="g" id="h-vol">—</span> m&sup3; &middot; voxels&nbsp;<span class="t" id="h-vox">—</span></div>
+    <div class="row">driving&nbsp;<span class="g" id="h-drive">tone</span> &middot; peak&nbsp;<span class="v" id="h-peak">—</span> Hz</div>
+  </div>
+  <div id="modes">
+    <div class="mh">analytic room modes &middot; f=(c/2)&radic;((nx/Lx)&sup2;+(ny/Ly)&sup2;+(nz/Lz)&sup2;)</div>
+    <div id="modelist"></div>
+  </div>
+  <div id="voicepanel">
+    <div class="sh"><span id="vp-title">the voice, by Fourier</span> &middot; <span id="vp-read" class="g">/A/ &middot; &beta;2.6</span></div>
+    <canvas id="vcv" width="268" height="66"></canvas>
+    <div class="vpr"><span class="pur">&mdash;</span> fractal source 1/f<sup>&beta;</sup> &middot; <span class="t">&mdash;</span> formant filter &middot; <span class="g">|</span> harmonics &middot; <span id="vp-f3" class="yes">reaches F3 &check;</span></div>
+  </div>
+  <div id="klaws"></div>
+</div>
+
+<div id="stamp">
+  <div class="s">TEMPLUM v1.1 &middot; 3D</div>
+  <div class="s g">the wave equation, in the round</div>
+  <div class="s">cartoon outside &middot; no cheating inside</div>
+  <div class="s g">P=12 &middot; &chi;=2 &middot; spini &middot; always</div>
+</div>
+
+<div id="bar">
+  <button class="btn play" id="b-play" onclick="togglePlay()">&#9654; RING IT</button>
+  <button class="btn tg active" id="b-src" onclick="toggleSource()">VOICE</button>
+  <input type="file" id="file" accept="audio/*" onchange="loadSong(this.files[0])">
+  <button class="btn" id="b-song" onclick="document.getElementById('file').click()">&#8593; SONG</button>
+  <div class="sep"></div>
+  <span class="lbl">plan</span>
+  <button class="btn" onclick="preset('rotunda')">ROTUNDA</button>
+  <button class="btn" onclick="preset('cathedral')">CATHEDRAL</button>
+  <button class="btn" onclick="preset('nave')">NAVE</button>
+  <button class="btn" onclick="preset('square')">SQUARE</button>
+  <div class="sep"></div>
+  <span class="lbl">blueprint</span>
+  <button class="btn active" id="t-build" onclick="setTool('build')">BUILD</button>
+  <button class="btn" id="t-erase" onclick="setTool('erase')">ERASE</button>
+  <button class="btn" id="t-strike" onclick="setTool('strike')">STRIKE</button>
+  <div class="sep"></div>
+  <button class="btn tg active" id="tg-spin" onclick="SPIN=!SPIN;this.classList.toggle('active',SPIN)">ORBIT</button>
+  <button class="btn" onclick="resetView()">RECENTER</button>
+  <div class="sep"></div>
+  <div class="slw"><span class="lbl">size m</span><input type="range" id="sl-scale" min="8" max="120" value="34" oninput="setScale(+this.value)"><span class="sv" id="sv-scale">34</span></div>
+  <div class="slw"><span class="lbl">height</span><input type="range" id="sl-h" min="4" max="40" value="16" oninput="setHeight(+this.value)"><span class="sv" id="sv-h">16</span></div>
+  <div class="slw"><span class="lbl">absorb</span><input type="range" id="sl-damp" min="0" max="60" value="9" oninput="DAMP=+this.value/10000"></div>
+  <div class="slw"><span class="lbl" style="color:#c0604080">res</span><input type="range" id="sl-res" min="32" max="72" value="44" step="4" oninput="setRes(+this.value)"><span class="sv" id="sv-res" style="color:#ff6a5c">44</span></div>
+  <div class="sep"></div>
+  <span class="lbl">voice</span>
+  <button class="btn vowbtn active" id="vw-A" onclick="setVowel('A')">A</button>
+  <button class="btn vowbtn" id="vw-E" onclick="setVowel('E')">E</button>
+  <button class="btn vowbtn" id="vw-I" onclick="setVowel('I')">I</button>
+  <button class="btn vowbtn" id="vw-O" onclick="setVowel('O')">O</button>
+  <button class="btn vowbtn" id="vw-U" onclick="setVowel('U')">U</button>
+  <div class="slw"><span class="lbl">f0</span><input type="range" id="sl-f0" min="70" max="320" value="140" oninput="setF0(+this.value)"><span class="sv" id="sv-f0">140</span></div>
+  <div class="slw"><span class="lbl">&beta; fractal</span><input type="range" id="sl-beta" min="0" max="400" value="260" oninput="setBeta(+this.value/100)"><span class="sv" id="sv-beta">2.60</span></div>
+  <div class="slw"><span class="lbl">raw&rarr;voice</span><input type="range" id="sl-morph" min="0" max="100" value="100" oninput="setMorph(+this.value/100)"><span class="sv" id="sv-morph">1.00</span></div>
+  <div class="slw"><span class="lbl">harm</span><input type="range" id="sl-nh" min="8" max="120" value="48" oninput="setNh(+this.value)"><span class="sv" id="sv-nh">48</span></div>
+</div>
+
+<script>
+// ============================================================================
+// TEMPLUM v1.2 -- the fractal voice, poured into the cathedral.
+//   NEW: the driving sound can be a VOICE we build in pure Fourier -- a fractal
+//   1/f^beta harmonic stack (the glottal source) carved by formant resonators
+//   (the vocal tract) into a vowel, synthesised with a Web Audio PeriodicWave
+//   (you literally hand it the Fourier coefficients). The honest lesson, after
+//   HARMONIA: the source IS fractal, but the FORMANTS make the word -- pure
+//   fractal is a buzz forever. We pour that voice into the 3D room and let it ring.
+//   THE HONEST CORE is still the 3D acoustic wave equation on the voxel room you
+//   build (a painted floor plan, extruded to height NZ):
+//     p_tt = c^2 (p_xx+p_yy+p_zz)   6-neighbour finite differences, rigid
+//     (Neumann) walls. CFL fixed at C=0.4 < 1/sqrt(3) -> unconditionally stable.
+//   A song's own waveform (Web Audio) is injected at a source in the air, so the
+//     room rings. We render the 3D pressure by PAINTING IT ON THE INTERIOR
+//     SURFACES (floor, walls, ceiling) with additive glow, camera orbiting: you
+//     watch the standing waves climb the walls of the cathedral you drew.
+//   Beside it, the analytic rectangular-room spectrum (Rayleigh) -- which now
+//     genuinely describes the resonances the 3D sim finds.
+//   Pure Canvas 2D + Web Audio. Zero dependencies. chi=2 . P=12 . 2026-07-21.
+// ============================================================================
+
+var cv=document.getElementById("cv"), ctx=cv.getContext("2d"), W,H,DPR;
+
+// ---- 3D voxel field: footprint N x N, extruded NZ layers ----
+var N=44, NZ=16;
+var cur,prev,nxt,mask;             // Float32 fields (N*N*NZ), Uint8 footprint (N*N)
+var C2=0.16;                       // (c dt/dx)^2 ; C=0.4 << 1/sqrt(3)=0.577, stable in 3D
+var DAMP=0.0009, SPIN=true;
+var SCALE=34, HEIGHT_M=16, cSound=343;
+var tool="build", spin=0, userYaw=0, userPitch=0, zoom=1, runningMax=0.001;
+var srcA=-1, srcB=-1, area=0;
+var PLANE=N*N;
+function vk(i,j,z){return z*PLANE + j*N + i;}
+function m2(i,j){return j*N+i;}
+
+function alloc(){
+  PLANE=N*N;
+  cur=new Float32Array(N*N*NZ); prev=new Float32Array(N*N*NZ); nxt=new Float32Array(N*N*NZ);
+  mask=new Uint8Array(N*N); runningMax=0.001;
+}
+
+// ---- footprint presets ----
+function preset(kind){
+  mask.fill(0); var c=N/2;
+  if(kind==="rotunda"){ var R=N*0.42;
+    for(var j=0;j<N;j++)for(var i=0;i<N;i++){var dx=i-c,dy=j-c;if(dx*dx+dy*dy<R*R)mask[m2(i,j)]=1;}
+  } else if(kind==="square"){ var s=N*0.74;
+    for(var j=0;j<N;j++)for(var i=0;i<N;i++){if(Math.abs(i-c)<s/2&&Math.abs(j-c)<s/2)mask[m2(i,j)]=1;}
+  } else if(kind==="nave"){ var w=N*0.86,h=N*0.4;
+    for(var j=0;j<N;j++)for(var i=0;i<N;i++){if(Math.abs(i-c)<w/2&&Math.abs(j-c)<h/2)mask[m2(i,j)]=1;}
+  } else if(kind==="cathedral"){
+    var navW=N*0.24,navL=N*0.9,trW=N*0.66,trH=N*0.22;
+    for(var j=0;j<N;j++)for(var i=0;i<N;i++){
+      var inNave=Math.abs(i-c)<navW/2&&Math.abs(j-c)<navL/2;
+      var inTran=Math.abs(i-c)<trW/2&&Math.abs(j-(c-N*0.14))<trH/2;
+      if(inNave||inTran)mask[m2(i,j)]=1;}
+    var ar=N*0.13,aj=c-navL/2;
+    for(var j=0;j<N;j++)for(var i=0;i<N;i++){var dx=i-c,dy=j-aj;if(dx*dx+dy*dy<ar*ar&&j<aj)mask[m2(i,j)]=1;}
+  }
+  lastPreset=kind; softReset(); rebuildGeom();
+}
+function softReset(){ for(var k=0;k<cur.length;k++){cur[k]*=0.15;prev[k]*=0.15;} }
+var lastPreset="rotunda";
+
+// centroid source (mid-height) + offset, and the surface-voxel list for rendering
+var surf=null, surfN=0, sX,sY,sZ,sK;   // typed arrays of surface voxel coords + index
+function rebuildGeom(){
+  // sources
+  var sx=0,sy=0,n=0;
+  for(var j=0;j<N;j++)for(var i=0;i<N;i++)if(mask[m2(i,j)]){sx+=i;sy+=j;n++;}
+  area=n;
+  if(n){ var ci=Math.round(sx/n),cj=Math.round(sy/n);
+    if(!mask[m2(ci,cj)]){ outer:for(var r=1;r<N;r++)for(var dj=-r;dj<=r;dj++)for(var di=-r;di<=r;di++){
+      var ii=ci+di,jj=cj+dj;if(ii>=0&&jj>=0&&ii<N&&jj<N&&mask[m2(ii,jj)]){ci=ii;cj=jj;break outer;}}}
+    var zc=(NZ/2)|0; srcA=vk(ci,cj,zc);
+    var oi=Math.min(N-1,ci+Math.round(N*0.16)); srcB=mask[m2(oi,cj)]?vk(oi,cj,zc):srcA;
+  } else { srcA=srcB=-1; }
+  // surface voxels: in-mask voxel with >=1 out-of-domain 6-neighbour
+  var list=[];
+  for(var z=0;z<NZ;z++)for(var j=0;j<N;j++)for(var i=0;i<N;i++){
+    if(!mask[m2(i,j)])continue;
+    var boundary = (z===0)||(z===NZ-1)||(i===0)||(i===N-1)||(j===0)||(j===N-1)
+      ||!mask[m2(i-1,j)]||!mask[m2(i+1,j)]||!mask[m2(i,j-1)]||!mask[m2(i,j+1)];
+    if(boundary) list.push([i,j,z]);
+  }
+  surfN=list.length;
+  sX=new Float32Array(surfN); sY=new Float32Array(surfN); sZ=new Float32Array(surfN); sK=new Int32Array(surfN);
+  for(var q=0;q<surfN;q++){sX[q]=list[q][0];sY[q]=list[q][1];sZ[q]=list[q][2];sK[q]=vk(list[q][0],list[q][1],list[q][2]);}
+  document.getElementById("h-vox").textContent=(n*NZ).toLocaleString();
+  updateModes();
+}
+
+// ---- audio (Web Audio) : song path + fractal-voice synthesiser ----
+var actx=null,analyser=null,timeData=null,freqData=null,srcNode=null,buffer=null;
+var playing=false,audioIdx=0,hasSong=false,sourceLive=false;
+var voiceMode=true, voiceOsc=null;
+// fractal voice parameters
+var f0=140, beta=2.6, Nh=48, morph=1.0, vowel="A";
+// representative vowel formants [F(Hz), BW(Hz), amp] (F1..F4) -- soprano-ish
+var VOWELS={
+  A:[[800,80,1.0],[1150,90,0.55],[2800,120,0.22],[3600,160,0.06]],
+  E:[[430,60,1.0],[2100,100,0.5],[2850,120,0.28],[3800,170,0.06]],
+  I:[[300,55,1.0],[2350,110,0.55],[3100,130,0.3],[3900,180,0.07]],
+  O:[[460,70,1.0],[760,90,0.5],[2760,120,0.14],[3400,160,0.05]],
+  U:[[330,60,1.0],[700,90,0.45],[2600,120,0.1],[3300,160,0.04]]
+};
+var voiceSpec=null;
+function formantMag(f){ var m=0,F=VOWELS[vowel];
+  for(var i=0;i<F.length;i++){ var Fc=F[i][0],BW=F[i][1],A=F[i][2],Q=Fc/BW,x=f/Fc;
+    var den=Math.sqrt((1-x*x)*(1-x*x)+(x/Q)*(x/Q)); m+=A/(den<1e-4?1e-4:den); }
+  return m; }
+function buildVoice(){ // Fourier coefficients + display spectrum
+  var real=new Float32Array(Nh+1), imag=new Float32Array(Nh+1); voiceSpec=[];
+  for(var k=1;k<=Nh;k++){ var f=k*f0;
+    var frac=1/Math.pow(k,beta/2);                        // fractal 1/f^beta source
+    var env=(1-morph)*1 + morph*formantMag(f);            // formant carving, blended
+    var a=frac*env; imag[k]=a; voiceSpec.push({f:f,amp:a,frac:frac}); }
+  return {real:real,imag:imag}; }
+function applyVoice(){ var vc=buildVoice();   // always refreshes display; updates osc if live
+  if(voiceOsc&&actx){ var pw=actx.createPeriodicWave(vc.real,vc.imag,{disableNormalization:false});
+    voiceOsc.setPeriodicWave(pw); voiceOsc.frequency.setValueAtTime(f0,actx.currentTime); } }
+function ensureCtx(){ if(!actx){ actx=new (window.AudioContext||window.webkitAudioContext)();
+  analyser=actx.createAnalyser(); analyser.fftSize=2048; analyser.smoothingTimeConstant=0.7;
+  timeData=new Uint8Array(analyser.fftSize); freqData=new Uint8Array(analyser.frequencyBinCount);
+  analyser.connect(actx.destination); } }
+function stopSources(){ if(srcNode){try{srcNode.stop();}catch(e){}srcNode=null;}
+  if(voiceOsc){try{voiceOsc.stop();}catch(e){}voiceOsc=null;} sourceLive=false; }
+function startVoice(){ ensureCtx(); stopSources();
+  voiceOsc=actx.createOscillator(); var vc=buildVoice();
+  var pw=actx.createPeriodicWave(vc.real,vc.imag,{disableNormalization:false});
+  voiceOsc.setPeriodicWave(pw); voiceOsc.frequency.value=f0;
+  voiceOsc.connect(analyser); voiceOsc.start(); sourceLive=true; }
+function startSong(){ if(!buffer)return; ensureCtx(); stopSources();
+  srcNode=actx.createBufferSource();srcNode.buffer=buffer;srcNode.loop=true;srcNode.connect(analyser);srcNode.start();audioIdx=0;sourceLive=true; }
+function loadSong(f){ if(!f)return; ensureCtx();
+  f.arrayBuffer().then(function(b){return actx.decodeAudioData(b);})
+   .then(function(buf){buffer=buf;hasSong=true; if(!voiceMode)updateDriveLabel(); if(playing&&!voiceMode)startSong();})
+   .catch(function(){document.getElementById("h-drive").textContent="decode failed";}); }
+function togglePlay(){ ensureCtx(); actx.resume&&actx.resume(); playing=!playing;
+  var b=document.getElementById("b-play");
+  if(playing){ b.textContent="\u25A0 SILENCE"; b.classList.remove("play");
+    if(voiceMode)startVoice(); else if(hasSong)startSong(); }
+  else { b.textContent="\u25B6 RING IT"; b.classList.add("play"); stopSources(); } }
+function toggleSource(){ voiceMode=!voiceMode;
+  document.getElementById("b-src").textContent=voiceMode?"VOICE":"SONG";
+  document.getElementById("vp-title").textContent=voiceMode?"the voice, by Fourier":"the song, by Fourier (FFT)";
+  if(playing){ if(voiceMode)startVoice(); else if(hasSong)startSong(); else stopSources(); }
+  updateDriveLabel(); }
+function drive(step){ if(!playing)return 0;
+  if(sourceLive&&timeData){var s=(timeData[audioIdx%timeData.length]-128)/128;audioIdx++;return s*2.2;}
+  var t=step*0.03; return (Math.sin(t*2.0)+0.6*Math.sin(t*3.17)+0.4*Math.sin(t*5.11)+0.25*Math.sin(t*7.3))*0.5; }
+// voice controls
+function setVowel(v){vowel=v;["A","E","I","O","U"].forEach(function(k){document.getElementById("vw-"+k).classList.toggle("active",k===v);});applyVoice();updateDriveLabel();}
+function setF0(v){f0=v;document.getElementById("sv-f0").textContent=v;applyVoice();updateDriveLabel();}
+function setBeta(v){beta=v;document.getElementById("sv-beta").textContent=v.toFixed(2);applyVoice();updateDriveLabel();}
+function setMorph(v){morph=v;document.getElementById("sv-morph").textContent=v.toFixed(2);applyVoice();updateDriveLabel();}
+function setNh(v){Nh=v;document.getElementById("sv-nh").textContent=v;applyVoice();updateDriveLabel();}
+function updateDriveLabel(){
+  var F3=VOWELS[vowel][2][0], reaches=(Nh*f0)>=F3, needN=Math.ceil(F3/f0);
+  document.getElementById("h-drive").textContent = voiceMode ? ("voice /"+vowel+"/") : (hasSong?"song":"tone");
+  document.getElementById("vp-read").innerHTML = voiceMode ? ("/"+vowel+"/ &middot; &beta;"+beta.toFixed(1)+" &middot; f0 "+f0+"Hz") : "song";
+  var el=document.getElementById("vp-f3");
+  el.innerHTML = voiceMode ? (reaches ? "reaches F3 &check;" : ("thin \u2014 need N&ge;"+needN)) : "&mdash;";
+  el.className = voiceMode ? (reaches?"yes":"no") : "";
+}
+
+// ---- the 3D wave step ----
+var stepN=0;
+function waveStep(){
+  if(playing&&analyser){analyser.getByteTimeDomainData(timeData);analyser.getByteFrequencyData(freqData);}
+  for(var s=0;s<2;s++){
+    stepN++;
+    var d=drive(stepN);
+    if(srcA>=0)cur[srcA]+=d*0.9;
+    if(srcB>=0&&srcB!==srcA)cur[srcB]-=d*0.5;
+    for(var z=0;z<NZ;z++){ var zb=z*PLANE, zdn=z>0, zup=z<NZ-1;
+      for(var j=1;j<N-1;j++){ var row=zb+j*N;
+        for(var i=1;i<N-1;i++){
+          if(!mask[j*N+i]){continue;}
+          var k=row+i, c0=cur[k], lap=0;
+          lap += (mask[j*N+i-1] ? cur[k-1] : c0)-c0;
+          lap += (mask[j*N+i+1] ? cur[k+1] : c0)-c0;
+          lap += (mask[(j-1)*N+i]? cur[k-N] : c0)-c0;
+          lap += (mask[(j+1)*N+i]? cur[k+N] : c0)-c0;
+          lap += (zdn ? cur[k-PLANE] : c0)-c0;
+          lap += (zup ? cur[k+PLANE] : c0)-c0;
+          nxt[k]=(2*c0 - prev[k]*(1-DAMP) + C2*lap)/(1+DAMP);
+        }
+      }
+    }
+    var tmp=prev;prev=cur;cur=nxt;nxt=tmp;
+  }
+  // amplitude for normalisation -- over surface voxels (what we draw)
+  var mx=0.0005;
+  for(var q=0;q<surfN;q++){var a=cur[sK[q]];if(a<0)a=-a;if(a>mx)mx=a;}
+  runningMax=runningMax*0.9+mx*0.1;
+  if(!isFinite(runningMax)||runningMax<=0)runningMax=0.001;
+}
+
+// ---- 3D projection (rotated orthographic) ----
+var cxG,cyG,czG,PSCALE;
+var cosY,sinY,cosP,sinP;
+function setCam(){
+  var yaw=spin+userYaw, pitch=Math.max(0.35,Math.min(1.45,0.98+userPitch));
+  cosY=Math.cos(yaw);sinY=Math.sin(yaw);cosP=Math.cos(pitch);sinP=Math.sin(pitch);
+  cxG=N/2; cyG=N/2; czG=NZ/2;
+  PSCALE=Math.min(W*0.62,H*0.66)/N*zoom;
+}
+function project(i,j,z){
+  var X=i-cxG, Y=j-cyG, Z=z-czG;
+  var Xr=X*cosY - Y*sinY, Yr=X*sinY + Y*cosY;
+  return { x: ORX + Xr*PSCALE,
+           y: ORY + (Yr*sinP - Z*cosP)*PSCALE,
+           d: Yr*cosP + Z*sinP };
+}
+var ORX,ORY;
+
+// ---- render: additive glow on the surface voxels + wireframe + ground ring ----
+function render(){
+  ctx.fillStyle="#050510"; ctx.fillRect(0,0,W,H);
+  ORX=W*0.5+(W>760?110:0); ORY=H*0.5-6;
+  setCam();
+  groundRing();          // behind
+  var inv=1/runningMax, sp=Math.max(2,PSCALE*1.5);
+  ctx.globalCompositeOperation="lighter";
+  for(var q=0;q<surfN;q++){
+    var p=project(sX[q],sY[q],sZ[q]);
+    var v=cur[sK[q]]*inv; if(v>1)v=1; if(v<-1)v=-1; var a=v<0?-v:v;
+    var db=0.45+0.55*(0.5+p.d/(N*0.9));   // depth cue: nearer brighter
+    if(db<0.2)db=0.2; if(db>1)db=1;
+    var r,g,b;
+    if(v>=0){ r=200*a; g=110*a; b=210*a; } else { r=30*a; g=180*a; b=200*a; }
+    // faint structural glow so silent surfaces still read as stone
+    r=r*db+7*db; g=g*db+7*db; b=b*db+11*db;
+    ctx.fillStyle="rgb("+(r|0)+","+(g|0)+","+(b|0)+")";
+    ctx.fillRect(p.x-sp*0.5,p.y-sp*0.5,sp,sp);
+  }
+  ctx.globalCompositeOperation="source-over";
+  wireframe();           // in front, faint
+  hud();
+}
+function groundRing(){
+  var rad=N*0.62*PSCALE;
+  ctx.save(); ctx.translate(ORX,ORY);
+  // the ground plane ring sits flat -> project a circle of footprint radius at z=0
+  ctx.strokeStyle="rgba(204,68,255,0.22)"; ctx.lineWidth=1; ctx.beginPath();
+  for(var a=0;a<=64;a++){var an=a/64*6.2832; var p=project(N/2+Math.cos(an)*N*0.5, N/2+Math.sin(an)*N*0.5, 0);
+    a===0?ctx.moveTo(p.x-ORX,p.y-ORY):ctx.lineTo(p.x-ORX,p.y-ORY);} ctx.stroke();
+  ctx.strokeStyle="rgba(255,215,0,0.14)"; ctx.beginPath();
+  for(var a=0;a<=64;a++){var an=a/64*6.2832; var p=project(N/2+Math.cos(an)*N*0.56, N/2+Math.sin(an)*N*0.56, 0);
+    a===0?ctx.moveTo(p.x-ORX,p.y-ORY):ctx.lineTo(p.x-ORX,p.y-ORY);} ctx.stroke();
+  ctx.restore();
+}
+function wireframe(){
+  // footprint outline at floor and top, from mask boundary edges (sampled)
+  ctx.strokeStyle="rgba(120,90,160,0.20)"; ctx.lineWidth=1;
+  ctx.beginPath();
+  for(var j=0;j<N;j++)for(var i=0;i<N;i++){ if(!mask[m2(i,j)])continue;
+    // draw an edge where a wall meets outside, at floor(0) and ceiling(NZ)
+    if(i<N-1&&!mask[m2(i+1,j)]){ edge(i+1,j,i+1,j+1); }
+    if(j<N-1&&!mask[m2(i,j+1)]){ edge(i,j+1,i+1,j+1); }
+    if(i>0&&!mask[m2(i-1,j)]){ edge(i,j,i,j+1); }
+    if(j>0&&!mask[m2(i,j-1)]){ edge(i,j,i+1,j); }
+  }
+  ctx.stroke();
+}
+function edge(i0,j0,i1,j1){ // vertical wall edge segment at top ring only (keeps it light)
+  var a=project(i0,j0,NZ-0.5), b=project(i1,j1,NZ-0.5);
+  ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y);
+}
+
+// ---- analytic 3D room modes (Rayleigh) ----
+function updateModes(){
+  var mini=N,maxi=0,minj=N,maxj=0,n=0;
+  for(var j=0;j<N;j++)for(var i=0;i<N;i++)if(mask[m2(i,j)]){if(i<mini)mini=i;if(i>maxi)maxi=i;if(j<minj)minj=j;if(j>maxj)maxj=j;n++;}
+  var el=document.getElementById("modelist");
+  if(!n){el.innerHTML="<div class='mrow'><span class='dim'>— empty plan —</span></div>";return;}
+  var cell=SCALE/N;
+  var Lx=Math.max(0.5,(maxi-mini+1)*cell),Ly=Math.max(0.5,(maxj-minj+1)*cell),Lz=Math.max(0.5,HEIGHT_M);
+  document.getElementById("h-dim").textContent=Lx.toFixed(1)+"\u00d7"+Ly.toFixed(1);
+  document.getElementById("h-ht").textContent=Lz.toFixed(0);
+  document.getElementById("h-vol").textContent=(n*cell*cell*Lz).toFixed(0);
+  var list=[];
+  for(var nx=0;nx<=3;nx++)for(var ny=0;ny<=3;ny++)for(var nz=0;nz<=2;nz++){ if(nx+ny+nz===0)continue;
+    var f=(cSound/2)*Math.sqrt((nx/Lx)*(nx/Lx)+(ny/Ly)*(ny/Ly)+(nz/Lz)*(nz/Lz));
+    list.push({f:f,nx:nx,ny:ny,nz:nz,o:(nx>0?1:0)+(ny>0?1:0)+(nz>0?1:0)}); }
+  list.sort(function(a,b){return a.f-b.f;});
+  var h="";
+  for(var m=0;m<8;m++){var L=list[m],cls=L.o===1?"ax":L.o===2?"tg":"ob",lab=L.o===1?"axial":L.o===2?"tang":"obliq";
+    h+="<div class='mrow'><span class='idx'>("+L.nx+","+L.ny+","+L.nz+") <span class='"+cls+"'>"+lab+"</span></span><span class='hz'>"+L.f.toFixed(1)+" Hz</span></div>";}
+  el.innerHTML=h;
+}
+
+// ---- voice/spectrum display + hud ----
+var vcv=null,vctx=null;
+function initVoiceCanvas(){vcv=document.getElementById("vcv");vctx=vcv.getContext("2d");}
+function drawVoice(){
+  if(!vctx)return; var w=268,h=66,FMAX=4000; vctx.clearRect(0,0,w,h);
+  if(voiceMode){
+    if(!voiceSpec)buildVoice();
+    var amax=1e-6,fmax2=1e-6;
+    for(var i=0;i<voiceSpec.length;i++){if(voiceSpec[i].amp>amax)amax=voiceSpec[i].amp;if(voiceSpec[i].frac>fmax2)fmax2=voiceSpec[i].frac;}
+    // fractal source 1/f^beta (violet, faint) -- the raw material
+    vctx.strokeStyle="rgba(204,68,255,0.5)";vctx.lineWidth=1;vctx.beginPath();
+    for(var i=0;i<voiceSpec.length;i++){var x=voiceSpec[i].f/FMAX*w,y=h-4-(voiceSpec[i].frac/fmax2)*(h-8);i===0?vctx.moveTo(x,y):vctx.lineTo(x,y);}vctx.stroke();
+    // formant filter (cyan) -- the vocal tract that carves the vowel
+    vctx.strokeStyle="rgba(53,224,200,0.75)";vctx.lineWidth=1.2;vctx.beginPath();
+    var emax=1e-6,es=[];for(var f=0;f<=FMAX;f+=40){var mg=formantMag(f);es.push([f,mg]);if(mg>emax)emax=mg;}
+    for(var i=0;i<es.length;i++){var x=es[i][0]/FMAX*w,y=h-4-(es[i][1]/emax)*(h-8);i===0?vctx.moveTo(x,y):vctx.lineTo(x,y);}vctx.stroke();
+    // harmonic comb (gold) -- the resulting voice spectrum
+    for(var i=0;i<voiceSpec.length;i++){var x=voiceSpec[i].f/FMAX*w;if(x>w)break;var barh=(voiceSpec[i].amp/amax)*(h-8);
+      vctx.strokeStyle="rgba(255,215,0,0.85)";vctx.lineWidth=1.4;vctx.beginPath();vctx.moveTo(x,h-4);vctx.lineTo(x,h-4-barh);vctx.stroke();}
+  } else if(playing&&freqData){ var nb=64;
+    for(var b=0;b<nb;b++){var lo=Math.floor(Math.pow(b/nb,1.7)*freqData.length*0.6),hi=Math.floor(Math.pow((b+1)/nb,1.7)*freqData.length*0.6);
+      var s=0,c=0;for(var q=lo;q<=hi&&q<freqData.length;q++){s+=freqData[q];c++;}var v=c?s/c:0;var x=b/nb*w,bw=w/nb-0.5,bh=v/255*(h-6);
+      vctx.fillStyle="rgba(255,215,0,0.7)";vctx.fillRect(x,h-3-bh,bw,bh);}
+  }
+}
+function hud(){
+  if(playing&&freqData&&sourceLive){var peakV=0,peakBin=0;
+    for(var q=0;q<freqData.length;q++)if(freqData[q]>peakV){peakV=freqData[q];peakBin=q;}
+    var nyq=(actx?actx.sampleRate:44100)/2,pf=peakBin*nyq/freqData.length;
+    document.getElementById("h-peak").textContent=peakV>20?Math.round(pf):"—";
+  } else { document.getElementById("h-peak").textContent="—"; }
+}
+
+// ---- main loop with honest guard ----
+var avgMS=16;
+function frame(){
+  requestAnimationFrame(frame);
+  var t0=performance.now();
+  if(SPIN)spin+=0.0034;
+  try{
+    if(area>0)waveStep();
+    render();
+    if(srcA>=0&&!isFinite(cur[srcA]))throw new Error("diverged");
+  }catch(e){
+    ctx.fillStyle="#050510";ctx.fillRect(0,0,W,H);
+    ctx.textAlign="center";ctx.fillStyle="rgba(255,106,92,0.8)";ctx.font="bold 13px ui-monospace,monospace";
+    ctx.fillText("\u2593 the field diverged \u2593",W/2+(W>760?110:0),H/2);
+    ctx.fillStyle="rgba(255,180,120,0.6)";ctx.font="10px ui-monospace,monospace";
+    ctx.fillText("re-seeding \u00b7 the math is absolute, the compute is not",W/2+(W>760?110:0),H/2+20);
+    cur.fill(0);prev.fill(0);nxt.fill(0);runningMax=0.001;
+  }
+  var dt=performance.now()-t0;avgMS=avgMS*0.9+dt*0.1;
+  var fps=Math.round(1000/Math.max(1,avgMS)),el=document.getElementById("h-fps");
+  el.textContent=fps;el.className=fps>=50?"fok":fps>=28?"fmid":"fbad";
+}
+
+// ---- controls ----
+function setTool(t){tool=t;["build","erase","strike"].forEach(function(k){document.getElementById("t-"+k).classList.toggle("active",k===t);});}
+function setScale(v){SCALE=v;document.getElementById("sv-scale").textContent=v;updateModes();}
+function setHeight(v){HEIGHT_M=v;NZ=Math.max(4,Math.min(48,Math.round(v/(SCALE/N))));
+  document.getElementById("sv-h").textContent=v;alloc();preset(lastPreset);}
+function setRes(v){N=v;document.getElementById("sv-res").textContent=v;
+  NZ=Math.max(4,Math.min(48,Math.round(HEIGHT_M/(SCALE/N))));alloc();preset(lastPreset);}
+function resetView(){userYaw=0;userPitch=0;zoom=1;}
+
+// ---- blueprint minimap (bottom-right): build / erase / strike ----
+var MM=150, MMX, MMY;
+function mmGeom(){ MMX=W-MM-14; MMY=H-MM-64; }
+function drawMinimap(){
+  mmGeom();
+  ctx.save();
+  ctx.fillStyle="rgba(5,5,16,0.9)";ctx.fillRect(MMX-2,MMY-2,MM+4,MM+4);
+  ctx.strokeStyle="rgba(204,68,255,0.4)";ctx.lineWidth=1;ctx.strokeRect(MMX-2,MMY-2,MM+4,MM+4);
+  var cs=MM/N, inv=1/runningMax;
+  for(var j=0;j<N;j++)for(var i=0;i<N;i++){ if(!mask[m2(i,j)])continue;
+    var v=cur[vk(i,j,0)]*inv; if(v>1)v=1;if(v<-1)v=-1;var a=v<0?-v:v;
+    var r,g,b; if(v>=0){r=30+200*a;g=16+110*a;b=30+210*a;}else{r=16+30*a;g=30+180*a;b=40+200*a;}
+    ctx.fillStyle="rgb("+(r|0)+","+(g|0)+","+(b|0)+")";
+    ctx.fillRect(MMX+i*cs,MMY+j*cs,cs+0.6,cs+0.6);
+  }
+  ctx.fillStyle="rgba(220,228,240,0.5)";ctx.font="8px ui-monospace,monospace";ctx.textAlign="left";
+  ctx.fillText("BLUEPRINT \u00b7 "+tool+" here \u00b7 top-down",MMX,MMY-6);
+  ctx.restore();
+}
+function inMM(x,y){return x>=MMX&&x<MMX+MM&&y>=MMY&&y<MMY+MM;}
+function mmApply(x,y){ var i=Math.floor((x-MMX)/MM*N), j=Math.floor((y-MMY)/MM*N);
+  if(i<0||j<0||i>=N||j>=N)return;
+  if(tool==="strike"){ if(mask[m2(i,j)])for(var z=0;z<NZ;z++)cur[vk(i,j,z)]+=runningMax*5+0.4; return; }
+  var br=Math.max(1,Math.round(N*0.05));
+  for(var dj=-br;dj<=br;dj++)for(var di=-br;di<=br;di++){ if(di*di+dj*dj>br*br)continue;
+    var ii=i+di,jj=j+dj; if(ii<1||jj<1||ii>=N-1||jj>=N-1)continue; mask[m2(ii,jj)]=(tool==="erase")?0:1; }
+}
+
+// pointer: minimap = edit ; main view = orbit
+var mode=null,lx=0,ly=0;
+cv.addEventListener("pointerdown",function(e){
+  if(inMM(e.clientX,e.clientY)){ mode="mm"; mmApply(e.clientX,e.clientY); if(tool!=="strike")rebuildGeom(); return; }
+  if(W>760&&e.clientX<296&&e.clientY<H-54)return;
+  mode="orbit"; lx=e.clientX; ly=e.clientY;
+});
+cv.addEventListener("pointermove",function(e){
+  if(mode==="mm"){ mmApply(e.clientX,e.clientY); if(tool!=="strike")rebuildGeom(); }
+  else if(mode==="orbit"){ userYaw+=(e.clientX-lx)*0.008; userPitch+=(e.clientY-ly)*0.006; lx=e.clientX;ly=e.clientY; }
+});
+cv.addEventListener("pointerup",function(){ if(mode==="mm"&&tool!=="strike")rebuildGeom(); mode=null; });
+cv.addEventListener("wheel",function(e){ if(inMM(e.clientX,e.clientY))return; e.preventDefault();
+  zoom*=(e.deltaY>0?0.92:1.08); zoom=Math.max(0.4,Math.min(3,zoom)); },{passive:false});
+
+// draw minimap on top each frame (after render)
+var _render=render; render=function(){ _render(); drawMinimap(); drawVoice(); };
+
+// ---- K-laws + bow ----
+document.getElementById("klaws").innerHTML=
+ "<div class='kh'>the fractal voice (the quest)</div>"+
+ "<p>The source is a <span class='pur'>fractal 1/f<sup>&beta;</sup> harmonic stack</span> \u2014 self-affine, power-law, where the 'song' lives. The <span class='t'>formants</span> (2-pole vocal-tract resonances) carve it into a vowel. Drag <b>raw&rarr;voice</b> to 0 and the vowel dissolves into a fractal <b>buzz</b>. The honest answer, after HARMONIA: <b>the formants make the word</b> \u2014 the source is fractal, the voice is fractal &times; formant. Not pure fractal. But we tried, and the trying is real.</p>"+
+ "<div class='kh'>the honesty (K-laws)</div>"+
+ "<p><b>K1 PURE FOURIER.</b> The voice is a Web Audio <span class='pur'>PeriodicWave</span> \u2014 you hand it the Fourier coefficients and it sums them. The gold comb IS those coefficients; the cyan curve is the formant filter; the violet line is the 1/f<sup>&beta;</sup> source before carving.</p>"+
+ "<p><b>K2 THE ROOM IS 3D & REAL.</b> That voice drives a source in the <span class='pur'>3D wave equation</span> of the room you build (6-neighbour FD, rigid walls). The glow on each surface is real pressure \u2014 the cathedral answering the voice.</p>"+
+ "<p><b>K3 THE TABLE IS A SHOEBOX.</b> Rayleigh's modes are exact for a box, so the list is your plan's <b>bounding box</b>; the sim obeys your true shape.</p>"+
+ "<p><b>K4 CFL FIXED.</b> C=0.4 &lt; 1/&radic;3, so the field can't blow up from the scheme. Push <span style='color:#ff6a5c'>res</span>; on divergence it <b>blanks and re-seeds</b>, no faked frame.</p>"+
+ "<p><b>K5 FORMANTS ARE REPRESENTATIVE.</b> The vowel tables are soprano-ish averages \u2014 real voices vary by speaker, register, and language. Edit them and the point stands: <b>peaks make vowels</b>.</p>"+
+ "<div class='kh'>the bow</div>"+
+ "<p><b>Fourier</b> (every sound a sum) \u00b7 <b>Helmholtz</b> (resonators & vowels) \u00b7 <b>Fant</b> (the source-filter theory of speech) \u00b7 <b>Rayleigh</b> & <b>Sabine</b> (room acoustics) \u00b7 <b>Voss & Clarke</b> (music is 1/f) \u00b7 <b>Mandelbrot</b> (the fractal) \u00b7 and <b>Xenakis</b>, conservatoire-refugee turned mathematician, who built cathedrals of sound.</p>";
+
+// ---- boot ----
+function resize(){DPR=Math.min(2,window.devicePixelRatio||1);W=innerWidth;H=innerHeight;
+  cv.width=W*DPR;cv.height=H*DPR;cv.style.width=W+"px";cv.style.height=H+"px";ctx.setTransform(DPR,0,0,DPR,0,0);}
+addEventListener("resize",resize);
+resize(); NZ=Math.max(4,Math.round(HEIGHT_M/(SCALE/N))); alloc(); initVoiceCanvas(); buildVoice(); updateDriveLabel(); preset("rotunda"); requestAnimationFrame(frame);
+</script>
+</body></html>
