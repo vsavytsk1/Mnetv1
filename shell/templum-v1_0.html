@@ -1,0 +1,428 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>TEMPLUM v1.0 &middot; build a resonant temple, watch its floor sing &middot; the wave equation, spun</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{background:#050510;color:#e0e0e0;font-family:ui-monospace,"SF Mono",Menlo,monospace;
+  font-size:11px;overflow:hidden;height:100%;width:100%}
+canvas{display:block}
+#cv{position:fixed;inset:0;z-index:1}
+#rail{position:fixed;top:0;bottom:54px;left:0;width:296px;z-index:5;display:flex;flex-direction:column;
+  background:linear-gradient(to right,rgba(5,5,16,0.92) 0,rgba(5,5,16,0.8) 76%,rgba(5,5,16,0) 100%);
+  border-right:1px solid rgba(80,50,120,0.12);pointer-events:none}
+#hud{padding:11px 14px 5px;text-shadow:0 0 10px rgba(5,5,16,0.95)}
+#hud .title{font-size:13px;color:#cc44ff;letter-spacing:.16em;text-transform:uppercase;font-weight:bold}
+#hud .sub{font-size:8px;color:rgba(204,68,255,.55);letter-spacing:.05em;margin:2px 0 6px;text-transform:uppercase}
+#hud .fps{font-size:15px;font-weight:bold;font-variant-numeric:tabular-nums}
+#hud .fok{color:#7fff9f}#hud .fmid{color:#ffd700}#hud .fbad{color:#ff6a5c}
+#hud .row{line-height:1.5;color:rgba(220,228,240,.5);font-size:10px;font-variant-numeric:tabular-nums}
+#hud .v{color:#cc44ff;font-weight:bold}#hud .g{color:#ffd700;font-weight:bold}#hud .t{color:#35e0c8;font-weight:bold}
+#hud .dim{color:rgba(220,228,240,.3)}
+#hud .hr{height:1px;background:rgba(204,68,255,.14);margin:5px 0}
+#modes{padding:0 14px 4px}
+#modes .mh{font-size:8px;text-transform:uppercase;letter-spacing:.1em;color:rgba(53,224,200,.6);margin:3px 0 2px}
+#modes .mrow{display:flex;justify-content:space-between;font-size:9px;line-height:1.55;color:rgba(220,228,240,.62);font-variant-numeric:tabular-nums}
+#modes .mrow .idx{color:rgba(220,228,240,.35)}
+#modes .mrow .hz{color:#ffd700;font-weight:bold}
+#modes .mrow .ax{color:#35e0c8}#modes .mrow .tg{color:#cc44ff}#modes .mrow .ob{color:#ff6a9e}
+#spec{padding:4px 14px 2px;pointer-events:none}
+#spec .sh{font-size:8px;text-transform:uppercase;letter-spacing:.1em;color:rgba(220,228,240,.4);margin-bottom:3px}
+#specbars{display:flex;align-items:flex-end;gap:1px;height:34px}
+#specbars > div{flex:1;background:linear-gradient(to top,#cc44ff,#ffd700);min-height:1px;border-radius:1px 1px 0 0}
+#klaws{flex:1;overflow-y:auto;padding:6px 14px 12px;pointer-events:auto;
+  -webkit-mask-image:linear-gradient(to bottom,#000 93%,transparent);mask-image:linear-gradient(to bottom,#000 93%,transparent)}
+#klaws .kh{font-size:8.5px;color:#35e0c8;text-transform:uppercase;letter-spacing:.12em;margin:7px 0 3px}
+#klaws p{font-size:8.5px;color:rgba(220,228,240,.42);line-height:1.55;margin-bottom:4px}
+#klaws b{color:#ffd700}#klaws .pur{color:#cc44ff}
+#stamp{position:fixed;bottom:60px;right:12px;z-index:6;pointer-events:none;text-align:right}
+#stamp .s{font-size:8px;color:rgba(204,68,255,.26);letter-spacing:.07em;line-height:1.8}
+#stamp .s.g{color:rgba(255,215,0,.3)}
+#bar{position:fixed;bottom:0;left:0;right:0;z-index:10;background:rgba(5,5,16,0.97);
+  border-top:1px solid #221033;padding:5px 9px;display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.btn{background:#0b0814;color:#5a4a6a;border:1px solid #221033;border-radius:3px;padding:3px 8px;
+  font-family:inherit;font-size:9px;cursor:pointer;transition:.12s;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+.btn:hover{border-color:#cc44ff;color:#cc44ff}.btn.active{background:#cc44ff;color:#050510;border-color:#cc44ff}
+.btn.tg.active{background:#35e0c8;border-color:#35e0c8}
+.btn.play{background:#ffd700;color:#050510;border-color:#ffd700;font-weight:bold}
+.sep{width:1px;height:15px;background:#221033}
+.lbl{color:rgba(220,228,240,.28);font-size:8px;text-transform:uppercase;letter-spacing:.05em}
+.slw{display:flex;align-items:center;gap:3px}
+.slw input{accent-color:#cc44ff;cursor:pointer;width:52px}
+#sl-res{accent-color:#ff6a5c}
+.sv{font-size:8.5px;color:#cc44ff;min-width:30px;font-variant-numeric:tabular-nums;text-transform:none}
+input[type=file]{display:none}
+</style></head><body>
+<canvas id="cv"></canvas>
+
+<div id="rail">
+  <div id="hud">
+    <span class="title">Templum</span>
+    <div class="sub">build a temple &middot; its floor sings the wave equation</div>
+    <div class="fps"><span id="h-fps" class="fok">60</span><span class="dim" style="font-size:9px"> fps &middot; the field is real, paid per cell</span></div>
+    <div class="hr"></div>
+    <div class="row">floor plan&nbsp;<span class="v" id="h-dim">—</span> &middot; <span class="t" id="h-area">—</span> m&sup2;</div>
+    <div class="row">volume&nbsp;<span class="g" id="h-vol">—</span> m&sup3; &middot; c&nbsp;<span class="t" id="h-c">343</span> m/s</div>
+    <div class="row">driving&nbsp;<span class="g" id="h-drive">tone</span> &middot; peak&nbsp;<span class="v" id="h-peak">—</span> Hz</div>
+  </div>
+  <div id="modes">
+    <div class="mh">analytic room modes &middot; f=(c/2)&radic;((nx/Lx)&sup2;+&hellip;)</div>
+    <div id="modelist"></div>
+  </div>
+  <div id="spec">
+    <div class="sh">the song, by Fourier &middot; live FFT</div>
+    <div id="specbars"></div>
+  </div>
+  <div id="klaws"></div>
+</div>
+
+<div id="stamp">
+  <div class="s">TEMPLUM v1.0</div>
+  <div class="s g">the wave equation, honestly</div>
+  <div class="s">cartoon outside &middot; no cheating inside</div>
+  <div class="s g">P=12 &middot; &chi;=2 &middot; spini &middot; always</div>
+</div>
+
+<div id="bar">
+  <button class="btn play" id="b-play" onclick="togglePlay()">&#9654; RING IT</button>
+  <input type="file" id="file" accept="audio/*" onchange="loadSong(this.files[0])">
+  <button class="btn" onclick="document.getElementById('file').click()">&#8593; SONG</button>
+  <div class="sep"></div>
+  <span class="lbl">plan</span>
+  <button class="btn" onclick="preset('rotunda')">ROTUNDA</button>
+  <button class="btn" onclick="preset('cathedral')">CATHEDRAL</button>
+  <button class="btn" onclick="preset('nave')">NAVE</button>
+  <button class="btn" onclick="preset('square')">SQUARE</button>
+  <div class="sep"></div>
+  <span class="lbl">tool</span>
+  <button class="btn active" id="t-build" onclick="setTool('build')">BUILD</button>
+  <button class="btn" id="t-erase" onclick="setTool('erase')">ERASE</button>
+  <button class="btn" id="t-strike" onclick="setTool('strike')">STRIKE</button>
+  <div class="sep"></div>
+  <button class="btn tg active" id="tg-spin" onclick="SPIN=!SPIN;this.classList.toggle('active',SPIN)">SPIN</button>
+  <button class="btn tg" id="tg-node" onclick="NODES=!NODES;this.classList.toggle('active',NODES)">NODES</button>
+  <button class="btn tg" id="tg-sym" onclick="SYM=!SYM;this.classList.toggle('active',SYM)">MIRROR&times;6</button>
+  <div class="sep"></div>
+  <div class="slw"><span class="lbl">size m</span><input type="range" id="sl-scale" min="8" max="120" value="34" oninput="setScale(+this.value)"><span class="sv" id="sv-scale">34</span></div>
+  <div class="slw"><span class="lbl">height</span><input type="range" id="sl-h" min="3" max="60" value="18" oninput="HEIGHT=+this.value;updateModes()"><span class="sv" id="sv-h">18</span></div>
+  <div class="slw"><span class="lbl">absorb</span><input type="range" id="sl-damp" min="0" max="60" value="8" oninput="DAMP=+this.value/10000"></div>
+  <div class="slw"><span class="lbl" style="color:#c0604080">res</span><input type="range" id="sl-res" min="90" max="230" value="150" step="10" oninput="setRes(+this.value)"><span class="sv" id="sv-res" style="color:#ff6a5c">150&sup2;</span></div>
+</div>
+
+<script>
+// ============================================================================
+// TEMPLUM v1.0 -- a resonant temple you build, whose floor sings.
+//   THE HONEST CORE is the 2D acoustic wave equation on the floor plan you paint:
+//     p_tt = c^2 (p_xx + p_yy)   solved by finite differences, rigid (Neumann)
+//     walls at the plan boundary. Standing waves, interference, and the symmetry
+//     of the pattern all EMERGE from the PDE -- nothing is a stored picture.
+//   A song's own waveform (Web Audio) is injected at a source, so the room rings
+//     with the music. Beside it: the analytic rectangular-room mode spectrum,
+//     f=(c/2)sqrt((nx/Lx)^2+(ny/Ly)^2+(nz/Lz)^2), c=343 m/s -- Rayleigh's formula.
+//   The magic circle is the real field, spun. Cartoon outside, no cheating inside.
+//   Pure Canvas 2D + Web Audio API. Zero dependencies. chi=2 . P=12 . 2026-07-21.
+// ============================================================================
+
+var cv=document.getElementById("cv"), ctx=cv.getContext("2d"), W,H,DPR;
+
+// ---- wave field (scaled units), footprint mask, CFL fixed for stability ----
+var N=150;                         // grid resolution (compute knob)
+var cur,prev,nxt,mask,area;        // Float32 fields, Uint8 mask
+var C2=0.25;                       // (c*dt/dx)^2 ; C=0.5 << 1/sqrt(2), rock stable
+var DAMP=0.0008, SPIN=true, NODES=false, SYM=false;
+var SCALE=34, HEIGHT=18, cSound=343;
+var tool="build", spin=0, runningMax=0.001;
+var srcA=-1, srcB=-1;              // source cell indices (footprint centroid + offset)
+
+// offscreen for the field image
+var off=document.createElement("canvas"), offc=off.getContext("2d"), img;
+function allocField(){
+  cur=new Float32Array(N*N); prev=new Float32Array(N*N); nxt=new Float32Array(N*N);
+  mask=new Uint8Array(N*N);
+  off.width=N; off.height=N; img=offc.createImageData(N,N);
+  runningMax=0.001;
+}
+
+function idx(i,j){return j*N+i;}
+// ---- footprint presets (i=col x, j=row y) ----
+function clearMask(){ mask.fill(0); }
+function preset(kind){
+  clearMask(); var c=N/2;
+  if(kind==="rotunda"){ var R=N*0.42;
+    for(var j=0;j<N;j++)for(var i=0;i<N;i++){var dx=i-c,dy=j-c;if(dx*dx+dy*dy<R*R)mask[idx(i,j)]=1;}
+  } else if(kind==="square"){ var s=N*0.72;
+    for(var j=0;j<N;j++)for(var i=0;i<N;i++){if(Math.abs(i-c)<s/2&&Math.abs(j-c)<s/2)mask[idx(i,j)]=1;}
+  } else if(kind==="nave"){ var w=N*0.86,h=N*0.4;
+    for(var j=0;j<N;j++)for(var i=0;i<N;i++){if(Math.abs(i-c)<w/2&&Math.abs(j-c)<h/2)mask[idx(i,j)]=1;}
+  } else if(kind==="cathedral"){ // cruciform: long nave + transept + apse
+    var navW=N*0.24, navL=N*0.88, trW=N*0.66, trH=N*0.22;
+    for(var j=0;j<N;j++)for(var i=0;i<N;i++){
+      var inNave=Math.abs(i-c)<navW/2 && Math.abs(j-c)<navL/2;
+      var inTran=Math.abs(i-c)<trW/2 && Math.abs(j-(c-N*0.14))<trH/2;
+      if(inNave||inTran)mask[idx(i,j)]=1;
+    }
+    // apse (semicircle at the top / low j)
+    var ar=N*0.13, ac=c, aj=c-navL/2;
+    for(var j=0;j<N;j++)for(var i=0;i<N;i++){var dx=i-ac,dy=j-aj;if(dx*dx+dy*dy<ar*ar&&j<aj)mask[idx(i,j)]=1;}
+  }
+  softReset(); computeSources(); updateModes();
+}
+function softReset(){ for(var k=0;k<cur.length;k++){cur[k]*=0.2;prev[k]*=0.2;} }
+
+// centroid + offset source points inside the footprint
+function computeSources(){
+  var sx=0,sy=0,n=0;
+  for(var j=0;j<N;j++)for(var i=0;i<N;i++)if(mask[idx(i,j)]){sx+=i;sy+=j;n++;}
+  area=n;
+  if(!n){srcA=srcB=-1;return;}
+  var ci=Math.round(sx/n), cj=Math.round(sy/n);
+  if(!mask[idx(ci,cj)]){ // centroid may be outside a cruciform; find nearest in-mask
+    outer: for(var r=1;r<N;r++)for(var dj=-r;dj<=r;dj++)for(var di=-r;di<=r;di++){
+      var ii=ci+di,jj=cj+dj; if(ii>=0&&jj>=0&&ii<N&&jj<N&&mask[idx(ii,jj)]){ci=ii;cj=jj;break outer;}}
+  }
+  srcA=idx(ci,cj);
+  var oi=Math.min(N-1,Math.max(0,ci+Math.round(N*0.16))), oj=cj;
+  srcB=mask[idx(oi,oj)]?idx(oi,oj):srcA;
+}
+
+// ---- audio (Web Audio) ----
+var actx=null, analyser=null, timeData=null, freqData=null, srcNode=null, buffer=null;
+var playing=false, audioIdx=0, hasSong=false;
+function ensureCtx(){ if(!actx){ actx=new (window.AudioContext||window.webkitAudioContext)();
+  analyser=actx.createAnalyser(); analyser.fftSize=2048; analyser.smoothingTimeConstant=0.75;
+  timeData=new Uint8Array(analyser.fftSize); freqData=new Uint8Array(analyser.frequencyBinCount);
+  analyser.connect(actx.destination); } }
+function loadSong(f){ if(!f)return; ensureCtx();
+  f.arrayBuffer().then(function(b){ return actx.decodeAudioData(b); })
+   .then(function(buf){ buffer=buf; hasSong=true; document.getElementById("h-drive").textContent="song";
+     if(playing) startSong(); })
+   .catch(function(){ document.getElementById("h-drive").textContent="decode failed"; });
+}
+function startSong(){ if(!buffer)return; if(srcNode){try{srcNode.stop();}catch(e){}}
+  srcNode=actx.createBufferSource(); srcNode.buffer=buffer; srcNode.loop=true;
+  srcNode.connect(analyser); srcNode.start(); audioIdx=0; }
+function togglePlay(){ ensureCtx(); actx.resume&&actx.resume();
+  playing=!playing; var b=document.getElementById("b-play");
+  if(playing){ b.textContent="\u25A0 SILENCE"; b.classList.remove("play"); if(hasSong)startSong(); }
+  else { b.textContent="\u25B6 RING IT"; b.classList.add("play"); if(srcNode){try{srcNode.stop();}catch(e){} srcNode=null;} }
+}
+// the driving signal injected at the source each substep
+function drive(step){
+  if(!playing) return 0;
+  if(hasSong && srcNode && timeData){ var s=(timeData[audioIdx%timeData.length]-128)/128; audioIdx++; return s*2.2; }
+  // synth fallback -- a slow shifting chord, so an empty temple still rings honestly
+  var t=step*0.03;
+  return (Math.sin(t*2.0)+0.6*Math.sin(t*3.17)+0.4*Math.sin(t*5.11)+0.25*Math.sin(t*7.3))*0.5;
+}
+
+// ---- the wave step: p_tt = c^2 lap, Neumann rigid walls at mask boundary ----
+var stepN=0;
+function waveStep(){
+  if(playing && analyser){ analyser.getByteTimeDomainData(timeData); analyser.getByteFrequencyData(freqData); }
+  var SUB=2;
+  for(var s=0;s<SUB;s++){
+    stepN++;
+    // inject sources
+    var d=drive(stepN);
+    if(srcA>=0) cur[srcA]+=d*0.9;
+    if(srcB>=0 && srcB!==srcA) cur[srcB]-=d*0.5;   // second source (anti-phase) -> interference
+    // update interior
+    for(var j=1;j<N-1;j++){
+      var row=j*N;
+      for(var i=1;i<N-1;i++){
+        var k=row+i;
+        if(!mask[k]){ nxt[k]=0; continue; }
+        var c0=cur[k], lap=0;
+        // Neumann: out-of-mask neighbour contributes 0 gradient (use centre)
+        lap += (mask[k-1] ? cur[k-1] : c0) - c0;
+        lap += (mask[k+1] ? cur[k+1] : c0) - c0;
+        lap += (mask[k-N] ? cur[k-N] : c0) - c0;
+        lap += (mask[k+N] ? cur[k+N] : c0) - c0;
+        var v = (2*c0 - prev[k]*(1-DAMP) + C2*lap) / (1+DAMP);
+        nxt[k]=v;
+      }
+    }
+    var tmp=prev; prev=cur; cur=nxt; nxt=tmp;
+  }
+  // track amplitude for auto-normalised colour
+  var mx=0.0005;
+  for(var k=0;k<cur.length;k++){ var a=cur[k]; if(a<0)a=-a; if(a>mx)mx=a; }
+  runningMax=runningMax*0.9+mx*0.1;
+  if(!isFinite(runningMax)||runningMax<=0) runningMax=0.001;   // guard
+}
+
+// ---- colour map the field into the offscreen image ----
+function paintField(){
+  var d=img.data, inv=1/runningMax, k4=0;
+  for(var k=0;k<cur.length;k++,k4+=4){
+    if(!mask[k]){ d[k4+3]=0; continue; }
+    var v=cur[k]*inv; if(v>1)v=1; if(v<-1)v=-1; var a=v<0?-v:v;
+    var r,g,b;
+    if(NODES && a<0.05){ r=235;g=230;b=255; }        // Chladni nodal lines
+    else if(v>=0){ r=40+215*a; g=20+150*a*(1-0.25*a); b=30+225*a*0.7; } // gold-violet crest
+    else { r=20+40*a; g=40+205*a; b=60+200*a; }        // cyan trough
+    // faint lit floor even when near-silent
+    var base=14;
+    d[k4]=Math.min(255,r+base*0.3); d[k4+1]=Math.min(255,g+base*0.4); d[k4+2]=Math.min(255,b+base*0.7);
+    d[k4+3]=255;
+  }
+  offc.putImageData(img,0,0);
+}
+
+// ---- render: field as spinning disc + magic-circle frame ----
+var cx,cy,rad;
+function render(){
+  ctx.fillStyle="#050510"; ctx.fillRect(0,0,W,H);
+  cx=W*0.5 + (W>760?120:0); cy=H*0.5-10; rad=Math.min(W*0.5,H*0.5)*0.86;
+  ctx.imageSmoothingEnabled=true;
+  var passes = SYM?6:1;
+  ctx.save(); ctx.translate(cx,cy); if(SPIN)ctx.rotate(spin);
+  for(var p=0;p<passes;p++){
+    ctx.save(); if(SYM)ctx.rotate(p*Math.PI*2/6);
+    if(SYM)ctx.globalCompositeOperation="lighter", ctx.globalAlpha=0.9;
+    ctx.drawImage(off,-rad,-rad,rad*2,rad*2);
+    ctx.restore();
+  }
+  ctx.restore();
+  ctx.globalCompositeOperation="source-over"; ctx.globalAlpha=1;
+  magicCircle();
+  hud();
+}
+// the transmutation-circle frame (decoration -- labeled in the K-laws)
+function magicCircle(){
+  ctx.save(); ctx.translate(cx,cy);
+  ctx.strokeStyle="rgba(204,68,255,0.32)"; ctx.lineWidth=1;
+  ctx.beginPath();ctx.arc(0,0,rad*1.01,0,6.2832);ctx.stroke();
+  ctx.strokeStyle="rgba(255,215,0,0.22)";
+  ctx.beginPath();ctx.arc(0,0,rad*1.05,0,6.2832);ctx.stroke();
+  // rotating tick ring (counter-spins for the layered sigil look)
+  ctx.rotate(-spin*0.6);
+  ctx.strokeStyle="rgba(53,224,200,0.28)";
+  for(var a=0;a<48;a++){ var an=a*Math.PI*2/48, r0=rad*1.05, r1=rad*(a%4===0?1.10:1.075);
+    ctx.beginPath();ctx.moveTo(Math.cos(an)*r0,Math.sin(an)*r0);ctx.lineTo(Math.cos(an)*r1,Math.sin(an)*r1);ctx.stroke(); }
+  ctx.rotate(spin*1.2);
+  ctx.strokeStyle="rgba(204,68,255,0.16)";
+  ctx.beginPath();ctx.arc(0,0,rad*0.66,0,6.2832);ctx.stroke();
+  ctx.beginPath();ctx.arc(0,0,rad*0.33,0,6.2832);ctx.stroke();
+  ctx.restore();
+}
+
+// ---- analytic rectangular-room modes (Rayleigh) ----
+function updateModes(){
+  // bounding box of the footprint, in metres
+  var mini=N,maxi=0,minj=N,maxj=0,n=0;
+  for(var j=0;j<N;j++)for(var i=0;i<N;i++)if(mask[idx(i,j)]){if(i<mini)mini=i;if(i>maxi)maxi=i;if(j<minj)minj=j;if(j>maxj)maxj=j;n++;}
+  var el=document.getElementById("modelist");
+  if(!n){ el.innerHTML="<div class='mrow'><span class='dim'>— empty plan —</span></div>"; return; }
+  var cell=SCALE/N;
+  var Lx=Math.max(0.5,(maxi-mini+1)*cell), Ly=Math.max(0.5,(maxj-minj+1)*cell), Lz=Math.max(0.5,HEIGHT);
+  document.getElementById("h-dim").textContent=Lx.toFixed(1)+"\u00d7"+Ly.toFixed(1);
+  document.getElementById("h-area").textContent=(n*cell*cell).toFixed(0);
+  document.getElementById("h-vol").textContent=(n*cell*cell*Lz).toFixed(0);
+  document.getElementById("h-c").textContent=cSound;
+  var list=[];
+  for(var nx=0;nx<=3;nx++)for(var ny=0;ny<=3;ny++)for(var nz=0;nz<=2;nz++){
+    if(nx+ny+nz===0)continue;
+    var f=(cSound/2)*Math.sqrt((nx/Lx)*(nx/Lx)+(ny/Ly)*(ny/Ly)+(nz/Lz)*(nz/Lz));
+    var order=(nx>0?1:0)+(ny>0?1:0)+(nz>0?1:0);
+    list.push({f:f,nx:nx,ny:ny,nz:nz,o:order});
+  }
+  list.sort(function(a,b){return a.f-b.f;});
+  var h="";
+  for(var m=0;m<9;m++){var L=list[m];var cls=L.o===1?"ax":L.o===2?"tg":"ob";var lab=L.o===1?"axial":L.o===2?"tang":"obliq";
+    h+="<div class='mrow'><span class='idx'>("+L.nx+","+L.ny+","+L.nz+") <span class='"+cls+"'>"+lab+"</span></span><span class='hz'>"+L.f.toFixed(1)+" Hz</span></div>";}
+  el.innerHTML=h;
+}
+
+// ---- spectrum bars + hud ----
+var SPBARS=null;
+function buildSpecBars(){ var w=document.getElementById("specbars"); w.innerHTML=""; SPBARS=[];
+  for(var i=0;i<40;i++){var d=document.createElement("div");w.appendChild(d);SPBARS.push(d);} }
+function hud(){
+  if(playing && freqData){
+    // spectrum bars (log-ish grouping of low half of spectrum)
+    var peakBin=0,peakV=0;
+    for(var b=0;b<40;b++){
+      var lo=Math.floor(Math.pow(b/40,1.7)*freqData.length*0.6), hi=Math.floor(Math.pow((b+1)/40,1.7)*freqData.length*0.6);
+      var s=0,c=0; for(var q=lo;q<=hi&&q<freqData.length;q++){s+=freqData[q];c++;}
+      var v=c?s/c:0; if(SPBARS)SPBARS[b].style.height=Math.max(1,v/255*34)+"px";
+    }
+    for(var q=0;q<freqData.length;q++)if(freqData[q]>peakV){peakV=freqData[q];peakBin=q;}
+    var nyq=(actx?actx.sampleRate:44100)/2, pf=peakBin*nyq/freqData.length;
+    document.getElementById("h-peak").textContent=peakV>20?Math.round(pf):"—";
+    document.getElementById("h-drive").textContent=hasSong?"song":"tone";
+  } else if(SPBARS){ for(var b=0;b<40;b++)SPBARS[b].style.height="1px"; document.getElementById("h-peak").textContent="—"; }
+}
+
+// ---- main loop with honest guard ----
+var avgMS=16, wall=false;
+function frame(){
+  requestAnimationFrame(frame);
+  var t0=performance.now();
+  if(SPIN) spin+=0.0032;
+  try{
+    if(area>0) waveStep();
+    paintField();
+    render();
+    // NaN guard -> honest blank + auto-recover by damping
+    if(srcA>=0 && !isFinite(cur[srcA])){ throw new Error("field diverged"); }
+  }catch(e){
+    ctx.fillStyle="#050510";ctx.fillRect(0,0,W,H);
+    ctx.textAlign="center";ctx.fillStyle="rgba(255,106,92,0.8)";ctx.font="bold 13px ui-monospace,monospace";
+    ctx.fillText("\u2593 the field diverged \u2593", W/2+(W>760?120:0), H/2);
+    ctx.fillStyle="rgba(255,180,120,0.6)";ctx.font="10px ui-monospace,monospace";
+    ctx.fillText("re-seeding \u00b7 the math is absolute, the compute is not", W/2+(W>760?120:0), H/2+20);
+    cur.fill(0);prev.fill(0);nxt.fill(0);runningMax=0.001;   // re-seed, no faked frame
+  }
+  var dt=performance.now()-t0; avgMS=avgMS*0.9+dt*0.1;
+  var fps=Math.round(1000/Math.max(1,avgMS)), el=document.getElementById("h-fps");
+  el.textContent=fps; el.className=fps>=50?"fok":fps>=28?"fmid":"fbad";
+}
+
+// ---- controls ----
+function setTool(t){tool=t;["build","erase","strike"].forEach(function(k){document.getElementById("t-"+k).classList.toggle("active",k===t);});}
+function setScale(v){SCALE=v;document.getElementById("sv-scale").textContent=v;updateModes();}
+function setRes(v){N=v;document.getElementById("sv-res").innerHTML=v+"&sup2;";var kind=lastPreset;allocField();preset(kind);}
+var lastPreset="rotunda";
+var _preset=preset; preset=function(k){lastPreset=k;_preset(k);};
+
+// paint / strike interaction
+var painting=false;
+function toGrid(mx,my){ var dx=mx-cx,dy=my-cy;
+  if(SPIN){var cs=Math.cos(-spin),sn=Math.sin(-spin);var rx=dx*cs-dy*sn,ry=dx*sn+dy*cs;dx=rx;dy=ry;}
+  var i=Math.round((dx/rad*0.5+0.5)*N), j=Math.round((dy/rad*0.5+0.5)*N);
+  if(i<0||j<0||i>=N||j>=N)return null; return {i:i,j:j};
+}
+function apply(mx,my){ var g=toGrid(mx,my); if(!g)return;
+  if(tool==="strike"){ var k=idx(g.i,g.j); if(mask[k]){cur[k]+=runningMax*6+0.5;} return; }
+  var br=Math.max(2,Math.round(N*0.045));
+  for(var dj=-br;dj<=br;dj++)for(var di=-br;di<=br;di++){ if(di*di+dj*dj>br*br)continue;
+    var ii=g.i+di,jj=g.j+dj; if(ii<1||jj<1||ii>=N-1||jj>=N-1)continue;
+    mask[idx(ii,jj)]= (tool==="erase")?0:1;
+  }
+}
+cv.addEventListener("pointerdown",function(e){ if(W>760&&e.clientX<296&&e.clientY<window.innerHeight-54)return;
+  painting=true; apply(e.clientX,e.clientY); if(tool!=="strike"){computeSources();updateModes();} });
+cv.addEventListener("pointermove",function(e){ if(!painting)return; apply(e.clientX,e.clientY);
+  if(tool!=="strike"){computeSources();} });
+cv.addEventListener("pointerup",function(){ if(painting&&tool!=="strike"){computeSources();updateModes();} painting=false; });
+
+// ---- K-laws + bow ----
+document.getElementById("klaws").innerHTML=
+ "<div class='kh'>the honesty (K-laws)</div>"+
+ "<p><b>K1 REAL.</b> The floor is the <span class='pur'>2D acoustic wave equation</span> solved by finite differences on the exact plan you paint, with rigid (Neumann) walls. Standing waves and interference <b>emerge</b> \u2014 nothing is a stored image.</p>"+
+ "<p><b>K2 TWO SCALES.</b> The <span class='pur'>field</span> runs in scaled grid units (CFL fixed, C=0.5, always stable). The <b>mode table</b> is the analytic rectangular-room spectrum in <b>real metres</b> \u2014 same physics, two unit scales, both true.</p>"+
+ "<p><b>K3 THE BOUNDING BOX.</b> Rayleigh's formula is exact for a <b>shoebox</b>. A cathedral is not a shoebox, so the mode table is the spectrum of the plan's <b>enclosing rectangle</b>. The <span class='pur'>field</span>, though, obeys your true shape.</p>"+
+ "<p><b>K4 CYMATICS IS AN ANALOGY.</b> Real Chladni figures are a vibrating <b>plate</b>; this is an air <b>cavity</b>. Same wave equation, different object. The nodal lines are honest; the resemblance is the point, not an identity claim.</p>"+
+ "<p><b>K5 THE SONG DRIVES.</b> Your audio's own <b>waveform</b> is injected at a source (Web Audio). The spectrum bars are a live FFT. <span class='pur'>MIRROR\u00d76</span> is a <b>beautify</b> overlay \u2014 off by default; the raw field is already as symmetric as your plan.</p>"+
+ "<p><b>K6 THE WALL.</b> Push <span style='color:#ff6a5c'>res</span> until frames drop \u2014 you pay per cell. If the field ever diverges it <b>blanks and re-seeds</b> \u2014 no faked frame.</p>"+
+ "<div class='kh'>the bow</div>"+
+ "<p><b>Rayleigh</b> (the theory of sound, room modes) \u00b7 <b>Chladni</b> (the figures) \u00b7 <b>Fourier</b> (every wave a sum) \u00b7 <b>Sabine</b> (architectural acoustics) \u00b7 <b>Helmholtz</b> (resonance) \u00b7 and <b>Xenakis</b> \u2014 who left the conservatoire, became a mathematician, and built cathedrals of sound. Music is for hippies until it isn't.</p>";
+
+// ---- boot ----
+function resize(){DPR=Math.min(2,window.devicePixelRatio||1);W=innerWidth;H=innerHeight;
+  cv.width=W*DPR;cv.height=H*DPR;cv.style.width=W+"px";cv.style.height=H+"px";ctx.setTransform(DPR,0,0,DPR,0,0);}
+addEventListener("resize",resize);
+resize(); allocField(); buildSpecBars(); preset("rotunda"); requestAnimationFrame(frame);
+</script>
+</body></html>
