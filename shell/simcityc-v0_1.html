@@ -1,0 +1,471 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SimCityC v0.1 &middot; the cell, in SimCity language &middot; pure graph, no deps</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{background:#050510;color:#e0e0e0;font-family:ui-monospace,"SF Mono",monospace;
+  font-size:11px;overflow:hidden;height:100%;width:100%}
+canvas{display:block}
+#cv{position:fixed;inset:0;z-index:1;cursor:crosshair}
+/* left rail */
+#rail{position:fixed;top:0;bottom:56px;left:0;width:300px;z-index:5;display:flex;flex-direction:column;
+  background:linear-gradient(to right,rgba(5,5,16,0.9) 0,rgba(5,5,16,0.78) 74%,rgba(5,5,16,0) 100%);
+  border-right:1px solid rgba(80,50,120,0.12);pointer-events:none}
+#hud{padding:11px 14px 6px;text-shadow:0 0 10px rgba(5,5,16,0.95)}
+#hud .title{font-size:13px;color:#cc44ff;letter-spacing:0.16em;text-transform:uppercase;font-weight:bold}
+#hud .sub{font-size:8px;color:rgba(204,68,255,0.55);letter-spacing:0.06em;margin:2px 0 6px;text-transform:uppercase}
+#hud .fps{font-size:20px;font-weight:bold;font-variant-numeric:tabular-nums;letter-spacing:0.02em}
+#hud .fok{color:#7fff9f}#hud .fmid{color:#ffd700}#hud .fbad{color:#ff6a5c}
+#hud .row{line-height:1.55;color:rgba(220,228,240,0.5);font-size:10px;font-variant-numeric:tabular-nums}
+#hud .v{color:#cc44ff;font-weight:bold}#hud .g{color:#ffd700;font-weight:bold}#hud .t{color:#35e0c8;font-weight:bold}
+#hud .dim{color:rgba(220,228,240,0.28)}
+#hud .hr{height:1px;background:rgba(204,68,255,0.14);margin:5px 0}
+/* demand meter */
+#demand{padding:2px 14px 4px}
+#demand .dl{font-size:8px;text-transform:uppercase;letter-spacing:0.1em;color:rgba(220,228,240,0.4);margin-bottom:2px}
+.dbar{height:9px;background:rgba(20,14,30,0.7);border:1px solid rgba(80,50,120,0.25);border-radius:2px;margin:2px 0 5px;position:relative;overflow:hidden}
+.dbar > div{height:100%;transition:width .3s}
+.dbar .lab{position:absolute;left:5px;top:-0.5px;font-size:7.5px;color:rgba(255,255,255,0.8);line-height:9px;letter-spacing:0.05em}
+/* legend */
+#legend{flex:1;overflow-y:auto;padding:4px 14px 12px;pointer-events:auto;
+  -webkit-mask-image:linear-gradient(to bottom,#000 93%,transparent 100%);mask-image:linear-gradient(to bottom,#000 93%,transparent 100%)}
+#legend .lh{font-size:8.5px;color:#35e0c8;text-transform:uppercase;letter-spacing:0.12em;margin:7px 0 3px}
+#legend .lr{display:flex;align-items:center;gap:6px;padding:1.5px 0;font-size:9px;color:rgba(220,224,240,0.72)}
+#legend .sw{width:10px;height:10px;border-radius:2px;flex-shrink:0}
+#legend .lr b{color:#ffd700}
+#legend .note{font-size:8.5px;color:rgba(220,228,240,0.3);margin-top:8px;line-height:1.5}
+/* stamp */
+#stamp{position:fixed;bottom:62px;right:12px;z-index:6;pointer-events:none;text-align:right}
+#stamp .s{font-size:8px;color:rgba(204,68,255,0.26);letter-spacing:0.07em;line-height:1.8}
+#stamp .s.g{color:rgba(255,215,0,0.3)}
+/* toolbar */
+#bar{position:fixed;bottom:0;left:0;right:0;z-index:10;background:rgba(5,5,16,0.97);
+  border-top:1px solid #221033;padding:5px 10px;display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.btn{background:#0b0814;color:#5a4a6a;border:1px solid #221033;border-radius:3px;padding:3px 8px;
+  font-family:inherit;font-size:9px;cursor:pointer;transition:all .12s;text-transform:uppercase;letter-spacing:0.05em;white-space:nowrap}
+.btn:hover{border-color:#cc44ff;color:#cc44ff}.btn.active{background:#cc44ff;color:#050510;border-color:#cc44ff}
+.btn.ov.active{background:#35e0c8;border-color:#35e0c8}
+.sep{width:1px;height:15px;background:#221033}
+.lbl{color:rgba(220,228,240,0.28);font-size:8px;text-transform:uppercase;letter-spacing:0.06em}
+.slw{display:flex;align-items:center;gap:3px}
+.slw input{accent-color:#ff6a5c;cursor:pointer}
+#sl-traffic{width:120px}#sl-speed,#sl-grid{width:56px}
+.sv{font-size:8.5px;color:#ff6a5c;min-width:44px;font-variant-numeric:tabular-nums;text-transform:none}
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+
+<div id="rail">
+  <div id="hud">
+    <span class="title">SimCityC</span>
+    <div class="sub">the cell in SimCity language &middot; pure graph &middot; no deps</div>
+    <div class="fps"><span id="h-fps" class="fok">60</span><span class="dim" style="font-size:10px"> fps &middot; we pay in compute</span></div>
+    <div class="hr"></div>
+    <div class="row">vesicles (agents)&nbsp;<span class="v" id="h-agents">0</span></div>
+    <div class="row">road graph&nbsp;<span class="t" id="h-nodes">0</span> nodes &middot; <span class="t" id="h-edges">0</span> edges</div>
+    <div class="row">reroutes/s (Dijkstra)&nbsp;<span class="v" id="h-pf">0</span></div>
+    <div class="hr"></div>
+    <div class="row"><span class="g">ATP</span> shipped&nbsp;<span class="g" id="h-atp">0</span></div>
+    <div class="row"><span class="t">protein</span> shipped&nbsp;<span class="t" id="h-pro">0</span> &middot; waste cleared&nbsp;<span class="v" id="h-was">0</span></div>
+  </div>
+  <div id="demand">
+    <div class="dl">metabolic demand &middot; the cell's RCI</div>
+    <div class="dbar"><div id="d-e" style="background:#ffb84a"></div><span class="lab">ENERGY &middot; ATP</span></div>
+    <div class="dbar"><div id="d-s" style="background:#35e0c8"></div><span class="lab">SYNTHESIS &middot; proteins</span></div>
+    <div class="dbar"><div id="d-c" style="background:#ff6a9e"></div><span class="lab">CLEARANCE &middot; waste</span></div>
+  </div>
+  <div id="legend"></div>
+</div>
+
+<div id="stamp">
+  <div class="s">SimCityC v0.1 . concept</div>
+  <div class="s">P=12 . chi=2</div>
+  <div class="s g">the math is absolute</div>
+  <div class="s g">the compute is not</div>
+  <div class="s">on the wall, slide back . always</div>
+</div>
+
+<div id="bar">
+  <button class="btn active" id="b-run" onclick="toggleRun()">RUNNING</button>
+  <div class="sep"></div>
+  <span class="lbl">build</span>
+  <button class="btn" id="t-road" onclick="setTool('road')">ROAD (MT)</button>
+  <button class="btn" id="t-mito" onclick="setTool('mito')">POWER</button>
+  <button class="btn" id="t-rib" onclick="setTool('rib')">FACTORY</button>
+  <button class="btn" id="t-lys" onclick="setTool('lys')">RECYCLE</button>
+  <button class="btn" id="t-none" onclick="setTool(null)">PAN</button>
+  <div class="sep"></div>
+  <span class="lbl">view</span>
+  <button class="btn ov active" id="o-none" onclick="setOverlay('none')">NONE</button>
+  <button class="btn ov" id="o-traffic" onclick="setOverlay('traffic')">TRAFFIC</button>
+  <button class="btn ov" id="o-atp" onclick="setOverlay('atp')">ATP</button>
+  <button class="btn" onclick="rotate()">ROTATE &#8635;</button>
+  <div class="sep"></div>
+  <div class="slw"><span class="lbl" style="color:#c0604080">traffic</span>
+    <input type="range" id="sl-traffic" min="100" max="24000" value="1400" step="100" oninput="setTraffic(+this.value)">
+    <span class="sv" id="sv-traffic">1,400</span></div>
+  <div class="slw"><span class="lbl">speed</span>
+    <input type="range" id="sl-speed" min="1" max="30" value="10" oninput="SIMSPD=+this.value/10"></div>
+  <div class="slw"><span class="lbl">grid</span>
+    <input type="range" id="sl-grid" min="16" max="48" value="30" step="2" oninput="setGrid(+this.value)">
+    <span class="sv" id="sv-grid" style="min-width:28px">30&sup2;</span></div>
+</div>
+
+<script>
+// ============================================================================
+// SimCityC v0.1 -- the cell, rendered in SimCity 4's isometric language,
+// on pure graph theory, zero dependencies. A concept demo of "how to build one."
+//   roads = microtubules ; vesicles = agents path-finding (congestion Dijkstra)
+//   organelles = zoned buildings satisfying Energy/Synthesis/Clearance demand
+//   data-views = overlays that make hidden cell state legible
+// THE WALL, on purpose: the math is absolute; we pay in compute; on overload or
+// error the screen goes to background colour -- no faked frame -- and you slide
+// the traffic back. spini (rotate) . chi=2 . P=12 . always. Built 2026-07-20.
+// ============================================================================
+
+var cv=document.getElementById("cv"),ctx=cv.getContext("2d"),W,H,DPR;
+var G=30;                          // grid size
+var TW=44,TH=22;                   // iso tile (2:1)
+var camX=0,camY=0,zoom=1,rot=0;    // camera
+var SIMSPD=1.0, running=true;
+var tool=null, overlay="none";
+
+// ---- grid: each cell is a small int type ----
+// 0 empty | 1 road(MT) | 2 nucleus | 3 mito | 4 ribosome | 5 golgi | 6 lysosome | 7 port
+var grid, load;                    // Int8 grid, Float32 congestion
+var organelles;                    // [{i,j,kind,access}]
+var ORG_COL={2:[255,215,0],3:[255,184,74],4:[53,224,200],5:[74,163,255],6:[255,106,158],7:[204,68,255]};
+
+// ---- graph on road tiles ----
+var adj;                           // Map: tileIndex -> [neighborTileIndex...]
+var pathCache;                     // key "s_d" -> [tileIndex...]
+var pfThisSec=0, pfDisplay=0;
+
+function idx(i,j){return i*G+j;}
+function inb(i,j){return i>=0&&j>=0&&i<G&&j<G;}
+
+// ---- build the starter cell-city (auto) ----
+function nearestRoad(i,j){var best=null,bd=1e9;
+  for(var di=-5;di<=5;di++)for(var dj=-5;dj<=5;dj++){var ii=i+di,jj=j+dj;
+    if(inb(ii,jj)&&grid[idx(ii,jj)]===1){var d=Math.abs(di)+Math.abs(dj);if(d<bd){bd=d;best=[ii,jj];}}}
+  return best;}
+function carveSpur(O){
+  // BFS over empty/road tiles from the organelle to the nearest road; carve the empties on that path
+  var start=idx(O.i,O.j), q=[start], came=new Map(); came.set(start,-1); var found=-1;
+  while(q.length){var t=q.shift(), ti=(t/G)|0, tj=t%G;
+    if(t!==start&&grid[t]===1){found=t;break;}
+    var nbs=[[ti-1,tj],[ti+1,tj],[ti,tj-1],[ti,tj+1]];
+    for(var k=0;k<nbs.length;k++){var ni=nbs[k][0],nj=nbs[k][1];if(!inb(ni,nj))continue;var nt=idx(ni,nj);
+      if(came.has(nt))continue; if(grid[nt]===0||grid[nt]===1){came.set(nt,t);q.push(nt);}}
+  }
+  if(found<0)return; var t=found; while(t!==-1&&t!==start){ if(grid[t]===0)grid[t]=1; t=came.get(t); }
+}
+function buildCity(){
+  grid=new Int8Array(G*G); load=new Float32Array(G*G); organelles=[];
+  var c=(G/2)|0;
+  // grid streets every 5 tiles (SimCity blocks) = the microtubule lattice
+  for(var i=0;i<G;i++)for(var j=0;j<G;j++){ if(i%5===0||j%5===0) grid[idx(i,j)]=1; }
+  function put(i,j,k){ if(inb(i,j)&&grid[idx(i,j)]===0){grid[idx(i,j)]=k;organelles.push({i:i,j:j,kind:k});} }
+  // nucleus near centre, off the road lines
+  put((c%5===0)?c+1:c, (c%5===0)?c+1:c, 2);
+  // organelles at (5*bi+1, 5*bj+2): i%5==1 guarantees a road neighbour at i-1
+  var blocks=[[0,0,3],[0,4,4],[4,0,4],[5,5,3],[2,0,3],[0,2,4],[4,3,6],[3,5,5],
+              [1,1,4],[4,4,6],[1,4,5],[4,1,4],[2,2,3],[1,3,6],[3,1,5],[2,5,3],[5,2,4],[0,5,6]];
+  for(var s=0;s<blocks.length;s++){ put(5*blocks[s][0]+1, 5*blocks[s][1]+2, blocks[s][2]); }
+  // membrane ports near the edge, road-adjacent where possible (spur fallback otherwise)
+  var ports=[[1,3],[1,G-4],[G-4,3],[G-4,G-4],[1,G-9],[G-4,6],[6,1],[G-9,1]];
+  for(var p=0;p<ports.length;p++){ put(ports[p][0],ports[p][1],7); }
+  rebuildGraph();
+  // guarantee every organelle can reach the network
+  var carved=false;
+  for(var o=0;o<organelles.length;o++){ if(organelles[o].access<0){carveSpur(organelles[o]);carved=true;} }
+  if(carved) rebuildGraph();
+}
+
+// ---- graph from road tiles + organelle access points ----
+function rebuildGraph(){
+  adj=new Map(); pathCache=new Map();
+  for(var i=0;i<G;i++)for(var j=0;j<G;j++){var t=idx(i,j);
+    if(grid[t]!==1)continue;var nb=[];
+    if(inb(i-1,j)&&grid[idx(i-1,j)]===1)nb.push(idx(i-1,j));
+    if(inb(i+1,j)&&grid[idx(i+1,j)]===1)nb.push(idx(i+1,j));
+    if(inb(i,j-1)&&grid[idx(i,j-1)]===1)nb.push(idx(i,j-1));
+    if(inb(i,j+1)&&grid[idx(i,j+1)]===1)nb.push(idx(i,j+1));
+    adj.set(t,nb);
+  }
+  // give each organelle an access road tile (nearest 4-neighbour road)
+  for(var o=0;o<organelles.length;o++){var O=organelles[o],a=-1;
+    var cand=[[O.i-1,O.j],[O.i+1,O.j],[O.i,O.j-1],[O.i,O.j+1]];
+    for(var k=0;k<cand.length;k++){var ci=cand[k][0],cj=cand[k][1];
+      if(inb(ci,cj)&&grid[idx(ci,cj)]===1){a=idx(ci,cj);break;}}
+    O.access=a;
+  }
+  updateHUDGraph();
+}
+function updateHUDGraph(){var e=0;adj.forEach(function(v){e+=v.length;});
+  document.getElementById("h-nodes").textContent=adj.size;
+  document.getElementById("h-edges").textContent=(e/2)|0;}
+
+// ---- congestion-aware Dijkstra between two road tiles ----
+function dijkstra(src,dst){
+  if(src<0||dst<0||!adj.has(src)||!adj.has(dst))return null;
+  pfThisSec++;
+  var dist=new Map(),prev=new Map(),visited=new Set();
+  dist.set(src,0);
+  // simple array-based frontier (road graph is small)
+  var frontier=[src];
+  while(frontier.length){
+    // extract-min
+    var bi=0,bd=Infinity;for(var k=0;k<frontier.length;k++){var d=dist.get(frontier[k]);if(d<bd){bd=d;bi=k;}}
+    var u=frontier.splice(bi,1)[0]; if(visited.has(u))continue; visited.add(u);
+    if(u===dst)break;
+    var nb=adj.get(u);
+    for(var n=0;n<nb.length;n++){var v=nb[n];if(visited.has(v))continue;
+      var w=1+load[v]*0.9;                     // congestion penalty -> reroute
+      var nd=bd+w;
+      if(nd<(dist.has(v)?dist.get(v):Infinity)){dist.set(v,nd);prev.set(v,u);frontier.push(v);}
+    }
+  }
+  if(!prev.has(dst)&&src!==dst)return null;
+  var path=[dst],u=dst;while(u!==src){u=prev.get(u);if(u===undefined)return null;path.push(u);}
+  path.reverse();return path;
+}
+function routeTiles(O1,O2){                     // full tile path incl. the two buildings
+  if(O1.access<0||O2.access<0)return null;
+  var key=O1.access+"_"+O2.access, rp=pathCache.get(key);
+  if(!rp){rp=dijkstra(O1.access,O2.access);if(!rp)return null;pathCache.set(key,rp);}
+  return [idx(O1.i,O1.j)].concat(rp,[idx(O2.i,O2.j)]);
+}
+
+// ---- agents (vesicles) : the traffic, the compute ----
+var agents=[], agentTarget=1400;
+var atpN=0,proN=0,wasN=0;
+function orgsOf(k){var r=[];for(var o=0;o<organelles.length;o++)if(organelles[o].kind===k)r.push(organelles[o]);return r;}
+function pick(a){return a[(Math.random()*a.length)|0];}
+function newAgent(a){
+  // cargo flow: ATP mito->consumer | protein rib->port | waste ->lysosome | import port->mito
+  var r=Math.random(),src,dst,col;
+  var mito=orgsOf(3),rib=orgsOf(4),lys=orgsOf(6),port=orgsOf(7),all=organelles;
+  if(r<0.42&&mito.length){src=pick(mito);dst=pick(all);col=[255,200,90];a.cargo=0;}
+  else if(r<0.70&&rib.length&&port.length){src=pick(rib);dst=pick(port);col=[53,224,200];a.cargo=1;}
+  else if(r<0.86&&lys.length){src=pick(all);dst=pick(lys);col=[190,140,200];a.cargo=2;}
+  else if(port.length&&mito.length){src=pick(port);dst=pick(mito);col=[120,230,120];a.cargo=3;}
+  else{src=pick(all);dst=pick(all);col=[180,180,200];a.cargo=0;}
+  var path=routeTiles(src,dst);
+  if(!path||path.length<2){a.dead=true;return a;}
+  a.path=path;a.seg=0;a.t=Math.random();a.spd=0.02+Math.random()*0.02;a.col=col;a.dead=false;
+  return a;
+}
+function syncAgents(){
+  while(agents.length<agentTarget)agents.push(newAgent({}));
+  if(agents.length>agentTarget)agents.length=agentTarget;
+}
+function stepAgents(){
+  // decay congestion
+  for(var t=0;t<load.length;t++)load[t]*=0.90;
+  for(var a=0;a<agents.length;a++){var ag=agents[a];
+    if(ag.dead){newAgent(ag);continue;}
+    ag.t+=ag.spd*SIMSPD*(ag.path.length-1)*0.14;
+    while(ag.t>=1&&ag.seg<ag.path.length-2){ag.t-=1;ag.seg++;}
+    // deposit congestion on current road tile
+    var here=ag.path[ag.seg]; if(grid[here]===1)load[here]+=1;
+    if(ag.seg>=ag.path.length-2&&ag.t>=1){                    // arrived
+      if(ag.cargo===0)atpN++;else if(ag.cargo===1)proN++;else if(ag.cargo===2)wasN++;else atpN++;
+      newAgent(ag);
+    }
+  }
+}
+function agentXY(ag){var A=ag.path[ag.seg],B=ag.path[Math.min(ag.seg+1,ag.path.length-1)];
+  var ai=(A/G)|0,aj=A%G, bi=(B/G)|0,bj=B%G;
+  return proj(ai+(bi-ai)*ag.t, aj+(bj-aj)*ag.t);
+}
+
+// ============================================================================
+// isometric projection (rotation = SimCity 4 view rotate)
+// ============================================================================
+function rotFwd(i,j){switch(rot){case 1:return [j,G-1-i];case 2:return [G-1-i,G-1-j];case 3:return [G-1-j,i];}return [i,j];}
+function rotInv(a,b){switch(rot){case 1:return [G-1-b,a];case 2:return [G-1-a,G-1-b];case 3:return [b,G-1-a];}return [a,b];}
+function proj(i,j){var r=rotFwd(i,j),a=r[0],b=r[1];
+  return {x:W/2+camX+(a-b)*(TW/2)*zoom, y:H*0.14+camY+(a+b)*(TH/2)*zoom};}
+function screenToTile(mx,my){
+  var dx=(mx-(W/2+camX))/((TW/2)*zoom), dy=(my-(H*0.14+camY))/((TH/2)*zoom);
+  var a=Math.round((dy+dx)/2), b=Math.round((dy-dx)/2);
+  if(a<0||b<0||a>=G||b>=G)return null; var o=rotInv(a,b); return {i:o[0],j:o[1]};
+}
+
+// ============================================================================
+// render
+// ============================================================================
+var BG="#050510";
+function tileColor(i,j){var t=grid[idx(i,j)];
+  if(overlay==="traffic"){var l=load[idx(i,j)];
+    if(t===1){var h=Math.min(1,l/10);return "rgb("+((40+h*215)|0)+","+((70+h*40)|0)+","+((90-h*70)|0)+")";}
+  }
+  if(overlay==="atp"&&t!==1&&t!==2){var cover=atpCover(i,j);var h=Math.min(1,cover);
+    return "rgb("+((14+h*70)|0)+","+((16+h*90)|0)+","+((22+h*20)|0)+")";}
+  if(t===1)return "#4a5468";                       // road / microtubule
+  return ((i+j)&1)?"#0c1418":"#0a1014";            // cytoplasm checker
+}
+var _atpCache=null,_atpTick=-1;
+function atpCover(i,j){ if(_atpTick!==tick){_atpTick=tick;_atpCache=new Float32Array(G*G);
+    var m=orgsOf(3);for(var o=0;o<m.length;o++){var O=m[o];
+      for(var di=-4;di<=4;di++)for(var dj=-4;dj<=4;dj++){var ii=O.i+di,jj=O.j+dj;
+        if(inb(ii,jj)){var d=Math.abs(di)+Math.abs(dj);_atpCache[idx(ii,jj)]+=Math.max(0,1-d/5);}}}}
+  return _atpCache[idx(i,j)];}
+
+function drawDiamond(p,col,h){
+  var w=TW/2*zoom, ht=TH/2*zoom;
+  ctx.beginPath();ctx.moveTo(p.x,p.y-ht);ctx.lineTo(p.x+w,p.y);ctx.lineTo(p.x,p.y+ht);ctx.lineTo(p.x-w,p.y);ctx.closePath();
+  ctx.fillStyle=col;ctx.fill();
+}
+function drawBuilding(p,kind){
+  var w=TW/2*zoom*0.72, col=ORG_COL[kind], hgt=(kind===2?26:kind===7?8:16)*zoom;
+  // simple extruded iso block
+  var top=p.y-hgt;
+  ctx.fillStyle="rgb("+col[0]+","+col[1]+","+col[2]+")";
+  ctx.beginPath();ctx.moveTo(p.x,top-TH/2*zoom*0.7);ctx.lineTo(p.x+w,top);ctx.lineTo(p.x,top+TH/2*zoom*0.7);ctx.lineTo(p.x-w,top);ctx.closePath();ctx.fill();
+  ctx.fillStyle="rgba("+col[0]+","+col[1]+","+col[2]+",0.55)";
+  ctx.beginPath();ctx.moveTo(p.x-w,top);ctx.lineTo(p.x,top+TH/2*zoom*0.7);ctx.lineTo(p.x,p.y+TH/2*zoom*0.7);ctx.lineTo(p.x-w,p.y);ctx.closePath();ctx.fill();
+  ctx.fillStyle="rgba("+col[0]+","+col[1]+","+col[2]+",0.75)";
+  ctx.beginPath();ctx.moveTo(p.x+w,top);ctx.lineTo(p.x,top+TH/2*zoom*0.7);ctx.lineTo(p.x,p.y+TH/2*zoom*0.7);ctx.lineTo(p.x+w,p.y);ctx.closePath();ctx.fill();
+  // glow
+  ctx.fillStyle="rgba("+col[0]+","+col[1]+","+col[2]+",0.16)";
+  ctx.beginPath();ctx.arc(p.x,top,w*1.4,0,6.2832);ctx.fill();
+}
+
+var frameMS=16, avgMS=16, wall=false, wallThresh=1e9, badFrames=0;
+function render(){
+  // ground tiles, back-to-front by rotated depth (a+b)
+  for(var d=0;d<2*G-1;d++){
+    for(var a=Math.max(0,d-G+1);a<=Math.min(G-1,d);a++){var b=d-a;
+      var o=rotInv(a,b),i=o[0],j=o[1];
+      var p={x:W/2+camX+(a-b)*(TW/2)*zoom, y:H*0.14+camY+(a+b)*(TH/2)*zoom};
+      if(p.x<-60||p.x>W+60||p.y<-60||p.y>H+60)continue;
+      drawDiamond(p,tileColor(i,j));
+    }
+  }
+  // buildings, same depth order
+  for(var d=0;d<2*G-1;d++){for(var a=Math.max(0,d-G+1);a<=Math.min(G-1,d);a++){var b=d-a;
+    var o=rotInv(a,b),i=o[0],j=o[1],t=grid[idx(i,j)];
+    if(t>=2){var p={x:W/2+camX+(a-b)*(TW/2)*zoom, y:H*0.14+camY+(a+b)*(TH/2)*zoom};
+      if(p.x<-60||p.x>W+60||p.y<-60||p.y>H+60)continue; drawBuilding(p,t);}
+  }}
+  // agents (vesicles) -- the traffic. fillRect is cheap; this is the compute-push.
+  for(var a=0;a<agents.length;a++){var ag=agents[a];if(ag.dead)continue;
+    var p=agentXY(ag),s=1.8*zoom;
+    ctx.fillStyle="rgba("+ag.col[0]+","+ag.col[1]+","+ag.col[2]+",0.92)";
+    ctx.fillRect(p.x-s,p.y-s,s*2,s*2);
+  }
+}
+function renderWall(){
+  ctx.fillStyle=BG;ctx.fillRect(0,0,W,H);
+  ctx.textAlign="center";ctx.fillStyle="rgba(255,106,92,0.85)";ctx.font="bold 15px ui-monospace,monospace";
+  ctx.fillText("\u2593  THE WALL  \u2593", W/2+130, H/2-14);
+  ctx.fillStyle="rgba(255,180,120,0.6)";ctx.font="10px ui-monospace,monospace";
+  ctx.fillText("the math is absolute \u2014 the compute is not.", W/2+130, H/2+8);
+  ctx.fillStyle="rgba(204,68,255,0.7)";
+  ctx.fillText("\u25c4 slide the traffic back below "+wallThresh.toLocaleString(), W/2+130, H/2+26);
+  ctx.fillStyle="rgba(180,180,200,0.35)";ctx.font="9px ui-monospace,monospace";
+  ctx.fillText(Math.round(1000/avgMS)+" fps at the wall", W/2+130, H/2+44);
+}
+
+// ============================================================================
+// main loop with the honest guard
+// ============================================================================
+var tick=0, secT=0;
+function frame(ts){
+  requestAnimationFrame(frame);
+  var t0=performance.now();
+  // honest wall: hysteresis -- once broken, require sliding below the break point
+  if(wall){ if(agentTarget<wallThresh){wall=false;badFrames=0;} else { renderWall(); updateHUD(); return; } }
+  try{
+    ctx.fillStyle=BG;ctx.fillRect(0,0,W,H);
+    if(running){tick++; syncAgents(); stepAgents();
+      // rebuild path cache every ~2s so routes adapt to congestion (dynamic shortest paths)
+      if(tick%120===0)pathCache=new Map();
+    }
+    render();
+    var badPos=false;                       // guard against NaN blowups
+    if(agents.length){var pp=agentXY(agents[0]); if(!isFinite(pp.x)||!isFinite(pp.y))badPos=true;}
+    var dt=performance.now()-t0; avgMS=avgMS*0.9+dt*0.1;
+    if(avgMS>45||badPos){badFrames++; if(badFrames>18){wall=true;wallThresh=Math.max(200,Math.floor(agentTarget*0.7));}}
+    else badFrames=Math.max(0,badFrames-1);
+  }catch(e){ wall=true; wallThresh=Math.max(200,Math.floor(agentTarget*0.7)); }
+  frameMS=performance.now()-t0;
+  // per-second HUD
+  secT+=frameMS; if(secT>1000){secT=0;pfDisplay=pfThisSec;pfThisSec=0;}
+  updateHUD();
+}
+function updateHUD(){
+  var fps=Math.round(1000/Math.max(1,avgMS)),el=document.getElementById("h-fps");
+  el.textContent=fps; el.className=fps>=50?"fok":fps>=28?"fmid":"fbad";
+  document.getElementById("h-agents").textContent=agents.length.toLocaleString();
+  document.getElementById("h-pf").textContent=pfDisplay.toLocaleString();
+  document.getElementById("h-atp").textContent=atpN.toLocaleString();
+  document.getElementById("h-pro").textContent=proN.toLocaleString();
+  document.getElementById("h-was").textContent=wasN.toLocaleString();
+  // demand meter (RCI-style): more producers -> less demand
+  var e=clamp(90-orgsOf(3).length*11), s=clamp(85-orgsOf(4).length*12), c=clamp(80-orgsOf(6).length*16);
+  document.getElementById("d-e").style.width=e+"%";
+  document.getElementById("d-s").style.width=s+"%";
+  document.getElementById("d-c").style.width=c+"%";
+}
+function clamp(v){return Math.max(6,Math.min(100,v));}
+
+// ============================================================================
+// controls
+// ============================================================================
+function toggleRun(){running=!running;var b=document.getElementById("b-run");b.classList.toggle("active",running);b.textContent=running?"RUNNING":"PAUSED";}
+function setTool(t){tool=t;["road","mito","rib","lys","none"].forEach(function(k){
+  document.getElementById("t-"+k).classList.toggle("active",(k==="none"?t===null:t===k));});
+  cv.style.cursor=t?"cell":"grab";}
+function setOverlay(o){overlay=o;["none","traffic","atp"].forEach(function(k){document.getElementById("o-"+k).classList.toggle("active",o===k);});}
+function rotate(){rot=(rot+1)%4;}
+function setTraffic(v){agentTarget=v;document.getElementById("sv-traffic").textContent=v.toLocaleString();}
+function setGrid(v){G=v;document.getElementById("sv-grid").innerHTML=v+"&sup2;";buildCity();agents=[];atpN=proN=wasN=0;}
+
+var KIND={road:1,mito:3,rib:4,lys:6};
+var dragging=false,lx=0,ly=0,moved=false;
+cv.addEventListener("pointerdown",function(e){if(W>820&&e.clientX<300)return;
+  if(tool){place(e.clientX,e.clientY);dragging=true;}
+  else{dragging=true;lx=e.clientX;ly=e.clientY;moved=false;cv.style.cursor="grabbing";}});
+cv.addEventListener("pointermove",function(e){if(!dragging)return;
+  if(tool){place(e.clientX,e.clientY);}
+  else{camX+=e.clientX-lx;camY+=e.clientY-ly;lx=e.clientX;ly=e.clientY;}});
+cv.addEventListener("pointerup",function(){dragging=false;if(!tool)cv.style.cursor="grab";});
+cv.addEventListener("wheel",function(e){if(W>820&&e.clientX<300)return;e.preventDefault();
+  zoom*=(e.deltaY>0?0.92:1.08);zoom=Math.max(0.4,Math.min(2.6,zoom));},{passive:false});
+function place(mx,my){var t=screenToTile(mx,my);if(!t)return;var id=idx(t.i,t.j);
+  if(tool==="road"){ if(grid[id]===0){grid[id]=1;rebuildGraph();} }
+  else{ var k=KIND[tool]; if(grid[id]===0){grid[id]=k;organelles.push({i:t.i,j:t.j,kind:k});rebuildGraph();} }
+}
+
+// ============================================================================
+// legend (how to build one)
+// ============================================================================
+function sw(c){return "<span class='sw' style='background:rgb("+c+")'></span>";}
+document.getElementById("legend").innerHTML=
+ "<div class='lh'>how to build one \u00b7 the translation</div>"+
+ "<div class='lr'>"+sw("255,215,0")+"City Hall &rarr; <b>nucleus</b> (the archive)</div>"+
+ "<div class='lr'>"+sw("255,184,74")+"Power Plant &rarr; <b>mitochondrion</b> (ATP)</div>"+
+ "<div class='lr'>"+sw("53,224,200")+"Factory &rarr; <b>ribosome/ER</b> (protein)</div>"+
+ "<div class='lr'>"+sw("74,163,255")+"Post Office &rarr; <b>Golgi</b> (shipping)</div>"+
+ "<div class='lr'>"+sw("255,106,158")+"Recycling &rarr; <b>lysosome</b> (waste)</div>"+
+ "<div class='lr'>"+sw("204,68,255")+"Customs &rarr; <b>membrane port</b></div>"+
+ "<div class='lr'>"+sw("74,84,104")+"Roads &rarr; <b>microtubules</b></div>"+
+ "<div class='lr'>"+sw("255,200,90")+"Trucks/cars &rarr; <b>vesicles</b> (motor proteins)</div>"+
+ "<div class='lh'>the graph is the engine</div>"+
+ "<div class='note'>Vesicles path-find on the microtubule graph with <b style='color:#35e0c8'>congestion-aware Dijkstra</b> \u2014 crowding raises edge cost, so traffic reroutes (recomputed every ~2 s). Zone POWER / FACTORY / RECYCLE to answer the cell's RCI. Toggle <b style='color:#35e0c8'>TRAFFIC</b> to see the jams, <b style='color:#35e0c8'>ATP</b> to see energy coverage.</div>"+
+ "<div class='note'>Push <b style='color:#ff6a5c'>traffic</b> until the frame budget breaks. On the wall the screen goes blank \u2014 no faked frame \u2014 and you slide back. Cartoon outside, no cheating inside.</div>";
+
+// ============================================================================
+// boot
+// ============================================================================
+function resize(){DPR=Math.min(2,window.devicePixelRatio||1);W=window.innerWidth;H=window.innerHeight;
+  cv.width=W*DPR;cv.height=H*DPR;cv.style.width=W+"px";cv.style.height=H+"px";ctx.setTransform(DPR,0,0,DPR,0,0);}
+window.addEventListener("resize",resize);
+resize(); buildCity(); setTool(null); requestAnimationFrame(frame);
+</script>
+</body></html>
