@@ -1,0 +1,361 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>VITRUVIUM v1.1 &middot; the cell as metropolis &middot; two cities, one cable</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{background:#050510;color:#e0e0e0;font-family:ui-monospace,"SF Mono",monospace;
+  font-size:11px;overflow:hidden;height:100%;width:100%}
+canvas{display:block}
+#cv{position:fixed;inset:0;z-index:1}
+#rail{position:fixed;top:0;bottom:54px;left:0;width:360px;z-index:5;display:flex;flex-direction:column;
+  background:linear-gradient(to right,rgba(5,5,16,0.87) 0,rgba(5,5,16,0.74) 72%,rgba(5,5,16,0) 100%);
+  border-right:1px solid rgba(80,50,120,0.12);pointer-events:none}
+#hud{padding:12px 15px 6px;text-shadow:0 0 10px rgba(5,5,16,0.95)}
+#hud .title{font-size:14px;color:#cc44ff;letter-spacing:0.2em;text-transform:uppercase;font-weight:bold}
+#hud .sub{font-size:8px;color:rgba(204,68,255,0.55);letter-spacing:0.07em;margin:2px 0 7px;text-transform:uppercase}
+#hud .row{line-height:1.7;color:rgba(220,228,240,0.5);font-size:10px}
+#hud .val{color:#cc44ff;font-weight:bold}#hud .gold{color:#ffd700;font-weight:bold}
+#hud .teal{color:#35e0c8;font-weight:bold}#hud .grn{color:#7fff9f;font-weight:bold}
+#hud .amb{color:#ffb84a;font-weight:bold}#hud .dim{color:rgba(220,228,240,0.28)}
+#hud .hr{height:1px;background:rgba(204,68,255,0.14);margin:6px 0}
+#hud .cmp{font-size:9px;letter-spacing:0.1em;text-transform:uppercase}
+#hud .c-c{color:#4aa3ff}#hud .c-d{color:#35e0c8}
+#card{padding:2px 15px 4px;font-size:10px;line-height:1.55;color:rgba(224,220,240,0.85)}
+#card .dn{font-weight:bold;font-size:12px;letter-spacing:0.04em}
+#card .infra{color:#ffd700}#card .bio{color:rgba(220,228,240,0.55)}
+#card .fact{color:rgba(180,220,255,0.75);font-size:9.5px;margin-top:3px;line-height:1.5}
+#card .num{color:#35e0c8;font-weight:bold}
+#detail{flex:1;overflow-y:auto;padding:4px 15px 12px;pointer-events:auto;
+  -webkit-mask-image:linear-gradient(to bottom,#000 93%,transparent 100%);mask-image:linear-gradient(to bottom,#000 93%,transparent 100%)}
+#detail .th{font-size:9px;color:#35e0c8;text-transform:uppercase;letter-spacing:0.13em;margin:8px 0 3px}
+#detail .big{font-size:10.5px;color:rgba(224,224,244,0.82);line-height:1.6}
+#detail .big b{color:#ffd700}#detail .big .n{color:#35e0c8;font-weight:bold}
+#detail .prompt{font-size:10px;color:rgba(204,68,255,0.6);margin-top:8px}
+#detail .titan{color:#ffd700;font-size:9px;margin-top:8px;line-height:1.5}
+#stamp{position:fixed;bottom:60px;right:12px;z-index:6;pointer-events:none;text-align:right}
+#stamp .s{font-size:8px;color:rgba(204,68,255,0.26);letter-spacing:0.07em;line-height:1.85}
+#stamp .s.g{color:rgba(255,215,0,0.3)}
+#bar{position:fixed;bottom:0;left:0;right:0;z-index:10;background:rgba(5,5,16,0.97);
+  border-top:1px solid #221033;padding:5px 12px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.btn{background:#0b0814;color:#5a4a6a;border:1px solid #221033;border-radius:3px;padding:3px 9px;
+  font-family:inherit;font-size:9px;cursor:pointer;transition:all .15s;text-transform:uppercase;letter-spacing:0.06em;white-space:nowrap}
+.btn:hover{border-color:#cc44ff;color:#cc44ff}.btn.active{background:#cc44ff;color:#050510;border-color:#cc44ff}
+.sep{width:1px;height:15px;background:#221033}
+.lbl{color:rgba(220,228,240,0.28);font-size:8.5px;text-transform:uppercase;letter-spacing:0.08em}
+.slw{display:flex;align-items:center;gap:4px}
+.slw input{width:120px;accent-color:#4aa3ff;cursor:pointer}
+.slw input#sl-spin{width:64px;accent-color:#cc44ff}
+.sv{font-size:8.5px;color:#4aa3ff;min-width:70px;font-variant-numeric:tabular-nums;text-transform:uppercase;letter-spacing:0.06em}
+@media(max-width:880px){#rail{width:100%;height:44vh;bottom:auto;border-right:none;border-bottom:1px solid rgba(80,50,120,0.15);
+  background:linear-gradient(to bottom,rgba(5,5,16,0.92),rgba(5,5,16,0.6))}#cv{top:44vh}#stamp{display:none}}
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+
+<div id="rail">
+  <div id="hud">
+    <span class="title">Vitruvium</span>
+    <div class="sub">the cell as metropolis &middot; two cities, one cable</div>
+    <div class="row cmp">view &middot; <span id="h-cmp" class="c-c">compressed &middot; the map</span></div>
+    <div class="hr"></div>
+    <div class="row"><span class="gold">CELL A</span> &middot; pancreatic &beta;-cell <span class="dim">the factory that ships insulin</span></div>
+    <div class="row"><span class="teal">CELL B</span> &middot; muscle cell <span class="dim">reads the message, opens glucose ports</span></div>
+    <div class="row">messages sent&nbsp;&nbsp;<span class="val" id="h-msg">0</span>&nbsp;&middot;&nbsp;glucose in&nbsp;<span class="grn" id="h-glu">0</span></div>
+    <div class="row">ATP burned&nbsp;&nbsp;<span class="amb" id="h-atp">0</span><span class="dim"> (schematic)</span></div>
+  </div>
+  <div id="card"></div>
+  <div id="detail"></div>
+</div>
+
+<div id="stamp">
+  <div class="s">Vitruvium v1.1</div>
+  <div class="s">P=12 . chi=2</div>
+  <div class="s g">2 m of DNA in 6 microns</div>
+  <div class="s g">the cell solved compression</div>
+  <div class="s">bow to the titans . always</div>
+</div>
+
+<div id="bar">
+  <button class="btn active" id="b-run" onclick="toggleRun()">RUNNING</button>
+  <button class="btn" onclick="sendNow()">SEND MESSAGE &#9654;</button>
+  <div class="sep"></div>
+  <div class="slw"><span class="lbl">compress</span>
+    <input type="range" id="sl-dc" min="0" max="100" value="18" oninput="setDC(+this.value/100)">
+    <span class="sv" id="sv-dc">the map</span></div>
+  <div class="sep"></div>
+  <div class="slw"><span class="lbl">spin</span>
+    <input type="range" id="sl-spin" min="0" max="100" value="24"
+      oninput="SPIN=+this.value/22000;document.getElementById('sv-spin').textContent=SPIN>0?'on':'0'">
+    <span class="sv" id="sv-spin" style="min-width:18px;color:#cc44ff">on</span></div>
+  <div class="sep"></div>
+  <span class="lbl" style="color:rgba(53,224,200,0.5)">click a district &#8594;</span>
+</div>
+
+<script>
+// ============================================================================
+// VITRUVIUM v1.1 -- the cell as metropolis.
+// Two cell-cities (a pancreatic beta-cell that manufactures & ships insulin,
+// a muscle cell that reads it & opens glucose ports) talk down one cable --
+// biology's submarine cable, signalling. Organelles = infrastructure.
+// COMPRESS to the city map; DECOMPRESS to the real molecular traffic + numbers.
+// The cell already solved compression: ~2 m of DNA in a ~6 um nucleus.
+// Cartoon outside, no cheating inside. spini spini. chi=2 . P=12. always.
+// Built 2026-07-20.
+// ============================================================================
+
+var cv=document.getElementById("cv"),ctx=cv.getContext("2d"),W,H,DPR;
+var SPIN=24/22000, DC=0.18, running=true;
+var msgCount=0, gluCount=0, atpCount=0;
+var selKey=null;
+
+// ---- district template : organelle = infrastructure, with honest facts ----
+// ang (rad), rf (radius fraction), col, infra name, bio name, facts
+var DTPL=[
+ {key:"nuc",  ang:0,      rf:0.0,  col:[255,215,0],  infra:"Archive & City Hall", bio:"nucleus",
+   fact:"~2 m of DNA folded into a ~6 \u00b5m nucleus \u2014 a ~300,000\u00d7 squeeze, and still read losslessly. The city's compression algorithm.", num:"2 m \u2192 6 \u00b5m"},
+ {key:"rib",  ang:-0.7,   rf:0.44, col:[53,224,200], infra:"Factory District", bio:"ribosomes + rough ER",
+   fact:"Reads blueprints (mRNA) and builds proteins. ~10\u2076\u201310\u2077 ribosomes per cell, each a nanoscale assembly line.", num:"~10\u2077 factories"},
+ {key:"ser",  ang:0.55,   rf:0.5,  col:[120,200,240],infra:"Chemical Plant", bio:"smooth ER",
+   fact:"Synthesises lipids, stores calcium, detoxifies. The city's petrochemical works.", num:"lipids + Ca\u00b2\u207a"},
+ {key:"gol",  ang:1.5,    rf:0.53, col:[74,163,255], infra:"Post Office & Docks", bio:"Golgi apparatus",
+   fact:"Modifies, sorts, addresses and packages proteins into vesicles for shipping. The central sorting hub.", num:"sort + ship"},
+ {key:"mit1", ang:-1.9,   rf:0.66, col:[255,184,74], infra:"Power Plant", bio:"mitochondrion",
+   fact:"Makes ATP \u2014 the city's power. Once a free-living bacterium that joined the metropolis (endosymbiosis). Hundreds to ~2000 per cell.", num:"~10\u2079 ATP/s cell-wide"},
+ {key:"mit2", ang:2.5,    rf:0.68, col:[255,184,74], infra:"Power Plant", bio:"mitochondrion",
+   fact:"An annexed power-city. A human remakes roughly its own body weight in ATP every day.", num:"\u2248 body-weight ATP/day"},
+ {key:"mit3", ang:-2.7,   rf:0.63, col:[255,184,74], infra:"Power Plant", bio:"mitochondrion",
+   fact:"Burns fuel + O\u2082 to charge the ATP grid that everything else spends.", num:"the grid"},
+ {key:"lys",  ang:2.0,    rf:0.8,  col:[255,106,158],infra:"Recycling Center", bio:"lysosome",
+   fact:"Digests worn-out parts and imported waste; returns the raw materials. Zero-landfill by design.", num:"~50 enzymes"},
+ {key:"per",  ang:-1.2,   rf:0.79, col:[200,140,255],infra:"Treatment Plant", bio:"peroxisome",
+   fact:"Neutralises reactive byproducts (H\u2082O\u2082) and breaks down fats. The city's hazmat unit.", num:"detox"}
+];
+// receiver-only special: the receptor port (customs receiving station)
+
+function mkCell(cx,cy,R,role){
+  return {cx:cx,cy:cy,R:R,role:role,rot:role==="sender"?0.2:-0.4,
+    D:DTPL.map(function(d){return {key:d.key,ang:d.ang,rf:d.rf,col:d.col,infra:d.infra,bio:d.bio,fact:d.fact,num:d.num};})};
+}
+var A,B,CABLE_Y;
+function dpos(cell,d){var a=d.ang+cell.rot;return {x:cell.cx+Math.cos(a)*cell.R*d.rf, y:cell.cy+Math.sin(a)*cell.R*d.rf};}
+function portAt(cell,worldAng){return {x:cell.cx+Math.cos(worldAng)*cell.R, y:cell.cy+Math.sin(worldAng)*cell.R};} // world-frame port
+
+// ---- packets : the traffic / the 1s and 0s ----
+var packets=[];
+function spawn(path,col,r,life,onArrive){packets.push({path:path,t:0,seg:0,col:col,r:r,spd:1/(life||60),onArrive:onArrive});}
+function stepPackets(){
+  for(var i=packets.length-1;i>=0;i--){var p=packets[i];p.t+=p.spd*(p.path.length-1);
+    while(p.t>=1&&p.seg<p.path.length-2){p.t-=1;p.seg++;}
+    if(p.seg>=p.path.length-1||(p.seg===p.path.length-2&&p.t>=1)){
+      if(p.onArrive)p.onArrive();packets.splice(i,1);continue;}
+  }
+}
+function packetXY(p){var a=p.path[p.seg],b=p.path[Math.min(p.seg+1,p.path.length-1)];
+  return {x:a.x+(b.x-a.x)*p.t,y:a.y+(b.y-a.y)*p.t};}
+
+// ---- ambient flows (rate scales with decompression) ----
+var atpClock=0, mfgClock=0;
+function ambient(){
+  var mult=0.35+DC*1.4;
+  atpClock++;
+  if(atpClock> Math.max(3,10-DC*8)){atpClock=0;
+    [A,B].forEach(function(c){["mit1","mit2","mit3"].forEach(function(k){
+      var d=c.D.find(function(x){return x.key===k;}),s=dpos(c,d),n=dpos(c,c.D[0]);
+      spawn([s,{x:(s.x+n.x)/2+(Math.random()*20-10),y:(s.y+n.y)/2+(Math.random()*20-10)},n],[255,200,90],1.4,26,function(){atpCount+=137;});
+    });});
+  }
+  mfgClock++;
+  if(mfgClock> Math.max(10,40-DC*30)){mfgClock=0;
+    [A,B].forEach(function(c){
+      var nuc=dpos(c,c.D[0]),rib=dpos(c,c.D.find(function(x){return x.key==="rib";})),
+          gol=dpos(c,c.D.find(function(x){return x.key==="gol";})),port=portAt(c,c.rot+0.3);
+      spawn([nuc,rib],[90,150,255],1.5,40,function(){          // blueprint -> factory
+        spawn([rib,gol],[53,224,200],1.6,40,function(){        // product -> post office
+          spawn([gol,port],[120,240,160],1.6,44);              // ship -> port
+        });
+      });
+    });
+  }
+}
+
+// ---- the message cycle : A ships insulin -> cable -> B receptor -> glucose in ----
+var autoClock=0;
+function maybeSend(){autoClock++;if(autoClock>260){autoClock=0;sendNow();}}
+function sendNow(){
+  var gol=dpos(A,A.D.find(function(x){return x.key==="gol";}));
+  var aPort=portAt(A,0);                    // A's right-facing port
+  var bPort=portAt(B,Math.PI);              // B's left-facing receptor
+  spawn([gol,aPort],[255,120,255],2.2,34,function(){        // package insulin, to A's dock
+    spawn([aPort,{x:(aPort.x+bPort.x)/2,y:CABLE_Y},bPort],[255,120,255],2.6,70,function(){ // across the cable
+      msgCount++;
+      // B receives: cascade to nucleus, then GLUT4 vesicle to a B port, then glucose import
+      var bNuc=dpos(B,B.D[0]);
+      spawn([bPort,bNuc],[120,255,180],1.8,34,function(){
+        var bGol=dpos(B,B.D.find(function(x){return x.key==="gol";}));
+        var importPort=portAt(B,B.rot+0.9);
+        spawn([bNuc,bGol,importPort],[90,255,150],2.0,50,function(){   // GLUT4 truck to the wall
+          for(var g=0;g<5;g++){(function(gg){setTimeout(function(){
+            var outside={x:importPort.x+Math.cos(B.rot+0.9)*26+(Math.random()*14-7),y:importPort.y+Math.sin(B.rot+0.9)*26+(Math.random()*14-7)};
+            spawn([outside,importPort,dpos(B,B.D[0])],[120,255,120],1.8,46,function(){gluCount++;});
+          },gg*90);})(g);}
+        });
+      });
+    });
+  });
+}
+
+// ============================================================================
+// draw
+// ============================================================================
+function draw(){
+  ctx.clearRect(0,0,W,H);ctx.fillStyle="#050510";ctx.fillRect(0,0,W,H);
+
+  // ---- the cable / bloodstream between the two cities ----
+  var aP=portAt(A,0),bP=portAt(B,Math.PI);
+  var grd=ctx.createLinearGradient(aP.x,0,bP.x,0);
+  grd.addColorStop(0,"rgba(120,30,50,0.0)");grd.addColorStop(0.5,"rgba(180,50,70,0.16)");grd.addColorStop(1,"rgba(120,30,50,0.0)");
+  ctx.fillStyle=grd;ctx.fillRect(aP.x,CABLE_Y-16,bP.x-aP.x,32);
+  ctx.strokeStyle="rgba(200,80,100,0.22)";ctx.lineWidth=1;ctx.setLineDash([4,5]);
+  ctx.beginPath();ctx.moveTo(aP.x,CABLE_Y);ctx.lineTo(bP.x,CABLE_Y);ctx.stroke();ctx.setLineDash([]);
+  if(DC>0.35){ctx.fillStyle="rgba(200,120,140,0.4)";ctx.font="8px ui-monospace,monospace";ctx.textAlign="center";
+    ctx.fillText("the cable \u00b7 bloodstream carries the signal",(aP.x+bP.x)/2,CABLE_Y-22);}
+
+  drawCell(A,"CELL A \u00b7 \u03b2-cell","the sender");
+  drawCell(B,"CELL B \u00b7 muscle","the receiver");
+
+  // ---- packets on top ----
+  for(var i=0;i<packets.length;i++){var p=packets[i],xy=packetXY(p);
+    ctx.fillStyle="rgba("+p.col[0]+","+p.col[1]+","+p.col[2]+",0.95)";
+    ctx.beginPath();ctx.arc(xy.x,xy.y,p.r,0,6.2832);ctx.fill();
+    ctx.fillStyle="rgba("+p.col[0]+","+p.col[1]+","+p.col[2]+",0.25)";
+    ctx.beginPath();ctx.arc(xy.x,xy.y,p.r*2.6,0,6.2832);ctx.fill();
+  }
+}
+function drawCell(c,title,sub){
+  ctx.globalCompositeOperation="lighter";
+  // membrane wall + faint interior
+  ctx.strokeStyle="rgba(204,68,255,0.5)";ctx.lineWidth=2;
+  ctx.beginPath();ctx.arc(c.cx,c.cy,c.R,0,6.2832);ctx.stroke();
+  ctx.fillStyle="rgba(204,68,255,0.03)";ctx.beginPath();ctx.arc(c.cx,c.cy,c.R,0,6.2832);ctx.fill();
+  // ports around the wall (customs)
+  for(var k=0;k<16;k++){var a=c.rot*0.6+k*(Math.PI*2/16),px=c.cx+Math.cos(a)*c.R,py=c.cy+Math.sin(a)*c.R;
+    ctx.fillStyle="rgba(204,68,255,0.5)";ctx.beginPath();ctx.arc(px,py,1.6,0,6.2832);ctx.fill();}
+  // radial roads (cytoskeleton highways)
+  ctx.strokeStyle="rgba(120,110,160,0.12)";ctx.lineWidth=1;
+  for(var k=0;k<8;k++){var a=c.rot+k*(Math.PI/4);ctx.beginPath();ctx.moveTo(c.cx,c.cy);
+    ctx.lineTo(c.cx+Math.cos(a)*c.R*0.95,c.cy+Math.sin(a)*c.R*0.95);ctx.stroke();}
+  ctx.globalCompositeOperation="source-over";
+
+  // districts
+  for(var i=0;i<c.D.length;i++){var d=c.D[i],p=dpos(c,d),sel=(selKey===d.key);
+    var rad = d.key==="nuc"?c.R*0.26:(d.key.indexOf("mit")===0?7:(d.key==="rib"?9:8));
+    ctx.fillStyle="rgba("+d.col[0]+","+d.col[1]+","+d.col[2]+","+(sel?0.95:0.75)+")";
+    ctx.beginPath();ctx.arc(p.x,p.y,rad,0,6.2832);ctx.fill();
+    ctx.fillStyle="rgba("+d.col[0]+","+d.col[1]+","+d.col[2]+",0.2)";
+    ctx.beginPath();ctx.arc(p.x,p.y,rad*(sel?2.4:1.8),0,6.2832);ctx.fill();
+    if(d.key==="nuc"){ // archive inner rings
+      ctx.strokeStyle="rgba(255,215,0,0.3)";ctx.lineWidth=1;
+      ctx.beginPath();ctx.arc(p.x,p.y,rad*0.6,0,6.2832);ctx.stroke();}
+    // label : infra name (compressed) -> bio name fades in (decompressed)
+    var lx=p.x+rad+4, ly=p.y;
+    ctx.textAlign="left";ctx.textBaseline="middle";
+    ctx.fillStyle="rgba("+d.col[0]+","+d.col[1]+","+d.col[2]+","+(sel?1:0.8)+")";
+    ctx.font=(sel?"bold ":"")+"9px ui-monospace,monospace";
+    if(d.key!=="nuc"||true) ctx.fillText(d.infra,lx,ly);
+    if(DC>0.4){ctx.fillStyle="rgba(200,205,225,"+(0.3+DC*0.4)+")";ctx.font="8px ui-monospace,monospace";
+      ctx.fillText(d.bio,lx,ly+9);
+      if(DC>0.62){ctx.fillStyle="rgba(120,220,200,"+(DC*0.7)+")";ctx.fillText(d.num,lx,ly+18);}}
+  }
+  // title
+  ctx.textAlign="center";ctx.fillStyle="rgba(230,225,245,0.8)";ctx.font="bold 10px ui-monospace,monospace";
+  ctx.fillText(title,c.cx,c.cy-c.R-16);
+  ctx.fillStyle="rgba(204,68,255,0.5)";ctx.font="8px ui-monospace,monospace";
+  ctx.fillText(sub,c.cx,c.cy-c.R-5);
+}
+
+// ============================================================================
+// panels
+// ============================================================================
+function renderCard(){
+  var card=document.getElementById("card"),det=document.getElementById("detail");
+  if(!selKey){card.innerHTML="";
+    if(DC>0.6){
+      det.innerHTML="<div class='th'>the complex space, decompressed</div>"+
+        "<div class='big'>One human cell runs on the order of <span class='n'>~2 billion protein molecules</span> of <span class='n'>~10,000+</span> distinct types, spends <span class='n'>~10\u2079 ATP/second</span>, and keeps <span class='n'>thousands</span> of chemical reactions running at once \u2014 all inside <span class='n'>~15 \u00b5m</span>. Your body has <b>~3.7\u00d710\u00b9\u00b3</b> of these cities, and they never stop talking.</div>"+
+        "<div class='big' style='margin-top:8px'>The headline compression: <b>~2 m of DNA</b> folded into a <b>~6 \u00b5m</b> nucleus \u2014 ~300,000\u00d7 \u2014 and read without error. We are still learning to compress like that.</div>"+
+        "<div class='titan'>\u2726 bow: Palade, de Duve, Claude \u2014 Nobel 1974, for mapping the city. Lynn Margulis \u2014 for proving the power plants were once free bacteria.</div>";
+    } else {
+      det.innerHTML="<div class='prompt'>&#9654; click any district to read what it really is.</div>"+
+        "<div class='big' style='margin-top:8px'>Left is the <b>compressed</b> view \u2014 the city map an engineer would draw. Slide <b style='color:#35e0c8'>compress \u2192 decompress</b> to flood the map with the real molecules, counts, and traffic underneath. That slider is the tool: <i>compression and decompression of a complex space.</i></div>"+
+        "<div class='titan'>\u2726 Cell A ships insulin down the cable; Cell B reads it and opens its glucose ports. Press <b>SEND MESSAGE</b> to watch one cross.</div>";
+    }
+    return;
+  }
+  var d=A.D.find(function(x){return x.key===selKey;});
+  card.innerHTML="<div class='dn' style='color:rgb("+d.col+")'>"+d.infra+"</div>"+
+    "<div class='bio'>the biology: <b style='color:rgb("+d.col+")'>"+d.bio+"</b> \u00b7 <span class='num'>"+d.num+"</span></div>"+
+    "<div class='fact'>"+d.fact+"</div>";
+  det.innerHTML="<div class='th'>why it matters to the newcomer</div>"+
+    "<div class='big'>"+cardExtra(selKey)+"</div>";
+}
+function cardExtra(k){
+  var m={
+   nuc:"To read this archive you need genetics, molecular biology, and structural biology \u2014 and to understand its <b>compression</b> (chromatin, histones) you need polymer physics too. The blueprint problem is the whole of the central dogma.",
+   rib:"The factory that turns a 4-letter code into 20-amino-acid machines. Understanding it spans biochemistry, structural biology (cryo-EM cracked its structure), and translation kinetics.",
+   ser:"Lipid synthesis and calcium storage \u2014 the membrane-building and signalling utility. Physical chemistry and biochemistry live here.",
+   gol:"Addressing and shipping. Every protein gets a zip code (sorting signals). Break this and cargo goes to the wrong district \u2014 the logistics problem of the cell.",
+   mit1:"The power plant \u2014 and the deepest twist in the metropolis: it carries its <b>own</b> genome and was once a free bacterium (endosymbiosis, Margulis). Bioenergetics is a field unto itself.",
+   mit2:"Charges the ATP grid the whole city spends. Follow the electrons through the respiratory chain and you are doing quantum chemistry on a membrane.",
+   mit3:"Fuel + oxygen in, ATP + CO\u2082 out. The city's entire economy is denominated in this one currency.",
+   lys:"Waste and recycling \u2014 de Duve discovered it and won a Nobel for it. Its failure causes real disease (lysosomal storage disorders).",
+   per:"Hazmat and detox. Small, essential, and its disorders are devastating \u2014 a reminder that no district is 'minor.'"
+  };
+  return m[k]||"";
+}
+
+// ============================================================================
+// controls
+// ============================================================================
+function setDC(v){DC=v;var el=document.getElementById("h-cmp"),sv=document.getElementById("sv-dc");
+  var label = v<0.33?"compressed \u00b7 the map":v<0.66?"decompressing\u2026":"decompressed \u00b7 the traffic";
+  el.textContent=label;el.className=v<0.5?"c-c":"c-d";
+  sv.textContent=v<0.33?"the map":v<0.66?"unfolding":"the traffic";
+  sv.style.color=v<0.5?"#4aa3ff":"#35e0c8";
+  renderCard();}
+function toggleRun(){running=!running;var b=document.getElementById("b-run");
+  b.classList.toggle("active",running);b.textContent=running?"RUNNING":"PAUSED";}
+
+cv.addEventListener("pointerdown",function(e){
+  if(W>880&&e.clientX<360)return;
+  var best=null,bd=18;
+  [A,B].forEach(function(c){c.D.forEach(function(d){var p=dpos(c,d);
+    var rad=d.key==="nuc"?c.R*0.26:9;var dist=Math.hypot(e.clientX-p.x,e.clientY-p.y);
+    if(dist<rad+8&&dist<bd){bd=dist;best=d.key;}});});
+  selKey=best;renderCard();
+});
+
+// ============================================================================
+// layout + loop
+// ============================================================================
+function resize(){DPR=Math.min(2,window.devicePixelRatio||1);W=window.innerWidth;H=window.innerHeight;
+  cv.width=W*DPR;cv.height=H*DPR;cv.style.width=W+"px";cv.style.height=H+"px";ctx.setTransform(DPR,0,0,DPR,0,0);
+  var rail=(W>880)?360:0,topOff=(W>880)?0:H*0.44;
+  var cy=topOff+(H-54-topOff)*0.5; CABLE_Y=cy;
+  var R=Math.min((W-rail)*0.165,(H-54-topOff)*0.34);
+  A=mkCell(rail+(W-rail)*0.30,cy,R,"sender");
+  B=mkCell(rail+(W-rail)*0.72,cy,R,"receiver");
+}
+window.addEventListener("resize",function(){resize();});
+
+function frame(){requestAnimationFrame(frame);
+  if(running){A.rot+=SPIN;B.rot-=SPIN*0.85;ambient();stepPackets();maybeSend();
+    document.getElementById("h-msg").textContent=msgCount;
+    document.getElementById("h-glu").textContent=gluCount;
+    document.getElementById("h-atp").textContent=atpCount.toLocaleString();}
+  draw();
+}
+resize();setDC(0.18);renderCard();requestAnimationFrame(frame);
+</script>
+</body></html>
