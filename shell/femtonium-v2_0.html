@@ -1,0 +1,733 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>FEMTONIUM v2.0 · the atelier build &middot; the pulse ends before the metal notices &middot; two-temperature model</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{background:#050510;color:#e0e0e0;font-family:ui-monospace,"SF Mono",Menlo,monospace;
+  font-size:11px;overflow:hidden;height:100%;width:100%}
+canvas{display:block}
+#cv{position:fixed;inset:0;z-index:1}
+#rail{position:fixed;top:0;bottom:54px;left:0;width:300px;z-index:5;display:flex;flex-direction:column;
+  background:linear-gradient(to right,rgba(5,5,16,0.93) 0,rgba(5,5,16,0.82) 76%,rgba(5,5,16,0) 100%);
+  border-right:1px solid rgba(80,50,120,0.12);pointer-events:none}
+#hud{padding:11px 14px 4px;text-shadow:0 0 10px rgba(5,5,16,0.95)}
+#hud .title{font-size:13px;color:#cc44ff;letter-spacing:.16em;text-transform:uppercase;font-weight:bold}
+#hud .sub{font-size:8px;color:rgba(204,68,255,.55);letter-spacing:.05em;margin:2px 0 6px;text-transform:uppercase}
+#hud .fps{font-size:14px;font-weight:bold;font-variant-numeric:tabular-nums}
+#hud .fok{color:#7fff9f}#hud .fmid{color:#ffd700}#hud .fbad{color:#ff6a5c}
+#hud .row{line-height:1.5;color:rgba(220,228,240,.5);font-size:10px;font-variant-numeric:tabular-nums}
+#hud .v{color:#cc44ff;font-weight:bold}#hud .g{color:#ffd700;font-weight:bold}#hud .t{color:#35e0c8;font-weight:bold}
+#hud .r{color:#ff6a5c;font-weight:bold}
+#hud .dim{color:rgba(220,228,240,.3)}
+#hud .hr{height:1px;background:rgba(204,68,255,.14);margin:5px 0}
+#verdict{margin:4px 14px 2px;padding:5px 7px;border-radius:3px;font-size:9.5px;line-height:1.4;
+  border:1px solid rgba(80,50,120,.3);background:rgba(15,8,26,.6)}
+#verdict b{font-size:10px;letter-spacing:.06em}
+#spec{padding:2px 14px 3px}
+#spec .sh{font-size:8px;text-transform:uppercase;letter-spacing:.1em;color:rgba(53,224,200,.6);margin:4px 0 2px}
+#spec .sr{display:flex;justify-content:space-between;font-size:9px;line-height:1.55;color:rgba(220,228,240,.55);font-variant-numeric:tabular-nums}
+#spec .sr .k{color:rgba(220,228,240,.34)}
+#spec .sr .g{color:#ffd700;font-weight:bold}#spec .sr .t{color:#35e0c8;font-weight:bold}#spec .sr .v{color:#cc44ff;font-weight:bold}
+#klaws{flex:1;overflow-y:auto;padding:5px 14px 12px;pointer-events:auto;
+  -webkit-mask-image:linear-gradient(to bottom,#000 92%,transparent);mask-image:linear-gradient(to bottom,#000 92%,transparent)}
+#klaws .kh{font-size:8.5px;color:#35e0c8;text-transform:uppercase;letter-spacing:.12em;margin:7px 0 3px}
+#klaws p{font-size:8.5px;color:rgba(220,228,240,.42);line-height:1.5;margin-bottom:4px}
+#klaws b{color:#ffd700}#klaws .pur{color:#cc44ff}
+#atel{position:fixed;z-index:7;left:314px;right:14px;top:8px;pointer-events:none;
+  background:linear-gradient(to right,rgba(10,7,22,.94),rgba(10,7,22,.72) 78%,rgba(10,7,22,0));
+  border:1px solid rgba(204,68,255,.22);border-left:3px solid #cc44ff;border-radius:4px;padding:7px 12px}
+#atel .an{font-size:10px;color:#cc44ff;letter-spacing:.14em;text-transform:uppercase;font-weight:bold}
+#atel .an .num{color:rgba(220,228,240,.3);font-weight:normal;letter-spacing:.05em}
+#atel .at{font-size:10.5px;color:rgba(220,228,240,.62);line-height:1.55;margin-top:3px;max-width:1050px}
+#atel .at b{color:#ffd700}#atel .at .c{color:#35e0c8}#atel .at .g{color:#7fff9f}#atel .at .r{color:#ff6a5c}
+#atel .nx{font-size:8px;color:rgba(220,228,240,.26);margin-top:4px;letter-spacing:.06em}
+#dots{display:flex;gap:3px;align-items:center}
+#dots i{width:7px;height:7px;border-radius:50%;background:#2a1838;cursor:pointer;display:block;transition:.15s}
+#dots i.on{background:#cc44ff}#dots i.now{background:#ffd700;transform:scale(1.5)}
+#sl-master{width:150px;accent-color:#cc44ff}
+.btn.mode.active{background:#cc44ff;color:#050510;border-color:#cc44ff}
+#stamp{position:fixed;bottom:60px;right:12px;z-index:6;pointer-events:none;text-align:right}
+#stamp .s{font-size:8px;color:rgba(204,68,255,.26);letter-spacing:.07em;line-height:1.8}
+#stamp .s.g{color:rgba(255,215,0,.3)}
+#bar{position:fixed;bottom:0;left:0;right:0;z-index:10;background:rgba(5,5,16,0.97);
+  border-top:1px solid #221033;padding:5px 9px;display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.btn{background:#0b0814;color:#5a4a6a;border:1px solid #221033;border-radius:3px;padding:3px 8px;
+  font-family:inherit;font-size:9px;cursor:pointer;transition:.12s;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+.btn:hover{border-color:#cc44ff;color:#cc44ff}.btn.active{background:#cc44ff;color:#050510;border-color:#cc44ff}
+.btn.tg.active{background:#35e0c8;border-color:#35e0c8}
+.btn.fire{background:#ffd700;color:#050510;border-color:#ffd700;font-weight:bold}
+.sep{width:1px;height:15px;background:#221033}
+.lbl{color:rgba(220,228,240,.28);font-size:8px;text-transform:uppercase;letter-spacing:.05em}
+.slw{display:flex;align-items:center;gap:3px}
+.slw input{accent-color:#cc44ff;cursor:pointer;width:52px}
+#sl-tau{width:150px;accent-color:#ffd700}
+#sl-res,#sl-sub{accent-color:#ff6a5c}
+.sv{font-size:8.5px;color:#cc44ff;min-width:28px;font-variant-numeric:tabular-nums;text-transform:none}
+#sv-tau{color:#ffd700;font-weight:bold;min-width:52px}
+</style></head><body>
+<canvas id="cv"></canvas>
+
+<div id="rail">
+  <div id="hud">
+    <span class="title">Femtonium</span>
+    <div class="sub">the pulse ends before the metal notices</div>
+    <div class="fps"><span id="h-fps" class="fok">60</span><span class="dim" style="font-size:9px"> fps &middot; two-temperature model, live</span></div>
+    <div class="hr"></div>
+    <div class="row">T<sub>e</sub> peak&nbsp;<span class="t" id="h-te">300</span> K &middot; T<sub>l</sub> peak&nbsp;<span class="r" id="h-tl">300</span> K</div>
+    <div class="row">pulses&nbsp;<span class="v" id="h-np">0</span> &middot; sim t&nbsp;<span class="g" id="h-t">0</span></div>
+    <div class="row" id="h-prog"><span class="dim">idle &middot; press FIRE</span></div>
+  </div>
+  <div id="verdict">&mdash;</div>
+  <div id="spec">
+    <div class="sh">the spec sheet &middot; measured, not typed</div>
+    <div class="sr"><span class="k">peak intensity</span><span class="g" id="s-I">—</span></div>
+    <div class="sr"><span class="k">peak power</span><span class="g" id="s-P">—</span></div>
+    <div class="sr"><span class="k">pulse energy &middot; avg power</span><span class="v" id="s-E">—</span></div>
+    <div class="sr"><span class="k">&tau;<sub>e-ph</sub> coupling (300 K)</span><span class="t" id="s-tep">—</span></div>
+    <div class="sr"><span class="k">heat diffusion in &tau;</span><span class="t" id="s-Ld">—</span></div>
+    <div class="sr"><span class="k">ablated depth / pulse</span><span class="g" id="s-abl">—</span></div>
+    <div class="sr"><span class="k">HAZ depth (T<sub>l</sub>&gt;T<sub>melt</sub>)</span><span class="r" id="s-haz">—</span></div>
+    <div class="sr"><span class="k">grid &middot; dz &times; dx</span><span class="v" id="s-grid">—</span></div>
+    <div class="sr"><span class="k">steps/frame &middot; asked / running</span><span class="v" id="s-sub">—</span></div>
+    <div class="sr"><span class="k">steps left this pulse</span><span class="v" id="s-left">—</span></div>
+  </div>
+  <div id="klaws"></div>
+</div>
+
+<div id="atel">
+  <div class="an"><span class="num" id="a-num">00/12</span> &nbsp; <span id="a-name">void</span></div>
+  <div class="at" id="a-txt">press <b>SPACE</b> or drag the reveal.</div>
+  <div class="nx" id="a-next">next: the metal at rest</div>
+</div>
+<div id="stamp">
+  <div class="s">FEMTONIUM v2.0 &middot; atelier</div>
+  <div class="s g">the electrons boil &middot; the lattice waits</div>
+  <div class="s">cartoon outside &middot; no cheating inside</div>
+  <div class="s g">P=12 &middot; &chi;=2 &middot; spini &middot; always</div>
+</div>
+
+<div id="bar">
+  <button class="btn mode active" id="m-atel" onclick="setMode('atelier')">ATELIER</button>
+  <button class="btn mode" id="m-lab" onclick="setMode('lab')">LAB</button>
+  <div class="sep"></div>
+  <button class="btn" onclick="stepAge(-1)">&#9664;</button>
+  <input type="range" id="sl-master" min="0" max="100" value="0" oninput="onMaster(+this.value)">
+  <button class="btn" onclick="stepAge(1)">&#9654;</button>
+  <div id="dots"></div>
+  <span class="lbl" style="color:rgba(220,228,240,.2)">SPACE</span>
+  <div class="sep"></div>
+  <button class="btn fire" id="b-fire" onclick="fire()">&#9889; FIRE</button>
+  <button class="btn tg" id="b-train" onclick="toggleTrain()">TRAIN</button>
+  <button class="btn" onclick="resetAll()">RESET</button>
+  <div class="sep"></div>
+  <span class="lbl">material</span>
+  <button class="btn active" id="m-Au" onclick="setMat('Au')">GOLD</button>
+  <button class="btn" id="m-Cu" onclick="setMat('Cu')">COPPER</button>
+  <button class="btn" id="m-Al" onclick="setMat('Al')">ALUM</button>
+  <div class="sep"></div>
+  <span class="lbl" style="color:#ffd70090">pulse &tau;</span>
+  <input type="range" id="sl-tau" min="100" max="500" value="200" oninput="setTau(+this.value)">
+  <span class="sv" id="sv-tau">100 fs</span>
+  <div class="sep"></div>
+  <div class="slw"><span class="lbl">fluence</span><input type="range" id="sl-F" min="5" max="600" value="150" oninput="setF(+this.value/100)"><span class="sv" id="sv-F">1.50</span></div>
+  <div class="slw"><span class="lbl">spot &micro;m</span><input type="range" id="sl-w" min="4" max="40" value="12" oninput="setW(+this.value/10)"><span class="sv" id="sv-w">1.2</span></div>
+  <div class="slw"><span class="lbl">rep kHz</span><input type="range" id="sl-rep" min="1" max="1000" value="100" oninput="setRep(+this.value)"><span class="sv" id="sv-rep">100</span></div>
+  <div class="sep"></div>
+  <button class="btn tg active" id="tg-spin" onclick="SPIN=!SPIN;this.classList.toggle('active',SPIN)">SPIN</button>
+  <div class="slw"><span class="lbl" style="color:#c0604080">res</span><input type="range" id="sl-res" min="60" max="200" value="120" step="10" oninput="setRes(+this.value)"><span class="sv" id="sv-res" style="color:#ff6a5c">120</span></div>
+  <div class="slw"><span class="lbl" style="color:#c0604080">steps/f</span><input type="range" id="sl-sub" min="20" max="600" value="140" step="20" oninput="SUB=+this.value;document.getElementById('sv-sub').textContent=SUB"><span class="sv" id="sv-sub" style="color:#ff6a5c">140</span></div>
+</div>
+
+<script>
+// ============================================================================
+// FEMTONIUM v1.0 -- femtosecond laser machining, on the real physics.
+//
+// THE HONEST CORE is the ANISIMOV TWO-TEMPERATURE MODEL (1974): a metal hit by
+// an ultrashort pulse is TWO coupled thermal systems -- the electron gas and the
+// ion lattice -- exchanging energy at a finite rate G:
+//
+//     Ce(Te) dTe/dt = div( ke grad Te ) - G (Te - Tl) + S(x,z,t)
+//     Cl     dTl/dt =                     G (Te - Tl)
+//
+//     Ce = gamma * Te      (electron heat capacity, linear in Te)
+//     ke = ke0 * Te / Tl   (Drude-like electron conductivity)
+//
+// solved by explicit finite differences on a 2D cross-section of the workpiece.
+//
+// THE WHOLE POINT, and it is one slider:
+//   The electron-phonon coupling time is tau_e-ph = Ce/G ~ 1 ps in gold.
+//   Fire a 100 fs pulse and it is OVER 10x before the lattice can be told.
+//   The electrons hit 10,000 K; the lattice is still at room temperature;
+//   the material leaves as plasma before heat can diffuse. No melt. No recast.
+//   Stretch tau past ~1 ps and the two temperatures lock together: now you are
+//   just heating metal, and you get melt, burr, and a heat-affected zone.
+//   Sweep the tau slider and watch cold machining become welding.
+//
+// EVERY NUMBER IN THE SPEC SHEET IS MEASURED FROM THE FIELD, NOT TYPED (K1).
+// Ablated depth and HAZ depth are counted off the grid each pulse.
+//
+// Pure Canvas 2D. Zero dependencies. chi=2 . P=12 . Built 2026-07-22.
+// ============================================================================
+
+var cv=document.getElementById("cv"), ctx=cv.getContext("2d"), W,H,DPR;
+
+// ---- materials (literature values; see K5) ----
+// g   = gamma, electron heat capacity coefficient   [J/(m^3 K^2)]
+// G   = electron-phonon coupling                    [W/(m^3 K)]
+// Cl  = lattice heat capacity                       [J/(m^3 K)]
+// ke0 = electron thermal conductivity               [W/(m K)]
+// dpt = optical penetration depth @ ~800 nm         [m]
+// R   = reflectivity, Tm melt, Ta ablation temp     [-, K, K]
+var MATS={
+  Au:{n:"GOLD",      g:67.6, G:2.2e16,  Cl:2.49e6, ke0:318, dpt:13e-9, R:0.55, Tm:1337, Ta:6600, TF:64200},
+  Cu:{n:"COPPER",    g:96.6, G:1.0e17,  Cl:3.45e6, ke0:401, dpt:13e-9, R:0.55, Tm:1358, Ta:7500, TF:81600},
+  Al:{n:"ALUMINIUM", g:135,  G:2.45e17, Cl:2.43e6, ke0:235, dpt:8e-9,  R:0.50, Tm:933,  Ta:6000, TF:134000}
+};
+var matKey="Au", M=MATS.Au;
+var T0=300;                        // ambient [K]
+
+
+// ============================================================================
+// THE 12 AGES -- after SMITHIUM's atelier. Each age sets the REAL tau and
+// fluence and re-solves; it is never a picture of the lesson. What the ages
+// gate is only WHAT IS DRAWN, so you meet one idea at a time.
+// The whole file is ONE RATIO hiding behind two coupled PDEs. We build it.
+// ============================================================================
+var MODE="atelier", age=0, AF={};
+var AGES=[
+ {n:"void", f:{},
+  t:"press <b>SPACE</b> or drag the reveal. we are going to build the reason femtosecond lasers work, one age at a time. at the end you will see it was never a wall of physics \u2014 it was <b>one ratio</b>."},
+ {n:"the metal at rest", f:{Tl:1}, tau:100e-15, F:0.4,
+  t:"a piece of gold. cold, boring, <b>300 K</b>. this panel is the <span class='r'>ion lattice</span> \u2014 the actual metal, the thing you can melt and ruin. nothing is happening, and that is the point: remember what undisturbed looks like."},
+ {n:"two thermometers", f:{Te:1,Tl:1}, tau:100e-15, F:0.4,
+  t:"now the strange part, and it is the whole file. a metal carries <b>TWO</b> thermal systems in the same place: the <span class='c'>electron gas</span> and the <span class='r'>ion lattice</span>. normally they share one temperature so nobody bothers. <b>for a few picoseconds they do not have to.</b>"},
+ {n:"the light lands", f:{Te:1,Tl:1,fire:1}, tau:100e-15, F:1.2,
+  t:"fire a pulse. light couples to <b>charges that can move</b>, so it is absorbed <span class='c'>entirely by the electrons</span>, inside one optical penetration depth (13 nm in gold). <span class='g'>the ions are never touched by the light. not once.</span>"},
+ {n:"the electrons boil", f:{Te:1,Tl:1,fire:1,scope:1}, tau:100e-15, F:2.0,
+  t:"the electron heat capacity is <b>Ce = \u03b3\u00b7Te</b> \u2014 tiny when cold. so a modest amount of energy throws Te to <b>tens of thousands of kelvin</b> almost instantly. watch the <span class='c'>cyan</span> curve leave the plot. the metal is not hot. the <i>electrons</i> are."},
+ {n:"the lattice is deaf", f:{Te:1,Tl:1,fire:1,scope:1}, tau:100e-15, F:2.0,
+  t:"electrons hand energy to ions at a <b>finite rate G</b>. the timescale is <b>\u03c4(e-ph) = Ce/G \u2248 0.92 ps</b> in gold \u2014 read it in the spec sheet. that is a <i>long</i> time. the <span class='r'>red</span> lattice curve is still flat while the electrons sit at 10^5 K. <span class='g'>two temperatures, one cubic nanometre.</span>"},
+ {n:"the race", f:{Te:1,Tl:1,fire:1,scope:1}, tau:100e-15, F:2.6,
+  t:"so it all reduces to one comparison: <b>your pulse length \u03c4</b> against <b>\u03c4(e-ph)</b>. the verdict box reads that ratio live. if the pulse ends before the ions are told, the energy leaves with the material. if not, it stays and spreads. <span class='g'>that ratio is the entire industry.</span>"},
+ {n:"cold ablation", f:{Te:1,Tl:1,fire:1,scope:1,part:1}, tau:10e-15, F:4.0,
+  t:"\u03c4 = <b>10 fs</b> \u2192 <b>0.01 \u03c4(e-ph)</b>. the pulse is finished a hundred times over before the lattice hears a thing. material leaves as plasma carrying its own enthalpy away. <span class='g'>no melt. no recast. no burr.</span> that is what surgeons and chipmakers are paying for."},
+ {n:"but the electrons run", f:{Te:1,Tl:1,fire:1,scope:1,part:1}, tau:10e-15, F:4.0,
+  t:"it is not free. while they are hot the electrons <b>diffuse</b> \u2014 De = ke/Ce \u2014 and in gold they carry heat about <b>100 nm</b> down before handing it over. read <span class='c'>heat diffusion in \u03c4</span>. <span class='r'>this is why gold has a higher threshold than steel</span>, and why a real crater is never as sharp as the brochure."},
+ {n:"the handover", f:{Te:1,Tl:1,fire:1,scope:1,part:1}, tau:300e-15, F:4.0,
+  t:"now watch the scope properly. <b>G(Te \u2212 Tl)</b> drains the <span class='c'>cyan</span> curve into the <span class='r'>red</span> one until they meet. after that there is one temperature and it is ordinary heat conduction. <b>everything interesting happened in the first picosecond.</b>"},
+ {n:"the lattice melts", f:{Te:1,Tl:1,fire:1,scope:1,part:1,melt:1}, tau:1e-12, F:4.7,
+  t:"\u03c4 = <b>1 ps</b> \u2248 \u03c4(e-ph). the two systems now lock together <i>during</i> the pulse. the gold contour appears: everything inside it went above <b>T melt</b>. that is your <b>heat affected zone</b>, and it is counted off the grid, not drawn."},
+ {n:"you are welding now", f:{Te:1,Tl:1,fire:1,scope:1,part:1,melt:1}, tau:30e-12, F:5.5,
+  t:"\u03c4 = <b>30 ps</b> \u2192 <b>32 \u03c4(e-ph)</b>. one temperature throughout. heat diffuses <i>while</i> you are still delivering it, so the pool spreads sideways, the edge rounds, burr forms, the HAZ swallows the feature. <span class='r'>same laser, same energy, same metal. only \u03c4 changed.</span>"},
+ {n:"and it was one ratio", f:{Te:1,Tl:1,fire:1,scope:1,part:1,melt:1}, tau:100e-15, F:4.0,
+  t:"that is the whole thing. two heat equations, one coupling constant, and the single question <b>\u03c4 / \u03c4(e-ph)</b>. drag <span class='g'>PULSE \u03c4</span> back and forth across the transition and watch clean machining become welding and back again. <span class='g'>now press LAB and go break it.</span>"}
+];
+function applyAge(){
+  var A=AGES[age]; AF=A.f||{};
+  if(A.tau!==undefined){ tau=A.tau;
+    var el=document.getElementById("sl-tau"); if(el) el.value=Math.round((Math.log10(tau)+15)*100);
+    document.getElementById("sv-tau").textContent=fmtT(tau); rescale(); }
+  if(A.F!==undefined){ Flu=A.F;
+    var fe=document.getElementById("sl-F"); if(fe) fe.value=Math.round(A.F*100);
+    document.getElementById("sv-F").textContent=A.F.toFixed(2); }
+  document.getElementById("a-num").textContent=(age<10?"0":"")+age+"/12";
+  document.getElementById("a-name").textContent=A.n;
+  document.getElementById("a-txt").innerHTML=A.t;
+  document.getElementById("a-next").textContent= age<12 ? ("next: "+AGES[age+1].n) : "complete \u00b7 press LAB and go break it";
+  document.getElementById("sl-master").value=Math.round(age/12*100);
+  var bar=document.getElementById("dots"); bar.innerHTML="";
+  for(var i=0;i<=12;i++){ var d=document.createElement("i");
+    d.className=(i===age)?"now":(i<age?"on":"");
+    d.onclick=(function(k){return function(){setAge(k);};})(i); bar.appendChild(d); }
+  running=false; train=false; alloc();
+  if(AF.fire) setTimeout(fire,140);
+}
+function setAge(n){ age=Math.max(0,Math.min(12,n)); applyAge(); }
+function stepAge(d){ setAge(age+d); }
+function onMaster(v){ setAge(Math.round(v/100*12)); }
+function setMode(m){ MODE=m;
+  document.getElementById("m-atel").classList.toggle("active",m==="atelier");
+  document.getElementById("m-lab").classList.toggle("active",m==="lab");
+  document.getElementById("atel").style.display=(m==="atelier")?"block":"none";
+  if(m==="lab"){ AF={Te:1,Tl:1,scope:1,part:1,melt:1}; } else { applyAge(); }
+}
+
+// ---- controls ----
+var tau=100e-15;                   // pulse duration (FWHM) [s]   <-- THE slider
+var Flu=1.5;                       // fluence [J/cm^2]
+var w0=1.2e-6;                     // spot radius (1/e^2) [m]
+var repRate=100e3;                 // rep rate [Hz]  (spec-sheet only, see K6)
+var SUB=140, subEff=140, SPIN=true;
+
+// ---- grid ----
+var NR=120, NZ=90;                 // lateral x depth cells
+var Te,Tl,Ue,solid,ablatedCol,UMIN;
+var dx,dz,dt,De,tep,winT,srcNorm;
+var running=false, train=false, pulseT=0, pulseN=0, simT=0;
+var craterDepth=0, hazDepth=0, TeMax=300, TlMax=300;
+var hist=[], HISTMAX=420;
+
+function alloc(){
+  Te=new Float32Array(NR*NZ); Tl=new Float32Array(NR*NZ); Ue=new Float32Array(NR*NZ);
+  solid=new Uint8Array(NR*NZ); ablatedCol=new Int32Array(NR);
+  UMIN=M.g*(T0*0.5)*(T0*0.5)/2;
+  var u0=M.g*T0*T0/2;
+  for(var k=0;k<NR*NZ;k++){Te[k]=T0;Tl[k]=T0;Ue[k]=u0;solid[k]=1;}
+  hist=[]; simT=0; pulseN=0; craterDepth=0; hazDepth=0; TeMax=T0; TlMax=T0;
+}
+function ix(i,j){return j*NR+i;}
+
+// ---- electron thermal conductivity, ANISIMOV-RETHFELD saturating form ----
+// The textbook ke = ke0*Te/Tl is only valid for Te << T_Fermi. At Te = 25 kK it
+// predicts ~100x the true conductivity, which flushes the energy uselessly deep
+// and destroys the ablation threshold. This saturating form is the standard fix;
+// we normalise it so ke(300,300) reproduces the tabulated room-temperature value.
+var keScale=1;
+function keFun(te,tl){
+  var qe=te/M.TF, ql=tl/M.TF, q2=qe*qe;
+  var num=Math.pow(q2+0.16,1.25)*(q2+0.44)*qe;
+  var den=Math.sqrt(q2+0.092)*(q2+0.16*ql);
+  return keScale*num/den;
+}
+function calibrateKe(){
+  var q=T0/M.TF, q2=q*q;
+  var num=Math.pow(q2+0.16,1.25)*(q2+0.44)*q;
+  var den=Math.sqrt(q2+0.092)*(q2+0.16*q);
+  keScale=M.ke0/(num/den);
+}
+
+// ---- geometry & timestep from the physics (the ruler follows the pulse) ----
+function rescale(){
+  calibrateKe();
+  De = M.ke0/(M.g*T0);                       // max electron diffusivity  [m^2/s]
+  var Dl = M.ke0/M.Cl;                       // lattice thermal diffusivity
+  tep = M.g*T0/M.G;                          // electron-phonon coupling time
+  // WATCH WINDOW: the pulse, PLUS long enough for the electrons to hand over.
+  // A 100 fs pulse is over in 100 fs but the lattice only learns about it ~1 ps later.
+  winT = 5*tau + 10*tep;
+  // DOMAIN: optical skin + electron heat penetration (~sqrt(De*tep), the famous
+  // ~100 nm in gold) + lattice diffusion over the window.
+  var Lel = Math.sqrt(De*Math.min(winT,tep));
+  var Lla = Math.sqrt(Dl*winT);
+  var depth = 12*M.dpt + 2.5*(Lel+Lla);
+  dz = depth/NZ;
+  dx = (2.6*w0)/NR;
+  // explicit-diffusion stability (2D, anisotropic) + coupling stability
+  var dtDiff = 0.7/(2*De*(1/(dx*dx)+1/(dz*dz)));
+  var dtCoup = 0.4*Math.min(M.g*T0/M.G, M.Cl/M.G);
+  dt = Math.min(dtDiff,dtCoup);
+  // discrete Beer-Lambert normalisation: sum_j exp(-j dz/delta) dz/delta must equal 1,
+  // or we silently deposit more energy than the fluence dial says. (K1: no free energy.)
+  var acc=0; for(var q=0;q<NZ;q++) acc += Math.exp(-q*dz/M.dpt)*dz/M.dpt;
+  srcNorm = 1/acc;
+  document.getElementById("s-grid").textContent=(dz*1e9).toFixed(1)+" x "+(dx*1e9).toFixed(0)+" nm";
+}
+
+// ---- the pulse: Gaussian in time, normalised so integral = 1 ----
+function gpulse(t){
+  var t0=2.2*tau, a=4*Math.LN2/(tau*tau);
+  return Math.sqrt(a/Math.PI)*Math.exp(-a*(t-t0)*(t-t0));
+}
+
+function fire(){ if(running)return; running=true; pulseT=0; pulseN++; }
+function toggleTrain(){ train=!train; document.getElementById("b-train").classList.toggle("active",train); if(train&&!running)fire(); }
+
+// ---- one TTM substep ----
+function substep(){
+  var Fjm2 = Flu*1e4;                              // J/cm^2 -> J/m^2
+  var src = (1-M.R)*Fjm2*gpulse(pulseT)/M.dpt*srcNorm; // W/m^3 prefactor (normalised)
+  var xc=(NR-1)/2;
+  // surface index per column (top solid cell) -- the beam only reaches the surface
+  for(var i=0;i<NR;i++){
+    var xr=(i-xc)*dx;
+    var beam=Math.exp(-2*xr*xr/(w0*w0));
+    var j0=ablatedCol[i];
+    for(var j=j0;j<NZ;j++){
+      var k=ix(i,j); if(!solid[k])continue;
+      var zdep=(j-j0)*dz;
+      var S=src*beam*Math.exp(-zdep/M.dpt);
+      // --- electron conduction (variable ke, arithmetic face mean) ---
+      var te=Te[k], tl=Tl[k];
+      var kec=keFun(te,tl);
+      var lap=0;
+      if(i>0   && solid[k-1]) { var kf=0.5*(kec+keFun(Te[k-1],Tl[k-1])); lap+=kf*(Te[k-1]-te)/(dx*dx); }
+      if(i<NR-1&& solid[k+1]) { var kf2=0.5*(kec+keFun(Te[k+1],Tl[k+1])); lap+=kf2*(Te[k+1]-te)/(dx*dx); }
+      if(j>j0  && solid[k-NR]){ var kf3=0.5*(kec+keFun(Te[k-NR],Tl[k-NR])); lap+=kf3*(Te[k-NR]-te)/(dz*dz); }
+      if(j<NZ-1&& solid[k+NR]){ var kf4=0.5*(kec+keFun(Te[k+NR],Tl[k+NR])); lap+=kf4*(Te[k+NR]-te)/(dz*dz); }
+      // ENERGY FORM. Ce = gamma*Te is strongly temperature dependent, so stepping
+      // dTe = S/Ce*dt with Ce at the OLD Te overshoots badly when the metal is cold.
+      // Integrate the electron INTERNAL ENERGY u = gamma*Te^2/2 (exact for this Ce)
+      // and recover Te = sqrt(2u/gamma). No overshoot, no stiff-source blow-up.
+      var coup=M.G*(te-tl);
+      var u=Ue[k] + (lap - coup + S)*dt;
+      if(u<UMIN)u=UMIN;
+      Ue[k]=u; Te[k]=Math.sqrt(2*u/M.g);
+      Tl[k]=tl + coup/M.Cl*dt;
+      if(Tl[k]<T0*0.5)Tl[k]=T0*0.5;
+    }
+  }
+  pulseT+=dt; simT+=dt;
+}
+
+// ---- ablation: lattice above the critical temperature leaves as plasma ----
+function ablate(){
+  for(var i=0;i<NR;i++){
+    var j=ablatedCol[i];
+    while(j<NZ-1 && Tl[ix(i,j)]>M.Ta){ var kk=ix(i,j); solid[kk]=0; Te[kk]=T0; Tl[kk]=T0; Ue[kk]=M.g*T0*T0/2; j++; }
+    ablatedCol[i]=j;
+  }
+}
+// ---- measure, never type (K1) ----
+function measure(){
+  var te=0,tl=0,haz=0,cmax=0;
+  for(var i=0;i<NR;i++){
+    if(ablatedCol[i]>cmax)cmax=ablatedCol[i];
+    for(var j=ablatedCol[i];j<NZ;j++){var k=ix(i,j); if(!solid[k])continue;
+      if(Te[k]>te)te=Te[k]; if(Tl[k]>tl)tl=Tl[k];
+      if(Tl[k]>M.Tm && j>haz)haz=j; }
+  }
+  TeMax=te; TlMax=tl; craterDepth=cmax*dz; hazDepth=Math.max(0,(haz-cmax))*dz;
+}
+
+// ---- main step ----
+function stepSim(){
+  if(!running)return;
+  for(var s=0;s<subEff;s++){
+    substep();
+    if((s&7)===0) ablate();
+    if(pulseT>winT){
+      running=false; ablate(); measure();
+      if(train){ setTimeout(fire,120); }
+      break;
+    }
+  }
+  ablate(); measure();
+  // history for the oscilloscope: surface of the centre column
+  var ic=(NR/2)|0, jc=ablatedCol[ic], kc=ix(ic,Math.min(NZ-1,jc));
+  hist.push({t:pulseT, te:Te[kc], tl:Tl[kc], p:gpulse(pulseT)});
+  if(hist.length>HISTMAX)hist.shift();
+}
+
+// ============================================================================
+// render
+// ============================================================================
+var SX,SY,SW,SH;            // stage rect (right of rail)
+function colTe(v){ // electrons: black -> blue -> cyan -> white
+  var t=Math.max(0,Math.min(1,(v-T0)/(18000-T0)));
+  var r=Math.pow(t,2.2)*255, g=Math.pow(t,1.1)*230, b=60+Math.pow(t,0.55)*195;
+  return "rgb("+(r|0)+","+(g|0)+","+((b*Math.min(1,t*6+0.06))|0)+")";
+}
+function colTl(v){ // lattice: black -> deep red -> orange -> gold -> white
+  var t=Math.max(0,Math.min(1,(v-T0)/(M.Ta-T0)));
+  var r=40+Math.pow(t,0.5)*215, g=Math.pow(t,1.7)*210, b=Math.pow(t,3.4)*220;
+  return "rgb("+(r|0)+","+(g|0)+","+(b|0)+")";
+}
+function sealed(px,py,pw,ph,label){
+  ctx.fillStyle="rgba(9,7,18,0.5)";ctx.fillRect(px,py,pw,ph);
+  ctx.strokeStyle="rgba(60,40,90,0.25)";ctx.setLineDash([3,5]);ctx.lineWidth=1;
+  ctx.strokeRect(px+.5,py+.5,pw-1,ph-1);ctx.setLineDash([]);
+  ctx.textAlign="center";ctx.font="9px ui-monospace,monospace";ctx.fillStyle="rgba(150,130,190,0.28)";
+  ctx.fillText(label,px+pw/2,py+ph/2-4);
+  ctx.font="8px ui-monospace,monospace";ctx.fillStyle="rgba(150,130,190,0.18)";
+  ctx.fillText("\u2014 not yet \u2014",px+pw/2,py+ph/2+10);ctx.textAlign="left";
+}
+function drawPanel(px,py,pw,ph,field,colf,label,sub){
+  var cw=pw/NR, ch=ph/NZ;
+  ctx.fillStyle="rgba(10,7,20,0.75)"; ctx.fillRect(px,py,pw,ph);
+  for(var j=0;j<NZ;j++)for(var i=0;i<NR;i++){var k=ix(i,j);
+    if(!solid[k])continue;
+    ctx.fillStyle=colf(field[k]);
+    ctx.fillRect(px+i*cw, py+j*ch, cw+0.7, ch+0.7);
+  }
+  // melt contour (gold) on the lattice panel
+  if(field===Tl && (MODE==="lab"||AF.melt)){ ctx.strokeStyle="rgba(255,215,0,0.55)"; ctx.lineWidth=1; ctx.beginPath();
+    for(var i=0;i<NR;i++){ var jm=-1;
+      for(var j=ablatedCol[i];j<NZ;j++){ if(solid[ix(i,j)]&&Tl[ix(i,j)]>M.Tm)jm=j; }
+      if(jm>=0){var x=px+(i+0.5)*cw,y=py+(jm+1)*ch; i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);} }
+    ctx.stroke(); }
+  ctx.strokeStyle="rgba(80,50,120,0.4)";ctx.lineWidth=1;ctx.strokeRect(px,py,pw,ph);
+  ctx.textAlign="left";ctx.font="bold 9px ui-monospace,monospace";
+  ctx.fillStyle=(field===Te)?"#35e0c8":"#ff9a5c";
+  ctx.fillText(label,px+5,py+12);
+  ctx.font="8px ui-monospace,monospace";ctx.fillStyle="rgba(220,228,240,0.4)";
+  ctx.fillText(sub,px+5,py+23);
+}
+function drawScope(px,py,pw,ph){
+  ctx.fillStyle="rgba(10,7,20,0.75)";ctx.fillRect(px,py,pw,ph);
+  ctx.strokeStyle="rgba(80,50,120,0.4)";ctx.strokeRect(px,py,pw,ph);
+  ctx.textAlign="left";ctx.font="bold 9px ui-monospace,monospace";ctx.fillStyle="#cc44ff";
+  ctx.fillText("THE DECOUPLING \u00b7 surface T vs time",px+5,py+12);
+  if(hist.length<2)return;
+  var TMAX=Math.max(2000,TeMax*1.05), tmax=winT;
+  var X=function(t){return px+8+(t/tmax)*(pw-16);};
+  var Y=function(v){return py+ph-10-(v/TMAX)*(ph-34);};
+  // pulse envelope (gold, filled)
+  var pk=0; for(var i=0;i<hist.length;i++)if(hist[i].p>pk)pk=hist[i].p;
+  if(pk>0){ ctx.fillStyle="rgba(255,215,0,0.13)"; ctx.beginPath(); ctx.moveTo(X(hist[0].t),py+ph-10);
+    for(var i=0;i<hist.length;i++)ctx.lineTo(X(hist[i].t),py+ph-10-(hist[i].p/pk)*(ph-40));
+    ctx.lineTo(X(hist[hist.length-1].t),py+ph-10); ctx.fill(); }
+  // Te (cyan)
+  ctx.strokeStyle="#35e0c8";ctx.lineWidth=1.4;ctx.beginPath();
+  for(var i=0;i<hist.length;i++){var x=X(hist[i].t),y=Y(hist[i].te);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);}ctx.stroke();
+  // Tl (red)
+  ctx.strokeStyle="#ff6a5c";ctx.lineWidth=1.4;ctx.beginPath();
+  for(var i=0;i<hist.length;i++){var x=X(hist[i].t),y=Y(hist[i].tl);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);}ctx.stroke();
+  // melt line
+  var ym=Y(M.Tm); if(ym>py+20&&ym<py+ph){ctx.strokeStyle="rgba(255,215,0,0.35)";ctx.lineWidth=1;ctx.setLineDash([3,3]);
+    ctx.beginPath();ctx.moveTo(px+8,ym);ctx.lineTo(px+pw-8,ym);ctx.stroke();ctx.setLineDash([]);
+    ctx.fillStyle="rgba(255,215,0,0.5)";ctx.font="7px ui-monospace,monospace";ctx.fillText("T melt",px+pw-42,ym-3);}
+  ctx.font="8px ui-monospace,monospace";
+  ctx.fillStyle="#35e0c8";ctx.fillText("Te electrons",px+6,py+ph-2);
+  ctx.fillStyle="#ff6a5c";ctx.fillText("Tl lattice",px+86,py+ph-2);
+  ctx.fillStyle="rgba(255,215,0,0.55)";ctx.fillText("pulse",px+152,py+ph-2);
+  ctx.fillStyle="rgba(220,228,240,0.32)";ctx.textAlign="right";
+  ctx.fillText(fmtT(tmax)+" window \u00b7 "+(TMAX/1000).toFixed(0)+" kK full",px+pw-6,py+ph-2);
+  ctx.textAlign="left";
+}
+// the part: crater profile extruded into a groove, spinning
+var yaw=0;
+function drawPart(px,py,pw,ph){
+  ctx.fillStyle="rgba(10,7,20,0.75)";ctx.fillRect(px,py,pw,ph);
+  ctx.strokeStyle="rgba(80,50,120,0.4)";ctx.strokeRect(px,py,pw,ph);
+  ctx.textAlign="left";ctx.font="bold 9px ui-monospace,monospace";ctx.fillStyle="#ffd700";
+  ctx.fillText("THE PART \u00b7 the groove you cut",px+5,py+12);
+  var cx=px+pw/2, cy=py+ph*0.62, sc=Math.min(pw/(NR*1.5),ph/60);
+  var cs=Math.cos(yaw),sn=Math.sin(yaw);
+  var LAY=13;
+  for(var L=LAY-1;L>=0;L--){
+    var yy=(L-(LAY-1)/2)*7;
+    var dep=0.55+0.45*(1-L/LAY);
+    ctx.strokeStyle="rgba("+(140+80*dep|0)+","+(90+60*dep|0)+","+(190+50*dep|0)+","+(0.14+0.5*dep).toFixed(2)+")";
+    ctx.lineWidth=1; ctx.beginPath();
+    for(var i=0;i<NR;i++){
+      var xr=(i-(NR-1)/2)*1.0;
+      var d=ablatedCol[i];
+      var X=cx+(xr*cs - yy*sn)*sc*1.5;
+      var Y=cy+(xr*sn + yy*cs)*sc*0.45 + d*sc*1.25;
+      i===0?ctx.moveTo(X,Y):ctx.lineTo(X,Y);
+    }
+    ctx.stroke();
+  }
+  ctx.font="8px ui-monospace,monospace";ctx.fillStyle="rgba(220,228,240,0.4)";
+  ctx.fillText("depth "+fmtL(craterDepth)+" \u00b7 HAZ "+fmtL(hazDepth),px+5,py+ph-6);
+}
+
+function fmtT(s){ if(s<1e-12)return (s*1e15).toFixed(0)+" fs"; if(s<1e-9)return (s*1e12).toFixed(1)+" ps";
+  if(s<1e-6)return (s*1e9).toFixed(1)+" ns"; return (s*1e6).toFixed(1)+" \u00b5s"; }
+function fmtL(m){ if(m<1e-9)return (m*1e12).toFixed(0)+" pm"; if(m<1e-6)return (m*1e9).toFixed(1)+" nm";
+  if(m<1e-3)return (m*1e6).toFixed(2)+" \u00b5m"; return (m*1e3).toFixed(2)+" mm"; }
+function fmtSI(v,u){ var a=Math.abs(v);
+  if(a>=1e15)return (v/1e15).toFixed(2)+" P"+u; if(a>=1e12)return (v/1e12).toFixed(2)+" T"+u;
+  if(a>=1e9)return (v/1e9).toFixed(2)+" G"+u; if(a>=1e6)return (v/1e6).toFixed(2)+" M"+u;
+  if(a>=1e3)return (v/1e3).toFixed(2)+" k"+u; if(a>=1)return v.toFixed(2)+" "+u;
+  if(a>=1e-3)return (v*1e3).toFixed(2)+" m"+u; return (v*1e6).toFixed(2)+" \u00b5"+u; }
+
+function render(){
+  ctx.fillStyle="#050510"; ctx.fillRect(0,0,W,H);
+  var L=(W>820)?306:6;
+  SX=L+8; SY=10; SW=W-SX-14; SH=H-64-SY;
+  var colW=SW*0.585, gap=10;
+  var panH=(SH-gap)/2;
+  if(AF.Te) drawPanel(SX,SY,colW,panH,Te,colTe,"ELECTRON GAS \u00b7 Te",
+    "the pulse lands here first \u00b7 peak "+(TeMax/1000).toFixed(1)+" kK");
+  else sealed(SX,SY,colW,panH,"ELECTRON GAS \u00b7 Te");
+  if(AF.Tl) drawPanel(SX,SY+panH+gap,colW,panH,Tl,colTl,"ION LATTICE \u00b7 Tl",
+    "this is the metal you can damage \u00b7 peak "+(TlMax/1000).toFixed(2)+" kK");
+  else sealed(SX,SY+panH+gap,colW,panH,"ION LATTICE \u00b7 Tl");
+  var rx=SX+colW+gap, rw=SW-colW-gap;
+  if(AF.scope) drawScope(rx,SY,rw,SH*0.52); else sealed(rx,SY,rw,SH*0.52,"THE DECOUPLING");
+  if(AF.part) drawPart(rx,SY+SH*0.52+gap,rw,SH*0.48-gap); else sealed(rx,SY+SH*0.52+gap,rw,SH*0.48-gap,"THE PART");
+  // scale bars
+  ctx.font="7.5px ui-monospace,monospace";ctx.fillStyle="rgba(220,228,240,0.35)";ctx.textAlign="left";
+  ctx.fillText("\u2194 "+fmtL(NR*dx)+" wide",SX+5,SY+panH-6);
+  ctx.fillText("\u2195 "+fmtL(NZ*dz)+" deep",SX+5,SY+panH-16);
+  updateHUD();
+}
+
+// ---- HUD / spec sheet ----
+function updateHUD(){
+  document.getElementById("h-te").textContent=TeMax.toFixed(0);
+  document.getElementById("h-tl").textContent=TlMax.toFixed(0);
+  document.getElementById("h-np").textContent=pulseN;
+  document.getElementById("h-t").textContent=fmtT(simT);
+  var area=Math.PI*w0*w0;                 // 1/e^2 spot area [m^2]
+  var E=Flu*1e4*area;                     // pulse energy [J]
+  var I=Flu/tau;                          // W/cm^2
+  document.getElementById("s-I").textContent=fmtSI(I*1e4,"W/m\u00b2").replace("W/m\u00b2","W/m\u00b2")+"  ("+fmtSI(I,"W/cm\u00b2")+")";
+  document.getElementById("s-P").textContent=fmtSI(E/tau,"W");
+  document.getElementById("s-E").textContent=fmtSI(E,"J")+" \u00b7 "+fmtSI(E*repRate,"W");
+  var tep=M.g*T0/M.G;
+  document.getElementById("s-tep").textContent=fmtT(tep);
+  document.getElementById("s-Ld").textContent=fmtL(Math.sqrt((M.ke0/M.Cl)*tau));
+  // honest progress: a long pulse spends most of its window BEFORE the light arrives.
+  var pk=document.getElementById("h-prog");
+  if(running && winT>0){
+    var frac=Math.max(0,Math.min(1,pulseT/winT)), pc=(frac*100).toFixed(1);
+    var arrive=2.2*tau, left=Math.max(0,(winT-pulseT)/dt);
+    var bars=Math.round(frac*18), bar="\u2588".repeat(bars)+"\u2591".repeat(18-bars);
+    var phase = (pulseT<arrive*0.55) ? "<span style='color:#7a6a9a'>waiting for the pulse</span>"
+              : (pulseT<arrive*1.6) ? "<span style='color:#ffd700'>PULSE ARRIVING</span>"
+              : "<span style='color:#35e0c8'>electrons handing over</span>";
+    pk.innerHTML="<span class='g' style='letter-spacing:-1px'>"+bar+"</span> "+pc+"% \u00b7 "+phase;
+    document.getElementById("s-left").textContent=Math.round(left).toLocaleString()+" \u00b7 arrives "+fmtT(arrive);
+  } else if(!running){
+    pk.innerHTML="<span class='dim'>idle \u00b7 press FIRE</span>";
+    document.getElementById("s-left").textContent="\u2014";
+  }
+  var sEl=document.getElementById("s-sub");
+  sEl.innerHTML=SUB+" / <b style='color:"+(subEff<SUB?"#ff6a5c":"#7fff9f")+"'>"+subEff+"</b>"+
+    (subEff<SUB?" <span style='color:rgba(220,228,240,.3)'>throttled</span>":"");
+  document.getElementById("s-abl").textContent=fmtL(craterDepth);
+  document.getElementById("s-haz").textContent=fmtL(hazDepth);
+  // the verdict
+  var r=tau/tep, el=document.getElementById("verdict");
+  if(r<0.35){ el.style.borderColor="rgba(53,224,200,0.5)";
+    el.innerHTML="<b style='color:#35e0c8'>COLD ABLATION</b> <span style='color:rgba(220,228,240,.5)'>\u00b7 &tau; = "+r.toFixed(2)+" &tau;<sub>e-ph</sub></span><br>"+
+      "<span style='color:rgba(220,228,240,.55)'>the pulse is over before the lattice is told. material leaves as plasma. no melt, no recast.</span>"; }
+  else if(r<3){ el.style.borderColor="rgba(255,215,0,0.5)";
+    el.innerHTML="<b style='color:#ffd700'>TRANSITION</b> <span style='color:rgba(220,228,240,.5)'>\u00b7 &tau; \u2248 "+r.toFixed(2)+" &tau;<sub>e-ph</sub></span><br>"+
+      "<span style='color:rgba(220,228,240,.55)'>electrons and lattice are locking together. damage begins.</span>"; }
+  else { el.style.borderColor="rgba(255,106,92,0.5)";
+    el.innerHTML="<b style='color:#ff6a5c'>THERMAL \u00b7 you are welding</b> <span style='color:rgba(220,228,240,.5)'>\u00b7 &tau; = "+r.toFixed(0)+" &tau;<sub>e-ph</sub></span><br>"+
+      "<span style='color:rgba(220,228,240,.55)'>one temperature now. heat diffuses during the pulse: melt, burr, HAZ.</span>"; }
+}
+
+// ---- loop with the honest guard ----
+var avgMS=16;
+function frame(){
+  requestAnimationFrame(frame);
+  var t0=performance.now();
+  if(SPIN)yaw+=0.006;
+  try{
+    stepSim();
+    if(!isFinite(TeMax)||!isFinite(TlMax))throw new Error("diverged");
+    render();
+  }catch(e){
+    ctx.fillStyle="#050510";ctx.fillRect(0,0,W,H);
+    ctx.textAlign="center";ctx.fillStyle="rgba(255,106,92,0.85)";ctx.font="bold 13px ui-monospace,monospace";
+    ctx.fillText("\u2593 the field diverged \u2593",W/2,H/2);
+    ctx.fillStyle="rgba(255,180,120,0.6)";ctx.font="10px ui-monospace,monospace";
+    ctx.fillText("re-seeding \u00b7 the math is absolute, the compute is not",W/2,H/2+20);
+    alloc(); running=false;
+  }
+  var d=performance.now()-t0; avgMS=avgMS*0.9+d*0.1;
+  // THE GOVERNOR. dt is pinned by stability and is never touched -- the integration
+  // is bit-identical. subEff is pure SCHEDULING: how much sim-time we advance per
+  // wall-clock frame. Throttle it to keep the frame budget so the UI stays alive and
+  // you keep the slider. Blanking the screen here would be worse: this is a long
+  // integration you do not want to abort, you want to STEER.
+  if(running){
+    if(avgMS>30 && subEff>2) subEff=Math.max(2,Math.floor(subEff*0.82));
+    else if(avgMS<18 && subEff<SUB) subEff=Math.min(SUB,Math.ceil(subEff*1.12)+1);
+  }
+  var fps=Math.round(1000/Math.max(1,avgMS)),el=document.getElementById("h-fps");
+  el.textContent=fps; el.className=fps>=50?"fok":fps>=28?"fmid":"fbad";
+}
+
+
+// ============================================================================
+// THE 12 AGES -- after SMITHIUM's atelier. Each age sets the REAL tau and
+// fluence and re-solves; it is never a picture of the lesson. What the ages
+// gate is only WHAT IS DRAWN, so you meet one idea at a time.
+// The whole file is ONE RATIO hiding behind two coupled PDEs. We build it.
+// ============================================================================
+var MODE="atelier", age=0, AF={};
+var AGES=[
+ {n:"void", f:{},
+  t:"press <b>SPACE</b> or drag the reveal. we are going to build the reason femtosecond lasers work, one age at a time. at the end you will see it was never a wall of physics \u2014 it was <b>one ratio</b>."},
+ {n:"the metal at rest", f:{Tl:1}, tau:100e-15, F:0.4,
+  t:"a piece of gold. cold, boring, <b>300 K</b>. this panel is the <span class='r'>ion lattice</span> \u2014 the actual metal, the thing you can melt and ruin. nothing is happening, and that is the point: remember what undisturbed looks like."},
+ {n:"two thermometers", f:{Te:1,Tl:1}, tau:100e-15, F:0.4,
+  t:"now the strange part, and it is the whole file. a metal carries <b>TWO</b> thermal systems in the same place: the <span class='c'>electron gas</span> and the <span class='r'>ion lattice</span>. normally they share one temperature so nobody bothers. <b>for a few picoseconds they do not have to.</b>"},
+ {n:"the light lands", f:{Te:1,Tl:1,fire:1}, tau:100e-15, F:1.2,
+  t:"fire a pulse. light couples to <b>charges that can move</b>, so it is absorbed <span class='c'>entirely by the electrons</span>, inside one optical penetration depth (13 nm in gold). <span class='g'>the ions are never touched by the light. not once.</span>"},
+ {n:"the electrons boil", f:{Te:1,Tl:1,fire:1,scope:1}, tau:100e-15, F:2.0,
+  t:"the electron heat capacity is <b>Ce = \u03b3\u00b7Te</b> \u2014 tiny when cold. so a modest amount of energy throws Te to <b>tens of thousands of kelvin</b> almost instantly. watch the <span class='c'>cyan</span> curve leave the plot. the metal is not hot. the <i>electrons</i> are."},
+ {n:"the lattice is deaf", f:{Te:1,Tl:1,fire:1,scope:1}, tau:100e-15, F:2.0,
+  t:"electrons hand energy to ions at a <b>finite rate G</b>. the timescale is <b>\u03c4(e-ph) = Ce/G \u2248 0.92 ps</b> in gold \u2014 read it in the spec sheet. that is a <i>long</i> time. the <span class='r'>red</span> lattice curve is still flat while the electrons sit at 10^5 K. <span class='g'>two temperatures, one cubic nanometre.</span>"},
+ {n:"the race", f:{Te:1,Tl:1,fire:1,scope:1}, tau:100e-15, F:2.6,
+  t:"so it all reduces to one comparison: <b>your pulse length \u03c4</b> against <b>\u03c4(e-ph)</b>. the verdict box reads that ratio live. if the pulse ends before the ions are told, the energy leaves with the material. if not, it stays and spreads. <span class='g'>that ratio is the entire industry.</span>"},
+ {n:"cold ablation", f:{Te:1,Tl:1,fire:1,scope:1,part:1}, tau:10e-15, F:4.0,
+  t:"\u03c4 = <b>10 fs</b> \u2192 <b>0.01 \u03c4(e-ph)</b>. the pulse is finished a hundred times over before the lattice hears a thing. material leaves as plasma carrying its own enthalpy away. <span class='g'>no melt. no recast. no burr.</span> that is what surgeons and chipmakers are paying for."},
+ {n:"but the electrons run", f:{Te:1,Tl:1,fire:1,scope:1,part:1}, tau:10e-15, F:4.0,
+  t:"it is not free. while they are hot the electrons <b>diffuse</b> \u2014 De = ke/Ce \u2014 and in gold they carry heat about <b>100 nm</b> down before handing it over. read <span class='c'>heat diffusion in \u03c4</span>. <span class='r'>this is why gold has a higher threshold than steel</span>, and why a real crater is never as sharp as the brochure."},
+ {n:"the handover", f:{Te:1,Tl:1,fire:1,scope:1,part:1}, tau:300e-15, F:4.0,
+  t:"now watch the scope properly. <b>G(Te \u2212 Tl)</b> drains the <span class='c'>cyan</span> curve into the <span class='r'>red</span> one until they meet. after that there is one temperature and it is ordinary heat conduction. <b>everything interesting happened in the first picosecond.</b>"},
+ {n:"the lattice melts", f:{Te:1,Tl:1,fire:1,scope:1,part:1,melt:1}, tau:1e-12, F:4.7,
+  t:"\u03c4 = <b>1 ps</b> \u2248 \u03c4(e-ph). the two systems now lock together <i>during</i> the pulse. the gold contour appears: everything inside it went above <b>T melt</b>. that is your <b>heat affected zone</b>, and it is counted off the grid, not drawn."},
+ {n:"you are welding now", f:{Te:1,Tl:1,fire:1,scope:1,part:1,melt:1}, tau:30e-12, F:5.5,
+  t:"\u03c4 = <b>30 ps</b> \u2192 <b>32 \u03c4(e-ph)</b>. one temperature throughout. heat diffuses <i>while</i> you are still delivering it, so the pool spreads sideways, the edge rounds, burr forms, the HAZ swallows the feature. <span class='r'>same laser, same energy, same metal. only \u03c4 changed.</span>"},
+ {n:"and it was one ratio", f:{Te:1,Tl:1,fire:1,scope:1,part:1,melt:1}, tau:100e-15, F:4.0,
+  t:"that is the whole thing. two heat equations, one coupling constant, and the single question <b>\u03c4 / \u03c4(e-ph)</b>. drag <span class='g'>PULSE \u03c4</span> back and forth across the transition and watch clean machining become welding and back again. <span class='g'>now press LAB and go break it.</span>"}
+];
+function applyAge(){
+  var A=AGES[age]; AF=A.f||{};
+  if(A.tau!==undefined){ tau=A.tau;
+    var el=document.getElementById("sl-tau"); if(el) el.value=Math.round((Math.log10(tau)+15)*100);
+    document.getElementById("sv-tau").textContent=fmtT(tau); rescale(); }
+  if(A.F!==undefined){ Flu=A.F;
+    var fe=document.getElementById("sl-F"); if(fe) fe.value=Math.round(A.F*100);
+    document.getElementById("sv-F").textContent=A.F.toFixed(2); }
+  document.getElementById("a-num").textContent=(age<10?"0":"")+age+"/12";
+  document.getElementById("a-name").textContent=A.n;
+  document.getElementById("a-txt").innerHTML=A.t;
+  document.getElementById("a-next").textContent= age<12 ? ("next: "+AGES[age+1].n) : "complete \u00b7 press LAB and go break it";
+  document.getElementById("sl-master").value=Math.round(age/12*100);
+  var bar=document.getElementById("dots"); bar.innerHTML="";
+  for(var i=0;i<=12;i++){ var d=document.createElement("i");
+    d.className=(i===age)?"now":(i<age?"on":"");
+    d.onclick=(function(k){return function(){setAge(k);};})(i); bar.appendChild(d); }
+  running=false; train=false; alloc();
+  if(AF.fire) setTimeout(fire,140);
+}
+function setAge(n){ age=Math.max(0,Math.min(12,n)); applyAge(); }
+function stepAge(d){ setAge(age+d); }
+function onMaster(v){ setAge(Math.round(v/100*12)); }
+function setMode(m){ MODE=m;
+  document.getElementById("m-atel").classList.toggle("active",m==="atelier");
+  document.getElementById("m-lab").classList.toggle("active",m==="lab");
+  document.getElementById("atel").style.display=(m==="atelier")?"block":"none";
+  if(m==="lab"){ AF={Te:1,Tl:1,scope:1,part:1,melt:1}; } else { applyAge(); }
+}
+
+// ---- controls ----
+function setMat(k){ matKey=k; M=MATS[k];
+  ["Au","Cu","Al"].forEach(function(q){document.getElementById("m-"+q).classList.toggle("active",q===k);});
+  rescale(); alloc(); }
+function setTau(v){ tau=Math.pow(10,v/100-15); // slider 100..500 -> 10 fs .. 100 ps (spans tau_e-ph)
+  document.getElementById("sv-tau").textContent=fmtT(tau); rescale(); }
+function setF(v){ Flu=v; document.getElementById("sv-F").textContent=v.toFixed(2); }
+function setW(v){ w0=v*1e-6; document.getElementById("sv-w").textContent=v.toFixed(1); rescale(); }
+function setRep(v){ repRate=v*1e3; document.getElementById("sv-rep").textContent=v; }
+function setRes(v){ NR=v; NZ=Math.round(v*0.75); document.getElementById("sv-res").textContent=v; rescale(); alloc(); }
+function resetAll(){ train=false; running=false;
+  document.getElementById("b-train").classList.remove("active"); rescale(); alloc(); }
+
+// ---- K-laws + bow ----
+document.getElementById("klaws").innerHTML=
+ "<div class='kh'>what you are looking at</div>"+
+ "<p>Two panels, one material, two thermometers. The <b style='color:#35e0c8'>electron gas</b> takes the light; the <b style='color:#ff9a5c'>ion lattice</b> is the metal you can ruin. They exchange energy at a finite rate <span class='pur'>G</span>, so for a few picoseconds they are <b>different temperatures in the same place</b>. That gap is the entire industry.</p>"+
+ "<div class='kh'>the honesty (K-laws)</div>"+
+ "<p><b>K1 MEASURED, NOT TYPED.</b> Ablated depth, HAZ depth and peak temperatures are <b>counted off the grid</b> every frame. Delete cells and the readout changes.</p>"+
+ "<p><b>K2 REAL MODEL, REDUCED WORLD.</b> The solver is the genuine <span class='pur'>two-temperature model</span>, explicit finite differences. What it does <b>not</b> model: plasma expansion, Coulomb explosion, phase explosion, shock waves, recoil pressure, redeposition, or the vapour plume shielding later pulses. Real ablation has all of these.</p>"+
+ "<p><b>K3 THE ABLATION RULE IS A CARTOON.</b> A cell leaves when T<sub>l</sub> exceeds a critical temperature (~0.9&nbsp;T<sub>c</sub>). Real removal is phase explosion plus spallation, and the threshold is fluence-dependent. The <b>trend</b> is right; the absolute depth is indicative, not a machining spec.</p>"+
+ "<p><b>K4 THE RULER MOVES.</b> Grid spacing is recomputed from the physics (optical penetration depth + electron diffusion length), so <b>the scale bars change with &tau;</b>. Read them. A 100 fs frame is nanometres deep; a 100 ps frame is microns.</p>"+
+ "<p><b>K5 CONSTANTS VARY.</b> &gamma;, G, C<sub>l</sub>, k<sub>e</sub>, R and T<sub>c</sub> are literature values and differ by source, temperature, wavelength and surface finish (G for gold spans ~2\u20133&times;10<sup>16</sup>). Edit them; the lesson survives, because the lesson is the <b>ratio &tau;/&tau;<sub>e-ph</sub></b>.</p>"+
+ "<p><b>K6 REP RATE IS SPEC-SHEET ONLY.</b> It sets average power in the panel. Heat accumulation between pulses happens over &micro;s\u2013ms, which this solver cannot reach; TRAIN fires back-to-back, which <b>exaggerates</b> accumulation. Single-pulse physics is the honest part.</p>"+
+ "<p><b>K7 THE WALL, AND THE GOVERNOR.</b> <span style='color:#ff6a5c'>res</span> and <span style='color:#ff6a5c'>steps/f</span> are the compute knobs \u2014 you pay per cell per substep. <b>dt is pinned by the stability limits and is never adjusted</b>, so the integration is always exact. What <i>does</i> adapt is <b>steps/frame</b>: if a frame overruns ~30 ms the governor cuts it back and the panel shows <b>asked / running</b> so you can see it happening. That is scheduling, not physics \u2014 the pulse simply advances more slowly in wall-clock time. Earlier this file had no governor: at \u03c4 = 100 ps, res 200 and 600 steps/frame it issues <b>18 million cell-updates in one blocking chunk</b>, giving 0 fps and 3.7 s interaction latency \u2014 a lock-out, not a wall. A wall you can step back from; a lock-out takes the slider away. That was a real defect and it is fixed.</p>"+"<p><b>K8 A LONG PULSE IS MOSTLY WAITING.</b> The gaussian is centred at 2.2\u03c4, so at \u03c4 = 100 ps nothing glows until ~220 ps of simulated time \u2014 roughly 189,000 steps in. The progress bar exists because a black panel that is <i>working</i> looks exactly like a black panel that is <b>broken</b>, and the file must tell you which one it is.</p>"+
+ "<p><b>K9 THE ATELIER DRIVES THE REAL PARAMETERS.</b> Each of the twelve ages sets the <b>actual \u03c4 and fluence</b> and re-solves \u2014 it is never a picture of the lesson. Age 7 really runs at 10 fs; age 11 really runs at 30 ps. Same solver, same K-laws, same measured readouts. What the ages gate is only <b>what is drawn</b>, so you meet one idea at a time; a panel that has not arrived yet says <i>not yet</i> rather than pretending to be empty. Press <b>LAB</b> at any point and every control is yours again. <span class='cy'>After SMITHIUM's atelier: you do not hand them the finished thing, you build it in front of them.</span></p>"+"<div class='kh'>the bow</div>"+
+ "<p><b>Anisimov, Kapeliovich & Perel'man</b> (1974) \u2014 the two-temperature model itself \u00b7 <b>Kaganov, Lifshitz & Tanatarov</b> (1957) \u2014 electron-lattice relaxation \u00b7 <b>Strickland & Mourou</b> (chirped pulse amplification, Nobel 2018) \u2014 <i>without CPA there is no femtosecond machining at all</i> \u00b7 <b>Chichkov et al.</b> (1996) \u2014 the fs/ps/ns ablation comparison \u00b7 <b>Nolte et al.</b> (1997) \u2014 the logarithmic depth law \u00b7 <b>Zewail</b> (femtochemistry, Nobel 1999) \u00b7 <b>Gattass & Mazur</b> \u2014 fs micromachining \u00b7 and every process engineer who found the parameter window the hard way.</p>";
+
+// ---- boot ----
+function resize(){DPR=Math.min(2,window.devicePixelRatio||1);W=innerWidth;H=innerHeight;
+  cv.width=W*DPR;cv.height=H*DPR;cv.style.width=W+"px";cv.style.height=H+"px";ctx.setTransform(DPR,0,0,DPR,0,0);}
+addEventListener("resize",resize);
+addEventListener("keydown",function(e){
+  if(e.code==="Space"){ e.preventDefault(); if(MODE==="atelier"&&age<12) stepAge(1); else fire(); }
+  if(e.code==="ArrowRight"&&MODE==="atelier"){e.preventDefault();stepAge(1);}
+  if(e.code==="ArrowLeft"&&MODE==="atelier"){e.preventDefault();stepAge(-1);}
+});
+resize(); setTau(200); rescale(); alloc(); requestAnimationFrame(frame);
+</script>
+</body></html>
