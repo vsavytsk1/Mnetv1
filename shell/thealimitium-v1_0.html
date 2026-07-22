@@ -1,0 +1,475 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>THEALIMITIUM v1.0 &middot; c is not a speed &middot; it is the shape of causality</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{background:#050510;color:#e0e0e0;font-family:ui-monospace,"SF Mono",Menlo,monospace;
+  font-size:11px;overflow:hidden;height:100%;width:100%}
+canvas{display:block}
+#cv{position:fixed;inset:0;z-index:1}
+#rail{position:fixed;top:0;bottom:54px;left:0;width:302px;z-index:5;display:flex;flex-direction:column;
+  background:linear-gradient(to right,rgba(5,5,16,0.93) 0,rgba(5,5,16,0.82) 76%,rgba(5,5,16,0) 100%);
+  border-right:1px solid rgba(80,50,120,0.12);pointer-events:none}
+#hud{padding:11px 14px 4px;text-shadow:0 0 10px rgba(5,5,16,0.95)}
+#hud .title{font-size:13px;color:#cc44ff;letter-spacing:.16em;text-transform:uppercase;font-weight:bold}
+#hud .sub{font-size:8px;color:rgba(204,68,255,.55);letter-spacing:.05em;margin:2px 0 6px;text-transform:uppercase}
+#hud .beta{font-size:15px;color:#ffd700;font-weight:bold;font-variant-numeric:tabular-nums;letter-spacing:-0.01em}
+#hud .row{line-height:1.55;color:rgba(220,228,240,.5);font-size:10px;font-variant-numeric:tabular-nums}
+#hud .v{color:#cc44ff;font-weight:bold}#hud .g{color:#ffd700;font-weight:bold}#hud .c{color:#00d4ff;font-weight:bold}
+#hud .dim{color:rgba(220,228,240,.3)}
+#hud .hr{height:1px;background:rgba(204,68,255,.14);margin:5px 0}
+#epoch{margin:3px 14px 2px;padding:6px 8px;border-radius:3px;font-size:9.5px;line-height:1.45;
+  border:1px solid rgba(255,215,0,.35);background:rgba(20,14,4,.55)}
+#epoch b{font-size:10px;letter-spacing:.05em}
+#spec{padding:2px 14px 3px}
+#spec .sh{font-size:8px;text-transform:uppercase;letter-spacing:.1em;color:rgba(53,224,200,.6);margin:5px 0 2px}
+#spec .sr{display:flex;justify-content:space-between;font-size:9px;line-height:1.5;color:rgba(220,228,240,.55);font-variant-numeric:tabular-nums}
+#spec .sr .k{color:rgba(220,228,240,.34)}
+#spec .sr .g{color:#ffd700;font-weight:bold}#spec .sr .c{color:#00d4ff;font-weight:bold}#spec .sr .v{color:#cc44ff;font-weight:bold}
+#spec .sr .r{color:#ff6a5c;font-weight:bold}
+#klaws{flex:1;overflow-y:auto;padding:5px 14px 12px;pointer-events:auto;
+  -webkit-mask-image:linear-gradient(to bottom,#000 92%,transparent);mask-image:linear-gradient(to bottom,#000 92%,transparent)}
+#klaws .kh{font-size:8.5px;color:#35e0c8;text-transform:uppercase;letter-spacing:.12em;margin:7px 0 3px}
+#klaws p{font-size:8.5px;color:rgba(220,228,240,.42);line-height:1.5;margin-bottom:4px}
+#klaws b{color:#ffd700}#klaws .pur{color:#cc44ff}#klaws .cy{color:#00d4ff}
+#stamp{position:fixed;bottom:60px;right:12px;z-index:6;pointer-events:none;text-align:right}
+#stamp .s{font-size:8px;color:rgba(204,68,255,.26);letter-spacing:.07em;line-height:1.8}
+#stamp .s.g{color:rgba(255,215,0,.3)}
+#bar{position:fixed;bottom:0;left:0;right:0;z-index:10;background:rgba(5,5,16,0.97);
+  border-top:1px solid #221033;padding:5px 9px;display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.btn{background:#0b0814;color:#5a4a6a;border:1px solid #221033;border-radius:3px;padding:3px 8px;
+  font-family:inherit;font-size:9px;cursor:pointer;transition:.12s;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+.btn:hover{border-color:#cc44ff;color:#cc44ff}.btn.active{background:#cc44ff;color:#050510;border-color:#cc44ff}
+.btn.tg.active{background:#35e0c8;border-color:#35e0c8}
+.btn.rev{background:#ffd700;color:#050510;border-color:#ffd700;font-weight:bold}
+.sep{width:1px;height:15px;background:#221033}
+.lbl{color:rgba(220,228,240,.28);font-size:8px;text-transform:uppercase;letter-spacing:.05em}
+.slw{display:flex;align-items:center;gap:3px}
+.slw input{accent-color:#cc44ff;cursor:pointer;width:52px}
+#sl-n{width:210px;accent-color:#ffd700}
+.sv{font-size:8.5px;color:#cc44ff;min-width:26px;font-variant-numeric:tabular-nums;text-transform:none}
+#sv-n{color:#ffd700;font-weight:bold;min-width:56px}
+#reveal{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:30;
+  background:rgba(5,5,16,0.975);border:1px solid #ffd700;border-radius:8px;
+  padding:20px 26px;max-width:450px;display:none;box-shadow:0 0 60px rgba(255,215,0,0.1)}
+#reveal h2{color:#ffd700;font-size:14px;letter-spacing:.18em;margin-bottom:12px;text-align:center}
+#reveal .eq{font-size:10.5px;color:#00d4ff;margin:6px 0;line-height:1.7;font-variant-numeric:tabular-nums}
+#reveal .eq b{color:#ffd700}
+#reveal .desc{font-size:9.5px;color:rgba(220,228,240,.5);line-height:1.7;margin:11px 0}
+#reveal .desc b{color:#cc44ff}
+#reveal button{background:#ffd700;color:#050510;border:none;padding:6px 22px;border-radius:3px;
+  cursor:pointer;font-family:inherit;font-size:10px;text-transform:uppercase;letter-spacing:.1em;
+  margin-top:6px;display:block;margin-left:auto;margin-right:auto;font-weight:bold}
+</style></head><body>
+<canvas id="cv"></canvas>
+
+<div id="rail">
+  <div id="hud">
+    <span class="title">Thealimitium</span>
+    <div class="sub">c is not a speed &middot; it is the shape of causality</div>
+    <div class="beta" id="h-beta">0.9&nbsp;c</div>
+    <div class="row"><span class="dim">nines of c</span>&nbsp;<span class="g" id="h-n">1</span> <span class="dim">&middot; &gamma; =</span> <span class="v" id="h-gam">2.29</span></div>
+    <div class="hr"></div>
+    <div class="row"><span class="c" id="h-part">electron</span> <span class="dim">&middot; rest</span> <span class="c" id="h-rest">511 keV</span></div>
+    <div class="row"><span class="dim">kinetic energy</span>&nbsp;<span class="g" id="h-KE">—</span></div>
+  </div>
+  <div id="epoch">&mdash;</div>
+  <div id="spec">
+    <div class="sh">the price of the next nine</div>
+    <div class="sr"><span class="k">cost of one more nine</span><span class="r" id="s-next">&times;3.162 &middot; forever</span></div>
+    <div class="sr"><span class="k">Newton says you'd be done at</span><span class="v" id="s-newt">—</span></div>
+    <div class="sr"><span class="k">Einstein says you owe</span><span class="g" id="s-eins">—</span></div>
+    <div class="sr"><span class="k">still missing from c</span><span class="r" id="s-miss">—</span></div>
+    <div class="sh">what this energy reaches</div>
+    <div class="sr"><span class="k">temperature kT</span><span class="c" id="s-T">—</span></div>
+    <div class="sr"><span class="k">age of universe then</span><span class="c" id="s-t">—</span></div>
+    <div class="sh">the collective joules</div>
+    <div class="sr"><span class="k">in joules</span><span class="g" id="s-J">—</span></div>
+    <div class="sr"><span class="k">= humanity's yearly energy &times;</span><span class="v" id="s-hum">—</span></div>
+    <div class="sr"><span class="k">= the Sun, for</span><span class="v" id="s-sun">—</span></div>
+  </div>
+  <div id="klaws"></div>
+</div>
+
+<div id="stamp">
+  <div class="s">THEALIMITIUM v1.0</div>
+  <div class="s g">symmetry &middot; pay to break &middot; it answers</div>
+  <div class="s">you may approach &middot; never arrive</div>
+  <div class="s g">P=12 &middot; &chi;=2 &middot; spini &middot; always</div>
+</div>
+
+<div id="bar">
+  <span class="lbl">rider</span>
+  <button class="btn active" id="p-e" onclick="setP('e')">ELECTRON</button>
+  <button class="btn" id="p-p" onclick="setP('p')">PROTON</button>
+  <button class="btn" id="p-au" onclick="setP('au')">GOLD NUCLEUS</button>
+  <button class="btn" id="p-dust" onclick="setP('dust')">DUST 1&micro;g</button>
+  <button class="btn" id="p-you" onclick="setP('you')">YOU 70kg</button>
+  <div class="sep"></div>
+  <span class="lbl" style="color:#ffd70090">nines of c</span>
+  <input type="range" id="sl-n" min="1" max="2400" value="100" oninput="setN(+this.value/100)">
+  <span class="sv" id="sv-n">1.00</span>
+  <div class="sep"></div>
+  <button class="btn" onclick="jumpN(8.05)">LHC</button>
+  <button class="btn" onclick="jumpN(23.37)">OH-MY-GOD</button>
+  <div class="sep"></div>
+  <button class="btn tg active" id="tg-spin" onclick="SPIN=!SPIN;this.classList.toggle('active',SPIN)">SPINI</button>
+  <button class="btn tg active" id="tg-cone" onclick="SHOWC=!SHOWC;this.classList.toggle('active',SHOWC)">CONE</button>
+  <button class="btn tg active" id="tg-wall" onclick="SHOWW=!SHOWW;this.classList.toggle('active',SHOWW)">WALL</button>
+  <div class="sep"></div>
+  <button class="btn rev" onclick="showReveal()">REVEAL</button>
+</div>
+
+<div id="reveal">
+  <h2>YOU MAY APPROACH &middot; YOU MAY NOT ARRIVE</h2>
+  <div id="rev-body"></div>
+  <button onclick="document.getElementById('reveal').style.display='none'">I SEE IT</button>
+</div>
+
+<script>
+// ============================================================================
+// THEALIMITIUM v1.0 -- the limit, and what it costs.
+//
+// c is not a speed limit bolted onto the world. It is the CONVERSION FACTOR
+// between space and time, and the light cone is the shape of cause and effect.
+// Inside the cone: reachable. Outside: not merely difficult -- not connected.
+//
+// THE SLIDER IS THE FILE, and it is measured in NINES OF c.
+//   beta = 1 - 10^-n.  Then gamma = 10^(n/2)/sqrt(2), exactly.
+//   So EVERY ADDITIONAL NINE COSTS EXACTLY sqrt(10) = 3.162x MORE ENERGY.
+//   Forever. No discount, no end, no last nine. That IS the wall.
+//   Newton disagrees: he says half m c-squared and you are finished. He is
+//   wrong by an infinite amount, and the gap between the two curves is drawn.
+//
+// AND THE LADDER, which is the older story. Every structure we know was paid
+// for by a symmetry breaking as the universe cooled: electroweak at 246 GeV,
+// confinement at ~200 MeV, nuclei at ~1 MeV, atoms at ~0.3 eV. Nature paid on
+// the way DOWN. We build machines to climb back UP, and the readout tells you
+// honestly how far back your energy reaches: a temperature, and a moment.
+//
+// The LHC gets to ~10^-11 s after the Big Bang. A single cosmic ray -- the
+// Oh-My-God particle, 3.2x10^20 eV in one proton -- beat every machine we have
+// ever built by eight orders of magnitude. Bow accordingly.
+//
+// Pure Canvas 2D. Zero dependencies. chi=2 . P=12 . Built 2026-07-22.
+// ============================================================================
+
+var cv=document.getElementById("cv"), ctx=cv.getContext("2d"), W,H,DPR;
+
+// ---- constants (SI / eV) ----
+var C0=2.99792458e8, QE=1.602176634e-19, KB_EV=8.617333262e-5;
+var J_PER_EV=QE;
+var HUMAN_YEAR_J=6.0e20;          // world primary energy ~600 EJ/yr
+var SUN_W=3.828e26;               // solar luminosity [W]
+
+// ---- riders: rest energy in eV ----
+var PARTS={
+  e:   {n:"electron",     E0:510998.95},
+  p:   {n:"proton",       E0:938272088},
+  au:  {n:"gold nucleus", E0:197*931.49410242e6},
+  dust:{n:"dust, 1 \u00b5g",E0:1e-9*C0*C0/QE},
+  you: {n:"you, 70 kg",   E0:70*C0*C0/QE}
+};
+var pk="e", P=PARTS.e;
+
+// ---- state ----
+var nNines=1.0, SPIN=true, SHOWC=true, SHOWW=true, yaw=0.6, t0=0;
+
+function beta(){ return 1-Math.pow(10,-nNines); }
+function gamma(){ // exact, but computed stably from n (1-beta^2 = (1-b)(1+b))
+  var eps=Math.pow(10,-nNines);
+  return 1/Math.sqrt(eps*(2-eps));
+}
+function KE_eV(){ return (gamma()-1)*P.E0; }
+function KE_J(){ return KE_eV()*J_PER_EV; }
+function newton_eV(){ var b=beta(); return 0.5*P.E0*b*b; }   // 1/2 m v^2 in eV
+
+// ---- cosmology: energy -> temperature -> moment ----
+// radiation-dominated: t = 2.42/sqrt(g*) * (kT/MeV)^-2 seconds
+function cosmicTime(E_eV){
+  var MeV=E_eV/1e6; if(MeV<=0) return Infinity;
+  var g=(MeV>1e3)?106.75:(MeV>1?61.75:10.75);
+  return 2.42/Math.sqrt(g)/(MeV*MeV);
+}
+var EPOCHS=[
+  {E:1.22e28,n:"PLANCK",     d:"all four forces one thing. our physics stops here."},
+  {E:1e25,   n:"GRAND UNIFICATION", d:"the strong force separates. (theory, unconfirmed)"},
+  {E:2.46e11,n:"ELECTROWEAK BREAKING", d:"the Higgs field freezes. mass begins. the photon stays massless \u2014 which is why c is reachable by light at all."},
+  {E:2.0e8,  n:"QUARK CONFINEMENT", d:"quarks are locked into protons and neutrons. forever."},
+  {E:1.0e6,  n:"NUCLEOSYNTHESIS", d:"the first nuclei. helium is minted in three minutes."},
+  {E:0.8,    n:"MATTER-RADIATION EQUALITY", d:"gravity takes over. structure can begin."},
+  {E:0.26,   n:"RECOMBINATION", d:"electrons join nuclei. the fog clears, the CMB flies free. this is the oldest light."},
+  {E:2.35e-4,n:"TODAY",      d:"the CMB, cooled to 2.725 K by the expansion."}
+];
+function epochOf(E){
+  var best=EPOCHS[EPOCHS.length-1];
+  for(var i=0;i<EPOCHS.length;i++){ if(E>=EPOCHS[i].E){ best=EPOCHS[i]; break; } }
+  return best;
+}
+
+// ---- the ladder: what nature paid (above), what we paid (below) ----
+var OURS=[
+  {E:2.35e-4,n:"CMB photon"},
+  {E:1.55,   n:"800 nm \u00b7 the fs laser"},
+  {E:3.81,   n:"one gold bond"},
+  {E:13.6,   n:"ionise hydrogen"},
+  {E:1e5,    n:"X-ray tube 100 kV"},
+  {E:5.11e5, n:"electron mc\u00b2"},
+  {E:9.38e8, n:"proton mc\u00b2"},
+  {E:6.8e12, n:"LHC beam"},
+  {E:3.2e20, n:"Oh-My-God particle (NATURE'S, not ours)"}
+];
+
+// ============================================================================
+// render
+// ============================================================================
+function fmtE(E){ // eV with SI-ish prefixes
+  var a=Math.abs(E);
+  if(a>=1e18)return (E/1e18).toFixed(2)+" EeV"; if(a>=1e15)return (E/1e15).toFixed(2)+" PeV";
+  if(a>=1e12)return (E/1e12).toFixed(2)+" TeV"; if(a>=1e9)return (E/1e9).toFixed(2)+" GeV";
+  if(a>=1e6)return (E/1e6).toFixed(2)+" MeV";   if(a>=1e3)return (E/1e3).toFixed(2)+" keV";
+  if(a>=1)return E.toFixed(2)+" eV";            if(a>=1e-3)return (E*1e3).toFixed(2)+" meV";
+  return E.toExponential(2)+" eV"; }
+function fmtJ(J){ var a=Math.abs(J);
+  if(a>=1e15)return (J/1e15).toExponential(2).replace("e+","\u00d710^")+" PJ";
+  if(a>=1e9)return (J/1e9).toFixed(2)+" GJ"; if(a>=1e6)return (J/1e6).toFixed(2)+" MJ";
+  if(a>=1e3)return (J/1e3).toFixed(2)+" kJ"; if(a>=1)return J.toFixed(2)+" J";
+  return J.toExponential(2)+" J"; }
+function fmtT(s){ if(!isFinite(s))return "\u2014";
+  if(s<1e-30)return s.toExponential(1)+" s"; if(s<1e-12)return s.toExponential(1)+" s";
+  if(s<1)return s.toExponential(1)+" s"; if(s<3.16e7)return (s/86400).toFixed(1)+" days";
+  return (s/3.156e7).toExponential(1)+" yr"; }
+
+var ORX,ORY,PSC;
+function render(){
+  ctx.fillStyle="#050510";ctx.fillRect(0,0,W,H);
+  var L=(W>820)?308:6, sx=L, sw=W-L-8, sh=H-58;
+  var ladH=76, top=44;
+  var coneW = SHOWW ? sw*0.55 : sw;
+  if(SHOWC) drawCone(sx, top, coneW, sh-ladH-top);
+  if(SHOWW) drawWall(sx+coneW+8, top, sw-coneW-16, sh-ladH-top);
+  drawLadder(sx, sh-ladH+8, sw, ladH-16);
+  updateHUD();
+}
+
+// ---- the light cone: c as geometry ----
+function drawCone(rx,ry,rw,rh){
+  var cx=rx+rw*0.5, cy=ry+rh*0.56, S=Math.min(rw,rh)*0.40;
+  var pitch=0.42, cp=Math.cos(pitch), sp=Math.sin(pitch);
+  function P3(x,y,tt){ // x,y space ; tt time (up)
+    var cyw=Math.cos(yaw), syw=Math.sin(yaw);
+    var X=x*cyw - y*syw, Y=x*syw + y*cyw;
+    return {x:cx+X*S, y:cy - tt*S*0.92 + Y*S*sp, d:Y};
+  }
+  ctx.font="9px ui-monospace,monospace";ctx.textAlign="left";
+  ctx.fillStyle="#ffd700";ctx.fillText("THE LIGHT CONE \u00b7 the shape of cause and effect",rx+4,ry-16);
+  ctx.font="7.5px ui-monospace,monospace";ctx.fillStyle="rgba(220,228,240,.32)";
+  ctx.fillText("inside: reachable \u00b7 the surface: light itself \u00b7 outside: not connected",rx+4,ry-5);
+  // cone rings (future + past)
+  for(var s=-1;s<=1;s+=2){
+    for(var k=1;k<=5;k++){
+      var tt=s*k/5, r=Math.abs(tt);
+      ctx.beginPath();
+      for(var i=0;i<=48;i++){ var a=i/48*6.2832, p=P3(r*Math.cos(a),r*Math.sin(a),tt);
+        i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y); }
+      ctx.strokeStyle=(s>0)?"rgba(255,215,0,"+(0.07+0.10*(k/5)).toFixed(2)+")"
+                           :"rgba(120,90,170,"+(0.05+0.07*(k/5)).toFixed(2)+")";
+      ctx.lineWidth=1;ctx.stroke();
+    }
+  }
+  // cone generators (null rays = light)
+  for(var i=0;i<16;i++){
+    var a=i/16*6.2832;
+    var A=P3(0,0,0), B=P3(Math.cos(a),Math.sin(a),1), C=P3(Math.cos(a),Math.sin(a),-1);
+    ctx.strokeStyle="rgba(255,215,0,0.16)";ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(A.x,A.y);ctx.lineTo(B.x,B.y);ctx.stroke();
+    ctx.strokeStyle="rgba(120,90,170,0.10)";
+    ctx.beginPath();ctx.moveTo(A.x,A.y);ctx.lineTo(C.x,C.y);ctx.stroke();
+  }
+  // time axis
+  var T0=P3(0,0,-1.05), T1=P3(0,0,1.05);
+  ctx.strokeStyle="rgba(120,140,180,0.28)";ctx.setLineDash([2,3]);
+  ctx.beginPath();ctx.moveTo(T0.x,T0.y);ctx.lineTo(T1.x,T1.y);ctx.stroke();ctx.setLineDash([]);
+  ctx.fillStyle="rgba(220,228,240,0.3)";ctx.font="7.5px ui-monospace,monospace";ctx.textAlign="center";
+  ctx.fillText("time",T1.x,T1.y-6);
+  // YOUR worldline: tilt = beta. at beta->1 it lies ON the cone but never crosses.
+  var b=beta();
+  var Wp=P3(b,0,1);
+  var O=P3(0,0,0);
+  ctx.strokeStyle="#00d4ff";ctx.lineWidth=2.2;
+  ctx.beginPath();ctx.moveTo(O.x,O.y);ctx.lineTo(Wp.x,Wp.y);ctx.stroke();
+  ctx.fillStyle="#00d4ff";ctx.beginPath();ctx.arc(Wp.x,Wp.y,3.4,0,6.2832);ctx.fill();
+  // the sliver you never close
+  var Np=P3(1,0,1);
+  ctx.strokeStyle="rgba(255,106,92,0.85)";ctx.lineWidth=2;
+  ctx.beginPath();ctx.moveTo(Wp.x,Wp.y);ctx.lineTo(Np.x,Np.y);ctx.stroke();
+  ctx.textAlign="left";ctx.font="7.5px ui-monospace,monospace";
+  ctx.fillStyle="rgba(255,106,92,0.8)";
+  var gap=Math.pow(10,-nNines);
+  ctx.fillText("the gap you never close: "+gap.toExponential(1),Math.min(Np.x+6,rx+rw-140),Np.y-4);
+  ctx.fillStyle="#00d4ff";ctx.fillText("you",Wp.x+6,Wp.y+10);
+  ctx.fillStyle="rgba(255,215,0,0.75)";ctx.fillText("light",Np.x+6,Np.y+11);
+}
+
+// ---- the wall: energy vs nines. a straight line that never stops climbing ----
+function drawWall(rx,ry,rw,rh){
+  ctx.font="9px ui-monospace,monospace";ctx.textAlign="left";
+  ctx.fillStyle="#ff6a5c";ctx.fillText("THE WALL \u00b7 every nine costs \u00d73.162",rx+4,ry-16);
+  ctx.font="7.5px ui-monospace,monospace";ctx.fillStyle="rgba(220,228,240,.32)";
+  ctx.fillText("gold: Einstein \u00b7 violet: Newton's finite answer",rx+4,ry-5);
+  ctx.fillStyle="rgba(10,7,20,0.55)";ctx.fillRect(rx,ry,rw,rh);
+  ctx.strokeStyle="rgba(80,50,120,0.3)";ctx.strokeRect(rx,ry,rw,rh);
+  var NMAX=24;
+  var loMax=Math.log10((1/Math.sqrt(2*Math.pow(10,-NMAX)))*P.E0);
+  var loMin=Math.log10(Math.max(1e-6,0.5*P.E0*1e-2));
+  function X(n){return rx+8+(n/NMAX)*(rw-16);}
+  function Y(logE){return ry+rh-14-((logE-loMin)/(loMax-loMin))*(rh-26);}
+  // gridlines
+  ctx.font="7px ui-monospace,monospace";
+  for(var d=Math.ceil(loMin);d<=Math.floor(loMax);d+=Math.max(1,Math.round((loMax-loMin)/7))){
+    var y=Y(d); if(y<ry+8||y>ry+rh-8)continue;
+    ctx.strokeStyle="rgba(80,50,120,0.13)";ctx.beginPath();ctx.moveTo(rx+8,y);ctx.lineTo(rx+rw-8,y);ctx.stroke();
+    ctx.fillStyle="rgba(220,228,240,0.2)";ctx.textAlign="left";ctx.fillText("1e"+d+" eV",rx+10,y-2);
+  }
+  // Newton: KE = 1/2 m v^2 -> flattens at 0.5*E0. He thinks you finish.
+  ctx.strokeStyle="rgba(204,68,255,0.6)";ctx.lineWidth=1.5;ctx.beginPath();
+  for(var i=0;i<=120;i++){ var n=1+(NMAX-1)*(i/120), bb=1-Math.pow(10,-n);
+    var e=0.5*P.E0*bb*bb; var y=Y(Math.log10(e));
+    i===0?ctx.moveTo(X(n),y):ctx.lineTo(X(n),y); }
+  ctx.stroke();
+  // Einstein: (gamma-1)mc^2 -> a straight climbing line, forever
+  ctx.strokeStyle="#ffd700";ctx.lineWidth=1.8;ctx.beginPath();
+  for(var i=0;i<=120;i++){ var n=1+(NMAX-1)*(i/120), eps=Math.pow(10,-n);
+    var g=1/Math.sqrt(eps*(2-eps)); var e=(g-1)*P.E0; var y=Y(Math.log10(e));
+    i===0?ctx.moveTo(X(n),y):ctx.lineTo(X(n),y); }
+  ctx.stroke();
+  // landmarks
+  [[8.05,"LHC"],[23.37,"OMG ray"]].forEach(function(m){
+    if(m[0]>NMAX)return; var x=X(m[0]);
+    ctx.strokeStyle="rgba(53,224,200,0.3)";ctx.setLineDash([2,3]);ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(x,ry+8);ctx.lineTo(x,ry+rh-14);ctx.stroke();ctx.setLineDash([]);
+    ctx.fillStyle="rgba(53,224,200,0.6)";ctx.textAlign="center";ctx.font="7px ui-monospace,monospace";
+    ctx.fillText(m[1],x,ry+rh-4); });
+  // you
+  var xu=X(Math.min(NMAX,nNines)), yu=Y(Math.log10(Math.max(1e-9,KE_eV())));
+  ctx.strokeStyle="rgba(0,212,255,0.5)";ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(xu,ry+8);ctx.lineTo(xu,ry+rh-14);ctx.stroke();
+  ctx.fillStyle="#00d4ff";ctx.beginPath();ctx.arc(xu,Math.max(ry+6,Math.min(ry+rh-8,yu)),4,0,6.2832);ctx.fill();
+  ctx.textAlign="left";ctx.font="7.5px ui-monospace,monospace";ctx.fillStyle="rgba(220,228,240,0.3)";
+  ctx.fillText("nines of c \u2192",rx+8,ry+rh-4);
+}
+
+// ---- the cosmic ladder: nature paid coming down, we pay climbing back ----
+function drawLadder(rx,ry,rw,rh){
+  var LO=-4, HI=28;                            // log10 eV
+  var x0=rx+8, x1=rx+rw-8, y=ry+rh*0.52;
+  function X(E){return x0+(Math.log10(E)-LO)/(HI-LO)*(x1-x0);}
+  ctx.strokeStyle="rgba(80,50,120,0.4)";ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(x0,y);ctx.lineTo(x1,y);ctx.stroke();
+  ctx.font="7px ui-monospace,monospace";ctx.textAlign="center";
+  for(var d=LO;d<=HI;d+=4){var x=X(Math.pow(10,d));
+    ctx.strokeStyle="rgba(80,50,120,0.3)";ctx.beginPath();ctx.moveTo(x,y-3);ctx.lineTo(x,y+3);ctx.stroke();
+    ctx.fillStyle="rgba(220,228,240,0.22)";ctx.fillText("1e"+d,x,y+11);}
+  // nature, above
+  ctx.textAlign="left";
+  for(var i=0;i<EPOCHS.length;i++){var e=EPOCHS[i],x=X(e.E);if(x<x0-4||x>x1+4)continue;
+    ctx.strokeStyle="rgba(255,215,0,0.4)";ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(x,y-4);ctx.lineTo(x,y-15);ctx.stroke();
+    ctx.fillStyle="rgba(255,215,0,0.5)";ctx.font="6.5px ui-monospace,monospace";
+    ctx.save();ctx.translate(x,y-17);ctx.rotate(-0.42);ctx.fillText(e.n,0,0);ctx.restore();}
+  // us, below
+  for(var i=0;i<OURS.length;i++){var o=OURS[i],x=X(o.E);if(x<x0-4||x>x1+4)continue;
+    ctx.strokeStyle="rgba(0,212,255,0.35)";ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(x,y+4);ctx.lineTo(x,y+15);ctx.stroke();
+    ctx.fillStyle="rgba(0,212,255,0.45)";ctx.font="6.5px ui-monospace,monospace";
+    ctx.save();ctx.translate(x,y+18);ctx.rotate(0.42);ctx.fillText(o.n,0,0);ctx.restore();}
+  // you
+  var E=Math.max(1e-6,KE_eV()), xu=Math.max(x0-4,Math.min(x1+4,X(E)));
+  ctx.strokeStyle="rgba(255,106,92,0.9)";ctx.lineWidth=2;
+  ctx.beginPath();ctx.moveTo(xu,y-22);ctx.lineTo(xu,y+22);ctx.stroke();
+  ctx.fillStyle="#ff6a5c";ctx.textAlign="center";ctx.font="bold 7.5px ui-monospace,monospace";
+  ctx.fillText("YOU",xu,y-25);
+  ctx.textAlign="left";ctx.fillStyle="rgba(255,215,0,0.4)";ctx.font="7px ui-monospace,monospace";
+  ctx.fillText("\u2191 what nature paid, cooling down",x0,ry+4);
+  ctx.fillStyle="rgba(0,212,255,0.4)";
+  ctx.fillText("\u2193 what we paid, climbing back",x0,ry+rh-1);
+}
+
+// ---- HUD ----
+function updateHUD(){
+  var b=beta(), g=gamma(), ke=KE_eV(), keJ=KE_J();
+  var nines="0."+"9".repeat(Math.max(1,Math.floor(nNines)));
+  document.getElementById("h-beta").textContent=(nNines>=1?nines:b.toFixed(3))+" c";
+  document.getElementById("h-n").textContent=nNines.toFixed(2);
+  document.getElementById("h-gam").textContent=(g>=1e5)?g.toExponential(2):g.toFixed(2);
+  document.getElementById("h-part").textContent=P.n;
+  document.getElementById("h-rest").textContent=fmtE(P.E0);
+  document.getElementById("h-KE").textContent=fmtE(ke);
+  document.getElementById("s-newt").textContent=fmtE(newton_eV());
+  document.getElementById("s-eins").textContent=fmtE(ke);
+  document.getElementById("s-miss").textContent=Math.pow(10,-nNines).toExponential(1)+" c";
+  var T=ke/KB_EV, tt=cosmicTime(ke);
+  document.getElementById("s-T").textContent=T.toExponential(2)+" K";
+  document.getElementById("s-t").textContent=fmtT(tt);
+  document.getElementById("s-J").textContent=fmtJ(keJ);
+  document.getElementById("s-hum").textContent=(keJ/HUMAN_YEAR_J).toExponential(2);
+  var ss=keJ/SUN_W;
+  document.getElementById("s-sun").textContent=(ss<1e-9)?(ss*1e9).toExponential(1)+" ns":
+    (ss<1e-3)?(ss*1e6).toFixed(2)+" \u00b5s":(ss<1)?(ss*1e3).toFixed(2)+" ms":ss.toExponential(2)+" s";
+  var ep=epochOf(ke), el=document.getElementById("epoch");
+  el.innerHTML="<b style='color:#ffd700'>"+ep.n+"</b> <span style='color:rgba(220,228,240,.4)'>&middot; kT "+fmtE(ep.E)+"</span><br>"+
+    "<span style='color:rgba(220,228,240,.55)'>"+ep.d+"</span>";
+}
+
+// ---- reveal ----
+function showReveal(){
+  var g=gamma(), ke=KE_eV(), keJ=KE_J(), tt=cosmicTime(ke);
+  document.getElementById("rev-body").innerHTML=
+    "<div class='eq'>&beta; = 1 &minus; 10<sup>&minus;n</sup> &nbsp;&rarr;&nbsp; &gamma; = 10<sup>n/2</sup>/&radic;2 &nbsp;&rarr;&nbsp; <b>every nine costs &times;&radic;10 = &times;3.162</b></div>"+
+    "<div class='desc'>There is no last nine. The cost of the next one is the same as the cost of the last one, and it never stops being that. <b>Newton</b> promised you would finish at &frac12;mc&sup2; \u2014 he was wrong by an infinite amount, and the violet curve shows exactly where he gave up.</div>"+
+    "<div class='eq'>your "+P.n+": &nbsp;&gamma; = <b>"+(g>=1e5?g.toExponential(2):g.toFixed(1))+"</b> &nbsp;&middot;&nbsp; KE = <b>"+fmtE(ke)+"</b> = "+fmtJ(keJ)+"</div>"+
+    "<div class='eq'>that energy is a temperature of <b>"+(ke/KB_EV).toExponential(1)+" K</b>,<br>which the universe last saw <b>"+fmtT(tt)+"</b> after the beginning</div>"+
+    "<div class='desc'>This is the whole law, in one line: <b>symmetry, pay the price to break it, and the symmetry answers.</b> The universe cooled and paid \u2014 the Higgs froze, quarks locked, nuclei formed, atoms closed, and every payment bought a structure. We build machines to hand some of it back and look at what falls out.</div>"+
+    "<div class='desc' style='color:rgba(255,215,0,.6)'>And we are not the best at it. A single proton \u2014 the <b style='color:#ffd700'>Oh-My-God particle</b>, 3.2&times;10<sup>20</sup> eV \u2014 arrived over Utah in 1991 carrying the kinetic energy of a thrown baseball, eight orders of magnitude past the LHC. Nature is still the better accelerator. <b style='color:#ffd700'>Bow.</b></div>";
+  document.getElementById("reveal").style.display="block";
+}
+
+// ---- controls ----
+function setP(k){ pk=k; P=PARTS[k];
+  ["e","p","au","dust","you"].forEach(function(q){document.getElementById("p-"+q).classList.toggle("active",q===k);}); }
+function setN(v){ nNines=v; document.getElementById("sv-n").textContent=v.toFixed(2); }
+function jumpN(v){ document.getElementById("sl-n").value=Math.round(v*100); setN(v); }
+
+// ---- K-laws + bow ----
+document.getElementById("klaws").innerHTML=
+ "<div class='kh'>the law this file is about</div>"+
+ "<p><span class='pur'>Symmetry. Pay the price to break it. The symmetry answers.</span> The universe cooled through that loop and every payment bought a structure \u2014 mass at the electroweak scale, protons at confinement, nuclei at an MeV, atoms at a fraction of an eV. We build machines to climb back and see what falls out. <b>c is the one price that cannot be paid in full.</b></p>"+
+ "<div class='kh'>the honesty (K-laws)</div>"+
+ "<p><b>K1 EXACT, NOT FITTED.</b> &gamma; is computed from &beta; = 1&minus;10<sup>&minus;n</sup> using (1&minus;&beta;&sup2;) = (1&minus;&beta;)(1+&beta;), which stays accurate to 24 nines where the naive form collapses into floating-point mush. The <b>&times;3.162 per nine</b> is not a fit \u2014 it falls straight out of &gamma; = 10<sup>n/2</sup>/&radic;2.</p>"+
+ "<p><b>K2 THE CONE IS THE POINT, THE PICTURE IS 2+1.</b> Real spacetime has three space dimensions; we draw two plus time so the cone is visible. The tilt of your worldline is exactly &beta;. It approaches the surface and <b>never touches it</b>, at any slider position, because that is what the algebra says.</p>"+
+ "<p><b>K3 ENERGY-TO-EPOCH IS A SCALING LAW.</b> t = 2.42/&radic;g* &times; (kT/MeV)<sup>&minus;2</sup> s holds in the <b>radiation-dominated</b> era only, and g* is stepped crudely. Below ~1 eV the universe is matter- then dark-energy-dominated and this formula is simply <b>wrong</b> \u2014 the late epochs are marked from measurement, not from it.</p>"+
+ "<p><b>K4 kT IS NOT A PARTICLE ENERGY.</b> Mapping one particle's kinetic energy onto a thermal temperature is a <b>comparison of scales</b>, not a claim that one fast electron is a hot universe. It answers \u201chow far back does this energy reach\u201d, and nothing more.</p>"+
+ "<p><b>K5 THE LADDER IS ORDERS OF MAGNITUDE.</b> Epoch energies are characteristic scales with real uncertainty; GUT and Planck are <b>theory, not observation</b>. Recombination is quoted as an effective ~0.26 eV because the fog clears well below hydrogen's 13.6 eV \u2014 there are far more photons than atoms.</p>"+
+ "<p><b>K6 THE COLLECTIVE JOULES ARE ROUNDED.</b> World primary energy ~6&times;10<sup>20</sup> J/yr and solar luminosity 3.83&times;10<sup>26</sup> W are used as stated constants. They move; the <b>ratios</b> are what carry the meaning.</p>"+
+ "<p><b>K7 NO ENGINEERING HERE.</b> This is the price in energy alone. It says nothing about how you would deliver it, what it would do to the accelerating structure, or the fact that a 70 kg rider at 0.999c is not a transport problem but a <b>cosmology</b>.</p>"+
+ "<div class='kh'>the bow</div>"+
+ "<p><b>Einstein</b> (1905: c is not about light, it is about time) \u00b7 <b>Minkowski</b> (\u201chenceforth space and time by themselves are shadows\u201d \u2014 the cone is his) \u00b7 <b>Lorentz</b> and <b>Poincar\u00e9</b> (who had the algebra before the meaning) \u00b7 <b>Maxwell</b> (whose equations quietly contained c all along) \u00b7 <b>Michelson &amp; Morley</b> (who looked for the ether and honestly reported nothing) \u00b7 <b>Noether</b> (every symmetry is a conservation law \u2014 the deepest sentence in physics) \u00b7 <b>Higgs, Englert, Brout</b> and the CERN thousands \u00b7 <b>Penzias &amp; Wilson</b> (who found the oldest light in a pigeon-fouled horn) \u00b7 and the <b>Fly's Eye</b> team, who in 1991 caught one proton that beat every machine we will build this century.</p>"+
+ "<p style='color:rgba(255,215,0,.5)'>Mama nature paid, cooling, for thirteen point eight billion years. We have spent a few decades and a great many joules asking for a little of it back. The receipts are all here, and none of them balance in our favour. <b>Bow.</b></p>";
+
+// ---- boot ----
+function resize(){DPR=Math.min(2,window.devicePixelRatio||1);W=innerWidth;H=innerHeight;
+  cv.width=W*DPR;cv.height=H*DPR;cv.style.width=W+"px";cv.style.height=H+"px";ctx.setTransform(DPR,0,0,DPR,0,0);}
+addEventListener("resize",resize);
+function frame(){ requestAnimationFrame(frame);
+  if(SPIN) yaw+=0.0035;
+  try{ render(); }catch(e){
+    ctx.fillStyle="#050510";ctx.fillRect(0,0,W,H);
+    ctx.textAlign="center";ctx.fillStyle="rgba(255,106,92,0.8)";ctx.font="bold 13px ui-monospace,monospace";
+    ctx.fillText("\u2593 the limit held \u2593",W/2,H/2);
+    ctx.fillStyle="rgba(255,180,120,0.6)";ctx.font="10px ui-monospace,monospace";
+    ctx.fillText("no faked frame \u00b7 step back and try again",W/2,H/2+20); }
+}
+resize(); setN(1.0); requestAnimationFrame(frame);
+</script>
+</body></html>
