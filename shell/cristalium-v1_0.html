@@ -1,0 +1,492 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>CRISTALIUM v1.0 &middot; one lattice, one photon &middot; the bow before the laser</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{background:#050510;color:#e0e0e0;font-family:ui-monospace,"SF Mono",Menlo,monospace;
+  font-size:11px;overflow:hidden;height:100%;width:100%}
+canvas{display:block}
+#cv{position:fixed;inset:0;z-index:1}
+#rail{position:fixed;top:0;bottom:54px;left:0;width:300px;z-index:5;display:flex;flex-direction:column;
+  background:linear-gradient(to right,rgba(5,5,16,0.93) 0,rgba(5,5,16,0.82) 76%,rgba(5,5,16,0) 100%);
+  border-right:1px solid rgba(80,50,120,0.12);pointer-events:none}
+#hud{padding:11px 14px 4px;text-shadow:0 0 10px rgba(5,5,16,0.95)}
+#hud .title{font-size:13px;color:#cc44ff;letter-spacing:.16em;text-transform:uppercase;font-weight:bold}
+#hud .sub{font-size:8px;color:rgba(204,68,255,.55);letter-spacing:.05em;margin:2px 0 6px;text-transform:uppercase}
+#hud .row{line-height:1.55;color:rgba(220,228,240,.5);font-size:10px;font-variant-numeric:tabular-nums}
+#hud .v{color:#cc44ff;font-weight:bold}#hud .g{color:#ffd700;font-weight:bold}#hud .c{color:#00d4ff;font-weight:bold}
+#hud .dim{color:rgba(220,228,240,.3)}
+#hud .hr{height:1px;background:rgba(204,68,255,.14);margin:5px 0}
+#verdict{margin:3px 14px 2px;padding:6px 8px;border-radius:3px;font-size:9.5px;line-height:1.45;
+  border:1px solid rgba(0,212,255,.35);background:rgba(8,14,26,.6)}
+#verdict b{font-size:10px;letter-spacing:.05em}
+#spec{padding:2px 14px 3px}
+#spec .sh{font-size:8px;text-transform:uppercase;letter-spacing:.1em;color:rgba(53,224,200,.6);margin:5px 0 2px}
+#spec .sr{display:flex;justify-content:space-between;font-size:9px;line-height:1.5;color:rgba(220,228,240,.55);font-variant-numeric:tabular-nums}
+#spec .sr .k{color:rgba(220,228,240,.34)}
+#spec .sr .g{color:#ffd700;font-weight:bold}#spec .sr .c{color:#00d4ff;font-weight:bold}#spec .sr .v{color:#cc44ff;font-weight:bold}
+#spec .ok{color:#7fff9f;font-weight:bold}
+#klaws{flex:1;overflow-y:auto;padding:5px 14px 12px;pointer-events:auto;
+  -webkit-mask-image:linear-gradient(to bottom,#000 92%,transparent);mask-image:linear-gradient(to bottom,#000 92%,transparent)}
+#klaws .kh{font-size:8.5px;color:#35e0c8;text-transform:uppercase;letter-spacing:.12em;margin:7px 0 3px}
+#klaws p{font-size:8.5px;color:rgba(220,228,240,.42);line-height:1.5;margin-bottom:4px}
+#klaws b{color:#ffd700}#klaws .pur{color:#cc44ff}#klaws .cy{color:#00d4ff}
+#stamp{position:fixed;bottom:60px;right:12px;z-index:6;pointer-events:none;text-align:right}
+#stamp .s{font-size:8px;color:rgba(204,68,255,.26);letter-spacing:.07em;line-height:1.8}
+#stamp .s.g{color:rgba(255,215,0,.3)}
+#bar{position:fixed;bottom:0;left:0;right:0;z-index:10;background:rgba(5,5,16,0.97);
+  border-top:1px solid #221033;padding:5px 9px;display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.btn{background:#0b0814;color:#5a4a6a;border:1px solid #221033;border-radius:3px;padding:3px 8px;
+  font-family:inherit;font-size:9px;cursor:pointer;transition:.12s;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+.btn:hover{border-color:#cc44ff;color:#cc44ff}.btn.active{background:#cc44ff;color:#050510;border-color:#cc44ff}
+.btn.tg.active{background:#35e0c8;border-color:#35e0c8}
+.btn.ph{border-color:#0d2233;color:#4a6a7a}
+.btn.ph:hover{border-color:#00d4ff;color:#00d4ff}
+.btn.rev{background:#00d4ff;color:#050510;border-color:#00d4ff;font-weight:bold}
+.sep{width:1px;height:15px;background:#221033}
+.lbl{color:rgba(220,228,240,.28);font-size:8px;text-transform:uppercase;letter-spacing:.05em}
+.slw{display:flex;align-items:center;gap:3px}
+.slw input{accent-color:#cc44ff;cursor:pointer;width:52px}
+#sl-E{width:170px;accent-color:#00d4ff}
+.sv{font-size:8.5px;color:#cc44ff;min-width:26px;font-variant-numeric:tabular-nums;text-transform:none}
+#sv-E{color:#00d4ff;font-weight:bold;min-width:76px}
+#reveal{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:30;
+  background:rgba(5,5,16,0.975);border:1px solid #00d4ff;border-radius:8px;
+  padding:20px 26px;max-width:430px;display:none;box-shadow:0 0 60px rgba(0,212,255,0.13)}
+#reveal h2{color:#ffd700;font-size:14px;letter-spacing:.18em;margin-bottom:12px;text-align:center}
+#reveal .eq{font-size:11px;color:#00d4ff;margin:7px 0;line-height:1.7;font-variant-numeric:tabular-nums}
+#reveal .eq b{color:#ffd700}
+#reveal .desc{font-size:9.5px;color:rgba(220,228,240,.5);line-height:1.7;margin:11px 0}
+#reveal .desc b{color:#cc44ff}
+#reveal button{background:#00d4ff;color:#050510;border:none;padding:6px 22px;border-radius:3px;
+  cursor:pointer;font-family:inherit;font-size:10px;text-transform:uppercase;letter-spacing:.1em;
+  margin-top:6px;display:block;margin-left:auto;margin-right:auto;font-weight:bold}
+</style></head><body>
+<canvas id="cv"></canvas>
+
+<div id="rail">
+  <div id="hud">
+    <span class="title">Cristalium</span>
+    <div class="sub">one lattice &middot; one photon &middot; drawn to scale</div>
+    <div class="row"><span class="v" id="h-mat">GOLD</span> <span class="dim">&middot;</span> <span class="v" id="h-struct">FCC</span> <span class="dim">&middot; a =</span> <span class="g" id="h-a">4.078</span> <span class="dim">&Aring;</span></div>
+    <div class="row">atoms drawn&nbsp;<span class="v" id="h-atoms">0</span> &middot; bonds&nbsp;<span class="v" id="h-bonds">0</span> &middot; <span class="dim">counted</span></div>
+    <div class="hr"></div>
+    <div class="row"><span class="c">photon</span>&nbsp;<span class="c" id="h-E">1.55</span> eV &middot; &lambda;&nbsp;<span class="c" id="h-lam">800</span> nm</div>
+    <div class="row"><span class="dim">&lambda; / a =</span>&nbsp;<span class="g" id="h-ratio">1962</span> <span class="dim">lattice constants wide</span></div>
+  </div>
+  <div id="verdict">&mdash;</div>
+  <div id="spec">
+    <div class="sh">the lattice &middot; nature's receipt</div>
+    <div class="sr"><span class="k">coordination &middot; packing</span><span class="v" id="s-coord">—</span></div>
+    <div class="sr"><span class="k">nearest neighbour</span><span class="v" id="s-nn">—</span></div>
+    <div class="sr"><span class="k">density, PREDICTED from a</span><span class="g" id="s-rho">—</span></div>
+    <div class="sr"><span class="k">density, measured</span><span class="ok" id="s-rhom">—</span></div>
+    <div class="sr"><span class="k">cohesive energy / atom</span><span class="g" id="s-coh">—</span></div>
+    <div class="sh">the photon &middot; what it can do</div>
+    <div class="sr"><span class="k">E / bond (cohesive)</span><span class="c" id="s-frac">—</span></div>
+    <div class="sr"><span class="k">work function (photoemit)</span><span class="c" id="s-wf">—</span></div>
+    <div class="sr"><span class="k">Debye phonon ceiling</span><span class="c" id="s-deb">—</span></div>
+    <div class="sr"><span class="k">Drude plasma energy</span><span class="c" id="s-plasma">—</span></div>
+    <div class="sr"><span class="k">Bragg needs &ge;</span><span class="c" id="s-bragg">—</span></div>
+  </div>
+  <div id="klaws"></div>
+</div>
+
+<div id="stamp">
+  <div class="s">CRISTALIUM v1.0</div>
+  <div class="s g">nature paid to build it</div>
+  <div class="s g">we pay to undo it</div>
+  <div class="s">P=12 &middot; &chi;=2 &middot; spini &middot; always</div>
+</div>
+
+<div id="bar">
+  <span class="lbl">lattice</span>
+  <button class="btn active" id="m-Au" onclick="setMat('Au')">GOLD</button>
+  <button class="btn" id="m-Cu" onclick="setMat('Cu')">COPPER</button>
+  <button class="btn" id="m-Al" onclick="setMat('Al')">ALUM</button>
+  <button class="btn" id="m-Fe" onclick="setMat('Fe')">IRON</button>
+  <button class="btn" id="m-W" onclick="setMat('W')">TUNGSTEN</button>
+  <div class="sep"></div>
+  <span class="lbl" style="color:#00d4ff90">photon</span>
+  <input type="range" id="sl-E" min="0" max="1000" value="399" oninput="setE(+this.value)">
+  <span class="sv" id="sv-E">1.55 eV</span>
+  <div class="sep"></div>
+  <button class="btn ph" onclick="jumpE(0.02)">THz</button>
+  <button class="btn ph" onclick="jumpE(1.55)">800nm</button>
+  <button class="btn ph" onclick="jumpE(2.33)">GREEN</button>
+  <button class="btn ph" onclick="jumpE(6.2)">UV</button>
+  <button class="btn ph" onclick="jumpE(8050)">X-RAY</button>
+  <div class="sep"></div>
+  <button class="btn tg active" id="tg-spin" onclick="SPIN=!SPIN;this.classList.toggle('active',SPIN)">SPINI</button>
+  <button class="btn tg active" id="tg-wave" onclick="SHOWW=!SHOWW;this.classList.toggle('active',SHOWW)">WAVE</button>
+  <button class="btn tg active" id="tg-bond" onclick="SHOWB=!SHOWB;this.classList.toggle('active',SHOWB)">BONDS</button>
+  <div class="slw"><span class="lbl">cells</span><input type="range" id="sl-N" min="1" max="4" value="2" oninput="setN(+this.value)"><span class="sv" id="sv-N">2</span></div>
+  <div class="sep"></div>
+  <button class="btn rev" onclick="showReveal()">REVEAL</button>
+</div>
+
+<div id="reveal">
+  <h2>ONE PHOTON CANNOT DO THIS</h2>
+  <div id="rev-body"></div>
+  <button onclick="document.getElementById('reveal').style.display='none'">I SEE IT</button>
+</div>
+
+<script>
+// ============================================================================
+// CRISTALIUM v1.0 -- the bow before the laser.
+//
+// Before FEMTONIUM is allowed to machine anything, this file states the two
+// facts it stands on, and draws them honestly:
+//
+//   1. THE LATTICE IS REAL AND IT COST SOMETHING. Real Bravais structures at
+//      real lattice constants, with real coordination. Nature paid the cohesive
+//      energy per atom to build it. Every number here is COMPUTED from the
+//      lattice, not typed -- including the density, which is PREDICTED from the
+//      lattice constant and then checked against the measured value. That check
+//      is the receipt: if the model of the crystal is right, the mass follows.
+//
+//   2. THE PHOTON IS ENORMOUS AND IT IS WEAK. Drawn in Maxwell's grammar as an
+//      E-perpendicular-B wave (thank you, MAXWELLIUM), with its WAVELENGTH TO
+//      SCALE against the lattice. An 800 nm photon is ~2000 lattice constants
+//      wide: it cannot resolve an atom, it can only drive the whole electron
+//      sea at once. And it carries 1.55 eV against a 3.81 eV bond -- it could
+//      not break one even if it could aim.
+//
+// That is WHY femtosecond machining is hard, and why the two-temperature model
+// exists at all: the light never touches the ions. It shakes the electrons, and
+// the electrons tell the lattice later. Everything FEMTONIUM does begins here.
+//
+// Pure Canvas 2D. Zero dependencies. chi=2 . P=12 . Built 2026-07-22.
+// ============================================================================
+
+var cv=document.getElementById("cv"), ctx=cv.getContext("2d"), W,H,DPR;
+
+// ---- physical constants ----
+var HC_EVNM = 1239.84193;      // h*c in eV*nm
+var NA      = 6.02214076e23;   // Avogadro
+var KB_EV   = 8.617333262e-5;  // Boltzmann, eV/K
+// hbar*omega_p = 3.7128 * sqrt(n / 1e22 cm^-3) eV   (free-electron Drude)
+var PLASMA_K = 3.7128;
+
+// ---- materials: REAL structures and constants ----
+// a   lattice constant [Angstrom] | str FCC/BCC | M molar mass [g/mol]
+// coh cohesive energy [eV/atom]   | wf work function [eV] | TD Debye temp [K]
+// val free electrons per atom     | rhoM measured density [g/cm^3]
+var MATS={
+  Au:{n:"GOLD",     a:4.078, str:"FCC", M:196.967, coh:3.81, wf:5.10, TD:165, val:1, rhoM:19.30, ib:2.4, col:[255,215,0]},
+  Cu:{n:"COPPER",   a:3.615, str:"FCC", M:63.546,  coh:3.49, wf:4.65, TD:343, val:1, rhoM:8.96,  ib:2.1, col:[255,140,80]},
+  Al:{n:"ALUMINIUM",a:4.050, str:"FCC", M:26.982,  coh:3.39, wf:4.06, TD:428, val:3, rhoM:2.70,  ib:1.5, col:[190,205,225]},
+  Fe:{n:"IRON",     a:2.866, str:"BCC", M:55.845,  coh:4.28, wf:4.50, TD:470, val:2, rhoM:7.87,  ib:0.5, col:[180,150,150]},
+  W: {n:"TUNGSTEN", a:3.165, str:"BCC", M:183.84,  coh:8.90, wf:4.55, TD:400, val:2, rhoM:19.25, ib:0.5, col:[160,180,200]}
+};
+var matKey="Au", M=MATS.Au;
+
+// ---- state ----
+var Ephot=1.55;                // photon energy [eV]
+var NCELL=2, SPIN=true, SHOWW=true, SHOWB=true;
+var yaw=0.6, pitch=0.42, uYaw=0, uPitch=0, zoom=1, phase=0;
+var atoms=[], bonds=[];
+
+// ---- lattice generation: real Bravais basis, deduped ----
+function basisOf(str){
+  if(str==="FCC") return [[0,0,0],[0.5,0.5,0],[0.5,0,0.5],[0,0.5,0.5]];
+  return [[0,0,0],[0.5,0.5,0.5]];                    // BCC
+}
+function buildLattice(){
+  var basis=basisOf(M.str), seen={}, pts=[];
+  for(var i=0;i<=NCELL;i++)for(var j=0;j<=NCELL;j++)for(var k=0;k<=NCELL;k++){
+    for(var b=0;b<basis.length;b++){
+      var x=i+basis[b][0], y=j+basis[b][1], z=k+basis[b][2];
+      if(x>NCELL+1e-9||y>NCELL+1e-9||z>NCELL+1e-9) continue;
+      var key=x.toFixed(3)+"_"+y.toFixed(3)+"_"+z.toFixed(3);
+      if(seen[key]) continue; seen[key]=1;
+      pts.push({x:x-NCELL/2, y:y-NCELL/2, z:z-NCELL/2});
+    }
+  }
+  atoms=pts;
+  // nearest-neighbour distance in units of a
+  var nn = (M.str==="FCC") ? Math.SQRT1_2 : Math.sqrt(3)/2;
+  var cut = nn*1.06, cut2=cut*cut;
+  bonds=[];
+  for(var p=0;p<pts.length;p++)for(var q=p+1;q<pts.length;q++){
+    var dx=pts[p].x-pts[q].x, dy=pts[p].y-pts[q].y, dz=pts[p].z-pts[q].z;
+    var d2=dx*dx+dy*dy+dz*dz;
+    if(d2<cut2) bonds.push([p,q]);
+  }
+  document.getElementById("h-atoms").textContent=atoms.length;
+  document.getElementById("h-bonds").textContent=bonds.length;
+}
+
+// ---- derived lattice physics (COMPUTED, never typed) ----
+function latticeFacts(){
+  var nCell = (M.str==="FCC")?4:2;                       // atoms per conventional cell
+  var aCm   = M.a*1e-8;                                  // Angstrom -> cm
+  var rho   = nCell*M.M/(NA*aCm*aCm*aCm);                // g/cm^3, PREDICTED
+  var coord = (M.str==="FCC")?12:8;
+  var pack  = (M.str==="FCC")? Math.PI/(3*Math.SQRT2) : Math.PI*Math.sqrt(3)/8;
+  var nnA   = M.a*((M.str==="FCC")?Math.SQRT1_2:Math.sqrt(3)/2);
+  // free-electron density [cm^-3] -> Drude plasma energy
+  var ne    = M.val*nCell/(aCm*aCm*aCm);
+  var Epl   = PLASMA_K*Math.sqrt(ne/1e22);
+  // Bragg: densest planes, first order needs lambda <= 2d
+  var dHkl  = (M.str==="FCC")? M.a/Math.sqrt(3) : M.a/Math.SQRT2;   // (111) FCC, (110) BCC
+  var Ebragg= HC_EVNM/(2*dHkl*0.1);                      // Angstrom -> nm
+  var Edeb  = KB_EV*M.TD;
+  return {nCell:nCell,rho:rho,coord:coord,pack:pack,nnA:nnA,ne:ne,Epl:Epl,dHkl:dHkl,Ebragg:Ebragg,Edeb:Edeb};
+}
+
+// ---- 3D projection ----
+var ORX,ORY,PSC;
+function proj(p){
+  var cy=Math.cos(yaw+uYaw), sy=Math.sin(yaw+uYaw);
+  var cp=Math.cos(pitch+uPitch), sp=Math.sin(pitch+uPitch);
+  var x=p.x*cy - p.z*sy;
+  var z=p.x*sy + p.z*cy;
+  var y=p.y*cp - z*sp;
+  var d=p.y*sp + z*cp;
+  return {x:ORX+x*PSC, y:ORY-y*PSC, d:d};
+}
+
+// ---- render ----
+function render(){
+  ctx.fillStyle="#050510"; ctx.fillRect(0,0,W,H);
+  var L=(W>820)?306:6;
+  var sx=L, sw=W-L-8, sh=H-58;
+  ORX=sx+sw*0.5; ORY=sh*0.46;
+  PSC=Math.min(sw/(NCELL+2.4), sh/(NCELL+2.6))*0.86*zoom;
+
+  var F=latticeFacts();
+  // --- the photon wave, drawn to scale, BEHIND the lattice ---
+  if(SHOWW) drawWave(F,sx,sw,-1);
+  // --- bonds then atoms, painter's algorithm ---
+  var pa=[]; for(var i=0;i<atoms.length;i++){var p=proj(atoms[i]); p.i=i; pa.push(p);}
+  if(SHOWB){
+    var bl=[];
+    for(var b=0;b<bonds.length;b++){var A=pa[bonds[b][0]],B=pa[bonds[b][1]];
+      bl.push({A:A,B:B,d:(A.d+B.d)/2});}
+    bl.sort(function(u,v){return u.d-v.d;});
+    for(var b=0;b<bl.length;b++){var o=bl[b];
+      var t=Math.max(0,Math.min(1,(o.d+NCELL)/(2*NCELL+0.001)));
+      ctx.strokeStyle="rgba("+(90+70*t|0)+","+(60+50*t|0)+","+(140+70*t|0)+","+(0.13+0.4*t).toFixed(3)+")";
+      ctx.lineWidth=0.6+1.1*t;
+      ctx.beginPath();ctx.moveTo(o.A.x,o.A.y);ctx.lineTo(o.B.x,o.B.y);ctx.stroke();}
+  }
+  pa.sort(function(u,v){return u.d-v.d;});
+  var R0=Math.max(1.6,PSC*0.115);
+  for(var i=0;i<pa.length;i++){var p=pa[i];
+    var t=Math.max(0,Math.min(1,(p.d+NCELL)/(2*NCELL+0.001)));
+    var r=R0*(0.72+0.5*t), c=M.col;
+    var g=ctx.createRadialGradient(p.x-r*0.35,p.y-r*0.35,r*0.1,p.x,p.y,r);
+    g.addColorStop(0,"rgba("+c[0]+","+c[1]+","+c[2]+","+(0.45+0.55*t).toFixed(2)+")");
+    g.addColorStop(0.6,"rgba("+(c[0]*0.75|0)+","+(c[1]*0.7|0)+","+(c[2]*0.7|0)+","+(0.35+0.5*t).toFixed(2)+")");
+    g.addColorStop(1,"rgba(10,6,20,0.05)");
+    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(p.x,p.y,r,0,6.2832); ctx.fill();
+  }
+  if(SHOWW) drawWave(F,sx,sw,1);
+  drawRuler(F,sx,sh,sw);
+  updateHUD(F);
+}
+
+// ---- the photon, in Maxwell's grammar: E (red) perp B (blue), to scale ----
+function drawWave(F,sx,sw,half){
+  // wavelength in the SAME units as the lattice (units of a)
+  var lamA = HC_EVNM/Ephot*10;            // nm -> Angstrom
+  var lamU = lamA/M.a;                    // in lattice-constant units
+  var k = 2*Math.PI/lamU;
+  var span = NCELL*1.75;                  // draw across the crystal + margin
+  var AMP = 0.62, NSEG=180;
+  var ptsE=[], ptsB=[];
+  for(var s=0;s<=NSEG;s++){
+    var u=-span + (2*span)*(s/NSEG);      // propagate along +x
+    var ph=k*u - phase;
+    var e=AMP*Math.sin(ph);
+    ptsE.push(proj({x:u, y:e, z:0}));
+    ptsB.push(proj({x:u, y:0, z:e}));
+  }
+  function strokePath(pts,col,wdt){
+    ctx.strokeStyle=col; ctx.lineWidth=wdt; ctx.beginPath();
+    for(var s=0;s<pts.length;s++){ if((half<0)===(pts[s].d<0)) {} }
+    var started=false;
+    for(var s=0;s<pts.length;s++){
+      var draw=(half<0)?(pts[s].d<=0):(pts[s].d>0);
+      if(draw){ if(!started){ctx.moveTo(pts[s].x,pts[s].y);started=true;} else ctx.lineTo(pts[s].x,pts[s].y); }
+      else started=false;
+    }
+    ctx.stroke();
+  }
+  strokePath(ptsE,"rgba(255,68,68,0.72)",1.5);      // E field, red
+  strokePath(ptsB,"rgba(68,136,255,0.62)",1.3);     // B field, blue
+  // field vectors (sampled), so a huge wavelength reads as a UNIFORM field
+  for(var s=0;s<=NSEG;s+=12){
+    var u=-span+(2*span)*(s/NSEG), ph=k*u-phase, e=AMP*Math.sin(ph);
+    var o=proj({x:u,y:0,z:0}), a=proj({x:u,y:e,z:0}), b=proj({x:u,y:0,z:e});
+    var draw=(half<0)?(o.d<=0):(o.d>0); if(!draw)continue;
+    ctx.strokeStyle="rgba(255,68,68,0.34)";ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(o.x,o.y);ctx.lineTo(a.x,a.y);ctx.stroke();
+    ctx.strokeStyle="rgba(68,136,255,0.26)";
+    ctx.beginPath();ctx.moveTo(o.x,o.y);ctx.lineTo(b.x,b.y);ctx.stroke();
+  }
+  if(half>0){
+    var lab=(lamU>=1000)?("\u03bb = "+(lamU/1000).toFixed(1)+"k lattice constants \u2014 the crystal sits in ONE uniform field")
+           :(lamU>=8)?("\u03bb = "+lamU.toFixed(0)+" lattice constants")
+           :("\u03bb = "+lamU.toFixed(2)+" a \u2014 the light can finally SEE the lattice");
+    ctx.font="9px ui-monospace,monospace";ctx.textAlign="left";
+    ctx.fillStyle=(lamU<8)?"#7fff9f":"rgba(0,212,255,0.6)";
+    ctx.fillText(lab,sx+10,26);
+    ctx.fillStyle="rgba(255,68,68,0.65)";ctx.fillText("E",sx+10,40);
+    ctx.fillStyle="rgba(120,130,150,0.5)";ctx.fillText("\u22a5",sx+22,40);
+    ctx.fillStyle="rgba(68,136,255,0.65)";ctx.fillText("B",sx+34,40);
+    ctx.fillStyle="rgba(120,130,150,0.45)";ctx.fillText("\u00b7 Maxwell's grammar",sx+46,40);
+  }
+}
+
+// ---- the log scale ruler: the visceral comparison ----
+function drawRuler(F,sx,sh,sw){
+  var y=sh-6, x0=sx+70, x1=sx+sw-30;
+  var LO=-11, HI=-3;                                  // log10(m): 0.1 Angstrom .. 1 mm
+  function X(m){var l=Math.log10(m);return x0+(l-LO)/(HI-LO)*(x1-x0);}
+  ctx.strokeStyle="rgba(80,50,120,0.45)";ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(x0,y);ctx.lineTo(x1,y);ctx.stroke();
+  ctx.font="7.5px ui-monospace,monospace";ctx.textAlign="center";
+  for(var e=LO;e<=HI;e++){var x=X(Math.pow(10,e));
+    ctx.strokeStyle="rgba(80,50,120,0.4)";ctx.beginPath();ctx.moveTo(x,y-3);ctx.lineTo(x,y+3);ctx.stroke();
+    var lab=(e<=-10)?(Math.pow(10,e+10)+"\u00c5"):(e<=-7)?(Math.pow(10,e+9)+"nm"):(Math.pow(10,e+6)+"\u00b5m");
+    ctx.fillStyle="rgba(220,228,240,0.25)";ctx.fillText(lab,x,y+13);}
+  ctx.textAlign="left";ctx.fillStyle="rgba(220,228,240,0.3)";ctx.fillText("SCALE",sx+10,y+3);
+  // lattice constant marker
+  var xa=X(M.a*1e-10);
+  ctx.strokeStyle="rgba(204,68,255,0.85)";ctx.lineWidth=1.5;
+  ctx.beginPath();ctx.moveTo(xa,y-11);ctx.lineTo(xa,y+3);ctx.stroke();
+  ctx.fillStyle="#cc44ff";ctx.textAlign="center";ctx.font="bold 8px ui-monospace,monospace";
+  ctx.fillText("a",xa,y-14);
+  // photon wavelength marker
+  var lam=HC_EVNM/Ephot*1e-9;
+  var xl=Math.max(x0-6,Math.min(x1+6,X(lam)));
+  ctx.strokeStyle="rgba(0,212,255,0.9)";ctx.lineWidth=1.5;
+  ctx.beginPath();ctx.moveTo(xl,y-11);ctx.lineTo(xl,y+3);ctx.stroke();
+  ctx.fillStyle="#00d4ff";ctx.fillText("\u03bb",xl,y-14);
+  // the gap between them
+  if(Math.abs(xl-xa)>14){
+    ctx.strokeStyle="rgba(255,215,0,0.3)";ctx.setLineDash([2,3]);ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(xa,y-8);ctx.lineTo(xl,y-8);ctx.stroke();ctx.setLineDash([]);
+    var lamU=(HC_EVNM/Ephot*10)/M.a;
+    ctx.fillStyle="rgba(255,215,0,0.55)";ctx.font="7.5px ui-monospace,monospace";
+    ctx.fillText((lamU>=1?(lamU>=1000?(lamU/1000).toFixed(1)+"k\u00d7":lamU.toFixed(0)+"\u00d7"):(1/lamU).toFixed(0)+"\u00d7 smaller"),(xa+xl)/2,y-11);
+  }
+  ctx.textAlign="left";
+}
+
+// ---- HUD + verdict ----
+function updateHUD(F){
+  var lamNm=HC_EVNM/Ephot, lamA=lamNm*10, ratio=lamA/M.a;
+  document.getElementById("h-mat").textContent=M.n;
+  document.getElementById("h-struct").textContent=M.str;
+  document.getElementById("h-a").textContent=M.a.toFixed(3);
+  document.getElementById("h-E").textContent=(Ephot<0.01)?Ephot.toFixed(4):(Ephot<1000?Ephot.toFixed(2):(Ephot/1000).toFixed(2)+"k");
+  document.getElementById("h-lam").textContent=(lamNm>=1)?lamNm.toFixed(lamNm<10?2:0):(lamA.toFixed(2)+" \u00c5").replace(" \u00c5","")+"\u00c5";
+  document.getElementById("h-ratio").textContent=(ratio>=1000)?(ratio/1000).toFixed(1)+"k":(ratio>=1?ratio.toFixed(0):ratio.toFixed(3));
+  document.getElementById("s-coord").textContent=F.coord+" \u00b7 "+(F.pack*100).toFixed(2)+"%";
+  document.getElementById("s-nn").textContent=F.nnA.toFixed(3)+" \u00c5";
+  document.getElementById("s-rho").textContent=F.rho.toFixed(2)+" g/cm\u00b3";
+  var err=Math.abs(F.rho-M.rhoM)/M.rhoM*100;
+  document.getElementById("s-rhom").textContent=M.rhoM.toFixed(2)+"  ("+err.toFixed(1)+"% off)";
+  document.getElementById("s-coh").textContent=M.coh.toFixed(2)+" eV";
+  document.getElementById("s-frac").textContent=(Ephot/M.coh*100).toFixed(1)+"%";
+  document.getElementById("s-wf").textContent=M.wf.toFixed(2)+" eV "+(Ephot>=M.wf?"\u2713":"\u2717");
+  document.getElementById("s-deb").textContent=(F.Edeb*1000).toFixed(1)+" meV";
+  document.getElementById("s-plasma").textContent=F.Epl.toFixed(1)+" eV";
+  document.getElementById("s-bragg").textContent=(F.Ebragg/1000).toFixed(2)+" keV "+(Ephot>=F.Ebragg?"\u2713":"\u2717");
+
+  var el=document.getElementById("verdict"), t,c;
+  if(Ephot<F.Edeb){ c="rgba(140,110,200,0.5)";
+    t="<b style='color:#b08cff'>PHONON</b> <span style='color:rgba(220,228,240,.45)'>&middot; below the Debye ceiling</span><br>"+
+      "<span style='color:rgba(220,228,240,.55)'>You can only make the lattice <b style='color:#b08cff'>ring</b>. No electron has anywhere to go.</span>"; }
+  else if(Ephot<M.ib){ c="rgba(255,140,80,0.5)";
+    t="<b style='color:#ff8c50'>INTRABAND</b> <span style='color:rgba(220,228,240,.45)'>&middot; the free-electron sea absorbs</span><br>"+
+      "<span style='color:rgba(220,228,240,.55)'>Heat, and nothing else. The ions are never touched \u2014 <b style='color:#ff8c50'>this is where the two-temperature model is born</b>.</span>"; }
+  else if(Ephot<M.wf){ c="rgba(255,215,0,0.5)";
+    t="<b style='color:#ffd700'>INTERBAND</b> <span style='color:rgba(220,228,240,.45)'>&middot; d-band electrons lift</span><br>"+
+      "<span style='color:rgba(220,228,240,.55)'>Above "+M.ib.toFixed(1)+" eV this metal absorbs selectively. <b style='color:#ffd700'>That is what its colour IS.</b></span>"; }
+  else if(Ephot<F.Epl){ c="rgba(127,255,159,0.5)";
+    t="<b style='color:#7fff9f'>PHOTOEMISSION</b> <span style='color:rgba(220,228,240,.45)'>&middot; E &gt; work function</span><br>"+
+      "<span style='color:rgba(220,228,240,.55)'>One photon can now eject <b style='color:#7fff9f'>one electron</b>. Einstein, 1905. Still not one atom.</span>"; }
+  else if(Ephot<F.Ebragg){ c="rgba(0,212,255,0.5)";
+    t="<b style='color:#00d4ff'>ABOVE THE PLASMA EDGE</b><br>"+
+      "<span style='color:rgba(220,228,240,.55)'>The electron sea can no longer follow. The metal stops being a mirror and goes <b style='color:#00d4ff'>transparent</b>.</span>"; }
+  else { c="rgba(127,255,159,0.65)";
+    t="<b style='color:#7fff9f'>X-RAY &middot; &lambda; ~ a</b><br>"+
+      "<span style='color:rgba(220,228,240,.55)'>At last the wave is the size of the spacing. Now light can <b style='color:#7fff9f'>see the lattice</b>: Bragg, n&lambda; = 2d sin&theta;. This is how we learned crystals exist.</span>"; }
+  el.style.borderColor=c; el.innerHTML=t;
+}
+
+// ---- the reveal (Maxwellium's device) ----
+function showReveal(){
+  var F=latticeFacts(), lamA=HC_EVNM/Ephot*10, ratio=lamA/M.a;
+  var perAtom=Math.ceil(M.coh/Ephot);
+  // atoms in 1 cubic micron = n_atoms_per_cell / a^3
+  var aCm=M.a*1e-8, nAtomCm3=F.nCell/(aCm*aCm*aCm), nAtomUm3=nAtomCm3*1e-12;
+  var photUm3=nAtomUm3*M.coh/Ephot;
+  document.getElementById("rev-body").innerHTML=
+    "<div class='eq'>photon &nbsp;<b>"+(Ephot<1000?Ephot.toFixed(2)+" eV":(Ephot/1000).toFixed(2)+" keV")+"</b> &nbsp;&middot;&nbsp; one bond &nbsp;<b>"+M.coh.toFixed(2)+" eV</b></div>"+
+    "<div class='eq'>&lambda; = <b>"+(lamA>=10000?(lamA/10000).toFixed(2)+" \u00b5m":lamA.toFixed(1)+" \u00c5")+"</b> &nbsp;&middot;&nbsp; a = <b>"+M.a.toFixed(3)+" \u00c5</b> &nbsp;&rarr;&nbsp; <b>"+
+      (ratio>=1?ratio.toFixed(0)+"\u00d7 wider":(1/ratio).toFixed(1)+"\u00d7 finer")+"</b></div>"+
+    "<div class='desc'>The photon is <b>"+(ratio>=1?ratio.toFixed(0)+" lattice constants wide":"finer than the spacing")+
+      "</b> and carries <b>"+(Ephot/M.coh*100).toFixed(0)+"%</b> of a single bond. It cannot aim at an atom, and it could not break one if it did.</div>"+
+    "<div class='eq'>to free ONE atom: &nbsp;<b>"+perAtom+"</b> photon"+(perAtom>1?"s":"")+", into one place, before the heat leaves</div>"+
+    "<div class='eq'>to clear ONE cubic micron: &nbsp;<b>"+photUm3.toExponential(1).replace("e+","\u00d710^")+"</b> photons</div>"+
+    "<div class='desc'>A femtosecond laser wins by bringing them <b>all at once</b> \u2014 ~10<sup>15</sup> photons inside 100 fs, faster than the lattice can flinch. Not by being clever. By being <b>overwhelming, and early</b>.</div>"+
+    "<div class='desc' style='color:rgba(255,215,0,.55)'>Nature paid "+M.coh.toFixed(2)+" eV an atom to build this. We pay a chirped-pulse amplifier to take it back. <b style='color:#ffd700'>Bow first.</b></div>";
+  document.getElementById("reveal").style.display="block";
+}
+
+// ---- controls ----
+function setMat(k){ matKey=k; M=MATS[k];
+  ["Au","Cu","Al","Fe","W"].forEach(function(q){document.getElementById("m-"+q).classList.toggle("active",q===k);});
+  buildLattice(); }
+function setE(v){ Ephot=Math.pow(10, v/1000*8 - 3);        // 1 meV .. 100 keV
+  document.getElementById("sv-E").textContent =
+    (Ephot<1)? (Ephot*1000).toFixed(Ephot<0.01?1:0)+" meV" : (Ephot<1000? Ephot.toFixed(2)+" eV" : (Ephot/1000).toFixed(1)+" keV"); }
+function jumpE(e){ var v=(Math.log10(e)+3)/8*1000; document.getElementById("sl-E").value=v; setE(v); }
+function setN(v){ NCELL=v; document.getElementById("sv-N").textContent=v; buildLattice(); }
+
+var drag=false,lx=0,ly=0;
+cv.addEventListener("pointerdown",function(e){ if(W>820&&e.clientX<300&&e.clientY<H-54)return;
+  drag=true;lx=e.clientX;ly=e.clientY; });
+cv.addEventListener("pointermove",function(e){ if(!drag)return;
+  uYaw+=(e.clientX-lx)*0.008; uPitch+=(e.clientY-ly)*0.006; lx=e.clientX;ly=e.clientY; });
+cv.addEventListener("pointerup",function(){drag=false;});
+cv.addEventListener("wheel",function(e){ if(W>820&&e.clientX<300)return; e.preventDefault();
+  zoom*=(e.deltaY>0?0.92:1.08); zoom=Math.max(0.45,Math.min(3.2,zoom)); },{passive:false});
+
+// ---- K-laws + bow ----
+document.getElementById("klaws").innerHTML=
+ "<div class='kh'>the honesty (K-laws)</div>"+
+ "<p><b>K1 COMPUTED, NOT TYPED.</b> Atom and bond counts are <b>.length</b> of what was drawn this frame. Coordination, packing fraction, nearest-neighbour distance and <b>density</b> are derived from the lattice constant and the structure. The density is <span class='pur'>predicted</span>, then shown next to the measured value \u2014 that agreement is the receipt that the crystal model is right.</p>"+
+ "<p><b>K2 SPHERES ARE NOT ATOMS.</b> One sphere per lattice site, at the right position with the right coordination. No orbitals, no electron density, no wavefunction. This is <b>structure and spacing</b>, rendered honestly, and nothing else.</p>"+
+ "<p><b>K3 THE WAVE IS THE FIELD, NOT THE PARTICLE.</b> Drawn in <span class='cy'>Maxwell's grammar</span> \u2014 E \u22a5 B \u2014 because that is what light is classically. A real photon is a quantised excitation of that field; a single photon has no classical amplitude. <b>The wavelength is to scale. The amplitude is arbitrary.</b> The animation rate is not real either: one optical cycle at 800 nm is 2.7 fs.</p>"+
+ "<p><b>K4 THE REGIMES ARE THRESHOLD CARTOONS.</b> Real optical response is the full dielectric function &epsilon;(&omega;), with interband structure, damping and surface effects. We mark <b>where the thresholds are</b>, not the spectrum. Interband edges are approximate, and for iron and tungsten the d-bands cross the Fermi level, so \u201cinterband\u201d has no clean onset.</p>"+
+ "<p><b>K5 THE PLASMA ENERGY IS FREE-ELECTRON.</b> Computed from the valence electron density by the Drude formula. It lands on the literature value for aluminium and gold, but <b>d-electron screening shifts the real edge</b>, and for transition metals the free-electron count is a fiction of convenience.</p>"+
+ "<p><b>K6 COHESIVE ENERGY IS A BULK FLOOR.</b> It is the energy per atom in the bulk; a surface atom has fewer bonds and costs less to remove. \u201cPhotons per atom\u201d is therefore an <b>energy floor, not a process model</b> \u2014 real removal is a cascade, not a bond-by-bond purchase.</p>"+
+ "<p><b>K7 SINGLE-PHOTON LOGIC ONLY.</b> Every verdict here assumes one photon at a time. At the intensities FEMTONIUM works with, <b>multiphoton and tunnelling ionisation break all of these thresholds</b> \u2014 which is exactly how a femtosecond laser machines glass it should not be able to touch. That is the next file, and it needs this one first.</p>"+
+ "<div class='kh'>the bow</div>"+
+ "<p><b>Bravais</b> (there are only fourteen ways) \u00b7 <b>von Laue</b> (crystals diffract X-rays, Nobel 1914) \u00b7 <b>W.H. &amp; W.L. Bragg</b> (n&lambda; = 2d sin&theta;, Nobel 1915 \u2014 the son was 25) \u00b7 <b>Planck</b> (E = h&nu;) \u00b7 <b>Einstein</b> (the photoelectric effect, 1905 \u2014 the photon is real) \u00b7 <b>Maxwell</b> (light IS the field; this file is drawn in his hand) \u00b7 <b>Debye</b> (the lattice has a ceiling) \u00b7 <b>Drude &amp; Sommerfeld</b> (the electron sea) \u00b7 <b>Hodgkin</b> and <b>Franklin</b> (who read life itself off diffraction spots) \u00b7 and <b>Strickland &amp; Mourou</b>, waiting one file ahead.</p>"+
+ "<p style='color:rgba(255,215,0,.5)'>Mama nature paid the cohesive energy, atom by atom, to make this order out of a hot gas. We are about to spend a very great deal to take a little of it back. <b>Bow first.</b></p>";
+
+// ---- boot ----
+function resize(){DPR=Math.min(2,window.devicePixelRatio||1);W=innerWidth;H=innerHeight;
+  cv.width=W*DPR;cv.height=H*DPR;cv.style.width=W+"px";cv.style.height=H+"px";ctx.setTransform(DPR,0,0,DPR,0,0);}
+addEventListener("resize",resize);
+function frame(){ requestAnimationFrame(frame);
+  if(SPIN){ yaw+=0.0035; phase+=0.06; }
+  try{ render(); }catch(e){
+    ctx.fillStyle="#050510";ctx.fillRect(0,0,W,H);
+    ctx.textAlign="center";ctx.fillStyle="rgba(255,106,92,0.8)";ctx.font="bold 13px ui-monospace,monospace";
+    ctx.fillText("\u2593 the lattice broke \u2593",W/2,H/2);
+    ctx.fillStyle="rgba(255,180,120,0.6)";ctx.font="10px ui-monospace,monospace";
+    ctx.fillText("no faked frame \u00b7 reduce cells and try again",W/2,H/2+20);
+  }
+}
+resize(); setE(399); buildLattice(); requestAnimationFrame(frame);
+</script>
+</body></html>
