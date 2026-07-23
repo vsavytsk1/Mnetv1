@@ -1,0 +1,364 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>GARDINERIUM v1.1 &middot; glyphs as bounded point-graphs &middot; 1 px, always</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{background:#050510;color:#e0e0e0;font-family:ui-monospace,"SF Mono",Menlo,monospace;
+  font-size:11px;overflow:hidden;height:100%;width:100%}
+canvas{display:block}
+#cv{position:fixed;inset:0;z-index:1;cursor:grab}
+#cv:active{cursor:grabbing}
+#rail{position:fixed;top:0;bottom:54px;left:0;width:300px;z-index:5;display:flex;flex-direction:column;
+  background:linear-gradient(to right,rgba(5,5,16,.94),rgba(5,5,16,.82) 76%,rgba(5,5,16,0));
+  border-right:1px solid rgba(80,50,120,.14);pointer-events:none}
+#hd{padding:11px 14px 5px;text-shadow:0 0 10px rgba(5,5,16,.95)}
+#hd .title{font-size:13px;color:#cc44ff;letter-spacing:.16em;text-transform:uppercase;font-weight:bold}
+#hd .sub{font-size:8px;color:rgba(204,68,255,.55);letter-spacing:.05em;margin:2px 0 6px;text-transform:uppercase}
+#hd .big{font-size:19px;color:#ffd700;font-weight:bold;font-variant-numeric:tabular-nums}
+#hd .row{line-height:1.55;color:rgba(220,228,240,.5);font-size:10px;font-variant-numeric:tabular-nums}
+#hd .g{color:#ffd700;font-weight:bold}#hd .c{color:#35e0c8;font-weight:bold}#hd .v{color:#cc44ff;font-weight:bold}
+#hd .ok{color:#7fff9f;font-weight:bold}#hd .r{color:#ff6a5c;font-weight:bold}
+#law{margin:3px 14px 3px;padding:6px 8px;border-radius:3px;font-size:9.5px;line-height:1.5;
+  border:1px solid rgba(127,255,159,.35);background:rgba(6,20,12,.5)}
+#law b{color:#7fff9f}
+.sec{padding:2px 14px 3px}
+.sh{font-size:8px;text-transform:uppercase;letter-spacing:.11em;color:rgba(53,224,200,.6);margin:6px 0 2px}
+.sr{display:flex;justify-content:space-between;font-size:9px;line-height:1.5;color:rgba(220,228,240,.55);font-variant-numeric:tabular-nums}
+.sr .k{color:rgba(220,228,240,.34)}
+.sr .g{color:#ffd700;font-weight:bold}.sr .c{color:#35e0c8;font-weight:bold}.sr .ok{color:#7fff9f;font-weight:bold}
+#cats{display:flex;flex-wrap:wrap;gap:3px;pointer-events:auto}
+.ct{font-size:8px;padding:2px 4px;border-radius:2px;background:#140c1e;color:#6a5a80;
+  border:1px solid #231338;cursor:pointer}
+.ct:hover{border-color:#cc44ff;color:#cc44ff}
+.ct.on{background:#cc44ff;color:#050510;border-color:#cc44ff;font-weight:bold}
+#klaws{flex:1;overflow-y:auto;padding:4px 14px 12px;pointer-events:auto;
+  -webkit-mask-image:linear-gradient(to bottom,#000 93%,transparent);mask-image:linear-gradient(to bottom,#000 93%,transparent)}
+#klaws p{font-size:8.5px;color:rgba(220,228,240,.42);line-height:1.5;margin-bottom:5px}
+#klaws b{color:#ffd700}#klaws .pur{color:#cc44ff}#klaws .cy{color:#00d4ff}
+#stamp{position:fixed;bottom:60px;right:12px;z-index:6;pointer-events:none;text-align:right}
+#stamp .s{font-size:8px;color:rgba(204,68,255,.28);letter-spacing:.07em;line-height:1.8}
+#stamp .s.g{color:rgba(255,215,0,.32)}
+#bar{position:fixed;bottom:0;left:0;right:0;z-index:10;background:rgba(5,5,16,.97);
+  border-top:1px solid #221033;padding:5px 9px;display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.btn{background:#0b0814;color:#5a4a6a;border:1px solid #221033;border-radius:3px;padding:3px 8px;
+  font-family:inherit;font-size:9px;cursor:pointer;text-transform:uppercase;letter-spacing:.04em}
+.btn:hover{border-color:#cc44ff;color:#cc44ff}.btn.active{background:#cc44ff;color:#050510;border-color:#cc44ff}
+.btn.tg.active{background:#35e0c8;border-color:#35e0c8}
+.sep{width:1px;height:15px;background:#221033}
+.lbl{color:rgba(220,228,240,.28);font-size:8px;text-transform:uppercase;letter-spacing:.05em}
+.slw{display:flex;align-items:center;gap:3px}
+.slw input{accent-color:#cc44ff;cursor:pointer;width:56px}
+.sv{font-size:8.5px;color:#cc44ff;min-width:26px;font-variant-numeric:tabular-nums}
+</style></head><body>
+<canvas id="cv"></canvas>
+
+<div id="rail">
+  <div id="hd">
+    <span class="title">Gardinerium</span>
+    <div class="sub">glyphs as bounded point-graphs</div>
+    <div class="big"><span id="h-pts">0</span><span style="font-size:10px;color:rgba(220,228,240,.35);font-weight:normal"> points on screen</span></div>
+    <div class="row">glyphs&nbsp;<span class="v" id="h-n">0</span> &middot; contours&nbsp;<span class="c" id="h-ct">0</span> &middot; fps&nbsp;<span class="g" id="h-fps">&mdash;</span></div>
+  </div>
+  <div id="law">
+    <b>the law:</b> points sit <b id="l-sp">1.00</b> px apart on screen, whatever the zoom. zoom in and you get <b>more points</b>, never bigger ones.
+  </div>
+  <div class="sec">
+    <div class="sh">measured, every frame</div>
+    <div class="sr"><span class="k">target spacing</span><span class="g">1.000 px</span></div>
+    <div class="sr"><span class="k">actual mean spacing</span><span class="ok" id="s-sp">&mdash;</span></div>
+    <div class="sr"><span class="k">error</span><span class="c" id="s-err">&mdash;</span></div>
+    <div class="sr"><span class="k">max |r| over all glyphs</span><span class="ok" id="s-rad">&mdash;</span></div>
+    <div class="sr"><span class="k">escaped the circle</span><span class="ok" id="s-esc">0</span></div>
+    <div class="sr"><span class="k">on the unit sphere |p|</span><span class="ok" id="s-sph">&mdash;</span></div>
+    <div class="sh">Gardiner's categories</div>
+    <div id="cats"></div>
+  </div>
+  <div id="klaws"></div>
+</div>
+
+<div id="stamp">
+  <div class="s">GARDINERIUM v1.1</div>
+  <div class="s g">nothing leaves the circle</div>
+  <div class="s">&chi;=2 &middot; P=12 &middot; spini &middot; always</div>
+</div>
+
+<div id="bar">
+  <button class="btn active" id="m-disc" onclick="setMode('disc')">CIRCLES</button>
+  <button class="btn" id="m-dome" onclick="setMode('dome')">DOME 3D</button>
+  <button class="btn" id="m-one" onclick="setMode('one')">ONE GLYPH</button>
+  <div class="sep"></div>
+  <button class="btn tg active" id="tg-spin" onclick="SPIN=!SPIN;this.classList.toggle('active',SPIN)">SPINI</button>
+  <button class="btn tg active" id="tg-ring" onclick="RING=!RING;this.classList.toggle('active',RING)">THE BOUND</button>
+  <button class="btn tg" id="tg-edge" onclick="EDGES=!EDGES;this.classList.toggle('active',EDGES)">EDGES</button>
+  <button class="btn" onclick="page(-1)">&#9664;</button>
+  <button class="btn" onclick="page(1)">&#9654;</button>
+  <div class="sep"></div>
+  <div class="slw"><span class="lbl">spacing px</span><input type="range" id="sl-sp" min="5" max="40" value="10" oninput="TARGET=+this.value/10;document.getElementById('l-sp').textContent=TARGET.toFixed(2)"><span class="sv" id="sv-sp">1.0</span></div>
+  <div class="slw"><span class="lbl">grid</span><input type="range" id="sl-g" min="2" max="10" value="5" oninput="GRID=+this.value;layout()"><span class="sv" id="sv-g">5</span></div>
+  <div class="slw"><span class="lbl">zoom</span><input type="range" id="sl-z" min="30" max="600" value="100" oninput="zoom=+this.value/100"></div>
+</div>
+
+<script>
+// ============================================================================
+// GARDINERIUM v1.1 -- the glyph as a bounded point-graph.
+//
+// THREE RULES, and all three are checked on screen every frame:
+//
+//  1. THE CIRCLE IS A HARD BOUND. Each sign is rasterized offscreen, its
+//     boundary traced by Moore neighbour-following into ordered closed
+//     contours, then divided by its own maximum radius from the centroid.
+//     After that every point satisfies |r| <= 1 BY CONSTRUCTION, and the
+//     panel counts how many escaped. It says 0 because it cannot say anything
+//     else -- but it is counted, not asserted.
+//
+//  2. ONE PIXEL, ALWAYS. The contours are stored arc-length parameterised.
+//     At draw time the number of points is chosen as N = arcLength * scale,
+//     so the on-screen gap between neighbours stays at the target no matter
+//     the zoom. Zoom in and you get MORE POINTS, never bigger ones. The
+//     achieved mean spacing is measured from the drawn positions and shown.
+//
+//  3. THE LIFT IS EXACT. DOME mode sends each disc point (x,y) to
+//     (x, y, sqrt(1 - x^2 - y^2)) -- the upper unit hemisphere. Then
+//     x^2+y^2+z^2 = 1 identically, so the 3D form is still inside the bound,
+//     and the panel prints the measured |p| to prove it.
+//
+// Everything else -- the 1,072 signs, the Gardiner codes -- is carried from
+// v1.0, where the codes were verified against Unicode one by one.
+// Pure Canvas 2D. Zero dependencies. chi=2 . P=12 . 2026
+// ============================================================================
+
+var cv=document.getElementById("cv"), ctx=cv.getContext("2d"), W,H,DPR;
+
+var RUNS=[["A",0x13000,80],["B",0x13050,10],["C",0x1305A,28],["D",0x13076,92],["E",0x130D2,44],
+ ["F",0x130FE,65],["G",0x1313F,64],["H",0x1317F,9],["I",0x13188,19],["K",0x1319B,8],
+ ["L",0x131A3,10],["M",0x131AD,66],["N",0x131EF,49],["NL",0x13220,22],["NU",0x13236,26],
+ ["O",0x13250,75],["P",0x1329B,13],["Q",0x132A8,7],["R",0x132AF,34],["S",0x132D1,54],
+ ["T",0x13307,44],["U",0x13333,47],["V",0x13362,77],["W",0x133B3,32],["X",0x133D3,12],
+ ["Y",0x133DF,9],["Z",0x133E8,41],["Aa",0x13411,34],["V",0x1342F,1]];
+var SIGNS=[],byCat={},CATS=[];
+for(var r=0;r<RUNS.length;r++){var c=RUNS[r][0];
+  if(!byCat[c]){byCat[c]=[];CATS.push(c);}
+  for(var k=0;k<RUNS[r][2];k++){var s={cp:RUNS[r][1]+k,cat:c,ch:String.fromCodePoint(RUNS[r][1]+k)};
+    SIGNS.push(s);byCat[c].push(s);}}
+
+var MODE="disc", SPIN=true, RING=true, EDGES=false;
+var TARGET=1.0, GRID=5, zoom=1, rot=0, uYaw=0, PAGE=0, ISO=null;
+var FONTOK=false;
+
+// ---- offscreen rasteriser ----
+var RS=112;
+var off=document.createElement("canvas"); off.width=RS; off.height=RS;
+var octx=off.getContext("2d",{willReadFrequently:true});
+
+function detectFont(){
+  var c=document.createElement("canvas").getContext("2d"); c.font="64px serif";
+  var tofu=c.measureText("\uFFFF").width, hier=c.measureText("\u{13000}").width, ref=c.measureText("M").width;
+  FONTOK = Math.abs(hier-tofu)>0.5 && hier>0.5*ref;
+}
+
+// ---- glyph -> ordered contours, normalised into the unit circle ----
+var CACHE={};
+function extract(cp){
+  if(CACHE[cp]) return CACHE[cp];
+  octx.fillStyle="#000"; octx.fillRect(0,0,RS,RS);
+  octx.fillStyle="#fff"; octx.textAlign="center"; octx.textBaseline="middle";
+  octx.font=Math.floor(RS*0.74)+"px serif";
+  try{ octx.fillText(String.fromCodePoint(cp), RS/2, RS/2); }catch(e){}
+  var d=octx.getImageData(0,0,RS,RS).data;
+  var bin=new Uint8Array(RS*RS);
+  for(var i=0;i<RS*RS;i++) bin[i]=d[i*4]>110?1:0;
+  function at(x,y){return (x<0||y<0||x>=RS||y>=RS)?0:bin[y*RS+x];}
+  // boundary = filled pixel with an empty 4-neighbour
+  var isB=new Uint8Array(RS*RS);
+  for(var y=0;y<RS;y++)for(var x=0;x<RS;x++)
+    if(at(x,y)&&(!at(x-1,y)||!at(x+1,y)||!at(x,y-1)||!at(x,y+1))) isB[y*RS+x]=1;
+  // Moore neighbour tracing, one closed loop per component
+  var seen=new Uint8Array(RS*RS), contours=[];
+  var N8=[[1,0],[1,1],[0,1],[-1,1],[-1,0],[-1,-1],[0,-1],[1,-1]];
+  for(var y0=0;y0<RS;y0++)for(var x0=0;x0<RS;x0++){
+    if(!isB[y0*RS+x0]||seen[y0*RS+x0])continue;
+    var pts=[],cx=x0,cy=y0,dir=0,guard=0;
+    do{
+      seen[cy*RS+cx]=1; pts.push([cx,cy]);
+      var found=false;
+      for(var t=0;t<8;t++){
+        var nd=(dir+6+t)%8, nx=cx+N8[nd][0], ny=cy+N8[nd][1];
+        if(nx>=0&&ny>=0&&nx<RS&&ny<RS&&isB[ny*RS+nx]){cx=nx;cy=ny;dir=nd;found=true;break;}
+      }
+      if(!found)break;
+    } while(!(cx===x0&&cy===y0) && ++guard<9000);
+    if(pts.length>7) contours.push(pts);
+  }
+  // centroid + normalise so max radius is exactly 1  (THE BOUND)
+  var sx=0,sy=0,n=0;
+  for(var c2=0;c2<contours.length;c2++)for(var i2=0;i2<contours[c2].length;i2++){
+    sx+=contours[c2][i2][0]; sy+=contours[c2][i2][1]; n++; }
+  var out={cs:[],L:0,maxR:0,cp:cp};
+  if(!n){ CACHE[cp]=out; return out; }
+  var mx=sx/n, my=sy/n, maxr=1e-9;
+  for(var c2=0;c2<contours.length;c2++)for(var i2=0;i2<contours[c2].length;i2++){
+    var dx=contours[c2][i2][0]-mx, dy=contours[c2][i2][1]-my;
+    var rr=Math.sqrt(dx*dx+dy*dy); if(rr>maxr)maxr=rr; }
+  for(var c2=0;c2<contours.length;c2++){
+    var src=contours[c2], P=[], cum=[0], tot=0;
+    for(var i2=0;i2<src.length;i2++)
+      P.push([(src[i2][0]-mx)/maxr, (src[i2][1]-my)/maxr]);
+    for(var i2=1;i2<=P.length;i2++){
+      var a=P[i2-1], b=P[i2%P.length];
+      tot+=Math.hypot(b[0]-a[0],b[1]-a[1]); cum.push(tot); }
+    out.cs.push({P:P,cum:cum,len:tot}); out.L+=tot;
+  }
+  // verify the bound, do not assume it
+  for(var c2=0;c2<out.cs.length;c2++)for(var i2=0;i2<out.cs[c2].P.length;i2++){
+    var p=out.cs[c2].P[i2], rr=Math.hypot(p[0],p[1]); if(rr>out.maxR)out.maxR=rr; }
+  CACHE[cp]=out; return out;
+}
+// resample a contour to exactly N points at equal arc length
+function resample(c,N,outArr){
+  if(N<3||c.len<=0)return 0;
+  var step=c.len/N, j=0, m=0;
+  for(var i=0;i<N;i++){
+    var target=i*step;
+    while(j<c.cum.length-2 && c.cum[j+1]<target) j++;
+    var t0=c.cum[j], t1=c.cum[j+1], f=(t1>t0)?(target-t0)/(t1-t0):0;
+    var a=c.P[j%c.P.length], b=c.P[(j+1)%c.P.length];
+    outArr[m++]=a[0]+(b[0]-a[0])*f;
+    outArr[m++]=a[1]+(b[1]-a[1])*f;
+  }
+  return N;
+}
+
+// ---- layout ----
+var CELLS=[];
+function layout(){
+  CELLS=[];
+  var list = ISO ? byCat[ISO] : SIGNS;
+  if(MODE==="one"){ CELLS.push({s:list[Math.min(list.length-1,PAGE)],x:0,y:0,r:1}); return; }
+  var per=GRID*GRID, start=((PAGE%Math.ceil(list.length/per))+Math.ceil(list.length/per))%Math.ceil(list.length/per)*per;
+  for(var i=0;i<per && start+i<list.length;i++){
+    var gx=i%GRID, gy=(i/GRID)|0;
+    CELLS.push({s:list[start+i], x:(gx-(GRID-1)/2)*2.35, y:(gy-(GRID-1)/2)*2.35, r:1});
+  }
+  document.getElementById("h-n").textContent=CELLS.length;
+}
+function page(d){PAGE+=d;layout();}
+
+// ---- render ----
+var buf=new Float32Array(200000);
+function render(){
+  ctx.fillStyle="#050510"; ctx.fillRect(0,0,W,H);
+  var L=(W>820)?302:6;
+  var ORX=L+(W-L)/2, ORY=H*0.46;
+  var span=(MODE==="one")?2.6:GRID*2.35+0.9;
+  var PSC=Math.min((W-L),H-72)/span*zoom;
+  var ca=Math.cos(rot+uYaw), sa=Math.sin(rot+uYaw);
+  var totalPts=0, totalCon=0, spSum=0, spN=0, maxR=0, escaped=0, sphMin=9, sphMax=0;
+
+  for(var q=0;q<CELLS.length;q++){
+    var C=CELLS[q], G=extract(C.s.cp);
+    if(G.maxR>maxR)maxR=G.maxR;
+    var cx=ORX+C.x*PSC, cy=ORY+C.y*PSC, R=PSC;
+    if(cx<L-R||cx>W+R||cy<-R||cy>H+R) continue;
+    totalCon+=G.cs.length;
+    // the bound, drawn
+    if(RING){
+      ctx.strokeStyle="rgba(204,68,255,.22)";ctx.lineWidth=1;
+      ctx.beginPath();ctx.arc(cx,cy,R,0,6.2832);ctx.stroke();
+    }
+    var col="hsl("+((CATS.indexOf(C.s.cat)*360/28+18)%360)+",65%,64%)";
+    for(var c2=0;c2<G.cs.length;c2++){
+      var con=G.cs[c2];
+      // THE LAW: N = on-screen arc length / target spacing
+      var N=Math.round(con.len*R/TARGET);
+      N=Math.max(3,Math.min(9000,N));
+      if((totalPts+N)*2>buf.length) break;
+      resample(con,N,buf);
+      var px=0,py=0;
+      for(var i=0;i<N;i++){
+        var ux=buf[i*2], uy=buf[i*2+1];
+        var sx,sy,rad=Math.hypot(ux,uy);
+        if(rad>1.0000001) escaped++;
+        if(MODE==="dome"){
+          var z=Math.sqrt(Math.max(0,1-ux*ux-uy*uy));
+          var m=Math.sqrt(ux*ux+uy*uy+z*z);
+          if(m<sphMin)sphMin=m; if(m>sphMax)sphMax=m;
+          var rx=ux*ca - z*sa, rz=ux*sa + z*ca;
+          sx=cx+rx*R; sy=cy+(uy*0.86 - rz*0.34)*R;
+        } else { sx=cx+ux*R; sy=cy+uy*R; }
+        if(i>0){var dd=Math.hypot(sx-px,sy-py); if(dd<40){spSum+=dd;spN++;}}
+        if(EDGES&&i>0){ctx.strokeStyle=col;ctx.globalAlpha=.5;ctx.lineWidth=.5;
+          ctx.beginPath();ctx.moveTo(px,py);ctx.lineTo(sx,sy);ctx.stroke();ctx.globalAlpha=1;}
+        ctx.fillStyle=col; ctx.fillRect(sx,sy,1,1);
+        px=sx;py=sy;
+      }
+      totalPts+=N;
+    }
+    if(MODE!=="one"&&R>26){
+      ctx.font="8px ui-monospace,monospace";ctx.textAlign="center";
+      ctx.fillStyle="rgba(220,228,240,.32)";
+      ctx.fillText(C.s.cat+" \u00b7 U+"+C.s.cp.toString(16).toUpperCase(),cx,cy+R+11);
+    }
+  }
+  ctx.textAlign="left";
+  document.getElementById("h-pts").textContent=totalPts.toLocaleString();
+  document.getElementById("h-ct").textContent=totalCon;
+  var mean=spN?spSum/spN:0;
+  document.getElementById("s-sp").textContent=mean.toFixed(3)+" px";
+  var err=TARGET>0?Math.abs(mean-TARGET)/TARGET*100:0;
+  var eEl=document.getElementById("s-err");
+  eEl.textContent=err.toFixed(1)+"%"; eEl.className=err<12?"ok":"c";
+  document.getElementById("s-rad").textContent=maxR.toFixed(6);
+  var esc=document.getElementById("s-esc");
+  esc.textContent=escaped; esc.className=escaped?"r":"ok";
+  document.getElementById("s-sph").textContent=(MODE==="dome"&&sphMax>0)?
+    (sphMin.toFixed(6)+" .. "+sphMax.toFixed(6)):"\u2014";
+}
+
+// ---- controls ----
+function setMode(m){MODE=m;
+  ["disc","dome","one"].forEach(function(q){document.getElementById("m-"+q).classList.toggle("active",q===m);});
+  layout();}
+var drag=false,lx=0;
+cv.addEventListener("pointerdown",function(e){if(W>820&&e.clientX<302)return;drag=true;lx=e.clientX;});
+cv.addEventListener("pointermove",function(e){if(drag){uYaw+=(e.clientX-lx)*0.007;lx=e.clientX;}});
+cv.addEventListener("pointerup",function(){drag=false;});
+cv.addEventListener("wheel",function(e){if(W>820&&e.clientX<302)return;e.preventDefault();
+  zoom*=(e.deltaY>0?0.9:1.11);zoom=Math.max(.3,Math.min(6,zoom));
+  document.getElementById("sl-z").value=Math.round(zoom*100);},{passive:false});
+
+var box=document.getElementById("cats");
+for(var i=0;i<CATS.length;i++){(function(c){
+  if(box.querySelector("[data-c='"+c+"']"))return;
+  var d=document.createElement("span");d.className="ct";d.dataset.c=c;
+  d.textContent=c+" "+byCat[c].length;
+  d.onclick=function(){ISO=(ISO===c)?null:c;PAGE=0;
+    Array.prototype.forEach.call(box.children,function(x){x.classList.toggle("on",x.dataset.c===ISO);});
+    layout();};
+  box.appendChild(d);})(CATS[i]);}
+
+document.getElementById("klaws").innerHTML=
+ "<div class='sh'>the honesty (K-laws)</div>"+
+ "<p><b>K1 THE BOUND IS BY CONSTRUCTION, AND STILL COUNTED.</b> Each sign's traced outline is divided by its own maximum radius from the centroid, so <b>|r| &le; 1</b> cannot fail. The panel still walks every drawn point and counts escapes, because a claim you never test is just a claim. <span class='pur'>max |r| reads 1.000000</span> \u2014 the outermost point touches the circle exactly, which is what normalising means.</p>"+
+ "<p><b>K2 ONE PIXEL, MEASURED NOT PROMISED.</b> Points are placed by arc length: <b>N = perimeter &times; scale / spacing</b>. The <i>achieved</i> mean gap is then measured from the drawn screen positions and printed with its error. Zoom in and the count rises; the gap does not. If the error climbs you are seeing a real limit, not a rounded number.</p>"+
+ "<p><b>K3 THE LIFT IS EXACT.</b> DOME sends (x,y) to (x, y, &radic;(1&minus;x&sup2;&minus;y&sup2;)), the upper unit hemisphere, so <b>x&sup2;+y&sup2;+z&sup2; = 1</b> identically. The panel prints the measured |p| range: it reads 1.000000 to 1.000000 because the algebra leaves it no choice. <span class='cy'>The circle became a sphere and the bound held.</span></p>"+
+ "<p><b>K4 THE OUTLINE IS A RASTER TRACE, NOT THE FONT'S CURVES.</b> Each sign is drawn to a "+RS+"&times;"+RS+" offscreen buffer and its boundary followed by <b>Moore neighbour tracing</b>. That means the point cloud carries <b>rasterisation error</b> \u2014 a hair thinner or fatter than the true outline, and hairline strokes can break into extra contours. It is the shape of the pixels, honestly, not the shape of the B\u00e9zier.</p>"+
+ "<p><b>K5 STILL YOUR FONT.</b> Nothing is drawn by me. If your system has no hieroglyph font the buffer comes back empty and you get empty circles \u2014 the bound with nothing in it, which is at least an honest picture of the situation. Install <b>Noto Sans Egyptian Hieroglyphs</b>.</p>"+
+ "<p><b>K6 CONTOUR COUNT IS NOT STROKE COUNT.</b> A scribe's stroke and a traced boundary loop are different things: one closed outline can be the edge of a single stroke, and a thin line yields <b>two</b> boundaries, not one. Read the contour number as topology, <span class='pur'>not as how the hand moved</span>.</p>"+
+ "<div class='sh'>the bow</div>"+
+ "<p><b>Alan Gardiner</b>, who indexed the signs \u00b7 <b>Champollion</b>, who broke them \u00b7 <b>Moore</b>, whose neighbour trace walks a boundary in one pass \u00b7 the <b>Unicode Technical Committee</b>, who put 1,072 of them within reach \u00b7 and the <b>scribes</b>, who fitted a bird, a basket and a bolt into the same square and never once let a sign leave its frame.</p>";
+
+function resize(){DPR=Math.min(2,devicePixelRatio||1);W=innerWidth;H=innerHeight;
+  cv.width=W*DPR;cv.height=H*DPR;cv.style.width=W+"px";cv.style.height=H+"px";ctx.setTransform(DPR,0,0,DPR,0,0);}
+addEventListener("resize",resize);
+var avgMS=16;
+function frame(){requestAnimationFrame(frame);var t0=performance.now();
+  if(SPIN&&MODE==="dome")rot+=0.006;
+  try{render();}catch(e){ctx.fillStyle="#050510";ctx.fillRect(0,0,W,H);
+    ctx.textAlign="center";ctx.fillStyle="rgba(255,106,92,.8)";ctx.font="bold 12px ui-monospace,monospace";
+    ctx.fillText("\u2593 render failed \u00b7 no faked frame \u2593",W/2,H/2);ctx.textAlign="left";}
+  avgMS=avgMS*0.9+(performance.now()-t0)*0.1;
+  document.getElementById("h-fps").textContent=Math.round(1000/Math.max(1,avgMS));}
+resize(); detectFont(); layout(); requestAnimationFrame(frame);
+</script>
+</body></html>
