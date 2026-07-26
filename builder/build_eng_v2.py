@@ -55,38 +55,59 @@ LEDGER_HTML = "".join(
     for e in ledger_lines
 )
 
-# Module cards definition
-MODULES = [
-    ("GENESIS v8.1",  "CANVAS",    "#00ffd5", "#1a3a3a",
-     "M1-M6 · full kernel · v7.5 format · canvas explorer",
-     "genesis", "https://vsavytsk1.github.io/Mnetv1/shell/genesis_v8.1.html"),
-    ("GRAPH SANDBOX", "SANDBOX",   "#80d0ff", "#1a2a3a",
-     "Graph ops · NS flow · cage · autopilot · cmd · 3D",
-     "sandbox", "https://vsavytsk1.github.io/Mnetv1/shell/graph_sandbox_v5.1.html"),
-    ("MATH TREE v5.0","TREE",      "#ffd700", "#3a3a1a",
-     "Sacred tree · gacha · forward-only · KaTeX · shame slider",
-     "tree",    "https://vsavytsk1.github.io/Mnetv1/tree/math_tree_v5.0.html"),
-    ("HOLLY7",        "DASHBOARD", "#a78bfa", "#2a1a4a",
-     "7 modules · SAR-5 proof · NS flow · navierCrunch · tree",
-     "holly7",  "https://vsavytsk1.github.io/Mnetv1/pack/holly7.html"),
-    ("NAVIERCUNCH",   "BENCHMARK", "#ff9040", "#3a2a1a",
-     "Turbulent Re>10000 · RTX3060 · O(n) · GPU/CPU sparse",
-     "navier",  "https://vsavytsk1.github.io/Mnetv1/pack/navierCrunch_turbulent.html"),
-    ("WARNING v2.0",  "FMA",       "#ff69b4", "#3a1a2a",
-     "FMA intro · transmutation circle · v8 engine · builder",
-     "warning", "https://vsavytsk1.github.io/Mnetv1/shell/spooky_warning/warning_v2.0.html"),
-]
+# Module cards: AUTO-DISCOVERED from disk (sim_scan). The builder is absolute --
+# the master control DISCOVERS every sim on the io pages (KEEP IT ALL: every version,
+# matching the archive) so it can never drift from what is shipped. Add a sim -> it appears.
+import sim_scan
+SIMS  = sim_scan.discover()             # ALL versions -- the archive truth (for LINKS)
+CARDS = sim_scan.latest_only(SIMS)      # newest per family -- the DASHBOARD view (pretty cards)
+print(f"  scanned {len(SIMS)} sims (archive) -> {len(CARDS)} shown on dashboard (latest per family)")
+
+# Group the DASHBOARD cards by category tag, rendered per group with a header.
+from collections import OrderedDict
+GROUPS = OrderedDict()
+for s in CARDS:
+    GROUPS.setdefault(s["tag"], []).append(s)
+
+def esc(t):
+    return (t.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"))
+
+def caps_html(caps):
+    return "".join(f'<span class="cap {c}">{c.upper()}</span>' for c in caps)
 
 CARDS_HTML = ""
-for name, tag, color, border, desc, key, url in MODULES:
-    CARDS_HTML += f"""
-  <div class="mod-card" onclick="summon('{key}')"
-    style="border-color:{border};--card-color:{color}">
-    <div class="card-tag" style="color:{color}">{tag}</div>
-    <div class="card-name" style="color:{color}">{name}</div>
-    <div class="card-desc">{desc}</div>
-    <div class="card-arrow" style="color:{color}">▶ SUMMON</div>
+for tag in sorted(GROUPS):
+    grp = sorted(GROUPS[tag], key=lambda x: x["key"])
+    CARDS_HTML += f'\n  <div class="cat-header">{esc(tag)} <span class="cat-count">{len(grp)}</span></div>'
+    for s in grp:
+        CARDS_HTML += f"""
+  <div class="mod-card" id="card-{s['key']}" data-tag="{esc(s['tag'])}" onclick="summon('{s['key']}')"
+    style="border-color:{s['border']};--card-color:{s['color']}">
+    <div class="card-dot"></div>
+    <div class="card-tag" style="color:{s['color']}">{esc(s['tag'])}</div>
+    <div class="card-name" style="color:{s['color']}">{esc(s['name'])}</div>
+    <div class="card-desc">{esc(s['desc'])}</div>
+    <div class="card-arrow" style="color:{s['color']}">SUMMON &#9654;</div>
+    <div class="card-caps">{caps_html(s.get('caps', []))}</div>
   </div>"""
+
+# The key -> url map for summon(), also auto-built from the same scan (no drift).
+LINKS_JS = "".join(f"  {s['key']}:'{s['url']}',\n" for s in SIMS)
+
+# The "select your sims" dropdown -- one toggle row per dashboard card, category-grouped,
+# ALL ON by default. Auto-populated from the same scan so it can never drift.
+SELECTOR_HTML = ""
+for tag in sorted(GROUPS):
+    grp = sorted(GROUPS[tag], key=lambda x: x["key"])
+    SELECTOR_HTML += f'\n  <div class="ms-cat">{esc(tag)}</div>'
+    for s in grp:
+        SELECTOR_HTML += (
+            f'\n  <div class="ms-row" onclick="toggleMod(\'{s["key"]}\')">'
+            f'<span class="ms-name">{esc(s["name"])}</span>'
+            f'<span class="ms-dot on" id="ms-{s["key"]}" style="--card-color:{s["color"]}"></span></div>'
+        )
+# JS array of all dashboard keys (for modApply / all-on default).
+ALL_KEYS_JS = "[" + ",".join(f"'{s['key']}'" for s in CARDS) + "]"
 
 HTML = f"""<!DOCTYPE html>
 <html lang="en">
@@ -159,9 +180,15 @@ body{{background:var(--bg);color:var(--text);
   color:#1a2a3a;font-size:9px;letter-spacing:0.15em;margin-bottom:4px
 }}
 .mod-grid{{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}}
+.cat-header{{grid-column:1/-1;color:#3a4a5a;font-size:10px;letter-spacing:0.25em;
+  text-transform:uppercase;margin:14px 0 2px;padding-bottom:4px;
+  border-bottom:1px solid #10101e;display:flex;align-items:center;gap:8px}}
+.cat-header:first-child{{margin-top:0}}
+.cat-count{{color:#1a2a3a;font-size:9px;background:#0a0a14;border-radius:8px;
+  padding:1px 7px}}
 .mod-card{{
   background:var(--panel);border:1px solid #0e0e1e;border-radius:4px;
-  padding:12px 14px;cursor:pointer;transition:all 0.2s;position:relative;
+  padding:12px 14px 18px;cursor:pointer;transition:all 0.2s;position:relative;
   overflow:hidden
 }}
 .mod-card::before{{
@@ -169,13 +196,57 @@ body{{background:var(--bg);color:var(--text);
   background:radial-gradient(ellipse at 30% 30%, var(--card-color,#00d4ff) 0%, transparent 70%);
   transition:opacity 0.3s
 }}
-.mod-card:hover::before{{opacity:0.04}}
-.mod-card:hover{{border-color:var(--card-color,#00d4ff);transform:translateY(-1px)}}
+.mod-card:hover::before{{opacity:0.05}}
+.mod-card:hover{{border-color:var(--card-color,#00d4ff);transform:translateY(-1px);
+  box-shadow:0 0 16px -6px var(--card-color,#00d4ff)}}
+/* the icon: a glowing status dot in the card's accent colour */
+.card-dot{{position:absolute;top:8px;right:8px;width:7px;height:7px;border-radius:50%;
+  background:var(--card-color,#00d4ff);opacity:0.55;
+  box-shadow:0 0 6px var(--card-color,#00d4ff);transition:opacity 0.2s}}
+.mod-card:hover .card-dot{{opacity:1}}
 .card-tag{{font-size:8px;letter-spacing:0.2em;margin-bottom:4px;opacity:0.7}}
-.card-name{{font-size:13px;font-weight:bold;margin-bottom:6px}}
-.card-desc{{color:#2a3a4a;font-size:9px;line-height:1.6;margin-bottom:8px}}
-.card-arrow{{font-size:9px;letter-spacing:0.1em;opacity:0}}
+.card-name{{font-size:12px;font-weight:bold;margin-bottom:6px;letter-spacing:0.02em}}
+.card-desc{{color:#2a3a4a;font-size:9px;line-height:1.55;margin-bottom:8px}}
+.card-arrow{{font-size:9px;letter-spacing:0.12em;opacity:0;transition:opacity 0.15s}}
 .mod-card:hover .card-arrow{{opacity:1}}
+/* capability chips, bottom-right, auto-detected from the sim */
+.card-caps{{position:absolute;bottom:5px;right:6px;display:flex;gap:3px;
+  flex-direction:row-reverse;flex-wrap:wrap;max-width:64%;justify-content:flex-start}}
+.card-caps .cap{{font-size:7px;letter-spacing:0.1em;font-family:ui-monospace,monospace;
+  padding:1px 4px;border-radius:2px;opacity:0.6;border:1px solid transparent;line-height:1.2}}
+.mod-card:hover .card-caps .cap{{opacity:0.95}}
+.cap.tab{{color:#ff9040;border-color:rgba(255,144,64,0.2)}}
+.cap.frm{{color:#80d0ff;border-color:rgba(128,208,255,0.2)}}
+.cap.pc{{color:#7fff7f;border-color:rgba(127,255,127,0.2)}}
+.cap.and{{color:#a4c639;border-color:rgba(164,198,57,0.2)}}
+.cap.ios{{color:#c8c8c8;border-color:rgba(200,200,200,0.2)}}
+.cap.gpu{{color:#ff69b4;border-color:rgba(255,105,180,0.2)}}
+.cap.kbd{{color:#ffd700;border-color:rgba(255,215,0,0.2)}}
+.cap.priv{{color:#888;border-color:rgba(136,136,136,0.2)}}
+/* dimmed card when toggled off in the selector */
+.mod-card.mod-off{{opacity:0.16;filter:grayscale(0.8);pointer-events:none}}
+/* the SELECT YOUR SIMS dropdown */
+#btn-modules #mod-count{{color:var(--green);font-size:9px}}
+#mod-selector{{position:fixed;right:12px;bottom:44px;width:250px;max-height:60vh;
+  background:#06060e;border:1px solid #1a1a2e;border-radius:6px;z-index:60;
+  box-shadow:0 8px 40px rgba(0,0,0,0.7);display:none;flex-direction:column;overflow:hidden}}
+#mod-selector.open{{display:flex}}
+#mod-selector .ms-head{{font-size:10px;letter-spacing:0.18em;color:#3a4a5a;
+  padding:9px 12px;border-bottom:1px solid #12121e;display:flex;justify-content:space-between;
+  align-items:center;flex-shrink:0}}
+#mod-selector #ms-allbtn{{color:var(--cyan);font-size:9px;cursor:pointer;
+  border:1px solid #12303a;border-radius:3px;padding:1px 7px}}
+#mod-selector #ms-allbtn:hover{{border-color:var(--cyan)}}
+#mod-selector .ms-body{{overflow-y:auto;padding:4px 0}}
+.ms-cat{{font-size:8px;letter-spacing:0.2em;color:#2a3a4a;padding:6px 12px 2px}}
+.ms-row{{display:flex;justify-content:space-between;align-items:center;
+  padding:3px 12px;cursor:pointer;font-size:10px}}
+.ms-row:hover{{background:#0c0c16}}
+.ms-name{{color:#6a7a8a;letter-spacing:0.03em;white-space:nowrap;overflow:hidden;
+  text-overflow:ellipsis;max-width:190px}}
+.ms-dot{{width:7px;height:7px;border-radius:50%;background:#1a1a26;flex-shrink:0;
+  transition:all 0.15s}}
+.ms-dot.on{{background:var(--card-color,#00ffd5);box-shadow:0 0 6px var(--card-color,#00ffd5)}}
 
 /* ── RIGHT PANEL ── */
 #right{{
@@ -234,6 +305,25 @@ body{{background:var(--bg);color:var(--text);
 #overlay-back:hover{{background:#1a1a2a;border-color:var(--purple)}}
 #overlay-frame{{flex:1;border:none;background:#030308}}
 
+/* ── LOADING OVERLAY -- the spini-spini net loads as the icon ── */
+#load{{position:fixed;inset:0;z-index:200;background:var(--bg);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;
+  transition:opacity 0.5s ease;overflow:hidden}}
+/* the net is BLOWN UP big and layered ABOVE the text (z-index 2): where its
+   pixels collide with the letters, the spini spini wins. Its border touches the
+   frame. Text shows through the gaps because the canvas clears transparent. */
+#load-cv{{position:absolute;top:50%;left:50%;width:min(88vh,88vw);height:min(88vh,88vw);
+  transform:translate(-50%,-54%);opacity:0.95;pointer-events:none;z-index:2}}
+#load.done{{opacity:0;pointer-events:none}}
+#load .load-logo{{font-size:20px;color:var(--purple);letter-spacing:0.28em;font-weight:bold;
+  text-shadow:0 0 24px rgba(167,139,250,0.6);z-index:1;margin-top:150px}}
+#load .load-sub{{font-size:9px;color:#3a4a5a;letter-spacing:0.14em;text-transform:uppercase;z-index:1}}
+#load .load-bar{{width:340px;height:3px;background:#12101e;border-radius:2px;overflow:hidden;z-index:1}}
+#load .load-fill{{height:100%;width:0%;border-radius:2px;
+  background:linear-gradient(90deg,var(--purple),var(--cyan));transition:width 0.28s ease}}
+#load .load-note{{font-size:8.5px;color:rgba(0,212,255,0.55);letter-spacing:0.06em;
+  font-variant-numeric:tabular-nums;z-index:1;min-height:11px}}
+
 /* ── SCROLLBAR ── */
 ::-webkit-scrollbar{{width:4px}}
 ::-webkit-scrollbar-track{{background:#030308}}
@@ -241,6 +331,17 @@ body{{background:var(--bg);color:var(--text);
 </style>
 </head>
 <body>
+
+<!-- LOADING OVERLAY -- pay once at load, then fly. The spini-spini net (a live
+     C60 buckyball) spins and REFINES itself as the kernel loads: a loading icon
+     that is the real geometry, not a spinner. spini spini. -->
+<div id="load">
+  <canvas id="load-cv"></canvas>
+  <div class="load-logo">⬡ ENG {VERSION}</div>
+  <div class="load-sub">MASTER CONTROL · summoning the kernel · P=12 · χ=2</div>
+  <div class="load-bar"><div class="load-fill" id="load-fill"></div></div>
+  <div class="load-note" id="load-note">&nbsp;</div>
+</div>
 
 <!-- TOP BAR -->
 <div id="top-bar">
@@ -303,10 +404,19 @@ body{{background:var(--bg);color:var(--text);
   <button class="btn op" onclick="engNS()">NS FLOW</button>
   <button class="btn op" onclick="engFS()">FRAC SEARCH</button>
   <div class="sep"></div>
+  <button class="btn" id="btn-modules" onclick="toggleModSelector(event)" title="select active sims">MODULES <span id="mod-count"></span></button>
+  <div class="sep"></div>
   <span class="lbl" style="color:#1a2a1a">P=12 · χ=2 · λ̃=0.1473</span>
   <div id="cmd-bar">
     <input id="cmd-input" type="text" placeholder="cmd + enter  (eval JS)" spellcheck="false">
     <button id="cmd-go" onclick="cmdRun()">RUN</button>
+  </div>
+</div>
+
+<!-- SELECT YOUR SIMS -->
+<div id="mod-selector">
+  <div class="ms-head">ACTIVE SIMS <span id="ms-allbtn" onclick="modAll(event)">all on</span></div>
+  <div class="ms-body">{SELECTOR_HTML}
   </div>
 </div>
 
@@ -410,15 +520,9 @@ var _miniState=null, _miniCam={{rx:0.3,ry:0,spin:0.004}};
   }})();
 }})();
 
-// ── SUMMON ───────────────────────────────────────────────────
+// ── SUMMON (auto-built from disk scan, no drift) ─────────────
 var LINKS={{
-  genesis:'https://vsavytsk1.github.io/Mnetv1/shell/genesis_v8.1.html',
-  sandbox:'https://vsavytsk1.github.io/Mnetv1/shell/graph_sandbox_v5.1.html',
-  tree   :'https://vsavytsk1.github.io/Mnetv1/tree/math_tree_v5.0.html',
-  holly7 :'https://vsavytsk1.github.io/Mnetv1/pack/holly7.html',
-  navier :'https://vsavytsk1.github.io/Mnetv1/pack/navierCrunch_turbulent.html',
-  warning:'https://vsavytsk1.github.io/Mnetv1/shell/spooky_warning/warning_v2.0.html'
-}};
+{LINKS_JS}}};
 function summon(key){{
   var ov=document.getElementById('overlay');
   var fr=document.getElementById('overlay-frame');
@@ -438,6 +542,53 @@ function overlayClose(){{
   setTimeout(function(){{fr.src='';}},300);
   logAdd('BACK','dashboard');
 }}
+
+// ── SELECT YOUR SIMS ─────────────────────────────────────────
+// All sims are LIVE by default. The selector only dims what you turn off.
+var ALL_KEYS={ALL_KEYS_JS};
+var modState={{}};
+(function(){{
+  var saved={{}};
+  try{{saved=JSON.parse(localStorage.getItem('eng_mods_v2')||'{{}}');}}catch(e){{}}
+  ALL_KEYS.forEach(function(k){{ modState[k]=(saved[k]===false)?false:true; }}); // default ON
+}})();
+function modApply(){{
+  var on=0;
+  ALL_KEYS.forEach(function(k){{
+    var card=document.getElementById('card-'+k);
+    var msd=document.getElementById('ms-'+k);
+    var isOn=modState[k]!==false;
+    if(isOn)on++;
+    if(card){{ if(isOn)card.classList.remove('mod-off'); else card.classList.add('mod-off'); }}
+    if(msd){{ msd.className='ms-dot'+(isOn?' on':''); }}
+  }});
+  var mc=document.getElementById('mod-count');
+  if(mc)mc.textContent=on+'/'+ALL_KEYS.length;
+}}
+function toggleMod(key){{
+  modState[key]=modState[key]===false?true:false;
+  try{{localStorage.setItem('eng_mods_v2',JSON.stringify(modState));}}catch(e){{}}
+  modApply();
+}}
+function modAll(e){{
+  if(e)e.stopPropagation();
+  var anyOff=ALL_KEYS.some(function(k){{return modState[k]===false;}});
+  ALL_KEYS.forEach(function(k){{ modState[k]=anyOff?true:false; }}); // all-on, or all-off toggle
+  try{{localStorage.setItem('eng_mods_v2',JSON.stringify(modState));}}catch(e2){{}}
+  modApply();
+  var b=document.getElementById('ms-allbtn'); if(b)b.textContent=anyOff?'all off':'all on';
+}}
+function toggleModSelector(e){{
+  if(e)e.stopPropagation();
+  document.getElementById('mod-selector').classList.toggle('open');
+}}
+document.addEventListener('click',function(e){{
+  var sel=document.getElementById('mod-selector');
+  var btn=document.getElementById('btn-modules');
+  if(sel&&sel.classList.contains('open')&&!sel.contains(e.target)&&!btn.contains(e.target)){{
+    sel.classList.remove('open');
+  }}
+}});
 
 // ── KERNEL OPS ───────────────────────────────────────────────
 var _engState=null;
@@ -486,6 +637,66 @@ function logAdd(op,msg){{
   el.scrollTop=el.scrollHeight;
 }}
 
+// ── THE SPINI-SPINI LOADER -- a live C60 that spins and REFINES as it loads ──
+var _loadNet=null, _loadCam={{rx:0.35,ry:0,spin:0.010}}, _loadRun=true, _loadLevel=0;
+function loadSpiniInit(){{
+  var cv=document.getElementById('load-cv'); if(!cv||typeof GK==='undefined') return;
+  var dpr=Math.min(2,window.devicePixelRatio||1);
+  var SZ=Math.min(window.innerHeight*0.88,window.innerWidth*0.88);
+  cv.width=SZ*dpr; cv.height=SZ*dpr;
+  var ctx=cv.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0);
+  _loadNet=GK.buildC60();
+  (function loop(){{
+    if(!_loadRun) return;
+    requestAnimationFrame(loop);
+    _loadCam.ry+=_loadCam.spin;
+    var W=SZ,H=SZ;
+    // clear TRANSPARENT so the text underneath shows through the net's gaps;
+    // where a strut is drawn it covers the letter -> the spini spini wins.
+    ctx.clearRect(0,0,W,H);
+    var cy2=Math.cos(_loadCam.ry),sy2=Math.sin(_loadCam.ry);
+    var cx2=Math.cos(_loadCam.rx),sx2=Math.sin(_loadCam.rx);
+    var zoom=Math.min(W,H)*0.46;   // blown up: border reaches the frame
+    function proj(p){{
+      var x=p[0],y=p[1],z=p[2];
+      var x1=x*cy2-z*sy2,z1=x*sy2+z*cy2;
+      var y1=y*cx2-z1*sx2,z2=y*sx2+z1*cx2;
+      var s=zoom/(z2+4);
+      return{{x:W/2+x1*s,y:H/2+y1*s,z:z2}};
+    }}
+    var F=_loadNet.faces;
+    for(var fi=0;fi<F.length;fi++){{
+      var f=F[fi],pts=f.pts,n=pts.length,isPent=f.type==='pent';
+      for(var i=0;i<n;i++){{
+        var a=proj(pts[i]),b=proj(pts[(i+1)%n]);
+        if(a.z<-3||b.z<-3) continue;
+        var br=Math.max(0.05,Math.min(0.85,1.3/(Math.abs(a.z)+2)));
+        ctx.strokeStyle=isPent?'rgba(167,139,250,'+br+')':'rgba(0,212,255,'+(br*0.45)+')';
+        ctx.lineWidth=isPent?1.3:0.5;
+        ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();
+      }}
+    }}
+  }})();
+}}
+// refine the spini net one Goldberg level (called as the load bar advances)
+function loadSpiniRefine(){{
+  if(!_loadNet||typeof GK==='undefined'||_loadLevel>=3) return;
+  try{{ _loadNet=GK.refineAll(_loadNet); _loadLevel++; }}catch(e){{}}
+}}
+
+// ── LOADING BAR ──────────────────────────────────────────────
+function loadStep(frac,note){{
+  var f=document.getElementById('load-fill'), n=document.getElementById('load-note');
+  if(f)f.style.width=Math.round(frac*100)+'%';
+  if(n&&note)n.textContent=note;
+}}
+function loadDone(){{
+  loadStep(1,'ready · '+ALL_KEYS.length+' sims live');
+  var el=document.getElementById('load');
+  if(el)setTimeout(function(){{el.classList.add('done');
+    setTimeout(function(){{_loadRun=false;el.style.display='none';}},520);}},300);
+}}
+
 // ── CMD ──────────────────────────────────────────────────────
 function cmdRun(){{
   var v=document.getElementById('cmd-input').value.trim();
@@ -501,7 +712,7 @@ document.getElementById('cmd-input').addEventListener('keydown',function(e){{
 }});
 
 // DATA PANELS
-var PC={cyan:"#00d4ff",pink:"#ff69b4",gold:"#ffd700",green:"#00ffd5",red:"#ff4444",orange:"#ff9040",dim:"#1a2a3a"};
+var PC={{cyan:"#00d4ff",pink:"#ff69b4",gold:"#ffd700",green:"#00ffd5",red:"#ff4444",orange:"#ff9040",dim:"#1a2a3a"}};
 function setPanel(id,rows){{
   var el=document.getElementById("dp-"+id); if(!el)return;
   el.innerHTML=rows.map(function(r){{
@@ -509,39 +720,63 @@ function setPanel(id,rows){{
   }}).join("");
 }}
 
-window.addEventListener("load",function(){{
-  logAdd("BOOT","ENG {VERSION} git:{GIT}");
-  var t0,dt,gk=GK.buildC60(),inv=GK.invariants(gk),chi=inv.vertices-inv.edges+inv.faces;
-  dt=(performance.now()-(t0=performance.now(),GK.buildC60(),performance.now()-t0)).toFixed(1);
-  // GK panel
+function engBoot(){{
+  // Build the C60 graph ONCE and reuse it across every panel (was built 4x -> 1x).
   var t1=performance.now(); var gk2=GK.buildC60(); var inv2=GK.invariants(gk2); var chi2=inv2.vertices-inv2.edges+inv2.faces;
   setPanel("gk",[["V",inv2.vertices,"cyan"],["E",inv2.edges,"cyan"],["F",inv2.faces,"cyan"],["P",inv2.pents,"pink"],["hex",inv2.hexes,"text"],["chi",chi2,"gold"],["E/V",(inv2.edges/inv2.vertices).toFixed(3),"gold"],["ms",(performance.now()-t1).toFixed(1),"dim"]]);
   logAdd("GK","C60 P="+inv2.pents+" chi="+chi2);
-  // GA panel
-  var t2=performance.now(); GA.logReset(); var ax=GA.eulerCheck(gk2);
-  setPanel("ga",[["euler",ax.valid?"PASS":"FAIL",ax.valid?"green":"red"],["P=12",ax.pents===12?"PASS":"FAIL",ax.pents===12?"green":"red"],["chi=2",ax.chi===2?"PASS":"FAIL",ax.chi===2?"green":"red"],["entries",GA.log.entries.length,"cyan"],["ms",(performance.now()-t2).toFixed(1),"dim"]]);
-  logAdd("GA","euler="+(ax.valid?"PASS":"FAIL")+" entries="+GA.log.entries.length);
-  // SAR panel
-  var t3=performance.now(); var sr=SAR.proof(gk2); var lam=parseFloat(sr.spectral.lambda1).toFixed(6);
-  setPanel("sar",[["lam1",lam,"cyan"],["theory",parseFloat(sr.spectral.theory_C60).toFixed(6),"dim"],["delta",Math.abs(sr.spectral.lambda1-sr.spectral.expected).toFixed(6),sr.spectral.match?"green":"orange"],["MATCH",sr.spectral.match?"YES":"NO",sr.spectral.match?"green":"red"],["M0",sr.M0.count,"pink"],["vacuum",sr.stability.projectorCheck?"STABLE":"UNSTABLE",sr.stability.projectorCheck?"green":"red"],["ms",(performance.now()-t3).toFixed(1),"dim"]]);
-  logAdd("SAR","lam1="+lam+" "+(sr.spectral.match?"MATCH":"no match"));
-  // NSS panel
-  var t4=performance.now(); var nr=NSS.runOn(gk2,{{Re:150,steps:200,logEvery:9999}}); var nl=nr.lambdaEst!==null?nr.lambdaEst.toFixed(6):"?";
-  setPanel("nss",[["Re",150,"orange"],["steps",200,"dim"],["N",nr.graph?nr.graph.N:"?","cyan"],["lam1",nl,"cyan"],["lam1w",nr.lambdaEstW!==null?nr.lambdaEstW.toFixed(6):"?","gold"],["delta",nr.delta!==null?nr.delta.toFixed(6):"?",Math.abs(nr.delta||1)<0.01?"green":"orange"],["ms",(performance.now()-t4).toFixed(1),"dim"]]);
-  logAdd("NSS","lam1="+nl);
-  // FS panel
-  var t5=performance.now(); var fr=FS.search({{seed:"c60",maxLevels:3,target:0.1473,lockThresh:0.005}});
-  setPanel("fs",[["target","0.1473","cyan"],["locked",fr.locked?"YES":"NO",fr.locked?"green":"orange"],["lockLvl",fr.lockLevel!==undefined?fr.lockLevel:"?","gold"],["bestLam",fr.bestLambda!==undefined?fr.bestLambda.toFixed(6):"?","cyan"],["bestDelta",fr.bestDelta!==undefined?fr.bestDelta.toFixed(6):"?","dim"],["ms",(performance.now()-t5).toFixed(1),"dim"]]);
-  logAdd("FS",(fr.locked?"LOCKED":"not locked"));
-  // NAN panel
-  var t6=performance.now(); var ns={};
-  try{{var dag=typeof MNetNanite.build==="function"?MNetNanite.build(gk2):MNetNanite; ns=dag.stats||dag;}}catch(e){{ns={err:e.message.slice(0,30)};}}
-  var nr2=Object.keys(ns).slice(0,5).map(function(k){{return[k,String(ns[k]).slice(0,12),"cyan"];}});
-  if(!nr2.length)nr2=[["api","MNetNanite","cyan"],["status","loaded","green"]];
-  nr2.push(["ms",(performance.now()-t6).toFixed(1),"dim"]);
-  setPanel("nan",nr2);
-  logAdd("NAN","MNetNanite loaded");
-  logAdd("ALL OK","6/6 modules ran");
+  return gk2;
+}}
+// The 5 remaining kernel modules as ordered steps; each drives a panel + the bar.
+function engSteps(gk2){{ return [
+  ["GA",function(){{ var t2=performance.now(); GA.logReset(); var ax=GA.eulerCheck(gk2);
+    setPanel("ga",[["euler",ax.valid?"PASS":"FAIL",ax.valid?"green":"red"],["P=12",ax.pents===12?"PASS":"FAIL",ax.pents===12?"green":"red"],["chi=2",ax.chi===2?"PASS":"FAIL",ax.chi===2?"green":"red"],["entries",GA.log.entries.length,"cyan"],["ms",(performance.now()-t2).toFixed(1),"dim"]]);
+    logAdd("GA","euler="+(ax.valid?"PASS":"FAIL")+" entries="+GA.log.entries.length); }}],
+  ["SAR",function(){{ var t3=performance.now(); var sr=SAR.proof(gk2); var lam=parseFloat(sr.spectral.lambda1).toFixed(6);
+    setPanel("sar",[["lam1",lam,"cyan"],["theory",parseFloat(sr.spectral.theory_C60).toFixed(6),"dim"],["delta",Math.abs(sr.spectral.lambda1-sr.spectral.expected).toFixed(6),sr.spectral.match?"green":"orange"],["MATCH",sr.spectral.match?"YES":"NO",sr.spectral.match?"green":"red"],["M0",sr.M0.count,"pink"],["vacuum",sr.stability.projectorCheck?"STABLE":"UNSTABLE",sr.stability.projectorCheck?"green":"red"],["ms",(performance.now()-t3).toFixed(1),"dim"]]);
+    logAdd("SAR","lam1="+lam+" "+(sr.spectral.match?"MATCH":"no match")); }}],
+  ["NSS",function(){{ var t4=performance.now(); var nr=NSS.runOn(gk2,{{Re:150,steps:200,logEvery:9999}}); var nl=nr.lambdaEst!==null?nr.lambdaEst.toFixed(6):"?";
+    setPanel("nss",[["Re",150,"orange"],["steps",200,"dim"],["N",nr.graph?nr.graph.N:"?","cyan"],["lam1",nl,"cyan"],["lam1w",nr.lambdaEstW!==null?nr.lambdaEstW.toFixed(6):"?","gold"],["delta",nr.delta!==null?nr.delta.toFixed(6):"?",Math.abs(nr.delta||1)<0.01?"green":"orange"],["ms",(performance.now()-t4).toFixed(1),"dim"]]);
+    logAdd("NSS","lam1="+nl); }}],
+  ["FS",function(){{ var t5=performance.now(); var fr=FS.search({{seed:"c60",maxLevels:3,target:0.1473,lockThresh:0.005}});
+    setPanel("fs",[["target","0.1473","cyan"],["locked",fr.locked?"YES":"NO",fr.locked?"green":"orange"],["lockLvl",fr.lockLevel!==undefined?fr.lockLevel:"?","gold"],["bestLam",fr.bestLambda!==undefined?fr.bestLambda.toFixed(6):"?","cyan"],["bestDelta",fr.bestDelta!==undefined?fr.bestDelta.toFixed(6):"?","dim"],["ms",(performance.now()-t5).toFixed(1),"dim"]]);
+    logAdd("FS",(fr.locked?"LOCKED":"not locked")); }}],
+  ["NAN",function(){{ var t6=performance.now(); var ns={{}};
+    try{{var dag=typeof MNetNanite.build==="function"?MNetNanite.build(gk2):MNetNanite; ns=dag.stats||dag;}}catch(e){{ns={{err:e.message.slice(0,30)}};}}
+    var nr2=Object.keys(ns).slice(0,5).map(function(k){{return[k,String(ns[k]).slice(0,12),"cyan"];}});
+    if(!nr2.length)nr2=[["api","MNetNanite","cyan"],["status","loaded","green"]];
+    nr2.push(["ms",(performance.now()-t6).toFixed(1),"dim"]);
+    setPanel("nan",nr2); logAdd("NAN","MNetNanite loaded"); }}]
+]; }}
+
+// Optimised start: paint the dashboard + all cards FIRST, then run the 6 kernel
+// modules as stepped chunks behind the loading bar, so the wait reads as a
+// deliberate ritual (Curse 9 was a 12s blocking LCP), never a glitch.
+window.addEventListener("load",function(){{
+  logAdd("BOOT","ENG {VERSION} git:{GIT}");
+  loadSpiniInit();                             // spini spini: the net starts spinning
+  modApply();  // all sims live by default; reflect saved toggles + fill the count
+  logAdd("SIMS",ALL_KEYS.length+" sims live");
+  loadStep(0.10,"spini spini · "+ALL_KEYS.length+" sims live");
+  // CURSE 34: sequence with setTimeout, NOT requestIdleCallback -- the spinning
+  // rAF loop would starve rIC and freeze the loader mid-way. A timer always fires.
+  var defer=function(f){{ return setTimeout(f,90); }};
+  var _loadFallback=setTimeout(loadDone,8000); // K4: never trap the user in the wait
+  defer(function(){{
+    try{{
+      loadStep(0.22,"kernel · building C60"); loadSpiniRefine();
+      var gk2=engBoot();                       // GK panel + the single C60 build
+      var steps=engSteps(gk2), i=0, base=0.30;
+      (function run(){{
+        if(i>=steps.length){{ clearTimeout(_loadFallback); logAdd("ALL OK","6/6 modules ran"); loadDone(); return; }}
+        var name=steps[i][0];
+        loadStep(base+(i/steps.length)*0.68,"module · "+name);
+        if(i%2===0) loadSpiniRefine();         // refine the net as the bar advances
+        try{{ steps[i][1](); }}catch(e){{ logAdd("ERR",name+" "+String(e.message||e).slice(0,30)); }}
+        i++; defer(run);
+      }})();
+    }}catch(e){{ logAdd("ERR",String(e.message||e).slice(0,40)); clearTimeout(_loadFallback); loadDone(); }}
+  }});
 }});
 console.log("%c ENG {VERSION} MASTER CONTROL","color:#a78bfa;font-size:14px;font-weight:bold");
 </script>
