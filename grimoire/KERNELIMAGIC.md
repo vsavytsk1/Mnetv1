@@ -50,7 +50,11 @@
 | 27 | Clone Mirage (originMirage)        | folder name lies; `origin` is the truth. One project, one clone. |
 | 28 | Wedged Host (hostWedge)            | cmds return `^C` + empty from a stuck PSES console; use a fresh pwsh.|
 | 29 | Eager Verify (deployLag)           | you check the live URL in the same second you pushed -> 404/stale. Wait ~60s for green.|
-
+| 30 | Detached Grind (bgProcOrphan)      | a long CPU build left in the background detaches -> partial orphan; run grinds foreground, ONE at a time.|
+| 31 | The Hundred-Meg Wall (bigFileBounce)| a file >=100MB in ANY commit bounces the WHOLE push (private too). Ignore the big copy; regenerate it.|
+| 32 | The Sticky Track (ignoreTooLate)   | .gitignore does NOT evict already-tracked files; `git check-ignore` lies path-by-path. `git rm --cached`, trust `git add` as the oracle.|
+| 33 | The Vanished Helper (editDropDef)  | a botched multi-edit silently deletes a helper/return; the file "looks" fine but throws NameError at runtime far from the edit. Compile after every structural edit.|
+| 34 | The Starved Idler (idleStall)      | a requestIdleCallback step-chain stalls forever when a rAF loop (a spinner) keeps the main thread "busy"; the loader freezes mid-load. Use setTimeout for sequenced work, rIC only for optional filler.|
 ---
 
 
@@ -7851,3 +7855,325 @@ FAMILY:
 ```
 
 Curse count: 29. git push is not deploy. Watch the deployment go green (~60s), then verify. The machine is lazy; do not be fast. Always.
+
+---
+
+## CURSE 30 -- The Detached Grind (bgProcOrphan)
+
+You launch a long CPU build (Helena genesis L9+ = millions of dot products, 11+ min).
+It is slow, so -- being an impatient goblin -- you move it to a BACKGROUND terminal to
+do other work. The terminal DETACHES. The python keeps grinding headless, but the
+pipe never reaches its gate/vault/card step, so you get a PARTIAL ORPHAN build: it has
+genesis + joins on disk, but no vault, no MANIFEST, no build_card. Worse: you launch a
+SECOND long build while the first is still alive, and now TWO python processes fight
+for the same cores -- both crawl, neither finishes.
+
+```
+SYMPTOM:
+  A builds/vNNN folder with join_L*.i32 but NO vault/ + NO MANIFEST.json + NO build_card.
+  Get-Process python shows more than one long-lived, high-CPU python.
+  Two half-built versions (vNNN and vNNN+1) both stuck, both slow.
+
+ROOT CAUSE:
+  A one-shot GRIND is not a server. Backgrounding is for things meant to run forever
+  (a dev server, a watcher). A build you need to COMPLETE must be watched to the end.
+  Detach it and the orchestration tail (vault/verify/card) never runs.
+
+HOW TO DETECT:
+  - Get-Process python | Sort-Object CPU -Descending  -> more than one big grinder = bad.
+  - A vNNN/net with edges/joins but the vault/ dir missing or half-populated.
+
+HOW TO FIX:
+  1. Run long builds FOREGROUND / sync with a generous timeout. Never background a build
+     you need to finish. Background is for servers, not one-shot grinds.
+  2. ONE build at a time. Confirm Get-Process python is empty BEFORE starting another.
+  3. If a grind orphans: write builds/vNNN/BROKEN.txt (never delete -- genizah law),
+     and rebuild clean as the next version number.
+  4. The real speed fix is the GPU line in 03_join.py: on the RTX 3060 the whole join is
+     a single cupy/torch matmul -- seconds, not minutes. Do the deep levels on GPU.
+
+FAMILY:
+  Cousin of CURSE 27 (Clone Mirage -- a partial that lies about being whole) and
+  CURSE 19 (Shell Devour -- too many calls, output eaten). The meta-lesson of Path VII:
+  the machine is lazy and you are fast; a grind has a clock, respect it. Always.
+```
+
+Curse count: 30. A grind is not a server. Foreground it, ONE at a time, or inherit an orphan. Always.
+
+---
+
+## CURSE 31 -- The Hundred-Meg Wall (bigFileBounce)
+
+THE CURSE THAT CAUSED GIT_INCIDENT_001. You generate a beautiful deep net -- Helena L9,
+a vault of the point-and-line data in three codecs (.csv human-readable, .bin packed,
+.zip compressed). You `git add` the whole builds folder, commit, and push. And the push
+DIES:
+
+```
+remote: error: File builder/helena_net/builds/v010/net/vault/join_L9_dot.f32.csv
+        is 188.71 MB; this exceeds GitHub's file size limit of 100.00 MB
+```
+
+And here is the cruel part: it is not just that ONE file that fails. The ENTIRE push
+bounces -- every commit, every other file, all rejected together -- because a push is
+atomic. One 100MB blob anywhere in the history you are pushing and NOTHING lands. This
+is why, last time, the v1 sims got rerouted into the shell: the real push was wedged by
+a data file nobody meant to publish.
+
+```
+SYMPTOM:
+  "this exceeds GitHub's file size limit of 100.00 MB" on push; the whole push rejected.
+  A push that used to work suddenly bounces after a big build was committed.
+  You reroute smaller work elsewhere to "get something pushed" -- a smell, not a fix.
+
+ROOT CAUSE:
+  GitHub HARD-REJECTS any single file >=100MB in a pushed commit. This is NOT lifted by
+  making the repo PRIVATE -- private repos have the exact same 100MB wall. The only
+  official lift is Git LFS, and free LFS is ~1GB total (a couple of L9 CSVs blow it).
+  The offending file is almost always GENERATED DATA that should never have been tracked.
+
+  The trap in GIT_INCIDENT_001: the commit message SAID "L9 CSV vault files excluded"
+  but there was no .gitignore rule for builder/helena_net/builds/ -- so they were NOT
+  excluded. The intention was logged; the fence was never built. K5: put the fence where
+  nature put it (100MB), in the .gitignore, and then VERIFY it holds.
+
+HOW TO DETECT (before you push, never after):
+  # any file >=100MB tracked or about to be committed?
+  git ls-files -z | ForEach-Object { ... }   # or just:
+  Get-ChildItem -Recurse -File | Where-Object { $_.Length -ge 100MB -and $_.FullName -notmatch '\\.git\\' }
+  A pre-push hook (.git/hooks/pre-push) that scans the diff and REFUSES >=100MB is the
+  permanent counter-hex -- the push passes through that logic first, every time.
+
+HOW TO FIX (the pattern -- "pay thea Heleni in compute"):
+  1. Keep the SMALL codecs in the repo: the .bin and the .zip are under 100MB and hold the
+     exact same numbers. The vault's whole point (TMR) means the big .csv is redundant.
+  2. .gitignore the big generated copies. For Helena, ignore the deep .csv:
+        builder/helena_net/builds/**/vault/*_L9*.csv
+        builder/helena_net/builds/**/vault/*_L8_dot.f32.csv   # if it crosses the line
+     (Ignore by SIZE-CROSSING level, not blindly -- L0-L7 csv are tiny and human-useful.)
+  3. If it is ALREADY committed (this incident): git rm --cached the big files (keeps them
+     on disk), fix .gitignore, and rewrite the UNPUSHED commits so the blob never entered
+     history. If it already reached origin, that is a history-rewrite -- do it deliberately.
+  4. Ship a REGENERATION guide (README): novice = double-click a .bat that runs
+     redundancy.py repair to rebuild the .csv from the .bin; advanced = re-run the pipe
+     at that level on GPU. The secret is not hidden -- you pay for it in compute.
+
+THE PATTERN (write it into every repo's README):
+  If a generated artifact is >=100MB, it does NOT go to git. The compact codec + the
+  recipe to regenerate go to git. "Wanna have the big file, broski? Pay thea Heleni in
+  compute" -- run the regen and the machine hands it to you locally. The repo stays
+  clean, the push never bounces, and nothing is lost -- because the MATH is stored, and
+  the math is absolute; only the expensive rendering of it is not.
+
+FAMILY:
+  The data-scale sibling of Path VI (one script, one run -- do not track what you can
+  regenerate) and K5 (put the fence where nature put it: 100MB is a real wall, not an
+  arbitrary cap). Cousin of GLAMOUR 01 (a thing that grows unbounded). The receipt of
+  this curse is GIT_INCIDENT_001.md. Always store the math; regenerate the render.
+```
+
+Curse count: 31. A file >=100MB bounces the whole push, private too. Store the small codec + the recipe; regenerate the big render. Pay thea Heleni in compute. Always.
+
+---
+
+## CURSE 32 -- The Sticky Track (ignoreTooLate)
+
+WHAT BIT US (right after Curse 31, same session, same builds/ folder):
+  We wrote a beautiful .gitignore to keep the Helena build data out of git --
+  `builds/**` to ignore all data, `!.../MANIFEST.json` to re-include only the tiny mirror.
+  Then we asked `git check-ignore <path>` to prove it worked. It said "ignored." We
+  believed it. But `git add` then staged 1011 build-data files anyway. The fence looked
+  built; the gate stayed wide open. Two separate lies stacked into one incident:
+
+  LIE 1 -- .gitignore does NOT evict what git already tracks.
+    Ignore rules only stop UNTRACKED files from entering. The moment a file is committed
+    (Curse 31 already put 1030 build files into HEAD 7cebcb7), .gitignore is deaf to it.
+    You can write the perfect rule and the file stays tracked forever, sailing past the
+    ignore on every commit, because git already "owns" it. The rule guards the door; it
+    does not search the house.
+
+  LIE 2 -- `git check-ignore` reports per-PATH, not per-INDEX-STATE.
+    `git check-ignore -v <path>` tells you which .gitignore LINE matches a path in the
+    abstract. It does NOT tell you whether that file is currently TRACKED (and therefore
+    immune to the rule). So it happily prints "builds/** :: <path>" for a file that is
+    ALSO sitting in the index -- true about the rule, useless about reality. We debugged
+    the pattern for three rounds chasing a lie that was never about the pattern.
+
+  BONUS HEAD -- a nested .gitignore.
+    There was a second .gitignore at builder/helena_net/.gitignore competing with the
+    root one. Two ignore files, one folder, and `Select-String` on the root found nothing
+    because the rule I was reasoning about lived in the child. Always find EVERY .gitignore
+    on the path (`git config --get-all core.excludesfile` + every dir from root to leaf).
+
+THE ROOT PROBLEM:
+  Ignore is an ENTRY filter, not an EVICTION tool. And check-ignore answers "does a rule
+  match this string?" not "will this file actually stay out of my next commit?" Those are
+  different questions, and the gap between them is exactly where an hour disappears.
+
+HOW TO DETECT:
+  The ONLY oracle that does not lie is the index itself. Never trust check-ignore for a
+  folder that has ANY history. Ask git what is actually tracked:
+    git ls-files builds/ | Measure-Object          # how many data files still tracked?
+    git ls-files builds/ | Where-Object { $_ -notmatch 'MANIFEST|build_card' }  # offenders
+  If that list is non-empty, your ignore rule is irrelevant -- the files are already stuck.
+
+HOW TO FIX (untrack, keep on disk):
+  1. git rm -r --cached builder/helena_net/builds/   # untrack EVERYTHING under builds/
+     (--cached = index only; the files stay on disk, nothing deleted, nothing regenerated)
+  2. Confirm the .gitignore now covers all of it (one ignore file, or know exactly which
+     nested one wins). Prefer ONE root .gitignore; delete the confusing child.
+  3. git add builder/helena_net/builds/            # re-add -- now ONLY the mirror comes
+     back, because the rest is finally, actually ignored.
+  4. VERIFY with the oracle, not check-ignore:
+       git diff --cached --name-only | Measure-Object   # should be ~the mirror count
+  5. Commit. The heavy data is now untracked-and-ignored; the 18-file mirror remains.
+
+THE PATTERN (the level-12 speed doctrine):
+  ALL builds are gitignored (private, local, on disk). Only a light MIRROR is committed:
+  the tiny MANIFEST.json + build_card.json per version -- the RECIPE and the receipt, not
+  the render. Other git mages read the mirror to see the steps, then "pay thea Heleni in
+  compute" to regenerate the data locally. Git stays tiny -> pushes are SNAPPY in every
+  repo. The math is stored (small); the expensive render is not (regenerated). This is
+  Path VI and Path X at data scale: store the journey and the recipe, never the giant
+  output you can rebuild.
+
+FAMILY:
+  The index-state sibling of Curse 31 (Hundred-Meg Wall -- 31 stops the big file entering,
+  32 is why it stays after it entered). Cousin of Curse 27 (originMirage: the name lies /
+  check-ignore lies -- always ask the source of truth: `origin` there, the INDEX here) and
+  Curse 15 (sortGhost: the tool reports a state that is not the real state). The counter to
+  all three is the same: distrust the convenient report; query the ground truth directly.
+
+```
+
+Curse count: 32. .gitignore is an entry filter, not an eviction tool; check-ignore lies per-path. git rm --cached, then let `git add` be the only oracle. Store the mirror, regenerate the render, keep the push snappy. Always.
+
+---
+
+## CURSE 33 -- The Vanished Helper (editDropDef)
+
+WHAT BIT US (rebuilding the ENG master control from the auto-scanner):
+  While tuning sim_scan.py with a multi-edit, one replacement's old_string did not match
+  exactly (a trailing-space / whitespace difference -- cousin of Curse 3/15). The edit that
+  DID land accidentally swallowed a function boundary: title_of() lost its final `return ""`
+  and merged into discover(), and the helper js_key() -- referenced inside discover() --
+  ended up never defined at all. The file still LOOKED complete. It imported fine at a
+  glance. Then at build time:
+      NameError: name 'js_key' is not defined
+  thrown from deep inside discover(), far from where the edit was made. We chased the symptom
+  (HTML entities not decoding) for a whole round before seeing the real cause: a helper had
+  quietly vanished, and a `return` with it.
+
+THE ROOT PROBLEM:
+  In Python, a function that calls a not-yet-defined name does NOT fail at import -- it fails
+  only when that line RUNS. So a deleted/renamed helper is invisible until the exact code
+  path executes. A structural edit (one that moves or removes a def, a return, a block) can
+  leave a file that parses, imports, and reads correctly, yet is broken on one branch. The
+  eye cannot catch it; only the compiler and the run can. This is the code-scale sibling of
+  Curse 3 (a mismatch makes an edit land wrong) and Curse 15 (the tool's OK is not truth).
+
+  Extra bite: batching several edits in one call means if ONE old_string mis-matches, the
+  others still apply -- so you get a PARTIAL edit set and a false sense of "it went through."
+  Never assume a multi-edit was atomic. It is not.
+
+HOW TO DETECT (immediately, not a round later):
+  After ANY edit that moves/removes a def, a return, or a block boundary, run the cheapest
+  possible truth check BEFORE the expensive rebuild:
+      py -3 -c "import ast; ast.parse(open('sim_scan.py',encoding='utf-8').read())"   # parses?
+      py -3 -c "import sim_scan"                                                       # imports?
+      py -3 -m pyflakes sim_scan.py            # undefined names / unused (if available)
+  Then list the defs and eyeball the count:
+      Select-String -Path sim_scan.py -Pattern "^def "      # did a def disappear?
+  A get_errors / language-server check on the file catches the vanished return; a run catches
+  the vanished name. Do BOTH -- parse is not enough, because NameError is a runtime beast.
+
+HOW TO FIX:
+  1. Re-read the actual file region (do not trust the edit's echo). Confirm every def has its
+     body and its return, and every referenced helper still exists.
+  2. Restore the vanished helper/return exactly. Prefer ONE precise edit over a multi-edit
+     when touching function boundaries.
+  3. Re-verify: parse, import, run the build, and check the OUTPUT (200 cards, 0 stray) --
+     the ground truth, per Curse 15/32.
+
+THE HABIT (write it in):
+  Structural edits are surgery. After surgery you check the patient is breathing BEFORE you
+  admire the stitches. Compile/import after every edit that changes a boundary; distrust the
+  echo; and when a multi-edit reports partial or an old_string fails to match, assume the set
+  landed PARTIAL and re-read the whole region. The math is absolute; the edit tool is not.
+
+FAMILY:
+  Sibling of Curse 3 (Multi-Edit Corruption -- mismatch makes edits silently fail) and Curse
+  15 (sortGhost -- a FAIL/OK that is not the real state). Cousin of Curse 32 (trust the oracle,
+  not the convenient report): here the oracle is `ast.parse` + `import` + the run, never the
+  eye on the echoed diff. Compile after every structural edit. Always.
+
+```
+
+Curse count: 33. A botched multi-edit can silently drop a def or a return; the file parses and reads fine, then throws NameError at runtime far away. Compile and import after every structural edit; distrust the echo; assume a failed multi-edit landed partial. Always.
+
+---
+
+## CURSE 34 -- The Starved Idler (idleStall)
+
+WHAT BIT US (the spini-spini loader):
+  The ENG master control paints the dashboard first, then runs the six kernel
+  modules off the critical path as a stepped chain, driving a loading bar. To make
+  the loader beautiful we added a live C60 buckyball that spins via
+  requestAnimationFrame and refines as it loads. Then the loader FROZE: the bar
+  stuck at ~57% on "module . NSS", the net kept spinning happily, the console even
+  logged all six modules OK -- yet the overlay never dismissed and the dashboard
+  never appeared. "The dash is not loading at all."
+
+THE ROOT PROBLEM -- rIC starves under a rAF loop:
+  We sequenced the module steps with requestIdleCallback (rIC): run a step, then
+  rIC(run) the next. rIC only fires when the browser judges the main thread IDLE.
+  But the spinner's requestAnimationFrame loop runs every frame FOREVER, so the
+  browser almost never sees an idle window -- and rIC is quietly starved. The chain
+  advances a step or two on the initial idle, then stalls, permanently. Nothing
+  throws. The spinner (rAF, which is NOT idle-gated) keeps running, so the page
+  looks alive while the sequence is dead. The most confusing kind of freeze: a
+  moving one.
+
+  The deep lesson: rAF and rIC have OPPOSITE trigger conditions. rAF fires when
+  there is WORK to paint (every frame). rIC fires when there is NO work (idle).
+  Run them together and the rAF loop is exactly the thing that denies rIC its
+  trigger. They fight, and rIC always loses.
+
+HOW TO DETECT:
+  - A loader that animates (spinner moves) but never completes -- motion is not
+    progress. Check the actual completion signal, not "does it look busy".
+  - The step/progress counter halts at a fixed value while a rAF animation runs.
+  - Console shows the WORK finished (all modules OK) but the UI state that DEPENDS
+    on the sequence callback never advanced -> the callback engine, not the work,
+    is stuck.
+  - Probe it: read the progress element's width / the step index directly. If the
+    work is done but the sequencer index is < N, your scheduler starved.
+
+HOW TO FIX:
+  Sequence real work with setTimeout (or a microtask/await chain), NEVER with
+  requestIdleCallback. setTimeout fires on a timer regardless of idle state, so a
+  concurrent rAF loop cannot starve it.
+    var defer = function(f){{ return setTimeout(f, 0); }};   // sequencer: always fires
+  Reserve requestIdleCallback for OPTIONAL, droppable filler that is fine to delay
+  indefinitely (prefetch, cosmetic warmups) -- never for a chain the UI must finish.
+  And gate the very first hop off window load behind a small setTimeout too, so a
+  busy first frame does not swallow it. Belt and braces: also arm a fallback timer
+  (setTimeout(loadDone, N)) so the overlay can never trap the user (Curse 19 / K4:
+  a wall you cannot escape is worse than a wall).
+
+THE PATTERN:
+  Motion is not progress. If a step chain MUST complete to reveal the UI, drive it
+  with a timer, not with "when the browser feels idle" -- because the pretty thing
+  you added to entertain during the wait (the rAF spinner) is precisely what
+  convinces the browser it is never idle. Entertainment and scheduling must not
+  share the same starvation condition.
+
+FAMILY:
+  Cousin of Curse 9 (12-Second LCP -- the honest cost of computing on load; here we
+  deferred that cost but wired the deferral wrong) and Curse 19 (Shell Devour /
+  lock-out -- a loader you cannot escape). Sibling of K4: blank/wait is honest only
+  if the user can still get through; arm a fallback so the wait always ends.
+
+```
+
+Curse count: 34. requestIdleCallback starves under a requestAnimationFrame loop -- the spinner you add to entertain the wait is what stops the idle callback ever firing, so the loader freezes while still moving. Sequence real work with setTimeout; keep rIC for droppable filler; arm a fallback dismiss. Motion is not progress. Always.

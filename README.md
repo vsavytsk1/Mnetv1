@@ -16,8 +16,10 @@
 https://vsavytsk1.github.io/Mnetv1/shell/eng_v2.0.html
 ```
 
-**ENG v2.0 -- MASTER CONTROL.** 15 modules. One URL.
+**ENG v2.0 -- MASTER CONTROL.** ~90 sims, one URL.
 Click any card. Everything runs in your browser. Zero install.
+The dashboard is BUILT, not hand-listed: `builder/build_eng_v2.py` scans the sims on
+disk and generates every card, so it can never drift from what actually ships.
 
 ---
 
@@ -40,11 +42,15 @@ Google Colab receipt (L6, Tesla T4, 2026-05-28):
 
 ---
 
-## The 15 live modules (all free, all browser)
+## The live modules -- a few highlights (all free, all browser)
+
+*This is a hand-picked taste, not the full list. The complete, always-current set lives
+in the master control, which is generated from the sims on disk (so it never goes stale
+the way a hand-typed table does). Open **ENG v2.0** and browse ~90 cards.*
 
 | Module | URL | What it is |
 |--------|-----|------------|
-| **ENG v2.0** | [eng_v2.0.html](https://vsavytsk1.github.io/Mnetv1/shell/eng_v2.0.html) | Master control. All modules. One URL. |
+| **ENG v2.0** | [eng_v2.0.html](https://vsavytsk1.github.io/Mnetv1/shell/eng_v2.0.html) | Master control. Auto-discovers every sim. One URL. |
 | GENESIS v8.1 | [genesis_v8.1.html](https://vsavytsk1.github.io/Mnetv1/shell/genesis_v8.1.html) | Goldberg fractal explorer. Inside view. M1-M6 kernel. |
 | ATELIER v1.3 | [atelier_v1.3.html](https://vsavytsk1.github.io/Mnetv1/shell/atelier_v1.3.html) | Magic circle builder. 12 Fourier layers. Maxwell buttons. |
 | MAXWELLIUM | [maxwellium_v1.0.html](https://vsavytsk1.github.io/Mnetv1/shell/maxwellium_v1.0.html) | 3D dipole. nabla.B=0. Closed field lines = chi=2. |
@@ -71,8 +77,11 @@ in `grimoire/` (moved, never deleted -- full git history preserved).
 root (engineering):
   PIPELINE.md       -- the law. builder owns the shell.
   LEDGER.md         -- append-only. 114 entries. one truth.
+
+docs/ (the guides):
   DEV_ONBOARDING.md -- start here.
   GAME_DESIGN.md    -- the $10 game. + THE LOOP LAW (VR frame engineering).
+  ATELIER_HELPERS.md . WORLDBUILDING.md . PIPELINE_DATA.md (pandas+LaTeX+SQLite)
 
 grimoire/ (the scrolls):
   KERNELIMAGIC.md   -- 21 curses documented. all slain.
@@ -83,7 +92,7 @@ grimoire/ (the scrolls):
   PRINCIPIA_MALGEBRA.md -- PM propositions -> our kernel P1-P7.
   GRAPHIUM.md       -- LaTeX runes -> pure graph math. 55 entries.
   LATEXIUM.md / MAXWELIUM.md / WHITE_MAGIC_COMPILATION.md
-  DIVINE_IDEA_47..53.md -- the idea log. never deleted.
+  DIVINE_IDEAS.md   -- the idea log (ideas 47-53, fused into one). never deleted.
 ```
 
 ---
@@ -346,6 +355,48 @@ This project grew from [MachineNet](https://github.com/vsavytsk1/Mnet) ? a force
 - **Forward-only state** ? same "no undo" philosophy as irreversible tessellation
 
 The buckyball and the math tree are the same idea: **a graph of knowledge with constrained topology.** The buckyball has 12 pentagons (always). The math tree has one root (always). Both grow by clicking. Both close when understanding is complete.
+
+---
+
+## Big files: the 100MB rule (Helena deep builds)
+
+> **The math is absolute. The compute is not.** Store the math in git; regenerate the
+> expensive render on your own machine. See `GIT_INCIDENT_001.md` for the full receipt.
+
+GitHub hard-rejects any single file **>= 100 MB** (private repos too), and a push is
+atomic -- one oversized file bounces the *whole* push. The Helena vault stores every
+array in three codecs; at level 9 the human-readable `.csv` copies grow past 100 MB, so
+**they are gitignored**. The compact `.bin` + `.zip` copies (both < 100 MB) stay in the
+repo and hold the exact same numbers, so nothing is lost.
+
+A **pre-push guard** (`.git/hooks/pre-push`) refuses any push with a file >= 100 MB
+before git contacts the remote. Install it in any clone with:
+
+```bash
+py -3 builder/install_prepush_guard.py
+```
+
+### Regenerate a big file -- "pay thea Heleni in compute"
+
+**Novice (rebuild from the vault -- seconds, no GPU):** the `.csv` is rebuilt bit-exact
+from the `.bin`/`.zip` copies by triple-modular-redundancy vote.
+
+```bash
+cd builder/helena_net
+py -3 redundancy.py repair builds/v009/net    # rebuild any missing/corrupt copy
+py -3 redundancy.py verify builds/v009/net    # confirm 3/3 codecs match the manifest
+```
+
+**Advanced (re-run the build from scratch):** regenerate the whole net at that level.
+The deep levels want the GPU (`>>> GPU <<<` line in `03_join.py`, RTX-class card);
+CPU works but grinds (see CURSE 30 -- run it foreground, one at a time).
+
+```bash
+cd builder/helena_net
+py -3 pipe.py --max 9 --k 4 --bits 10101      # rebuild v-next end to end
+```
+
+The secret is not hidden -- you pay for it in compute, locally. **P=12. chi=2. Always.**
 
 ---
 
