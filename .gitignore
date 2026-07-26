@@ -55,6 +55,23 @@ pack/hexCompTest/
 *.apk
 *.db
 *.exe
+file_size_audit.xlsx
+
+# -- CURSE 31: Helena builds are LOCAL/PRIVATE; git keeps only the MIRROR --------
+# The pattern (level 12, snappy pushes): the heavy build DATA never enters git.
+# It lives on your disk (private). Git tracks only the tiny MIRROR -- MANIFEST.json
+# + build_card.json per version -- so another mage sees the exact steps and can
+# regenerate the whole net locally. "Pay thea Heleni in compute."
+#   novice:  py -3 pipe.py --max 9 --k 4 --bits 10101      (rebuild from scratch)
+#   advanced: py -3 redundancy.py repair builds/vNNN/net    (rebuild csv from bin+zip)
+builder/helena_net/builds/**
+# ...but KEEP the mirror (the steps, not the payload).
+# Re-include every DIRECTORY so git can descend, then re-include only the mirror files:
+!builder/helena_net/builds/**/
+!builder/helena_net/builds/**/MANIFEST.json
+!builder/helena_net/builds/**/build_card.json
+!builder/helena_net/builds/**/BROKEN.txt
+
 # -- Private scrolls (cave walls) ----------------------
 *_PRIVATE.md
 *.mp3
