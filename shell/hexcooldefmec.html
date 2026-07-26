@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Hex Shadow 3D · Pentagon Curvature</title>
+<style>
+  body { margin:0; overflow:hidden; background:#0a0c12; font-family:ui-monospace,monospace; color:#ccd1e0; }
+  canvas { display:block; cursor:grab; }
+  body.dragging canvas { cursor: grabbing; }
+  .label {
+    position:fixed; top:14px; left:14px; z-index:10;
+    background:rgba(10,12,18,0.78); padding:10px 14px; border-radius:6px;
+    border:1px solid #1a1f2e; font-size:12px; line-height:1.6;
+    pointer-events: none;
+  }
+  .label .title { color:#00d4ff; font-weight:bold; margin-bottom:6px; }
+  .label .stat span { color:#fff; }
+  .label .msg { color:#8a92a8; font-size:11px; margin-top:8px; }
+  .label .msg.closed { color:#7fffa0; font-weight:bold; font-size:12px; }
+  .label .msg.over { color:#ff9090; }
+  .controls {
+    position:fixed; bottom:20px; left:50%; transform:translateX(-50%); z-index:10;
+    background:rgba(10,12,18,0.88); padding:12px 18px; border-radius:8px;
+    border:1px solid #1a1f2e; display:flex; align-items:center; gap:14px;
+    font-size:12px;
+  }
+  .controls input[type=range] { width: 220px; accent-color: #00d4ff; }
+  .controls .val { color:#00d4ff; font-weight:bold; min-width:30px; text-align:right; }
+  .controls button {
+    background:#1a1f2e; color:#ccd1e0; border:1px solid #2a3040;
+    padding:6px 14px; border-radius:4px; cursor:pointer; font-family:inherit; font-size:12px;
+  }
+  .controls button:hover { background:#2a3040; }
+</style>
+</head>
+<body>
+
+<div class="label">
+  <div class="title">Hex Shadow 3D · Pentagon Curvature</div>
+  <div class="stat">rings: <span id="ringsN">4</span></div>
+  <div class="stat">hexagons: <span id="hexN">0</span></div>
+  <div class="stat">pentagons: <span id="pentN">0</span> / 12</div>
+  <div class="msg" id="msg">click hex → pentagon · drag to orbit · scroll to zoom</div>
+</div>
+
+<div class="controls">
+  <span>rings</span>
+  <input type="range" id="slider" min="0" max="12" step="1" value="4">
+  <span class="val" id="val">4</span>
+  <button id="resetView">reset view</button>
+  <button id="clear">clear pentagons</button>
+</div>
+
+<script type="importmap">
+{"imports":{"three":"https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js"}}
+</script>
+<script type="module">
+import * as THREE from 'three';
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0a0c12);
+const camera = new THREE.PerspectiveCamera(50, innerWidth/innerHeight, 0.1, 200);
+const renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(innerWidth, innerHeight);
+document.body.appendChild(renderer.domElement);
+
+// === Parameters
+const HEX_SIZE = 1.0;
+const AMPLITUDE = 1.4;   // height of one pentagon's curvature bump
+const SIGMA = 2.0;       // radius of falloff
+let rings = 4;
+
+// === Hex math (pointy-top axial)
+function axialToWorld(q, r) {
+  const x = HEX_SIZE * Math.sqrt(3) * (q + r / 2);
+  const y = HEX_SIZE * 1.5 * r;
+  return [x, y];
+}
+function* allHexes(N) {
+  for (let x = -N; x <= N; x++) {
+    for (let y = Math.max(-N, -x - N); y <= Math.min(N, -x + N); y++) {
+      const z = -x - y;
+      if (Math.max(Math.abs(x), Math.abs(y), Math.abs(z)) <= N) yield [x, z];
+    }
+  }
+}
+
+// === State
+const pentagons = new Set();        // keys currently pentagon
+const liftState = new Map();        // key → current activation (0..1)
+const liftTarget = new Map();       // key → target activation
+let pentagonCache = [];             // [x, y, activation] for getLift()
+
+function rebuildPentagonCache() {
+  pentagonCache = [];
+  for (const [key, act] of liftState) {
+    if (act <= 0) continue;
+    const [q, r] = key.split(',').map(Number);
+    const [px, py] = axialToWorld(q, r);
+    pentagonCache.push([px, py, act]);
+  }
+}
+
+function getLift(x, y) {
+  let z = 0;
+  for (const [px, py, act] of pentagonCache) {
+    const dx = x - px, dy = y - py;
+    z += AMPLITUDE * act * Math.exp(-(dx*dx + dy*dy) / (SIGMA * SIGMA));
+  }
+  return z;
+}
+
+function togglePentagon(key) {
+  if (pentagons.has(key)) {
+    pentagons.delete(key);
+    liftTarget.set(key, 0);
+  } else {
+    pentagons.add(key);
+    liftTarget.set(key, 1);
+  }
+}
+
+// === Geometry buffers — big enough for max rings
+const MAX_HEXES = 600;
+const lineGeometry = new THREE.BufferGeometry();
+const linePositions = new Float32Array(MAX_HEXES * 6 * 2 * 3);
+lineGeometry.setAttribute('position', new THREE.BufferAttribute(linePositions, 3));
+const lines = new THREE.LineSegments(
+  lineGeometry,
+  new THREE.LineBasicMaterial({ color: 0x6a7a90, transparent:true, opacity:0.65 })
+);
+scene.add(lines);
+
+const pentGeometry = new THREE.BufferGeometry();
+const pentPositions = new Float32Array(200 * 5 * 2 * 3);
+pentGeometry.setAttribute('position', new THREE.BufferAttribute(pentPositions, 3));
+const pents = new THREE.LineSegments(
+  pentGeometry,
+  new THREE.LineBasicMaterial({ color: 0xff9090, transparent:true, opacity:0.95 })
+);
+scene.add(pents);
+
+// === Core marker at origin
+const core = new THREE.Mesh(
+  new THREE.SphereGeometry(0.18, 24, 24),
+  new THREE.MeshBasicMaterial({ color: 0x00d4ff })
+);
+scene.add(core);
+
+function rebuildGeometry() {
+  rebuildPentagonCache();
+
+  let lIdx = 0, pIdx = 0, hexCount = 0, pentCount = 0;
+
+  for (const [q, r] of allHexes(rings)) {
+    const key = `${q},${r}`;
+    const [cx, cy] = axialToWorld(q, r);
+    const isPent = pentagons.has(key);
+
+    if (!isPent) {
+      hexCount++;
+      for (let i = 0; i < 6; i++) {
+        const a1 = Math.PI / 3 * i - Math.PI / 2;
+        const a2 = Math.PI / 3 * (i + 1) - Math.PI / 2;
+        const x1 = cx + HEX_SIZE * Math.cos(a1), y1 = cy + HEX_SIZE * Math.sin(a1);
+        const x2 = cx + HEX_SIZE * Math.cos(a2), y2 = cy + HEX_SIZE * Math.sin(a2);
+        const z1 = getLift(x1, y1), z2 = getLift(x2, y2);
+        linePositions[lIdx++]=x1; linePositions[lIdx++]=z1; linePositions[lIdx++]=y1;
+        linePositions[lIdx++]=x2; linePositions[lIdx++]=z2; linePositions[lIdx++]=y2;
+      }
+    } else {
+      pentCount++;
+      const r5 = HEX_SIZE * 0.9;
+      for (let i = 0; i < 5; i++) {
+        const a1 = Math.PI * 2 * i / 5 - Math.PI / 2;
+        const a2 = Math.PI * 2 * (i + 1) / 5 - Math.PI / 2;
+        const x1 = cx + r5 * Math.cos(a1), y1 = cy + r5 * Math.sin(a1);
+        const x2 = cx + r5 * Math.cos(a2), y2 = cy + r5 * Math.sin(a2);
+        const z1 = getLift(x1, y1), z2 = getLift(x2, y2);
+        pentPositions[pIdx++]=x1; pentPositions[pIdx++]=z1; pentPositions[pIdx++]=y1;
+        pentPositions[pIdx++]=x2; pentPositions[pIdx++]=z2; pentPositions[pIdx++]=y2;
+      }
+    }
+  }
+
+  lineGeometry.attributes.position.needsUpdate = true;
+  lineGeometry.setDrawRange(0, lIdx / 3);
+  pentGeometry.attributes.position.needsUpdate = true;
+  pentGeometry.setDrawRange(0, pIdx / 3);
+
+  document.getElementById('hexN').textContent = hexCount;
+  document.getElementById('pentN').textContent = pentCount;
+
+  const msg = document.getElementById('msg');
+  if (pentCount === 12) {
+    msg.textContent = '✓ 12 pentagons → χ=2. C₆₀ closure unlocked.';
+    msg.className = 'msg closed';
+  } else if (pentCount > 12) {
+    msg.textContent = `${pentCount} pentagons — over budget (χ > 2)`;
+    msg.className = 'msg over';
+  } else if (pentCount > 0) {
+    msg.textContent = `${12 - pentCount} more to fullerene · drag to see curvature`;
+    msg.className = 'msg';
+  } else {
+    msg.textContent = 'click hex → pentagon · drag to orbit · scroll to zoom';
+    msg.className = 'msg';
+  }
+}
+
+// === Animation tick — eases activations toward targets
+function tickLifts(dt) {
+  let any = false;
+  const speed = 4;
+  for (const [key, target] of [...liftTarget]) {
+    const cur = liftState.get(key) || 0;
+    const diff = target - cur;
+    const step = Math.sign(diff) * Math.min(Math.abs(diff), dt * speed);
+    const next = cur + step;
+    if (Math.abs(next - target) < 0.001) {
+      if (target === 0) { liftState.delete(key); }
+      else { liftState.set(key, target); }
+      liftTarget.delete(key);
+      any = true;
+    } else {
+      liftState.set(key, next);
+      any = true;
+    }
+  }
+  return any;
+}
+
+// === Orbit camera (manual, distinguishes click vs drag)
+let yaw = 0, pitch = 0.7, dist = 24;
+function updateCamera() {
+  camera.position.x = dist * Math.cos(pitch) * Math.sin(yaw);
+  camera.position.y = dist * Math.sin(pitch);
+  camera.position.z = dist * Math.cos(pitch) * Math.cos(yaw);
+  camera.lookAt(0, 0, 0);
+}
+updateCamera();
+
+let mouseDown = null;
+let dragged = false;
+const DRAG_THRESHOLD = 5;
+
+renderer.domElement.addEventListener('mousedown', e => {
+  mouseDown = { x: e.clientX, y: e.clientY };
+  dragged = false;
+  document.body.classList.add('dragging');
+});
+renderer.domElement.addEventListener('mousemove', e => {
+  if (!mouseDown) return;
+  const dx = e.clientX - mouseDown.x, dy = e.clientY - mouseDown.y;
+  if (!dragged && Math.hypot(dx, dy) > DRAG_THRESHOLD) dragged = true;
+  if (dragged) {
+    yaw -= dx * 0.006;
+    pitch += dy * 0.006;
+    pitch = Math.max(0.05, Math.min(Math.PI/2 - 0.05, pitch));
+    mouseDown = { x: e.clientX, y: e.clientY };
+    updateCamera();
+  }
+});
+renderer.domElement.addEventListener('mouseup', e => {
+  document.body.classList.remove('dragging');
+  if (!dragged && mouseDown) handleClick(e);
+  mouseDown = null;
+  dragged = false;
+});
+renderer.domElement.addEventListener('wheel', e => {
+  e.preventDefault();
+  dist = Math.max(6, Math.min(80, dist + e.deltaY * 0.03));
+  updateCamera();
+}, { passive: false });
+
+// === Raycast click → nearest hex
+const raycaster = new THREE.Raycaster();
+const mouseNDC = new THREE.Vector2();
+const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+const hitPoint = new THREE.Vector3();
+
+function handleClick(e) {
+  const rect = renderer.domElement.getBoundingClientRect();
+  mouseNDC.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+  mouseNDC.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+  raycaster.setFromCamera(mouseNDC, camera);
+  if (!raycaster.ray.intersectPlane(groundPlane, hitPoint)) return;
+
+  let nearest = null, minD = Infinity;
+  for (const [q, r] of allHexes(rings)) {
+    const [hx, hy] = axialToWorld(q, r);
+    const d = Math.hypot(hitPoint.x - hx, hitPoint.z - hy);
+    if (d < minD) { minD = d; nearest = `${q},${r}`; }
+  }
+  if (nearest && minD < HEX_SIZE) {
+    togglePentagon(nearest);
+    rebuildGeometry();
+  }
+}
+
+// === UI
+document.getElementById('slider').addEventListener('input', e => {
+  rings = parseInt(e.target.value);
+  document.getElementById('val').textContent = rings;
+  document.getElementById('ringsN').textContent = rings;
+  for (const key of [...pentagons]) {
+    const [q, r] = key.split(',').map(Number);
+    const dd = Math.max(Math.abs(q), Math.abs(r), Math.abs(q + r));
+    if (dd > rings) { pentagons.delete(key); liftTarget.set(key, 0); }
+  }
+  rebuildGeometry();
+});
+document.getElementById('clear').addEventListener('click', () => {
+  for (const key of [...pentagons]) { pentagons.delete(key); liftTarget.set(key, 0); }
+  rebuildGeometry();
+});
+document.getElementById('resetView').addEventListener('click', () => {
+  yaw = 0; pitch = 0.7; dist = 24; updateCamera();
+});
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+
+// === Loop
+let lastTime = performance.now();
+function animate() {
+  requestAnimationFrame(animate);
+  const now = performance.now();
+  const dt = Math.min(0.1, (now - lastTime) / 1000);
+  lastTime = now;
+  if (tickLifts(dt)) rebuildGeometry();
+  renderer.render(scene, camera);
+}
+rebuildGeometry();
+animate();
+</script>
+</body>
+</html>

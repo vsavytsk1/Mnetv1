@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Transmutation Circle</title>
+<style>
+  :root{
+    --bg-0:#0a1024; --bg-1:#05080f;
+    --gold:#e9c07a; --brass:#d9a94a; --silver:#cfd8e6;
+    --ink:#e8ecf6; --dim:#8b93a7; --line:#26304a;
+    --panel:rgba(14,20,38,.72);
+    --serif:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif;
+    --mono:"SFMono-Regular",ui-monospace,"DejaVu Sans Mono",Menlo,Consolas,monospace;
+    --sans:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:
+      radial-gradient(120% 90% at 50% -10%, #131a33 0%, var(--bg-0) 42%, var(--bg-1) 100%) fixed;
+    color:var(--ink); font-family:var(--sans);
+    -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+    min-height:100vh; padding:26px 16px 40px;
+  }
+  .wrap{max-width:900px;margin:0 auto}
+  header{margin:0 0 18px}
+  .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.32em;text-transform:uppercase;color:var(--brass);margin:0 0 8px}
+  h1{font-family:var(--serif);font-weight:600;font-size:clamp(30px,6vw,46px);line-height:1.02;margin:0;letter-spacing:.01em}
+  h1 .amp{color:var(--gold);font-style:italic;font-weight:500}
+  .sub{margin:10px 0 0;color:var(--dim);font-size:15px;max-width:60ch;line-height:1.5}
+  .stage{
+    margin:20px 0 0; display:grid; grid-template-columns:1.15fr .85fr; gap:22px; align-items:start;
+  }
+  .canvas-card{
+    position:relative; border:1px solid var(--line); border-radius:16px; overflow:hidden;
+    background:linear-gradient(180deg,#0b1122,#070b16);
+    box-shadow:0 24px 60px -30px #000, inset 0 1px 0 #ffffff0d;
+  }
+  canvas{display:block;width:100%;height:auto;aspect-ratio:1/1}
+  .seal{
+    position:absolute;left:0;right:0;bottom:0;padding:12px 14px;
+    font-family:var(--mono);font-size:12px;letter-spacing:.02em;line-height:1.45;
+    background:linear-gradient(180deg,transparent,#05080fdd 55%);
+    color:var(--silver); transition:color .3s;
+  }
+  .seal.lit{color:var(--gold)}
+  .seal.broke{color:#e0a3a3}
+  .panel{
+    border:1px solid var(--line);border-radius:16px;background:var(--panel);
+    padding:16px 16px 18px; box-shadow:0 20px 50px -34px #000;
+  }
+  .ctrls .row{margin:0 0 15px}
+  .ctrls .row:last-child{margin-bottom:0}
+  .lab{display:flex;justify-content:space-between;align-items:baseline;margin:0 0 7px}
+  .lab .name{font-size:13px;color:#c6cdde;letter-spacing:.02em}
+  .lab .val{font-family:var(--mono);font-size:12px;color:var(--gold)}
+  input[type=range]{
+    -webkit-appearance:none;appearance:none;width:100%;height:3px;border-radius:3px;
+    background:linear-gradient(90deg,var(--brass),#5b4a2a);outline:none;margin:6px 0 0;
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;width:16px;height:16px;border-radius:50%;
+    background:radial-gradient(circle at 38% 34%,#fff3d8,var(--brass));
+    border:1px solid #3a2f18;box-shadow:0 0 10px #e9c07a66;cursor:pointer;
+  }
+  input[type=range]::-moz-range-thumb{
+    width:16px;height:16px;border:1px solid #3a2f18;border-radius:50%;
+    background:radial-gradient(circle at 38% 34%,#fff3d8,var(--brass));box-shadow:0 0 10px #e9c07a66;cursor:pointer;
+  }
+  input[type=range]:focus-visible{box-shadow:0 0 0 3px #e9c07a44}
+  .seg{display:flex;gap:6px;flex-wrap:wrap}
+  .seg button, .play{
+    font-family:var(--mono);font-size:12px;letter-spacing:.02em;color:#cdd4e6;
+    background:#121a30;border:1px solid var(--line);border-radius:9px;padding:8px 11px;cursor:pointer;
+    transition:.16s;
+  }
+  .seg button:hover,.play:hover{border-color:#3d4b6e;color:#fff}
+  .seg button[aria-pressed=true]{
+    background:linear-gradient(180deg,#2a2413,#171204);border-color:var(--brass);color:var(--gold);
+    box-shadow:inset 0 0 12px #e9c07a1f;
+  }
+  .play{width:100%;margin-top:2px;text-align:center}
+  .play.on{border-color:var(--brass);color:var(--gold)}
+  .reading{margin-top:20px}
+  .reading h2{font-family:var(--mono);font-size:11px;letter-spacing:.3em;text-transform:uppercase;color:var(--brass);margin:0 0 10px}
+  .kv{font-family:var(--mono);font-size:12.5px;line-height:1.85;color:#c2c9db}
+  .kv b{color:var(--ink);font-weight:600}
+  .kv .g{color:var(--gold)}
+  .kv .s{color:var(--silver)}
+  .kv .no{color:#e0a3a3}
+  .kv .yes{color:#a8d8a0}
+  .kv .schlafli{font-size:15px;color:var(--gold)}
+  footer{margin:26px 2px 0;color:var(--dim);font-size:12.5px;line-height:1.6;border-top:1px solid var(--line);padding-top:14px}
+  footer b{color:#b9c0d2;font-weight:600}
+  @media (max-width:760px){
+    .stage{grid-template-columns:1fr;gap:16px}
+  }
+  @media (prefers-reduced-motion:reduce){*{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <p class="eyebrow">Corinthian Almanac · Applied Sigils</p>
+    <h1>The Transmutation Circle</h1>
+    <p class="sub">Every sigil is a graph: <b style="color:#c6cdde">n</b> points on a ring, each joined to the one <b style="color:#c6cdde">k</b> steps along. Raise the pact to inscribe it — but a single unbroken line only exists when <span style="color:var(--gold);font-family:var(--mono)">gcd(n, k) = 1</span>. Otherwise the figure shatters into rings, and nothing answers.</p>
+  </header>
+
+  <div class="stage">
+    <div class="canvas-card">
+      <canvas id="c" width="560" height="560"></canvas>
+      <div class="seal" id="seal">—</div>
+    </div>
+
+    <div>
+      <div class="panel ctrls">
+        <div class="row">
+          <div class="lab"><span class="name">Points · n</span><span class="val" id="vN">5</span></div>
+          <input type="range" id="n" min="3" max="24" value="5" step="1">
+        </div>
+        <div class="row">
+          <div class="lab"><span class="name">Skip · k</span><span class="val" id="vK">2</span></div>
+          <input type="range" id="k" min="1" max="4" value="2" step="1">
+        </div>
+        <div class="row">
+          <div class="lab"><span class="name">Figure</span><span class="val" id="vMode">star</span></div>
+          <div class="seg" id="mode">
+            <button data-m="star" aria-pressed="true">Star {n/k}</button>
+            <button data-m="complete" aria-pressed="false">Complete Kₙ</button>
+            <button data-m="cycle" aria-pressed="false">Ring Cₙ</button>
+          </div>
+        </div>
+        <div class="row">
+          <div class="lab"><span class="name">Hour (of Corinth)</span><span class="val" id="vHour">13:00</span></div>
+          <input type="range" id="hour" min="0" max="24" value="13" step="0.1">
+        </div>
+        <div class="row">
+          <div class="lab"><span class="name">Final pact · mana</span><span class="val" id="vMana">72%</span></div>
+          <input type="range" id="mana" min="0" max="100" value="72" step="1">
+        </div>
+        <div class="row">
+          <div class="lab"><span class="name">Echoes · fractal depth</span><span class="val" id="vDepth">0</span></div>
+          <input type="range" id="depth" min="0" max="2" value="0" step="1">
+        </div>
+        <div class="row">
+          <button class="play" id="play">▶ Let the hours turn</button>
+        </div>
+      </div>
+
+      <div class="panel reading">
+        <h2>Graph reading</h2>
+        <div class="kv" id="kv"></div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <b>Why the rule holds.</b> Joining every point to the one k steps away makes a 2-regular graph — a union of <b>gcd(n, k)</b> equal cycles. When that gcd is 1, all n points fall on a single cycle you can trace without lifting the pen (a Hamiltonian circuit); when it isn't, you get d interlocking rings, like {6/2} = two triangles. Complete Kₙ is traceable unbroken only when <b>n is odd</b> (every degree even → an Eulerian circuit). Same sky, same hours, same gold-by-day / silver-by-night as the almanac — just spent on geometry.
+  </footer>
+</div>
+
+<script>
+const cvs=document.getElementById('c'), ctx=cvs.getContext('2d');
+const el=id=>document.getElementById(id);
+const reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+
+const S={n:5,k:2,mode:'star',hour:13,mana:0.72,depth:0,playing:false};
+
+/* ---------- graph theory ---------- */
+function gcd(a,b){a=Math.abs(a);b=Math.abs(b);while(b){[a,b]=[b,a%b];}return a;}
+
+function starData(n,k){
+  const d=gcd(n,k), rings=[];
+  for(let s=0;s<d;s++){
+    const ring=[]; let cur=s;
+    do{ ring.push(cur); cur=(cur+k)%n; }while(cur!==s);
+    rings.push(ring);
+  }
+  const edges=[];
+  for(const r of rings) for(let i=0;i<r.length;i++) edges.push([r[i], r[(i+1)%r.length]]);
+  return {edges, d, ringLen:n/d};
+}
+function completeData(n){
+  const pairs=[];
+  for(let i=0;i<n;i++) for(let j=i+1;j<n;j++){
+    const raw=j-i, skip=Math.min(raw,n-raw);
+    pairs.push([i,j,skip]);
+  }
+  pairs.sort((a,b)=> a[2]-b[2] || a[0]-b[0]);
+  return {edges:pairs.map(p=>[p[0],p[1]])};
+}
+function edgesFor(n,k,mode){
+  if(mode==='complete') return completeData(n).edges;
+  if(mode==='cycle') return starData(n,1).edges;
+  return starData(n,k).edges;
+}
+
+/* ---------- color ---------- */
+function rgb(h){h=h.replace('#','');return [parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)];}
+function mix(c1,c2,t,a){
+  const A=rgb(c1),B=rgb(c2);
+  const r=Math.round(A[0]+(B[0]-A[0])*t),g=Math.round(A[1]+(B[1]-A[1])*t),b=Math.round(A[2]+(B[2]-A[2])*t);
+  return a==null?`rgb(${r},${g},${b})`:`rgba(${r},${g},${b},${a})`;
+}
+const SILVER='#cfd8e6', GOLD='#e9c07a', BRASS='#d9a94a';
+
+function dayFactor(hour){ // 0 at midnight -> 1 at noon
+  const d=Math.sin(((hour-6)/12)*Math.PI); // -1..1
+  return (Math.max(-1,Math.min(1,d))+1)/2;
+}
+
+/* ---------- geometry helpers ---------- */
+function verts(cx,cy,R,rot,n){
+  const p=[];
+  for(let i=0;i<n;i++){
+    const a=-Math.PI/2+rot+i*2*Math.PI/n;
+    p.push([cx+Math.cos(a)*R, cy+Math.sin(a)*R]);
+  }
+  return p;
+}
+
+/* ---------- drawing ---------- */
+let W=560,H=560,DPR=1;
+function resize(){
+  const cssW=cvs.clientWidth||560;
+  DPR=Math.min(window.devicePixelRatio||1,2);
+  W=cssW; H=cssW;
+  cvs.width=Math.round(W*DPR); cvs.height=Math.round(H*DPR);
+}
+
+function drawSigil(cx,cy,R,rot,edges,n,tint,frac,alpha,isRoot,pulse){
+  const p=verts(cx,cy,R,rot,n);
+
+  if(isRoot){
+    // astrolabe rim
+    ctx.lineWidth=1;
+    ctx.strokeStyle=mix(BRASS,'#000',.2,.32);
+    ctx.beginPath();ctx.arc(cx,cy,R*1.10,0,2*Math.PI);ctx.stroke();
+    ctx.strokeStyle=mix(BRASS,'#000',.2,.18);
+    ctx.beginPath();ctx.arc(cx,cy,R*1.16,0,2*Math.PI);ctx.stroke();
+    // 24 hour ticks
+    for(let t=0;t<24;t++){
+      const a=-Math.PI/2+t*2*Math.PI/24, r0=R*1.10, r1=R*(t%6===0?1.02:1.06);
+      ctx.strokeStyle=mix(BRASS,'#000',.2,t%6===0?.5:.22);
+      ctx.beginPath();ctx.moveTo(cx+Math.cos(a)*r0,cy+Math.sin(a)*r0);ctx.lineTo(cx+Math.cos(a)*r1,cy+Math.sin(a)*r1);ctx.stroke();
+    }
+    // faint base circle the star sits in
+    ctx.strokeStyle=tint(.16);
+    ctx.beginPath();ctx.arc(cx,cy,R,0,2*Math.PI);ctx.stroke();
+  }
+
+  // edges up to frac
+  const E=edges.length;
+  const full=Math.floor(frac*E), partial=frac*E-full;
+  ctx.lineCap='round'; ctx.lineJoin='round';
+  ctx.lineWidth=isRoot?2.1:1.2;
+  ctx.shadowColor=tint(.9); ctx.shadowBlur=isRoot?(10+pulse*8):5;
+  ctx.strokeStyle=tint(alpha);
+  ctx.beginPath();
+  for(let i=0;i<full;i++){
+    const A=p[edges[i][0]],B=p[edges[i][1]];
+    ctx.moveTo(A[0],A[1]);ctx.lineTo(B[0],B[1]);
+  }
+  ctx.stroke();
+  if(full<E && partial>0){
+    const A=p[edges[full][0]],B=p[edges[full][1]];
+    ctx.beginPath();ctx.moveTo(A[0],A[1]);
+    ctx.lineTo(A[0]+(B[0]-A[0])*partial, A[1]+(B[1]-A[1])*partial);
+    ctx.stroke();
+  }
+  ctx.shadowBlur=0;
+
+  // nodes
+  const nr=isRoot?4.2:2.4;
+  for(let i=0;i<n;i++){
+    ctx.fillStyle=tint(alpha);
+    ctx.beginPath();ctx.arc(p[i][0],p[i][1],nr,0,2*Math.PI);ctx.fill();
+    if(isRoot){
+      ctx.strokeStyle=tint(.55);ctx.lineWidth=1;
+      ctx.beginPath();ctx.arc(p[i][0],p[i][1],nr+3,0,2*Math.PI);ctx.stroke();
+      if(n<=16){
+        ctx.fillStyle=mix(SILVER,'#000',.15,.5);
+        ctx.font='9px '+getComputedStyle(document.body).getPropertyValue('--mono');
+        ctx.textAlign='center';ctx.textBaseline='middle';
+        const a=-Math.PI/2+rot+i*2*Math.PI/n;
+        ctx.fillText(String(i), cx+Math.cos(a)*(R+16), cy+Math.sin(a)*(R+16));
+      }
+    }
+  }
+
+  return p;
+}
+
+function render(now){
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+  // background
+  const g=ctx.createRadialGradient(W/2,H*0.36,10,W/2,H/2,W*0.72);
+  g.addColorStop(0,'#111834'); g.addColorStop(.5,'#0a1024'); g.addColorStop(1,'#05080f');
+  ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+
+  const n=S.n, k=S.k, mode=S.mode;
+  const df=dayFactor(S.hour);
+  const tint=(a)=>mix(SILVER,GOLD,df,a);            // silver by night → gold by noon
+  const rot=(S.hour/24)*2*Math.PI;
+  const edges=edgesFor(n,k,mode);
+  const cx=W/2, cy=H/2, R=W*0.34;
+  const t=(now||0)/1000;
+  const pulse=reduce?0:(0.5+0.5*Math.sin(t*2))*Math.min(1,S.mana*1.2);
+
+  // fractal budget
+  let depth=S.depth;
+  if(n>16) depth=0; else if(n>10) depth=Math.min(depth,1);
+
+  // recursive echoes (drawn first, faint)
+  function recurse(cx,cy,R,rot,d,alpha){
+    drawSigil(cx,cy,R,rot,edges,n,tint,S.mana,alpha,d===depth, pulse);
+    if(d>0){
+      const p=verts(cx,cy,R,rot,n), childR=R*0.34, childAlpha=alpha*0.5;
+      for(let i=0;i<n;i++) recurse(p[i][0],p[i][1],childR,rot+0.6,d-1,childAlpha);
+    }
+  }
+  recurse(cx,cy,R,rot,depth,1);
+
+  // hour bead on the rim (gold day / silver night)
+  const bead=-Math.PI/2+rot;
+  const beadCol = (S.hour>=6&&S.hour<=18)?GOLD:SILVER;
+  ctx.fillStyle=beadCol; ctx.shadowColor=beadCol; ctx.shadowBlur=12;
+  ctx.beginPath();ctx.arc(cx+Math.cos(bead)*R*1.10, cy+Math.sin(bead)*R*1.10, 4.5,0,2*Math.PI);ctx.fill();
+  ctx.shadowBlur=0;
+
+  // center core + bloom
+  const uni=isUnicursal(n,k,mode);
+  const bloomR = R*(0.05 + S.mana*0.9) * (1+(reduce?0:pulse*0.12));
+  const bg=ctx.createRadialGradient(cx,cy,0,cx,cy,Math.max(6,bloomR));
+  const sealed = S.mana>=0.99 && uni;
+  const coreCol = sealed?'#fff3d8':tint(1);
+  bg.addColorStop(0, mix(coreCol,'#000',0, 0.85*S.mana));
+  bg.addColorStop(.35, tint(0.28*S.mana));
+  bg.addColorStop(1, tint(0));
+  ctx.fillStyle=bg; ctx.beginPath();ctx.arc(cx,cy,Math.max(6,bloomR),0,2*Math.PI);ctx.fill();
+
+  ctx.fillStyle=coreCol; ctx.shadowColor=coreCol; ctx.shadowBlur=10+S.mana*22;
+  ctx.beginPath();ctx.arc(cx,cy, 2.4+S.mana*4.2, 0,2*Math.PI);ctx.fill();
+  ctx.shadowBlur=0;
+
+  // descent flash: expanding ring when sealed
+  if(sealed){
+    const ph=(t*0.6)%1;
+    ctx.strokeStyle=mix('#fff3d8',GOLD,ph, (1-ph)*0.8);
+    ctx.lineWidth=2*(1-ph)+0.5;
+    ctx.beginPath();ctx.arc(cx,cy, R*(0.2+ph*1.15), 0,2*Math.PI);ctx.stroke();
+  }
+
+  updateReadout(n,k,mode,edges.length,uni,sealed);
+  raf=requestAnimationFrame(loop);
+}
+
+function isUnicursal(n,k,mode){
+  if(mode==='complete') return n%2===1;          // Eulerian iff n odd
+  if(mode==='cycle') return true;                // single cycle
+  return gcd(n,k)===1;                           // one Hamiltonian circuit
+}
+
+function updateReadout(n,k,mode,E,uni,sealed){
+  const df=dayFactor(S.hour);
+  const tone = df>0.5?'g':'s';
+  let rows='';
+  const sym = mode==='complete'?`K<sub>${n}</sub>` : mode==='cycle'?`C<sub>${n}</sub>` : `{${n}/${k}}`;
+  rows+=`<div class="schlafli">${sym}</div>`;
+  rows+=`<div>vertices &nbsp;<b>${n}</b></div>`;
+  rows+=`<div>edges &nbsp;<b>${E}</b>`+(mode==='complete'?` &nbsp;=&nbsp; n(n−1)/2`:``)+`</div>`;
+  if(mode==='star'){
+    const d=gcd(n,k);
+    rows+=`<div>gcd(n, k) &nbsp;<b>${d}</b></div>`;
+    rows+=`<div>components &nbsp;<b>${d}</b>`+(d>1?` &nbsp;·&nbsp; ${d} rings of ${n/d}`:` &nbsp;·&nbsp; one ring`)+`</div>`;
+  } else if(mode==='cycle'){
+    rows+=`<div>components &nbsp;<b>1</b> &nbsp;·&nbsp; a single ${n}-gon</div>`;
+  } else {
+    rows+=`<div>every vertex degree &nbsp;<b>${n-1}</b> &nbsp;(${(n-1)%2===0?'even':'odd'})</div>`;
+  }
+  const line = uni
+    ? `<span class="yes">one unbroken line — traceable without lifting the pen</span>`
+    : (mode==='complete'
+        ? `<span class="no">broken — n is even, so no single Eulerian stroke</span>`
+        : `<span class="no">broken — ${gcd(n,k)} interlocking rings, no single stroke</span>`);
+  rows+=`<div style="margin-top:8px">unbroken? ${line}</div>`;
+  el('kv').innerHTML=rows;
+
+  // seal caption
+  const seal=el('seal');
+  seal.classList.remove('lit','broke');
+  if(S.mana>=0.99){
+    if(uni){ seal.classList.add('lit'); seal.textContent='◈ The circle closes — one unbroken line. The pact is sealed; something descends.'; }
+    else { seal.classList.add('broke'); seal.textContent='◈ Mana spent — but the sigil breaks into rings. No single stroke, no descent.'; }
+  } else {
+    const pct=Math.round(S.mana*100);
+    seal.textContent = `Inscribing… ${pct}%  ·  ${tone==='g'?'daylight gold':'moonlit silver'}  ·  drag Final pact to ${uni?'seal it':'see it break'}`;
+  }
+}
+
+/* ---------- loop ---------- */
+let raf=null, last=null;
+function loop(now){
+  if(S.playing){
+    if(last==null) last=now;
+    const dt=(now-last)/1000; last=now;
+    S.hour=(S.hour + dt*1.6)%24;   // ~15s per day
+    el('hour').value=S.hour.toFixed(1);
+    el('vHour').textContent=fmtHour(S.hour);
+  } else { last=null; }
+  render(now);
+}
+
+/* ---------- ui ---------- */
+function fmtHour(h){
+  let hh=Math.floor(h)%24, mm=Math.round((h-Math.floor(h))*60);
+  if(mm===60){mm=0;hh=(hh+1)%24;}
+  return String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0');
+}
+function syncK(){
+  const kIn=el('k');
+  kIn.max=S.n-1;
+  if(S.k>S.n-1){S.k=S.n-1; kIn.value=S.k;}
+  el('vK').textContent=S.k;
+}
+el('n').addEventListener('input',e=>{S.n=+e.target.value; el('vN').textContent=S.n; syncK();});
+el('k').addEventListener('input',e=>{S.k=+e.target.value; el('vK').textContent=S.k;});
+el('hour').addEventListener('input',e=>{S.hour=+e.target.value; el('vHour').textContent=fmtHour(S.hour);});
+el('mana').addEventListener('input',e=>{S.mana=+e.target.value/100; el('vMana').textContent=e.target.value+'%';});
+el('depth').addEventListener('input',e=>{S.depth=+e.target.value; el('vDepth').textContent=S.depth;});
+el('mode').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b)return;
+  S.mode=b.dataset.m; el('vMode').textContent=S.mode;
+  [...el('mode').children].forEach(x=>x.setAttribute('aria-pressed', x===b));
+});
+el('play').addEventListener('click',()=>{
+  S.playing=!S.playing;
+  const p=el('play');
+  p.classList.toggle('on',S.playing);
+  p.textContent = S.playing?'❚❚ Pause the hours':'▶ Let the hours turn';
+});
+window.addEventListener('resize',()=>{resize();});
+
+/* ---------- go ---------- */
+resize(); syncK();
+el('vHour').textContent=fmtHour(S.hour);
+raf=requestAnimationFrame(loop);
+</script>
+</body>
+</html>

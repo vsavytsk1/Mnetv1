@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lattice Probe · Z[i,ρ] vs Z[ζ₅]</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 100%; height: 100%;
+    background: #050510; color: #e0f0ff;
+    font-family: 'Share Tech Mono', 'Consolas', 'Menlo', monospace;
+    overflow: hidden; user-select: none;
+  }
+  #canvas { position: fixed; inset: 0; cursor: crosshair; display: block; }
+  .panel {
+    position: fixed; padding: 12px 14px;
+    font-size: 11px; line-height: 1.7; letter-spacing: 0.04em;
+    text-transform: lowercase;
+  }
+  #hud      { top: 16px; left: 16px; pointer-events: none; }
+  #ring-info{ top: 16px; right: 16px; pointer-events: none; text-align: right; }
+  #picked   { bottom: 16px; left: 16px; pointer-events: none; max-width: 340px; }
+  #controls { bottom: 16px; right: 16px; text-align: right; }
+  #hint     { bottom: 16px; left: 50%; transform: translateX(-50%); pointer-events: none; color: #7090a0; }
+
+  .lbl  { color: #7090a0; }
+  .pent { color: #ff6b35; }
+  .hex  { color: #00d4ff; }
+  .gold { color: #ffd700; }
+  b     { color: #00d4ff; font-weight: normal; }
+  .gold b { color: #ffd700; }
+
+  .ring-btn {
+    display: inline-block; padding: 4px 12px; margin-left: 8px;
+    border: 1px solid #2a4858; cursor: pointer; transition: all 0.15s;
+    color: #7090a0;
+  }
+  .ring-btn:hover { color: #e0f0ff; border-color: #4060a0; }
+  .ring-btn.on    { color: #ffd700; border-color: #ffd700; background: #ffd70011; }
+
+  input[type=range] {
+    width: 100px; vertical-align: middle;
+    accent-color: #ffd700;
+  }
+  .ctl-row { margin: 4px 0; }
+</style>
+</head>
+<body>
+<canvas id="canvas"></canvas>
+
+<div id="hud" class="panel">
+  <div class="lbl">lattice probe · unit-distance graph</div>
+  <div><span class="lbl">ring</span> <b id="g-ring">—</b></div>
+  <div><span class="lbl">points</span> <b id="g-pts">0</b> &nbsp; <span class="lbl">edges</span> <b id="g-edges">0</b></div>
+  <div><span class="lbl">chord</span> <b id="g-chord">1.000</b> &nbsp; <span class="lbl">extent N</span> <b id="g-N">2</b></div>
+  <div><span class="lbl">degree</span> min <b id="g-degmin">—</b> · max <b id="g-degmax">—</b> · mean <b id="g-degavg">—</b></div>
+  <div><span class="lbl">automorphism hint</span> <b id="g-sym">—</b></div>
+</div>
+
+<div id="ring-info" class="panel">
+  <div class="lbl">vladyslav savytskyy · 2026</div>
+  <div class="lbl"><span class="gold">gold</span> · selected · its neighbors</div>
+  <div class="lbl"><span class="pent">orange</span> · vertices</div>
+  <div class="lbl"><span class="hex">cyan</span> · unit-distance edges</div>
+</div>
+
+<div id="picked" class="panel"></div>
+
+<div id="hint" class="panel">click vertex · scroll to zoom · drag to pan</div>
+
+<div id="controls" class="panel">
+  <div class="ctl-row">
+    <span class="ring-btn on" data-ring="eisenstein">ℤ[i,ρ] · hex</span>
+    <span class="ring-btn"    data-ring="cyclotomic5">ℤ[ζ₅] · pent</span>
+  </div>
+  <div class="ctl-row"><span class="lbl">extent N</span>
+    <input id="ctl-N" type="range" min="1" max="3" value="2" step="1">
+  </div>
+  <div class="ctl-row"><span class="lbl">chord²</span>
+    <input id="ctl-chord" type="range" min="1" max="6" value="1" step="1">
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════════
+// §A Two rings, four generators each.  ℤ-linear span in ℂ.
+//   ℤ[i,ρ]   — Eisenstein-Gaussian — ρ = e^{iπ/3}
+//             generators: {1, i, ρ, iρ} → 12 twelfth-roots-of-unity in the
+//             ring at unit magnitude; visual symmetry is D_12 (order 24).
+//   ℤ[ζ₅]    — 5th cyclotomic integers — ζ₅ = e^{2πi/5}
+//             generators: {1, ζ₅, ζ₅², ζ₅³} → 10 fifth-roots-of-unity (and
+//             their negatives) at unit magnitude; visual symmetry is D_10
+//             (order 20) — and this is the algebraic neighbourhood of
+//             icosahedral H_3 / A_5 via φ = (1+√5)/2.  THIS is where C60
+//             lives, not the Eisenstein ring.
+// ═══════════════════════════════════════════════════════════════════════════
+const RINGS = {
+  eisenstein: {
+    name:    'ℤ[i, ρ]',
+    notes:   '12-fold dihedral · hexagonal',
+    sym:     'D_12 (order 24)',
+    gens: [
+      { tag: '1',  re: 1,                im: 0                 },
+      { tag: 'i',  re: 0,                im: 1                 },
+      { tag: 'ρ',  re: Math.cos(Math.PI/3), im: Math.sin(Math.PI/3) },
+      { tag: 'iρ', re: Math.cos(5*Math.PI/6), im: Math.sin(5*Math.PI/6) },
+    ],
+  },
+  cyclotomic5: {
+    name:    'ℤ[ζ₅]',
+    notes:   '5-fold dihedral · pentagonal · the icosahedral neighbourhood',
+    sym:     'D_10 (order 20) · contains 5-fold rotation',
+    gens: [
+      { tag: '1',   re: Math.cos(0),           im: Math.sin(0)           },
+      { tag: 'ζ₅',  re: Math.cos(2*Math.PI/5), im: Math.sin(2*Math.PI/5) },
+      { tag: 'ζ₅²', re: Math.cos(4*Math.PI/5), im: Math.sin(4*Math.PI/5) },
+      { tag: 'ζ₅³', re: Math.cos(6*Math.PI/5), im: Math.sin(6*Math.PI/5) },
+    ],
+  },
+};
+
+// ═══════════════════════════════════════════════════════════════════════════
+// §B State
+// ═══════════════════════════════════════════════════════════════════════════
+const state = {
+  ring:    'eisenstein',
+  N:       2,         // lattice extent: coeffs ∈ {-N..N}
+  chord2:  1,         // target squared distance
+  points:  [],        // {re, im, coeffs}
+  edges:   [],        // [i,j] pairs
+  adj:     [],        // neighbour list per vertex
+  picked:  -1,
+  view:    { cx: 0, cy: 0, scale: 60 },
+};
+
+// ═══════════════════════════════════════════════════════════════════════════
+// §C Canvas + DPR-correct sizing
+// ═══════════════════════════════════════════════════════════════════════════
+const cv  = document.getElementById('canvas');
+const ctx = cv.getContext('2d');
+function fitCanvas(){
+  const dpr = window.devicePixelRatio || 1;
+  cv.width  = innerWidth  * dpr;
+  cv.height = innerHeight * dpr;
+  cv.style.width  = innerWidth  + 'px';
+  cv.style.height = innerHeight + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+fitCanvas();
+addEventListener('resize', () => { fitCanvas(); draw(); });
+
+function w2s(re, im){
+  return {
+    x: innerWidth  / 2 + (re - state.view.cx) * state.view.scale,
+    y: innerHeight / 2 - (im - state.view.cy) * state.view.scale,
+  };
+}
+function s2w(x, y){
+  return {
+    re: state.view.cx + (x - innerWidth  / 2) / state.view.scale,
+    im: state.view.cy - (y - innerHeight / 2) / state.view.scale,
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// §D Build lattice + edges (spatial-hash matching at target distance)
+// ═══════════════════════════════════════════════════════════════════════════
+function buildLattice(){
+  const ring = RINGS[state.ring];
+  const N    = state.N;
+  const pts  = [];
+  for (let a = -N; a <= N; a++)
+    for (let b = -N; b <= N; b++)
+      for (let c = -N; c <= N; c++)
+        for (let d = -N; d <= N; d++){
+          let re = 0, im = 0;
+          const cs = [a, b, c, d];
+          for (let k = 0; k < 4; k++){
+            re += cs[k] * ring.gens[k].re;
+            im += cs[k] * ring.gens[k].im;
+          }
+          pts.push({ re, im, coeffs: cs });
+        }
+  state.points = pts;
+
+  // Edges: spatial-hash matching at sqrt(chord2)
+  const target = Math.sqrt(state.chord2);
+  const tol    = 1e-6;
+  const cell   = target + 0.1;
+  const grid   = new Map();
+  const key = (re, im) => Math.floor(re/cell) + ',' + Math.floor(im/cell);
+  for (let i = 0; i < pts.length; i++){
+    const k = key(pts[i].re, pts[i].im);
+    if (!grid.has(k)) grid.set(k, []);
+    grid.get(k).push(i);
+  }
+  const edges = [];
+  const adj   = pts.map(() => []);
+  for (let i = 0; i < pts.length; i++){
+    const gx = Math.floor(pts[i].re/cell);
+    const gy = Math.floor(pts[i].im/cell);
+    for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++){
+      const bucket = grid.get((gx+dx)+','+(gy+dy));
+      if (!bucket) continue;
+      for (const j of bucket){
+        if (j <= i) continue;
+        const ddx = pts[i].re - pts[j].re;
+        const ddy = pts[i].im - pts[j].im;
+        const d2  = ddx*ddx + ddy*ddy;
+        if (Math.abs(d2 - state.chord2) < tol){
+          edges.push([i, j]);
+          adj[i].push(j); adj[j].push(i);
+        }
+      }
+    }
+  }
+  state.edges = edges;
+  state.adj   = adj;
+
+  fitView();
+  updateHUD();
+  draw();
+}
+
+function fitView(){
+  if (state.points.length === 0) return;
+  let mnR =  Infinity, mxR = -Infinity, mnI =  Infinity, mxI = -Infinity;
+  for (const p of state.points){
+    if (p.re < mnR) mnR = p.re;
+    if (p.re > mxR) mxR = p.re;
+    if (p.im < mnI) mnI = p.im;
+    if (p.im > mxI) mxI = p.im;
+  }
+  state.view.cx = (mnR + mxR) / 2;
+  state.view.cy = (mnI + mxI) / 2;
+  const spanX = Math.max(0.1, mxR - mnR);
+  const spanY = Math.max(0.1, mxI - mnI);
+  const margin = 80;
+  state.view.scale = Math.min(
+    (innerWidth  - margin*2) / spanX,
+    (innerHeight - margin*2) / spanY,
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// §E Draw
+// ═══════════════════════════════════════════════════════════════════════════
+function draw(){
+  ctx.clearRect(0, 0, innerWidth, innerHeight);
+  const picked = state.picked;
+
+  // hi-set of edges from picked vertex
+  const hiEdge = new Set();
+  if (picked >= 0){
+    for (const j of state.adj[picked]){
+      hiEdge.add(picked < j ? (picked + ',' + j) : (j + ',' + picked));
+    }
+  }
+
+  // Background edges
+  ctx.lineWidth = 0.6;
+  ctx.strokeStyle = '#00d4ff55';
+  ctx.beginPath();
+  for (const [i, j] of state.edges){
+    const k = i + ',' + j;
+    if (hiEdge.has(k)) continue;
+    const a = w2s(state.points[i].re, state.points[i].im);
+    const b = w2s(state.points[j].re, state.points[j].im);
+    ctx.moveTo(a.x, a.y);
+    ctx.lineTo(b.x, b.y);
+  }
+  ctx.stroke();
+
+  // Highlighted edges (from picked vertex)
+  if (hiEdge.size > 0){
+    ctx.lineWidth = 1.6;
+    ctx.strokeStyle = '#ffd700';
+    ctx.beginPath();
+    for (const [i, j] of state.edges){
+      const k = i + ',' + j;
+      if (!hiEdge.has(k)) continue;
+      const a = w2s(state.points[i].re, state.points[i].im);
+      const b = w2s(state.points[j].re, state.points[j].im);
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(b.x, b.y);
+    }
+    ctx.stroke();
+  }
+
+  // Vertices
+  const hiSet = new Set();
+  if (picked >= 0){
+    hiSet.add(picked);
+    for (const j of state.adj[picked]) hiSet.add(j);
+  }
+  for (let i = 0; i < state.points.length; i++){
+    const p = w2s(state.points[i].re, state.points[i].im);
+    if (i === picked){
+      ctx.fillStyle = '#ffd700';
+      ctx.beginPath(); ctx.arc(p.x, p.y, 5, 0, 6.2832); ctx.fill();
+    } else if (hiSet.has(i)){
+      ctx.fillStyle = '#ffd700';
+      ctx.beginPath(); ctx.arc(p.x, p.y, 3, 0, 6.2832); ctx.fill();
+    } else {
+      ctx.fillStyle = '#ff6b35';
+      ctx.beginPath(); ctx.arc(p.x, p.y, 2, 0, 6.2832); ctx.fill();
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// §F HUD
+// ═══════════════════════════════════════════════════════════════════════════
+function $(id){ return document.getElementById(id); }
+function updateHUD(){
+  const ring = RINGS[state.ring];
+  $('g-ring').textContent  = ring.name + ' · ' + ring.notes;
+  $('g-pts').textContent   = state.points.length;
+  $('g-edges').textContent = state.edges.length;
+  $('g-N').textContent     = state.N;
+  $('g-chord').textContent = Math.sqrt(state.chord2).toFixed(3);
+  $('g-sym').textContent   = ring.sym;
+
+  if (state.adj.length > 0){
+    let mn = Infinity, mx = -Infinity, sum = 0;
+    for (const a of state.adj){
+      if (a.length < mn) mn = a.length;
+      if (a.length > mx) mx = a.length;
+      sum += a.length;
+    }
+    $('g-degmin').textContent = mn;
+    $('g-degmax').textContent = mx;
+    $('g-degavg').textContent = (sum / state.adj.length).toFixed(2);
+  }
+  updatePickedPanel();
+}
+
+function updatePickedPanel(){
+  const el = $('picked');
+  if (state.picked < 0){ el.innerHTML = ''; return; }
+  const p   = state.points[state.picked];
+  const ring = RINGS[state.ring];
+  const cs  = p.coeffs.map((c, k) => c + '·' + ring.gens[k].tag)
+                      .join(' + ').replace(/\+ -/g, '- ');
+  el.innerHTML = `
+    <div class="gold"><span class="lbl">selected</span> <b>#${state.picked}</b></div>
+    <div><span class="lbl">coords</span> ${cs}</div>
+    <div><span class="lbl">ℂ</span> ${p.re.toFixed(3)} + ${p.im.toFixed(3)}i</div>
+    <div><span class="lbl">|z|</span> ${Math.sqrt(p.re*p.re + p.im*p.im).toFixed(3)}</div>
+    <div class="gold"><span class="lbl">degree</span> <b>${state.adj[state.picked].length}</b></div>
+  `;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// §G Interaction: click to pick, drag to pan, wheel to zoom
+// ═══════════════════════════════════════════════════════════════════════════
+cv.addEventListener('mousedown', e => {
+  const startX = e.clientX, startY = e.clientY;
+  const cx0 = state.view.cx, cy0 = state.view.cy;
+  let moved = false;
+  function move(ev){
+    if (Math.hypot(ev.clientX - startX, ev.clientY - startY) > 4) moved = true;
+    if (moved){
+      state.view.cx = cx0 - (ev.clientX - startX) / state.view.scale;
+      state.view.cy = cy0 + (ev.clientY - startY) / state.view.scale;
+      draw();
+    }
+  }
+  function up(ev){
+    removeEventListener('mousemove', move);
+    removeEventListener('mouseup', up);
+    if (!moved){
+      // pick nearest vertex within tolerance
+      const w = s2w(ev.clientX, ev.clientY);
+      let best = -1, bestD2 = (12 / state.view.scale) ** 2;
+      for (let i = 0; i < state.points.length; i++){
+        const dx = state.points[i].re - w.re;
+        const dy = state.points[i].im - w.im;
+        const d2 = dx*dx + dy*dy;
+        if (d2 < bestD2){ bestD2 = d2; best = i; }
+      }
+      state.picked = (best === state.picked) ? -1 : best;
+      updatePickedPanel();
+      draw();
+    }
+  }
+  addEventListener('mousemove', move);
+  addEventListener('mouseup', up);
+});
+
+cv.addEventListener('wheel', e => {
+  e.preventDefault();
+  const factor = Math.exp(-e.deltaY * 0.001);
+  state.view.scale = Math.max(8, Math.min(800, state.view.scale * factor));
+  draw();
+}, { passive: false });
+
+// Ring toggle
+document.querySelectorAll('.ring-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.ring-btn').forEach(b => b.classList.remove('on'));
+    btn.classList.add('on');
+    state.ring   = btn.dataset.ring;
+    state.picked = -1;
+    buildLattice();
+  });
+});
+
+// Sliders
+$('ctl-N').addEventListener('input', e => {
+  state.N      = +e.target.value;
+  state.picked = -1;
+  buildLattice();
+});
+$('ctl-chord').addEventListener('input', e => {
+  state.chord2 = +e.target.value;
+  state.picked = -1;
+  buildLattice();
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// §H Boot
+// ═══════════════════════════════════════════════════════════════════════════
+buildLattice();

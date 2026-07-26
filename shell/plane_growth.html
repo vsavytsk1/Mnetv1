@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>plane growth · pent+hex · void-armed</title>
+<style>
+  :root{
+    --bg:#050510;
+    --pent:#ff6b35;
+    --hex:#00d4ff;
+    --text:#e0f0ff;
+    --text2:#7090a0;
+    --void:#ff3050;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;overflow:hidden;background:var(--bg);
+    color:var(--text);font-family:'Share Tech Mono','Consolas','Menlo',monospace}
+  #c{display:block;width:100%;height:100%;cursor:grab;touch-action:none}
+  #c.drag{cursor:grabbing}
+  .hud{position:fixed;pointer-events:none;font-size:11px;letter-spacing:.05em;color:var(--text2)}
+  .hud b{color:var(--text);font-weight:400}
+  #tl{top:14px;left:14px;line-height:1.55}
+  #br{bottom:60px;right:14px;text-align:right;line-height:1.55}
+  .tag{font-size:9px;letter-spacing:.18em;color:#506070;text-transform:uppercase;margin-bottom:6px}
+  .pent{color:var(--pent)}
+  .hex{color:var(--hex)}
+  #row{position:fixed;left:14px;right:14px;bottom:14px;
+    display:flex;gap:14px;align-items:center;font-size:11px;color:var(--text2);
+    pointer-events:auto}
+  #slider{flex:1;height:4px;-webkit-appearance:none;appearance:none;
+    background:#1a2030;border-radius:2px;outline:none}
+  #slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;
+    width:14px;height:14px;border-radius:50%;background:var(--hex);
+    border:2px solid var(--bg);cursor:pointer}
+  #slider::-moz-range-thumb{width:10px;height:10px;border-radius:50%;
+    background:var(--hex);border:2px solid var(--bg);cursor:pointer}
+  #vmode{font-size:10px;letter-spacing:.18em;color:#506070;transition:color .25s}
+  #vmode.warm{color:#9a5040}
+  #vmode.on{color:var(--void)}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<div id="tl" class="hud">
+  <div class="tag">plane growth · clockwise spiral · rigid hex</div>
+  <div><span class="pent">●</span> pent   <b id="np">1</b></div>
+  <div><span class="hex">●</span>  hex    <b id="nh">0</b></div>
+  <div>open edges  <b id="ne">5</b></div>
+  <div>place ms    <b id="ms">0.0</b></div>
+  <div>render ms   <b id="rms">0.0</b></div>
+</div>
+
+<div id="br" class="hud">
+  <div>drag · pan</div>
+  <div>scroll · zoom</div>
+  <div><b>R</b> · reset cam</div>
+  <div><b>F</b> · toggle fills</div>
+</div>
+
+<div id="row">
+  <span>0</span>
+  <input id="slider" type="range" min="0" max="1500" value="60" />
+  <span>1500</span>
+  <span>·</span>
+  <span><b id="sval">60</b> hex</span>
+  <span>·</span>
+  <span id="vmode">VOID · ARMED</span>
+</div>
+
+<script>
+// ─── §A canvas + camera ────────────────────────────────────────────────────
+const cvs = document.getElementById('c');
+const ctx = cvs.getContext('2d');
+let DPR = Math.min(window.devicePixelRatio || 1, 2);
+let CW = 0, CH = 0;
+
+function resize(){
+  CW = innerWidth; CH = innerHeight;
+  cvs.style.width = CW + 'px';
+  cvs.style.height = CH + 'px';
+  cvs.width = Math.round(CW * DPR);
+  cvs.height = Math.round(CH * DPR);
+}
+resize();
+addEventListener('resize', resize);
+
+// view: world units to screen px
+const view = { x: 0, y: 0, s: 26 };
+const resetView = () => { view.x = 0; view.y = 0; view.s = 26; };
+
+let drag = null;
+cvs.addEventListener('pointerdown', e => {
+  drag = { x: e.clientX, y: e.clientY, vx: view.x, vy: view.y };
+  cvs.classList.add('drag');
+  cvs.setPointerCapture(e.pointerId);
+});
+cvs.addEventListener('pointermove', e => {
+  if (!drag) return;
+  view.x = drag.vx - (e.clientX - drag.x) / view.s;
+  view.y = drag.vy - (e.clientY - drag.y) / view.s;
+});
+addEventListener('pointerup', () => { drag = null; cvs.classList.remove('drag'); });
+cvs.addEventListener('wheel', e => {
+  e.preventDefault();
+  const mx = e.clientX - CW/2, my = e.clientY - CH/2;
+  const wx = view.x + mx / view.s, wy = view.y + my / view.s;
+  const ns = Math.max(2, Math.min(160, view.s * (1 - e.deltaY * 0.001)));
+  view.x = wx - mx / ns; view.y = wy - my / ns;
+  view.s = ns;
+}, { passive: false });
+
+let showFills = true;
+addEventListener('keydown', e => {
+  if (e.key === 'r' || e.key === 'R') resetView();
+  else if (e.key === 'f' || e.key === 'F') showFills = !showFills;
+});
+
+const w2sx = wx => (wx - view.x) * view.s + CW/2;
+const w2sy = wy => (wy - view.y) * view.s + CH/2;
+
+// ─── §B geometry ───────────────────────────────────────────────────────────
+//
+// Each placement is RIGID: hex is regular, edge length 1, attached to a free
+// boundary edge with center at edge_midpoint + apothem * outward_normal.
+//
+// Vertex merging via canonV(): rounds positions to a grid of resolution ε.
+// Two hexes that should share a vertex but disagree by > ε won't merge — and
+// that disagreement is exactly the 12° angular defect bleeding outward from
+// each pentagon vertex. Geometric honesty: the cracks ARE the curvature.
+//
+const EDGE = 1;
+const APO  = EDGE * Math.sqrt(3) / 2;   // hex apothem (edge-len 1)
+const EPS  = 0.05;                       // vertex snap tolerance
+
+const polys     = [];                    // {kind, vs:[Vert], cen:{x,y}}
+const openEdges = [];                    // {a, b, ownerCen}   FIFO queue
+const vmap      = new Map();             // "rx|ry" → canonical Vert
+
+const vKey = (x, y) => `${Math.round(x / EPS)}|${Math.round(y / EPS)}`;
+function canonV(x, y){
+  const k = vKey(x, y);
+  const ex = vmap.get(k);
+  if (ex) return ex;
+  const v = { x, y };
+  vmap.set(k, v);
+  return v;
+}
+const sameEdge = (a, b, c, d) => (a === c && b === d) || (a === d && b === c);
+
+function reset(){
+  polys.length = 0;
+  openEdges.length = 0;
+  vmap.clear();
+
+  // Pentagon: vertex 0 at top, going clockwise (screen y +down)
+  const vs = [];
+  for (let i = 0; i < 5; i++){
+    const a = -Math.PI/2 + i * 2*Math.PI/5;
+    vs.push(canonV(Math.cos(a), Math.sin(a)));
+  }
+  polys.push({ kind: 'pent', vs, cen: { x: 0, y: 0 } });
+
+  // Enqueue all 5 pent edges in clockwise order
+  for (let i = 0; i < 5; i++){
+    openEdges.push({ a: vs[i], b: vs[(i+1) % 5], ownerCen: { x: 0, y: 0 } });
+  }
+}
+
+function placeOneHex(){
+  while (openEdges.length){
+    const e = openEdges.shift();
+    const a = e.a, b = e.b;
+    const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+    const dx = b.x - a.x, dy = b.y - a.y;
+    const L  = Math.hypot(dx, dy);
+    if (L < 1e-6) continue;
+
+    // outward normal — away from owner polygon center
+    let nx = -dy / L, ny = dx / L;
+    if ((mx - e.ownerCen.x) * nx + (my - e.ownerCen.y) * ny < 0){
+      nx = -nx; ny = -ny;
+    }
+    const cx = mx + nx * APO;
+    const cy = my + ny * APO;
+
+    // 6 vertices, starting near `a` and going around the hex
+    const ang0 = Math.atan2(a.y - cy, a.x - cx);
+    const vs = [];
+    for (let i = 0; i < 6; i++){
+      const ang = ang0 + i * Math.PI / 3;
+      vs.push(canonV(cx + EDGE * Math.cos(ang), cy + EDGE * Math.sin(ang)));
+    }
+    polys.push({ kind: 'hex', vs, cen: { x: cx, y: cy } });
+
+    // 6 hex edges: skip the shared anchor edge; close any that match an
+    // existing open edge (= adjacency closure = the "3 share a corner" case)
+    for (let i = 0; i < 6; i++){
+      const va = vs[i], vb = vs[(i+1) % 6];
+      if (sameEdge(va, vb, a, b)) continue;
+      const j = openEdges.findIndex(oe => sameEdge(oe.a, oe.b, va, vb));
+      if (j >= 0) openEdges.splice(j, 1);
+      else openEdges.push({ a: va, b: vb, ownerCen: { x: cx, y: cy } });
+    }
+    return true;
+  }
+  return false;
+}
+
+function growTo(target){
+  while (polys.filter(p => p.kind === 'hex').length < target){
+    if (!placeOneHex()) break;
+  }
+}
+
+// ─── §C slider & void factor ───────────────────────────────────────────────
+reset();
+const slider = document.getElementById('slider');
+const sval   = document.getElementById('sval');
+const np     = document.getElementById('np');
+const nh     = document.getElementById('nh');
+const ne     = document.getElementById('ne');
+const ms     = document.getElementById('ms');
+const rms    = document.getElementById('rms');
+const vmode  = document.getElementById('vmode');
+
+let pendingTarget = +slider.value;
+let placeMs = 0;
+let renderMs = 0;
+let voidF = 0;             // 0 = full visible · 1 = total void
+
+slider.addEventListener('input', () => {
+  pendingTarget = +slider.value;
+  sval.textContent = slider.value;
+});
+sval.textContent = slider.value;
+
+function processPending(){
+  const want = pendingTarget;
+  const have = polys.filter(p => p.kind === 'hex').length;
+  if (want === have) return;
+  const t0 = performance.now();
+  if (want < have){
+    // shrink → cheap full rebuild
+    reset();
+    growTo(want);
+  } else {
+    growTo(want);
+  }
+  placeMs = performance.now() - t0;
+}
+
+// ─── §D render (Canvas2D, void-aware) ──────────────────────────────────────
+function fmt(n){ return n.toFixed(1); }
+
+function path(vs){
+  ctx.beginPath();
+  ctx.moveTo(w2sx(vs[0].x), w2sy(vs[0].y));
+  for (let i = 1; i < vs.length; i++) ctx.lineTo(w2sx(vs[i].x), w2sy(vs[i].y));
+  ctx.closePath();
+}
+function appendPath(vs){
+  ctx.moveTo(w2sx(vs[0].x), w2sy(vs[0].y));
+  for (let i = 1; i < vs.length; i++) ctx.lineTo(w2sx(vs[i].x), w2sy(vs[i].y));
+  ctx.closePath();
+}
+
+function render(){
+  const t0 = performance.now();
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  ctx.fillStyle = '#050510';
+  ctx.fillRect(0, 0, CW, CH);
+
+  const vis = 1 - voidF;
+  if (vis > 0.005){
+
+    // hex translucent fill
+    if (showFills){
+      ctx.globalAlpha = 0.045 * vis;
+      ctx.fillStyle = '#00d4ff';
+      for (const p of polys){
+        if (p.kind !== 'hex') continue;
+        path(p.vs); ctx.fill();
+      }
+      // pent fill
+      ctx.globalAlpha = 0.13 * vis;
+      ctx.fillStyle = '#ff6b35';
+      for (const p of polys){
+        if (p.kind !== 'pent') continue;
+        path(p.vs); ctx.fill();
+      }
+    }
+
+    // hex edges (one merged path)
+    ctx.globalAlpha = 0.55 * vis;
+    ctx.strokeStyle = '#00d4ff';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (const p of polys){ if (p.kind === 'hex') appendPath(p.vs); }
+    ctx.stroke();
+
+    // pent edges
+    ctx.globalAlpha = 0.95 * vis;
+    ctx.strokeStyle = '#ff6b35';
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    for (const p of polys){ if (p.kind === 'pent') appendPath(p.vs); }
+    ctx.stroke();
+
+    // center dots
+    ctx.globalAlpha = 0.95 * vis;
+    ctx.fillStyle = '#ff6b35';
+    for (const p of polys){
+      if (p.kind !== 'pent') continue;
+      ctx.beginPath();
+      ctx.arc(w2sx(p.cen.x), w2sy(p.cen.y), 3.4, 0, 2*Math.PI);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 0.7 * vis;
+    ctx.fillStyle = '#00d4ff';
+    for (const p of polys){
+      if (p.kind !== 'hex') continue;
+      ctx.beginPath();
+      ctx.arc(w2sx(p.cen.x), w2sy(p.cen.y), 1.4, 0, 2*Math.PI);
+      ctx.fill();
+    }
+  }
+
+  ctx.globalAlpha = 1;
+  renderMs = performance.now() - t0;
+
+  // HUD
+  np.textContent = polys.filter(p => p.kind === 'pent').length;
+  nh.textContent = polys.filter(p => p.kind === 'hex').length;
+  ne.textContent = openEdges.length;
+  ms.textContent  = fmt(placeMs);
+  rms.textContent = fmt(renderMs);
+
+  // void factor — drive from total frame cost
+  //   safe ≤ 16 ms  ·  full void ≥ 60 ms
+  const total = placeMs + renderMs;
+  const target = Math.max(0, Math.min(1, (total - 16) / (60 - 16)));
+  voidF += (target - voidF) * 0.08; // smooth lerp
+
+  if (voidF > 0.45)      { vmode.className = 'on';   vmode.textContent = `VOID · ${Math.round(voidF*100)}%`; }
+  else if (voidF > 0.08) { vmode.className = 'warm'; vmode.textContent = `VOID · WARMING · ${Math.round(voidF*100)}%`; }
+  else                   { vmode.className = '';     vmode.textContent = 'VOID · ARMED'; }
+}
+
+// ─── §E loop ───────────────────────────────────────────────────────────────
+function frame(){
+  processPending();
+  render();
+  requestAnimationFrame(frame);
+}
+processPending();
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

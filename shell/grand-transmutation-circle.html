@@ -1,0 +1,228 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>The Grand Transmutation Circle · core volume ⊕ agapi ring ⊕ Fourier</title>
+<style>
+:root{--bg:#05050a;--gold:#ffd700;--purp:#cc44ff;--cyan:#00d4ff;--pink:#ff69b4;--white:#e8ecf6;--dim:#6a6a82;
+ --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--white);font-family:var(--mono);overflow:hidden}
+#cv{position:fixed;inset:0;display:block;cursor:grab}#cv.drag{cursor:grabbing}
+#hud{position:fixed;top:10px;left:12px;z-index:10;pointer-events:none;max-width:320px}
+#ttl{color:var(--gold);font-size:13px;letter-spacing:.06em;text-transform:uppercase}
+#ttl .p{color:var(--purp)}
+#hud .row{line-height:1.75;color:rgba(232,236,246,.5);font-size:11px}
+#hud .g{color:var(--gold)}.pu{color:var(--purp)}.cy{color:var(--cyan)}.pk{color:var(--pink)}
+#hud .dim{color:rgba(232,236,246,.28);font-size:10px;line-height:1.5;margin-top:4px}
+#bar{position:fixed;left:50%;transform:translateX(-50%);bottom:10px;display:flex;flex-wrap:wrap;gap:7px 11px;
+ align-items:center;background:rgba(8,8,16,.92);border:1px solid #20202e;border-radius:10px;padding:9px 14px;z-index:10;max-width:96vw;justify-content:center}
+.klbl{color:var(--dim);font-size:9px;text-transform:uppercase;letter-spacing:.08em}
+input[type=range]{appearance:none;-webkit-appearance:none;width:74px;height:4px;background:#2a2a3a;border-radius:3px;outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:var(--gold);cursor:pointer}
+input[type=range]::-moz-range-thumb{width:12px;height:12px;border:none;border-radius:50%;background:var(--gold);cursor:pointer}
+.v2{color:var(--gold);font-size:9px;min-width:26px;text-align:right}
+.sep{width:1px;height:15px;background:#20202e}
+button{background:#14141f;border:1px solid #2a2a3a;border-radius:6px;color:var(--gold);font:11px var(--mono);padding:5px 9px;cursor:pointer;transition:all .12s}
+button:hover{border-color:var(--gold)}button.on{border-color:var(--cyan);color:var(--cyan)}
+button.gt{color:#00ffd5;border-color:#0a3a3a}button.gt.on{border-color:#00ffd5;color:#00ffd5}
+#stamp{position:fixed;bottom:10px;right:12px;color:var(--dim);font-size:9px;text-align:right;z-index:9;line-height:1.5}
+#stamp b{color:var(--gold)}
+</style></head>
+<body>
+<canvas id="cv"></canvas>
+
+<div id="hud">
+  <div id="ttl">The Grand Transmutation <span class="p">Circle</span></div>
+  <div class="row">core <span class="pu" id="h-core">{8/3}</span> volume · loops <span class="pu" id="h-cl">1</span></div>
+  <div class="row">ring <span class="g" id="h-ring">{12/5}</span> · agapi <span class="cy">12</span> circles</div>
+  <div class="row">q <span class="pk" id="h-q">0.70</span> · diametric ∠ <span class="cy" id="h-ang">88.9°</span></div>
+  <div class="row">view <span class="cy" id="h-view">3D</span></div>
+  <div class="dim">core = the transmutation volume · flatten projects the whole rite to 2D · χ=2</div>
+</div>
+
+<div id="bar">
+  <span class="klbl">flatten</span><input id="s-flat" type="range" min="0" max="100" value="0" oninput="FLAT=+this.value/100;view()"><span class="v2" id="v-flat">3D</span>
+  <span class="klbl">tilt</span><input id="s-tilt" type="range" min="-120" max="120" value="90" oninput="TILT=+this.value/100"><span class="v2" id="v-tilt">.90</span>
+  <span class="klbl">spin</span><input id="s-spin" type="range" min="0" max="100" value="22" oninput="SPIN=+this.value/6000"><span class="v2" id="v-spin">22</span>
+  <span class="klbl">charge</span><input id="s-chg" type="range" min="0" max="100" value="100" oninput="CHG=+this.value/100"><span class="v2" id="v-chg">100</span>
+  <div class="sep"></div>
+  <span class="klbl">core n</span><input id="s-cn" type="range" min="3" max="12" value="8" oninput="setCN(+this.value)"><span class="v2" id="v-cn">8</span>
+  <span class="klbl">core k</span><input id="s-ck" type="range" min="1" max="7" value="3" oninput="setCK(+this.value)"><span class="v2" id="v-ck">3</span>
+  <span class="klbl">ring N</span><input id="s-rn" type="range" min="5" max="18" value="12" oninput="setRN(+this.value)"><span class="v2" id="v-rn">12</span>
+  <span class="klbl">ring k</span><input id="s-rk" type="range" min="1" max="8" value="5" oninput="setRK(+this.value)"><span class="v2" id="v-rk">5</span>
+  <div class="sep"></div>
+  <span class="klbl">q</span><input id="s-q" type="range" min="45" max="130" value="70" oninput="Q=+this.value/100;target=null"><span class="v2" id="v-q">.70</span>
+  <button id="b-sq" class="gt" onclick="target=ISQ2">→1/√2</button>
+  <button id="b-epi" onclick="EPI=!EPI;this.classList.toggle('on',EPI)">epicycles</button>
+</div>
+
+<div id="stamp">Grand Transmutation · HELENA<br>core volume ⊕ agapi ring ⊕ Fourier curve<br>one line iff gcd(n,k)=1 · χ=2 · always</div>
+
+<script>
+"use strict";
+var cv=document.getElementById("cv"),ctx=cv.getContext("2d");
+var W,H,DPR;
+function resize(){DPR=Math.min(window.devicePixelRatio||1,2);W=window.innerWidth;H=window.innerHeight;cv.width=Math.round(W*DPR);cv.height=Math.round(H*DPR);}
+window.addEventListener("resize",resize);resize();
+
+var ISQ2=1/Math.SQRT2;
+var CN=8,CK=3,RN=12,RK=5,Q=0.70;
+var FLAT=0,TILT=0.90,SPIN=22/6000,CHG=1,EPI=false;
+var theta=0,ry=0.4,rx=0.90,dragging=false,lx=0,ly=0,target=null;
+var TONG=["EN","EL","ES","PT","RU","UK","LA","IT","FR","DE","JA","AR","GR","HE","SA","GE","TR","NO"];
+
+var GOLD=[255,215,0],PURP=[204,68,255],CYAN=[0,212,255],PINK=[255,105,180],WHITE=[232,236,246];
+function css(c,a){return "rgba("+(c[0]|0)+","+(c[1]|0)+","+(c[2]|0)+","+a+")";}
+function mix(a,b,t){t=t<0?0:t>1?1:t;return [a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t];}
+function gcd(a,b){a=Math.abs(a);b=Math.abs(b);while(b){var t=a%b;a=b;b=t;}return a;}
+function starEdges(n,k){var d=gcd(n,k),e=[],s,cur,ring;for(s=0;s<d;s++){ring=[];cur=s;do{ring.push(cur);cur=(cur+k)%n;}while(cur!==s);for(var i=0;i<ring.length;i++)e.push([ring[i],ring[(i+1)%ring.length]]);}return e;}
+var ROSE=[{f:1,r:1},{f:-5,r:0.55},{f:7,r:0.28}];
+function tip(t){var x=0,y=0;for(var j=0;j<ROSE.length;j++){x+=ROSE[j].r*Math.cos(ROSE[j].f*t);y+=ROSE[j].r*Math.sin(ROSE[j].f*t);}return [x,y];}
+function intersect(x0,y0,x1,y1,R){var dx=x1-x0,dy=y1-y0,dd=Math.hypot(dx,dy);if(dd<1e-6||dd>2*R)return null;var a=dd/2,h2=R*R-a*a;if(h2<0)return null;var h=Math.sqrt(h2),xm=x0+dx/2,ym=y0+dy/2;return [[xm+h*dy/dd,ym-h*dx/dd],[xm-h*dy/dd,ym+h*dx/dd]];}
+
+// ---- combined transform: world (x,y,z) -> screen, with flatten morph (validated) ----
+var CAM=4.0;
+function w2s(p,cx,cy,scale){
+  var f=scale*CAM;
+  // 3D
+  var cX=Math.cos(rx),sX=Math.sin(rx),y1=p[1]*cX-p[2]*sX,z1=p[1]*sX+p[2]*cX;
+  var cY=Math.cos(ry),sY=Math.sin(ry),x2=p[0]*cY+z1*sY,z2=-p[0]*sY+z1*cY;
+  var d=CAM-z2;if(d<0.4)d=0.4;var s3=f/d;
+  var ax=cx+x2*s3, ay=cy-y1*s3;
+  // 2D top-down (in-plane spin)
+  var bx=cx+(p[0]*cY-p[1]*sY)*scale, by=cy-(p[0]*sY+p[1]*cY)*scale;
+  return [ax+(bx-ax)*FLAT, ay+(by-ay)*FLAT, z2];
+}
+
+function ramp(c,a,b){return Math.max(0,Math.min(1,(c-a)/(b-a)));}
+
+function draw(){
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+  ctx.fillStyle="rgba(5,5,10,0.34)";ctx.fillRect(0,0,W,H);
+  if(target!==null){Q+=(target-Q)*0.04;document.getElementById("s-q").value=Math.round(Q*100);document.getElementById("v-q").textContent=Q.toFixed(2);}
+  rx = FLAT>0.5? rx : TILT;                       // tilt drives 3D; drag overrides
+  var cx=W/2,cy=H/2,scale=Math.min(W,H)*0.34;
+  var aVes=ramp(CHG,0.0,0.30),aRose=ramp(CHG,0.25,0.55),aStar=ramp(CHG,0.45,0.78),aCore=ramp(CHG,0.62,1.0)*0+1; // core always on
+  aCore=Math.max(0.15,ramp(CHG,0.0,0.25));
+  ctx.globalCompositeOperation="screen";ctx.lineCap="round";ctx.lineJoin="round";
+
+  // ---------- Layer 1: agapi vesica circles (flower backdrop) ----------
+  var Rv=0.48, d=Q*Rv;
+  var cen=[];
+  for(var i=0;i<RN;i++){var a=i/RN*6.2832;cen.push([Math.cos(a)*d,Math.sin(a)*d]);}
+  if(aVes>0.02){
+    for(var i2=0;i2<RN;i2++){
+      ctx.strokeStyle=css(GOLD,0.14*aVes);ctx.lineWidth=0.8;ctx.beginPath();
+      for(var t=0;t<=44;t++){var th=t/44*6.2832;var P=w2s([cen[i2][0]+Math.cos(th)*Rv,cen[i2][1]+Math.sin(th)*Rv,0],cx,cy,scale);t?ctx.lineTo(P[0],P[1]):ctx.moveTo(P[0],P[1]);}
+      ctx.stroke();
+    }
+    // vesica crossing points + diametric right-angle highlight
+    var ang=Math.acos(Math.max(-1,Math.min(1,1-2*Q*Q)))*180/Math.PI, orth=Math.abs(ang-90)<0.6;
+    for(var a2=0;a2<RN;a2++)for(var b2=a2+1;b2<RN;b2++){var pts=intersect(cen[a2][0],cen[a2][1],cen[b2][0],cen[b2][1],Rv);if(!pts)continue;
+      var diam=(RN%2===0)&&((b2-a2)===RN/2);
+      var pc= diam&&orth? [0,255,213]:PINK;
+      for(var pi=0;pi<2;pi++){var P=w2s([pts[pi][0],pts[pi][1],0],cx,cy,scale);ctx.fillStyle=css(pc,(diam?0.9:0.4)*aVes);ctx.beginPath();ctx.arc(P[0],P[1],diam?2.4:1.4,0,6.2832);ctx.fill();}
+    }
+  }
+
+  // ---------- Layer 2: inscribed star {RN/RK} (gold sigil ring) ----------
+  if(aStar>0.02){
+    var rr=0.74, pts2=[];
+    for(var s2=0;s2<RN;s2++){var a=s2/RN*6.2832-1.5708;pts2.push(w2s([Math.cos(a)*rr,Math.sin(a)*rr,0],cx,cy,scale));}
+    var e2=starEdges(RN,RK);
+    ctx.strokeStyle=css(GOLD,0.7*aStar);ctx.lineWidth=1.3;ctx.beginPath();
+    for(var q2=0;q2<e2.length;q2++){var A=pts2[e2[q2][0]],B=pts2[e2[q2][1]];ctx.moveTo(A[0],A[1]);ctx.lineTo(B[0],B[1]);}
+    ctx.stroke();
+    // outer ring circle
+    ctx.strokeStyle=css(GOLD,0.3*aStar);ctx.lineWidth=1;ctx.beginPath();
+    for(var t3=0;t3<=64;t3++){var th=t3/64*6.2832;var P=w2s([Math.cos(th)*0.86,Math.sin(th)*0.86,0],cx,cy,scale);t3?ctx.lineTo(P[0],P[1]):ctx.moveTo(P[0],P[1]);}
+    ctx.stroke();
+    for(var v2=0;v2<RN;v2++){ctx.fillStyle=css(GOLD,0.8*aStar);ctx.beginPath();ctx.arc(pts2[v2][0],pts2[v2][1],2,0,6.2832);ctx.fill();}
+  }
+
+  // ---------- Layer 3: Fourier rose curve (cyan) + epicycles ----------
+  if(aRose>0.02){
+    var rs=0.20;
+    ctx.strokeStyle=css(CYAN,0.6*aRose);ctx.lineWidth=1.1;ctx.beginPath();
+    for(var t4=0;t4<=240;t4++){var qq=tip(t4/240*6.2832);var P=w2s([qq[0]*rs,qq[1]*rs,0.02],cx,cy,scale);t4?ctx.lineTo(P[0],P[1]):ctx.moveTo(P[0],P[1]);}
+    ctx.stroke();
+    if(EPI){
+      var x=0,y=0;
+      for(var j=0;j<ROSE.length;j++){
+        var ox=x,oy=y;
+        // circle
+        ctx.strokeStyle=css(mix(CYAN,PURP,j/ROSE.length),0.3*aRose);ctx.lineWidth=0.6;ctx.beginPath();
+        for(var tt=0;tt<=40;tt++){var th=tt/40*6.2832;var P=w2s([(ox+Math.cos(th)*ROSE[j].r)*rs,(oy+Math.sin(th)*ROSE[j].r)*rs,0.02],cx,cy,scale);tt?ctx.lineTo(P[0],P[1]):ctx.moveTo(P[0],P[1]);}
+        ctx.stroke();
+        x+=ROSE[j].r*Math.cos(ROSE[j].f*theta);y+=ROSE[j].r*Math.sin(ROSE[j].f*theta);
+        var A=w2s([ox*rs,oy*rs,0.02],cx,cy,scale),Bp=w2s([x*rs,y*rs,0.02],cx,cy,scale);
+        ctx.strokeStyle=css(mix(CYAN,PURP,j/ROSE.length),0.7*aRose);ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(A[0],A[1]);ctx.lineTo(Bp[0],Bp[1]);ctx.stroke();
+      }
+      var pen=w2s([x*rs,y*rs,0.02],cx,cy,scale);ctx.fillStyle=css(PINK,0.9*aRose);ctx.shadowColor=css(PINK,1);ctx.shadowBlur=6;ctx.beginPath();ctx.arc(pen[0],pen[1],3,0,6.2832);ctx.fill();ctx.shadowBlur=0;
+    }
+  }
+
+  // ---------- Layer 4: CORE transmutation volume (3D twisted {CN/CK} prism) ----------
+  var SLICES=13,half=(SLICES-1)/2,Rc=0.27,twist=0.26,zc=0.42;
+  var edgesC=starEdges(CN,CK);
+  var slicePts=[];
+  for(var s=0;s<SLICES;s++){
+    var sc=s-half,z=(sc/half)*zc,tw=sc*twist,row=[];
+    for(var i=0;i<CN;i++){var a=-1.5708+i/CN*6.2832+tw;row.push(w2s([Math.cos(a)*Rc,Math.sin(a)*Rc,z],cx,cy,scale));}
+    slicePts.push(row);
+  }
+  // struts
+  ctx.strokeStyle=css(PURP,0.20*aCore);ctx.lineWidth=0.6;ctx.beginPath();
+  for(var s3b=0;s3b<SLICES-1;s3b++)for(var i3=0;i3<CN;i3++){var P=slicePts[s3b][i3],Qp=slicePts[s3b+1][i3];ctx.moveTo(P[0],P[1]);ctx.lineTo(Qp[0],Qp[1]);}
+  ctx.stroke();
+  // slice sigils
+  for(var s4=0;s4<SLICES;s4++){
+    var t=s4/(SLICES-1),col=mix(PURP,GOLD,Math.abs(s4-half)/half);
+    var em=0.35+0.65*(1-Math.abs(s4-half)/(half+1));
+    ctx.strokeStyle=css(col,em*0.8*aCore);ctx.lineWidth=s4===half?1.6:0.9;ctx.beginPath();
+    for(var q4=0;q4<edgesC.length;q4++){var A=slicePts[s4][edgesC[q4][0]],B=slicePts[s4][edgesC[q4][1]];ctx.moveTo(A[0],A[1]);ctx.lineTo(B[0],B[1]);}
+    ctx.stroke();
+  }
+
+  // ---------- Gate ----------
+  var pulse=0.5+0.5*Math.sin(performance.now()*0.002);
+  var gate=w2s([0,0,0],cx,cy,scale);
+  var sealed=CHG>=0.99;
+  ctx.strokeStyle=css(sealed?[0,255,213]:CYAN,(0.3+pulse*0.3));ctx.lineWidth=2;ctx.beginPath();ctx.arc(gate[0],gate[1],11+pulse*3,0,6.2832);ctx.stroke();
+  ctx.fillStyle=css(sealed?WHITE:GOLD,1);ctx.shadowColor=css(GOLD,1);ctx.shadowBlur=sealed?18:8;ctx.beginPath();ctx.arc(gate[0],gate[1],5,0,6.2832);ctx.fill();ctx.shadowBlur=0;
+  if(sealed){var ph=(performance.now()*0.0004)%1;ctx.strokeStyle=css(mix(WHITE,GOLD,ph),(1-ph)*0.5);ctx.lineWidth=1.5*(1-ph)+0.3;ctx.beginPath();ctx.arc(gate[0],gate[1],ph*scale*0.9,0,6.2832);ctx.stroke();}
+
+  ctx.globalCompositeOperation="source-over";
+
+  // HUD
+  set("h-core","{"+CN+"/"+CK+"}");set("h-cl",gcd(CN,CK));
+  set("h-ring","{"+RN+"/"+RK+"}");set("h-q",Q.toFixed(2));
+  set("h-ang",(Math.acos(Math.max(-1,Math.min(1,1-2*Q*Q)))*180/Math.PI).toFixed(1)+"°");
+  set("h-view",FLAT<0.02?"3D dome":FLAT>0.98?"2D circle":"morph "+Math.round(FLAT*100)+"%");
+}
+function set(id,v){var e=document.getElementById(id);if(e)e.textContent=v;}
+
+// controls
+function view(){document.getElementById("v-flat").textContent=FLAT<0.02?"3D":FLAT>0.98?"2D":Math.round(FLAT*100)+"%";}
+function clampCK(){var e=document.getElementById("s-ck");e.max=CN-1;if(CK>CN-1){CK=CN-1;e.value=CK;set("v-ck",CK);}}
+function clampRK(){var e=document.getElementById("s-rk");e.max=RN-1;if(RK>RN-1){RK=RN-1;e.value=RK;set("v-rk",RK);}}
+function setCN(v){CN=v;set("v-cn",v);clampCK();}
+function setCK(v){CK=v;set("v-ck",v);}
+function setRN(v){RN=v;set("v-rn",v);clampRK();}
+function setRK(v){RK=v;set("v-rk",v);}
+document.getElementById("s-tilt").addEventListener("input",function(){set("v-tilt",TILT.toFixed(2));});
+document.getElementById("s-spin").addEventListener("input",function(e){set("v-spin",e.target.value);});
+document.getElementById("s-chg").addEventListener("input",function(e){set("v-chg",e.target.value);});
+document.getElementById("s-flat").addEventListener("input",function(){view();});
+
+// drag rotate
+cv.addEventListener("mousedown",function(e){dragging=true;cv.classList.add("drag");lx=e.clientX;ly=e.clientY;});
+window.addEventListener("mouseup",function(){dragging=false;cv.classList.remove("drag");});
+window.addEventListener("mousemove",function(e){if(!dragging)return;ry+=(e.clientX-lx)*0.008;rx+=(e.clientY-ly)*0.008;rx=Math.max(-1.5,Math.min(1.5,rx));lx=e.clientX;ly=e.clientY;});
+cv.addEventListener("touchstart",function(e){dragging=true;lx=e.touches[0].clientX;ly=e.touches[0].clientY;},{passive:true});
+window.addEventListener("touchend",function(){dragging=false;});
+window.addEventListener("touchmove",function(e){if(!dragging)return;ry+=(e.touches[0].clientX-lx)*0.008;rx+=(e.touches[0].clientY-ly)*0.008;rx=Math.max(-1.5,Math.min(1.5,rx));lx=e.touches[0].clientX;ly=e.touches[0].clientY;},{passive:true});
+
+function frame(){requestAnimationFrame(frame);if(!dragging)ry+=SPIN;theta+=0.014;draw();}
+view();frame();
+</script>
+</body></html>

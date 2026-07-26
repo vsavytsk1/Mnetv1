@@ -1,0 +1,1132 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Shannonium v1.0 — From Tower to Song</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{background:#050510;color:#e0e0e0;
+  font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:11px;
+  overflow:hidden;height:100%;width:100%}
+canvas{display:block}
+#net{position:fixed;inset:0;z-index:1}
+
+/* ---- HUD top-left ---- */
+#hud{position:fixed;top:12px;left:12px;z-index:10;pointer-events:none}
+#hud .title{font-size:13px;color:var(--acc,#00d4ff);letter-spacing:0.14em;
+  text-transform:uppercase;margin-bottom:5px;transition:color .3s}
+#hud .row{line-height:1.85;color:rgba(220,228,240,0.42)}
+#hud .val{color:var(--acc,#00d4ff);font-weight:bold;transition:color .3s}
+#hud .gen{color:var(--acc,#00d4ff);transition:color .3s}
+#hud .dim{color:rgba(220,228,240,0.2);font-size:10px;margin-top:3px}
+#hud .step{color:#ffd700}
+
+/* ---- Spectrum inspector top-right ---- */
+#insp{position:fixed;top:12px;right:12px;z-index:10;width:262px;
+  background:rgba(5,5,16,0.82);border:1px solid #161b2c;border-radius:5px;
+  padding:9px 11px}
+#insp .h{display:flex;justify-content:space-between;align-items:baseline;
+  margin-bottom:6px}
+#insp .h .a{font-size:11px;color:var(--acc,#00d4ff);letter-spacing:0.1em;
+  text-transform:uppercase;transition:color .3s}
+#insp .h .y{font-size:9px;color:rgba(220,228,240,0.3)}
+#insp canvas{width:240px;height:122px;border-radius:3px;background:#03030a}
+#insp .cap{font-size:9px;color:rgba(220,228,240,0.4);line-height:1.6;margin-top:6px}
+#insp .cap b{color:var(--acc,#00d4ff);transition:color .3s}
+
+/* ---- step log (left, appears on query) ---- */
+#log{position:fixed;top:118px;left:12px;z-index:10;width:288px;
+  background:rgba(5,5,16,0.86);border:1px solid #161b2c;border-radius:4px;
+  padding:8px 11px;max-height:46vh;overflow-y:auto;line-height:1.6}
+#log:empty{display:none}
+#log .e{padding:2px 0;border-bottom:1px solid #0e0e1a;font-size:10px;
+  color:rgba(220,228,240,0.7)}
+#log .e .n{color:#444;margin-right:6px}
+#log .e.ok{color:#7fff7f}
+#log .e.warn{color:#ffd700}
+#log .e.fail{color:#ff5555}
+#log .e .hl{color:var(--acc,#00d4ff)}
+
+/* ---- Shazam pipeline strip (bottom, appears on query) ---- */
+#pipe{position:fixed;left:12px;right:12px;bottom:46px;z-index:9;
+  display:none;gap:10px;justify-content:center}
+#pipe.show{display:flex}
+.pp{background:rgba(5,5,16,0.9);border:1px solid #161b2c;border-radius:5px;
+  padding:8px 10px;flex:1;max-width:300px}
+.pp .t{font-size:9px;color:rgba(220,228,240,0.38);letter-spacing:0.12em;
+  text-transform:uppercase;margin-bottom:5px;display:flex;justify-content:space-between}
+.pp .t .s{color:var(--acc,#00d4ff);transition:color .3s}
+.pp canvas{width:100%;height:118px;border-radius:3px;background:#03030a;display:block}
+
+/* ---- reveal modal ---- */
+#reveal{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+  z-index:30;background:rgba(5,5,16,0.97);border:1px solid var(--acc,#00d4ff);
+  border-radius:8px;padding:22px 30px;text-align:center;display:none;
+  max-width:430px;transition:border-color .3s}
+#reveal h2{color:#ffd700;font-size:15px;letter-spacing:0.16em;margin-bottom:14px}
+#reveal .eq{font-size:15px;color:var(--acc,#00d4ff);margin:5px 0;font-family:Georgia,serif}
+#reveal .desc{font-size:10px;color:#9aa;line-height:1.95;margin:14px 0}
+#reveal .desc b{color:#cfd}
+#reveal button{background:var(--acc,#00d4ff);color:#050510;border:none;
+  padding:6px 22px;border-radius:3px;cursor:pointer;font-family:inherit;
+  font-size:10px;text-transform:uppercase;letter-spacing:0.1em;margin-top:6px}
+
+/* ---- bottom control bar ---- */
+#bar{position:fixed;bottom:0;left:0;right:0;z-index:20;
+  background:rgba(5,5,16,0.97);border-top:1px solid #161b2c;
+  padding:6px 14px;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.btn{background:#0a0e18;color:#4a4a5a;border:1px solid #1a1f2e;border-radius:3px;
+  padding:3px 10px;font-family:inherit;font-size:9px;cursor:pointer;
+  text-transform:uppercase;letter-spacing:0.06em;transition:all .15s}
+.btn:hover{border-color:var(--acc,#00d4ff);color:var(--acc,#00d4ff)}
+.gbtn.on{color:#050510}
+.gbtn[data-g="1G"].on{background:#ff9933;border-color:#ff9933}
+.gbtn[data-g="2G"].on{background:#7fff7f;border-color:#7fff7f}
+.gbtn[data-g="3G"].on{background:#4488ff;border-color:#4488ff}
+.gbtn[data-g="4G"].on{background:#00d4ff;border-color:#00d4ff}
+.gbtn[data-g="5G"].on{background:#cc44ff;border-color:#cc44ff}
+.gbtn[data-g="1G"]:hover{border-color:#ff9933;color:#ff9933}
+.gbtn[data-g="2G"]:hover{border-color:#7fff7f;color:#7fff7f}
+.gbtn[data-g="3G"]:hover{border-color:#4488ff;color:#4488ff}
+.gbtn[data-g="4G"]:hover{border-color:#00d4ff;color:#00d4ff}
+.gbtn[data-g="5G"]:hover{border-color:#cc44ff;color:#cc44ff}
+.gbtn.on:hover{color:#050510}
+.run{color:#ffd700;border-color:#3a2f0a}
+.run:hover{background:#ffd700;color:#050510;border-color:#ffd700}
+.gold{color:#ffd700;border-color:#3a2f0a}
+.sep{width:1px;height:15px;background:#1a1f2e;margin:0 2px}
+.lbl{color:rgba(220,228,240,0.26);font-size:9px;text-transform:uppercase;letter-spacing:0.1em}
+.sl{display:flex;align-items:center;gap:3px}
+.sl input{width:58px;accent-color:var(--acc,#00d4ff)}
+.sv{font-size:9px;color:var(--acc,#00d4ff);min-width:30px;transition:color .3s}
+
+/* ---- corner stamp ---- */
+#stamp{position:fixed;bottom:52px;right:14px;z-index:8;pointer-events:none;text-align:right}
+#stamp .s{font-size:8px;color:rgba(120,140,200,0.22);letter-spacing:0.08em;line-height:1.75}
+
+@media (max-width:760px){
+  #insp{display:none}
+  #log{width:232px;max-height:36vh}
+  #pipe{bottom:44px}
+  .pp .t{font-size:8px}
+}
+</style>
+</head>
+<body>
+
+<canvas id="net"></canvas>
+
+<div id="hud">
+  <div class="title">Shannonium v1.0</div>
+  <div class="row">gen&nbsp; <span class="gen" id="h-gen">4G · LTE</span> &nbsp;<span class="dim" id="h-year">2009</span></div>
+  <div class="row">access&nbsp; <span class="val" id="h-acc">OFDMA</span></div>
+  <div class="row">devices&nbsp; <span class="val" id="h-dev">10,485,760</span></div>
+  <div class="row">cell capacity&nbsp; <span class="val" id="h-cap">~600 / cell</span></div>
+  <div class="row">throughput&nbsp; <span class="val" id="h-rate">~100 Mbps</span></div>
+  <div class="row">latency&nbsp; <span class="val" id="h-lat">~35 ms</span></div>
+  <div class="row dim" id="h-step">click a device · or RUN QUERY</div>
+</div>
+
+<div id="insp">
+  <div class="h"><span class="a" id="i-name">OFDMA · resource grid</span><span class="y" id="i-yr">4G</span></div>
+  <canvas id="c-insp" width="240" height="122"></canvas>
+  <div class="cap" id="i-cap">A wideband channel split into a <b>time×frequency grid</b> of resource blocks, tiled among users. FFT-based — same transform Shazam uses to listen.</div>
+</div>
+
+<div id="log"></div>
+
+<div id="pipe">
+  <div class="pp">
+    <div class="t"><span>01 · listen — spectrogram</span><span class="s" id="s1">STFT</span></div>
+    <canvas id="c-spec" width="300" height="118"></canvas>
+  </div>
+  <div class="pp">
+    <div class="t"><span>02·03 — peaks → hash graph</span><span class="s" id="s2">pairs</span></div>
+    <canvas id="c-con" width="300" height="118"></canvas>
+  </div>
+  <div class="pp">
+    <div class="t"><span>05 · match — Δt histogram</span><span class="s" id="s3">align</span></div>
+    <canvas id="c-hist" width="300" height="118"></canvas>
+  </div>
+</div>
+
+<div id="reveal">
+  <h2>HOW IS EVERYONE CONNECTED?</h2>
+  <div class="eq">C = B · log₂(1 + S/N)</div>
+  <div class="eq" style="font-size:12px;color:#9aa">1G→ split frequency &nbsp; 2G→ split time</div>
+  <div class="eq" style="font-size:12px;color:#9aa">3G→ split by code &nbsp; 4G→ split the grid</div>
+  <div class="eq" style="font-size:12px;color:#9aa">5G→ split space itself</div>
+  <div class="desc">
+    A tower and a song speak the same language.<br>
+    The <b>FFT</b> that packs your voice into the air<br>
+    is the <b>FFT</b> that hears the music.<br><br>
+    Every generation is one idea wearing a new coat:<br>
+    <b>find the right domain, then share it.</b><br><br>
+    Shazam keeps only the <b>peaks</b> of the spectrogram,<br>
+    pairs them into landmarks — <b>peaks are nodes,<br>
+    pairs are edges</b> — and a song becomes a graph.<br>
+    The graph becomes a packet. The packet finds home,<br>
+    and a diagonal line says: <b>I know this song.</b><br><br>
+    Shannon told us it was <i>possible</i>.<br>
+    The rest is engineering.<br>
+    χ = 2 · always.
+  </div>
+  <button id="x-reveal">I SEE IT</button>
+</div>
+
+<div id="stamp">
+  <div class="s">Shannonium v1.0</div>
+  <div class="s">C = B·log₂(1+S/N)</div>
+  <div class="s">Shannon → Shazam · χ=2 · always</div>
+</div>
+
+<div id="bar">
+  <span class="lbl">gen</span>
+  <button class="btn gbtn" data-g="1G">1G</button>
+  <button class="btn gbtn" data-g="2G">2G</button>
+  <button class="btn gbtn" data-g="3G">3G</button>
+  <button class="btn gbtn on" data-g="4G">4G</button>
+  <button class="btn gbtn" data-g="5G">5G</button>
+  <div class="sep"></div>
+  <span class="lbl">sample</span>
+  <div class="sl">
+    <input type="range" id="sl-den" min="200" max="4000" step="100" value="1400">
+    <span class="sv" id="sv-den">1400</span>
+  </div>
+  <div class="sep"></div>
+  <span class="lbl">speed</span>
+  <div class="sl">
+    <input type="range" id="sl-spd" min="20" max="200" step="5" value="100">
+    <span class="sv" id="sv-spd">1.00×</span>
+  </div>
+  <div class="sep"></div>
+  <button class="btn run" id="btn-run">▶ run query</button>
+  <button class="btn gold" id="btn-rev">reveal</button>
+  <button class="btn" id="btn-reset">reset</button>
+</div>
+
+<script>
+"use strict";
+// ============================================================
+// SHANNONIUM v1.0 — From Tower to Song
+// One scene, two truths:
+//   (1) a cellular network you can switch 1G→5G, each generation
+//       redrawing its REAL multiple-access scheme + latency.
+//   (2) a Shazam query that becomes a GRAPH (peaks=nodes,
+//       anchor→target pairs=edges) and rides that network home.
+// Pure Canvas 2D. No dependencies. Deterministic synthetic song.
+// Built: 2026-06-21
+// ============================================================
+
+// ---------- generation table (defensible ballparks) ----------
+var GENS = {
+  "1G": { name:"AMPS",  access:"FDMA",  full:"FDMA · frequency channels",
+          year:1983, acc:"#ff9933", rateMbps:0.0, latMs:0, cov:1.34, beams:0,
+          cellCap:8, dataOK:false,
+          cap:"<b>One call = one frequency.</b> Analog voice, no data channel — a Shazam query has nowhere to ride. Big low-band cells reach far." },
+  "2G": { name:"GSM",   access:"TDMA",  full:"TDMA · time slots",
+          year:1991, acc:"#7fff7f", rateMbps:0.30, latMs:620, cov:1.18, beams:0,
+          cellCap:64, dataOK:true,
+          cap:"Each frequency is sliced into <b>time slots</b> (users take turns). GPRS/EDGE adds a slow data path — the query crawls home." },
+  "3G": { name:"UMTS",  access:"WCDMA / CDMA", full:"CDMA · spread by code",
+          year:2001, acc:"#4488ff", rateMbps:14, latMs:130, cov:1.0, beams:0,
+          cellCap:128, dataOK:true,
+          cap:"Everyone talks at once over the <b>same wide band</b>, separated by orthogonal codes. HSPA carries real data — the query moves." },
+  "4G": { name:"LTE",   access:"OFDMA", full:"OFDMA · resource grid",
+          year:2009, acc:"#00d4ff", rateMbps:100, latMs:35, cov:0.86, beams:0,
+          cellCap:600, dataOK:true,
+          cap:"A wideband channel split into a <b>time×frequency grid</b> of resource blocks, tiled among users. FFT-based — Shazam's transform, exactly." },
+  "5G": { name:"NR",    access:"Massive MIMO", full:"Massive MIMO · beams",
+          year:2019, acc:"#cc44ff", rateMbps:1200, latMs:8, cov:0.62, beams:1,
+          cellCap:2400, dataOK:true,
+          cap:"<b>Space itself</b> becomes a channel: dense small cells steer many <b>beams</b> at once (spatial multiplexing). The query is home before you blink." }
+};
+var ORDER = ["1G","2G","3G","4G","5G"];
+
+// ---------- state ----------
+var S = {
+  gen: "4G",
+  speed: 1.0,
+  sample: 1400,
+  pop: 10485760,            // 10 * 2^20 — a number papa will smile at
+  covAnim: 0.86,            // animated coverage scale (eased)
+  query: null,              // active query object or null
+  t: 0
+};
+
+// ---------- canvas ----------
+var net = document.getElementById("net");
+var ctx = net.getContext("2d");
+var W = 0, H = 0, DPR = 1;
+
+function resize(){
+  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  W = window.innerWidth; H = window.innerHeight;
+  net.width = W * DPR; net.height = H * DPR;
+  net.style.width = W + "px"; net.style.height = H + "px";
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+  layout();
+}
+window.addEventListener("resize", resize);
+
+// ---------- world: towers (hex lattice) → routers → core ----------
+var towers = [], routers = [], core = {x:0,y:0}, phones = [], ambient = [];
+
+function layout(){
+  // playfield bounds — query-INDEPENDENT so the map never jumps mid-flight.
+  // Reserve the lower strip for the Shazam pipeline + control bar.
+  var L = 24, R = W - 24, T = 96, B = H - 176;
+  var pw = R - L, ph = Math.max(168, B - T);
+
+  // core / datacenter sits right-center: packets read left→right toward it
+  core.x = R - pw*0.10; core.y = T + ph*0.5;
+
+  // hex lattice of towers across the left ~80%
+  towers = [];
+  var cols = pw > 900 ? 5 : (pw > 620 ? 4 : 3);
+  var rows = ph > 520 ? 4 : 3;
+  var gx = (pw*0.74) / cols, gy = ph / rows;
+  var ox = L + gx*0.5, oy = T + gy*0.5;
+  var id = 0;
+  for (var r=0;r<rows;r++){
+    for (var c=0;c<cols;c++){
+      var x = ox + c*gx + (r%2 ? gx*0.5 : 0);
+      var y = oy + r*gy;
+      if (x > core.x - gx*0.7) continue;            // keep clear of core
+      towers.push({ id:id++, x:x, y:y, gx:gx, gy:gy, beat:Math.random()*6.28 });
+    }
+  }
+  // two aggregation routers between RAN and core
+  routers = [
+    { x: core.x - pw*0.18, y: T + ph*0.30 },
+    { x: core.x - pw*0.18, y: T + ph*0.70 }
+  ];
+  towers.forEach(function(tw){
+    tw.router = (tw.y < core.y) ? 0 : 1;
+  });
+
+  spawnPhonesIfNeeded();
+  seedAmbient();
+}
+function spawnPhonesIfNeeded(){
+  if (phones.length !== S.sample) spawnPhones(S.sample);
+  else repositionPhones();
+}
+
+// devices cluster around towers (as real users do) — stored as tower-relative
+// offsets so they ride with the towers across any relayout, keeping identity.
+function spawnPhones(n){
+  phones = [];
+  if (!towers.length) return;
+  for (var i=0;i<n;i++){
+    phones.push({
+      tw: (Math.random()*towers.length)|0,
+      ang: Math.random()*6.2832,
+      rf: Math.pow(Math.random(),0.6),          // radius as fraction of cell
+      ph: Math.random()*6.2832,
+      sp: 0.4 + Math.random()*0.9,
+      active: Math.random() < 0.06,
+      x:0, y:0
+    });
+  }
+  repositionPhones();
+}
+function repositionPhones(){
+  if (!towers.length) return;
+  for (var i=0;i<phones.length;i++){
+    var p=phones[i];
+    var tw=towers[Math.min(p.tw, towers.length-1)];
+    var rad=p.rf*Math.min(tw.gx,tw.gy)*0.52;
+    p.x=tw.x+Math.cos(p.ang)*rad;
+    p.y=tw.y+Math.sin(p.ang)*rad;
+  }
+}
+
+// ambient backbone packets so the net feels alive without a query
+function seedAmbient(){
+  ambient = [];
+  for (var i=0;i<22;i++) ambient.push(newAmbient());
+}
+function newAmbient(){
+  if (!towers.length) return {p:0,dead:true};
+  var tw = towers[(Math.random()*towers.length)|0];
+  return { tw:tw.id, p:Math.random(), sp:0.18+Math.random()*0.5,
+           up: Math.random()<0.5 };
+}
+
+// ---------- synthetic "song" → spectrogram (computed once) ----------
+var TB = 110, FB = 64;           // time bins, freq bins
+var SPEC = null, PEAKS = [], DBHASH = {}, NDBHASH = 0;
+
+function midi(m){ return 440 * Math.pow(2,(m-69)/12); }
+function freqToBin(f){
+  // log map 90..2200 Hz -> 0..FB
+  var lo=Math.log(90), hi=Math.log(2200);
+  return Math.round((Math.log(f)-lo)/(hi-lo)*(FB-1));
+}
+function buildSong(){
+  // a little ascending/descending phrase (fundamental + one harmonic)
+  var notes = [
+    [0,16,60],[8,16,64],[18,18,67],[30,22,72],
+    [46,16,67],[58,16,64],[70,20,60],[84,22,67],[96,14,72]
+  ];
+  SPEC = [];
+  for (var t=0;t<TB;t++){ SPEC[t]=new Float32Array(FB); }
+  function bump(t0,dur,bin,amp){
+    for (var t=t0;t<Math.min(TB,t0+dur);t++){
+      var env = Math.sin(Math.PI*(t-t0)/dur);        // soft attack/decay
+      for (var df=-2;df<=2;df++){
+        var b=bin+df; if(b<0||b>=FB)continue;
+        SPEC[t][b]+= amp*env*Math.exp(-df*df/2.2);
+      }
+    }
+  }
+  notes.forEach(function(n){
+    var f=midi(n[2]);
+    bump(n[0],n[1],freqToBin(f),1.0);
+    bump(n[0],n[1],freqToBin(f*2),0.45);             // 1st harmonic
+    bump(n[0],n[1],freqToBin(f*3),0.2);              // 2nd harmonic
+  });
+  // faint background texture
+  for (var t=0;t<TB;t++) for (var b=0;b<FB;b++){
+    SPEC[t][b]+= 0.04*Math.random();
+  }
+  // normalize
+  var mx=0; for (t=0;t<TB;t++) for (b=0;b<FB;b++) if(SPEC[t][b]>mx)mx=SPEC[t][b];
+  for (t=0;t<TB;t++) for (b=0;b<FB;b++) SPEC[t][b]/=mx;
+
+  extractPeaks();
+  buildDB();
+}
+
+function extractPeaks(){
+  PEAKS=[];
+  var nb=2;
+  for (var t=nb;t<TB-nb;t++){
+    for (var b=nb;b<FB-nb;b++){
+      var v=SPEC[t][b];
+      if (v<0.22) continue;
+      var isMax=true;
+      for (var dt=-nb;dt<=nb&&isMax;dt++)
+        for (var db=-nb;db<=nb;db++){
+          if(!dt&&!db)continue;
+          if(SPEC[t+dt][b+db]>=v){isMax=false;break;}
+        }
+      if(isMax) PEAKS.push({t:t,f:b,v:v});
+    }
+  }
+  // thin to strongest, keep spacing
+  PEAKS.sort(function(a,b){return b.v-a.v;});
+  var kept=[];
+  PEAKS.forEach(function(p){
+    var ok=true;
+    for (var i=0;i<kept.length;i++){
+      if(Math.abs(kept[i].t-p.t)<2 && Math.abs(kept[i].f-p.f)<2){ok=false;break;}
+    }
+    if(ok&&kept.length<52) kept.push(p);
+  });
+  kept.sort(function(a,b){return a.t-b.t;});
+  PEAKS=kept;
+}
+
+// combinatorial hashing — anchor → target-zone peaks (fan-out)
+function hashesFrom(peaks){
+  var out=[], F=5, dTmax=34, dFmax=26;
+  for (var i=0;i<peaks.length;i++){
+    var a=peaks[i], n=0;
+    for (var j=i+1;j<peaks.length && n<F;j++){
+      var b=peaks[j];
+      var dt=b.t-a.t;
+      if(dt<2)continue;
+      if(dt>dTmax)break;
+      if(Math.abs(b.f-a.f)>dFmax)continue;
+      var key=(a.f<<14)|(b.f<<7)|(dt&0x7f);          // 30-ish bit landmark
+      out.push({key:key, at:a.t, a:a, b:b});
+      n++;
+    }
+  }
+  return out;
+}
+function buildDB(){
+  DBHASH={}; var hs=hashesFrom(PEAKS); NDBHASH=hs.length;
+  hs.forEach(function(h){ (DBHASH[h.key]=DBHASH[h.key]||[]).push(h.at); });
+}
+
+// ---------- color helpers ----------
+function acc(){ return GENS[S.gen].acc; }
+function hexA(hex,a){
+  var n=parseInt(hex.slice(1),16);
+  return "rgba("+((n>>16)&255)+","+((n>>8)&255)+","+(n&255)+","+a+")";
+}
+function setAccentVar(){ document.documentElement.style.setProperty("--acc", acc()); }
+
+// ============================================================
+//  MAIN RENDER (network map)
+// ============================================================
+function draw(){
+  var g=GENS[S.gen];
+  ctx.clearRect(0,0,W,H);
+
+  // backbone: tower→router→core
+  drawBackbone();
+
+  // towers + coverage + beams
+  towers.forEach(function(tw){ drawTower(tw,g); });
+
+  // device swarm
+  drawPhones(g);
+
+  // ambient packets along backbone
+  drawAmbient(g);
+
+  // core / datacenter
+  drawCore();
+
+  // active query packet + pipeline driver
+  if (S.query) stepQuery();
+}
+
+function drawBackbone(){
+  ctx.lineWidth=1;
+  routers.forEach(function(rt){
+    // router → core
+    ctx.strokeStyle="rgba(90,110,170,0.22)";
+    line(rt.x,rt.y,core.x,core.y);
+  });
+  towers.forEach(function(tw){
+    var rt=routers[tw.router];
+    ctx.strokeStyle="rgba(70,90,140,0.14)";
+    line(tw.x,tw.y,rt.x,rt.y);
+  });
+  // router nodes
+  routers.forEach(function(rt){
+    ctx.fillStyle="rgba(120,140,200,0.5)";
+    diamond(rt.x,rt.y,4);
+  });
+}
+
+function drawTower(tw,g){
+  var cr=Math.min(tw.gx,tw.gy)*0.62*S.covAnim;
+  // coverage halo
+  var grd=ctx.createRadialGradient(tw.x,tw.y,2,tw.x,tw.y,cr);
+  grd.addColorStop(0,hexA(g.acc,0.10));
+  grd.addColorStop(1,hexA(g.acc,0));
+  ctx.fillStyle=grd;
+  ctx.beginPath(); ctx.arc(tw.x,tw.y,cr,0,6.2832); ctx.fill();
+  // hex coverage outline
+  ctx.strokeStyle=hexA(g.acc,0.16); ctx.lineWidth=1;
+  hexPath(tw.x,tw.y,cr); ctx.stroke();
+
+  // 5G: steer beams at nearby active devices
+  if (g.beams){
+    var bm=0;
+    for (var i=0;i<phones.length && bm<7;i++){
+      var p=phones[i];
+      if(p.tw!==tw.id || !p.active)continue;
+      ctx.strokeStyle=hexA(g.acc,0.5);
+      ctx.lineWidth=1.4;
+      line(tw.x,tw.y,p.x,p.y);
+      // lobe
+      ctx.fillStyle=hexA(g.acc,0.06);
+      var ang=Math.atan2(p.y-tw.y,p.x-tw.x), sp=0.22;
+      ctx.beginPath(); ctx.moveTo(tw.x,tw.y);
+      ctx.arc(tw.x,tw.y,cr*0.9,ang-sp,ang+sp); ctx.closePath(); ctx.fill();
+      bm++;
+    }
+  }
+
+  // antenna glyph (pulsing)
+  var pulse=0.55+0.45*Math.sin(S.t*1.6+tw.beat);
+  ctx.strokeStyle=hexA(g.acc,0.85); ctx.lineWidth=1.6;
+  line(tw.x,tw.y+7,tw.x,tw.y-7);
+  ctx.fillStyle=g.acc;
+  ctx.beginPath(); ctx.arc(tw.x,tw.y-7,2.2,0,6.2832); ctx.fill();
+  // signal arcs
+  ctx.strokeStyle=hexA(g.acc,0.25+0.4*pulse); ctx.lineWidth=1;
+  for (var k=1;k<=2;k++){
+    ctx.beginPath(); ctx.arc(tw.x,tw.y-7,3+k*3.4,-2.4,-0.74); ctx.stroke();
+  }
+}
+
+function drawPhones(g){
+  for (var i=0;i<phones.length;i++){
+    var p=phones[i];
+    var tw=towers[Math.min(p.tw, towers.length-1)]; if(!tw)continue;
+    var tk=0.35+0.4*Math.sin(S.t*p.sp+p.ph);
+    if (p.active){
+      // uplink hair to tower
+      ctx.strokeStyle=hexA(g.acc,0.10);
+      ctx.lineWidth=0.6; line(p.x,p.y,tw.x,tw.y);
+      ctx.fillStyle=hexA(g.acc,0.55+0.4*tk);
+      ctx.fillRect(p.x-1,p.y-1,2.4,2.4);
+    } else {
+      ctx.fillStyle=hexA(g.acc,0.16+0.22*tk);
+      ctx.fillRect(p.x-0.6,p.y-0.6,1.4,1.4);
+    }
+  }
+}
+
+function drawAmbient(g){
+  if(!GENS[S.gen].dataOK){return;}                   // 1G: no data flowing
+  var rate=0.4+Math.min(1.4, Math.log10(1+g.rateMbps)*0.5);
+  for (var i=0;i<ambient.length;i++){
+    var a=ambient[i];
+    var tw=towers[a.tw]; if(!tw){ambient[i]=newAmbient();continue;}
+    var rt=routers[tw.router];
+    a.p += a.sp*0.01*S.speed*rate;
+    var seg, x,y;
+    if (a.p<0.5){ // tower→router
+      var u=a.p/0.5; x=lerp(tw.x,rt.x,u); y=lerp(tw.y,rt.y,u);
+    } else if (a.p<1){ // router→core
+      var u2=(a.p-0.5)/0.5; x=lerp(rt.x,core.x,u2); y=lerp(rt.y,core.y,u2);
+    } else { ambient[i]=newAmbient(); continue; }
+    ctx.fillStyle=hexA(g.acc,0.7);
+    ctx.beginPath(); ctx.arc(x,y,1.4,0,6.2832); ctx.fill();
+  }
+}
+
+function drawCore(){
+  var g=GENS[S.gen];
+  var pulse = (S.query && S.query.matchPulse>0) ? S.query.matchPulse : 0;
+  // glow
+  var grd=ctx.createRadialGradient(core.x,core.y,2,core.x,core.y,30+pulse*40);
+  grd.addColorStop(0,hexA(g.acc,0.22+pulse*0.5));
+  grd.addColorStop(1,hexA(g.acc,0));
+  ctx.fillStyle=grd;
+  ctx.beginPath(); ctx.arc(core.x,core.y,30+pulse*40,0,6.2832); ctx.fill();
+  // hex server
+  ctx.strokeStyle=hexA(g.acc,0.9); ctx.lineWidth=1.6;
+  hexPath(core.x,core.y,15); ctx.stroke();
+  ctx.strokeStyle=hexA(g.acc,0.4); ctx.lineWidth=1;
+  hexPath(core.x,core.y,9); ctx.stroke();
+  // inner "rack" lines
+  ctx.strokeStyle=hexA(g.acc,0.5);
+  for (var i=-1;i<=1;i++){ line(core.x-6,core.y+i*4,core.x+6,core.y+i*4); }
+  // label
+  ctx.fillStyle=hexA(g.acc,0.6); ctx.font="9px ui-monospace,monospace";
+  ctx.textAlign="center"; ctx.fillText("MATCH CORE", core.x, core.y+28);
+  ctx.textAlign="left";
+}
+
+// ---------- tiny canvas primitives ----------
+function line(x1,y1,x2,y2){ ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke(); }
+function diamond(x,y,r){ ctx.beginPath();ctx.moveTo(x,y-r);ctx.lineTo(x+r,y);ctx.lineTo(x,y+r);ctx.lineTo(x-r,y);ctx.closePath();ctx.fill(); }
+function hexPath(x,y,r){ ctx.beginPath();
+  for(var i=0;i<6;i++){var a=Math.PI/6+i*Math.PI/3;var px=x+r*Math.cos(a),py=y+r*Math.sin(a);i?ctx.lineTo(px,py):ctx.moveTo(px,py);} ctx.closePath(); }
+function lerp(a,b,t){ return a+(b-a)*t; }
+
+// ============================================================
+//  SPECTRUM INSPECTOR — the multiple-access scheme per gen
+// ============================================================
+var ci=document.getElementById("c-insp"), cix=ci.getContext("2d");
+function drawInspector(){
+  var g=GENS[S.gen], w=ci.width,h=ci.height;
+  cix.clearRect(0,0,w,h);
+  cix.save();
+  var A=g.acc, t=S.t;
+  // axis frame
+  cix.strokeStyle="rgba(120,140,200,0.18)"; cix.lineWidth=1;
+  cix.strokeRect(10,8,w-20,h-26);
+  cix.fillStyle="rgba(180,195,230,0.32)"; cix.font="8px ui-monospace,monospace";
+
+  if (g.access==="FDMA"){
+    cix.fillText("freq ▲", 12, h-8); cix.fillText("each band = 1 call", w-104, h-8);
+    var n=6, bh=(h-30)/n;
+    for (var i=0;i<n;i++){
+      var on=i<4;
+      cix.fillStyle= on? hexA(A,0.65): "rgba(60,70,100,0.25)";
+      cix.fillRect(13, 10+i*bh+1, w-26, bh-2);
+    }
+  }
+  else if (g.access==="TDMA"){
+    cix.fillText("freq ▲  time →", 12, h-8);
+    var nb=4, slots=8, bh=(h-30)/nb;
+    for (var b=0;b<nb;b++){
+      for (var s=0;s<slots;s++){
+        var sw=(w-26)/slots;
+        var lit=((s+b*3 + ((t*1.5)|0))%slots)<5;
+        cix.fillStyle= lit? hexA(A,0.6): "rgba(60,70,100,0.2)";
+        cix.fillRect(13+s*sw+0.5, 10+b*bh+1, sw-1, bh-2);
+      }
+    }
+  }
+  else if (g.access.indexOf("CDMA")>=0){
+    cix.fillText("one wide band · all users superposed (code)", 12, h-8);
+    // overlapping spread waveforms, screen-blended -> the purple superposition
+    cix.globalCompositeOperation="screen";
+    var cols=["#ff4488","#4488ff","#44ff88","#ffaa33"];
+    for (var c=0;c<4;c++){
+      cix.strokeStyle=cols[c]; cix.lineWidth=1.2; cix.globalAlpha=0.7;
+      cix.beginPath();
+      for (var x=0;x<w-26;x++){
+        var ph=x*0.6 + c*1.7 + t*2;
+        var chip=Math.sin(ph)*Math.sin(ph*2.3+c)* ( (((x+c*5)>>2)%2)?1:-1 );
+        var y=(h-30)/2 + chip*((h-34)/2*0.5) + (c-1.5)*2;
+        x?cix.lineTo(13+x,10+y):cix.moveTo(13+x,10+y);
+      }
+      cix.stroke();
+    }
+    cix.globalAlpha=1; cix.globalCompositeOperation="source-over";
+  }
+  else if (g.access==="OFDMA"){
+    cix.fillText("freq ▲  time →  (resource grid)", 12, h-8);
+    var gc=12, gr=6, cw=(w-26)/gc, ch=(h-30)/gr;
+    var users=[hexA(A,0.7),"rgba(255,170,60,0.6)","rgba(120,255,140,0.55)","rgba(255,70,130,0.55)"];
+    for (var yy=0;yy<gr;yy++) for (var xx=0;xx<gc;xx++){
+      var idx=(xx*7+yy*3 + ((t*2)|0))%users.length;
+      var blank=((xx+yy)%9===((t*2)|0)%9);
+      cix.fillStyle= blank? "rgba(60,70,100,0.18)": users[idx];
+      cix.fillRect(13+xx*cw+0.5,10+yy*ch+0.5,cw-1,ch-1);
+    }
+  }
+  else { // Massive MIMO
+    cix.fillText("base station ▾  steered beams (space)", 12, h-8);
+    var bx=20, by=10+(h-30)/2;
+    cix.fillStyle=A; cix.beginPath(); cix.arc(bx,by,3,0,6.28); cix.fill();
+    var targets=6;
+    for (var i=0;i<targets;i++){
+      var ang=(-0.7+i*0.28) + Math.sin(t+i)*0.03;
+      var len=(w-50);
+      var tx=bx+Math.cos(ang)*len, ty=by+Math.sin(ang)*len*0.5;
+      cix.strokeStyle=hexA(A,0.55); cix.lineWidth=1.4; 
+      cix.beginPath(); cix.moveTo(bx,by); cix.lineTo(tx,ty); cix.stroke();
+      // lobe fill
+      cix.fillStyle=hexA(A,0.05);
+      cix.beginPath(); cix.moveTo(bx,by);
+      cix.arc(bx,by,len*0.7,ang-0.08,ang+0.08); cix.closePath(); cix.fill();
+      cix.fillStyle=hexA(A,0.8); cix.beginPath(); cix.arc(tx,ty,1.6,0,6.28); cix.fill();
+    }
+  }
+  cix.restore();
+}
+
+// ============================================================
+//  SHAZAM PIPELINE PANELS
+// ============================================================
+var csp=document.getElementById("c-spec"), cspx=csp.getContext("2d");
+var ccn=document.getElementById("c-con"), ccnx=ccn.getContext("2d");
+var chs=document.getElementById("c-hist"), chsx=chs.getContext("2d");
+
+function specColor(v){
+  // dark → accent → white
+  var A=acc(); var n=parseInt(A.slice(1),16);
+  var r=(n>>16)&255,gg=(n>>8)&255,b=n&255;
+  if(v<0.5){ var u=v/0.5; return "rgb("+(r*u*0.4|0)+","+(gg*u*0.4|0)+","+(b*u*0.4|0)+")"; }
+  var u2=(v-0.5)/0.5;
+  return "rgb("+(r+(255-r)*u2|0)+","+(gg+(255-gg)*u2|0)+","+(b+(255-b)*u2|0)+")";
+}
+function drawSpec(prog){
+  var w=csp.width,h=csp.height; cspx.clearRect(0,0,w,h);
+  var cols=Math.floor(TB*prog);
+  var cw=w/TB, ch=h/FB;
+  for (var t=0;t<cols;t++){
+    for (var b=0;b<FB;b++){
+      var v=SPEC[t][b]; if(v<0.12)continue;
+      cspx.fillStyle=specColor(v);
+      cspx.fillRect(t*cw, h-(b+1)*ch, cw+0.6, ch+0.6);
+    }
+  }
+  // sweep line
+  if(prog<1){ cspx.strokeStyle=hexA(acc(),0.7); cspx.lineWidth=1;
+    cspx.beginPath(); cspx.moveTo(cols*cw,0); cspx.lineTo(cols*cw,h); cspx.stroke(); }
+}
+function drawCon(showEdges, q){
+  var w=ccn.width,h=ccn.height; ccnx.clearRect(0,0,w,h);
+  var cw=w/TB, ch=h/FB;
+  function px(p){ return {x:p.t*cw, y:h-(p.f+1)*ch}; }
+  // edges (hash graph)
+  if (showEdges && q){
+    var n=Math.floor(q.hashShown);
+    for (var i=0;i<n && i<q.qhashes.length;i++){
+      var hh=q.qhashes[i];
+      var pa=px(hh.a), pb=px(hh.b);
+      ccnx.strokeStyle=hexA(acc(),0.5); ccnx.lineWidth=0.8;
+      ccnx.beginPath(); ccnx.moveTo(pa.x,pa.y); ccnx.lineTo(pb.x,pb.y); ccnx.stroke();
+    }
+  }
+  // peak nodes
+  for (var k=0;k<PEAKS.length;k++){
+    var p=px(PEAKS[k]);
+    var surv = q ? q.survive[k] : true;
+    ccnx.fillStyle = surv ? hexA(acc(),0.95) : "rgba(90,100,130,0.35)";
+    ccnx.fillRect(p.x-1.4,p.y-1.4,2.8,2.8);
+    if(surv){ ccnx.fillStyle=hexA(acc(),0.25); ccnx.fillRect(p.x-2.6,p.y-0.4,5.2,0.8); ccnx.fillRect(p.x-0.4,p.y-2.6,0.8,5.2);}
+  }
+  // sample hash label
+  if (showEdges && q && q.qhashes.length){
+    var hh=q.qhashes[Math.min(q.qhashes.length-1, Math.floor(q.hashShown)) % q.qhashes.length] || q.qhashes[0];
+    ccnx.fillStyle=hexA(acc(),0.85); ccnx.font="8px ui-monospace,monospace";
+    ccnx.fillText("h=(f"+hh.a.f+",f"+hh.b.f+",Δt"+(hh.b.t-hh.a.t)+")", 6, h-6);
+  }
+}
+function drawHist(prog, q){
+  var w=chs.width,h=chs.height; chsx.clearRect(0,0,w,h);
+  if(!q){return;}
+  // left 60%: scatter (t_query vs t_db). right 40%: Δt histogram.
+  var sw=w*0.58, hx=w*0.62, hw=w-hx-4;
+  chsx.strokeStyle="rgba(120,140,200,0.18)"; chsx.lineWidth=1;
+  chsx.strokeRect(2,2,sw,h-4); chsx.strokeRect(hx,2,hw,h-4);
+  chsx.fillStyle="rgba(180,195,230,0.3)"; chsx.font="8px ui-monospace,monospace";
+  chsx.fillText("t_db", 6, 11); chsx.fillText("Δt", hx+4, 11);
+
+  var n=Math.floor(q.matchShown);
+  // scatter
+  for (var i=0;i<n && i<q.scatter.length;i++){
+    var s=q.scatter[i];
+    var x=2+ (s.tq/TB)*sw, y=2+(1-s.tdb/TB)*(h-4);
+    chsx.fillStyle = s.good ? hexA(acc(),0.9):"rgba(120,130,160,0.4)";
+    chsx.fillRect(x-1,y-1,2,2);
+  }
+  // diagonal guide once enough matches
+  if (n>q.scatter.length*0.5){
+    chsx.strokeStyle=hexA("#7fff7f",0.4); chsx.lineWidth=0.8;
+    chsx.beginPath(); chsx.moveTo(2,h-2); chsx.lineTo(2+sw,2+ (1-1)*0); // slope-1ish
+    chsx.lineTo(2+sw, 2 + (1-(TB)/TB)*(h-4)); chsx.stroke();
+  }
+  // histogram of Δt — spike at true offset
+  var bins=18, hist=new Array(bins).fill(0);
+  for (i=0;i<n && i<q.scatter.length;i++){
+    var d=q.scatter[i].dt;
+    var bi=Math.max(0,Math.min(bins-1, Math.floor((d+TB)/(2*TB)*bins)));
+    hist[bi]++;
+  }
+  var hm=Math.max(1,Math.max.apply(null,hist));
+  for (var b=0;b<bins;b++){
+    var bh=(hist[b]/hm)*(h-8);
+    var spike = hist[b]===hm && hm>2;
+    chsx.fillStyle= spike? "#7fff7f": hexA(acc(),0.5);
+    chsx.fillRect(hx+2+b*(hw/bins), h-2-bh, (hw/bins)-1, bh);
+  }
+  if (q.matched && n>=q.scatter.length){
+    chsx.fillStyle="#7fff7f"; chsx.font="9px ui-monospace,monospace";
+    chsx.fillText("★ Δt locked", hx-2, h-4);
+  }
+}
+
+// ============================================================
+//  QUERY STATE MACHINE
+// ============================================================
+function startQuery(originPhone){
+  if (S.query) return;
+  var g=GENS[S.gen];
+  // pick an origin device (clicked, else a random active one)
+  var p=originPhone;
+  if (!p){
+    var act=phones.filter(function(q){return q.active;});
+    p = act.length ? act[(Math.random()*act.length)|0] : phones[(Math.random()*phones.length)|0];
+  }
+  if (!p){ return; }
+  p.active=true;
+  var tw=towers[Math.min(p.tw, towers.length-1)];
+
+  // simulate noisy capture: a fraction of peaks survive
+  var survRate = 0.62 + Math.random()*0.16;
+  var survive=[], qpeaks=[];
+  for (var i=0;i<PEAKS.length;i++){
+    var s = Math.random()<survRate;
+    survive.push(s); if(s) qpeaks.push(PEAKS[i]);
+  }
+  var qhashes = hashesFrom(qpeaks);
+
+  // build match scatter against DB
+  var scatter=[], OFF=0; // same song, aligned → offset ~0
+  qhashes.forEach(function(hh){
+    var hits=DBHASH[hh.key];
+    if (hits){
+      hits.forEach(function(tdb){
+        scatter.push({tq:hh.at, tdb:tdb, dt:(tdb-hh.at), good:true});
+      });
+    }
+  });
+  // sprinkle a few false matches (chance collisions)
+  for (i=0;i<14;i++){
+    var tq=(Math.random()*TB)|0, tdb=(Math.random()*TB)|0;
+    scatter.push({tq:tq,tdb:tdb,dt:tdb-tq,good:false});
+  }
+  // shuffle so good/bad interleave as they "arrive"
+  for (i=scatter.length-1;i>0;i--){ var j=(Math.random()*(i+1))|0; var tmp=scatter[i];scatter[i]=scatter[j];scatter[j]=tmp; }
+
+  // real-ish transfer + latency
+  var bytes = qhashes.length*4 + 48;
+  var txMs  = g.rateMbps>0 ? (bytes*8)/(g.rateMbps*1e6)*1000 : Infinity;
+  var rtt   = g.latMs;
+
+  S.query = {
+    phone:p, tw:tw,
+    survive:survive, qpeaks:qpeaks, qhashes:qhashes, scatter:scatter,
+    bytes:bytes, txMs:txMs, rtt:rtt,
+    stage:0, st:0, hashShown:0, matchShown:0, matchPulse:0,
+    packetP:0, ret:0, matched:false,
+    // node hops: phone → tower → router → core
+    route:[ {x:p.x,y:p.y}, {x:tw.x,y:tw.y}, {x:routers[tw.router].x,y:routers[tw.router].y}, {x:core.x,y:core.y} ]
+  };
+
+  clearLog();
+  log("LISTEN — sampling 8 kHz mono, "+TB+"×"+FB+" STFT", "");
+  setStep("01 · listening to the room");
+  setPanels(true);
+  setSub("s1","● rec"); setSub("s2","—"); setSub("s3","—");
+}
+
+// stage timings (seconds, before speed scaling)
+var STAGE = { listen:1.5, peaks:0.9, hash:1.7, tx:1.0, match:1.7, ret:0.9, done:1.6 };
+
+function stepQuery(){
+  var q=S.query, g=GENS[S.gen];
+  var dt=lastDT*S.speed;
+  q.st += dt;
+
+  // ---- 0 LISTEN ----
+  if (q.stage===0){
+    var pr=Math.min(1,q.st/STAGE.listen);
+    drawSpec(pr);
+    if (pr>=1){ q.stage=1; q.st=0;
+      log("PEAKS — "+PEAKS.length+" spectral peaks kept (the constellation)","");
+      setStep("02 · keeping only the peaks");
+      setSub("s1","done"); setSub("s2","● peaks");
+    }
+  }
+  // ---- 1 PEAKS ----
+  else if (q.stage===1){
+    drawSpec(1);
+    drawCon(false,q);
+    if (q.st>=STAGE.peaks){ q.stage=2; q.st=0; q.hashShown=0;
+      log("HASH — "+q.qhashes.length+" landmark pairs · 30 bits each <span class='hl'>(peaks→nodes, pairs→edges)</span>","");
+      setStep("03 · pairing peaks into a graph");
+      setSub("s2","● hashing");
+    }
+  }
+  // ---- 2 HASH (graph builds) ----
+  else if (q.stage===2){
+    q.hashShown = Math.min(q.qhashes.length, q.hashShown + dt*q.qhashes.length/STAGE.hash);
+    drawCon(true,q);
+    if (q.hashShown>=q.qhashes.length){ q.stage=3; q.st=0; q.packetP=0;
+      if (!g.dataOK){
+        log("TX — AMPS is analog voice: <b>no packet-data channel</b>","fail");
+        log("query cannot ride 1G · switch to 2G+ to send","warn");
+        setStep("✕ 1G carries voice only — no data path");
+        setSub("s3","✕");
+        // park on the constellation, end after a beat
+        q.stage=98; q.st=0;
+      } else {
+        var ltxt = isFinite(q.txMs)? q.txMs.toFixed(q.txMs<1?3:1)+" ms" : "—";
+        log("TX — "+(q.bytes/1024).toFixed(1)+" kB over "+g.name+" @ ~"+fmtRate(g.rateMbps)+
+            " · transfer "+ltxt+" · latency ~"+g.latMs+" ms","");
+        setStep("04 · packet rides the "+S.gen+" network");
+        setSub("s2","sent"); setSub("s3","● tx");
+      }
+    }
+  }
+  // ---- 3 TX (packet travels phone→tower→router→core) ----
+  else if (q.stage===3){
+    // animation duration driven by felt latency (floored for visibility)
+    var feltMs = Math.max(g.latMs, isFinite(q.txMs)?q.txMs:0);
+    var dur = Math.max(0.45, Math.min(2.8, feltMs/260)); // compress, monotonic
+    q.packetP = Math.min(1, q.packetP + dt/dur);
+    drawCon(true,q);
+    drawQueryPacket(q.packetP, false);
+    if (q.packetP>=1){ q.stage=4; q.st=0; q.matchShown=0; q.matchPulse=0.0;
+      log("MATCH — scatter t_query vs t_db → seeking the diagonal","");
+      setStep("05 · matching at the core");
+      setSub("s3","● match");
+    }
+  }
+  // ---- 4 MATCH (histogram + diagonal) ----
+  else if (q.stage===4){
+    q.matchShown = Math.min(q.scatter.length, q.matchShown + dt*q.scatter.length/STAGE.match);
+    q.matchPulse = Math.max(0, q.matchPulse-dt*0.5);
+    drawHist(1, q); drawCon(true,q);
+    if (q.matchShown>=q.scatter.length){
+      q.matched=true; q.matchPulse=1.0; q.stage=5; q.st=0; q.ret=0;
+      var goods=q.scatter.filter(function(s){return s.good;}).length;
+      log("DIAGONAL LOCKED — "+goods+" consistent hashes at Δt≈0 <span class='hl'>★ MATCH</span>","ok");
+      setStep("06 · I know this song");
+      setSub("s3","★ match");
+    }
+  }
+  // ---- 5 RETURN (result back to phone) ----
+  else if (q.stage===5){
+    q.matchPulse=Math.max(0,q.matchPulse-dt*0.6);
+    drawHist(1,q);
+    var dur2=Math.max(0.4,Math.min(2.4, Math.max(g.latMs,1)/260));
+    q.ret=Math.min(1,q.ret+dt/dur2);
+    drawQueryPacket(1, true);
+    drawReturn(q.ret);
+    if (q.ret>=1){ q.stage=6; q.st=0;
+      log("♪ identified: track #1337 — \"Shannon's Theme\"","ok");
+      setStep("♪ track #1337 — delivered in ~"+g.latMs+" ms");
+      drawResultTag();
+    }
+  }
+  // ---- 6 DONE ----
+  else if (q.stage===6){
+    drawHist(1,q); drawResultTag();
+    if (q.st>=STAGE.done){ endQuery(); }
+  }
+  // ---- 98 voice-only dead end (1G) ----
+  else if (q.stage===98){
+    drawCon(true,q);
+    if (q.st>=1.8){ endQuery(); }
+  }
+}
+
+function drawQueryPacket(p, atCore){
+  var q=S.query, g=GENS[S.gen];
+  // route through segments
+  var R=q.route, segs=R.length-1, fp=p*segs, si=Math.min(segs-1,Math.floor(fp)), u=fp-si;
+  var x=lerp(R[si].x,R[si+1].x,u), y=lerp(R[si].y,R[si+1].y,u);
+  if (atCore){ x=core.x; y=core.y; }
+  // trail
+  ctx.strokeStyle=hexA(g.acc,0.5); ctx.lineWidth=2;
+  ctx.beginPath();
+  for (var k=0;k<=si;k++){
+    if(k===0)ctx.moveTo(R[0].x,R[0].y); else ctx.lineTo(R[k].x,R[k].y);
+  }
+  ctx.lineTo(x,y); ctx.stroke();
+  // comet
+  var grd=ctx.createRadialGradient(x,y,0,x,y,9);
+  grd.addColorStop(0,"#ffffff"); grd.addColorStop(0.4,g.acc); grd.addColorStop(1,hexA(g.acc,0));
+  ctx.fillStyle=grd; ctx.beginPath(); ctx.arc(x,y,9,0,6.2832); ctx.fill();
+  // tag
+  ctx.fillStyle=hexA(g.acc,0.9); ctx.font="9px ui-monospace,monospace";
+  ctx.fillText(q.qhashes.length+" hashes · "+(q.bytes/1024).toFixed(1)+"kB", x+11, y-6);
+}
+function drawReturn(p){
+  var q=S.query, g=GENS[S.gen], R=q.route;
+  // core → ... → phone (reverse)
+  var rev=R.slice().reverse(), segs=rev.length-1, fp=p*segs, si=Math.min(segs-1,Math.floor(fp)),u=fp-si;
+  var x=lerp(rev[si].x,rev[si+1].x,u), y=lerp(rev[si].y,rev[si+1].y,u);
+  ctx.fillStyle="#7fff7f";
+  ctx.beginPath(); ctx.arc(x,y,4,0,6.2832); ctx.fill();
+  ctx.strokeStyle="rgba(127,255,127,0.5)"; ctx.lineWidth=1.4;
+  ctx.beginPath(); ctx.arc(x,y,7+Math.sin(S.t*8)*1.5,0,6.2832); ctx.stroke();
+}
+function drawResultTag(){
+  var q=S.query, p=q.phone;
+  ctx.fillStyle="rgba(127,255,127,0.95)"; ctx.font="bold 10px ui-monospace,monospace";
+  ctx.textAlign="center";
+  ctx.fillText("♪ #1337 \"Shannon's Theme\"", p.x, p.y-12);
+  ctx.textAlign="left";
+  ctx.strokeStyle="rgba(127,255,127,0.8)"; ctx.lineWidth=1.4;
+  ctx.beginPath(); ctx.arc(p.x,p.y,6+Math.sin(S.t*6)*1.4,0,6.2832); ctx.stroke();
+}
+function endQuery(){
+  S.query=null;
+  setPanels(false);
+  setStep("click a device · or RUN QUERY");
+}
+
+function fmtRate(m){ return m>=1000? (m/1000)+" Gbps" : m+" Mbps"; }
+
+// ============================================================
+//  HUD / LOG / PANELS
+// ============================================================
+function setStep(t){ var e=document.getElementById("h-step"); if(e)e.textContent=t; }
+function setSub(id,t){ var e=document.getElementById(id); if(e)e.textContent=t; }
+function setPanels(on){ document.getElementById("pipe").classList.toggle("show",on); }
+
+var logEl=document.getElementById("log");
+function clearLog(){ logEl.innerHTML=""; }
+var logN=0;
+function log(html,cls){
+  logN++;
+  var d=document.createElement("div");
+  d.className="e"+(cls?(" "+cls):"");
+  d.innerHTML="<span class='n'>"+String(logN).padStart(2,"0")+"</span>"+html;
+  logEl.appendChild(d);
+  logEl.scrollTop=logEl.scrollHeight;
+  if (logEl.children.length>9) logEl.removeChild(logEl.firstChild);
+}
+
+function refreshHUD(){
+  var g=GENS[S.gen];
+  setText("h-gen", S.gen+" · "+g.name);
+  setText("h-year", g.year);
+  setText("h-acc", g.access);
+  setText("h-dev", S.pop.toLocaleString());
+  setText("h-cap", "~"+g.cellCap+" / cell");
+  setText("h-rate", g.rateMbps>0? "~"+fmtRate(g.rateMbps): "voice only");
+  setText("h-lat", g.dataOK? "~"+g.latMs+" ms": "n/a (analog)");
+  // inspector header
+  setText("i-name", g.full);
+  setText("i-yr", S.gen);
+  document.getElementById("i-cap").innerHTML=g.cap;
+}
+function setText(id,t){ var e=document.getElementById(id); if(e)e.textContent=t; }
+
+// ============================================================
+//  CONTROLS
+// ============================================================
+function setGen(gname){
+  S.gen=gname; setAccentVar();
+  ORDER.forEach(function(gn){
+    var b=document.querySelector('.gbtn[data-g="'+gn+'"]');
+    if(b)b.classList.toggle("on",gn===gname);
+  });
+  refreshHUD();
+}
+document.querySelectorAll(".gbtn").forEach(function(b){
+  b.addEventListener("click",function(){ setGen(b.getAttribute("data-g")); });
+});
+document.getElementById("sl-den").addEventListener("input",function(){
+  S.sample=+this.value; setText("sv-den",this.value);
+  if(!S.query) spawnPhones(S.sample);   // don't reshuffle mid-flight
+});
+document.getElementById("sl-spd").addEventListener("input",function(){
+  S.speed=+this.value/100; setText("sv-spd",(S.speed).toFixed(2)+"×");
+});
+document.getElementById("btn-run").addEventListener("click",function(){ startQuery(null); });
+document.getElementById("btn-rev").addEventListener("click",function(){
+  document.getElementById("reveal").style.display="block";
+});
+document.getElementById("x-reveal").addEventListener("click",function(){
+  document.getElementById("reveal").style.display="none";
+});
+document.getElementById("btn-reset").addEventListener("click",function(){
+  endQuery(); clearLog(); logN=0; setGen("4G");
+  document.getElementById("sl-den").value=1400; S.sample=1400; setText("sv-den","1400");
+  document.getElementById("sl-spd").value=100; S.speed=1; setText("sv-spd","1.00×");
+  layout();
+});
+
+// click a device → start a query from it
+net.addEventListener("click",function(e){
+  if (S.query) return;
+  var mx=e.clientX, my=e.clientY, best=null, bd=1e9;
+  for (var i=0;i<phones.length;i++){
+    var p=phones[i], d=(p.x-mx)*(p.x-mx)+(p.y-my)*(p.y-my);
+    if(d<bd){bd=d;best=p;}
+  }
+  if (best && bd<900) startQuery(best);
+});
+
+// reveal close on outside click
+document.addEventListener("click",function(e){
+  var r=document.getElementById("reveal");
+  if (r.style.display==="block" && !r.contains(e.target) &&
+      e.target.id!=="btn-rev"){ r.style.display="none"; }
+});
+
+// ============================================================
+//  LOOP
+// ============================================================
+var lastTS=performance.now(), lastDT=0.016;
+function frame(now){
+  lastDT=Math.min((now-lastTS)/1000,0.05); lastTS=now;
+  S.t += lastDT*S.speed;
+  // ease coverage toward target generation
+  var tgt=GENS[S.gen].cov;
+  S.covAnim += (tgt-S.covAnim)*Math.min(1,lastDT*4);
+  draw();
+  drawInspector();
+  requestAnimationFrame(frame);
+}
+
+// ---------- init ----------
+buildSong();
+setAccentVar();
+resize();
+setGen("4G");
+refreshHUD();
+requestAnimationFrame(frame);
+</script>
+</body></html>

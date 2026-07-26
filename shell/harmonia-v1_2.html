@@ -1,0 +1,350 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>HARMONIA v1.2 — the fractal voice, spun · a rosette after the Corinth mosaic</title>
+<!--
+  HARMONIA v1.2 — THE FRACTAL VOICE, SPUN
+  ================================================================
+  Same audio engine as v1.0 (pure sines on a 1/fᵝ ladder, heard). New skin:
+  the voice is drawn as a SPINNING ROSETTE — the Fourier-epicycle trace of the
+  exact partials that make the sound, after the Dionysos mosaic of Ancient
+  Corinth (god in the gate, vesica lattice around it).
+
+    core   = the "voice rose": z(θ) = Σ aₖ e^{i (fₖ/f0) θ}, the partials as
+             nested epicycles, a pen tracing the summed waveform in polar form.
+    ring   = radial spectrum: one petal per partial, length = amplitude.
+    border = an ornament {P/skip} star + gate at the centre.
+
+  THE GEM (K-honest): the rose CLOSES  ⟺  the frequency ratios are rational
+  ⟺  the tone is PERIODIC. HARMONIC ladder → integer ratios → closed rosette →
+  a pitched voice. GOLDEN·φ → irrational ratios → the rose never closes → an
+  inharmonic voice that never repeats. The picture's periodicity IS the
+  sound's periodicity. Shown, not asserted.
+
+  HONESTY carried from v1.0:
+   K1  finite stack = a 1/fᵝ (self-affine) approximation, NOT an infinite fractal.
+   K2  β is measured BACK from the real output (TETRA GENESIS method) → the loop.
+   K3  partials above 20 kHz / Nyquist are dropped; "active" can be < N.
+
+  Pure Canvas 2D + Web Audio. No deps. as above, so below · χ=2 · always.
+  Built 2026-07-14.
+-->
+<style>
+:root{
+  --bg:#050508; --gold:#ffd700; --cyan:#00d4ff; --pink:#ff69b4; --green:#00ffd5;
+  --dim:#6a6a82; --txt:#e8e0d0; --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--txt);font-family:var(--mono);overflow:hidden}
+#cv{position:fixed;inset:0;display:block}
+#hud{position:fixed;top:0;left:0;right:0;padding:10px 14px;display:flex;gap:12px;align-items:flex-start;
+  pointer-events:none;font-size:11px;z-index:10;flex-wrap:wrap}
+#hud>div{pointer-events:auto;background:rgba(8,8,16,.78);border:1px solid #20202e;border-radius:8px;padding:8px 11px}
+#ttl{color:var(--gold);font-size:14px;letter-spacing:.05em}
+#sub{color:var(--dim);font-size:10px;margin-top:2px;max-width:540px;line-height:1.45}
+#sub b{color:var(--cyan)} #sub .g{color:var(--green)}
+#read{display:flex;gap:6px;flex-wrap:wrap}
+.mc{background:rgba(8,8,16,.85);border:1px solid #20202e;border-radius:6px;padding:5px 9px;min-width:70px}
+.mc .lab{font-size:8px;color:var(--dim);text-transform:uppercase;letter-spacing:.07em}
+.mc .val{font-size:14px;font-weight:bold;color:var(--gold)}
+.mc .val.cyan{color:var(--cyan)} .mc .val.green{color:var(--green)} .mc .val.pink{color:var(--pink)}
+#bar{position:fixed;left:50%;transform:translateX(-50%);bottom:10px;display:flex;flex-wrap:wrap;
+  gap:7px 11px;align-items:center;justify-content:center;background:rgba(8,8,16,.92);
+  border:1px solid #20202e;border-radius:10px;padding:9px 13px;z-index:10;max-width:98vw}
+button{background:#14141f;border:1px solid #2a2a3a;border-radius:6px;color:var(--gold);
+  font:11px var(--mono);padding:5px 9px;cursor:pointer;transition:all .12s}
+button:hover{border-color:var(--gold)} button.on{background:#1d1a0a;border-color:var(--gold)}
+button.cyan{color:var(--cyan)} button.cyan.on{border-color:var(--cyan);background:#08222a}
+button.pre{color:var(--green);border-color:#0a3a3a} button.pre:hover{border-color:var(--green)}
+.ctl{display:flex;align-items:center;gap:5px}
+.klbl{color:var(--dim);font-size:10px;text-transform:uppercase;letter-spacing:.05em}
+.val2{color:var(--gold);font-size:10px;min-width:34px;text-align:right}
+input[type=range]{appearance:none;-webkit-appearance:none;width:74px;height:4px;background:#2a2a3a;border-radius:3px;outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;border-radius:50%;background:var(--gold);cursor:pointer}
+input[type=range]::-moz-range-thumb{width:13px;height:13px;border:none;border-radius:50%;background:var(--gold);cursor:pointer}
+#bbeta{width:112px} #bbeta::-webkit-slider-thumb{background:var(--cyan)}
+#bspin::-webkit-slider-thumb{background:var(--pink)}
+.sep{width:1px;height:20px;background:#2a2a3a;margin:0 2px}
+#gate{position:fixed;inset:0;z-index:40;display:flex;align-items:center;justify-content:center;flex-direction:column;
+  background:rgba(5,5,8,.86);backdrop-filter:blur(4px);cursor:pointer;text-align:center;padding:20px}
+#gate .big{font-size:20px;color:var(--gold);letter-spacing:.12em;margin-bottom:8px}
+#gate .g2{font-size:12px;color:var(--dim);line-height:1.7;max-width:440px}
+#gate .g2 b{color:var(--cyan)}
+#gate .go{margin-top:16px;font-size:12px;color:var(--green);border:1px solid #0a3a3a;border-radius:8px;padding:9px 18px}
+#stamp{position:fixed;bottom:10px;right:14px;color:var(--dim);font-size:9px;text-align:right;z-index:9;line-height:1.5}
+#stamp b{color:var(--gold)}
+#selfsim{display:none;align-items:center;gap:5px} #selfsim.show{display:flex}
+</style></head>
+<body>
+<canvas id="cv"></canvas>
+
+<div id="hud">
+  <div>
+    <div id="ttl">HARMONIA v1.2 · the voice, spun</div>
+    <div id="sub">the partials drawn as a spinning <b>rosette</b> — Fourier epicycles of the exact tones you hear, after the Corinth mosaic. <span class="g">the rose closes ⟺ the ratios are rational ⟺ the tone is periodic.</span></div>
+  </div>
+  <div id="read">
+    <div class="mc"><div class="lab">ladder</div><div class="val cyan" id="m-mode">harmonic</div></div>
+    <div class="mc"><div class="lab">β set</div><div class="val" id="m-beta">1.00</div></div>
+    <div class="mc"><div class="lab">β measured</div><div class="val green" id="m-bmeas">—</div></div>
+    <div class="mc"><div class="lab">partials</div><div class="val pink" id="m-parts">—</div></div>
+    <div class="mc"><div class="lab">voice · closes</div><div class="val" id="m-close">—</div></div>
+  </div>
+</div>
+
+<div id="bar">
+  <span class="klbl">preset</span>
+  <button class="pre" onclick="preset('white')">WHITE</button>
+  <button class="pre" onclick="preset('pink')">PINK</button>
+  <button class="pre" onclick="preset('saw')">SAW</button>
+  <button class="pre" onclick="preset('shepard')">SHEPARD</button>
+  <button class="pre" onclick="preset('golden')">GOLDEN·φ</button>
+  <div class="sep"></div>
+  <button id="b-mode" class="cyan on" onclick="toggleMode()">HARMONIC</button>
+  <div class="ctl"><span class="klbl">β</span><input id="bbeta" type="range" min="0" max="260" value="100" oninput="setBeta(+this.value/100)"><span class="val2" id="v-beta">1.00</span></div>
+  <div class="ctl"><span class="klbl">f0</span><input id="bf0" type="range" min="30" max="500" value="110" oninput="setF0(+this.value)"><span class="val2" id="v-f0">110</span></div>
+  <div class="ctl"><span class="klbl">N</span><input id="bN" type="range" min="1" max="48" value="12" oninput="setN(+this.value)"><span class="val2" id="v-N">12</span></div>
+  <span id="selfsim">
+    <div class="ctl"><span class="klbl">ratio b</span><input id="bb" type="range" min="105" max="300" value="200" oninput="setB(+this.value/100)"><span class="val2" id="v-b">2.00</span></div>
+  </span>
+  <div class="ctl"><span class="klbl">vol</span><input id="bvol" type="range" min="0" max="100" value="50" oninput="setVol(+this.value/100)"><span class="val2" id="v-vol">0.50</span></div>
+  <div class="sep"></div>
+  <div class="ctl"><span class="klbl">spin</span><input id="bspin" type="range" min="0" max="40" value="10" oninput="setSpin(+this.value)"><span class="val2" id="v-spin">1.0</span></div>
+  <button id="b-sweep" onclick="toggleSweep()">↕ sweep β</button>
+  <button id="b-play" class="cyan" onclick="togglePlay()">▶ play</button>
+</div>
+
+<div id="stamp">
+  HARMONIA v1.2 · the fractal voice, spun<br>
+  rose closes ⟺ periodic tone · self-affine, not infinite fractal<br>
+  as above, so below · χ=2 · always
+</div>
+
+<div id="gate" onclick="startFromGate()">
+  <div class="big">HARMONIA · spun</div>
+  <div class="g2">the <b>voice</b> as a turning rosette — the god in the gate, the tones in the lattice. move the sliders and <b>listen</b> as it spins.</div>
+  <div class="go">▶ click for sound</div>
+</div>
+
+<script>
+"use strict";
+var cv=document.getElementById("cv"), ctx=cv.getContext("2d");
+var W=0,H=0,DPR=1;
+function resize(){ DPR=Math.min(window.devicePixelRatio||1,2); W=window.innerWidth; H=window.innerHeight;
+  cv.width=Math.round(W*DPR); cv.height=Math.round(H*DPR); ctx.setTransform(DPR,0,0,DPR,0,0); }
+window.addEventListener("resize",resize); resize();
+
+// ---------- params ----------
+var MODE="harmonic";
+var beta=1.0, f0=110, N=12, bRatio=2.0, vol=0.5;
+var sweep=false, sweepDir=1, muted=false;
+var PHI=(1+Math.sqrt(5))/2, CAP=20000;
+var spin=0, spinSpeed=0.004, penTheta=0, penSpeed=0.02;
+var lastCloses=false, lastT=null;
+
+// ---------- colours ----------
+var GOLD=[255,215,0], CYAN=[0,212,255], PINK=[255,105,180], GRN=[0,255,213];
+function css(c,a){ return "rgba("+(c[0]|0)+","+(c[1]|0)+","+(c[2]|0)+","+a+")"; }
+function mix(a,b,t){ t=t<0?0:t>1?1:t; return [a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t, a[2]+(b[2]-a[2])*t]; }
+
+// ---------- audio (identical engine to v1.0) ----------
+var actx=null, master=null, analyser=null, started=false;
+var voice=[], freqData=null, timeData=null;
+function nyqCap(){ return Math.min(CAP, actx ? actx.sampleRate/2 : 22050); }
+function partials(){
+  var raw=[], cap=nyqCap();
+  for(var k=0;k<N;k++){
+    var f, ratio;
+    if(MODE==="harmonic"){ var n=k+1; f=n*f0; ratio=n; }
+    else { ratio=Math.pow(bRatio,k); f=f0*ratio; }
+    if(f>cap || f<15) continue;
+    raw.push({ f:f, a:Math.pow(ratio,-beta/2) });
+  }
+  var s=0; for(var i=0;i<raw.length;i++) s+=raw[i].a; if(s<=0) s=1;
+  for(var j=0;j<raw.length;j++) raw[j].aN=raw[j].a/s;
+  return raw;
+}
+function ensureSize(n){
+  while(voice.length<n){
+    var o=actx.createOscillator(); o.type="sine";
+    var g=actx.createGain(); g.gain.value=0;
+    o.connect(g); g.connect(master); o.start();
+    voice.push({osc:o,gain:g});
+  }
+  while(voice.length>n){
+    var v=voice.pop();
+    try{ v.gain.gain.setTargetAtTime(0,actx.currentTime,0.02); v.osc.stop(actx.currentTime+0.12); }catch(e){}
+  }
+}
+function syncVoice(){
+  if(!started) return;
+  var ps=partials(); ensureSize(ps.length); var t=actx.currentTime;
+  for(var i=0;i<ps.length;i++){
+    voice[i].osc.frequency.setTargetAtTime(ps[i].f, t, 0.02);
+    voice[i].gain.gain.setTargetAtTime(ps[i].aN*0.9, t, 0.03);
+  }
+  master.gain.setTargetAtTime(muted?0:vol, t, 0.05);
+}
+function start(){
+  if(started) return;
+  actx=new (window.AudioContext||window.webkitAudioContext)();
+  master=actx.createGain(); master.gain.value=0;
+  analyser=actx.createAnalyser(); analyser.fftSize=4096; analyser.smoothingTimeConstant=0.5;
+  analyser.minDecibels=-100; analyser.maxDecibels=-12;
+  master.connect(analyser); analyser.connect(actx.destination);
+  freqData=new Float32Array(analyser.frequencyBinCount);
+  timeData=new Float32Array(analyser.fftSize);
+  started=true; muted=false;
+  if(actx.state==="suspended") actx.resume();
+  syncVoice(); master.gain.setTargetAtTime(vol, actx.currentTime, 0.12); setPlayLabel(true);
+}
+function startFromGate(){ document.getElementById("gate").style.display="none"; start(); }
+function togglePlay(){ if(!started){ start(); return; }
+  muted=!muted; master.gain.setTargetAtTime(muted?0:vol, actx.currentTime, 0.05); setPlayLabel(!muted); }
+function setPlayLabel(on){ var b=document.getElementById("b-play"); b.textContent=on?"⏸ pause":"▶ play"; b.classList.toggle("on",on); }
+function measuredBeta(){
+  if(!started) return null;
+  var binHz=actx.sampleRate/analyser.fftSize;
+  var lo=Math.max(1,Math.floor(80/binHz)), hi=Math.min(freqData.length-1,Math.ceil(8000/binHz));
+  var n=0,sx=0,sy=0,sxx=0,sxy=0;
+  for(var i=lo;i<=hi;i++){ var dB=freqData[i]; if(dB<=-100) continue; var P=Math.pow(10,dB/10); if(P<=0) continue;
+    var x=Math.log10(i*binHz), y=Math.log10(P); n++; sx+=x; sy+=y; sxx+=x*x; sxy+=x*y; }
+  if(n<3) return null; var den=n*sxx-sx*sx; if(Math.abs(den)<1e-12) return null;
+  return -((n*sxy-sx*sy)/den);
+}
+
+// smallest T (turns) with all ratios·T ≈ integer → the rose closes; null = doesn't (in view)
+function findPeriod(ratios){
+  for(var T=1;T<=120;T++){ var ok=true;
+    for(var i=0;i<ratios.length;i++){ var v=ratios[i]*T; if(Math.abs(v-Math.round(v))>1e-4){ ok=false; break; } }
+    if(ok) return T; }
+  return null;
+}
+
+// ---------- the spinning mandala ----------
+function drawMandala(ps){
+  var cx=W/2, cy=H/2, base=Math.min(W,H);
+  var ratios=[], amps=[], sumA=0, maxA=0;
+  for(var i=0;i<ps.length;i++){ var r=ps[i].f/f0, a=ps[i].a; ratios.push(r); amps.push(a); sumA+=a; if(a>maxA)maxA=a; }
+  if(sumA<=0) sumA=1; if(maxA<=0) maxA=1;
+  var roseScale=base*0.29/sumA;
+  var cS=Math.cos(spin), sN=Math.sin(spin);
+  var T=findPeriod(ratios); lastCloses=(T!==null); lastT=T;
+  var P=ps.length;
+
+  ctx.lineCap="round"; ctx.lineJoin="round";
+  ctx.globalCompositeOperation="screen";
+
+  // outer ornament star {P/skip} — the mosaic border
+  if(P>=3){
+    var Ro=base*0.46, pts=[];
+    for(var o=0;o<P;o++){ var a=o/P*6.2832 + spin*0.6; pts.push([cx+Math.cos(a)*Ro, cy+Math.sin(a)*Ro]); }
+    var skip=Math.max(2,Math.min(P-1,Math.round(P*0.4)));
+    ctx.strokeStyle=css(GOLD,0.13); ctx.lineWidth=1; ctx.beginPath();
+    for(var s0=0;s0<P;s0++){ var j=(s0+skip)%P; ctx.moveTo(pts[s0][0],pts[s0][1]); ctx.lineTo(pts[j][0],pts[j][1]); }
+    ctx.stroke();
+  }
+
+  // mid ring — radial spectrum petals (one per partial)
+  var Rin=base*0.325, Rlen=base*0.11;
+  ctx.strokeStyle=css(GOLD,0.09); ctx.lineWidth=1; ctx.beginPath(); ctx.arc(cx,cy,Rin,0,6.2832); ctx.stroke();
+  for(var k=0;k<P;k++){
+    var ang=k/P*6.2832 + spin, rel=amps[k]/maxA, r1=Rin+rel*Rlen;
+    var col=mix(GOLD,CYAN, P>1?k/(P-1):0);
+    ctx.strokeStyle=css(col,0.6); ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.moveTo(cx+Math.cos(ang)*Rin, cy+Math.sin(ang)*Rin);
+    ctx.lineTo(cx+Math.cos(ang)*r1, cy+Math.sin(ang)*r1); ctx.stroke();
+    ctx.fillStyle=css(col,0.9); ctx.beginPath(); ctx.arc(cx+Math.cos(ang)*r1, cy+Math.sin(ang)*r1, 2.2, 0, 6.2832); ctx.fill();
+  }
+
+  // core — the voice rose (Fourier epicycle trace of the actual partials)
+  var turns = lastCloses ? Math.min(T,24) : 14;
+  var STEPS = Math.min(6000, Math.max(500, turns*300));
+  ctx.strokeStyle=css(CYAN,0.55); ctx.lineWidth=1.2; ctx.beginPath();
+  for(var s=0;s<=STEPS;s++){
+    var th=s/STEPS*6.2832*turns, x=0, y=0;
+    for(var m=0;m<ratios.length;m++){ x+=amps[m]*Math.cos(ratios[m]*th); y+=amps[m]*Math.sin(ratios[m]*th); }
+    var X=cx+(x*cS-y*sN)*roseScale, Y=cy+(x*sN+y*cS)*roseScale;
+    s?ctx.lineTo(X,Y):ctx.moveTo(X,Y);
+  }
+  ctx.stroke();
+
+  // live epicycle chain + pen (the Fourier construction, walking)
+  var px=0, py=0;
+  for(var m2=0;m2<ratios.length;m2++){
+    var CXc=cx+(px*cS-py*sN)*roseScale, CYc=cy+(px*sN+py*cS)*roseScale, rad=amps[m2]*roseScale;
+    if(rad>1.6){ ctx.strokeStyle=css(mix(CYAN,GOLD, ratios.length>1?m2/(ratios.length-1):0),0.15); ctx.lineWidth=0.7;
+      ctx.beginPath(); ctx.arc(CXc,CYc,rad,0,6.2832); ctx.stroke(); }
+    px+=amps[m2]*Math.cos(ratios[m2]*penTheta); py+=amps[m2]*Math.sin(ratios[m2]*penTheta);
+  }
+  var PX=cx+(px*cS-py*sN)*roseScale, PY=cy+(px*sN+py*cS)*roseScale;
+  ctx.fillStyle=css(PINK,0.95); ctx.shadowColor=css(PINK,1); ctx.shadowBlur=9;
+  ctx.beginPath(); ctx.arc(PX,PY,3.4,0,6.2832); ctx.fill(); ctx.shadowBlur=0;
+
+  ctx.globalCompositeOperation="source-over";
+
+  // gate
+  var pulse=0.5+0.5*Math.sin(performance.now()*0.002);
+  ctx.strokeStyle=css(mix(CYAN,GRN, lastCloses?0.15:0), 0.3+pulse*0.28); ctx.lineWidth=2;
+  ctx.beginPath(); ctx.arc(cx,cy,11+pulse*3,0,6.2832); ctx.stroke();
+  ctx.fillStyle=css(GOLD,1); ctx.shadowColor=css(GOLD,1); ctx.shadowBlur=9;
+  ctx.beginPath(); ctx.arc(cx,cy,5,0,6.2832); ctx.fill(); ctx.shadowBlur=0;
+}
+
+function updateHUD(ps){
+  set("m-mode", MODE==="harmonic"?"harmonic":"self-sim");
+  set("m-beta", beta.toFixed(2));
+  var mb=measuredBeta(); set("m-bmeas", mb==null?"—":mb.toFixed(2));
+  set("m-parts", ps.length+" / "+N);
+  var el=document.getElementById("m-close");
+  if(lastCloses){ el.textContent="YES · "+lastT+"↻"; el.style.color="#00ffd5"; }
+  else { el.textContent="no · ∞"; el.style.color="#ff9944"; }
+}
+function set(id,v){ var e=document.getElementById(id); if(e)e.textContent=v; }
+
+function draw(){
+  requestAnimationFrame(draw);
+  if(sweep && started){ beta+=sweepDir*0.004;
+    if(beta>=2.6){beta=2.6;sweepDir=-1;} if(beta<=0){beta=0;sweepDir=1;}
+    document.getElementById("bbeta").value=Math.round(beta*100); set("v-beta",beta.toFixed(2)); syncVoice(); }
+  spin+=spinSpeed; penTheta+=penSpeed;
+  if(started){ analyser.getFloatFrequencyData(freqData); analyser.getFloatTimeDomainData(timeData); }
+  ctx.globalCompositeOperation="source-over";
+  ctx.fillStyle="rgba(5,5,8,0.30)"; ctx.fillRect(0,0,W,H);   // motion trail
+  var ps=partials();
+  drawMandala(ps); updateHUD(ps);
+}
+
+// ---------- controls ----------
+function toggleMode(){
+  MODE=(MODE==="harmonic")?"selfsim":"harmonic";
+  var b=document.getElementById("b-mode"); b.textContent=MODE==="harmonic"?"HARMONIC":"SELF-SIMILAR";
+  document.getElementById("selfsim").classList.toggle("show", MODE==="selfsim"); syncVoice();
+}
+function setBeta(v){ beta=v; set("v-beta",v.toFixed(2)); syncVoice(); }
+function setF0(v){ f0=v; set("v-f0",Math.round(v)); syncVoice(); }
+function setN(v){ N=v; set("v-N",v); syncVoice(); }
+function setB(v){ bRatio=v; set("v-b",v.toFixed(2)); syncVoice(); }
+function setVol(v){ vol=v; set("v-vol",v.toFixed(2)); if(started&&!muted) master.gain.setTargetAtTime(v,actx.currentTime,0.05); }
+function setSpin(v){ spinSpeed=v/10000; set("v-spin",(v/10).toFixed(1)); }
+function toggleSweep(){ sweep=!sweep; document.getElementById("b-sweep").classList.toggle("on",sweep); }
+
+function preset(name){
+  if(name==="white"){ MODE="harmonic"; beta=0.0; N=40; f0=110; }
+  else if(name==="pink"){ MODE="harmonic"; beta=1.0; N=32; f0=110; }
+  else if(name==="saw"){ MODE="harmonic"; beta=2.0; N=40; f0=110; }
+  else if(name==="shepard"){ MODE="selfsim"; bRatio=2.0; beta=1.0; N=9; f0=55; }
+  else if(name==="golden"){ MODE="selfsim"; bRatio=PHI; beta=1.2; N=16; f0=98; }
+  document.getElementById("bbeta").value=Math.round(beta*100); set("v-beta",beta.toFixed(2));
+  document.getElementById("bf0").value=Math.round(f0); set("v-f0",Math.round(f0));
+  document.getElementById("bN").value=N; set("v-N",N);
+  document.getElementById("bb").value=Math.round(bRatio*100); set("v-b",bRatio.toFixed(2));
+  var bm=document.getElementById("b-mode"); bm.textContent=MODE==="harmonic"?"HARMONIC":"SELF-SIMILAR";
+  document.getElementById("selfsim").classList.toggle("show", MODE==="selfsim");
+  if(!started){ startFromGate(); } else { syncVoice(); }
+}
+
+cv.addEventListener("click", function(){ if(!started) startFromGate(); });
+requestAnimationFrame(draw);
+</script>
+</body></html>

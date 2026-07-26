@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Möbius v4 · Pentagon Curvature on Non-Orientable Substrate</title>
+<style>
+  body { margin:0; overflow:hidden; background:#0a0c12; font-family:ui-monospace,monospace; color:#ccd1e0; }
+  canvas { display:block; cursor:grab; }
+  body.dragging canvas { cursor: grabbing; }
+  .label {
+    position:fixed; top:14px; left:14px; z-index:10;
+    background:rgba(10,12,18,0.78); padding:10px 14px; border-radius:6px;
+    border:1px solid #1a1f2e; font-size:12px; line-height:1.7;
+    pointer-events: none;
+  }
+  .label .title { color:#00d4ff; font-weight:bold; margin-bottom:6px; }
+  .label .stat span { color:#fff; }
+  .label .small { color:#8a92a8; font-size:11px; }
+  .label .msg { color:#8a92a8; font-size:11px; margin-top:8px; }
+  .label .msg.closed { color:#7fffa0; font-weight:bold; font-size:12px; }
+  .label .msg.over { color:#ff9090; }
+  .controls {
+    position:fixed; bottom:20px; left:50%; transform:translateX(-50%); z-index:10;
+    background:rgba(10,12,18,0.88); padding:12px 18px; border-radius:8px;
+    border:1px solid #1a1f2e; display:flex; align-items:center; gap:14px;
+    font-size:12px;
+  }
+  .controls button {
+    background:#1a1f2e; color:#ccd1e0; border:1px solid #2a3040;
+    padding:6px 14px; border-radius:4px; cursor:pointer; font-family:inherit; font-size:12px;
+  }
+  .controls button:hover { background:#2a3040; }
+  .controls button.primary { background:#00d4ff; color:#0a0c12; border-color:#00d4ff; }
+  .controls button.primary:hover { background:#33ddff; }
+</style>
+</head>
+<body>
+
+<div class="label">
+  <div class="title">Möbius v4 · Pentagon Curvature</div>
+  <div class="stat">substrate: <span>Möbius · χ=0</span></div>
+  <div class="stat">pentagons: <span id="pentN">0</span> / 12</div>
+  <div class="msg" id="msg">click strip → pentagon · drag orbit · scroll zoom</div>
+</div>
+
+<div class="controls">
+  <span>density</span>
+  <input type="range" id="density" min="20" max="240" step="4" value="120" style="width:140px; accent-color:#00d4ff;">
+  <span id="densityVal" style="color:#00d4ff; font-weight:bold; min-width:36px; text-align:right;">120</span>
+  <button id="place12" class="primary">place 12 (icosa)</button>
+  <button id="clear">clear</button>
+  <button id="resetView">reset view</button>
+</div>
+
+<script type="importmap">
+{"imports":{"three":"https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js"}}
+</script>
+<script type="module">
+import * as THREE from 'three';
+
+// ===== Scene =====
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0a0c12);
+const camera = new THREE.PerspectiveCamera(50, innerWidth/innerHeight, 0.1, 100);
+const renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(innerWidth, innerHeight);
+document.body.appendChild(renderer.domElement);
+
+// ===== The ephemeral center (tesseract energy) =====
+const core = new THREE.Mesh(
+  new THREE.SphereGeometry(0.18, 24, 24),
+  new THREE.MeshBasicMaterial({color: 0x00d4ff})
+);
+scene.add(core);
+const halo = new THREE.Mesh(
+  new THREE.SphereGeometry(0.40, 24, 24),
+  new THREE.MeshBasicMaterial({color: 0x00d4ff, transparent:true, opacity:0.12})
+);
+scene.add(halo);
+
+// ===== Möbius parameters =====
+const R = 3.0;
+const WIDTH = 1.25;
+let U_STEPS = 120;
+let V_STEPS = 18;
+const AMPLITUDE = 0.55;   // height of pentagon bump (along normal)
+const SIGMA = 0.45;       // bump falloff in parameter space
+
+// ===== Parameterization =====
+function paramToWorld(u, v) {
+  const cosU2 = Math.cos(u/2);
+  const sinU2 = Math.sin(u/2);
+  return [
+    (R + v * cosU2) * Math.cos(u),
+    (R + v * cosU2) * Math.sin(u),
+    v * sinU2
+  ];
+}
+
+// ===== Surface normal — numerical, force outward =====
+function getNormal(u, v) {
+  const h = 0.001;
+  const p0 = paramToWorld(u, v);
+  const p1 = paramToWorld(u + h, v);
+  const p2 = paramToWorld(u, v + h);
+  const tux = (p1[0]-p0[0])/h, tuy = (p1[1]-p0[1])/h, tuz = (p1[2]-p0[2])/h;
+  const tvx = (p2[0]-p0[0])/h, tvy = (p2[1]-p0[1])/h, tvz = (p2[2]-p0[2])/h;
+  let nx = tuy*tvz - tuz*tvy;
+  let ny = tuz*tvx - tux*tvz;
+  let nz = tux*tvy - tuy*tvx;
+  const mag = Math.hypot(nx, ny, nz);
+  if (mag < 1e-6) return [0, 0, 1];
+  nx /= mag; ny /= mag; nz /= mag;
+  // Force "outward" — flip if normal points back at origin
+  // (this is what makes both sides bend in the SAME direction)
+  const dot = nx*p0[0] + ny*p0[1] + nz*p0[2];
+  if (dot < 0) return [-nx, -ny, -nz];
+  return [nx, ny, nz];
+}
+
+// ===== State =====
+const pentagons = []; // {u, v, activation, target}
+
+function getLift(u, v) {
+  let total = 0;
+  for (const p of pentagons) {
+    if (p.activation <= 0) continue;
+    // Periodic distance in u
+    let du = u - p.u;
+    while (du > Math.PI) du -= 2*Math.PI;
+    while (du < -Math.PI) du += 2*Math.PI;
+    const dv = v - p.v;
+    const d2 = du*du + dv*dv*0.8;  // anisotropic falloff
+    total += AMPLITUDE * p.activation * Math.exp(-d2 / (SIGMA*SIGMA));
+  }
+  return total;
+}
+
+function vertexPos(u, v) {
+  const [x, y, z] = paramToWorld(u, v);
+  const lift = getLift(u, v);
+  if (lift === 0) return [x, y, z];
+  const [nx, ny, nz] = getNormal(u, v);
+  return [x + nx*lift, y + ny*lift, z + nz*lift];
+}
+
+// ===== Build hex lattice (rebuildable on density change) =====
+let gridPoints = [];
+let lineIndices = [];
+let positions = null;
+
+const lineGeo = new THREE.BufferGeometry();
+const lines = new THREE.LineSegments(lineGeo, new THREE.LineBasicMaterial({
+  color: 0x6a7a90, transparent: true, opacity: 0.6
+}));
+scene.add(lines);
+
+function rebuildLattice() {
+  gridPoints = [];
+  for (let i = 0; i <= U_STEPS; i++) {
+    const u = (i / U_STEPS) * Math.PI * 2;
+    for (let j = 0; j <= V_STEPS; j++) {
+      const v = (j / V_STEPS) * 2 * WIDTH - WIDTH;
+      gridPoints.push([u, v]);
+    }
+  }
+  lineIndices = [];
+  for (let i = 0; i <= U_STEPS; i++) {
+    for (let j = 0; j <= V_STEPS; j++) {
+      if (i < U_STEPS) {
+        const cur = i * (V_STEPS + 1) + j;
+        lineIndices.push(cur, cur + (V_STEPS + 1));
+      }
+      if (j < V_STEPS && ((i + j) % 2 === 0)) {
+        const cur = i * (V_STEPS + 1) + j;
+        lineIndices.push(cur, cur + 1);
+      }
+    }
+  }
+  positions = new Float32Array(gridPoints.length * 3);
+  lineGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  lineGeo.setIndex(lineIndices);
+}
+rebuildLattice();
+
+// ===== Pentagon markers (drawn in tangent plane) =====
+const PENT_BUFFER_SIZE = 50 * 5 * 2 * 3;
+const pentPositions = new Float32Array(PENT_BUFFER_SIZE);
+const pentGeo = new THREE.BufferGeometry();
+pentGeo.setAttribute('position', new THREE.BufferAttribute(pentPositions, 3));
+const pentLines = new THREE.LineSegments(pentGeo, new THREE.LineBasicMaterial({
+  color: 0xff9090, transparent: true, opacity: 0.95
+}));
+scene.add(pentLines);
+
+function updatePentagonMarkers() {
+  let idx = 0;
+  for (const p of pentagons) {
+    if (p.activation <= 0.05) continue;
+    const center = vertexPos(p.u, p.v);
+    // Tangent basis from parameterization
+    const h = 0.001;
+    const p0 = paramToWorld(p.u, p.v);
+    const p1 = paramToWorld(p.u + h, p.v);
+    let tx = (p1[0]-p0[0])/h, ty = (p1[1]-p0[1])/h, tz = (p1[2]-p0[2])/h;
+    const tmag = Math.hypot(tx, ty, tz);
+    tx /= tmag; ty /= tmag; tz /= tmag;
+    const n = getNormal(p.u, p.v);
+    // Bitangent = n × t
+    const bx = n[1]*tz - n[2]*ty;
+    const by = n[2]*tx - n[0]*tz;
+    const bz = n[0]*ty - n[1]*tx;
+    const size = 0.18 * p.activation;
+    const corners = [];
+    for (let i = 0; i < 5; i++) {
+      const a = Math.PI * 2 * i / 5 - Math.PI / 2;
+      const ca = Math.cos(a), sa = Math.sin(a);
+      corners.push([
+        center[0] + size * (ca*tx + sa*bx),
+        center[1] + size * (ca*ty + sa*by),
+        center[2] + size * (ca*tz + sa*bz)
+      ]);
+    }
+    for (let i = 0; i < 5; i++) {
+      const c1 = corners[i], c2 = corners[(i+1)%5];
+      pentPositions[idx++] = c1[0]; pentPositions[idx++] = c1[1]; pentPositions[idx++] = c1[2];
+      pentPositions[idx++] = c2[0]; pentPositions[idx++] = c2[1]; pentPositions[idx++] = c2[2];
+    }
+  }
+  pentGeo.attributes.position.needsUpdate = true;
+  pentGeo.setDrawRange(0, idx / 3);
+}
+
+function updateLatticePositions() {
+  for (let k = 0; k < gridPoints.length; k++) {
+    const [u, v] = gridPoints[k];
+    const [x, y, z] = vertexPos(u, v);
+    positions[k*3] = x; positions[k*3+1] = y; positions[k*3+2] = z;
+  }
+  lineGeo.attributes.position.needsUpdate = true;
+}
+
+function refreshAll() {
+  updateLatticePositions();
+  updatePentagonMarkers();
+  rebuildRaycastMesh();
+  updateStatus();
+}
+
+// ===== Pentagon ops =====
+function placePentagon(u, v) {
+  pentagons.push({ u, v, activation: 0, target: 1 });
+}
+function removePentagonNear(u, v, threshold = 0.22) {
+  // Tighter: must click visually close to the pentagon
+  let bestIdx = -1, bestD = Infinity;
+  for (let i = pentagons.length - 1; i >= 0; i--) {
+    const p = pentagons[i];
+    if (p.target === 0) continue;
+    let du = u - p.u;
+    while (du > Math.PI) du -= 2*Math.PI;
+    while (du < -Math.PI) du += 2*Math.PI;
+    const d = Math.hypot(du, (v - p.v) * 0.7);
+    if (d < bestD && d < threshold) { bestD = d; bestIdx = i; }
+  }
+  if (bestIdx >= 0) { pentagons[bestIdx].target = 0; return true; }
+  return false;
+}
+
+function place12() {
+  for (const p of pentagons) p.target = 0;
+  // Icosahedral-ish: 12 evenly spaced in u, alternating v
+  for (let i = 0; i < 12; i++) {
+    const u = (i / 12) * Math.PI * 2;
+    const v = (i % 2 === 0) ? 0.5 : -0.5;
+    placePentagon(u, v);
+  }
+}
+
+function clearAll() {
+  for (const p of pentagons) p.target = 0;
+}
+
+// ===== Animation tick =====
+function tickLifts(dt) {
+  let any = false;
+  const speed = 3;
+  for (let i = pentagons.length - 1; i >= 0; i--) {
+    const p = pentagons[i];
+    const diff = p.target - p.activation;
+    if (Math.abs(diff) < 0.001) {
+      if (p.target === 0) pentagons.splice(i, 1);
+      continue;
+    }
+    const step = Math.sign(diff) * Math.min(Math.abs(diff), dt * speed);
+    p.activation += step;
+    any = true;
+  }
+  return any;
+}
+
+function updateStatus() {
+  const active = pentagons.filter(p => p.target === 1).length;
+  document.getElementById('pentN').textContent = active;
+  const msg = document.getElementById('msg');
+  if (active === 12) {
+    msg.textContent = '✓ 12 pentagons on Möbius (χ=0)·curvature woven into the twist';
+    msg.className = 'msg closed';
+  } else if (active > 12) {
+    msg.textContent = `${active} pentagons — over budget · Möbius can\'t hold this`;
+    msg.className = 'msg over';
+  } else {
+    msg.textContent = `${active}/12 · click strip → toggle · drag orbit · scroll zoom`;
+    msg.className = 'msg';
+  }
+}
+
+// ===== Click detection — raycast against the LIFTED surface =====
+const meshUSteps = 80, meshVSteps = 12;
+const meshIndices = [];
+const meshVertCount = (meshUSteps + 1) * (meshVSteps + 1);
+const meshVerts = new Float32Array(meshVertCount * 3);
+for (let i = 0; i <= meshUSteps; i++) {
+  for (let j = 0; j <= meshVSteps; j++) {
+    if (i < meshUSteps && j < meshVSteps) {
+      const a = i*(meshVSteps+1)+j;
+      const b = (i+1)*(meshVSteps+1)+j;
+      const c = (i+1)*(meshVSteps+1)+j+1;
+      const d = i*(meshVSteps+1)+j+1;
+      meshIndices.push(a,b,c, a,c,d);
+    }
+  }
+}
+const mobiusMeshGeo = new THREE.BufferGeometry();
+mobiusMeshGeo.setAttribute('position', new THREE.BufferAttribute(meshVerts, 3));
+mobiusMeshGeo.setIndex(meshIndices);
+const mobiusMesh = new THREE.Mesh(
+  mobiusMeshGeo,
+  new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.0, side: THREE.DoubleSide, depthWrite: false })
+);
+scene.add(mobiusMesh);
+
+function rebuildRaycastMesh() {
+  let k = 0;
+  for (let i = 0; i <= meshUSteps; i++) {
+    const u = (i / meshUSteps) * Math.PI * 2;
+    for (let j = 0; j <= meshVSteps; j++) {
+      const v = (j / meshVSteps) * 2 * WIDTH - WIDTH;
+      const [x, y, z] = vertexPos(u, v);
+      meshVerts[k++] = x; meshVerts[k++] = y; meshVerts[k++] = z;
+    }
+  }
+  mobiusMeshGeo.attributes.position.needsUpdate = true;
+  mobiusMeshGeo.computeBoundingSphere();
+}
+
+function findUVFromHit(x, y, z) {
+  // Coarse then fine — close enough for placement
+  let bestU = 0, bestV = 0, bestD = Infinity;
+  for (let i = 0; i < 36; i++) {
+    for (let j = 0; j < 18; j++) {
+      const u = (i / 36) * Math.PI * 2;
+      const v = (j / 17) * 2 * WIDTH - WIDTH;
+      const [px, py, pz] = paramToWorld(u, v);
+      const d = (x-px)**2 + (y-py)**2 + (z-pz)**2;
+      if (d < bestD) { bestD = d; bestU = u; bestV = v; }
+    }
+  }
+  // refine
+  for (let pass = 0; pass < 3; pass++) {
+    const range = 0.3 / (pass + 1);
+    for (let i = -5; i <= 5; i++) {
+      for (let j = -5; j <= 5; j++) {
+        const u = bestU + (i / 5) * range;
+        const v = Math.max(-WIDTH, Math.min(WIDTH, bestV + (j / 5) * range));
+        const uu = (u + 2*Math.PI) % (2*Math.PI);
+        const [px, py, pz] = paramToWorld(uu, v);
+        const d = (x-px)**2 + (y-py)**2 + (z-pz)**2;
+        if (d < bestD) { bestD = d; bestU = uu; bestV = v; }
+      }
+    }
+  }
+  return [bestU, bestV];
+}
+
+const raycaster = new THREE.Raycaster();
+const mouseNDC = new THREE.Vector2();
+
+function handleClick(e) {
+  const rect = renderer.domElement.getBoundingClientRect();
+  mouseNDC.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+  mouseNDC.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+  raycaster.setFromCamera(mouseNDC, camera);
+  const hits = raycaster.intersectObject(mobiusMesh);
+  if (hits.length === 0) return;
+  const p = hits[0].point;
+  const [u, v] = findUVFromHit(p.x, p.y, p.z);
+  // Reject if the snap is too far from the actual click point (sanity check)
+  const [sx, sy, sz] = vertexPos(u, v);
+  if (Math.hypot(sx - p.x, sy - p.y, sz - p.z) > 0.6) return;
+  if (!removePentagonNear(u, v)) placePentagon(u, v);
+}
+
+// ===== Orbit camera =====
+let yaw = 0.5, pitch = 0.35, dist = 11;
+function updateCamera() {
+  camera.position.x = dist * Math.cos(pitch) * Math.sin(yaw);
+  camera.position.y = dist * Math.sin(pitch);
+  camera.position.z = dist * Math.cos(pitch) * Math.cos(yaw);
+  camera.lookAt(0, 0, 0);
+}
+updateCamera();
+
+let mouseDown = null, dragged = false;
+renderer.domElement.addEventListener('mousedown', e => {
+  mouseDown = { x: e.clientX, y: e.clientY };
+  dragged = false;
+  document.body.classList.add('dragging');
+});
+renderer.domElement.addEventListener('mousemove', e => {
+  if (!mouseDown) return;
+  const dx = e.clientX - mouseDown.x, dy = e.clientY - mouseDown.y;
+  if (!dragged && Math.hypot(dx, dy) > 5) dragged = true;
+  if (dragged) {
+    yaw -= dx * 0.006;
+    pitch += dy * 0.006;
+    pitch = Math.max(-Math.PI/2+0.05, Math.min(Math.PI/2-0.05, pitch));
+    mouseDown = { x: e.clientX, y: e.clientY };
+    updateCamera();
+  }
+});
+renderer.domElement.addEventListener('mouseup', e => {
+  document.body.classList.remove('dragging');
+  if (!dragged && mouseDown) handleClick(e);
+  mouseDown = null; dragged = false;
+});
+renderer.domElement.addEventListener('wheel', e => {
+  e.preventDefault();
+  dist = Math.max(4, Math.min(30, dist + e.deltaY * 0.01));
+  updateCamera();
+}, { passive: false });
+
+// ===== UI =====
+document.getElementById('place12').addEventListener('click', place12);
+document.getElementById('clear').addEventListener('click', clearAll);
+document.getElementById('resetView').addEventListener('click', () => {
+  yaw = 0.5; pitch = 0.35; dist = 11; updateCamera();
+});
+document.getElementById('density').addEventListener('input', e => {
+  const val = parseInt(e.target.value);
+  U_STEPS = val;
+  V_STEPS = Math.max(3, Math.round(val * 0.15));
+  document.getElementById('densityVal').textContent = val;
+  rebuildLattice();
+  refreshAll();
+});
+
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+
+// ===== Initial state: place 12 on load =====
+place12();
+refreshAll();
+
+// ===== Loop =====
+let lastTime = performance.now();
+function animate() {
+  requestAnimationFrame(animate);
+  const now = performance.now();
+  const dt = Math.min(0.1, (now - lastTime) / 1000);
+  lastTime = now;
+  if (tickLifts(dt)) refreshAll();
+  renderer.render(scene, camera);
+}
+animate();
+</script>
+</body>
+</html>

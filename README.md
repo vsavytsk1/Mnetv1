@@ -21,6 +21,9 @@ Click any card. Everything runs in your browser. Zero install.
 The dashboard is BUILT, not hand-listed: `builder/build_eng_v2.py` scans the sims on
 disk and generates every card, so it can never drift from what actually ships.
 
+**Want every single link, no matter how small?** See [`IO_PAGES.md`](IO_PAGES.md) --
+the complete public index of all 283 `.html` pages across every repo.
+
 ---
 
 ## What the kernel actually proved

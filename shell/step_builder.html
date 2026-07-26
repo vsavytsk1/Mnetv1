@@ -1,0 +1,510 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>step builder · one hex per click · minimum-energy angle</title>
+<style>
+  :root{
+    --bg:#050510;
+    --pent:#ff6b35;
+    --hex:#00d4ff;
+    --hex-hot:#ffd700;
+    --text:#e0f0ff;
+    --text2:#7090a0;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;overflow:hidden;background:var(--bg);
+    color:var(--text);font-family:'Share Tech Mono','Consolas','Menlo',monospace}
+  #app{position:fixed;inset:0;cursor:crosshair}
+  #app.drag{cursor:grabbing}
+
+  .hud{position:fixed;pointer-events:none;font-size:11px;letter-spacing:.05em;color:var(--text2)}
+  .hud b{color:var(--text);font-weight:400}
+  .tag{font-size:9px;letter-spacing:.18em;color:#506070;text-transform:uppercase;margin-bottom:6px}
+  #tl{top:14px;left:14px;line-height:1.55}
+  #br{bottom:14px;right:14px;text-align:right;line-height:1.55}
+  .pent-tone{color:var(--pent)}
+  .hex-tone{color:var(--hex)}
+  .hot-tone{color:var(--hex-hot)}
+
+  #mid{position:fixed;left:50%;bottom:60px;transform:translateX(-50%);
+    text-align:center;pointer-events:none;transition:opacity .35s}
+  #mid .big{font-size:13px;letter-spacing:.4em;color:var(--text);text-transform:uppercase}
+  #mid .sub{font-size:10px;letter-spacing:.22em;color:#506070;text-transform:uppercase;margin-top:4px}
+  #mid.hidden{opacity:0}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<div id="mid">
+  <div class="big" id="midbig">click anywhere</div>
+  <div class="sub" id="midsub">to seed the pentagon on the substrate</div>
+</div>
+
+<div id="tl" class="hud">
+  <div class="tag">step builder · one hex per click · auto dihedral</div>
+  <div><span class="pent-tone">●</span> pent <b id="np">0</b></div>
+  <div><span class="hex-tone">●</span> hex  <b id="nh">0</b></div>
+  <div>free edges <b id="ne">0</b></div>
+  <div>next θ     <b id="nt">—</b></div>
+  <div>E_bend     <b id="eb">0.000</b></div>
+  <div>frame      <b id="ms">0.0</b> ms</div>
+</div>
+
+<div id="br" class="hud">
+  <div>drag · orbit</div>
+  <div>scroll · zoom</div>
+  <div><b>R</b> · reset</div>
+</div>
+
+<script type="module">
+import * as THREE from 'https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js';
+
+// ─── §A scene / camera / renderer ──────────────────────────────────────────
+const appEl = document.getElementById('app');
+const W = () => appEl.clientWidth, H = () => appEl.clientHeight;
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color('#050510');
+scene.fog = new THREE.FogExp2(0x050510, 0.04);
+
+const camera = new THREE.PerspectiveCamera(45, W()/H(), 0.05, 80);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(W(), H());
+appEl.appendChild(renderer.domElement);
+addEventListener('resize', () => {
+  camera.aspect = W()/H();
+  camera.updateProjectionMatrix();
+  renderer.setSize(W(), H());
+});
+
+// ─── §B inline orbit + click-vs-drag ──────────────────────────────────────
+const orbit = { az: Math.PI*0.30, el: Math.PI*0.32, r: 9, tgt: new THREE.Vector3() };
+const home  = { az: orbit.az, el: orbit.el, r: orbit.r };
+let drag = null;
+const cv = renderer.domElement;
+
+cv.addEventListener('pointerdown', e => {
+  if (e.button !== 0) return;
+  drag = { x: e.clientX, y: e.clientY, az: orbit.az, el: orbit.el, moved: false };
+  cv.setPointerCapture(e.pointerId);
+});
+cv.addEventListener('pointermove', e => {
+  if (!drag) return;
+  const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+  if (!drag.moved && Math.hypot(dx, dy) > 4) drag.moved = true;
+  if (drag.moved){
+    orbit.az = drag.az - dx * 0.006;
+    orbit.el = Math.max(0.08, Math.min(Math.PI/2 - 0.08, drag.el - dy * 0.006));
+    appEl.classList.add('drag');
+  }
+});
+cv.addEventListener('pointerup', e => {
+  if (!drag) return;
+  const wasDrag = drag.moved;
+  drag = null;
+  appEl.classList.remove('drag');
+  if (!wasDrag) handleClick(e);
+});
+cv.addEventListener('wheel', e => {
+  e.preventDefault();
+  orbit.r = Math.max(2, Math.min(40, orbit.r * (1 + e.deltaY * 0.0015)));
+}, { passive: false });
+addEventListener('keydown', e => {
+  if (e.key === 'r' || e.key === 'R') reset();
+});
+
+function updateCam(){
+  const { az, el, r, tgt } = orbit;
+  const ce = Math.cos(el), se = Math.sin(el);
+  camera.position.set(
+    tgt.x + r*ce*Math.sin(az), tgt.y + r*se, tgt.z + r*ce*Math.cos(az)
+  );
+  camera.lookAt(tgt);
+}
+
+// ─── §C phantom substrate ─────────────────────────────────────────────────
+const SUB_HALF = 7, SUB_SEG = 60;
+const subGeom = new THREE.PlaneGeometry(SUB_HALF * 2, SUB_HALF * 2, SUB_SEG, SUB_SEG);
+subGeom.rotateX(-Math.PI/2);
+const subBase = new Float32Array(subGeom.attributes.position.array);
+const sub = new THREE.Mesh(subGeom, new THREE.MeshBasicMaterial({
+  wireframe: true, color: 0x2a4858, transparent: true, opacity: 0.42, depthWrite: false,
+}));
+scene.add(sub);
+
+// ─── §D constants ─────────────────────────────────────────────────────────
+const PENT_R    = 1.0;
+const PENT_EDGE = 2 * PENT_R * Math.sin(Math.PI/5);
+const HEX_APO   = PENT_EDGE * Math.sqrt(3) / 2;
+
+// Two truncated-icosahedron dihedrals, the only two angles the builder ever uses:
+//   pent–hex: arccos(−√(5+2√5)/√15) ≈ 142.62°  → tilt 37.38°
+//   hex–hex: arccos(−√5/3)          ≈ 138.19°  → tilt 41.81°
+const DIHEDRAL_PENT_HEX = Math.acos(-Math.sqrt(5 + 2*Math.sqrt(5)) / Math.sqrt(15));
+const DIHEDRAL_HEX_HEX  = Math.acos(-Math.sqrt(5) / 3);
+const TILT_PENT_HEX     = Math.PI - DIHEDRAL_PENT_HEX;   // ≈ 0.6525 rad
+const TILT_HEX_HEX      = Math.PI - DIHEDRAL_HEX_HEX;    // ≈ 0.7297 rad
+const FOLD_DURATION_MS  = 700;
+
+// ─── §E state ─────────────────────────────────────────────────────────────
+const state = {
+  pent:           null,
+  hexes:          [],
+  freeEdges:      [],            // FIFO: { owner, edgeIdx, type: 'pent-hex' | 'hex-hex' }
+  animating:      null,          // ref to hex currently folding, or null
+  nextSlot:       null,          // peek at front of freeEdges for HUD/preview
+};
+
+// ─── §F substrate dimple (constant, scales with cap progress) ─────────────
+const BUMP_SIGMA   = 1.2;
+const BUMP_SIG2    = BUMP_SIGMA * BUMP_SIGMA;
+const BUMP_AMP_MAX = -0.12;
+let subFalloff = null;
+
+function precomputeFalloff(){
+  if (!state.pent) return;
+  const n = subGeom.attributes.position.count;
+  subFalloff = new Float32Array(n);
+  for (let i = 0; i < n; i++){
+    const x = subBase[i*3], z = subBase[i*3+2];
+    let s = 0;
+    for (const pv of state.pent.corners){
+      const dx = x - pv.x, dz = z - pv.z;
+      s += Math.exp(-(dx*dx + dz*dz) / BUMP_SIG2);
+    }
+    subFalloff[i] = s;
+  }
+}
+function capProgress(){
+  // 0 → 1 as the first 5 hexes fold; saturates after
+  if (state.hexes.length === 0) return 0;
+  const cap = state.hexes.slice(0, 5);
+  let s = 0;
+  for (const h of cap) s += Math.abs(h.foldCurrent) / TILT_PENT_HEX;
+  return Math.min(1, s / 5);
+}
+let lastBend = -1;
+function updateSubstrate(){
+  if (!subFalloff) return;
+  const b = capProgress();
+  if (Math.abs(b - lastBend) < 1e-4) return;
+  lastBend = b;
+  const amp = BUMP_AMP_MAX * b;
+  const pos = subGeom.attributes.position;
+  for (let i = 0; i < pos.count; i++) pos.setY(i, amp * subFalloff[i]);
+  pos.needsUpdate = true;
+}
+
+// ─── §G scene group + builders ────────────────────────────────────────────
+const root = new THREE.Group();
+scene.add(root);
+
+function disposeAll(){
+  while (root.children.length){
+    const c = root.children.pop();
+    c.geometry?.dispose();
+    if (Array.isArray(c.material)) c.material.forEach(m => m.dispose());
+    else c.material?.dispose();
+  }
+}
+
+function buildPentAt(cx, cz){
+  const corners = [];
+  for (let i = 0; i < 5; i++){
+    const a = -Math.PI/2 + i * 2*Math.PI/5;
+    corners.push(new THREE.Vector3(cx + PENT_R*Math.cos(a), 0, cz + PENT_R*Math.sin(a)));
+  }
+  const positions = [cx, 0, cz];
+  for (const v of corners) positions.push(v.x, v.y, v.z);
+  const indices = [];
+  for (let i = 0; i < 5; i++) indices.push(0, 1+i, 1+(i+1)%5);
+  const gFill = new THREE.BufferGeometry();
+  gFill.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  gFill.setIndex(indices);
+  const meshFill = new THREE.Mesh(gFill, new THREE.MeshBasicMaterial({
+    color: 0xff6b35, transparent: true, opacity: 0.16, side: THREE.DoubleSide, depthWrite: false,
+  }));
+  const segs = [];
+  for (let i = 0; i < 5; i++){
+    const a = corners[i], b = corners[(i+1)%5];
+    segs.push(a.x, a.y, a.z, b.x, b.y, b.z);
+  }
+  const gEdges = new THREE.BufferGeometry();
+  gEdges.setAttribute('position', new THREE.Float32BufferAttribute(segs, 3));
+  const meshEdges = new THREE.LineSegments(gEdges, new THREE.LineBasicMaterial({
+    color: 0xff6b35, transparent: true, opacity: 0.95,
+  }));
+  const gDot = new THREE.BufferGeometry();
+  gDot.setAttribute('position', new THREE.Float32BufferAttribute([cx, 0, cz], 3));
+  const dot = new THREE.Points(gDot, new THREE.PointsMaterial({
+    color: 0xff6b35, size: 0.13, sizeAttenuation: true, transparent: true, opacity: 0.95,
+  }));
+  root.add(meshFill, meshEdges, dot);
+  return { kind: 'pent', center: new THREE.Vector3(cx, 0, cz), corners };
+}
+
+// Lay out a regular hex flat in an arbitrary plane defined by (a, b, normal),
+// on the side of edge (a,b) opposite `awayFromInPlane`.
+function makeFlatHexOnPlane(a, b, awayFromInPlane, planeNormal){
+  const m = a.clone().add(b).multiplyScalar(0.5);
+  const u = b.clone().sub(a).normalize();
+  const L = a.distanceTo(b);
+  let v = new THREE.Vector3().crossVectors(planeNormal, u).normalize();
+  if (v.dot(m.clone().sub(awayFromInPlane)) < 0) v.negate();
+  const c = m.clone().addScaledVector(v, HEX_APO);
+  const corners = [a.clone(), b.clone()];
+  for (let i = 2; i < 6; i++){
+    const ang = 4*Math.PI/3 + i * Math.PI/3;
+    corners.push(c.clone()
+      .addScaledVector(u, L * Math.cos(ang))
+      .addScaledVector(v, L * Math.sin(ang)));
+  }
+  return { center: c, corners, u, v };
+}
+
+function buildHexMeshes(hex){
+  const positions = [hex.center0.x, hex.center0.y, hex.center0.z];
+  for (const v of hex.corners0) positions.push(v.x, v.y, v.z);
+  const indices = [];
+  for (let i = 0; i < 6; i++) indices.push(0, 1+i, 1+(i+1)%6);
+  const gFill = new THREE.BufferGeometry();
+  gFill.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  gFill.setIndex(indices);
+  const meshFill = new THREE.Mesh(gFill, new THREE.MeshBasicMaterial({
+    color: 0x00d4ff, transparent: true, opacity: 0.06, side: THREE.DoubleSide, depthWrite: false,
+  }));
+  const segs = [];
+  for (let i = 0; i < 6; i++){
+    const A = hex.corners0[i], B = hex.corners0[(i+1)%6];
+    segs.push(A.x, A.y, A.z, B.x, B.y, B.z);
+  }
+  const gEdges = new THREE.BufferGeometry();
+  gEdges.setAttribute('position', new THREE.Float32BufferAttribute(segs, 3));
+  const meshEdges = new THREE.LineSegments(gEdges, new THREE.LineBasicMaterial({
+    color: 0x00d4ff, transparent: true, opacity: 0.65,
+  }));
+  root.add(meshFill, meshEdges);
+  hex.gFill = gFill;
+  hex.gEdges = gEdges;
+  hex.meshFill = meshFill;
+  hex.meshEdges = meshEdges;
+}
+
+// Rotate hex around its (a→b) anchor axis. Anchors stay put; corners 2-5 and
+// center rotate. Stashes hex.current for the next hex to attach to.
+function applyTiltToHex(hex, tiltRad){
+  const a = hex.anchorA, b = hex.anchorB;
+  const axis = b.clone().sub(a).normalize();
+  const q = new THREE.Quaternion().setFromAxisAngle(axis, tiltRad);
+  const c0 = hex.corners0;
+  const rot = [c0[0].clone(), c0[1].clone()];
+  for (let i = 2; i < 6; i++){
+    rot.push(c0[i].clone().sub(a).applyQuaternion(q).add(a));
+  }
+  const cR = hex.center0.clone().sub(a).applyQuaternion(q).add(a);
+
+  const fp = hex.gFill.attributes.position;
+  fp.setXYZ(0, cR.x, cR.y, cR.z);
+  for (let i = 0; i < 6; i++) fp.setXYZ(1+i, rot[i].x, rot[i].y, rot[i].z);
+  fp.needsUpdate = true;
+
+  const ep = hex.gEdges.attributes.position;
+  let k = 0;
+  for (let i = 0; i < 6; i++){
+    const A = rot[i], B = rot[(i+1)%6];
+    ep.setXYZ(k++, A.x, A.y, A.z);
+    ep.setXYZ(k++, B.x, B.y, B.z);
+  }
+  ep.needsUpdate = true;
+
+  hex.current = { corners: rot, center: cR };
+}
+
+// ─── §H click → seed pent or place next hex ───────────────────────────────
+const ray = new THREE.Raycaster();
+const ndc = new THREE.Vector2();
+const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+
+function handleClick(e){
+  if (state.animating) return;          // ignore clicks mid-fold
+
+  if (!state.pent){
+    ndc.x = (e.clientX / W()) * 2 - 1;
+    ndc.y = -(e.clientY / H()) * 2 + 1;
+    ray.setFromCamera(ndc, camera);
+    const hit = new THREE.Vector3();
+    if (ray.ray.intersectPlane(groundPlane, hit)) seedPent(hit.x, hit.z);
+    return;
+  }
+  if (state.freeEdges.length === 0) return;
+  placeNextHex();
+}
+
+function seedPent(x, z){
+  state.pent = buildPentAt(x, z);
+  for (let i = 0; i < 5; i++){
+    state.freeEdges.push({ owner: state.pent, edgeIdx: i, type: 'pent-hex' });
+  }
+  precomputeFalloff();
+  orbit.tgt.set(x, 0, z);
+  updateGuide();
+  refreshNextSlot();
+}
+
+function placeNextHex(){
+  const slot = state.freeEdges.shift();
+  const owner = slot.owner;
+  const isPent = (owner === state.pent);
+
+  let a, b, ownerCenter, ownerNormal;
+  if (isPent){
+    a = owner.corners[slot.edgeIdx];
+    b = owner.corners[(slot.edgeIdx + 1) % 5];
+    ownerCenter = owner.center;
+    ownerNormal = new THREE.Vector3(0, 1, 0);
+  } else {
+    const cc = owner.current.corners;
+    a = cc[slot.edgeIdx];
+    b = cc[(slot.edgeIdx + 1) % 6];
+    ownerCenter = owner.current.center;
+    const e1 = cc[1].clone().sub(cc[0]);
+    const e2 = cc[5].clone().sub(cc[0]);
+    ownerNormal = new THREE.Vector3().crossVectors(e1, e2).normalize();
+    if (ownerNormal.y < 0) ownerNormal.negate();
+  }
+
+  const hd = makeFlatHexOnPlane(a.clone(), b.clone(), ownerCenter, ownerNormal);
+  const test = new THREE.Vector3().crossVectors(hd.u, hd.v);
+  const foldSign = test.dot(ownerNormal) > 0 ? 1 : -1;
+  const foldTarget = slot.type === 'pent-hex' ? TILT_PENT_HEX : TILT_HEX_HEX;
+
+  const hex = {
+    kind: 'hex',
+    type: slot.type,
+    anchorA: a.clone(),
+    anchorB: b.clone(),
+    corners0: hd.corners.map(v => v.clone()),
+    center0: hd.center.clone(),
+    foldSign,
+    foldTarget,
+    foldCurrent: 0,
+    animStart: performance.now(),
+  };
+  buildHexMeshes(hex);
+  applyTiltToHex(hex, 0);  // initialize at flat
+
+  state.hexes.push(hex);
+  state.animating = hex;
+
+  // queue this hex's 5 free edges (all are hex-hex going forward)
+  for (let i = 1; i < 6; i++){
+    state.freeEdges.push({ owner: hex, edgeIdx: i, type: 'hex-hex' });
+  }
+
+  refreshNextSlot();
+  updateGuide();
+}
+
+function refreshNextSlot(){
+  state.nextSlot = state.freeEdges[0] ?? null;
+}
+
+function reset(){
+  disposeAll();
+  state.pent = null;
+  state.hexes.length = 0;
+  state.freeEdges.length = 0;
+  state.animating = null;
+  state.nextSlot = null;
+  subFalloff = null;
+  lastBend = -1;
+  subGeom.attributes.position.array.set(subBase);
+  subGeom.attributes.position.needsUpdate = true;
+  orbit.az = home.az; orbit.el = home.el; orbit.r = home.r;
+  orbit.tgt.set(0, 0, 0);
+  updateGuide();
+}
+
+// ─── §I guide text + HUD ──────────────────────────────────────────────────
+const midEl  = document.getElementById('mid');
+const midBig = document.getElementById('midbig');
+const midSub = document.getElementById('midsub');
+const npEl = document.getElementById('np');
+const nhEl = document.getElementById('nh');
+const neEl = document.getElementById('ne');
+const ntEl = document.getElementById('nt');
+const ebEl = document.getElementById('eb');
+const msEl = document.getElementById('ms');
+
+function updateGuide(){
+  if (!state.pent){
+    midEl.classList.remove('hidden');
+    midBig.textContent = 'click anywhere';
+    midSub.textContent = 'to seed the pentagon on the substrate';
+  } else if (state.hexes.length === 0){
+    midEl.classList.remove('hidden');
+    midBig.textContent = 'click again';
+    midSub.textContent = 'each click → one hex · auto-picks dihedral · animates fold';
+  } else if (state.freeEdges.length === 0){
+    midEl.classList.remove('hidden');
+    midBig.textContent = 'no free edges';
+    midSub.textContent = 'press R to reset and start over';
+  } else {
+    midEl.classList.add('hidden');
+  }
+}
+
+// ─── §J loop ──────────────────────────────────────────────────────────────
+function frame(){
+  const t0 = performance.now();
+
+  // animate the currently-folding hex
+  if (state.animating){
+    const hex = state.animating;
+    const e = t0 - hex.animStart;
+    if (e >= FOLD_DURATION_MS){
+      hex.foldCurrent = hex.foldTarget;
+      applyTiltToHex(hex, hex.foldCurrent * hex.foldSign);
+      state.animating = null;
+      updateGuide();
+    } else {
+      const f = e / FOLD_DURATION_MS;
+      const eased = 0.5 - 0.5 * Math.cos(f * Math.PI);
+      hex.foldCurrent = eased * hex.foldTarget;
+      applyTiltToHex(hex, hex.foldCurrent * hex.foldSign);
+    }
+    updateSubstrate();
+  }
+
+  updateCam();
+  renderer.render(scene, camera);
+  const ms = performance.now() - t0;
+
+  // HUD
+  npEl.textContent = state.pent ? 1 : 0;
+  nhEl.textContent = state.hexes.length;
+  neEl.textContent = state.freeEdges.length;
+  if (state.nextSlot){
+    const deg = (state.nextSlot.type === 'pent-hex' ? DIHEDRAL_PENT_HEX : DIHEDRAL_HEX_HEX) * 180 / Math.PI;
+    ntEl.innerHTML = `<span class="${state.nextSlot.type === 'pent-hex' ? 'pent-tone' : 'hex-tone'}">${state.nextSlot.type}</span> · ${deg.toFixed(2)}°`;
+  } else {
+    ntEl.textContent = '—';
+  }
+  let E = 0;
+  for (const h of state.hexes) E += h.foldCurrent * h.foldCurrent;
+  ebEl.textContent = E.toFixed(3);
+  msEl.textContent = ms.toFixed(1);
+
+  requestAnimationFrame(frame);
+}
+
+updateCam();
+updateGuide();
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

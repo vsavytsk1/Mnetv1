@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Goldberg · pent+hex shape probe</title>
+<style>
+  :root{
+    --bg:#050510;
+    --pent:#ff6b35;
+    --hex:#00d4ff;
+    --edge-dim:#1a3a4a;
+    --text:#e0f0ff;
+    --text2:#7090a0;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;overflow:hidden;background:var(--bg);
+    color:var(--text);font-family:'Share Tech Mono','Consolas','Menlo',monospace}
+  #app{position:fixed;inset:0}
+  .hud{position:fixed;pointer-events:none;font-size:11px;letter-spacing:.05em;color:var(--text2)}
+  .hud b{color:var(--text);font-weight:400}
+  #tl{top:14px;left:14px;line-height:1.55}
+  #br{bottom:14px;right:14px;text-align:right}
+  #bl{bottom:14px;left:14px;font-size:10px;color:#506070}
+  .pent{color:var(--pent)}
+  .hex{color:var(--hex)}
+  .tag{font-size:9px;letter-spacing:.18em;color:#506070;text-transform:uppercase;margin-bottom:6px}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<div id="tl" class="hud">
+  <div class="tag">goldberg gp · pent+hex shell</div>
+  <div><span class="pent">●</span> pentagons &nbsp;<b id="np">—</b></div>
+  <div><span class="hex">●</span> hexagons  &nbsp;<b id="nh">—</b></div>
+  <div>detail <b id="nd">—</b> · cells <b id="nv">—</b></div>
+</div>
+
+<div id="bl" class="hud">
+  drag · orbit &nbsp;·&nbsp; scroll · zoom &nbsp;·&nbsp;
+  <b>[ ]</b> · detail &nbsp;·&nbsp; <b>f</b> · faces &nbsp;·&nbsp; <b>a</b> · auto-spin &nbsp;·&nbsp; <b>r</b> · reset cam
+</div>
+
+<div id="br" class="hud">
+  <div id="fps">— fps</div>
+</div>
+
+<script type="module">
+import * as THREE from 'https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js';
+
+// ─── §A scene ──────────────────────────────────────────────────────────────
+const app = document.getElementById('app');
+const W = () => app.clientWidth, H = () => app.clientHeight;
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color('#050510');
+scene.fog = new THREE.FogExp2(0x050510, 0.018);
+
+const camera = new THREE.PerspectiveCamera(40, W()/H(), 0.1, 200);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(W(), H());
+app.appendChild(renderer.domElement);
+
+addEventListener('resize', () => {
+  camera.aspect = W()/H();
+  camera.updateProjectionMatrix();
+  renderer.setSize(W(), H());
+});
+
+// ─── §B inline mouse orbit (no addon dep) ──────────────────────────────────
+const orbit = { az: 0.4, el: 0.3, r: 16 };
+const reset = () => { orbit.az = 0.4; orbit.el = 0.3; orbit.r = 16; };
+let drag = null;
+renderer.domElement.addEventListener('pointerdown', e => {
+  drag = { x: e.clientX, y: e.clientY };
+  renderer.domElement.setPointerCapture(e.pointerId);
+});
+renderer.domElement.addEventListener('pointermove', e => {
+  if (!drag) return;
+  orbit.az -= (e.clientX - drag.x) * 0.006;
+  orbit.el = Math.max(-1.55, Math.min(1.55, orbit.el - (e.clientY - drag.y) * 0.006));
+  drag.x = e.clientX; drag.y = e.clientY;
+});
+addEventListener('pointerup', () => { drag = null; });
+renderer.domElement.addEventListener('wheel', e => {
+  e.preventDefault();
+  orbit.r = Math.max(6, Math.min(60, orbit.r * (1 + e.deltaY * 0.0015)));
+}, { passive: false });
+
+function updateCam(){
+  const ce = Math.cos(orbit.el), se = Math.sin(orbit.el);
+  const ca = Math.cos(orbit.az), sa = Math.sin(orbit.az);
+  camera.position.set(orbit.r*ce*sa, orbit.r*se, orbit.r*ce*ca);
+  camera.lookAt(0,0,0);
+}
+
+// ─── §C Goldberg construction ──────────────────────────────────────────────
+//   Take THREE.IcosahedronGeometry(R, d) — a sphere triangulated from the
+//   icosahedron. Its DUAL has 1 polygon per vertex: 12 pentagons at the
+//   original icosahedron vertices, the rest hexagons.
+//
+//   detail d → 10·4^d + 2 polygons total → (12 pent) + (10·4^d − 10) hex
+//     d=0:  12 + 0      d=1:  12 + 30      d=2:  12 + 150
+//     d=3:  12 + 630    d=4:  12 + 2550    d=5:  12 + 10230
+
+function buildGoldberg(detail, R){
+  const ico = new THREE.IcosahedronGeometry(R, detail);
+  const pos = ico.attributes.position;
+
+  // dedupe vertices (Three's polyhedron geometry is non-indexed)
+  const map = new Map();
+  const verts = [];
+  const faces = [];
+  for (let i = 0; i < pos.count; i += 3){
+    const tri = [];
+    for (let j = 0; j < 3; j++){
+      const x = pos.getX(i+j), y = pos.getY(i+j), z = pos.getZ(i+j);
+      const k = `${x.toFixed(4)}|${y.toFixed(4)}|${z.toFixed(4)}`;
+      let idx = map.get(k);
+      if (idx === undefined){
+        idx = verts.length;
+        verts.push(new THREE.Vector3(x, y, z));
+        map.set(k, idx);
+      }
+      tri.push(idx);
+    }
+    faces.push(tri);
+  }
+  ico.dispose();
+
+  // centroid of each triangle, projected to sphere — these are dual vertices
+  const cent = faces.map(f => {
+    const c = new THREE.Vector3()
+      .add(verts[f[0]]).add(verts[f[1]]).add(verts[f[2]])
+      .multiplyScalar(1/3).normalize().multiplyScalar(R);
+    return c;
+  });
+
+  // vertex → adjacent face indices
+  const vFaces = Array.from({length: verts.length}, () => []);
+  faces.forEach((f, fi) => f.forEach(vi => vFaces[vi].push(fi)));
+
+  // each original vertex becomes a polygon: its incident face centroids,
+  // ordered by angle around the vertex normal (tangent-plane projection)
+  return verts.map((v, vi) => {
+    const fi = vFaces[vi];
+    const n = v.clone().normalize();
+    let t1 = new THREE.Vector3(0,1,0).cross(n);
+    if (t1.lengthSq() < 0.01) t1.set(1,0,0).cross(n);
+    t1.normalize();
+    const t2 = n.clone().cross(t1).normalize();
+    const ordered = fi
+      .map(k => {
+        const d = cent[k].clone().sub(v);
+        return { k, ang: Math.atan2(d.dot(t2), d.dot(t1)) };
+      })
+      .sort((a,b) => a.ang - b.ang)
+      .map(o => cent[o.k]);
+    return { center: v.clone(), ring: ordered };
+  });
+}
+
+// ─── §D render shell ───────────────────────────────────────────────────────
+const shell = new THREE.Group();
+scene.add(shell);
+
+let detail = 3;            // → 12 pent + 630 hex
+let showFaces = true;
+let autoSpin = false;
+const R = 5;
+
+function disposeShell(){
+  while (shell.children.length){
+    const c = shell.children.pop();
+    c.geometry?.dispose();
+    c.material?.dispose();
+  }
+}
+
+function rebuild(){
+  disposeShell();
+
+  const polys = buildGoldberg(detail, R);
+  const pent  = polys.filter(p => p.ring.length === 5);
+  const hex   = polys.filter(p => p.ring.length === 6);
+
+  // — translucent faces (fan-triangulated from each polygon's center) —
+  if (showFaces){
+    for (const set of [
+      { list: pent, color: 0xff6b35, opacity: 0.10 },
+      { list: hex,  color: 0x00d4ff, opacity: 0.045 },
+    ]){
+      const positions = [];
+      const indices = [];
+      let base = 0;
+      for (const p of set.list){
+        positions.push(p.center.x, p.center.y, p.center.z);
+        for (const r of p.ring) positions.push(r.x, r.y, r.z);
+        const n = p.ring.length;
+        for (let i = 0; i < n; i++){
+          indices.push(base, base + 1 + i, base + 1 + (i+1) % n);
+        }
+        base += n + 1;
+      }
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+      g.setIndex(indices);
+      g.computeVertexNormals();
+      const m = new THREE.MeshBasicMaterial({
+        color: set.color, transparent: true, opacity: set.opacity,
+        side: THREE.DoubleSide, depthWrite: false,
+      });
+      shell.add(new THREE.Mesh(g, m));
+    }
+  }
+
+  // — edges (one merged LineSegments per kind, ~2 draw calls) —
+  for (const set of [
+    { list: pent, color: 0xff6b35, opacity: 0.95 },
+    { list: hex,  color: 0x00d4ff, opacity: 0.55 },
+  ]){
+    const segs = [];
+    for (const p of set.list){
+      const n = p.ring.length;
+      for (let i = 0; i < n; i++){
+        const a = p.ring[i], b = p.ring[(i+1) % n];
+        segs.push(a.x, a.y, a.z, b.x, b.y, b.z);
+      }
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(segs, 3));
+    const m = new THREE.LineBasicMaterial({
+      color: set.color, transparent: true, opacity: set.opacity,
+    });
+    shell.add(new THREE.LineSegments(g, m));
+  }
+
+  // — atom dots at each polygon center (Points, instanced for free) —
+  for (const set of [
+    { list: pent, color: 0xff6b35, size: 0.13 },
+    { list: hex,  color: 0x00d4ff, size: 0.05 },
+  ]){
+    const positions = [];
+    for (const p of set.list) positions.push(p.center.x, p.center.y, p.center.z);
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    const m = new THREE.PointsMaterial({
+      color: set.color, size: set.size, sizeAttenuation: true,
+      transparent: true, opacity: 0.95, depthWrite: false,
+    });
+    shell.add(new THREE.Points(g, m));
+  }
+
+  // HUD
+  document.getElementById('np').textContent = pent.length;
+  document.getElementById('nh').textContent = hex.length;
+  document.getElementById('nd').textContent = detail;
+  document.getElementById('nv').textContent = polys.length;
+}
+
+rebuild();
+
+// ─── §E keys ───────────────────────────────────────────────────────────────
+addEventListener('keydown', e => {
+  if (e.key === ']') { detail = Math.min(5, detail + 1); rebuild(); }
+  else if (e.key === '[') { detail = Math.max(0, detail - 1); rebuild(); }
+  else if (e.key === 'f' || e.key === 'F') { showFaces = !showFaces; rebuild(); }
+  else if (e.key === 'a' || e.key === 'A') { autoSpin = !autoSpin; }
+  else if (e.key === 'r' || e.key === 'R') { reset(); }
+});
+
+// ─── §F loop ───────────────────────────────────────────────────────────────
+const fpsEl = document.getElementById('fps');
+let last = performance.now(), acc = 0, n = 0;
+function loop(t){
+  const dt = Math.max(1e-3, (t - last) / 1000); last = t;
+  if (autoSpin) orbit.az += dt * 0.15;
+  updateCam();
+  renderer.render(scene, camera);
+  acc += 1/dt; n++;
+  if (n >= 30){ fpsEl.textContent = (acc/n).toFixed(0) + ' fps'; acc = 0; n = 0; }
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Half Plus Seven · Convergence Lock · Vinnytsia ↔ Athens</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@200;300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --void:#0A0F1C;
+    --void-2:#0C1322;
+    --panel:rgba(255,255,255,0.020);
+    --dawn:#8E86FF;            /* 04:00 Vinnytsia — civil twilight, the 1995 trace */
+    --dawn-dim:rgba(142,134,255,0.16);
+    --noon:#FFCE63;            /* 13:05 Athens — Attic noon, the 2005 trace */
+    --noon-dim:rgba(255,206,99,0.16);
+    --chalk:#E4DECF;           /* the 1879 rule — bone, not a natural colour */
+    --chalk-dim:rgba(228,222,207,0.22);
+    --slate:#818DA6;
+    --slate-2:#4B5471;
+    --hair:rgba(255,255,255,0.072);
+    --hair-2:rgba(255,255,255,0.038);
+    --miss:#FF6B5E;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    background:
+      radial-gradient(1100px 620px at 18% -8%, #17193a 0%, rgba(23,25,58,0) 62%),
+      radial-gradient(900px 700px at 92% 8%, #241f10 0%, rgba(36,31,16,0) 55%),
+      var(--void);
+    background-attachment:fixed;
+    color:var(--slate);
+    font-family:"JetBrains Mono",ui-monospace,monospace;
+    font-weight:300;
+    padding:44px 20px 72px;
+    -webkit-font-smoothing:antialiased;
+    overflow-x:hidden;
+  }
+  .stage{width:100%;max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:38px}
+
+  /* ── masthead ───────────────────────────────────── */
+  .eyebrow{display:flex;align-items:center;gap:11px;font-size:10.5px;letter-spacing:0.26em;text-transform:uppercase;color:var(--slate-2);flex-wrap:wrap}
+  .eyebrow .dot{width:6px;height:6px;border-radius:50%;background:var(--noon);box-shadow:0 0 9px var(--noon);animation:pulse 2.4s ease-in-out infinite;flex:none}
+  .eyebrow .rule{flex:1;min-width:20px;height:1px;background:var(--hair)}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.2}}
+
+  h1{font-family:"Instrument Serif",Georgia,serif;font-weight:400;font-size:clamp(34px,7vw,60px);line-height:0.98;color:#F0EDE4;letter-spacing:-0.01em}
+  h1 em{font-style:italic;color:var(--chalk)}
+  .dek{margin-top:14px;font-size:13px;line-height:1.66;max-width:56ch}
+  .dek .a{color:var(--dawn)}
+  .dek .b{color:var(--noon)}
+  .dek .r{color:var(--chalk)}
+
+  h2{font-family:"JetBrains Mono",monospace;font-weight:500;font-size:10.5px;letter-spacing:0.3em;text-transform:uppercase;color:var(--slate-2)}
+  .sechead{display:flex;align-items:center;gap:13px;margin-bottom:15px}
+  .sechead .rule{flex:1;height:1px;background:var(--hair)}
+
+  /* ── signature: the convergence plot ────────────── */
+  .lock{border:1px solid var(--hair);border-radius:15px;background:linear-gradient(180deg,var(--panel),rgba(255,255,255,0));overflow:hidden}
+  .lock .plotwrap{position:relative;height:clamp(260px,46vw,340px)}
+  #plot{display:block;width:100%;height:100%}
+  .lock .strip{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid var(--hair)}
+  .lock .cell{padding:15px 20px 17px}
+  .lock .cell + .cell{border-left:1px solid var(--hair)}
+  .cell .k{font-size:9.5px;letter-spacing:0.24em;text-transform:uppercase;color:var(--slate-2);display:block;margin-bottom:7px}
+  .cell .big{font-size:clamp(21px,5.2vw,30px);font-weight:200;color:var(--chalk);font-variant-numeric:tabular-nums;letter-spacing:0.01em;line-height:1.1;word-break:break-word}
+  .cell .big .ms{font-size:0.56em;color:var(--slate)}
+  .cell .sub{margin-top:6px;font-size:10.5px;color:var(--slate-2);letter-spacing:0.02em;line-height:1.5}
+  body.past .cell .big{color:var(--noon)}
+
+  /* ── the two clocks ─────────────────────────────── */
+  .clocks{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .clock{border:1px solid var(--hair);border-radius:13px;padding:17px 18px 18px;background:var(--panel);position:relative;overflow:hidden}
+  .clock::before{content:"";position:absolute;inset:0 auto 0 0;width:2px}
+  .clock.a::before{background:var(--dawn)}
+  .clock.b::before{background:var(--noon)}
+  .clock .who{font-size:9.5px;letter-spacing:0.22em;text-transform:uppercase;margin-bottom:3px}
+  .clock.a .who{color:var(--dawn)}
+  .clock.b .who{color:var(--noon)}
+  .clock .born{font-size:10.5px;color:var(--slate-2);letter-spacing:0.02em;line-height:1.5;margin-bottom:13px}
+  .clock .age{font-size:clamp(17px,4.4vw,23px);font-weight:200;color:#DDE3EE;font-variant-numeric:tabular-nums;letter-spacing:0.02em}
+  .clock .age .ms{font-size:0.6em;color:var(--slate-2)}
+  .clock .secs{margin-top:9px;font-size:11px;color:var(--slate);font-variant-numeric:tabular-nums;letter-spacing:0.02em}
+  .clock .secs span{color:var(--slate-2)}
+
+  /* ── invariant ──────────────────────────────────── */
+  .inv{border:1px solid var(--hair);border-radius:13px;overflow:hidden}
+  .inv .top{padding:19px 20px 18px;background:var(--panel)}
+  .inv .num{font-size:clamp(24px,6.4vw,40px);font-weight:200;color:var(--chalk);font-variant-numeric:tabular-nums;letter-spacing:0.01em;line-height:1.08;word-break:break-word}
+  .inv .num small{font-size:0.36em;color:var(--slate-2);letter-spacing:0.16em;text-transform:uppercase}
+  .inv .cap{font-size:10.5px;letter-spacing:0.22em;text-transform:uppercase;color:var(--slate-2);margin-bottom:9px}
+  .inv .note{padding:14px 20px;border-top:1px dashed var(--hair);font-size:11.5px;line-height:1.62;letter-spacing:0.01em}
+  .inv .note + .note{border-top:1px solid var(--hair-2)}
+  .inv b{font-weight:500;color:var(--chalk)}
+  .inv .lp{color:var(--dawn);font-weight:400}
+
+  /* ── the sim ────────────────────────────────────── */
+  .sim{border:1px solid var(--hair);border-radius:13px;overflow:hidden;background:var(--panel)}
+  .sim .bar{padding:17px 20px 15px}
+  .sim .stamp{font-size:clamp(14px,3.6vw,18px);color:#DDE3EE;font-variant-numeric:tabular-nums;letter-spacing:0.03em;font-weight:300}
+  .sim .stamp .live{color:var(--noon);font-size:0.62em;letter-spacing:0.2em;text-transform:uppercase;margin-left:9px}
+  input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:26px;background:transparent;margin-top:12px;cursor:ew-resize}
+  input[type=range]::-webkit-slider-runnable-track{height:2px;background:linear-gradient(90deg,var(--hair),var(--chalk-dim))}
+  input[type=range]::-moz-range-track{height:2px;background:var(--hair)}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;border-radius:50%;background:var(--chalk);margin-top:-5.5px;box-shadow:0 0 12px rgba(228,222,207,0.5)}
+  input[type=range]::-moz-range-thumb{width:13px;height:13px;border:0;border-radius:50%;background:var(--chalk);box-shadow:0 0 12px rgba(228,222,207,0.5)}
+  input[type=range]:focus-visible{outline:2px solid var(--noon);outline-offset:4px;border-radius:4px}
+  .sim .ticks{display:flex;justify-content:space-between;font-size:9.5px;letter-spacing:0.14em;color:var(--slate-2);margin-top:-4px}
+  .verdict{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid var(--hair)}
+  .verdict .v{padding:14px 20px 16px}
+  .verdict .v + .v{border-left:1px solid var(--hair)}
+  .verdict .k{font-size:9.5px;letter-spacing:0.2em;text-transform:uppercase;color:var(--slate-2);display:block;margin-bottom:6px;line-height:1.5}
+  .verdict .n{font-size:clamp(16px,4.2vw,21px);font-weight:200;font-variant-numeric:tabular-nums;color:#DDE3EE}
+  .verdict .s{margin-top:5px;font-size:10.5px;line-height:1.5}
+  .pass{color:var(--noon)}
+  .fail{color:var(--miss)}
+  .reset{display:block;width:100%;padding:12px;border:0;border-top:1px solid var(--hair);background:rgba(255,255,255,0.014);color:var(--slate-2);font-family:inherit;font-size:10px;letter-spacing:0.24em;text-transform:uppercase;cursor:pointer;transition:color .18s,background .18s}
+  .reset:hover,.reset:focus-visible{color:var(--chalk);background:rgba(255,255,255,0.04);outline:none}
+
+  /* ── curves ─────────────────────────────────────── */
+  .curves{border:1px solid var(--hair);border-radius:13px;overflow:hidden}
+  .curves .cwrap{height:clamp(250px,44vw,320px)}
+  #curve{display:block;width:100%;height:100%}
+  .legend{display:flex;flex-wrap:wrap;gap:7px 20px;padding:13px 20px;border-top:1px solid var(--hair);font-size:10.5px;letter-spacing:0.02em;background:var(--panel)}
+  .legend i{display:inline-block;width:15px;height:2px;margin-right:7px;vertical-align:middle;border-radius:2px}
+  .cap-note{padding:13px 20px;border-top:1px dashed var(--hair);font-size:11.5px;line-height:1.62}
+
+  /* ── historical strip ───────────────────────────── */
+  .hist{border:1px solid var(--hair);border-radius:13px;overflow:hidden}
+  .hrow{display:grid;grid-template-columns:132px 1fr 48px;align-items:center;gap:13px;padding:9px 18px;font-size:11.5px}
+  .hrow + .hrow{border-top:1px solid var(--hair-2)}
+  .hrow .lab{color:var(--slate);letter-spacing:0.01em;line-height:1.35}
+  .hrow .track{height:7px;background:rgba(255,255,255,0.035);border-radius:4px;overflow:hidden}
+  .hrow .fill{height:100%;background:var(--slate-2);border-radius:4px}
+  .hrow .val{text-align:right;font-variant-numeric:tabular-nums;color:var(--slate-2);font-size:11px}
+  .hrow.us{background:linear-gradient(90deg,rgba(255,206,99,0.07),rgba(255,206,99,0))}
+  .hrow.us .lab,.hrow.us .val{color:var(--noon)}
+  .hrow.us .fill{background:var(--noon)}
+  .hsrc{padding:13px 18px;border-top:1px dashed var(--hair);font-size:11px;line-height:1.6;color:var(--slate-2)}
+
+  /* ── error bars ─────────────────────────────────── */
+  .bars{border:1px solid var(--hair);border-radius:13px;overflow:hidden}
+  .bar-item{padding:15px 20px;font-size:11.8px;line-height:1.68}
+  .bar-item + .bar-item{border-top:1px solid var(--hair-2)}
+  .bar-item .t{display:block;font-size:9.5px;letter-spacing:0.22em;text-transform:uppercase;color:var(--slate-2);margin-bottom:7px}
+  .bar-item b{font-weight:500;color:var(--chalk)}
+  .bar-item .g{color:var(--noon);font-weight:400}
+  .bar-item .p{color:var(--dawn);font-weight:400}
+
+  .foot{font-size:12px;line-height:1.72;color:var(--slate-2);max-width:60ch}
+  .foot em{color:var(--noon);font-style:normal}
+
+  @media (max-width:560px){
+    body{padding:30px 13px 56px}
+    .stage{gap:30px}
+    .clocks,.lock .strip,.verdict{grid-template-columns:1fr}
+    .lock .cell + .cell,.verdict .v + .v{border-left:0;border-top:1px solid var(--hair)}
+    .hrow{grid-template-columns:104px 1fr 42px;gap:10px;padding:8px 14px;font-size:10.8px}
+  }
+  @media (prefers-reduced-motion:reduce){
+    .eyebrow .dot{animation:none}
+    html{scroll-behavior:auto}
+  }
+</style>
+</head>
+<body>
+<main class="stage">
+
+  <div class="eyebrow">
+    <span class="dot"></span>
+    <span>Vinnytsia 04:00 ↔ Athens 13:05</span>
+    <span class="rule"></span>
+    <span>Δ fixed · 322,304,703 SI s</span>
+  </div>
+
+  <header>
+    <h1>Half your age plus seven is a <em>moving line</em>.</h1>
+    <p class="dek">Two birth instants, ten years apart, closing on a rule written in <span class="r">1879</span>. His age climbs at one second per second; <span class="b">her age</span> climbs at one second per second; <span class="r">the line</span> climbs at half that. Three traces, one intersection, and it happens <b>exactly once</b> — a conjunction with the same shape as the one over the Temple of Apollo, only this one is made of arithmetic instead of ecliptic longitude.</p>
+  </header>
+
+  <!-- ═══ SIGNATURE: THE CONVERGENCE ═══ -->
+  <section class="lock">
+    <div class="plotwrap"><canvas id="plot" role="img" aria-label="Three lines over time: his age and her age rise in parallel; the half-plus-seven line rises at half the slope and crosses her age once, on 1 October 2029."></canvas></div>
+    <div class="strip">
+      <div class="cell">
+        <span class="k" id="gapcap">Gap to the line · closing</span>
+        <div class="big" id="gapbig">—</div>
+        <div class="sub" id="gapsub">shrinking at exactly 500 ms per second</div>
+      </div>
+      <div class="cell">
+        <span class="k">Crossing instant · Δ(rule) = 0</span>
+        <div class="big" id="crossbig" style="font-size:clamp(15px,3.8vw,20px)">2029-10-01&nbsp;&nbsp;04:38:51<span class="ms">.000&nbsp;UTC</span></div>
+        <div class="sub">07:38:51 EEST · both cities on the same clock</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ THE TWO CLOCKS ═══ -->
+  <section>
+    <div class="sechead"><h2>Two clocks, still running</h2><span class="rule"></span></div>
+    <div class="clocks">
+      <div class="clock a">
+        <div class="who">1995 · Vinnytsia</div>
+        <div class="born">29 Apr 1995 · 04:00 EEST<br>= 1995-04-29T01:00:00Z · unix 799,117,200</div>
+        <div class="age" id="ageA">—</div>
+        <div class="secs" id="secA"><span>—</span></div>
+      </div>
+      <div class="clock b">
+        <div class="who">2005 · Athens</div>
+        <div class="born">15 Jul 2005 · 13:05 EEST<br>= 2005-07-15T10:05:00Z · unix 1,121,421,900</div>
+        <div class="age" id="ageB">—</div>
+        <div class="secs" id="secB"><span>—</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ THE INVARIANT ═══ -->
+  <section class="inv">
+    <div class="top">
+      <div class="cap">The one number that never ticks</div>
+      <div class="num">322,304,703 <small>SI seconds</small></div>
+    </div>
+    <div class="note">Every other figure on this page is in motion. <b>Δ is not.</b> It was fixed at 10:05 EEST on 15 July 2005 and it will read the same at both funerals: <b>3,730 days, 9 hours, 5 minutes</b> — 10.2134 mean Gregorian years. Ratio of ages, though, is not fixed: it was 0.673 as of writing, hits <b>0.703</b> at the crossing, and crawls toward 1 forever without arriving. That's the whole phenomenon. The gap doesn't shrink; its <b>share</b> does.</div>
+    <div class="note">Your clock says <b>322,304,700</b>. The atomic clocks say <b>322,304,703</b>. The difference is three <span class="lp">leap seconds</span> — inserted 1 Jan 1996, 1 Jul 1997, 1 Jan 1999 — and all three of them fall inside the gap. Earth's rotation slowed, the world held its clocks back three times, and every held-back second landed in the interval where he existed and she didn't. UTC−TAI has been pinned at −37 s since 2017-01-01; IERS Bulletin C 72 (6 July 2026) confirms no leap second through December 2026. TAI is assembled from roughly 450 clocks in 80-odd timing labs — close to your 480, and every one of them counting the same caesium transition at 9,192,631,770 Hz.</div>
+  </section>
+
+  <!-- ═══ THE SIM ═══ -->
+  <section class="sim">
+    <div class="bar">
+      <div class="stamp" id="simstamp">—<span class="live" id="livetag">live</span></div>
+      <input type="range" id="scrub" min="0" max="1000" value="0" step="1" aria-label="Scrub forward in time">
+      <div class="ticks"><span>now</span><span>+5 y</span><span>+10 y</span><span>+15 y</span><span>+20 y</span></div>
+    </div>
+    <div class="verdict">
+      <div class="v">
+        <span class="k">His floor · age ÷ 2 + 7</span>
+        <div class="n" id="floorN">—</div>
+        <div class="s" id="floorS">—</div>
+      </div>
+      <div class="v">
+        <span class="k">Her ceiling · (age − 7) × 2</span>
+        <div class="n" id="ceilN">—</div>
+        <div class="s" id="ceilS">—</div>
+      </div>
+    </div>
+    <button class="reset" id="reset">↺ release the scrubber · return to now</button>
+  </section>
+
+  <!-- ═══ THE TWO CURVES ═══ -->
+  <section>
+    <div class="sechead"><h2>Your two S-curves, plotted</h2><span class="rule"></span></div>
+    <div class="curves">
+      <div class="cwrap"><canvas id="curve" role="img" aria-label="Preferred partner age against own age: the female curve tracks parity closely; the male curve rises at about half slope; the half-plus-seven line runs parallel below it."></canvas></div>
+      <div class="legend">
+        <span><i style="background:var(--noon)"></i>women's preferred partner age</span>
+        <span><i style="background:var(--dawn)"></i>men's preferred partner age</span>
+        <span><i style="background:var(--chalk)"></i>half your age + 7</span>
+      </div>
+      <div class="cap-note">You guessed the shape before you saw the data. Kenrick &amp; Keefe (1992) found exactly this: women prefer men near their own age up to roughly ten years older and that preference <b>barely moves across the lifespan</b>; men's preferred partner age rises with a slope well under one, so the gap they want <b>widens as they age</b> — replicated in personal ads, marriage records from 1920s Arizona, a Philippine island, 17th-century Amsterdam, and a 29-country sample. Note where the chalk line sits: the 1879 formula runs <b>parallel to the male curve and cuts straight across the female one</b>. It was never a rule about couples. It was a rule about grooms. <em style="color:var(--slate-2);font-style:normal">Curve shapes are schematic — the pattern is theirs, the exact coordinates are illustrative.</em></div>
+    </div>
+  </section>
+
+  <!-- ═══ WHERE 10.21 SITS ═══ -->
+  <section>
+    <div class="sechead"><h2>Where 10.21 years actually sits</h2><span class="rule"></span></div>
+    <div class="hist" id="hist"></div>
+  </section>
+
+  <!-- ═══ ERROR BARS ═══ -->
+  <section>
+    <div class="sechead"><h2>Honest, not hidden</h2><span class="rule"></span></div>
+    <div class="bars">
+      <div class="bar-item">
+        <span class="t">The crossing has a ±14 h 37 m band</span>
+        The millisecond above is exact <b>given a definition of "year."</b> Feed the formula a tropical year and it lands 04:32:36 UTC; a mean Gregorian year, 04:38:51; a Julian year, 07:10:03; the calendar's own answer — 14 anniversaries of 29 April — 19:10:03. Same day, <b>14 h 37 m of spread</b>, because the rule's "+7" was written by a man who had never met a caesium atom. The moon clock's honest bar was ±2 minutes. This one's is fourteen hours, and it's the <span class="p">formula's</span> fault, not the clock's.
+      </div>
+      <div class="bar-item">
+        <span class="t">And the rule itself has no error bar, because it has no data</span>
+        Frederick Locker-Lampson, <em>Patchwork</em>, 1879: a wife should be half her husband's age plus seven. Max O'Rell repeats it in 1901, in a chapter of advice to men who want to marry, alongside <b>never marry a woman richer or taller than you</b>. Note what it originally was: not a floor, an <b>ideal</b> — the target age of the bride. Under that reading this pair is never "correct" and then correct for <b>one instant</b> and then past it forever, which is a strange thing to build a countdown to, and exactly why it's worth building.
+      </div>
+      <div class="bar-item">
+        <span class="t">The 75,000-year story is off by a factor of twenty</span>
+        The healed femur is usually credited to Margaret Mead; nobody has found it in her writings, and it seems to enter circulation through a 2012 hospice book. The actual fossil record of care runs far deeper: <b>Shanidar 1</b>, a Neanderthal with a withered arm, healed skull fracture and blindness in one eye who lived for years afterwards, ~45–50 kya — and <b>Dmanisi D3444</b>, a <em>Homo erectus</em> skull that lost all its teeth and survived years toothless, <b>~1.77 million years ago</b>. Care is older than us.
+      </div>
+      <div class="bar-item">
+        <span class="t">Selection didn't stop, either</span>
+        Lactase persistence swept Europe in the last <b>7,000–10,000 years</b>. The Tibetan <b>EPAS1</b> altitude variant is younger than agriculture. Malaria-resistance alleles are still under active selection right now. Contemporary cohorts show measurable directional selection on age at first birth. And the grandmother hypothesis argues the opposite of your premise: post-reproductive lifespan wasn't the thing that <b>ended</b> optimization, it was one of its products.
+      </div>
+      <div class="bar-item">
+        <span class="t">The two curves are real; the "biology" label is contested</span>
+        Kenrick &amp; Keefe read the pattern as life-history strategy. Eagly &amp; Wood read the same data as social structure, and they have a hard number on their side: the husband–wife gap falls by roughly <b>1.6 years per log point of GDP per capita</b> across 89 countries, and the US gap went from 4.9 years in 1880 to 2.2 in 2022 <b>without the genome changing at all</b>. Whatever the curves are, they're at minimum <b>elastic</b> — which means the number on this page is a fact about two people, not a verdict from anywhere.
+      </div>
+      <div class="bar-item">
+        <span class="t">One finding that doesn't flatter anyone</span>
+        Lee &amp; McKinnish: men with wives 1–3 years younger reported the <b>highest</b> initial marital satisfaction — and that advantage had fully dissipated by roughly the eighth year, after which differently-aged couples showed <b>steeper declines</b> and less resilience to financial and health shocks. It's a population average and it says nothing about any particular pair. Included because leaving it out would make this page dishonest.
+      </div>
+    </div>
+  </section>
+
+  <p class="foot">Same trick as the moon clock: this runs on <em>your</em> machine, which is allowed to know what <em>now</em> is. The countdown above is real to the millisecond, and the thing it's counting down to is a Victorian aphorism about brides — so the precision is honest and the target is arbitrary, and knowing which is which is the entire point. Δ = 322,304,703 SI seconds, forever. χ=2, always. 🌒</p>
+
+</main>
+
+<script>
+(function(){
+  "use strict";
+  /* ── constants ───────────────────────────────────── */
+  var A_MS   = 799117200000;      // 1995-04-29T01:00:00Z
+  var B_MS   = 1121421900000;     // 2005-07-15T10:05:00Z
+  var YEAR   = 31556952;          // mean Gregorian year, seconds
+  var CROSS  = 1885523931000;     // 2029-10-01T04:38:51Z
+  var DELTA  = (B_MS - A_MS) / 1000;
+
+  var $ = function(id){ return document.getElementById(id); };
+  var grp = function(n){ return n.toLocaleString('en-US'); };
+  var pad = function(n,w){ return String(Math.abs(n)).padStart(w||2,'0'); };
+  var reduce = window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+
+  var simMs = null;                                   // null = live
+  var now = function(){ return simMs === null ? Date.now() : simMs; };
+
+  /* years / months / days breakdown from a millisecond span */
+  function ymd(ms){
+    var s = Math.max(0, Math.floor(ms/1000));
+    var y = Math.floor(s / 31556952); s -= y*31556952;
+    var mo = Math.floor(s / 2629746); s -= mo*2629746;
+    var d = Math.floor(s / 86400);    s -= d*86400;
+    var h = Math.floor(s / 3600);     s -= h*3600;
+    var mi = Math.floor(s / 60);      s -= mi*60;
+    return {y:y, mo:mo, d:d, h:h, mi:mi, s:s};
+  }
+  function stampUTC(ms){
+    var t = new Date(ms);
+    return t.getUTCFullYear()+'-'+pad(t.getUTCMonth()+1)+'-'+pad(t.getUTCDate())+
+           '  '+pad(t.getUTCHours())+':'+pad(t.getUTCMinutes())+':'+pad(t.getUTCSeconds());
+  }
+
+  /* ── main readout ────────────────────────────────── */
+  function paint(){
+    var t = now();
+    var aA = (t - A_MS)/1000, aB = (t - B_MS)/1000;      // ages, seconds
+    var floorS = aA/2 + 7*YEAR;                          // the 1879 line, seconds
+    var gap = floorS - aB;                               // >0 = below the line
+    var past = gap <= 0;
+    document.body.classList.toggle('past', past);
+
+    /* headline gap */
+    var g = ymd(Math.abs(gap)*1000);
+    var msF = Math.floor(((Math.abs(gap)*1000) % 1000));
+    $('gapbig').innerHTML = (past ? '+ ' : '') + g.y+'y '+pad(g.mo)+'mo '+pad(g.d)+'d '+
+                            pad(g.h)+':'+pad(g.mi)+':'+pad(g.s)+
+                            '<span class="ms">.'+pad(msF,3)+'</span>';
+    $('gapcap').textContent = past ? 'Past the line · opening' : 'Gap to the line · closing';
+    $('gapsub').textContent = past
+      ? 'now widening at exactly 500 ms per second'
+      : 'shrinking at exactly 500 ms per second';
+
+    /* the two clocks */
+    function clock(secs, elAge, elSec, extraLeaps){
+      var b = ymd(secs*1000);
+      var ms = Math.floor((secs*1000) % 1000);
+      $(elAge).innerHTML = b.y+' y '+pad(b.mo)+' mo '+pad(b.d)+' d '+pad(b.h)+':'+pad(b.mi)+':'+pad(b.s)+
+                           '<span class="ms">.'+pad(ms,3)+'</span>';
+      $(elSec).innerHTML = '<span>SI s lived ·</span> ' + grp(Math.floor(secs) + extraLeaps);
+    }
+    clock(aA, 'ageA', 'secA', 8);        // 8 leap seconds since 1995-04-29
+    clock(aB, 'ageB', 'secB', 5);        // 5 leap seconds since 2005-07-15
+
+    /* sim bar */
+    $('simstamp').innerHTML = stampUTC(t) + ' UTC' +
+      (simMs === null ? '<span class="live" style="color:var(--noon)">live</span>'
+                      : '<span class="live" style="color:var(--chalk)">simulated</span>');
+
+    /* verdict dials */
+    var fl = floorS/YEAR, ce = (aB/YEAR - 7)*2, ageAy = aA/YEAR, ageBy = aB/YEAR;
+    $('floorN').textContent = fl.toFixed(4) + ' y';
+    $('floorS').innerHTML = 'she is <b>'+ageBy.toFixed(4)+'</b> · ' +
+      (past ? '<span class="pass">clears it by '+(ageBy-fl).toFixed(4)+' y</span>'
+            : '<span class="fail">short by '+(fl-ageBy).toFixed(4)+' y</span>');
+    $('ceilN').textContent = ce.toFixed(4) + ' y';
+    $('ceilS').innerHTML = 'he is <b>'+ageAy.toFixed(4)+'</b> · ' +
+      (past ? '<span class="pass">under it by '+(ce-ageAy).toFixed(4)+' y</span>'
+            : '<span class="fail">over by '+(ageAy-ce).toFixed(4)+' y</span>');
+
+    drawPlot(t);
+    drawCurve(ageAy, ageBy);
+  }
+
+  /* ── canvas helpers ──────────────────────────────── */
+  function fit(cv){
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    var r = cv.getBoundingClientRect();
+    cv.width = Math.round(r.width * dpr);
+    cv.height = Math.round(r.height * dpr);
+    var ctx = cv.getContext('2d');
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    return {ctx:ctx, w:r.width, h:r.height};
+  }
+  function css(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
+  var C = {};
+  function loadColors(){
+    C.dawn = css('--dawn'); C.noon = css('--noon'); C.chalk = css('--chalk');
+    C.slate = css('--slate'); C.slate2 = css('--slate-2'); C.miss = css('--miss');
+  }
+
+  /* ── SIGNATURE PLOT: three traces, one intersection ── */
+  var T0 = Date.UTC(2015,0,1), T1 = Date.UTC(2047,0,1);
+  var Y0 = 4, Y1 = 54;
+  function drawPlot(t){
+    var cv = $('plot'); if(!cv) return;
+    var f = fit(cv), ctx = f.ctx, W = f.w, H = f.h;
+    var padL = 34, padR = 14, padT = 16, padB = 26;
+    var X = function(ms){ return padL + (ms - T0)/(T1 - T0) * (W - padL - padR); };
+    var Y = function(a){ return H - padB - (a - Y0)/(Y1 - Y0) * (H - padT - padB); };
+    ctx.clearRect(0,0,W,H);
+
+    /* grid */
+    ctx.strokeStyle = 'rgba(255,255,255,0.05)'; ctx.lineWidth = 1;
+    ctx.fillStyle = C.slate2; ctx.font = '9px "JetBrains Mono", monospace';
+    for(var a = 10; a <= 50; a += 10){
+      ctx.beginPath(); ctx.moveTo(padL, Y(a)); ctx.lineTo(W - padR, Y(a)); ctx.stroke();
+      ctx.textAlign = 'right'; ctx.fillText(a, padL - 7, Y(a) + 3);
+    }
+    ctx.textAlign = 'center';
+    for(var yr = 2015; yr <= 2045; yr += 10){
+      var xm = X(Date.UTC(yr,0,1));
+      ctx.strokeStyle = 'rgba(255,255,255,0.035)';
+      ctx.beginPath(); ctx.moveTo(xm, padT); ctx.lineTo(xm, H - padB); ctx.stroke();
+      ctx.fillText(yr, xm, H - padB + 15);
+    }
+
+    var line = function(fn, color, width, dash){
+      ctx.save(); ctx.strokeStyle = color; ctx.lineWidth = width;
+      if(dash) ctx.setLineDash(dash);
+      ctx.beginPath();
+      for(var i = 0; i <= 240; i++){
+        var ms = T0 + (T1 - T0) * i/240;
+        var xx = X(ms), yy = Y(fn(ms));
+        i ? ctx.lineTo(xx,yy) : ctx.moveTo(xx,yy);
+      }
+      ctx.stroke(); ctx.restore();
+    };
+    var ageAf = function(ms){ return (ms - A_MS)/1000/YEAR; };
+    var ageBf = function(ms){ return (ms - B_MS)/1000/YEAR; };
+    var rulef = function(ms){ return ageAf(ms)/2 + 7; };
+
+    /* forbidden zone: below the rule line */
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(X(T0), Y(rulef(T0)));
+    ctx.lineTo(X(T1), Y(rulef(T1)));
+    ctx.lineTo(X(T1), H - padB); ctx.lineTo(X(T0), H - padB); ctx.closePath();
+    ctx.fillStyle = 'rgba(228,222,207,0.028)'; ctx.fill();
+    ctx.restore();
+
+    line(ageAf, 'rgba(142,134,255,0.55)', 1.4);              // his age
+    line(rulef, C.chalk, 1.6, [5,4]);                         // the 1879 line
+    ctx.save(); ctx.shadowColor = 'rgba(255,206,99,0.5)'; ctx.shadowBlur = 10;
+    line(ageBf, C.noon, 1.9);                                 // her age
+    ctx.restore();
+
+    /* crossing ring */
+    var cx = X(CROSS), cy = Y(ageBf(CROSS));
+    ctx.strokeStyle = C.chalk; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(cx, cy, 7, 0, Math.PI*2); ctx.stroke();
+    ctx.globalAlpha = 0.4;
+    ctx.beginPath(); ctx.arc(cx, cy, 12.5, 0, Math.PI*2); ctx.stroke();
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = C.chalk; ctx.font = '9px "JetBrains Mono", monospace';
+    ctx.textAlign = cx > W*0.62 ? 'right' : 'left';
+    var lx = cx > W*0.62 ? cx - 17 : cx + 17;
+    ctx.fillText('1 OCT 2029', lx, cy - 4);
+    ctx.fillStyle = C.slate2;
+    ctx.fillText('24.2134 y', lx, cy + 8);
+
+    /* live marker + the closing gap as a literal vertical bar */
+    if(t >= T0 && t <= T1){
+      var mx = X(t), my = Y(ageBf(t)), ry = Y(rulef(t));
+      ctx.strokeStyle = ageBf(t) < rulef(t) ? C.miss : C.noon;
+      ctx.lineWidth = 2.2; ctx.globalAlpha = 0.65;
+      ctx.beginPath(); ctx.moveTo(mx, my); ctx.lineTo(mx, ry); ctx.stroke();
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = C.noon;
+      ctx.beginPath(); ctx.arc(mx, my, 3.6, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = C.chalk;
+      ctx.beginPath(); ctx.arc(mx, ry, 3, 0, Math.PI*2); ctx.fill();
+    }
+
+    /* trace labels */
+    ctx.font = '9px "JetBrains Mono", monospace'; ctx.textAlign = 'left';
+    ctx.fillStyle = 'rgba(142,134,255,0.8)';
+    ctx.fillText('his age', X(T0) + 6, Y(ageAf(T0)) - 7);
+    ctx.fillStyle = C.noon;
+    ctx.fillText('her age', X(T0) + 6, Y(ageBf(T0)) + 13);
+    ctx.fillStyle = C.chalk;
+    ctx.fillText('his ÷2 +7', X(T0) + 6, Y(rulef(T0)) + 14);
+  }
+
+  /* ── THE TWO CURVES ─────────────────────────────── */
+  /* Schematic shapes after Kenrick & Keefe (1992): women's preferred partner age
+     tracks their own with a small, shrinking positive offset; men's rises with a
+     slope well under 1, so the gap they prefer widens with age. */
+  function femalePref(x){ return x + 4.2 - 0.085 * Math.max(0, x - 19); }
+  function malePref(x){   return 19.2 + 0.55 * (x - 18); }
+  function rulePref(x){   return x/2 + 7; }
+
+  function drawCurve(ageAy, ageBy){
+    var cv = $('curve'); if(!cv) return;
+    var f = fit(cv), ctx = f.ctx, W = f.w, H = f.h;
+    var padL = 36, padR = 16, padT = 18, padB = 30;
+    var X0 = 18, X1 = 62, YY0 = 14, YY1 = 66;
+    var X = function(v){ return padL + (v - X0)/(X1 - X0) * (W - padL - padR); };
+    var Y = function(v){ return H - padB - (v - YY0)/(YY1 - YY0) * (H - padT - padB); };
+    ctx.clearRect(0,0,W,H);
+
+    ctx.font = '9px "JetBrains Mono", monospace';
+    ctx.strokeStyle = 'rgba(255,255,255,0.045)'; ctx.lineWidth = 1;
+    ctx.fillStyle = C.slate2;
+    for(var v = 20; v <= 60; v += 10){
+      ctx.beginPath(); ctx.moveTo(padL, Y(v)); ctx.lineTo(W - padR, Y(v)); ctx.stroke();
+      ctx.textAlign = 'right'; ctx.fillText(v, padL - 7, Y(v) + 3);
+      ctx.beginPath(); ctx.moveTo(X(v), padT); ctx.lineTo(X(v), H - padB); ctx.stroke();
+      ctx.textAlign = 'center'; ctx.fillText(v, X(v), H - padB + 15);
+    }
+    ctx.textAlign = 'center';
+    ctx.fillText('own age →', W/2, H - 5);
+    ctx.save(); ctx.translate(11, H/2); ctx.rotate(-Math.PI/2);
+    ctx.fillText('preferred partner age →', 0, 0); ctx.restore();
+
+    /* parity line */
+    ctx.save(); ctx.setLineDash([2,4]); ctx.strokeStyle = 'rgba(255,255,255,0.16)';
+    ctx.beginPath(); ctx.moveTo(X(X0), Y(X0)); ctx.lineTo(X(X1), Y(X1)); ctx.stroke();
+    ctx.restore();
+    ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.textAlign = 'right';
+    ctx.fillText('same age', X(X1) - 4, Y(X1) + 13);
+
+    var plot = function(fn, color, w, dash, glow){
+      ctx.save(); ctx.strokeStyle = color; ctx.lineWidth = w;
+      if(dash) ctx.setLineDash(dash);
+      if(glow){ ctx.shadowColor = glow; ctx.shadowBlur = 9; }
+      ctx.beginPath();
+      for(var i = 0; i <= 120; i++){
+        var x = X0 + (X1 - X0)*i/120;
+        i ? ctx.lineTo(X(x), Y(fn(x))) : ctx.moveTo(X(x), Y(fn(x)));
+      }
+      ctx.stroke(); ctx.restore();
+    };
+    plot(rulePref, C.chalk, 1.5, [5,4]);
+    plot(malePref, C.dawn, 1.8, null, 'rgba(142,134,255,0.45)');
+    plot(femalePref, C.noon, 1.8, null, 'rgba(255,206,99,0.45)');
+
+    /* the two of them, on their own curves */
+    function dot(ownAge, partnerAge, color, label){
+      if(ownAge < X0 || ownAge > X1) return;
+      var px = X(ownAge), py = Y(partnerAge);
+      ctx.strokeStyle = color; ctx.lineWidth = 1; ctx.globalAlpha = 0.45;
+      ctx.beginPath(); ctx.moveTo(px, H - padB); ctx.lineTo(px, py); ctx.stroke();
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = color;
+      ctx.beginPath(); ctx.arc(px, py, 4, 0, Math.PI*2); ctx.fill();
+      ctx.strokeStyle = '#0A0F1C'; ctx.lineWidth = 1.4;
+      ctx.beginPath(); ctx.arc(px, py, 4, 0, Math.PI*2); ctx.stroke();
+      ctx.fillStyle = color; ctx.textAlign = px > W*0.7 ? 'right' : 'left';
+      ctx.fillText(label, px + (px > W*0.7 ? -8 : 8), py - 8);
+    }
+    /* where each of them actually is: own age on x, the OTHER's age on y */
+    dot(ageAy, ageBy, C.dawn, 'him → her');
+    dot(ageBy, ageAy, C.noon, 'her → him');
+  }
+
+  /* ── historical strip ───────────────────────────── */
+  var HIST = [
+    ['Classical Athens, 5th c. BCE', 13.0, 'bride 14–18, groom ~30'],
+    ['Roman elite, 1st c. CE',        10.0, 'reconstructed from epitaphs'],
+    ['THIS PAIR, 2026',               10.21,'Δ = 322,304,703 SI s'],
+    ['The Gambia, today',             14.5, 'widest national mean on record'],
+    ['Sub-Saharan Africa, today',      8.6, '130-country study'],
+    ['World average, today',           4.2, 'current partners, 130 countries'],
+    ['United States, 1880',            4.9, 'census'],
+    ['NW Europe, 1600–1800',           2.5, 'European marriage pattern'],
+    ['Europe, today',                  2.7, 'regional mean'],
+    ['United States, 2022',            2.2, 'CPS'],
+    ['His floor at the crossing',      10.21,'the same Δ, finally legal by O\u2019Rell']
+  ];
+  (function buildHist(){
+    var el = $('hist'); if(!el) return;
+    var max = 15;
+    var rows = HIST.slice();
+    rows.sort(function(a,b){ return b[1] - a[1]; });
+    var html = '';
+    rows.forEach(function(r){
+      var mine = r[0].indexOf('THIS PAIR') === 0;
+      html += '<div class="hrow'+(mine ? ' us' : '')+'">' +
+                '<span class="lab">'+r[0]+'</span>' +
+                '<span class="track"><span class="fill" style="width:'+(r[1]/max*100).toFixed(1)+'%"></span></span>' +
+                '<span class="val">'+r[1].toFixed(1)+'</span>' +
+              '</div>';
+    });
+    html += '<div class="hsrc">Years, husband older, mean where available. Ancient figures are reconstructions from a thin and elite-skewed evidence base — treat them as order-of-magnitude. Modern figures: 130-country partner-age study; US Census/CPS; regional means. The trend line is the real finding: the gap collapses as women\u2019s economic independence rises, at roughly 1.6 years per log point of GDP per capita. Ten years was ordinary for most of recorded history and is unusual in Europe right now — both of those are facts about societies, not about two people.</div>';
+    el.innerHTML = html;
+  })();
+
+  /* ── scrubber ───────────────────────────────────── */
+  var SPAN = 20 * 31556952 * 1000;
+  var base = Date.now();
+  $('scrub').addEventListener('input', function(e){
+    simMs = base + (+e.target.value / 1000) * SPAN;
+    paint();
+  });
+  $('reset').addEventListener('click', function(){
+    simMs = null; $('scrub').value = 0; base = Date.now(); paint();
+  });
+
+  /* ── boot ───────────────────────────────────────── */
+  loadColors();
+  paint();
+  window.addEventListener('resize', paint);
+  if(document.fonts && document.fonts.ready){ document.fonts.ready.then(paint); }
+  setInterval(function(){ if(simMs === null) paint(); }, reduce ? 1000 : 61);
+})();
+</script>
+</body>
+</html>

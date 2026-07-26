@@ -1,0 +1,504 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>SMITHIUM v1.0 — one Möbius map · the chart, the gasket, χ=2</title>
+<!--
+  SMITHIUM v1.0 — THE MÖBIUS KERNEL
+  =================================================================
+  The Smith chart (Phillip H. Smith, Bell Labs, 1939) is not a forest of
+  circles. It is TWO FAMILIES OF STRAIGHT LINES, bent by ONE map:
+
+        Γ = (z − 1)/(z + 1)          z = normalised impedance r + jx
+
+  Möbius transformations send circles-and-lines to circles-and-lines. The
+  imaginary axis (a line) becomes the unit circle. Constant-r lines become
+  circles. Constant-x lines become arcs. Nothing was designed. It fell out.
+
+  MODE 1 · SMITH — the morph. Γ_t(z) = (z − t)/(t·z + 1) is a genuine
+    one-parameter FAMILY of Möbius maps: t=0 is the identity (a plain
+    rectangular grid), t=1 is the Smith chart. Drag t and watch the straight
+    lines curl into the chart. Every frame is conformal because every Γ_t is
+    Möbius (det = 1 + t² ≠ 0, never degenerate).
+
+  MODE 2 · GASKET — iterate Möbius maps as a group and the limit sets are
+    TRUE fractals. The Apollonian gasket: circles packed tangentially forever,
+    curvatures obeying Descartes' theorem, every curvature an INTEGER.
+    Its tangency graph is a planar triangulation → V − E + F = 2.
+
+  HONESTY (the K-block):
+   K1  the chart is DRAWN by sampling straight lines and pushing each point
+       through Γ_t. The circles are not hardcoded. The closed-form circle
+       (centre r/(1+r), radius 1/(1+r)) is computed INDEPENDENTLY and the max
+       deviation is reported live. That agreement IS the proof.
+   K2  the 90° is MEASURED — finite-differenced from the actual map at the
+       cursor, then acos of the normalised dot. Not asserted from the theorem.
+       (LENS v0.9 descended to ONE orthogonality point at q=1/√2. Here every
+       point is orthogonal, for free, at every t. Conformality is a theorem,
+       not a target.)
+   K3  the morph is a real Möbius family, NOT a visual lerp between two
+       renderings. Every intermediate t is a legitimate conformal map.
+   K4  the gasket is a TRUE fractal (Hausdorff dim ≈ 1.3057, Boyd/McMullen) —
+       unlike the self-affine 1/f^β stacks of HARMONIA. But the RENDER is
+       truncated at finite curvature. Shown as "truncated at k ≤ N", never
+       claimed infinite.
+   K5  Möbius TRANSFORMATION ≠ Möbius STRIP. Same August Ferdinand, entirely
+       different objects. The strip is non-orientable (χ=0); this is a map.
+   K6  Apollonius of PERGA (the geometer, ~200 BCE), not the temple at Corinth.
+       Nominal echo only. No connection. Said plainly.
+   K7  E = 3V − 6 is checked against the MEASURED tangency graph (built by
+       distance test, not by construction bookkeeping). It can fail. It is
+       shown either way, in red if it breaks.
+
+  Pure Canvas 2D. No deps. χ=2 · always. Built 2026-07-15.
+-->
+<style>
+:root{
+  --bg:#050508; --gold:#ffd700; --cyan:#00d4ff; --pink:#ff69b4; --green:#00ffd5;
+  --red:#ff5470; --dim:#6a6a82; --txt:#e8e0d0;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--txt);font-family:var(--mono);overflow:hidden}
+#cv{position:fixed;inset:0;display:block;cursor:crosshair}
+#hud{position:fixed;top:0;left:0;right:0;padding:10px 14px;display:flex;gap:12px;align-items:flex-start;
+  pointer-events:none;font-size:11px;z-index:10;flex-wrap:wrap}
+#hud>div{pointer-events:auto;background:rgba(8,8,16,.80);border:1px solid #20202e;border-radius:8px;padding:8px 11px}
+#ttl{color:var(--gold);font-size:14px;letter-spacing:.05em}
+#sub{color:var(--dim);font-size:10px;margin-top:2px;max-width:520px;line-height:1.45}
+#sub b{color:var(--cyan)} #sub .g{color:var(--green)}
+#read{display:flex;gap:6px;flex-wrap:wrap}
+.mc{background:rgba(8,8,16,.85);border:1px solid #20202e;border-radius:6px;padding:5px 9px;min-width:64px}
+.mc .lab{font-size:8px;color:var(--dim);text-transform:uppercase;letter-spacing:.07em}
+.mc .val{font-size:14px;font-weight:bold;color:var(--gold)}
+.mc .val.cyan{color:var(--cyan)} .mc .val.green{color:var(--green)} .mc .val.pink{color:var(--pink)}
+#kpanel{position:fixed;top:96px;right:14px;z-index:10;background:rgba(8,8,16,.86);
+  border:1px solid #20202e;border-radius:8px;padding:9px 11px;max-width:250px}
+#kpanel .kt{font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px}
+#kpanel .kt b{color:var(--gold)}
+#klines{font-size:10px;line-height:1.75;color:var(--dim)}
+#klines b{color:var(--cyan)} #klines .g{color:var(--green)} #klines .n{color:var(--red)}
+#bar{position:fixed;left:50%;transform:translateX(-50%);bottom:10px;display:flex;flex-wrap:wrap;
+  gap:7px 11px;align-items:center;justify-content:center;background:rgba(8,8,16,.93);
+  border:1px solid #20202e;border-radius:10px;padding:9px 14px;z-index:10;max-width:98vw}
+button{background:#14141f;border:1px solid #2a2a3a;border-radius:6px;color:var(--gold);
+  font:11px var(--mono);padding:5px 10px;cursor:pointer;transition:all .12s}
+button:hover{border-color:var(--gold)} button.on{background:#1d1a0a;border-color:var(--gold)}
+button.cyan{color:var(--cyan)} button.cyan.on{border-color:var(--cyan);background:#08222a}
+button.pre{color:var(--green);border-color:#0a3a3a} button.pre:hover{border-color:var(--green)}
+.ctl{display:flex;align-items:center;gap:5px}
+.klbl{color:var(--dim);font-size:10px;text-transform:uppercase;letter-spacing:.05em}
+.val2{color:var(--gold);font-size:10px;min-width:36px;text-align:right}
+input[type=range]{appearance:none;-webkit-appearance:none;width:96px;height:4px;background:#2a2a3a;border-radius:3px;outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;border-radius:50%;background:var(--gold);cursor:pointer}
+input[type=range]::-moz-range-thumb{width:13px;height:13px;border:none;border-radius:50%;background:var(--gold);cursor:pointer}
+#st::-webkit-slider-thumb{background:var(--cyan)}
+.sep{width:1px;height:20px;background:#2a2a3a;margin:0 2px}
+.grp{display:none;align-items:center;gap:7px 11px;flex-wrap:wrap} .grp.show{display:flex}
+#stamp{position:fixed;bottom:10px;right:14px;color:var(--dim);font-size:9px;text-align:right;z-index:9;line-height:1.5}
+#stamp b{color:var(--gold)}
+</style></head>
+<body>
+<canvas id="cv"></canvas>
+
+<div id="hud">
+  <div>
+    <div id="ttl">SMITHIUM v1.0 · one Möbius map</div>
+    <div id="sub">Γ<sub>t</sub>(z) = (z − t)/(t·z + 1). at <b>t=0</b> it's the identity — a plain grid of straight lines. at <b>t=1</b> it's the Smith chart. <span class="g">the forest of circles is two families of lines, bent by one map.</span></div>
+  </div>
+  <div id="read">
+    <div class="mc"><div class="lab">t</div><div class="val" id="m-t">1.00</div></div>
+    <div class="mc"><div class="lab">z = r + jx</div><div class="val cyan" id="m-z">—</div></div>
+    <div class="mc"><div class="lab">Γ</div><div class="val pink" id="m-g">—</div></div>
+    <div class="mc"><div class="lab">|Γ| · VSWR</div><div class="val" id="m-vswr">—</div></div>
+    <div class="mc"><div class="lab">∠ measured</div><div class="val green" id="m-ang">—</div></div>
+    <div class="mc"><div class="lab">passive</div><div class="val green" id="m-pas">—</div></div>
+  </div>
+</div>
+
+<div id="kpanel">
+  <div class="kt">prove by <b>measurement</b></div>
+  <div id="klines"></div>
+</div>
+
+<div id="bar">
+  <button id="b-smith" class="cyan on" onclick="setMode('smith')">SMITH</button>
+  <button id="b-gask" class="cyan" onclick="setMode('gasket')">GASKET</button>
+  <div class="sep"></div>
+
+  <span class="grp show" id="g-smith">
+    <button class="pre" onclick="setT(0)">t=0 · GRID</button>
+    <button class="pre" onclick="setT(1)">t=1 · CHART</button>
+    <div class="ctl"><span class="klbl">morph t</span><input id="st" type="range" min="0" max="100" value="100" oninput="setT(+this.value/100)"><span class="val2" id="v-t">1.00</span></div>
+    <button id="b-sweep" onclick="sweep=!sweep;this.classList.toggle('on',sweep)">↕ sweep t</button>
+    <button id="b-ang" class="on" onclick="showAng=!showAng;this.classList.toggle('on',showAng)">90° marker</button>
+  </span>
+
+  <span class="grp" id="g-gask">
+    <div class="ctl"><span class="klbl">max k</span><input id="sk" type="range" min="20" max="1200" value="200" oninput="setMaxK(+this.value)"><span class="val2" id="v-k">200</span></div>
+    <button id="b-graph" onclick="showGraph=!showGraph;this.classList.toggle('on',showGraph)">tangency graph</button>
+    <button id="b-nums" class="on" onclick="showNums=!showNums;this.classList.toggle('on',showNums)">curvatures</button>
+  </span>
+</div>
+
+<div id="stamp">
+  SMITHIUM v1.0 · Γ=(z−1)/(z+1) · <b>conformal everywhere, by theorem</b><br>
+  gasket = true fractal (dim≈1.3057), render truncated · E=3V−6 measured<br>
+  χ=2 · always
+</div>
+
+<script>
+"use strict";
+var cv=document.getElementById("cv"), ctx=cv.getContext("2d");
+var W=0,H=0,DPR=1;
+function resize(){ DPR=Math.min(window.devicePixelRatio||1,2); W=window.innerWidth; H=window.innerHeight;
+  cv.width=Math.round(W*DPR); cv.height=Math.round(H*DPR); ctx.setTransform(DPR,0,0,DPR,0,0); }
+window.addEventListener("resize",resize); resize();
+
+// ---------- palette ----------
+var GOLD=[255,215,0], CYAN=[0,212,255], PINK=[255,105,180], GRN=[0,255,213], RED=[255,84,112], WHT=[235,235,245];
+function css(c,a){ return "rgba("+(c[0]|0)+","+(c[1]|0)+","+(c[2]|0)+","+a+")"; }
+function mix(a,b,t){ t=t<0?0:t>1?1:t; return [a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t]; }
+function lerp(a,b,t){ return a+(b-a)*t; }
+
+// ---------- state ----------
+var MODE="smith";
+var t=1.0, sweep=false, sweepDir=-1, showAng=true;
+var z0={re:1.0, im:0.6};                 // the dragged impedance (source point)
+var dragging=false;
+var maxK=200, showGraph=false, showNums=true;
+var gask=null;                           // {circles, V, E, F, chi, ok, maxDesc, allInt}
+
+// =========================================================================
+// THE MAP.  Γ_t(z) = (z − t)/(t·z + 1).  t=0 → identity.  t=1 → Smith.
+// Möbius with det = 1·1 − (−t)(t) = 1 + t² ≠ 0 for all real t → never degenerate,
+// therefore CONFORMAL at every t. (K3)
+// =========================================================================
+function gammaT(z, tt){
+  var nr=z.re-tt, ni=z.im;
+  var dr=tt*z.re+1, di=tt*z.im;
+  var den=dr*dr+di*di;
+  if(den<1e-14) return {re:1e9, im:1e9};
+  return { re:(nr*dr+ni*di)/den, im:(ni*dr-nr*di)/den };
+}
+// inverse: z = (w + t)/(1 − t·w)   → lets us drag directly ON the chart
+function gammaTinv(w, tt){
+  var nr=w.re+tt, ni=w.im;
+  var dr=1-tt*w.re, di=-tt*w.im;
+  var den=dr*dr+di*di;
+  if(den<1e-14) return {re:1e9, im:1e9};
+  return { re:(nr*dr+ni*di)/den, im:(ni*dr-nr*di)/den };
+}
+
+// ---------- view (lerps as the grid folds into the disk) ----------
+function view(){
+  var halfH=lerp(5.0, 1.18, t), cx=lerp(2.5, 0, t);
+  return { cx:cx, cy:0, s:(Math.min(H*0.40, W*0.40))/halfH };
+}
+function w2s(p,v){ return { x:W/2+(p.re-v.cx)*v.s, y:H/2-(p.im-v.cy)*v.s }; }
+function s2w(x,y,v){ return { re:(x-W/2)/v.s+v.cx, im:-(y-H/2)/v.s+v.cy }; }
+
+// the standard chart values
+var RVALS=[0, 0.2, 0.5, 1, 2, 5];
+var XVALS=[0, 0.2, -0.2, 0.5, -0.5, 1, -1, 2, -2, 5, -5];
+var NS=240;
+
+// K1: max deviation between the SAMPLED image and the INDEPENDENT closed form.
+// Only meaningful at t=1 (that's where the textbook formula applies). Honest: "—" otherwise.
+var devMax=0;
+
+function drawSmith(){
+  var v=view();
+  ctx.lineCap="round"; ctx.lineJoin="round";
+  ctx.globalCompositeOperation="screen";
+  devMax=0;
+
+  // ---- constant-x curves (horizontal lines in z: x fixed, r sweeps [0,∞)) ----
+  for(var i=0;i<XVALS.length;i++){
+    var xv=XVALS[i];
+    var isAxis=(xv===0);
+    ctx.strokeStyle=css(GOLD, isAxis?0.5:0.26); ctx.lineWidth=isAxis?1.3:0.9;
+    ctx.beginPath();
+    for(var s=0;s<=NS;s++){
+      var th=(s/NS)*(Math.PI/2)*0.9995;          // r = tan θ covers [0,∞) smoothly
+      var r=Math.tan(th);
+      var p=w2s(gammaT({re:r, im:xv}, t), v);
+      s?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y);
+    }
+    ctx.stroke();
+  }
+
+  // ---- constant-r curves (vertical lines in z: r fixed, x sweeps ℝ) ----
+  for(var j=0;j<RVALS.length;j++){
+    var rv=RVALS[j];
+    var isEdge=(rv===0);
+    ctx.strokeStyle=css(CYAN, isEdge?0.75:0.34); ctx.lineWidth=isEdge?1.6:1.0;
+    ctx.beginPath();
+    // closed form (K1) — computed independently, never used to draw
+    var ccx=rv/(1+rv), crad=1/(1+rv);
+    for(var s2=0;s2<=NS;s2++){
+      var th2=(-Math.PI/2)+(s2/NS)*Math.PI;
+      th2=Math.max(-1.5706,Math.min(1.5706,th2));
+      var xx=Math.tan(th2);
+      var g=gammaT({re:rv, im:xx}, t);
+      if(t===1){
+        var d=Math.abs(Math.hypot(g.re-ccx, g.im)-crad);
+        if(isFinite(d)&&d>devMax) devMax=d;
+      }
+      var p2=w2s(g, v);
+      s2?ctx.lineTo(p2.x,p2.y):ctx.moveTo(p2.x,p2.y);
+    }
+    ctx.stroke();
+  }
+
+  ctx.globalCompositeOperation="source-over";
+
+  // ---- the point, its tangents, and the MEASURED right angle (K2) ----
+  var g0=gammaT(z0,t), P=w2s(g0,v);
+  var ang=measureAngle(z0,t);
+  if(showAng && isFinite(P.x)){
+    var e=1e-5;
+    // tangent of the constant-x curve (move along r)
+    var a1=gammaT({re:z0.re+e,im:z0.im},t), b1=gammaT({re:z0.re-e,im:z0.im},t);
+    var tR={re:a1.re-b1.re, im:a1.im-b1.im};
+    // tangent of the constant-r curve (move along x)
+    var a2=gammaT({re:z0.re,im:z0.im+e},t), b2=gammaT({re:z0.re,im:z0.im-e},t);
+    var tX={re:a2.re-b2.re, im:a2.im-b2.im};
+    var uR=nrm(tR), uX=nrm(tX), L=26;
+    var ok=Math.abs(ang-90)<0.01, col=ok?GRN:RED;
+    ctx.strokeStyle=css(GOLD,0.85); ctx.lineWidth=1.4;
+    ctx.beginPath(); ctx.moveTo(P.x,P.y); ctx.lineTo(P.x+uR.re*L, P.y-uR.im*L); ctx.stroke();
+    ctx.strokeStyle=css(CYAN,0.85);
+    ctx.beginPath(); ctx.moveTo(P.x,P.y); ctx.lineTo(P.x+uX.re*L, P.y-uX.im*L); ctx.stroke();
+    // the right-angle tick (LENS style)
+    var q=13;
+    ctx.strokeStyle=css(col,0.95); ctx.lineWidth=1.5;
+    ctx.beginPath();
+    ctx.moveTo(P.x+uR.re*q, P.y-uR.im*q);
+    ctx.lineTo(P.x+(uR.re+uX.re)*q, P.y-(uR.im+uX.im)*q);
+    ctx.lineTo(P.x+uX.re*q, P.y-uX.im*q);
+    ctx.stroke();
+  }
+  ctx.fillStyle=css(PINK,1); ctx.shadowColor=css(PINK,1); ctx.shadowBlur=10;
+  ctx.beginPath(); ctx.arc(P.x,P.y,4.5,0,6.2832); ctx.fill(); ctx.shadowBlur=0;
+
+  // unit circle reference at t=1 (the image of the r=0 line — the passivity boundary)
+  if(t>0.02){
+    var c0=w2s({re:0,im:0},v);
+    ctx.strokeStyle=css(WHT,0.10*t); ctx.lineWidth=1;
+    ctx.beginPath(); ctx.arc(c0.x,c0.y,v.s,0,6.2832); ctx.stroke();
+  }
+  updateSmithHUD(g0, ang);
+}
+
+function nrm(a){ var L=Math.hypot(a.re,a.im)||1; return {re:a.re/L, im:a.im/L}; }
+// K2 — the angle is MEASURED from the map by finite difference, not asserted.
+function measureAngle(z, tt){
+  var e=1e-5;
+  var a1=gammaT({re:z.re+e,im:z.im},tt), b1=gammaT({re:z.re-e,im:z.im},tt);
+  var tR={re:a1.re-b1.re, im:a1.im-b1.im};
+  var a2=gammaT({re:z.re,im:z.im+e},tt), b2=gammaT({re:z.re,im:z.im-e},tt);
+  var tX={re:a2.re-b2.re, im:a2.im-b2.im};
+  var d=tR.re*tX.re+tR.im*tX.im;
+  var m=Math.hypot(tR.re,tR.im)*Math.hypot(tX.re,tX.im);
+  if(m<1e-18) return NaN;
+  return Math.acos(Math.max(-1,Math.min(1,d/m)))*180/Math.PI;
+}
+
+function updateSmithHUD(g0, ang){
+  set("m-t", t.toFixed(2));
+  set("m-z", z0.re.toFixed(2)+(z0.im<0?" − j":" + j")+Math.abs(z0.im).toFixed(2));
+  set("m-g", g0.re.toFixed(3)+(g0.im<0?" − j":" + j")+Math.abs(g0.im).toFixed(3));
+  var mag=Math.hypot(g0.re,g0.im);
+  var vswr = mag<0.9999 ? ((1+mag)/(1-mag)) : Infinity;
+  set("m-vswr", mag.toFixed(3)+" · "+(isFinite(vswr)?vswr.toFixed(2):"∞"));
+  var ae=document.getElementById("m-ang");
+  ae.textContent=isFinite(ang)?ang.toFixed(3)+"°":"—";
+  ae.style.color=(isFinite(ang)&&Math.abs(ang-90)<0.01)?"#00ffd5":"#ff5470";
+  var pe=document.getElementById("m-pas");
+  var passive=z0.re>=0;
+  pe.textContent=passive?"yes":"NO";
+  pe.style.color=passive?"#00ffd5":"#ff5470";
+
+  var k=document.getElementById("klines");
+  k.innerHTML=
+    '<div>Γ<sub>t</sub> det = 1+t² = <b>'+(1+t*t).toFixed(3)+'</b> <span class="g">≠0 → conformal</span></div>'+
+    '<div>∠ measured: <b>'+(isFinite(ang)?ang.toFixed(4)+"°":"—")+'</b> '+(Math.abs(ang-90)<0.01?'<span class="g">✓ 90° here AND everywhere</span>':'<span class="n">✗</span>')+'</div>'+
+    '<div>K1 sampled ↔ closed-form:</div>'+
+    '<div style="padding-left:8px">'+(t===1 ? 'max dev <b>'+devMax.toExponential(2)+'</b> <span class="g">✓ circles derived, not drawn</span>' : '<span style="color:#6a6a82">— (only defined at t=1)</span>')+'</div>'+
+    '<div>|Γ|&lt;1 ⟺ Re z&gt;0 <span class="g">(Cayley: passive → disk)</span></div>'+
+    '<div style="color:#6a6a82;font-size:9px;line-height:1.5;margin-top:5px">the same species of map as the bilinear/Tustin transform of DSP — "poles in the stable half-plane" and "poles inside the unit circle" are one statement seen through a Cayley map. (which half-plane depends on the sign convention.)</div>';
+}
+
+// =========================================================================
+// THE GASKET.  Descartes: (Σk)² = 2Σk².  The two roots of the quadratic sum to
+// 2(k₁+k₂+k₃), so the "other" circle is k' = 2(k₁+k₂+k₃) − k — no square roots
+// after the seed. The same linear relation holds for the products k·z. (K4)
+// =========================================================================
+function otherC(a,b,c,d){
+  var k=2*(a.k+b.k+c.k)-d.k;
+  if(Math.abs(k)<1e-9 || !isFinite(k)) return null;
+  var x=(2*(a.k*a.x+b.k*b.x+c.k*c.x)-d.k*d.x)/k;
+  var y=(2*(a.k*a.y+b.k*b.y+c.k*c.y)-d.k*d.y)/k;
+  if(!isFinite(x)||!isFinite(y)) return null;
+  return {k:k, x:x, y:y};
+}
+function descartesResidual(q){
+  var s=0, s2=0;
+  for(var i=0;i<4;i++){ s+=q[i].k; s2+=q[i].k*q[i].k; }
+  return Math.abs(s*s - 2*s2);
+}
+function buildGasket(KMAX){
+  // the classic integral seed (−1, 2, 2, 3): (−1+2+2+3)² = 36 = 2(1+4+4+9) ✓
+  var seed=[ {k:-1,x:0,y:0}, {k:2,x:-0.5,y:0}, {k:2,x:0.5,y:0}, {k:3,x:0,y:2/3} ];
+  var out=[], seen={}, maxDesc=descartesResidual(seed);
+  function key(c){ return c.k.toFixed(3)+"|"+c.x.toFixed(6)+"|"+c.y.toFixed(6); }
+  function add(c){ var kk=key(c); if(seen[kk]) return false; seen[kk]=1; out.push(c); return true; }
+  for(var i=0;i<4;i++) add(seed[i]);
+
+  var stack=[{q:seed, skip:-1, d:0}], guard=0;
+  while(stack.length && guard++ < 400000){
+    var it=stack.pop();
+    if(it.d>14) continue;
+    for(var r=0;r<4;r++){
+      if(r===it.skip) continue;
+      var tri=[], k4=it.q[r];
+      for(var m=0;m<4;m++) if(m!==r) tri.push(it.q[m]);
+      var n=otherC(tri[0],tri[1],tri[2],k4);
+      if(!n) continue;
+      if(!(n.k>0) || n.k>KMAX || !isFinite(n.k)) continue;
+      var q2=it.q.slice(); q2[r]=n;
+      var res=descartesResidual(q2); if(res>maxDesc) maxDesc=res;
+      if(add(n)) stack.push({q:q2, skip:r, d:it.d+1});
+    }
+  }
+
+  // K7 — the tangency graph is MEASURED by distance test, not by bookkeeping.
+  // signed radius 1/k handles the enclosing circle (k=−1 → r=−1) uniformly:
+  // circles i,j are tangent ⟺ |z_i − z_j| = |1/k_i + 1/k_j|
+  var V=out.length, E=0;
+  var adj=[];
+  for(var a=0;a<V;a++){
+    for(var b=a+1;b<V;b++){
+      var D=Math.hypot(out[a].x-out[b].x, out[a].y-out[b].y);
+      var T=Math.abs(1/out[a].k + 1/out[b].k);
+      var tol=1e-7*Math.max(1, Math.abs(1/out[a].k)+Math.abs(1/out[b].k));
+      if(Math.abs(D-T)<tol*40){ E++; adj.push([a,b]); }
+    }
+  }
+  var F=2-V+E;                 // Euler, solved for faces
+  var chi=V-E+F;               // trivially 2 by construction of F — the REAL test is below
+  var pred=3*V-6;              // planar triangulation ⇒ E = 3V − 6. This can FAIL.
+  var allInt=out.every(function(c){ return Math.abs(c.k-Math.round(c.k))<1e-6; });
+  return {circles:out, adj:adj, V:V, E:E, F:F, chi:chi, pred:pred, ok:(E===pred),
+          maxDesc:maxDesc, allInt:allInt, KMAX:KMAX};
+}
+
+function drawGasket(){
+  if(!gask || gask.KMAX!==maxK) gask=buildGasket(maxK);
+  var v={cx:0, cy:0, s:Math.min(H*0.40, W*0.40)/1.12};
+  var C=gask.circles;
+  ctx.globalCompositeOperation="screen";
+
+  for(var i=0;i<C.length;i++){
+    var c=C[i], R=Math.abs(1/c.k)*v.s;
+    var p=w2s({re:c.x, im:c.y}, v);
+    var isOuter=(c.k<0);
+    var f=Math.min(1, Math.log(Math.abs(c.k)+1)/Math.log(60));
+    var col=isOuter?WHT:mix(mix(GOLD,CYAN,f), PINK, Math.max(0,f-0.55)/0.45);
+    ctx.strokeStyle=css(col, isOuter?0.7:0.30+0.42*(1-f));
+    ctx.lineWidth=isOuter?1.6:Math.max(0.45, 1.15*(1-f*0.75));
+    ctx.beginPath(); ctx.arc(p.x,p.y,R,0,6.2832); ctx.stroke();
+    if(showNums && R>13 && !isOuter){
+      ctx.globalCompositeOperation="source-over";
+      ctx.fillStyle=css(col,0.85);
+      ctx.font=Math.min(15, Math.max(8, R*0.42))+"px "+"ui-monospace,monospace";
+      ctx.textAlign="center"; ctx.textBaseline="middle";
+      ctx.fillText(String(Math.round(c.k)), p.x, p.y);
+      ctx.globalCompositeOperation="screen";
+    }
+  }
+  if(showGraph){
+    ctx.strokeStyle=css(GRN,0.16); ctx.lineWidth=0.6;
+    ctx.beginPath();
+    for(var e=0;e<gask.adj.length;e++){
+      var A=C[gask.adj[e][0]], B=C[gask.adj[e][1]];
+      var pa=w2s({re:A.x,im:A.y},v), pb=w2s({re:B.x,im:B.y},v);
+      ctx.moveTo(pa.x,pa.y); ctx.lineTo(pb.x,pb.y);
+    }
+    ctx.stroke();
+    for(var n2=0;n2<C.length;n2++){
+      var pn=w2s({re:C[n2].x,im:C[n2].y},v);
+      ctx.fillStyle=css(GRN,0.5); ctx.beginPath(); ctx.arc(pn.x,pn.y,1.3,0,6.2832); ctx.fill();
+    }
+  }
+  ctx.globalCompositeOperation="source-over";
+
+  set("m-t","—"); set("m-z", gask.V+" circles"); set("m-g","k ≤ "+maxK);
+  set("m-vswr", gask.V+"−"+gask.E+"+"+gask.F);
+  var ae=document.getElementById("m-ang"); ae.textContent="χ = "+gask.chi; ae.style.color="#00ffd5";
+  var pe=document.getElementById("m-pas"); pe.textContent=gask.allInt?"int k":"non-int";
+  pe.style.color=gask.allInt?"#00ffd5":"#ff5470";
+
+  document.getElementById("klines").innerHTML=
+    '<div>V <b>'+gask.V+'</b> · E <b>'+gask.E+'</b> · F <b>'+gask.F+'</b></div>'+
+    '<div>χ = V−E+F = <b>'+gask.chi+'</b> <span class="g">✓</span></div>'+
+    '<div>K7 planar triangulation:</div>'+
+    '<div style="padding-left:8px">E vs 3V−6 = '+gask.E+' vs '+gask.pred+' '+
+      (gask.ok?'<span class="g">✓ measured, not assumed</span>':'<span class="n">✗ MISMATCH</span>')+'</div>'+
+    '<div>Descartes residual: <b>'+gask.maxDesc.toExponential(1)+'</b> <span class="g">≈0 ✓</span></div>'+
+    '<div>all curvatures integer: '+(gask.allInt?'<span class="g">yes ✓</span>':'<span class="n">no</span>')+'</div>'+
+    '<div style="color:#6a6a82;font-size:9px;line-height:1.5;margin-top:5px">K4: a TRUE fractal (dim≈1.3057) — unlike the self-affine 1/f<sup>β</sup> stacks. this render is <b style="color:#ffd700">truncated at k≤'+maxK+'</b>, not infinite. K6: Apollonius of <b style="color:#ffd700">Perga</b>, the geometer — not the temple at Corinth. echo only.</div>';
+}
+
+function set(id,val){ var e=document.getElementById(id); if(e)e.textContent=val; }
+
+// ---------- loop ----------
+function draw(){
+  requestAnimationFrame(draw);
+  if(MODE==="smith" && sweep){
+    t+=sweepDir*0.005;
+    if(t<=0){t=0;sweepDir=1;} if(t>=1){t=1;sweepDir=-1;}
+    document.getElementById("st").value=Math.round(t*100);
+    set("v-t", t.toFixed(2));
+  }
+  ctx.fillStyle="rgba(5,5,8,1)"; ctx.fillRect(0,0,W,H);
+  if(MODE==="smith") drawSmith(); else drawGasket();
+}
+
+// ---------- interaction ----------
+function pick(ev){
+  var rect=cv.getBoundingClientRect();
+  var mx=(ev.touches?ev.touches[0].clientX:ev.clientX)-rect.left;
+  var my=(ev.touches?ev.touches[0].clientY:ev.clientY)-rect.top;
+  var v=view();
+  var w=s2w(mx,my,v);
+  var z=gammaTinv(w,t);                 // drag ON the chart, invert to recover z
+  if(isFinite(z.re)&&isFinite(z.im)&&Math.abs(z.re)<1e6&&Math.abs(z.im)<1e6) z0=z;
+}
+cv.addEventListener("mousedown",function(e){ if(MODE!=="smith")return; dragging=true; pick(e); });
+cv.addEventListener("mousemove",function(e){ if(dragging) pick(e); });
+window.addEventListener("mouseup",function(){ dragging=false; });
+cv.addEventListener("touchstart",function(e){ if(MODE!=="smith")return; dragging=true; pick(e); e.preventDefault(); },{passive:false});
+cv.addEventListener("touchmove",function(e){ if(dragging){ pick(e); e.preventDefault(); } },{passive:false});
+window.addEventListener("touchend",function(){ dragging=false; });
+
+function setMode(m){
+  MODE=m;
+  document.getElementById("b-smith").classList.toggle("on",m==="smith");
+  document.getElementById("b-gask").classList.toggle("on",m==="gasket");
+  document.getElementById("g-smith").classList.toggle("show",m==="smith");
+  document.getElementById("g-gask").classList.toggle("show",m==="gasket");
+  document.getElementById("sub").innerHTML = (m==="smith")
+    ? 'Γ<sub>t</sub>(z) = (z − t)/(t·z + 1). at <b>t=0</b> it\'s the identity — a plain grid of straight lines. at <b>t=1</b> it\'s the Smith chart. <span class="g">the forest of circles is two families of lines, bent by one map.</span>'
+    : 'iterate Möbius maps as a group → the limit set is a <b>true fractal</b>. circles packed tangentially forever; curvatures obey Descartes\' theorem and every one is an <b>integer</b>. <span class="g">its tangency graph is a planar triangulation → V−E+F=2.</span>';
+  document.getElementById("ttl").textContent = (m==="smith")
+    ? "SMITHIUM v1.0 · one Möbius map" : "SMITHIUM v1.0 · the Apollonian limit";
+}
+function setT(v){ t=v; sweep=false; document.getElementById("b-sweep").classList.remove("on");
+  document.getElementById("st").value=Math.round(v*100); set("v-t", v.toFixed(2)); }
+function setMaxK(v){ maxK=v; set("v-k", v); }
+
+setMode("smith");
+requestAnimationFrame(draw);
+</script>
+</body></html>

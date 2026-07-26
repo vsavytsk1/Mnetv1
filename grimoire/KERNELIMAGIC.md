@@ -55,6 +55,7 @@
 | 32 | The Sticky Track (ignoreTooLate)   | .gitignore does NOT evict already-tracked files; `git check-ignore` lies path-by-path. `git rm --cached`, trust `git add` as the oracle.|
 | 33 | The Vanished Helper (editDropDef)  | a botched multi-edit silently deletes a helper/return; the file "looks" fine but throws NameError at runtime far from the edit. Compile after every structural edit.|
 | 34 | The Starved Idler (idleStall)      | a requestIdleCallback step-chain stalls forever when a rAF loop (a spinner) keeps the main thread "busy"; the loader freezes mid-load. Use setTimeout for sequenced work, rIC only for optional filler.|
+| 35 | The Loaded Gun (noCeiling)         | a correct recursive kernel with no ceiling blows the tab: 7x-per-level growth OOMs before you can react. PREDICT the next step's cost from the recurrence BEFORE allocating; refuse loudly if over budget. The guillotine is built in.|
 ---
 
 
@@ -8177,3 +8178,61 @@ FAMILY:
 ```
 
 Curse count: 34. requestIdleCallback starves under a requestAnimationFrame loop -- the spinner you add to entertain the wait is what stops the idle callback ever firing, so the loader freezes while still moving. Sequence real work with setTimeout; keep rIC for droppable filler; arm a fallback dismiss. Motion is not progress. Always.
+
+---
+
+## CURSE 35 -- The Loaded Gun (noCeiling)
+
+WHAT BIT US (found in the imported archive -- genesis_safe.not_so_easy_broski.html):
+  A recursive Goldberg-Coxeter refiner is CORRECT -- P stays exactly 12, chi stays
+  exactly 2, verified offline through 24.7M faces. And correct is exactly what makes it
+  dangerous: each REFINE multiplies the face count by ~7 (the 7x-per-level cliff). Level
+  5-6 is ~1.2M faces; two more clicks and you are at tens of millions. The tab does not
+  warn, it does not slow gracefully -- it allocates until the browser OOM-kills it. A
+  correct kernel with no ceiling is a loaded gun pointed at the tab.
+
+THE ROOT PROBLEM:
+  The bug is not in the math -- the math is perfect. The bug is the ABSENCE of a fence.
+  Growth that is exponential (7x, or 4x, or even 2x per step) crosses from "instant" to
+  "fatal" in one or two clicks, faster than a human can react and faster than any
+  after-the-fact error handler can catch, because the death happens DURING the allocation
+  the handler was supposed to guard. You cannot catch an OOM you are still inside of.
+
+HOW TO DETECT (before you ship an interactive recursive/growing control):
+  Ask: "what does one more click cost, and what stops the click that costs too much?"
+  If the answer to the second part is "nothing," you are holding the gun. Any control
+  that refines, subdivides, adds a level, doubles a resolution, or grows a buffer needs a
+  predicted-cost gate. Compute the NEXT step's size from the recurrence and compare it to
+  a budget BEFORE you allocate.
+
+HOW TO FIX (the guillotine, built in):
+  1. Name a hard, honest budget: `const FACE_BUDGET = 1_200_000;` -- a real limit tied to
+     what the machine can hold, not an arbitrary round number (K5: fence where nature put it).
+  2. PREDICT before you allocate:
+        const predicted = faces * 4;            // or whatever the verified recurrence is
+        if (predicted > FACE_BUDGET) { refuseLoudly(predicted); return; }   // THE GUILLOTINE
+  3. Refuse LOUDLY, with the reason and the number: disable the button, show
+     "HALT: next level = 9.6M faces > budget 1.2M". Not a silent no-op (that reads as a
+     bug); a stated, visible refusal (that reads as engineering). Cousin of K4 -- a wall
+     is honest only if the user can see why and can still act elsewhere.
+  4. Say in one line that the cap is engineering, not doubt: the kernel is correct to
+     24.7M faces offline; the ceiling is there because the TAB cannot hold it, not because
+     the math fails.
+
+THE PATTERN (write it into every growing control):
+  Every exponential control caps itself, on purpose, out loud. Predict the next step from
+  the recurrence; compare to a budget tied to real memory; refuse with the number when it
+  would exceed. "A correct kernel with no ceiling is a loaded gun pointed at the tab; this
+  one caps itself." The math may be infinite; the compute is not -- so the control must
+  know where the compute ends and stop there, visibly.
+
+FAMILY:
+  The interactive-growth sibling of Curse 31 (Hundred-Meg Wall -- both are "a real limit
+  is a real wall; predict it, fence it, say so"). Cousin of GLAMOUR 01 (a thing that grows
+  unbounded) and Curse 9 (a heavy compute the user must be told about, not surprised by).
+  The counter-hex is K5 (put the fence where nature put it) plus K4 (blank/halt honestly,
+  never a silent trap). Predict before you allocate. The guillotine is built in. Always.
+
+```
+
+Curse count: 35. A correct recursive kernel with no ceiling OOM-kills the tab: exponential growth crosses from instant to fatal in one click, during an allocation no handler can catch. Predict the next step's cost from the recurrence BEFORE allocating; refuse loudly with the number when it exceeds a memory-tied budget. The guillotine is built in. Always.

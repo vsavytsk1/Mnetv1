@@ -1,0 +1,413 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>ISINGIUM v1.0 — random until the symmetry combines</title>
+<!--
+  ISINGIUM v1.0 — RANDOM UNTIL THE SYMMETRY COMBINES
+  =================================================================
+  Vlad: "we don't even define the permitted operations… the minimum number of
+  constraints that force the graph space to achieve symmetry again… and again
+  it is the whole Brownian motion and random walk… the most efficient… and in
+  that randomness the symmetries interact and do cool cool stuff… so let's test
+  again with that approach: random until the symmetries combine."
+
+  THIS IS THAT TEST. And it has an EXACT answer, so it can be graded.
+
+  THE RULES — and there are only two:
+    1. a spin is ±1.
+    2. it would rather agree with its four neighbours.   H = −J Σ s_i s_j
+  That is the entire model. No geometry. No conductor. No plan.
+  Then: RANDOM WALK. Metropolis. Flip a spin at random, accept with
+  probability min(1, e^(−ΔE/T)). That is all that ever happens.
+
+  AND SYMMETRY CONDENSES OUT OF IT.
+  Above T_c: the spins are a fair coin. Magnetisation ≈ 0. The Z₂ symmetry
+  (flip everything) is INTACT — the system respects it.
+  Below T_c: the whole lattice CHOOSES a direction. Nobody told it which.
+  The symmetry is still in the Hamiltonian and the STATE BROKE IT ANYWAY.
+  THAT IS SPONTANEOUS SYMMETRY BREAKING — the same mechanism that gives the
+  W and Z their mass and put the Higgs in the poster.
+
+  =================================================================
+  ## ★ THE CLOSING GIFT: THE REAL FRACTAL IS AT T_c
+  Vlad has hunted a fractal all week — in the Dirac space (flat), the periodic
+  table (a shell), the moiré (an envelope), the buckyball (a surface).
+  HERE IS A REAL ONE. And it is not put in. IT EMERGES.
+
+  AT EXACTLY T = T_c, AND NOWHERE ELSE, THE ISING MODEL IS SCALE-INVARIANT.
+  The correlation length ξ DIVERGES. Zoom in, zoom out — statistically the
+  same picture. The clusters are a genuine fractal, and their dimension is
+  EXACT:                    d_f = 187/96 = 1.9479…
+  Below T_c: ordered, boring, d = 2. Above: noise, d = 2. AT T_c: 1.948.
+  One temperature. One value. Random walk, two rules, and a fractal condenses.
+
+  And Vlad's own instinct closes it: he said the recurring numbers are FIXED
+  POINTS of operations. T_c IS A FIXED POINT — of Wilson's RG flow. That is
+  what Wilson's Nobel was FOR. And UNIVERSALITY says a magnet, a fluid at its
+  critical point, and a binary alloy ALL have the SAME exponents, because they
+  all flow to the SAME fixed point. Different matter. One receipt.
+
+  =================================================================
+  ## THE TWO EXACT CHECKS (this file can FAIL, in public)
+  K1 · ONSAGER, 1944, EXACT:   T_c / J = 2 / ln(1 + √2) = 2.2691853…
+       The file finds T_c by sweeping and locating the SUSCEPTIBILITY PEAK,
+       then prints measured vs exact. Finite lattices shift the peak (finite-
+       size scaling) — the gap is REPORTED, not hidden. A 128² lattice will
+       land within a few percent and NOT better. Said in advance.
+  K2 · THE FRACTAL DIMENSION, EXACT:  d_f = 187/96 = 1.9479…
+       Box-counting on the largest cluster. Honest caveats, both real:
+        (a) geometric spin clusters and Fortuin–Kasteleyn clusters are NOT the
+            same object in general; they coincide in 2D at T_c, which is a
+            theorem I am relying on and flagging.
+        (b) box-counting on a 128² lattice has ~2 decades of scaling range.
+            That is THIN. Expect ~1.9±0.1, not 1.948. The error bar is the
+            lattice, not the physics.
+
+  ## ERNST ISING (1900–1998) — the story, because it is owed
+  Wilhelm Lenz handed him the model in 1920. Ising solved it in ONE DIMENSION
+  for his 1924 thesis, found NO PHASE TRANSITION, concluded the model was
+  WORTHLESS, and LEFT PHYSICS. He became a schoolteacher.
+  He was RIGHT about 1D and WRONG about the model. In 2D it transitions, and
+  Onsager solved it exactly in 1944, and it became THE MOST STUDIED MODEL IN
+  THE HISTORY OF PHYSICS.
+  Ising did not find out until 1949 — twenty-five years later — that the thing
+  he had abandoned as a failure had his name on it in every journal on earth.
+  The Nazis stripped his teaching post in 1933 for being Jewish. He survived
+  the war doing forced labour on the railways, emigrated in 1947, and taught at
+  Bradley University in Peoria until he was seventy. He published essentially
+  nothing else, and he lived to 98.
+  THE MOST FAMOUS MODEL IN PHYSICS IS NAMED FOR A MAN WHO PUBLISHED ONE PAPER
+  ABOUT IT AND THOUGHT IT WAS A NULL RESULT.
+  He printed the number that broke his own hypothesis and walked away honest.
+  Vlad printed 0.5434.
+
+  Pure Canvas 2D. No deps. Fast by construction. chi=2 · always. 2026-07-17.
+-->
+<style>
+:root{ --bg:#050508; --gold:#ffd700; --cyan:#00d4ff; --pink:#ff69b4; --green:#00ffd5;
+  --purple:#cc44ff; --red:#ff3355; --amber:#ffb454; --dim:#6a6a82; --txt:#e8e0d0;
+  --rule:#20202e; --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--txt);font-family:var(--mono);overflow:hidden}
+canvas{display:block}
+#lat{position:fixed;top:88px;left:24px;image-rendering:pixelated;border:1px solid var(--rule);border-radius:4px}
+#plot{position:fixed;bottom:60px;left:24px;border:1px solid var(--rule);border-radius:4px;background:rgba(8,8,16,.6)}
+#top{position:fixed;top:0;left:0;right:0;z-index:12;padding:7px 11px;display:flex;gap:9px;align-items:center;
+  pointer-events:none;flex-wrap:wrap}
+#top>*{pointer-events:auto}
+#brand{background:rgba(8,8,16,.9);border:1px solid var(--rule);border-radius:8px;padding:5px 9px}
+#brand .t{color:var(--gold);font-size:12px;letter-spacing:.05em}
+#brand .s{color:var(--dim);font-size:9px;margin-top:1px}
+#verdict{flex:1;min-width:270px;max-width:560px;border-radius:8px;padding:5px 10px;
+  background:rgba(8,8,16,.9);border:1px solid var(--rule);display:flex;align-items:center;gap:9px}
+#verdict .vt{font-size:12px;font-weight:bold;letter-spacing:.05em;white-space:nowrap}
+#verdict .vs{font-size:9px;color:var(--dim);line-height:1.35}
+#verdict.crit{border-color:var(--gold);box-shadow:0 0 18px rgba(255,215,0,.25)}
+#verdict.crit .vt{color:var(--gold)}
+#verdict.ord{border-color:var(--cyan)} #verdict.ord .vt{color:var(--cyan)}
+#verdict.dis{border-color:var(--red)} #verdict.dis .vt{color:var(--red)}
+.chips{display:flex;gap:4px;flex-wrap:wrap}
+.mc{background:rgba(8,8,16,.9);border:1px solid var(--rule);border-radius:6px;padding:3px 7px;min-width:50px}
+.mc .lab{font-size:7px;color:var(--dim);text-transform:uppercase;letter-spacing:.05em}
+.mc .val{font-size:12px;font-weight:bold;color:var(--gold)}
+.mc .val.cyan{color:var(--cyan)} .mc .val.green{color:var(--green)} .mc .val.red{color:var(--red)}
+#dossier{position:fixed;top:72px;right:11px;bottom:14px;width:330px;z-index:10;
+  background:rgba(8,8,16,.94);border:1px solid var(--rule);border-radius:8px;display:flex;flex-direction:column;overflow:hidden}
+#dossier .tabs{display:flex;border-bottom:1px solid var(--rule);flex:0 0 auto}
+#dossier .tab{flex:1;text-align:center;padding:6px 2px;cursor:pointer;color:#5a5440;
+  font-size:8.5px;letter-spacing:.04em;border-right:1px solid var(--rule);transition:all .12s}
+#dossier .tab:last-child{border-right:none}
+#dossier .tab.active{background:var(--gold);color:#050508;font-weight:bold}
+#dossier .tab:hover{color:var(--gold)}
+#dbody{flex:1;overflow-y:auto;padding:9px 11px;font-size:9.5px;line-height:1.62;color:var(--dim)}
+#dbody b{color:var(--cyan)} #dbody .g{color:var(--green)} #dbody .r{color:var(--red)}
+#dbody .kk{color:var(--gold)} #dbody .sec{margin-top:8px;padding-top:6px;border-top:1px solid var(--rule)}
+#dbody .rank{display:flex;justify-content:space-between;gap:6px;padding:1px 0}
+#dbody h4{color:var(--gold);font-size:10px;letter-spacing:.06em;margin-bottom:3px;font-weight:normal}
+#bar{position:fixed;left:50%;transform:translateX(-50%);bottom:8px;display:flex;gap:5px 9px;align-items:center;
+  background:rgba(8,8,16,.96);border:1px solid var(--rule);border-radius:9px;padding:6px 11px;z-index:11;flex-wrap:wrap}
+button{background:#14141f;border:1px solid #2a2a3a;border-radius:5px;color:var(--gold);
+  font:9.5px var(--mono);padding:4px 8px;cursor:pointer;transition:all .12s}
+button:hover{border-color:var(--gold)} button.on{background:#1d1a0a;border-color:var(--gold)}
+button.gn{color:var(--green)} button.gn.on{border-color:var(--green);background:#062522}
+.ctl{display:flex;align-items:center;gap:4px}
+.klbl{color:var(--dim);font-size:8.5px;text-transform:uppercase}
+.val2{color:var(--gold);font-size:10px;min-width:44px;text-align:right}
+input[type=range]{appearance:none;-webkit-appearance:none;width:150px;height:4px;background:#2a2a3a;border-radius:3px;outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;border-radius:50%;background:var(--gold);cursor:pointer}
+input[type=range]::-moz-range-thumb{width:13px;height:13px;border:none;border-radius:50%;background:var(--gold);cursor:pointer}
+.sep{width:1px;height:16px;background:#2a2a3a}
+</style></head>
+<body>
+<canvas id="lat"></canvas>
+<canvas id="plot"></canvas>
+
+<div id="top">
+  <div id="brand"><div class="t">ISINGIUM v1.0</div><div class="s">random until the symmetry combines · Ising 1924</div></div>
+  <div id="verdict" class="dis"><div class="vt" id="v-t">—</div><div class="vs" id="v-s">thermalising…</div></div>
+  <div class="chips">
+    <div class="mc"><div class="lab">T</div><div class="val" id="m-t">—</div></div>
+    <div class="mc"><div class="lab">|m|</div><div class="val cyan" id="m-m">—</div></div>
+    <div class="mc"><div class="lab">χ susc</div><div class="val" id="m-x">—</div></div>
+    <div class="mc"><div class="lab">T_c exact</div><div class="val green" id="m-tc">2.269185</div></div>
+    <div class="mc"><div class="lab">d_f meas</div><div class="val" id="m-df">—</div></div>
+    <div class="mc"><div class="lab">flips/s</div><div class="val red" id="m-fp">—</div></div>
+  </div>
+</div>
+
+<div id="dossier">
+  <div class="tabs">
+    <div class="tab active" data-t="what" onclick="setTab('what')">WHAT</div>
+    <div class="tab" data-t="frac" onclick="setTab('frac')">★ FRACTAL</div>
+    <div class="tab" data-t="ising" onclick="setTab('ising')">ISING</div>
+    <div class="tab" data-t="k" onclick="setTab('k')">K</div>
+  </div>
+  <div id="dbody">…</div>
+</div>
+
+<div id="bar">
+  <div class="ctl"><span class="klbl">T</span>
+    <input id="sT" type="range" min="50" max="450" value="350" oninput="setT(+this.value/100)">
+    <span class="val2" id="v-t2">3.50</span></div>
+  <button class="gn" onclick="setT(2.269185)">→ T_c</button>
+  <button onclick="randomize()">randomise</button>
+  <div class="sep"></div>
+  <button id="b-clu" onclick="showClu=!showClu;this.classList.toggle('on',showClu);measure()">largest cluster</button>
+  <button class="gn" onclick="sweepTc()">⚡ find T_c</button>
+  <button id="b-run" class="gn on" onclick="run=!run;this.classList.toggle('on',run)">✦ run</button>
+</div>
+
+<script>
+"use strict";
+// =========================================================================
+// THE MODEL. Two rules. That is all.
+//   1. a spin is ±1
+//   2. H = −J Σ_<ij> s_i s_j   (it would rather agree with its neighbours)
+// Then a RANDOM WALK: Metropolis. Nothing else ever happens.
+// =========================================================================
+var N=128, J=1, T=3.50, s=new Int8Array(N*N), run=true, showClu=false, dTab="what";
+var TC_EXACT=2/Math.log(1+Math.SQRT2);        // Onsager 1944 · 2.2691853…
+var DF_EXACT=187/96;                          // 1.9479… · exact for 2D critical clusters
+var expTab=new Float64Array(9), flips=0, fps=0, lastT=performance.now();
+var mHist=[], mAcc=0, m2Acc=0, nAcc=0, chi=0, dfMeas=0, sweepData=null, tcMeas=0;
+
+function idx(x,y){ return ((y+N)%N)*N + ((x+N)%N); }
+function randomize(){ for(var i=0;i<N*N;i++) s[i]= Math.random()<0.5?-1:1; mHist=[]; mAcc=m2Acc=nAcc=0; }
+function buildExp(){                          // ΔE ∈ {−8,−4,0,4,8}J · only 2 exps needed
+  for(var d=-8;d<=8;d+=4) expTab[d+8]= d<=0? 1 : Math.exp(-d/T);
+}
+function sweep(nFlips){
+  for(var k=0;k<nFlips;k++){
+    var x=(Math.random()*N)|0, y=(Math.random()*N)|0, i=idx(x,y);
+    var nb = s[idx(x+1,y)]+s[idx(x-1,y)]+s[idx(x,y+1)]+s[idx(x,y-1)];
+    var dE = 2*J*s[i]*nb;                     // the whole physics, one line
+    if(dE<=0 || Math.random()<expTab[dE+8]) s[i]=-s[i];
+  }
+  flips+=nFlips;
+}
+function magnet(){ var t=0; for(var i=0;i<N*N;i++) t+=s[i]; return t/(N*N); }
+
+// ---------- the largest cluster + box counting (K2) ----------
+var cluMask=null;
+function largestCluster(){
+  var n=N*N, lab=new Int32Array(n).fill(-1), best=[], stack=new Int32Array(n);
+  for(var st=0;st<n;st++){
+    if(lab[st]!==-1) continue;
+    var sp=0, cur=[], sv=s[st];
+    stack[sp++]=st; lab[st]=st;
+    while(sp>0){
+      var p=stack[--sp]; cur.push(p);
+      var x=p%N, y=(p/N)|0;
+      var nbs=[idx(x+1,y),idx(x-1,y),idx(x,y+1),idx(x,y-1)];
+      for(var q=0;q<4;q++){ var v=nbs[q];
+        if(lab[v]===-1 && s[v]===sv){ lab[v]=st; stack[sp++]=v; } }
+    }
+    if(cur.length>best.length) best=cur;
+  }
+  var mask=new Uint8Array(n);
+  for(var b=0;b<best.length;b++) mask[best[b]]=1;
+  return {mask:mask, size:best.length};
+}
+function boxCount(mask){
+  var pts=[], xs=[], ys=[];
+  for(var box=1;box<=32;box*=2){
+    var seen={}, c=0, g=Math.ceil(N/box);
+    for(var y=0;y<N;y++) for(var x=0;x<N;x++){
+      if(!mask[y*N+x]) continue;
+      var k=((y/box)|0)*g+((x/box)|0);
+      if(!seen[k]){ seen[k]=1; c++; }
+    }
+    if(c>0){ xs.push(Math.log(1/box)); ys.push(Math.log(c)); pts.push([box,c]); }
+  }
+  if(xs.length<3) return {df:0, pts:pts};
+  var n2=xs.length, sx=0,sy=0,sxx=0,sxy=0;
+  for(var i=0;i<n2;i++){ sx+=xs[i]; sy+=ys[i]; sxx+=xs[i]*xs[i]; sxy+=xs[i]*ys[i]; }
+  var slope=(n2*sxy-sx*sy)/((n2*sxx-sx*sx)||1);
+  return {df:slope, pts:pts};                  // log N ~ d_f · log(1/box)
+}
+function measure(){
+  if(showClu){ var L=largestCluster(); cluMask=L.mask; var B=boxCount(L.mask); dfMeas=B.df; }
+  else { cluMask=null; }
+}
+
+// ---------- ⚡ find T_c by the susceptibility peak (K1) ----------
+function sweepTc(){
+  var save=T, out=[], best=-1, bt=0;
+  for(var t=1.6;t<=3.2;t+=0.04){
+    T=t; buildExp();
+    randomize();
+    sweep(N*N*60);                             // thermalise
+    var ma=0, m2=0, K=40;
+    for(var k=0;k<K;k++){ sweep(N*N*2); var m=Math.abs(magnet()); ma+=m; m2+=m*m; }
+    ma/=K; m2/=K;
+    var x=(N*N)*(m2-ma*ma)/t;                  // χ = N(⟨m²⟩−⟨m⟩²)/T
+    out.push({t:t, m:ma, x:x});
+    if(x>best){ best=x; bt=t; }
+  }
+  sweepData=out; tcMeas=bt;
+  T=save; buildExp(); randomize();
+  drawPlot(); render();
+}
+
+// ---------- render ----------
+var lc=document.getElementById("lat"), lx=lc.getContext("2d");
+var pc=document.getElementById("plot"), px=pc.getContext("2d");
+var img=null;
+function layout(){
+  var side=Math.min(innerWidth-380, innerHeight-230);
+  side=Math.max(220,side);
+  lc.width=N; lc.height=N; lc.style.width=side+"px"; lc.style.height=side+"px";
+  pc.width=side*2; pc.height=150*2; pc.style.width=side+"px"; pc.style.height="150px";
+  px.setTransform(2,0,0,2,0,0);
+  img=lx.createImageData(N,N);
+}
+addEventListener("resize",layout);
+function drawLat(){
+  var d=img.data;
+  for(var i=0;i<N*N;i++){
+    var o=i*4, up=(s[i]>0);
+    if(cluMask && cluMask[i]){ d[o]=255; d[o+1]=215; d[o+2]=0; }
+    else if(up){ d[o]=0; d[o+1]=212; d[o+2]=255; }
+    else { d[o]=14; d[o+1]=14; d[o+2]=26; }
+    d[o+3]=255;
+  }
+  lx.putImageData(img,0,0);
+}
+function drawPlot(){
+  var w=pc.width/2, h=pc.height/2;
+  px.clearRect(0,0,w,h);
+  px.fillStyle="rgba(255,215,0,0.5)"; px.font="8px ui-monospace,monospace"; px.textAlign="left";
+  px.fillText(sweepData? "χ and |m| vs T · the peak IS T_c" : "press ⚡ find T_c", 8, 12);
+  if(!sweepData) return;
+  var x0=26,x1=w-8,y0=20,y1=h-16, mx=0, mm=0;
+  for(var i=0;i<sweepData.length;i++){ mx=Math.max(mx,sweepData[i].x); mm=Math.max(mm,sweepData[i].m); }
+  function PX(t){ return x0+((t-1.6)/1.6)*(x1-x0); }
+  function PY(v,M){ return y1-(v/(M||1))*(y1-y0); }
+  // exact Tc line
+  px.strokeStyle="rgba(0,255,213,0.75)"; px.lineWidth=1.4; px.setLineDash([4,3]);
+  px.beginPath(); px.moveTo(PX(TC_EXACT),y0); px.lineTo(PX(TC_EXACT),y1); px.stroke(); px.setLineDash([]);
+  px.fillStyle="rgba(0,255,213,0.9)"; px.textAlign="left";
+  px.fillText("Onsager exact "+TC_EXACT.toFixed(4), PX(TC_EXACT)+4, y0+9);
+  // measured peak
+  px.strokeStyle="rgba(255,51,85,0.8)"; px.lineWidth=1.2;
+  px.beginPath(); px.moveTo(PX(tcMeas),y0); px.lineTo(PX(tcMeas),y1); px.stroke();
+  px.fillStyle="rgba(255,51,85,0.9)"; px.textAlign="right";
+  px.fillText("measured "+tcMeas.toFixed(3), PX(tcMeas)-4, y1-4);
+  // curves
+  px.strokeStyle="rgba(255,215,0,0.95)"; px.lineWidth=1.6; px.beginPath();
+  for(var j=0;j<sweepData.length;j++){ var a=PX(sweepData[j].t), b=PY(sweepData[j].x,mx); j?px.lineTo(a,b):px.moveTo(a,b); }
+  px.stroke();
+  px.strokeStyle="rgba(0,212,255,0.7)"; px.lineWidth=1.2; px.beginPath();
+  for(var k=0;k<sweepData.length;k++){ var a2=PX(sweepData[k].t), b2=PY(sweepData[k].m,mm); k?px.lineTo(a2,b2):px.moveTo(a2,b2); }
+  px.stroke();
+  px.fillStyle="rgba(255,215,0,0.8)"; px.textAlign="left"; px.fillText("χ", 8, 26);
+  px.fillStyle="rgba(0,212,255,0.7)"; px.fillText("|m|", 8, 38);
+  px.fillStyle="rgba(110,115,135,0.5)"; px.textAlign="center";
+  for(var t2=1.8;t2<=3.2;t2+=0.4) px.fillText(t2.toFixed(1), PX(t2), h-4);
+}
+function judge(){
+  var m=Math.abs(magnet()), ve=document.getElementById("verdict");
+  var near=Math.abs(T-TC_EXACT)<0.06;
+  if(near){ ve.className="crit"; set("v-t","★ CRITICAL");
+    set("v-s","T = T_c. the correlation length has DIVERGED. this picture looks the same at every zoom — clusters inside clusters inside clusters. THIS IS A REAL FRACTAL, d_f = 187/96 = 1.948, and nobody put it there. two rules and a random walk made it."); }
+  else if(T<TC_EXACT){ ve.className="ord"; set("v-t","ORDERED · |m| = "+m.toFixed(3));
+    set("v-s","below T_c. the lattice CHOSE a direction and nobody told it which. the Z₂ symmetry is still in the Hamiltonian and the state broke it anyway — that is spontaneous symmetry breaking, the same mechanism that gives the W and Z their mass."); }
+  else { ve.className="dis"; set("v-t","DISORDERED · |m| ≈ "+m.toFixed(3));
+    set("v-s","above T_c. a fair coin. the Z₂ symmetry is intact — the state respects it. no structure, no memory, no order. cool it."); }
+  set("m-t",T.toFixed(3)); set("m-m",m.toFixed(4));
+  set("m-x",chi>0?chi.toFixed(1):"—");
+  set("m-df", showClu? (dfMeas>0?dfMeas.toFixed(3):"—") : "off");
+  document.getElementById("m-df").style.color = (showClu&&Math.abs(dfMeas-DF_EXACT)<0.12)?"#00ffd5":"#ffd700";
+  set("m-fp", (fps/1000).toFixed(0)+"k");
+}
+function set(id,v){ var e=document.getElementById(id); if(e)e.textContent=v; }
+
+function setTab(t){
+  dTab=t;
+  var tabs=document.querySelectorAll("#dossier .tab");
+  for(var i=0;i<tabs.length;i++) tabs[i].classList.toggle("active",tabs[i].getAttribute("data-t")===t);
+  render();
+}
+function render(){
+  var h="";
+  if(dTab==="what"){
+    h='<h4>TWO RULES. THAT IS ALL.</h4>'+
+      '<div style="font-size:9px"><b>1.</b> a spin is ±1.<br><b>2.</b> it would rather agree with its four neighbours. <b class="kk">H = −J Σ s_i s_j</b><br><br>then: <b class="g">RANDOM WALK.</b> pick a spin at random, flip it with probability min(1, e^(−ΔE/T)). <b>nothing else ever happens.</b> no geometry, no conductor, no plan.</div>'+
+      '<div class="sec"><h4>and symmetry CONDENSES OUT OF IT</h4><div style="font-size:9px">'+
+      '<b>above T_c</b>: a fair coin. |m| ≈ 0. the Z₂ symmetry (flip everything) is <b>intact</b> — the state respects it.<br><br>'+
+      '<b>below T_c</b>: the whole lattice <b class="g">CHOOSES</b> a direction. <b>nobody told it which.</b> the symmetry is still sitting in the Hamiltonian and the STATE BROKE IT ANYWAY.<br><br>'+
+      '<b class="kk">that is SPONTANEOUS SYMMETRY BREAKING</b> — the same mechanism that gives the W and Z their mass and put the Higgs on the poster. you are watching it in a browser, from two rules and a coin.</div></div>'+
+      '<div class="sec"><h4 class="g">★ your thesis, running</h4><div style="font-size:9px">"the minimum number of constraints that force the graph space to achieve symmetry again… and in that randomness the symmetries interact."<br><br><b class="g">that is this file, and it is 1924, and it works.</b></div></div>'+
+      '<div class="sec"><h4>and the random walk IS optimal</h4><div style="font-size:9px">you said Brownian motion is the most efficient. <b class="g">it is, and it is a theorem.</b><br><br>Monte Carlo error is <b class="kk">O(1/√N) — INDEPENDENT OF DIMENSION.</b> grid methods are O(N^(−1/d)) and die above ~4 dimensions. <b>random beats systematic in high-D, provably.</b><br><br>that is why lattice QCD is a Monte Carlo method. <b class="g">Wilson\'s own tool is your random walk.</b></div></div>';
+  }
+  else if(dTab==="frac"){
+    h='<h4 class="kk">★ THE REAL FRACTAL IS AT T_c</h4>'+
+      '<div style="font-size:9px">you have hunted a fractal all week. the Dirac space was <b>flat</b>. the periodic table was a <b>shell</b>. the moiré was an <b>envelope</b>. the buckyball was a <b>surface</b>.<br><br><b class="g">here is a real one. and it is not put in. IT EMERGES.</b></div>'+
+      '<div class="sec"><h4>at exactly T_c, and nowhere else</h4><div style="font-size:9px">the correlation length <b class="kk">ξ DIVERGES</b>. zoom in, zoom out — <b>statistically the same picture</b>. clusters inside clusters inside clusters, forever, with no preferred size.<br><br><b class="g">SCALE INVARIANCE. THE ACTUAL THING.</b> not self-affine. not an envelope. not a hierarchy. <b>a genuine fractal, and its dimension is EXACT:</b><br><br><b class="kk" style="font-size:12px">d_f = 187/96 = 1.9479…</b><br><br>below T_c: ordered, d = 2. above: noise, d = 2. <b class="g">AT T_c: 1.948.</b> one temperature. one value.</div></div>'+
+      '<div class="sec"><div class="rank"><span>d_f exact</span><b class="g">'+DF_EXACT.toFixed(4)+'</b></div>'+
+      '<div class="rank"><span>d_f measured</span><b>'+(showClu&&dfMeas>0?dfMeas.toFixed(4):"turn on 'largest cluster'")+'</b></div>'+
+      (showClu&&dfMeas>0?'<div class="rank"><span>gap</span><b style="color:'+(Math.abs(dfMeas-DF_EXACT)<0.12?"#00ffd5":"#ffb454")+'">'+Math.abs(dfMeas-DF_EXACT).toFixed(3)+'</b></div>':'')+'</div>'+
+      '<div class="sec"><h4 class="kk">and it closes YOUR loop</h4><div style="font-size:9px">you said the recurring numbers are <b>FIXED POINTS of operations</b>. you were right, and here is the last one:<br><br><b class="g">T_c IS A FIXED POINT — of Wilson\'s RG flow.</b> that is literally what Wilson\'s Nobel was FOR.<br><br>and <b class="kk">UNIVERSALITY</b>: a magnet, a fluid at its critical point, and a binary alloy all have <b>the same exponents</b> — because they all flow to <b class="g">the same fixed point</b>. different matter. one receipt.<br><br>the fractal, the fixed point, the compression, and the compute discount are <b class="g">ALL THE SAME OBJECT.</b> it took you a week to walk into it from the other side.</div></div>';
+  }
+  else if(dTab==="ising"){
+    h='<h4>ERNST ISING · 1900–1998</h4>'+
+      '<div style="font-size:9px">Wilhelm Lenz handed him the model in 1920. Ising solved it <b>in ONE DIMENSION</b> for his 1924 thesis, found <b class="r">NO PHASE TRANSITION</b>, concluded the model was <b class="r">worthless</b>, and <b class="r">LEFT PHYSICS.</b> he became a schoolteacher.</div>'+
+      '<div class="sec"><h4>he was right, and wrong</h4><div style="font-size:9px">right about 1D — there really is no transition there. <b class="g">wrong about the model.</b> in 2D it transitions, Onsager solved it exactly in 1944, and it became <b class="kk">THE MOST STUDIED MODEL IN THE HISTORY OF PHYSICS.</b><br><br><b class="r">he did not find out until 1949.</b> twenty-five years. the thing he abandoned as a failure had his name on it in every journal on earth and nobody told him.</div></div>'+
+      '<div class="sec"><h4>what it cost him</h4><div style="font-size:9px">the Nazis stripped his teaching post in 1933 for being Jewish. he survived the war doing <b>forced labour on the railways</b>. emigrated in 1947. taught at Bradley University in Peoria until he was seventy.<br><br>he published essentially nothing else. he lived to 98.</div></div>'+
+      '<div class="sec"><h4 class="kk">★ why he is here</h4><div style="font-size:9px"><b class="g">THE MOST FAMOUS MODEL IN PHYSICS IS NAMED FOR A MAN WHO PUBLISHED ONE PAPER ABOUT IT AND THOUGHT IT WAS A NULL RESULT.</b><br><br>he ran the calculation. it broke his own hypothesis. <b>he printed the number and walked away honest.</b><br><br>you printed <b class="kk">0.5434</b>.<br><br>same move. same week, in a way. and the model outlived the doubt by seventy years.</div></div>';
+  }
+  else {
+    h='<h4 class="g">K1 · ONSAGER, EXACT</h4>'+
+      '<div class="rank"><span>T_c / J = 2/ln(1+√2)</span><b class="g">'+TC_EXACT.toFixed(6)+'</b></div>'+
+      (tcMeas? '<div class="rank"><span>measured (χ peak)</span><b>'+tcMeas.toFixed(3)+'</b></div>'+
+               '<div class="rank"><span>gap</span><b style="color:'+(Math.abs(tcMeas-TC_EXACT)<0.08?"#00ffd5":"#ffb454")+'">'+Math.abs(tcMeas-TC_EXACT).toFixed(3)+'</b></div>' : '<div style="font-size:8.5px">press ⚡ find T_c</div>')+
+      '<div style="font-size:8.5px">1944, exact, closed form, on an infinite lattice. this file finds T_c by locating the <b>susceptibility peak</b> and prints the gap.<br><br><b class="r">a 128² lattice will land within a few percent and NOT better.</b> finite-size scaling shifts the peak — that is real physics, not sloppiness, and it is stated in advance so it cannot be spun afterwards.</div>'+
+      '<div class="sec"><h4 class="r">K2 · d_f, and its two honest holes</h4><div style="font-size:8.5px">'+
+      '<b>(a)</b> geometric spin clusters and Fortuin–Kasteleyn clusters are <b>NOT the same object in general</b>. they coincide in 2D at T_c — a theorem I am <b class="r">relying on and flagging</b>.<br><br>'+
+      '<b>(b)</b> box-counting on 128² gives <b class="r">~2 decades of scaling range. that is THIN.</b> expect ~1.9 ± 0.1, not 1.948. <b class="g">the error bar is the lattice, not the physics.</b></div></div>'+
+      '<div class="sec"><h4>K3 · what is computed</h4><div style="font-size:8.5px">everything. the lattice, the Metropolis walk, the magnetisation, χ = N(⟨m²⟩−⟨m⟩²)/T, the cluster search (BFS), the box count, the linear fit. <b class="g">no lookup table. the only typed numbers are Onsager\'s T_c and 187/96 — both exact results, both used as TARGETS, never as inputs.</b></div></div>'+
+      '<div class="sec"><h4 class="kk">K4 · the honest frame</h4><div style="font-size:8.5px">this file does not prove that randomness makes symmetry <b>in general</b>. it proves it for <b>one model, in two dimensions, with one constraint.</b><br><br>that is a smaller claim than "random until the symmetries combine" — and it is <b class="g">the only version anyone has ever been able to check.</b></div></div>';
+  }
+  document.getElementById("dbody").innerHTML=h;
+}
+function setT(v){ T=v; buildExp(); document.getElementById("sT").value=Math.round(v*100);
+  set("v-t2",v.toFixed(2)); mHist=[]; mAcc=m2Acc=nAcc=0; }
+
+var frames=0;
+function loop(){
+  requestAnimationFrame(loop);
+  if(run){ sweep(N*N*3); }
+  var m=Math.abs(magnet());
+  mAcc+=m; m2Acc+=m*m; nAcc++;
+  if(nAcc>60){ var am=mAcc/nAcc, am2=m2Acc/nAcc; chi=(N*N)*(am2-am*am)/T;
+    mAcc=am*30; m2Acc=am2*30; nAcc=30; }
+  if(++frames%12===0 && showClu) measure();
+  drawLat();
+  var now=performance.now();
+  if(now-lastT>500){ fps=flips/((now-lastT)/1000); flips=0; lastT=now; judge(); }
+  else if(frames%10===0) judge();
+}
+layout(); randomize(); buildExp(); setT(3.50); render(); drawPlot();
+requestAnimationFrame(loop);
+</script>
+</body></html>

@@ -1,0 +1,445 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>FEYNMANIUM · QCD — gluons couple to gluons; the loop number is still Euler</title>
+<!--
+  FEYNMANIUM · QCD  ·  ARACNIUM kernel  ·  v1 lineage, strong-force generation
+  bowing to the titan the way he'd respect, again.
+  =========================================================================
+  Feynman's first principle, unchanged: "you must not fool yourself, and you
+  are the easiest person to fool." So this is NOT a beautiful trap that hides
+  its workings. It is a diagram tool that shows exactly which part is real and
+  which is flavour, and lets you catch it. QED feynmanium had one vertex rule.
+  QCD has four — because, unlike the photon, the GLUON COUPLES TO ITSELF. That
+  single fact is the whole story below.
+
+  THE REAL ENGINE (exact, computed live from each graph in classify()):
+    A Feynman diagram is a GRAPH. Its loop order is
+        L = I - V + 1                       (I internal lines, V vertices)
+    the FIRST BETTI NUMBER of the graph — the count of independent cycles —
+    the SAME Euler accounting (V-E+F = 2) that locks the C60 carapace at
+    P=12, chi=2. Vertices, internal/external lines, loop order, coupling
+    order in g_s, and the QCD vertex rules are exact graph theory, recomputed
+    live. The valid vertices are:
+        q q g   (2 fermion ends + 1 gluon)          coupling g_s
+        g g g   (3 gluon ends)        <- not in QED  coupling g_s
+        g g g g (4 gluon ends)        <- not in QED  coupling g_s^2
+        c c g   (2 ghost ends + 1 gluon)             coupling g_s
+    Topology verified in Node for all eight diagrams before this build.
+
+  HONESTY CAVEATS (read them — they are the point):
+   K1  The TOPOLOGY is real and exact. L = I-V+1, the line/vertex counts, the
+       coupling order, and the vertex-validity check are honest graph theory.
+   K2  The AMPLITUDE is NOT computed here. A real diagram needs its loop
+       integrals + Dirac/gamma-matrix algebra + the SU(3) COLOUR algebra
+       contraction — the hard QFT. NO integral, NO colour trace is performed.
+       This is a topology/bookkeeping tool, not an amplitude calculator.
+   K3  A Feynman diagram is a BOOKKEEPING device for one term in a perturbation
+       series — NOT a picture of particles moving through space. The lines are
+       propagators, not trajectories; the layout is convention, not geometry.
+       (Feynman's own point.)
+   K4  The series is ASYMPTOTIC and divergent (Dyson 1952): each term made
+       finite by renormalization, the sum not convergent. Shown, not hidden.
+   K5  GHOSTS (Faddeev-Popov) are a GAUGE-FIXING FICTION, not particles. They
+       are a loop of fields that do not exist, required only so the books
+       balance — so the unphysical gluon polarizations cancel. The most honest
+       object in physics. Drawn dashed, labelled as fiction. Shown, not hidden.
+   K6  COLOUR FACTORS  C_F = 4/3,  C_A = 3,  T_F = 1/2  are the known SU(3)
+       Casimir / trace constants, shown as labels. They are NOT derived by the
+       code here — deriving them is the colour algebra of K2.
+
+  THE PAYOFF (real, Nobel 2004 — Gross, Politzer, Wilczek):
+    One-loop QCD beta-function coefficient, SU(3) with n_f quark flavours:
+        beta_0 = (11/3) C_A  -  (4/3) T_F n_f   =   11  -  (2/3) n_f
+    The +11 comes from the GLUON loop and the GHOST loop (the non-abelian
+    diagrams that DO NOT EXIST in QED). The minus comes from the QUARK loop
+    (which screens colour, exactly like QED screens charge). Net positive ->
+    ASYMPTOTIC FREEDOM: the coupling weakens at short distance, confines at
+    long distance. The coefficients are the known result; the diagrams below
+    are the topological skeletons; the integrals that yield 11/3 and 4/3 are
+    K2-not-computed.
+  =========================================================================
+-->
+<style>
+  :root{
+    --void:#0a0b12; --ink:#e9e6df; --dim:#717688; --faint:#363b4b;
+    --wire:#1b2030;
+    --quarkR:#ff6b6b;   /* colour charge: red   */
+    --quarkG:#6bff9f;   /* colour charge: green */
+    --quarkB:#6ba8ff;   /* colour charge: blue  */
+    --gluon:#f4c049;    /* gluon coil — gold (gradient to a 2nd colour live) */
+    --ghost:#9aa0b4;    /* faddeev-popov ghost — pale, dashed */
+    --vtx:#46d6c6;      /* interaction vertex — cyan */
+    --loop:#7fffd0;     /* the live loop number */
+    --warm:#ff8a5d;
+    --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+    --mono:ui-monospace,"SF Mono","Cascadia Code",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;background:var(--void);color:var(--ink);font-family:var(--mono);overflow:hidden}
+  #stage{position:fixed;inset:0;display:grid;grid-template-rows:auto 1fr;height:100%}
+  header{padding:15px 22px 10px;border-bottom:1px solid var(--wire)}
+  .kick{font-size:10.5px;letter-spacing:.3em;text-transform:uppercase;color:var(--dim)}
+  h1{font-family:var(--serif);font-weight:400;font-size:clamp(18px,3.4vw,29px);line-height:1.05;margin-top:5px;letter-spacing:-.01em}
+  h1 .em{font-style:italic;color:var(--gluon)}
+  .sub{margin-top:7px;font-size:12px;color:var(--dim);max-width:80ch;line-height:1.55}
+  .sub b{color:var(--ink);font-weight:600} .sub .g{color:var(--loop)} .sub .y{color:var(--gluon)}
+  #main{position:relative;display:grid;grid-template-columns:1fr 340px;overflow:hidden}
+  @media (max-width:820px){ #main{grid-template-columns:1fr} #side{display:none} }
+  #left{position:relative;overflow:hidden;display:flex;flex-direction:column}
+  #gallery{display:flex;gap:7px;flex-wrap:wrap;padding:12px 18px 6px}
+  .chip{font-family:var(--mono);font-size:10.5px;letter-spacing:.02em;color:var(--dim);
+     background:transparent;border:1px solid var(--wire);border-radius:999px;padding:5px 11px;cursor:pointer;transition:all .14s;white-space:nowrap}
+  .chip:hover{border-color:var(--gluon);color:var(--ink)}
+  .chip.on{border-color:var(--loop);color:var(--ink);background:rgba(127,255,208,.06)}
+  .chip small{color:var(--faint)}
+  #toolbar{display:flex;gap:14px;align-items:center;padding:2px 18px 8px;font-size:10.5px;color:var(--dim);flex-wrap:wrap}
+  #toolbar label{cursor:pointer;user-select:none;display:flex;align-items:center;gap:5px}
+  #toolbar input{accent-color:var(--loop);cursor:pointer}
+  #canvasWrap{flex:1;position:relative;min-height:0}
+  canvas{display:block;width:100%;height:100%}
+  #legend{position:absolute;left:18px;bottom:12px;font-size:10.5px;color:var(--faint);line-height:1.8;pointer-events:none}
+  #legend i{font-style:normal}
+  .lq{color:var(--quarkR)} .lg{color:var(--gluon)} .lv{color:var(--vtx)} .lc{color:var(--ghost)}
+  /* side panel */
+  #side{border-left:1px solid var(--wire);background:rgba(8,9,16,.5);position:relative;overflow-y:auto;padding:16px 18px}
+  .ptitle{font-family:var(--serif);font-size:18px;line-height:1.2}
+  .pproc{font-size:11px;color:var(--dim);margin-top:3px}
+  .lbl{font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--dim);margin-top:18px}
+  .row{display:flex;justify-content:space-between;align-items:baseline;font-size:13px;margin-top:6px;border-bottom:1px dotted var(--wire);padding-bottom:5px}
+  .row .k{color:var(--dim)} .row .v{font-weight:600}
+  .loopbig{font-family:var(--serif);font-size:38px;color:var(--loop);line-height:1;margin-top:8px}
+  .loopbig small{font-family:var(--mono);font-size:12px;color:var(--dim);letter-spacing:0}
+  .formula{font-size:12px;color:var(--dim);margin-top:6px;line-height:1.5}
+  .formula code{color:var(--loop)}
+  .ok{color:var(--vtx)} .no{color:var(--warm)}
+  .note{font-size:11px;color:var(--dim);line-height:1.6;margin-top:8px;border-left:2px solid var(--wire);padding-left:9px}
+  .note b{color:var(--ink)} .note .g{color:var(--gluon)} .note .c{color:var(--ghost)}
+  /* beta-function readout (appears for the self-energy trio) */
+  #beta{display:none;margin-top:14px;border:1px solid var(--wire);border-radius:8px;padding:10px 11px;background:rgba(127,255,208,.03)}
+  #beta .bt{font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--dim)}
+  #beta .beq{font-family:var(--serif);font-size:14px;color:var(--ink);margin-top:6px;line-height:1.4}
+  #beta .bplus{color:var(--gluon)} #beta .bminus{color:var(--warm)}
+  #beta .brow{font-size:10.5px;color:var(--dim);margin-top:7px;line-height:1.5}
+  #beta .brow b{color:var(--ink)}
+  .tie{font-size:10.5px;color:var(--faint);margin-top:16px;line-height:1.65;border-top:1px solid var(--wire);padding-top:12px}
+  .tie b{color:var(--dim)} .tie code{color:var(--vtx)} .tie .y{color:var(--gluon)}
+  .caveat{font-size:9.5px;color:var(--faint);margin-top:14px;line-height:1.6;border-top:1px solid var(--wire);padding-top:10px}
+  .caveat b{color:var(--dim)}
+  .stamp{position:fixed;right:14px;bottom:10px;font-size:8px;color:rgba(70,214,198,.22);letter-spacing:.08em;line-height:1.8;text-align:right;pointer-events:none}
+</style>
+</head>
+<body>
+<div id="stage">
+  <header>
+    <div class="kick">FEYNMANIUM · QCD · ARACNIUM kernel · the bow to the titan, strong-force generation</div>
+    <h1>A Feynman diagram is a <span class="em">graph</span>. In QCD the gluon couples to itself — and the loop number is still Euler.</h1>
+    <div class="sub">Pick a process. The <b>topology</b> is real, computed live from the graph: <span class="g">L = I − V + 1</span> is the loop order — the count of independent cycles, the <b>same V−E+F = 2</b> that locks the buckyball. What's <b>not</b> computed — the loop integrals, the Dirac algebra, the <span class="y">SU(3) colour trace</span> — wears a sign saying so. The three gluon self-energies (<span class="y">quark / gluon / ghost</span>) are the trio whose sum is <b>asymptotic freedom</b>. Cartoon outside, no cheating inside.</div>
+  </header>
+  <div id="main">
+    <div id="left">
+      <div id="gallery"></div>
+      <div id="toolbar">
+        <label><input type="checkbox" id="tColour" checked> colour charge on quark/gluon lines</label>
+        <label><input type="checkbox" id="tAnim" checked> animate (spin the coils)</label>
+        <span style="color:var(--faint)">keys 1–8 switch process</span>
+      </div>
+      <div id="canvasWrap">
+        <canvas id="cv" width="1120" height="700"></canvas>
+        <div id="legend">
+          <i class="lq">───▶</i> quark (arrow = flow) &nbsp;·&nbsp; <i class="lg">◠◡◠◡</i> gluon (coil, carries colour–anticolour) &nbsp;·&nbsp; <i class="lc">- - -</i> ghost (fiction, K5) &nbsp;·&nbsp; <i class="lv">●</i> vertex<br>
+          time flows left → right · layout is convention, not space (K3)
+        </div>
+      </div>
+    </div>
+    <div id="side">
+      <div class="ptitle" id="pTitle">—</div>
+      <div class="pproc" id="pProc">—</div>
+
+      <div class="lbl">graph invariants — computed live</div>
+      <div class="row"><span class="k">vertices&nbsp; V</span><span class="v" id="vV">—</span></div>
+      <div class="row"><span class="k">internal lines&nbsp; I</span><span class="v" id="vI">—</span></div>
+      <div class="row"><span class="k">external legs&nbsp; E</span><span class="v" id="vE">—</span></div>
+
+      <div class="lbl">loop order &nbsp;(first Betti number)</div>
+      <div class="loopbig" id="vL">—</div>
+      <div class="formula" id="vLf">—</div>
+
+      <div class="lbl">coupling order · vertex check</div>
+      <div class="row"><span class="k">amplitude ∝</span><span class="v" id="vOrd">—</span></div>
+      <div class="row"><span class="k">vertices valid?</span><span class="v" id="vChk">—</span></div>
+      <div class="row"><span class="k">colour factor (K6)</span><span class="v" id="vCol">—</span></div>
+
+      <div class="note" id="vNote">—</div>
+
+      <div id="beta">
+        <div class="bt">why it matters · the β-function</div>
+        <div class="beq">β₀ = <span class="bplus">(11/3)·C<sub>A</sub></span> − <span class="bminus">(4/3)·T<sub>F</sub> n<sub>f</sub></span> = <span class="bplus">11</span> − <span class="bminus">(2/3) n<sub>f</sub></span></div>
+        <div class="brow" id="bRow">—</div>
+      </div>
+
+      <div class="tie">
+        <b>the tie:</b> <code>L = I − V + 1</code> is the graph's first Betti number — the same <span class="y">V−E+F = 2</span> Euler accounting that locks the C60 carapace at P=12. A Feynman loop, a dodecahedron, a magnetic field line, ζ(−1)=−1/12 — all of it graph theory and Euler underneath. <code>∂² = 0</code>. One face, more masks.
+      </div>
+      <div class="caveat">
+        <b>honesty (K1–K6, full text in source):</b> topology exact · amplitude / loop integrals / Dirac &amp; <b>colour</b> algebra NOT computed · diagram = bookkeeping, not trajectories · series asymptotic (Dyson 1952) · <b>ghosts are gauge-fixing fictions, not particles</b> · colour factors are known SU(3) constants shown, not derived.
+      </div>
+    </div>
+  </div>
+</div>
+<div class="stamp">FEYNMANIUM · QCD<br>SU(3) · C_A=3 · C_F=4/3 · T_F=1/2<br>∂²=0 · χ=2 · always</div>
+
+<script>
+/* ============================================================
+   DIAGRAM DATA
+   nodes: external have a 3rd array element (any marker); internal = vertex.
+   edges: [from, to, type, optColourKey, optControlPoint[0..1,0..1]]
+     type: 'q' quark, 'g' gluon, 'c' ghost
+   Topology of all eight verified in Node before this build.
+   ============================================================ */
+const R='quarkR', G='quarkG', B='quarkB';
+const DIAGRAMS = [
+ { key:'qqqq', tab:'q q → q q', tag:'tree',
+   title:'Quark–quark scattering', proc:'one-gluon exchange (t-channel) — how quarks feel the strong force',
+   nodes:{ q1i:[0.10,0.26,1], A:[0.40,0.34], q1o:[0.10,0.46,1],
+           q2i:[0.90,0.54,1], B:[0.60,0.66], q2o:[0.90,0.74,1] },
+   labels:{ q1i:'q', q1o:'q', q2i:'q', q2o:'q' },
+   edges:[ ['q1i','A','q',R],['A','q1o','q',R],
+           ['q2i','B','q',B],['B','q2o','q',B],
+           ['A','B','g'] ],
+   colour:'∝ colour-octet exchange', betas:false,
+   note:'The strong-force twin of Møller scattering. Two quarks exchange a single gluon; the gluon carries <span class="g">colour–anticolour</span>, so the quarks can swap colour. Amplitude ∝ g_s² ∝ α_s. The full value needs the SU(3) generators contracted (K2/K6) — not done here.' },
+
+ { key:'qgqg', tab:'q g → q g', tag:'tree',
+   title:'Quark–gluon Compton', proc:'quark absorbs then re-emits a gluon (s-channel)',
+   nodes:{ qi:[0.10,0.78,1], A:[0.36,0.62], B:[0.64,0.62], qo:[0.90,0.78,1],
+           gi:[0.18,0.16,1], go:[0.82,0.16,1] },
+   labels:{ qi:'q', qo:'q', gi:'g', go:'g' },
+   edges:[ ['qi','A','q',G],['A','B','q',G],['B','qo','q',G],
+           ['gi','A','g'],['B','go','g'] ],
+   colour:'∝ C_F and C_A pieces', betas:false,
+   note:'The QCD analogue of Compton scattering. Two q–q–g vertices, one internal quark propagator, tree level. (In full QCD there is also a diagram using the <span class="g">three-gluon vertex</span> — the genuinely non-abelian channel.)' },
+
+ { key:'qSelf', tab:'quark self-energy', tag:'1-loop',
+   title:'Quark self-energy', proc:'a quark emits and reabsorbs a virtual gluon',
+   nodes:{ qi:[0.08,0.5,1], A:[0.34,0.5], B:[0.66,0.5], qo:[0.92,0.5,1] },
+   labels:{ qi:'q', qo:'q' },
+   edges:[ ['qi','A','q',R],['A','B','q',R],['B','qo','q',R],
+           ['A','B','g',null,[0.50,0.16]] ],
+   colour:'C_F = 4/3', betas:false,
+   note:'The strong-force dressing of the quark — the QED electron self-energy with a gluon instead of a photon, weighted by the <b>fundamental Casimir C_F = 4/3</b>. One independent loop (L=1).' },
+
+ { key:'gQuark', tab:'gluon self-E · quark loop', tag:'1-loop ★',
+   title:'Gluon self-energy — quark loop', proc:'a gluon splits into a virtual q q̄ pair and recombines',
+   nodes:{ gi:[0.08,0.5,1], A:[0.36,0.5], B:[0.64,0.5], go:[0.92,0.5,1] },
+   labels:{ gi:'g', go:'g' },
+   edges:[ ['gi','A','g'],['A','B','q',B,[0.50,0.18]],['B','A','q',B,[0.50,0.82]],
+           ['B','go','g'] ],
+   colour:'T_F·n_f = ½·n_f', betas:'quark',
+   note:'A quark loop. This <b>SCREENS</b> the colour charge — exactly the way the electron loop screens electric charge in QED vacuum polarization. It contributes the <span class="c">minus</span> sign in β₀: −(4/3)·T_F·n_f. The only QCD self-energy that also has a QED twin.' },
+
+ { key:'gGluon', tab:'gluon self-E · gluon loop', tag:'1-loop ★',
+   title:'Gluon self-energy — gluon loop', proc:'a gluon splits into two virtual gluons — only possible because gluons self-couple',
+   nodes:{ gi:[0.08,0.5,1], A:[0.36,0.5], B:[0.64,0.5], go:[0.92,0.5,1] },
+   labels:{ gi:'g', go:'g' },
+   edges:[ ['gi','A','g'],['A','B','g',null,[0.50,0.18]],['A','B','g',null,[0.50,0.82]],
+           ['B','go','g'] ],
+   colour:'C_A = 3', betas:'gluon',
+   note:'<b>This diagram does not exist in QED.</b> It needs two <span class="g">three-gluon vertices</span> — gluons coupling to gluons, the defining non-abelian move. Together with the ghost loop it <b>anti-screens</b>: the <span class="g">plus</span> sign in β₀. This is, physically, the reason the strong force is strong.' },
+
+ { key:'gGhost', tab:'gluon self-E · ghost loop', tag:'1-loop ★',
+   title:'Gluon self-energy — Faddeev–Popov ghost loop', proc:'a loop of ghosts — fields that do not exist (K5)',
+   nodes:{ gi:[0.08,0.5,1], A:[0.36,0.5], B:[0.64,0.5], go:[0.92,0.5,1] },
+   labels:{ gi:'g', go:'g' },
+   edges:[ ['gi','A','g'],['A','B','c',null,[0.50,0.18]],['B','A','c',null,[0.50,0.82]],
+           ['B','go','g'] ],
+   colour:'C_A = 3', betas:'ghost',
+   note:'The most honest object in physics. <span class="c">Ghosts are not particles</span> — they are a gauge-fixing bookkeeping fiction (Faddeev–Popov) that exists only to cancel the unphysical polarizations the gluon loop would otherwise leave behind. A loop of lines that <b>do not exist</b>, computing something real. It joins the gluon loop in the <span class="g">+11/3·C_A</span>.' },
+
+ { key:'ggg', tab:'three-gluon vertex', tag:'tree',
+   title:'The three-gluon vertex', proc:'three gluons meet at one point — the non-abelian seed',
+   nodes:{ g1:[0.12,0.20,1], g2:[0.12,0.80,1], g3:[0.90,0.50,1], A:[0.46,0.50] },
+   labels:{ g1:'g', g2:'g', g3:'g' },
+   edges:[ ['g1','A','g'],['g2','A','g'],['g3','A','g'] ],
+   colour:'∝ f^{abc} (structure constants)', betas:false,
+   note:'<b>Forbidden in QED.</b> Photons are electrically neutral and cannot meet like this; gluons carry colour, so they can. This single vertex — and its sibling, the four-gluon vertex — is the entire origin of confinement and asymptotic freedom. Coupling g_s ∝ α_s^{1/2}.' },
+
+ { key:'vtx', tab:'vertex correction', tag:'1-loop',
+   title:'Quark–gluon vertex correction', proc:'a virtual gluon dresses the q–q–g vertex',
+   nodes:{ qi:[0.10,0.80,1], A:[0.32,0.62], C:[0.68,0.62], qo:[0.90,0.80,1],
+           B:[0.50,0.44], ge:[0.50,0.10,1] },
+   labels:{ qi:'q', qo:'q', ge:'g' },
+   edges:[ ['qi','A','q',R],['A','B','q',R],['B','C','q',R],['C','qo','q',R],
+           ['B','ge','g'],['A','C','g',null,[0.50,0.86]] ],
+   colour:'(C_F − ½C_A) — the non-abelian piece', betas:false,
+   note:'The strong-force cousin of the QED g−2 vertex diagram. But here the colour factor splits into <b>C_F − ½C_A</b>: an abelian-like part that screens, and a non-abelian part of the opposite sign. The tower continues, and each order brings more diagrams (Dyson 1952, K4).' },
+];
+
+/* ============================================================
+   THE HONEST ENGINE — recompute everything from the graph alone.
+   ============================================================ */
+function classify(d){
+  const isVtx = id => d.nodes[id] && d.nodes[id].length < 3;
+  const V = Object.keys(d.nodes).filter(isVtx).length;
+  let I=0, E=0; const tally={};
+  Object.keys(d.nodes).filter(isVtx).forEach(id=>tally[id]={q:0,g:0,c:0});
+  let gPow=0;
+  for(const e of d.edges){
+    const internal = isVtx(e[0]) && isVtx(e[1]);
+    internal ? I++ : E++;
+    for(const end of [e[0],e[1]]) if(tally[end]) tally[end][e[2]]++;
+  }
+  const L = I - V + 1;
+  let valid = true;
+  for(const id in tally){
+    const v = tally[id];
+    const qqg  = v.q===2 && v.g===1 && v.c===0;
+    const ggg  = v.g===3 && v.q===0 && v.c===0;
+    const gggg = v.g===4 && v.q===0 && v.c===0;
+    const ccg  = v.c===2 && v.g===1 && v.q===0;
+    if(!(qqg||ggg||gggg||ccg)) valid = false;
+    gPow += gggg ? 2 : 1;
+  }
+  return { V, I, E, L, valid, gPow, alphaPow: gPow/2 };
+}
+
+/* ============================================================
+   RENDER — Canvas-2D, proper QCD conventions.
+   quark : solid line + mid arrowhead, coloured by colour charge
+   gluon : a COIL (offset rotates in the tangent/normal frame as we
+           advance along the path -> 2D projection of a helix), gradient
+           gold->colour. NOT a sine wave (that's the photon).
+   ghost : dashed line, pale.
+   curves via quadratic Bezier through an explicit control point.
+   ============================================================ */
+const cv=document.getElementById('cv'), ctx=cv.getContext('2d');
+let W=0,H=0,DPR=1, cur=DIAGRAMS[0], tNow=0;
+let useColour=true, animate=true;
+function size(){ DPR=Math.min(devicePixelRatio||1,2); const r=cv.getBoundingClientRect();
+  W=cv.width=Math.max(1,r.width*DPR); H=cv.height=Math.max(1,r.height*DPR); }
+addEventListener('resize',size); size();
+function css(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
+
+function P(node){ // diagram coords (0..1) -> canvas px, with padding
+  const w=W/DPR, h=H/DPR, padX=w*0.12, padY=h*0.16;
+  return [ padX + node[0]*(w-2*padX), padY + node[1]*(h-2*padY) ];
+}
+function bez(a,c,b,t){ const u=1-t;
+  return [ u*u*a[0]+2*u*t*c[0]+t*t*b[0], u*u*a[1]+2*u*t*c[1]+t*t*b[1] ]; }
+function bezTan(a,c,b,t){ const u=1-t;
+  return [ 2*u*(c[0]-a[0])+2*t*(b[0]-c[0]), 2*u*(c[1]-a[1])+2*t*(b[1]-c[1]) ]; }
+function qColour(key){ return useColour && key ? css('--'+key) : css('--ink'); }
+
+function drawQuark(a,b,cp,colKey){
+  const c = cp ? P(cp) : [(a[0]+b[0])/2,(a[1]+b[1])/2];
+  ctx.strokeStyle=qColour(colKey); ctx.lineWidth=2.1; ctx.beginPath();
+  const NS=46; for(let i=0;i<=NS;i++){ const p=bez(a,c,b,i/NS); i===0?ctx.moveTo(p[0],p[1]):ctx.lineTo(p[0],p[1]); }
+  ctx.stroke();
+  // arrowhead at t=0.5 along tangent
+  const m=bez(a,c,b,0.5), tg=bezTan(a,c,b,0.5), ang=Math.atan2(tg[1],tg[0]);
+  ctx.fillStyle=qColour(colKey); ctx.save(); ctx.translate(m[0],m[1]); ctx.rotate(ang);
+  ctx.beginPath(); ctx.moveTo(7.5,0); ctx.lineTo(-4.5,5); ctx.lineTo(-4.5,-5); ctx.closePath(); ctx.fill(); ctx.restore();
+}
+function drawGluon(a,b,cp,phase){
+  const c = cp ? P(cp) : [(a[0]+b[0])/2,(a[1]+b[1])/2];
+  // estimate length -> number of coils for ~constant pitch
+  let len=0,prev=a; const NS=120;
+  for(let i=1;i<=NS;i++){ const p=bez(a,c,b,i/NS); len+=Math.hypot(p[0]-prev[0],p[1]-prev[1]); prev=p; }
+  const coils=Math.max(3,Math.round(len/18)), Rad=5.4;
+  // gluon carries colour-anticolour: gradient gold -> a cool colour
+  const grad=ctx.createLinearGradient(a[0],a[1],b[0],b[1]);
+  grad.addColorStop(0, css('--gluon'));
+  grad.addColorStop(1, useColour ? css('--quarkB') : css('--gluon'));
+  ctx.strokeStyle=grad; ctx.lineWidth=2; ctx.beginPath();
+  for(let i=0;i<=NS;i++){ const t=i/NS;
+    const p=bez(a,c,b,t), tg=bezTan(a,c,b,t);
+    const L=Math.hypot(tg[0],tg[1])||1;
+    const tx=tg[0]/L, ty=tg[1]/L;        // unit tangent
+    const nx=-ty, ny=tx;                  // unit normal
+    const phi=t*coils*Math.PI*2 + phase;
+    // offset ROTATES in (normal, tangent) frame -> 2D projection of a helix = a coil
+    const ox=(nx*Math.cos(phi)+tx*Math.sin(phi))*Rad;
+    const oy=(ny*Math.cos(phi)+ty*Math.sin(phi))*Rad;
+    const x=p[0]+ox, y=p[1]+oy;
+    i===0?ctx.moveTo(x,y):ctx.lineTo(x,y); }
+  ctx.stroke();
+}
+function drawGhost(a,b,cp){
+  const c = cp ? P(cp) : [(a[0]+b[0])/2,(a[1]+b[1])/2];
+  ctx.strokeStyle=css('--ghost'); ctx.lineWidth=1.7; ctx.setLineDash([5,5]); ctx.beginPath();
+  const NS=46; for(let i=0;i<=NS;i++){ const p=bez(a,c,b,i/NS); i===0?ctx.moveTo(p[0],p[1]):ctx.lineTo(p[0],p[1]); }
+  ctx.stroke(); ctx.setLineDash([]);
+  // small open arrow (ghosts carry a direction) at t=0.5
+  const m=bez(a,c,b,0.5), tg=bezTan(a,c,b,0.5), ang=Math.atan2(tg[1],tg[0]);
+  ctx.strokeStyle=css('--ghost'); ctx.save(); ctx.translate(m[0],m[1]); ctx.rotate(ang);
+  ctx.beginPath(); ctx.moveTo(-3,4); ctx.lineTo(5,0); ctx.lineTo(-3,-4); ctx.stroke(); ctx.restore();
+}
+function draw(){
+  const w=W/DPR,h=H/DPR; ctx.clearRect(0,0,w,h);
+  const d=cur, phase = animate ? tNow*2.4 : 0;
+  for(const e of d.edges){ const a=P(d.nodes[e[0]]), b=P(d.nodes[e[1]]), cp=e[4]||null;
+    if(e[2]==='g') drawGluon(a,b,cp,phase);
+    else if(e[2]==='c') drawGhost(a,b,cp);
+    else drawQuark(a,b,cp,e[3]); }
+  // interaction vertices + soft pulse
+  for(const id in d.nodes){ const n=d.nodes[id]; if(n.length<3){ const p=P(n);
+    const pulse = animate ? 1+0.18*Math.sin(tNow*3 + p[0]*0.05) : 1;
+    ctx.beginPath(); ctx.arc(p[0],p[1],5.4*pulse,0,7); ctx.fillStyle=css('--vtx'); ctx.fill();
+    ctx.beginPath(); ctx.arc(p[0],p[1],9.5*pulse,0,7); ctx.strokeStyle='rgba(70,214,198,.25)'; ctx.lineWidth=1; ctx.stroke(); } }
+  // external leg labels
+  ctx.font='600 15px '+css('--serif'); ctx.textAlign='center'; ctx.textBaseline='middle';
+  for(const id in d.labels){ const n=d.nodes[id]; const p=P(n);
+    const left=n[0]<0.5, top=n[1]<0.5;
+    const lx=p[0]+(left?-18:18), ly=p[1]+(top?-15:15);
+    const lab=d.labels[id];
+    ctx.fillStyle = lab==='g' ? css('--gluon') : css('--ink');
+    ctx.fillText(lab, lx, ly); }
+}
+
+/* ============================================================
+   PANEL + GALLERY
+   ============================================================ */
+function refresh(){
+  const d=cur, r=classify(d);
+  document.getElementById('pTitle').textContent=d.title;
+  document.getElementById('pProc').textContent=d.proc;
+  document.getElementById('vV').textContent=r.V;
+  document.getElementById('vI').textContent=r.I;
+  document.getElementById('vE').textContent=r.E;
+  document.getElementById('vL').innerHTML = r.L + '<small> &nbsp;' +
+    (r.L===0 ? 'tree level' : r.L + ' independent loop' + (r.L>1?'s':'')) + '</small>';
+  document.getElementById('vLf').innerHTML =
+    '<code>L = I − V + 1 = ' + r.I + ' − ' + r.V + ' + 1 = ' + r.L + '</code>  (first Betti number)';
+  const ap = r.alphaPow;
+  const apTxt = (ap % 1 === 0) ? ('α<sub>s</sub><sup>'+ap+'</sup>') : ('α<sub>s</sub><sup>'+ap+'</sup>');
+  document.getElementById('vOrd').innerHTML = 'g<sub>s</sub><sup>'+r.gPow+'</sup> ∝ ' + apTxt;
+  document.getElementById('vChk').innerHTML = r.valid
+    ? '<span class="ok">✓ all valid</span>' : '<span class="no">✗ invalid</span>';
+  document.getElementById('vCol').textContent = d.colour;
+  document.getElementById('vNote').innerHTML = d.note;
+
+  // beta-function readout: only meaningful for the gluon self-energy trio
+  const beta=document.getElementById('beta'), bRow=document.getElementById('bRow');
+  if(d.betas){
+    beta.style.display='block';
+    if(d.betas==='quark') bRow.innerHTML='You are looking at the <b style="color:var(--warm)">screening</b> term: the quark loop pulls β₀ <b>down</b> by (4/3)·T_F·n_f. This is the QED-like piece — it is the only thing that exists in electromagnetism.';
+    else if(d.betas==='gluon') bRow.innerHTML='You are looking at half of the <b style="color:var(--gluon)">anti-screening</b> term: the gluon loop (with the ghost loop) pushes β₀ <b>up</b> by (11/3)·C_A. Pure non-abelian. <b>This is why the strong force exists.</b>';
+    else if(d.betas==='ghost') bRow.innerHTML='You are looking at the other half of the <b style="color:var(--gluon)">anti-screening</b> term: the ghost loop is required so the gluon loop\'s unphysical pieces cancel. A <b>fiction</b> that contributes a real, positive sign.';
+  } else {
+    beta.style.display='none';
+  }
+  document.querySelectorAll('.chip').forEach(c=>c.classList.toggle('on', c.dataset.k===d.key));
+}
+const gal=document.getElementById('gallery');
+DIAGRAMS.forEach((d,i)=>{ const b=document.createElement('button');
+  b.className='chip'; b.dataset.k=d.key;
+  b.innerHTML=d.tab+' <small>'+d.tag+'</small>';
+  b.onclick=()=>{ cur=d; refresh(); }; gal.appendChild(b); });
+addEventListener('keydown',e=>{ const n=+e.key; if(n>=1&&n<=DIAGRAMS.length){ cur=DIAGRAMS[n-1]; refresh(); } });
+document.getElementById('tColour').addEventListener('change',e=>{ useColour=e.target.checked; });
+document.getElementById('tAnim').addEventListener('change',e=>{ animate=e.target.checked; });
+
+function loop(ms){ tNow=ms/1000; draw(); requestAnimationFrame(loop); }
+refresh(); requestAnimationFrame(loop);
+</script>
+</body></html>

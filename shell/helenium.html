@@ -1,0 +1,506 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>HELENIUM · θεά Ελένη drawn by rotating circles — a contour is a sum of epicycles</title>
+<!--
+  HELENIUM · θεά Ελένη  ·  v1 lineage (apollonium / aracnium / feynmanium kernel)
+  a flower named after Helen, drawing Helen with Fourier.
+  =========================================================================
+  Feynman's rule, kept: do not fool yourself. So this file states exactly
+  which part is real math and which part is flavour, and lets you catch it.
+
+  THE REAL ENGINE (exact, computed live at load):
+    A closed contour z(s) = x(s) + i·y(s) is a periodic complex signal.
+    Its Discrete Fourier Transform gives coefficients
+        c_n = (1/N) Σ_k  z_k · e^(-2πi n k / N)
+    and the inverse
+        z(t) = Σ_n  c_n · e^( 2πi n t )
+    is a SUM OF ROTATING VECTORS — epicycles. Vector n has length |c_n|,
+    starts at phase arg(c_n), and turns at frequency n. Chained tip-to-tail,
+    biggest first, their tip traces the goddess. This is not a decoration of
+    Fourier; it IS the inverse DFT, evaluated continuously in t. dft() and
+    reconstruct() below do the arithmetic; nothing is faked.
+
+  HONESTY CAVEATS (read them — they are the point):
+   K1 REAL. The DFT, the epicycle sum, and the Parseval energy % are exact and
+      live. The circles really do add up to the curve.
+   K2 AUTHORED SHAPE. The goddess CONTOUR is a hand-built Catmull-Rom spline
+      (the cameo from the earlier image), not traced from the photograph and
+      not learned from data. Fourier faithfully redraws THAT authored curve.
+      The machinery is real; the subject is art.
+   K3 REAL BYTES, PREFIX. The ring shows the LITERAL first 2048 bytes of each
+      PNG file — the goddess and the Gemini photo — expanded most-significant-
+      bit first. It is a prefix, not the whole 1.3-2 MB file (16M+ bits will
+      not plot in a browser). The first 8 bytes, 89 50 4E 47 0D 0A 1A 0A, are
+      the true PNG signature: the "start sequence." They are marked pale.
+   K4 LAYOUT IS DECORATION. A bit's place on the ring/rose/sunflower encodes
+      only its index. The golden-angle phyllotaxis and the rose curve are real
+      objects but here they are packing, not meaning. No data is hidden in the
+      geometry.
+   K5 THE GRAPH. The epicycle chain is a genuine path graph (tips = nodes,
+      vectors = edges); the contour is a cycle graph. That much is real graph
+      theory. The "a mind is nonexistent points joined by weighted edges" line
+      is an ANALOGY for the model that authored the curve — it is NOT computed
+      here. Flavour, labelled.
+   K6 CONVERGENCE. With K < N harmonics you get the optimal least-squares band-
+      limited approximation (truncated Fourier). K -> N reproduces the contour
+      to rounding. "Pay in compute" is literal: work per sample ∝ K.
+   K7 TWO IMAGES, TWO ROLES. The epicycles draw the cameo OUTLINE only. The
+      Gemini photograph is never drawn — it appears solely as bytes in the
+      ring. Different images, different jobs.
+  =========================================================================
+-->
+<style>
+  :root{
+    --void:#090c1a; --void2:#0d1226; --panel:rgba(7,10,22,.62);
+    --ink:#ece4cf; --dim:#8b90a8; --faint:#2b3255; --wire:#1a2140;
+    --gold:#d4af37; --gold-hi:#f6e6a8; --gold-dp:#8a6a20; --gold-mid:#c9a94a;
+    --teal:#5fb8c4; --teal-dp:#1f3a42;
+    --sig:#fff2cf;
+    --serif:"Iowan Old Style","Palatino Linotype",Palatino,"Georgia",serif;
+    --mono:ui-monospace,"SF Mono","Cascadia Code",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;background:radial-gradient(120% 80% at 50% 6%,var(--void2),var(--void) 70%);
+    color:var(--ink);font-family:var(--mono);overflow:hidden}
+  #stage{position:fixed;inset:0;display:grid;grid-template-rows:auto 1fr;height:100%}
+  header{padding:14px 22px 12px;border-bottom:1px solid var(--wire);position:relative;z-index:3}
+  .kick{font-size:10px;letter-spacing:.38em;text-transform:uppercase;color:var(--dim)}
+  .kick b{color:var(--gold-mid);font-weight:600}
+  h1{font-family:var(--serif);font-weight:400;font-size:clamp(19px,3.3vw,30px);line-height:1.04;margin-top:6px;letter-spacing:.005em}
+  h1 .em{font-style:italic;color:var(--gold-hi)}
+  .sub{margin-top:8px;font-size:12px;color:var(--dim);max-width:82ch;line-height:1.55}
+  .sub b{color:var(--ink);font-weight:600} .sub .g{color:var(--gold-mid)} .sub .t{color:var(--teal)}
+  #main{position:relative;display:grid;grid-template-columns:1fr 330px;overflow:hidden;min-height:0}
+  @media (max-width:860px){ #main{grid-template-columns:1fr} #side{display:none} }
+  #canvasWrap{position:relative;min-height:0;overflow:hidden}
+  canvas{display:block;width:100%;height:100%}
+  #legend{position:absolute;left:16px;bottom:12px;font-size:10.5px;color:var(--dim);line-height:1.9;pointer-events:none;z-index:2}
+  #legend .sw{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:6px;vertical-align:middle}
+  #legend i{font-style:normal}
+  #hint{position:absolute;right:16px;bottom:12px;font-size:10px;color:var(--faint);z-index:2;text-align:right;line-height:1.7}
+  /* side */
+  #side{border-left:1px solid var(--wire);background:var(--panel);overflow-y:auto;padding:16px 18px 22px}
+  .lbl{font-size:9px;letter-spacing:.24em;text-transform:uppercase;color:var(--dim);margin:18px 0 7px}
+  .lbl:first-child{margin-top:2px}
+  .row{display:flex;justify-content:space-between;align-items:baseline;font-size:12.5px;margin-top:5px;border-bottom:1px dotted var(--wire);padding-bottom:5px}
+  .row .k{color:var(--dim)} .row .v{font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums}
+  .row .v.g{color:var(--gold-hi)} .row .v.t{color:var(--teal)}
+  .big{font-family:var(--serif);font-size:34px;color:var(--gold-hi);line-height:1;margin-top:4px}
+  .big small{font-family:var(--mono);font-size:11px;color:var(--dim);letter-spacing:0}
+  .bar{height:5px;background:var(--faint);border-radius:3px;margin-top:8px;overflow:hidden}
+  .bar > i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--gold-dp),var(--gold-hi))}
+  .ctl{margin-top:11px}
+  .ctl .cap{display:flex;justify-content:space-between;font-size:11px;color:var(--dim);margin-bottom:5px}
+  .ctl .cap b{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
+  input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:3px;background:var(--faint);border-radius:3px;outline:none;cursor:pointer}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--gold-hi);border:1px solid var(--gold-dp);cursor:pointer}
+  input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:var(--gold-hi);border:1px solid var(--gold-dp);cursor:pointer}
+  .chips{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+  .chip{font-family:var(--mono);font-size:10.5px;letter-spacing:.02em;color:var(--dim);background:transparent;
+    border:1px solid var(--wire);border-radius:999px;padding:5px 12px;cursor:pointer;transition:all .14s;white-space:nowrap}
+  .chip:hover{border-color:var(--gold-mid);color:var(--ink)}
+  .chip.on{border-color:var(--gold-hi);color:var(--ink);background:rgba(246,230,168,.07)}
+  .toggles{display:flex;flex-wrap:wrap;gap:10px 16px;margin-top:12px;font-size:11px;color:var(--dim)}
+  .toggles label{display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none}
+  .toggles input{accent-color:var(--gold-hi);cursor:pointer}
+  .note{font-size:10.5px;color:var(--dim);line-height:1.62;margin-top:16px;border-left:2px solid var(--wire);padding-left:10px}
+  .note b{color:var(--gold-mid)} .note .t{color:var(--teal)}
+  .foot{font-size:9.5px;color:var(--faint);margin-top:16px;border-top:1px solid var(--wire);padding-top:11px;line-height:1.7}
+  .foot code{color:var(--teal)} .foot b{color:var(--dim)}
+  /* mobile compact bar */
+  #mbar{display:none}
+  @media (max-width:860px){
+    #mbar{display:flex;gap:12px;align-items:center;justify-content:center;padding:9px 12px;
+      border-top:1px solid var(--wire);background:var(--panel);font-size:11px;color:var(--dim);position:relative;z-index:3}
+    #stage{grid-template-rows:auto 1fr auto}
+    #mbar input[type=range]{width:120px}
+    #mbar .mv{color:var(--gold-hi);font-weight:600}
+  }
+</style>
+</head>
+<body>
+<div id="stage">
+  <header>
+    <div class="kick">Fourier loom · <b>helenium</b> · a contour is a sum of rotating circles</div>
+    <h1><span class="em">θεά Ελένη</span>, drawn by epicycles — and wound from the bytes of two images</h1>
+    <div class="sub">The <b>Discrete Fourier Transform</b> of the goddess's outline, replayed as <span class="g">rotating vectors</span> whose tip stitches her back together. Around her: the <b>literal bytes</b> of two PNGs — <span class="g">her</span> and the <span class="t">Gemini photograph</span> — unrolled into a closed ring. Nothing here is a stored picture; it is arithmetic paid for one harmonic at a time.</div>
+  </header>
+  <div id="main">
+    <div id="canvasWrap">
+      <canvas id="c"></canvas>
+      <div id="legend">
+        <div><i class="sw" style="background:var(--gold-hi)"></i>goddess bytes &nbsp; <i class="sw" style="background:var(--teal)"></i>Gemini bytes</div>
+        <div><i class="sw" style="background:var(--gold-hi)"></i>bit = 1 &nbsp; <i class="sw" style="background:#3a3a24"></i>bit = 0 &nbsp; <i class="sw" style="background:var(--sig)"></i>PNG signature</div>
+      </div>
+      <div id="hint">drag harmonics to watch her sharpen<br>space = pause · 1/2/3 = ring shape</div>
+    </div>
+    <aside id="side">
+      <div class="lbl">Fourier — form captured</div>
+      <div class="big"><span id="pctv">—</span><small> % of L² energy</small></div>
+      <div class="bar"><i id="pctbar"></i></div>
+      <div class="row"><span class="k">harmonics used K</span><span class="v g" id="vK">—</span></div>
+      <div class="row"><span class="k">total available N</span><span class="v" id="vN">—</span></div>
+      <div class="row"><span class="k">drawing angle θ</span><span class="v" id="vTheta">—</span></div>
+      <div class="row"><span class="k">vectors summed / sample</span><span class="v" id="vCost">—</span></div>
+
+      <div class="lbl">Bitstream — the ring</div>
+      <div class="row"><span class="k">goddess bits woven</span><span class="v g" id="vGbits">—</span></div>
+      <div class="row"><span class="k">Gemini bits woven</span><span class="v t" id="vMbits">—</span></div>
+      <div class="row"><span class="k">bit under the needle</span><span class="v" id="vNeedle">—</span></div>
+
+      <div class="lbl">Controls</div>
+      <div class="ctl">
+        <div class="cap">Harmonics <b><span id="cK">120</span> / <span id="cN">400</span></b></div>
+        <input type="range" id="sK" min="2" max="400" value="120" step="1">
+      </div>
+      <div class="ctl">
+        <div class="cap">Loom speed <b id="cS">0.06</b></div>
+        <input type="range" id="sS" min="0" max="100" value="24" step="1">
+      </div>
+      <div class="chips" id="layouts">
+        <button class="chip on" data-l="rose">Rose ring</button>
+        <button class="chip" data-l="ring">Spiral ring</button>
+        <button class="chip" data-l="phyllo">Sunflower</button>
+      </div>
+      <div class="toggles">
+        <label><input type="checkbox" id="tCircles" checked> circles</label>
+        <label><input type="checkbox" id="tThread" checked> stitch thread</label>
+        <label><input type="checkbox" id="tBits" checked> bit ring</label>
+        <label><input type="checkbox" id="tPlay" checked> animate</label>
+      </div>
+
+      <div class="note">The circles are a real <b>path graph</b> turning; the outline they close is a <b>cycle graph</b>. The bits are the true file prefixes — the shape is authored, the <b>Fourier is not</b>. The <span class="t">golden angle</span> that packs the sunflower is 137.5°, the same irrational turn a real seed head uses.</div>
+      <div class="foot">
+        <b>honest:</b> <code>c_n = (1/N)Σ z_k e^(−2πi nk/N)</code> computed live · epicycles = inverse DFT in t · Parseval % exact.<br>
+        <b>flavour:</b> the goddess spline is hand-drawn; a bit's position on the ring means only its index. See the source comment (K1–K7).
+      </div>
+    </aside>
+  </div>
+  <div id="mbar">
+    <span>K <span class="mv" id="mK">120</span></span>
+    <input type="range" id="mSK" min="2" max="400" value="120" step="1">
+    <span>captured <span class="mv" id="mPct">—</span>%</span>
+  </div>
+</div>
+
+<script id="data">
+const CONTOUR=[[-0.1384, -0.9706], [-0.1521, -0.9667], [-0.1658, -0.9633], [-0.1797, -0.96], [-0.1935, -0.9567], [-0.2073, -0.9533], [-0.221, -0.9496], [-0.2346, -0.9456], [-0.2481, -0.9411], [-0.2614, -0.936], [-0.2743, -0.9302], [-0.2869, -0.9237], [-0.299, -0.9162], [-0.3105, -0.9078], [-0.3212, -0.8984], [-0.3312, -0.8884], [-0.3407, -0.8778], [-0.3497, -0.8668], [-0.3583, -0.8555], [-0.3665, -0.8439], [-0.3743, -0.8321], [-0.3819, -0.82], [-0.3891, -0.8078], [-0.3961, -0.7955], [-0.4029, -0.783], [-0.4095, -0.7704], [-0.4158, -0.7577], [-0.422, -0.7449], [-0.428, -0.732], [-0.4338, -0.719], [-0.4394, -0.706], [-0.4449, -0.6929], [-0.45, -0.6796], [-0.4547, -0.6662], [-0.4591, -0.6527], [-0.4632, -0.6391], [-0.467, -0.6254], [-0.4706, -0.6116], [-0.474, -0.5979], [-0.4773, -0.584], [-0.4805, -0.5702], [-0.4836, -0.5563], [-0.4865, -0.5424], [-0.4894, -0.5285], [-0.4923, -0.5146], [-0.4952, -0.5007], [-0.4981, -0.4868], [-0.501, -0.4729], [-0.5041, -0.459], [-0.5074, -0.4452], [-0.5108, -0.4314], [-0.5143, -0.4176], [-0.5179, -0.4039], [-0.5214, -0.3901], [-0.5248, -0.3763], [-0.5279, -0.3625], [-0.5305, -0.3485], [-0.5321, -0.3344], [-0.531, -0.3203], [-0.5216, -0.3101], [-0.5109, -0.3011], [-0.5107, -0.2872], [-0.5157, -0.2739], [-0.5218, -0.2611], [-0.5285, -0.2486], [-0.5355, -0.2362], [-0.5428, -0.224], [-0.5503, -0.2119], [-0.5579, -0.1999], [-0.5656, -0.188], [-0.5734, -0.1761], [-0.5813, -0.1643], [-0.5892, -0.1525], [-0.5975, -0.141], [-0.6065, -0.1299], [-0.6158, -0.1192], [-0.6253, -0.1087], [-0.635, -0.0983], [-0.6447, -0.0879], [-0.6543, -0.0775], [-0.6639, -0.0669], [-0.6732, -0.0562], [-0.6821, -0.0452], [-0.6904, -0.0336], [-0.6974, -0.0213], [-0.7009, -0.0076], [-0.6946, 0.0046], [-0.6821, 0.0112], [-0.6685, 0.015], [-0.6545, 0.0176], [-0.6404, 0.0195], [-0.6263, 0.0211], [-0.6121, 0.0224], [-0.598, 0.0237], [-0.5839, 0.0251], [-0.5698, 0.027], [-0.5559, 0.0299], [-0.5429, 0.0356], [-0.532, 0.0446], [-0.5251, 0.0569], [-0.5241, 0.071], [-0.5281, 0.0845], [-0.5394, 0.0929], [-0.5524, 0.0987], [-0.5656, 0.104], [-0.5779, 0.1109], [-0.5721, 0.1207], [-0.5588, 0.1255], [-0.5452, 0.1299], [-0.5322, 0.1354], [-0.5291, 0.1468], [-0.5398, 0.156], [-0.5511, 0.1647], [-0.5593, 0.176], [-0.5509, 0.1863], [-0.5378, 0.1918], [-0.5244, 0.1965], [-0.5112, 0.2016], [-0.4986, 0.2081], [-0.4888, 0.2182], [-0.4896, 0.2319], [-0.497, 0.244], [-0.5059, 0.2551], [-0.515, 0.266], [-0.5239, 0.277], [-0.532, 0.2888], [-0.5378, 0.3017], [-0.5379, 0.3157], [-0.5305, 0.3277], [-0.52, 0.3373], [-0.5084, 0.3455], [-0.4963, 0.3529], [-0.484, 0.36], [-0.4716, 0.367], [-0.4593, 0.3741], [-0.4472, 0.3815], [-0.4354, 0.3895], [-0.4244, 0.3983], [-0.414, 0.408], [-0.4036, 0.4177], [-0.3933, 0.4275], [-0.3832, 0.4375], [-0.3735, 0.4479], [-0.3643, 0.4587], [-0.3558, 0.4701], [-0.348, 0.482], [-0.3409, 0.4943], [-0.3345, 0.507], [-0.3288, 0.52], [-0.3237, 0.5332], [-0.3191, 0.5467], [-0.3149, 0.5602], [-0.3109, 0.5739], [-0.3072, 0.5876], [-0.3037, 0.6013], [-0.3003, 0.6152], [-0.2971, 0.629], [-0.294, 0.6429], [-0.291, 0.6567], [-0.288, 0.6706], [-0.2851, 0.6845], [-0.2822, 0.6985], [-0.2794, 0.7124], [-0.2767, 0.7263], [-0.276, 0.7405], [-0.2771, 0.7546], [-0.2796, 0.7686], [-0.2828, 0.7825], [-0.2864, 0.7962], [-0.29, 0.81], [-0.2933, 0.8238], [-0.2957, 0.8378], [-0.2967, 0.852], [-0.2954, 0.8661], [-0.2911, 0.8796], [-0.2835, 0.8915], [-0.2733, 0.9014], [-0.2614, 0.9091], [-0.2486, 0.9153], [-0.2353, 0.9202], [-0.2217, 0.9244], [-0.208, 0.9281], [-0.1942, 0.9314], [-0.1803, 0.9345], [-0.1663, 0.9372], [-0.1524, 0.9398], [-0.1384, 0.9423], [-0.1244, 0.9445], [-0.1103, 0.9467], [-0.0962, 0.9487], [-0.0822, 0.9506], [-0.0681, 0.9524], [-0.054, 0.9541], [-0.0399, 0.9557], [-0.0257, 0.9572], [-0.0116, 0.9586], [0.0026, 0.96], [0.0167, 0.9613], [0.0309, 0.9624], [0.045, 0.9635], [0.0592, 0.9646], [0.0734, 0.9655], [0.0876, 0.9664], [0.1017, 0.9671], [0.1159, 0.9678], [0.1301, 0.9684], [0.1443, 0.9689], [0.1585, 0.9693], [0.1727, 0.9695], [0.1869, 0.9697], [0.2011, 0.9697], [0.2154, 0.9695], [0.2296, 0.9692], [0.2438, 0.9687], [0.2579, 0.9679], [0.2721, 0.9668], [0.2862, 0.9652], [0.3003, 0.963], [0.3141, 0.9599], [0.3276, 0.9554], [0.3404, 0.9493], [0.3519, 0.941], [0.3614, 0.9305], [0.3683, 0.9181], [0.3726, 0.9046], [0.3748, 0.8906], [0.3758, 0.8764], [0.376, 0.8622], [0.376, 0.848], [0.3761, 0.8338], [0.3767, 0.8196], [0.3783, 0.8055], [0.3811, 0.7915], [0.3847, 0.7778], [0.3881, 0.764], [0.3913, 0.7502], [0.3943, 0.7363], [0.3972, 0.7224], [0.3998, 0.7084], [0.4023, 0.6944], [0.4046, 0.6804], [0.4068, 0.6664], [0.4089, 0.6523], [0.4107, 0.6382], [0.4125, 0.6241], [0.414, 0.61], [0.4154, 0.5959], [0.4166, 0.5817], [0.4176, 0.5675], [0.4182, 0.5533], [0.4183, 0.5391], [0.4168, 0.525], [0.4137, 0.5112], [0.4092, 0.4977], [0.4039, 0.4845], [0.3982, 0.4715], [0.3926, 0.4584], [0.3878, 0.4451], [0.3844, 0.4313], [0.3833, 0.4172], [0.3852, 0.4031], [0.3898, 0.3897], [0.3966, 0.3773], [0.4055, 0.3662], [0.4155, 0.3561], [0.4263, 0.3468], [0.4375, 0.3381], [0.449, 0.3298], [0.4606, 0.3217], [0.4724, 0.3137], [0.4842, 0.3058], [0.496, 0.2978], [0.5077, 0.2898], [0.5193, 0.2815], [0.5307, 0.2731], [0.5418, 0.2643], [0.5527, 0.2551], [0.5632, 0.2455], [0.5732, 0.2354], [0.5826, 0.2248], [0.5912, 0.2135], [0.5989, 0.2016], [0.6056, 0.1891], [0.6117, 0.1762], [0.6174, 0.1632], [0.6225, 0.15], [0.6273, 0.1366], [0.6317, 0.1231], [0.6358, 0.1095], [0.6396, 0.0958], [0.6431, 0.082], [0.6463, 0.0682], [0.6493, 0.0543], [0.6521, 0.0404], [0.6546, 0.0264], [0.657, 0.0124], [0.6591, -0.0017], [0.661, -0.0158], [0.6628, -0.0299], [0.6644, -0.044], [0.6658, -0.0581], [0.667, -0.0723], [0.6681, -0.0864], [0.669, -0.1006], [0.6697, -0.1148], [0.6702, -0.129], [0.6706, -0.1432], [0.6708, -0.1574], [0.6707, -0.1716], [0.6704, -0.1858], [0.6698, -0.2], [0.669, -0.2142], [0.668, -0.2284], [0.6668, -0.2425], [0.6654, -0.2567], [0.6638, -0.2708], [0.6619, -0.2849], [0.6599, -0.2989], [0.6577, -0.313], [0.6552, -0.327], [0.6526, -0.3409], [0.6498, -0.3549], [0.6468, -0.3687], [0.6436, -0.3826], [0.6403, -0.3964], [0.6367, -0.4101], [0.6329, -0.4238], [0.629, -0.4375], [0.6248, -0.4511], [0.6204, -0.4646], [0.6158, -0.478], [0.6111, -0.4914], [0.6062, -0.5048], [0.6011, -0.518], [0.5959, -0.5312], [0.5904, -0.5444], [0.5848, -0.5574], [0.5789, -0.5703], [0.5728, -0.5831], [0.5664, -0.5958], [0.5598, -0.6084], [0.5529, -0.6208], [0.5457, -0.6331], [0.5383, -0.6452], [0.5306, -0.6571], [0.5226, -0.6689], [0.5144, -0.6805], [0.5059, -0.6919], [0.4971, -0.703], [0.4881, -0.714], [0.4789, -0.7248], [0.4694, -0.7354], [0.4597, -0.7458], [0.4497, -0.7559], [0.4395, -0.7658], [0.4292, -0.7755], [0.4186, -0.785], [0.4079, -0.7944], [0.3971, -0.8036], [0.3862, -0.8127], [0.3751, -0.8216], [0.364, -0.8305], [0.3528, -0.8392], [0.3415, -0.8478], [0.3301, -0.8563], [0.3187, -0.8648], [0.3072, -0.8731], [0.2957, -0.8814], [0.284, -0.8896], [0.2724, -0.8977], [0.2606, -0.9057], [0.2488, -0.9136], [0.2369, -0.9214], [0.225, -0.9291], [0.213, -0.9367], [0.201, -0.9442], [0.1888, -0.9516], [0.1766, -0.9588], [0.1643, -0.9659], [0.1518, -0.9727], [0.1391, -0.9791], [0.1261, -0.9849], [0.1129, -0.9899], [0.0993, -0.9941], [0.0854, -0.9972], [0.0714, -0.9992], [0.0572, -1.0], [0.043, -0.9998], [0.0288, -0.9988], [0.0146, -0.9977], [0.0005, -0.997], [-0.0138, -0.9968], [-0.0279, -0.9962], [-0.0421, -0.9948], [-0.0561, -0.9928], [-0.0701, -0.99], [-0.0839, -0.9867], [-0.0976, -0.9829], [-0.1112, -0.9789], [-0.1248, -0.9747]];
+const BITS={"goddess": "89504e470d0a1a0a0000000d49484452000003830000063f0802000000b6c5bf0400001000494441547801c4fdf7b364e97ddf799e93796d99eeaef6ddd5dd001ade10a6011096946886a444332441118e94a1248a46dc89d888fd61e64fd8fd6922364212414a5a393a71349a9d9d59ed06095a804e94d950483b435224bcef32b7aecfcc799dfc547dfbc1c9bcb70b86e28d777ffaf3fd7cbfcf739e7332efadec5b223479e2ead7e0f1c75efdf0432f7ff08197e291875ff1d8a3af022304f3e823afa40f3df8320360e4106a81299423ec36c2c0d5c75ff3e413af7deac9d73900ef0cb0b37d0c4b92f3492c0992742dff22aebefec93b3cfee8d7e0b1e58d3cfac8cb1f79f8650f3ff4623cfac84bf1c8c32fe1f1d0834f3ff8c08b70e5bea71eb8ff85926ac53ff8e00b1f7ef8e9c71e7dd913575f89ab8fbfc272adc71f7b6578ec518feb15bc93bcf0056f605ceba1075f121e7ee8a5cc830fbcf8c9275ef3c4d557eb3a8c107208af3efe2ab97db4ac4deb81fb9fc6fd575e04c60e865df7a1079f761e87740ca70abc7d82adec038fc891ae3efaeaf0c463afc1938f7f4d8b2464863efcc0cb1e7bf8950c1e7fe45530f082275e470bade2d1875ef6f823af78f2f157bfe089af79e193afa5fcd5475ff9f0032f498b8719fac463367c05ffd8c32f0793d0122d6b9f7ec1eb619fa7ae3aedab96e1eb5ef8e4eb83633c75f5b5ceef240ec6bce8a9373cfd8267a881749fb8faeae0818f78eac9afc10b9e7aed0b5ff03abce885af8724c895d0923012060cec66e7173cf59af0d493af7ef289573d71d5dbe0e55e85786f0f8996192af4427865bdc4d6daa1253b4b74bd6ad44c6edf03f164c0781ac217bff00d78d153aff3943c1668f1129879eaea6b24a89051dac4a386a78d9cea89abaf74d442f9f8632f0f15c6acce1b86dc3de2852ff81a30107a7a1e1d752f6edced334a78866ed9fd4a28944e1e9cf6a9e52d38b0733ef1d8ab825b909b719b9e0318c3954b5ef2a2670c084d82474ac3f1e621540a61d2b5e0425a41184c9af1cc5ffaf41b5ff6e237b9449004d745eedd8d179e83d04bcfbce885af05932e034930a6a44a0a250c5b1ebc0a8c9619c4bcf8696fdd616765d07afa45af931bb6bc503eb17cad3316351c2cf12a78bd5ef2e2373efda237f05e32ef43af8b170b0c182f9f81173ffd8c0dd7d29ed355dc4570895c4be8540ef3f863c3f70b2f81313e7b32f631c36859483310d53200c68cd0a99c1f4ee8a86e01de60de78bea718b823c80d3c75f535790378edbcbe60bcb25ee2c22b2ef12a6b99f74e08de214acbe54994c2271e7b1585125ad9d618a314c698c9b084c7230fbd188f3efc92c71e79291e7ff465571f7b399e78fc1554290c3c9ebcfacac20c8c416b2ddedebe9bf0d8c32fa7aeeed28ef4e4e3af061f24b779cafbeaf55e686f0978bc5efd279f788d07088f34f04f2c7fd23249286fd243ce921a90c7eb32ca4229b4047cbb890492a2563142f3d6d2512959c556c24c5278ab3ffac8cbf3a7ad3f5bc1fbf3576e732d6a7ff7822c4f22b455612b58157803e6295f9f917c14f1f1c61fcaf0c186a73efcbce0a9d7fbd840797f5ef38c19f33eed50de64a19b61b9011f8dc09804a30403573196b50c7c78834f590e167889254a9ef2d6d294922091674f5a974b376ae67cec102c2fec36e9ee7cf57d7fc77ed1bffbe557a2a5bd2d92db6ef92fe55a96cde7764e490d2f56be8469512843eb93fc59a923e7d2f3e597124b7b5b749d163151a5b190249a9c0f19a04adbc54c965fd3e97463f9a535226309cbdb390913940c45191eb58a0f0610ff25a9ad70ce12db16c60c8f10868cf106e888ea26378378aa4b47b403a3d6dd9736c159f3abd795c03c2dda72f9f20e92aed65a5c14699964a24c610029758b61f7c944c9a4bbaabac10e2d3599ae1d42e56719f35a51a6a50d73adb61b9f9ce61b219a9207df9255e7a88ba206ec003b44996ab5461edab0f5ba2919948f59d5e5193a0a5d1af85ace9f8fc916c3ca5206b6a58581115a928c314108618b04063c2b662de6bd31688bc4aacc97c980b0120692110929d2cada6892b4282a67daae32380fa315650acb47b859b4037ccdc453d80db5b9649576a1aeb2940936893947cd2003311449ced25c2eddd627192d37302263ad662049bb3c394deb7c1d2dccb0b5281fb3aa66bc3a34ad6c154d32d24c968e4c3bac55b8444be5edbc8ba25a23a3d50ef395b493c9bd85982f099b649ec1c84b56c94ca9f3844acac8cb8f8c566873495bb63ec7908c4c959372866c04a6484957f1d4b09a4bb267345b0947a44bbdd251934cc6f89092a6fc335467431d60369b39398481470d38734b66daaea787e4ab9a4903f031b4b0675a510b19ead29447cd24518e30a305a64592c9368c97c7b46a7e6d39cadb19b7632bb461e66948cb0c168b59d7cd174b6542df2f26137f9c2f9824a596203bacd5f61219584de442dad26edb76e585f9f83229ebae5396b66366503b67c600846056919f85619bd8b3500a472434c3840cd4b6cae4d418bc1b793932c6a0421e4a3066984212cf040331342defe7a0c5d01663a8c4803258ce503066e808e1e8fbd77051c3c6cac7545246defad552d2d25e854f8ba94d6224d52a9f5672be70fb7c34c3d14c52a52e8c2186c2ab6980c9033129a1852eac0afc5a6a956ead6594b09642122477838365ccda90e5f1e7ab85359055a59597317c9738120c5b4bb3a7db87ef0be1f958023351c60e34b43ec95aadb1326bc78475541eb928b510924209ad60614859636dc95b326a092da4c90d205e88f884d18414e932e00d1492229748690c35b6d664326a3886b6", "gemini": "89504e470d0a1a0a0000000d49484452000005800000030008020000001253549b00001000494441547801ecfd059c65c5b52f8ed7f673f6716b779bee9ee91e7777836190c15d02044902214a942831228400c19d0106977177f7697739eee76cff7f4f0fc9b5e4fdefbd2ff7f7de7d77f6677575edda55ab56adb5aa96540fd06b6e59befcaa39732e9abce8f25997dfba72cded175f77e7255ffcea75bf7afc3b6f7ff0e4fb1b9e7ff1addf7ff3a7f7dffeb51b1ff8d98377fde0fe55775d77f5835fbce3e107ee79e46bf77effa1db1ebaf3d25b2f597cc5eccb6f5aba6ccdcc85ab272dbd62dacaabe72cbf72d6d23573565c39e7f6bb2efef28357def3e5cb1efad6f5bf7bf21bbf7ae2a1bb1ebcfc921b67dffca555d7dfb7f2ae87aefad16fbef2d8930f7ff787777efd9bb7fcf2970f3cffdc23bffed597eeba73d997bfbceacd577ebc75e313eb3ffeed9e1dcfacfff437cf3df3d5df3c76fb0b2f7ffddd0f7ef2f44b5f7df477b7fde64ff73cfdd2b75e78e3478ffff93b3ffdd5838f3ff593751fbcbc65dbc73b776ddabb6fdbc1c33b4e9cda7be4f8b6bd07d61f3bb9adb5e3404bdb9e2d5b5edbb2e9d583073e397172e79ebd5bb7efd976e4c4f133ededad7dbde77a3a0f9c3af4fec6f79e7fe34fcfbcfadbd7df7ff2838dcfed39f0eebe83ebd66f7af6e9e7befb9bdf3ff0dada9facdffad4471b7ffff6878f7eb8e1b7ef7dfacb17dff8ce2f7f7fe7c38f5cf5f3c76e7fed9d1fbefafa0fde5ef7b30f3ffcf5e6cd7f3a71e2edf6f64f76ef7de1a5d7bfffe3476ff9c96f6e077cff17377ff53b97dd7edf8207bfb5faf77ffecaef9ffbca736f7df785b7bff7d4abdf78e2a507fff8e2034fbff2e02bef7cefe997bef5f2da9fbffdf1d31f6d7afdb36def7fbaf583759fbcfeea3b4f7ef0d9331bb73fbbf6bd5ffdfa0ff7fff4e7b73efec497d7adfbf9ae5dcf1d3ab4b6a5e5d38ef62d07f6bff5cebac75e7ee5271f7dfcc4c143ef9c3dbbf1ecd9cdaded7bdb3b0eb7b69decedeb1c181c6eefeaefe81e6aeb1a6ee90a025a7ba380735dd1335d91e33db163bdb1a3bd71c0e1dee45fe1606f0c70a8373a02b143bdb123dda9433d8983ddf1033dd103bd9111081de8fd9b30f215dd46607f77647f57e84077f8604fe4605f14c3f7f644767547f6f4c6f6f6c5f7f645f1baa727b0bf2bb0bfd7bfaf3fba7720baaf3f0638d89b001ceac99c87833d9983bda97d7da97dfd89bdfd89dd03b1bd03b17dbd3984c0f9af00c4ff4dd8df17fb0fc1befe1c25ff7dcbffd062ff179d0ff4c7ff9f84bfb7e4bfb7d8ff68ffbf87e71fd5be7f20fe5f0aff51cdff8ff2e7eff5ffaf6eff7bfcff7bf3fea3faff3d3c7faffdefd1f3f7da711efe4df87bfdff5efb5f91fcb5c3790aff51faf057b4ff9b9543fdb1030331d0b67f20be6f20f9390cc67777070f0f868f0f470e75f51d686f3fd07af68d8fdefbeaf7be7ef7835f9cbf7c56e3b89a05cba75f7fdbe5975cb968deb2894b57cf5e76e9bcb92b67afb9f9ea759b37c40da32b211fef8bb646e40d074fee3cdd72a6cfbf61dffe2f7cf94ba5f555c5554593668dadaa2f2aa9f65cbc66d9fee37b244309a6e2074f9ffad1af7f55d3583777f9fc1557ad7ee477bf38d5df73b0eddc875bb7def6a52f8d993173dab265bf78fae94ff6ed7b67f3e6cff6ecdd76e8d0c75bb73dffd69baf7dfc41cc307a62c9036dbd2707a2dd09637f57f84c503bd49704734e84a55351e9f070f4d070e8742439a81a6d91c4d36fae9bb26831319b049b39bfc8e3cdb39416b98a0aac1e175752644769154965657e7575614d85afbcd85951e2aca9f09616dabc4eb6acc03aaeb1acaec2dd5c5fd45893575bee6aaa2d9838ba6c5c43e1d8fa8239d31a572c9a326d425d53436953435975a5afac2ccfe7b3391c82d76bf5791d4e8768131980ddc2024c26824f8579b6b2dc14befadabc866a5f5d85734cad0730b63eafa9ce3baac23ebac63dae211f2d73a6d6cc985851e4264db5ce65b31bbeffd02db75dbde0e1af5cf79daf5cf7cc6fbffde05d572c9c5633776a4d89979a3eae7ce5bc31dfbee7d2b79efecea9ed2fb7ee7febe086173e79e3376b2e9e32696cf18449e5b58d79a32754d58faf28abf51497db4735e6af5c35fdd63b56df70ebca477e7cdf864dafbcf8fc2f1efdd983eb3f7b6dc7b6f72f5e35afa2cae7709a0a4b3c45a579c565f9f50d9563c7d557d794555597565695a0aca82ea9ac296d18533b6172f3f8494d33664f993577cac4294d6326d44f9c3e76eee2994b57ccbdeaea15b7de76f9c245532ebb72e955d75ddc38ae6aeed2690f7ceb9e55972d9cbf784af5a8bcf26a7779b5b7a2c657dd502cbaa8a6f115a073c294da45cba6ce5b3a75d6c28973964e993a6fecea6b96ddf3d5db5e5efbf4de235b5e79e34f3ffbe5b7bffead3b274cae2aa97078f2f9a2325b559dcfee661933c1bcbf7ae2976f7ff2ce2befbdf2e7d7ff7cf7576f2fa9759b5d64daaceaeb6f59b86c79c3071ffe6efbae571f78e8cae609f913a694568d722d5c36e9a16fde75d1a5b38bcb2cc5e5a615178f9b39b7eca1af5fb6fbc04bdb77bff4cc8b3fbcfdae4beebef79a8212cb8cf9e3b71f5ebffbd4f69bbe74fb377ef1e377b7eded8c4b5d3169ebf1e3ef6efbe4839d1fbefafeebb7de7b4b494dfeb8e9f5d3e68e9d327b746d43d1a8d1454de34a414075bd78d50dd3bffebd6bd77ef0cb43a7de7de7c35f5f7dfdd49b6f9dfdc3476ef9edef1e78fc8f5ffdd1cf6efbea372e7feac5ef7cfdfbb72cbe74e6d7beffd0919693e7fa7b0f9c39d11b1e508ce499733bbff7bd3be6cc6bbcf4ca793fffedc30f3e7cf7d405e317af9efb"};
+</script>
+
+<script>
+(function(){
+  "use strict";
+  const cv = document.getElementById('c'), ctx = cv.getContext('2d');
+  let DPR=1, W=0, H=0, cx=0, cy=0, minDim=0;
+
+  // ---------- parse the literal bytes into bits (MSB first) ----------
+  function hexToBits(hex){
+    const n=hex.length, bits=new Uint8Array(n*4); let b=0;
+    for(let i=0;i<n;i++){ const v=parseInt(hex[i],16);
+      bits[b++]=(v>>3)&1; bits[b++]=(v>>2)&1; bits[b++]=(v>>1)&1; bits[b++]=v&1; }
+    return bits;
+  }
+  const G_BITS = hexToBits(BITS.goddess);   // goddess PNG prefix, as bits
+  const M_BITS = hexToBits(BITS.gemini);    // Gemini PNG prefix, as bits
+  const SIG_BITS = 8*8;                     // first 8 bytes = PNG signature
+
+  // ---------- Discrete Fourier Transform of the contour ----------
+  // CONTOUR is [[x,y],...] normalized to ~[-1,1], nose facing left, y down.
+  function dft(pts){
+    const N=pts.length, out=new Array(N);
+    for(let k=0;k<N;k++){
+      let re=0, im=0;
+      for(let j=0;j<N;j++){
+        const a=-2*Math.PI*k*j/N, c=Math.cos(a), s=Math.sin(a);
+        const zx=pts[j][0], zy=pts[j][1];
+        re += zx*c - zy*s;
+        im += zx*s + zy*c;
+      }
+      re/=N; im/=N;
+      const freq = (k<=N/2) ? k : k-N;
+      out[k]={freq, re, im, amp:Math.hypot(re,im), phase:Math.atan2(im,re)};
+    }
+    out.sort((a,b)=>b.amp-a.amp);   // biggest circles first
+    return out;
+  }
+  const N = CONTOUR.length;
+  const COEF = dft(CONTOUR);
+  // Parseval: cumulative energy captured by the top-K coefficients
+  const totalE = COEF.reduce((s,c)=>s+c.amp*c.amp,0);
+  const cumE = new Float64Array(N+1);
+  for(let i=0;i<N;i++) cumE[i+1]=cumE[i]+COEF[i].amp*COEF[i].amp;
+
+  // ---------- reconstruct the closed outline for a given K ----------
+  const M = 900;                      // polyline resolution
+  let poly = new Float32Array(M*2);   // normalized coords
+  let polyK = -1;
+  function reconstruct(K){
+    for(let i=0;i<M;i++){
+      const t=i/M; let x=0,y=0;
+      for(let j=0;j<K;j++){ const c=COEF[j], a=c.freq*2*Math.PI*t + c.phase;
+        x += c.amp*Math.cos(a); y += c.amp*Math.sin(a); }
+      poly[i*2]=x; poly[i*2+1]=y;
+    }
+    polyK=K;
+  }
+  // epicycle chain node positions at time t (normalized coords)
+  function chain(K,t){
+    const nodes=new Float32Array((K+1)*2); let x=0,y=0;
+    for(let j=0;j<K;j++){ const c=COEF[j], a=c.freq*2*Math.PI*t + c.phase;
+      x += c.amp*Math.cos(a); y += c.amp*Math.sin(a);
+      nodes[(j+1)*2]=x; nodes[(j+1)*2+1]=y; }
+    return nodes;
+  }
+
+  // ---------- binary ring: positions (polar, px) baked once per layout ----------
+  // each entry: r, ang, bit, stream(0=goddess,1=gemini), sig(bool)
+  let fieldPos=[], field=null, fieldScale=1;
+  function buildAnnulus(bits, stream, a, b, gap, phase, rose){
+    const rings=Math.max(1,Math.floor((b-a)/gap));
+    const avgC=Math.PI*(a+b);
+    let dot=Math.max(1.7,(rings*avgC)/bits.length);
+    let idx=0;
+    for(let ri=0; ri<rings && idx<bits.length; ri++){
+      const r0=a+ri*gap+gap*0.5;
+      const cnt=Math.max(4,Math.floor(2*Math.PI*r0/dot));
+      for(let j=0;j<cnt && idx<bits.length;j++){
+        let ang=phase + (j/cnt)*2*Math.PI + ri*0.55;
+        let r=r0;
+        if(rose) r = r0*(0.80+0.20*Math.cos(5*ang));   // petaled ring
+        fieldPos.push({r, ang, bit:bits[idx], stream, sig: idx<SIG_BITS, i:idx});
+        idx++;
+      }
+    }
+  }
+  function buildPhyllo(){
+    // one sunflower, goddess first (inner), gemini after (outer); golden angle
+    const g=Math.PI*(3-Math.sqrt(5));
+    const all=[]; for(let i=0;i<G_BITS.length;i++) all.push([G_BITS[i],0,i]);
+    for(let i=0;i<M_BITS.length;i++) all.push([M_BITS[i],1,i]);
+    const Rmax=minDim*0.455, c=Rmax/Math.sqrt(all.length);
+    for(let i=0;i<all.length;i++){
+      const r=c*Math.sqrt(i+0.5), ang=i*g;
+      fieldPos.push({r, ang, bit:all[i][0], stream:all[i][1], sig: all[i][1]===0 && all[i][2]<SIG_BITS, i:all[i][2]});
+    }
+  }
+  function buildField(layout){
+    fieldPos=[];
+    if(layout==='phyllo'){ buildPhyllo(); }
+    else {
+      const Ri=minDim*0.315, Rmid=minDim*0.385, Ro=minDim*0.470, rose=(layout==='rose');
+      buildAnnulus(G_BITS,0, Ri, Rmid, 3.1, 0.0, rose);
+      buildAnnulus(M_BITS,1, Rmid+3, Ro, 3.1, 0.7, rose);
+    }
+    // bake to offscreen (centered), drawn rotated each frame
+    field=document.createElement('canvas');
+    field.width=W; field.height=H;
+    const f=field.getContext('2d');
+    f.translate(cx,cy);
+    for(const p of fieldPos){
+      const x=p.r*Math.cos(p.ang), y=p.r*Math.sin(p.ang);
+      let col;
+      if(p.sig) col='#fff2cf';
+      else if(p.stream===0) col = p.bit ? '#f3e0a0' : '#463c1f';
+      else col = p.bit ? '#7fd0dc' : '#1c343c';
+      f.fillStyle=col;
+      const s = p.bit? 1.7 : 1.2;
+      f.fillRect(x-s/2, y-s/2, s, s);
+    }
+  }
+
+  // screen position of a field entry at current field rotation
+  function fieldScreen(p, rot){
+    const a=p.ang+rot, r=p.r;
+    return [cx + r*Math.cos(a), cy + r*Math.sin(a)];
+  }
+
+  // ---------- state ----------
+  let K=120, speed=0.06, layout='rose';
+  let showCircles=true, showThread=true, showBits=true, playing=true;
+  let t=0, lastMs=0, fieldRot=0;
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(reduce){ playing=false; document.getElementById('tPlay').checked=false; }
+
+  // goddess draw scale
+  let SC=1;
+  function computeScale(){ SC=minDim*0.275; }
+
+  // ---------- resize ----------
+  function resize(){
+    DPR=Math.min(2, window.devicePixelRatio||1);
+    const wrap=document.getElementById('canvasWrap');
+    W=Math.round(wrap.clientWidth*DPR); H=Math.round(wrap.clientHeight*DPR);
+    cv.width=W; cv.height=H; cv.style.width=wrap.clientWidth+'px'; cv.style.height=wrap.clientHeight+'px';
+    cx=W/2; cy=H/2; minDim=Math.min(W,H);
+    computeScale();
+    buildField(layout);
+  }
+
+  // ---------- draw ----------
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    // ambient glow behind her
+    const g=ctx.createRadialGradient(cx,cy,0,cx,cy,minDim*0.5);
+    g.addColorStop(0,'rgba(60,52,90,0.35)');
+    g.addColorStop(0.5,'rgba(24,26,54,0.15)');
+    g.addColorStop(1,'rgba(9,12,26,0)');
+    ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+
+    // binary ring (rotated offscreen)
+    if(showBits && field){
+      ctx.save(); ctx.translate(cx,cy); ctx.rotate(fieldRot);
+      ctx.globalAlpha = (layout==='phyllo')?0.60:0.92;
+      ctx.drawImage(field,-cx,-cy);
+      ctx.restore(); ctx.globalAlpha=1;
+    }
+
+    if(polyK!==K) reconstruct(K);
+
+    // ghost outline (full closed goddess for this K) — faint gold
+    ctx.lineWidth=Math.max(1,DPR*1.0);
+    ctx.strokeStyle='rgba(212,175,55,0.30)';
+    ctx.beginPath();
+    for(let i=0;i<=M;i++){ const ii=(i%M)*2; const x=cx+poly[ii]*SC, y=cy+poly[ii+1]*SC; i?ctx.lineTo(x,y):ctx.moveTo(x,y); }
+    ctx.stroke();
+
+    // epicycle chain at time t
+    const nodes=chain(K,t);
+    const headX=cx+nodes[K*2]*SC, headY=cy+nodes[K*2+1]*SC;
+
+    if(showCircles){
+      ctx.lineWidth=Math.max(0.6,DPR*0.6);
+      // faint circles
+      ctx.strokeStyle='rgba(150,160,200,0.10)';
+      for(let j=0;j<K;j++){
+        const R=COEF[j].amp*SC; if(R<0.6*DPR) continue;
+        const px=cx+nodes[j*2]*SC, py=cy+nodes[j*2+1]*SC;
+        ctx.beginPath(); ctx.arc(px,py,R,0,7); ctx.stroke();
+      }
+      // the turning vectors (the graph edges)
+      ctx.strokeStyle='rgba(201,169,74,0.32)';
+      ctx.lineWidth=Math.max(0.8,DPR*0.8);
+      ctx.beginPath();
+      for(let j=0;j<=K;j++){ const x=cx+nodes[j*2]*SC, y=cy+nodes[j*2+1]*SC; j?ctx.lineTo(x,y):ctx.moveTo(x,y); }
+      ctx.stroke();
+      // nodes
+      ctx.fillStyle='rgba(246,230,168,0.5)';
+      for(let j=1;j<=K;j+=Math.max(1,Math.floor(K/60))){ const x=cx+nodes[j*2]*SC, y=cy+nodes[j*2+1]*SC;
+        ctx.beginPath(); ctx.arc(x,y,DPR*0.9,0,7); ctx.fill(); }
+    }
+
+    // bright "just-stitched" arc trailing the head, fading into the ghost
+    const headI=Math.floor(t*M);
+    const tail=Math.floor(M*0.16);
+    ctx.lineCap='round';
+    for(let s=0;s<tail;s++){
+      const i0=((headI-s-1)%M+M)%M, i1=((headI-s)%M+M)%M;
+      const al=(1-s/tail);
+      ctx.strokeStyle='rgba(246,230,168,'+(0.85*al*al).toFixed(3)+')';
+      ctx.lineWidth=(0.6+2.2*al)*DPR;
+      ctx.beginPath();
+      ctx.moveTo(cx+poly[i0*2]*SC, cy+poly[i0*2+1]*SC);
+      ctx.lineTo(cx+poly[i1*2]*SC, cy+poly[i1*2+1]*SC);
+      ctx.stroke();
+    }
+    ctx.lineCap='butt';
+
+    // stitch thread: needle (head) -> the goddess bit at this progress
+    const gIdx = Math.floor(t*G_BITS.length) % G_BITS.length;
+    if(showThread && showBits){
+      // find the goddess-stream entry with i===gIdx (fieldPos ordered per stream)
+      // goddess entries were pushed first; index maps directly for annulus/phyllo start
+      const p = gField(gIdx);
+      if(p){
+        const [bx,by]=fieldScreen(p, fieldRot);
+        ctx.strokeStyle='rgba(246,230,168,0.22)';
+        ctx.lineWidth=Math.max(0.7,DPR*0.7);
+        ctx.beginPath(); ctx.moveTo(headX,headY); ctx.lineTo(bx,by); ctx.stroke();
+        // spark on the bit
+        ctx.fillStyle='rgba(255,242,207,0.9)';
+        ctx.beginPath(); ctx.arc(bx,by,DPR*1.6,0,7); ctx.fill();
+      }
+    }
+
+    // the needle head
+    ctx.fillStyle='#fff6df';
+    ctx.beginPath(); ctx.arc(headX,headY,DPR*2.2,0,7); ctx.fill();
+    ctx.strokeStyle='rgba(255,246,223,0.35)'; ctx.lineWidth=DPR;
+    ctx.beginPath(); ctx.arc(headX,headY,DPR*5,0,7); ctx.stroke();
+
+    // subtle vignette
+    const vg=ctx.createRadialGradient(cx,cy,minDim*0.35,cx,cy,minDim*0.72);
+    vg.addColorStop(0,'rgba(0,0,0,0)'); vg.addColorStop(1,'rgba(4,6,16,0.55)');
+    ctx.fillStyle=vg; ctx.fillRect(0,0,W,H);
+  }
+
+  // quick lookup of a goddess-stream field entry by its bit index
+  let gLookup=null;
+  function buildLookup(){ gLookup=new Array(G_BITS.length);
+    for(const p of fieldPos){ if(p.stream===0) gLookup[p.i]=p; } }
+  function gField(i){ if(!gLookup) buildLookup(); return gLookup[i]; }
+  // rebuild lookup whenever field rebuilds
+  const _bf=buildField; buildField=function(l){ _bf(l); gLookup=null; };
+
+  // ---------- panel ----------
+  function fmt(n){ return n.toLocaleString('en-US'); }
+  function updatePanel(){
+    const pct = 100*cumE[K]/totalE;
+    document.getElementById('pctv').textContent=pct.toFixed(pct>99.9?2:1);
+    document.getElementById('pctbar').style.width=Math.min(100,pct)+'%';
+    document.getElementById('vK').textContent=K;
+    document.getElementById('vN').textContent=N;
+    document.getElementById('vTheta').textContent=(t*360).toFixed(0)+'°';
+    document.getElementById('vCost').textContent=K;
+    document.getElementById('vGbits').textContent=fmt(G_BITS.length);
+    document.getElementById('vMbits').textContent=fmt(M_BITS.length);
+    const gi=Math.floor(t*G_BITS.length)%G_BITS.length;
+    document.getElementById('vNeedle').textContent='#'+gi+' = '+G_BITS[gi];
+    document.getElementById('mPct').textContent=pct.toFixed(1);
+  }
+
+  // ---------- loop ----------
+  function frame(ms){
+    if(!lastMs) lastMs=ms; const dt=Math.min(0.05,(ms-lastMs)/1000); lastMs=ms;
+    if(playing){ t=(t+speed*dt)%1; fieldRot += dt*0.05; }
+    draw(); updatePanel();
+    requestAnimationFrame(frame);
+  }
+
+  // ---------- controls ----------
+  const sK=document.getElementById('sK'), sS=document.getElementById('sS'),
+        mSK=document.getElementById('mSK');
+  function setK(v){ K=Math.max(2,Math.min(N,v|0)); polyK=-1;
+    sK.value=K; mSK.value=K;
+    document.getElementById('cK').textContent=K; document.getElementById('mK').textContent=K;
+    document.getElementById('cN').textContent=N; }
+  sK.addEventListener('input',e=>setK(+e.target.value));
+  mSK.addEventListener('input',e=>setK(+e.target.value));
+  sS.addEventListener('input',e=>{ speed=(+e.target.value)/400; document.getElementById('cS').textContent=speed.toFixed(3); });
+  document.getElementById('layouts').addEventListener('click',e=>{
+    const b=e.target.closest('.chip'); if(!b) return;
+    layout=b.dataset.l; buildField(layout);
+    document.querySelectorAll('#layouts .chip').forEach(c=>c.classList.toggle('on',c===b));
+  });
+  document.getElementById('tCircles').addEventListener('change',e=>showCircles=e.target.checked);
+  document.getElementById('tThread').addEventListener('change',e=>showThread=e.target.checked);
+  document.getElementById('tBits').addEventListener('change',e=>showBits=e.target.checked);
+  document.getElementById('tPlay').addEventListener('change',e=>playing=e.target.checked);
+  addEventListener('keydown',e=>{
+    if(e.code==='Space'){ e.preventDefault(); playing=!playing; document.getElementById('tPlay').checked=playing; }
+    else if(e.key==='1'){ layout='rose'; syncLayout(); }
+    else if(e.key==='2'){ layout='ring'; syncLayout(); }
+    else if(e.key==='3'){ layout='phyllo'; syncLayout(); }
+  });
+  function syncLayout(){ buildField(layout);
+    document.querySelectorAll('#layouts .chip').forEach(c=>c.classList.toggle('on',c.dataset.l===layout)); }
+
+  // ---------- go ----------
+  let rz; addEventListener('resize',()=>{ clearTimeout(rz); rz=setTimeout(resize,120); });
+  setK(120); speed=24/400; document.getElementById('cS').textContent=speed.toFixed(3);
+  resize(); reconstruct(K);
+  requestAnimationFrame(frame);
+})();
+</script>
+</body></html>

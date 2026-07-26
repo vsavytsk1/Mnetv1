@@ -1,0 +1,428 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>SAMSARIUM · the fractal floor — pay the price in compute (until a triangle is smaller than a pixel)</title>
+<!--
+  SAMSARIUM · builds the NANITE HOOK that SAMSARA v1.0 stubbed (Vladyslav
+  Savytskyy, "VR Algebra Floor"). lineage: apollonium / aracnium / feynmanium
+  / helenium / genesium kernel. same hand-rolled canvas 3D, no Three.js.
+  =========================================================================
+  Feynman's rule, kept: do not fool yourself. Here is the claim under test:
+      "the more you fractalize, the better the quality, right?"
+  The honest answer is YES — up to one hard wall — and this file shows both
+  the yes and the wall, live, so you can catch it.
+
+  THE REAL ENGINE (exact, computed every frame):
+    PROJECTION (samsara's math): P_view = P - eye ; perspective divide by the
+    rotated depth z' ; P_screen = centre + P_view/z' * focal. focal = (H/2)/
+    tan(fov/2). Camera pitched to look at the floor.
+    HEIGHT is fractional Brownian motion:  h(x,z) = Σ_i a_i · noise(f_i·x,f_i·z)
+    with a_i = 1/2^i , f_i = 2^i. It is SELF-SIMILAR: it carries real structure
+    at every scale. Crucially, a quad at subdivision depth d is evaluated with
+    (baseOctaves + d) octaves — so each time you subdivide you ADD a finer
+    octave. Going deeper reveals genuinely NEW detail, not a smoother version
+    of the same detail. THAT is why "pay compute -> see more" is literally true
+    here and not a slogan.
+    LOD is continuous, screen-space-error driven (the nanite idea): a quad
+    subdivides only while its projected size exceeds the target, and only
+    deeper near where you look (the FOVEA). Triangle and cull counts are exact.
+
+  THE WALL (the honest catch):
+    Once a triangle projects smaller than one screen pixel, subdividing it
+    again changes NOTHING a viewer can see — that compute is spent on detail
+    below the resolution of the display. The HUD reports the % of drawn tris
+    that are already sub-pixel. When that climbs, "more fractalize" stops
+    buying quality and starts buying nothing. The cure is not more compute
+    everywhere; it is FOVEATION — spend depth where the eye is, stay coarse
+    elsewhere. That is precisely what reality (and nanite) does.
+
+  HONESTY CAVEATS (K1-K7):
+   K1 REAL. projection, fBm height, per-quad normals + Lambert shading, the
+      screen-space-error quadtree, and every count are exact and live.
+   K2 REAL DETAIL, NOT SMOOTHING. depth d uses baseOct+d octaves; deeper =
+      new octaves = new structure. Verify: raise MAX DEPTH and watch fresh
+      ridges appear, not blur soften.
+   K3 THE WALL IS REAL. sub-pixel triangles are wasted compute; the HUD shows
+      the fraction. This is the whole point of the piece.
+   K4 FOVEATION. subdivision target is relaxed away from screen centre, so the
+      periphery stays coarse on purpose. Honest approximation, shown.
+   K5 PAINTER'S ORDER. no z-buffer in 2D canvas; leaves are drawn far->near by
+      depth. At grazing angles a few quads can mis-order. Limitation, not hidden.
+   K6 NOT UE5 NANITE, NOT A GPU. a CPU canvas toy that demonstrates the IDEA
+      (screen-space-error continuous LOD + foveation + fractal detail). No
+      meshlets, no virtualized geometry streaming, no GPU.
+   K7 FINITE. hash value-noise, deterministic; "infinite detail" is bounded by
+      float precision and an octave cap. Practically deep, not literally endless.
+    Samsara's own hooks honoured: fixed-timestep LOOP LAW (dt=1/120, 33ms
+    governor, <=4 sims/frame), and the pink far SPHERE on the horizon. STEREO
+    stays a stub (mono/centre eye), honestly unbuilt.
+  =========================================================================
+-->
+<style>
+  :root{
+    --void:#04060c; --void2:#081018; --panel:rgba(5,9,16,.72);
+    --ink:#cfe0ee; --dim:#6f7c8f; --faint:#1b2838; --wire:#12202e;
+    --cy:#00ffd5; --cy2:#35e0d0; --gold:#ffd36a; --pink:#ff69b4; --blue:#80d0ff;
+    --mono:ui-monospace,"SF Mono","Cascadia Code",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;background:#04060c;color:var(--ink);font-family:var(--mono);overflow:hidden}
+  #stage{position:fixed;inset:0;display:grid;grid-template-rows:auto 1fr;height:100%}
+  header{padding:12px 20px 10px;border-bottom:1px solid var(--wire);position:relative;z-index:3;background:rgba(4,6,12,.6)}
+  .kick{font-size:9.5px;letter-spacing:.32em;text-transform:uppercase;color:var(--dim)}
+  .kick b{color:var(--cy);font-weight:600}
+  h1{font-weight:700;font-size:clamp(15px,2.6vw,22px);line-height:1.1;margin-top:6px;letter-spacing:.14em;text-transform:uppercase}
+  h1 .em{color:var(--cy)}
+  .sub{margin-top:7px;font-size:12px;color:var(--dim);max-width:92ch;line-height:1.5;text-transform:none;letter-spacing:0;font-weight:400}
+  .sub b{color:var(--ink);font-weight:600} .sub .cy{color:var(--cy)} .sub .pk{color:var(--pink)} .sub .go{color:var(--gold)}
+  #main{position:relative;display:grid;grid-template-columns:1fr 320px;overflow:hidden;min-height:0}
+  @media (max-width:900px){ #main{grid-template-columns:1fr} #side{display:none} }
+  #canvasWrap{position:relative;min-height:0;overflow:hidden;cursor:grab}
+  #canvasWrap:active{cursor:grabbing}
+  canvas#c{display:block;width:100%;height:100%}
+  #hud{position:absolute;left:14px;top:12px;font-size:10px;line-height:1.65;color:var(--dim);pointer-events:none;z-index:2}
+  #hud .r{display:flex;gap:8px}#hud .r b{color:var(--cy);font-weight:600;min-width:52px;text-align:right;font-variant-numeric:tabular-nums}
+  #hud .r .k{min-width:66px} #hud .go b{color:var(--gold)} #hud .pk b{color:var(--pink)}
+  #verdict{position:absolute;left:14px;bottom:12px;max-width:52%;font-size:11px;line-height:1.5;color:var(--dim);z-index:2;pointer-events:none;border-left:2px solid var(--wire);padding-left:9px}
+  #verdict b{color:var(--cy)} #verdict.warn b{color:var(--pink)} #verdict.warn{border-color:#3a1a2a}
+  #hint{position:absolute;right:14px;bottom:12px;font-size:10px;color:var(--faint);text-align:right;z-index:2;line-height:1.7}
+  /* side */
+  #side{border-left:1px solid var(--wire);background:var(--panel);overflow-y:auto;padding:15px 18px 22px}
+  .big{font-size:34px;color:var(--cy);line-height:1;margin-top:2px;font-variant-numeric:tabular-nums;font-weight:700}
+  .big small{font-size:11px;color:var(--dim);letter-spacing:0;font-weight:400}
+  .big.warn{color:var(--pink)}
+  .lbl{font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--dim);margin:16px 0 8px}
+  .ctl{margin-top:12px}
+  .ctl .cap{display:flex;justify-content:space-between;font-size:11px;color:var(--dim);margin-bottom:5px}
+  .ctl .cap b{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
+  .ctl .cap.hot b{color:var(--gold)}
+  input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:3px;background:var(--faint);border-radius:3px;outline:none;cursor:pointer}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;border-radius:50%;background:var(--cy);border:1px solid #013;cursor:pointer}
+  input[type=range]::-moz-range-thumb{width:13px;height:13px;border-radius:50%;background:var(--cy);border:1px solid #013;cursor:pointer}
+  #dTarget::-webkit-slider-thumb{background:var(--gold)} #dTarget::-moz-range-thumb{background:var(--gold)}
+  .toggles{display:flex;flex-wrap:wrap;gap:9px 15px;margin-top:14px;font-size:11px;color:var(--dim)}
+  .toggles label{display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none}
+  .toggles input{accent-color:var(--cy);cursor:pointer}
+  .note{font-size:10.5px;color:var(--dim);line-height:1.6;margin-top:16px;border-left:2px solid var(--wire);padding-left:10px}
+  .note b{color:var(--cy)} .note .go{color:var(--gold)} .note .pk{color:var(--pink)}
+  .foot{font-size:9.5px;color:var(--faint);margin-top:15px;border-top:1px solid var(--wire);padding-top:11px;line-height:1.7}
+  .foot code{color:var(--gold)} .foot b{color:var(--dim)}
+  #mbar{display:none}
+  @media (max-width:900px){
+    #mbar{display:flex;gap:12px;align-items:center;justify-content:center;padding:9px 12px;
+      border-top:1px solid var(--wire);background:var(--panel);font-size:11px;color:var(--dim);position:relative;z-index:3}
+    #stage{grid-template-rows:auto 1fr auto}
+    #mbar input[type=range]{width:120px}
+    #mbar .mv{color:var(--gold);font-weight:600}
+  }
+</style>
+</head>
+<body>
+<div id="stage">
+  <header>
+    <div class="kick">samsarium · <b>the fractal floor</b> · samsara's nanite hook, built</div>
+    <h1><span class="em">pay the price in compute</span> — until a triangle is smaller than a pixel</h1>
+    <div class="sub">A first-person floor whose height is <b>fractional Brownian motion</b>. Each subdivision adds a finer octave, so paying compute reveals <span class="cy">genuinely new detail</span> — real, not smoothing. But watch the HUD: once triangles fall <span class="pk">below one pixel</span>, extra compute is invisible. The fix isn't more everywhere — it's the <span class="go">fovea</span>: deep where you look, coarse in the corner of your eye.</div>
+  </header>
+  <div id="main">
+    <div id="canvasWrap">
+      <canvas id="c"></canvas>
+      <div id="hud">
+        <div class="r"><span class="k">eye</span><b id="hEye">mono</b></div>
+        <div class="r"><span class="k">height</span><b id="hH">1.6</b></div>
+        <div class="r"><span class="k">fov</span><b id="hFov">65°</b></div>
+        <div class="r"><span class="k">target px</span><b id="hT" style="color:var(--gold)">12</b></div>
+        <div class="r"><span class="k">max depth</span><b id="hD">8</b></div>
+        <div class="r"><span class="k">octaves@fovea</span><b id="hOct">—</b></div>
+        <div class="r"><span class="k">triangles</span><b id="hTri">—</b></div>
+        <div class="r"><span class="k">avg tri px</span><b id="hAvg">—</b></div>
+        <div class="r pk"><span class="k">at pixel scale</span><b id="hSub">—</b></div>
+        <div class="r pk"><span class="k">culled+fog</span><b id="hCull">—</b></div>
+        <div class="r" style="margin-top:5px"><span class="k">render</span><b id="hFps">60</b></div>
+        <div class="r go"><span class="k">frame ms</span><b id="hMs">—</b></div>
+        <div class="r"><span class="k">sim/frm</span><b id="hSim">—</b></div>
+        <div class="r"><span class="k">acc</span><b id="hAcc">—</b></div>
+      </div>
+      <div id="verdict">—</div>
+      <div id="hint">drag = look up / down · space = pause<br>lower <b style="color:var(--gold)">target px</b> = spend more compute</div>
+    </div>
+    <aside id="side">
+      <div class="lbl">Detail per triangle — the pixel wall</div>
+      <div class="big" id="waste">—<small> px · avg triangle</small></div>
+
+      <div class="lbl">Spend — the price of detail</div>
+      <div class="ctl">
+        <div class="cap hot">target px / triangle <b id="cT">12</b></div>
+        <input type="range" id="dTarget" min="1" max="40" value="12" step="1">
+      </div>
+      <div class="ctl">
+        <div class="cap">max subdivision depth <b id="cD">8</b></div>
+        <input type="range" id="dDepth" min="3" max="12" value="8" step="1">
+      </div>
+      <div class="ctl">
+        <div class="cap">fovea strength <b id="cK">1.8</b></div>
+        <input type="range" id="dFov" min="0" max="40" value="18" step="1">
+      </div>
+
+      <div class="lbl">Camera</div>
+      <div class="ctl">
+        <div class="cap">height above floor <b id="cH">1.6</b></div>
+        <input type="range" id="dH" min="15" max="600" value="160" step="1">
+      </div>
+      <div class="ctl">
+        <div class="cap">field of view <b id="cFov">65</b></div>
+        <input type="range" id="dFOV" min="40" max="110" value="65" step="1">
+      </div>
+      <div class="ctl">
+        <div class="cap">forward speed <b id="cS">1.0</b></div>
+        <input type="range" id="dS" min="0" max="60" value="16" step="1">
+      </div>
+
+      <div class="toggles">
+        <label><input type="checkbox" id="tFovea"> foveate</label>
+        <label><input type="checkbox" id="tWire"> wireframe</label>
+        <label><input type="checkbox" id="tFog" checked> fog</label>
+        <label><input type="checkbox" id="tPlay" checked> move</label>
+      </div>
+
+      <div class="note" id="note">Drop <b>target px</b> toward 1 and the triangle count explodes for detail you may already be past. Then turn on <span class="go">foveate</span>: the corners go coarse, the centre stays razor, and the same eye-quality costs a fraction of the tris. That trade is the whole game.</div>
+      <div class="foot">
+        <b>honest:</b> <code>h = Σ 2⁻ⁱ·noise(2ⁱx,2ⁱz)</code> · depth d → baseOct+d octaves · screen-space-error LOD · counts exact.<br>
+        <b>flavour:</b> CPU canvas toy of the nanite idea, not UE5. See source (K1–K7).
+      </div>
+    </aside>
+  </div>
+  <div id="mbar">
+    <span>target px <span class="mv" id="mT">12</span></span>
+    <input type="range" id="mTr" min="1" max="40" value="12" step="1">
+    <span>waste <span class="mv" id="mW">—</span>%</span>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  const cv=document.getElementById('c'), ctx=cv.getContext('2d');
+  let DPR=1,W=0,H=0,cxp=0,cyc=0;
+
+  // ---------- value-noise fBm (hash lattice, pure) ----------
+  function hash2(ix,iz){
+    let h=(ix|0)*374761393 + (iz|0)*668265263;
+    h=(h^(h>>>13))>>>0; h=(h*1274126177)>>>0; h=(h^(h>>>16))>>>0;
+    return h/4294967295;
+  }
+  function sm(t){ return t*t*(3-2*t); }
+  function vnoise(x,z){
+    const x0=Math.floor(x), z0=Math.floor(z), fx=x-x0, fz=z-z0;
+    const a=hash2(x0,z0), b=hash2(x0+1,z0), c=hash2(x0,z0+1), d=hash2(x0+1,z0+1);
+    const u=sm(fx), v=sm(fz);
+    return a*(1-u)*(1-v)+b*u*(1-v)+c*(1-u)*v+d*u*v;
+  }
+  const F0=0.16, HS=0.62, BASE_OCT=3, MAX_OCT=13;
+  function fbm(x,z,oct){
+    let amp=1,freq=F0,sum=0,norm=0;
+    for(let i=0;i<oct;i++){ sum+=amp*(vnoise(x*freq,z*freq)-0.5); norm+=amp; amp*=0.5; freq*=2; }
+    return HS*sum/norm;
+  }
+
+  // ---------- state ----------
+  const eye={x:0,y:3.5,z:0};
+  let pitch=0.90, fovDeg=68, focal=1;
+  let targetPx=24, maxDepth=10, foveaK=3.0, foveaOn=false, wire=false, fog=true, playing=true, speed=1.0;
+  const NEAR=0.05, ROOT_HALF=13, ROOT_ZNEAR=0.5, FOG_FAR=20, ZCLAMP=8, CAP=8000;
+  const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(reduce){ playing=false; document.getElementById('tPlay').checked=false; }
+
+  // loop law (samsara)
+  const loop={fixedDt:1/120, maxFrameMs:33, maxSimPerFrame:4, acc:0, last:0, simSteps:0};
+  let fps=60, msAcc=0, frameCt=0, fpsT=0, lastMs=0;
+
+  // ---------- projection (samsara port + pitch) ----------
+  function project(x,y,z){
+    const vx=x-eye.x, vy=y-eye.y, vz=z-eye.z;
+    const cp=Math.cos(pitch), sp=Math.sin(pitch);
+    const y2=vy*cp + vz*sp;
+    const z2=-vy*sp + vz*cp;
+    if(z2<=NEAR) return null;
+    return { sx: cxp + (vx/z2)*focal, sy: cyc - (y2/z2)*focal, z:z2 };
+  }
+
+  // ---------- shading ----------
+  const LIGHT=(function(){ const l=[-0.42,0.82,-0.40]; const m=Math.hypot(l[0],l[1],l[2]); return [l[0]/m,l[1]/m,l[2]/m]; })();
+  const C_LOW=[8,54,58], C_MID=[24,150,150], C_HI=[150,255,235], C_FOG=[6,20,28];
+  function mix(a,b,t){ return [a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t, a[2]+(b[2]-a[2])*t]; }
+  function shadeQuad(c0,c1,c3, hAvg, z2){
+    // normal from edges c1-c0, c3-c0
+    const ux=c1[0]-c0[0], uy=c1[1]-c0[1], uz=c1[2]-c0[2];
+    const wx=c3[0]-c0[0], wy=c3[1]-c0[1], wz=c3[2]-c0[2];
+    let nx=uy*wz-uz*wy, ny=uz*wx-ux*wz, nz=ux*wy-uy*wx;
+    const nm=Math.hypot(nx,ny,nz)||1; nx/=nm; ny/=nm; nz/=nm; if(ny<0){nx=-nx;ny=-ny;nz=-nz;}
+    let L=nx*LIGHT[0]+ny*LIGHT[1]+nz*LIGHT[2]; if(L<0)L=0;
+    const hN=Math.max(0,Math.min(1,(hAvg/HS)*0.5+0.5));
+    let col = hN<0.5 ? mix(C_LOW,C_MID,hN*2) : mix(C_MID,C_HI,(hN-0.5)*2);
+    const lit=0.28+0.72*L;
+    col=[col[0]*lit,col[1]*lit,col[2]*lit];
+    if(fog){ const ft=Math.max(0,Math.min(1,(z2-2)/(FOG_FAR-2))); const f=ft*ft; col=mix(col,C_FOG,f); }
+    return 'rgb('+(col[0]|0)+','+(col[1]|0)+','+(col[2]|0)+')';
+  }
+
+  // ---------- quadtree ----------
+  let leaves=[], culled=0, deepest=0, near3=0, sizeSum=0, capped=false;
+  function octAt(depth){ let o=BASE_OCT+depth; return o>MAX_OCT?MAX_OCT:o; }
+  function recurse(qx,qz,half,depth){
+    if(leaves.length>=CAP){ capped=true; return; }
+    const oct=octAt(depth);
+    const x0=qx-half,x1=qx+half,z0=qz-half,z1=qz+half;
+    const h00=fbm(x0,z0,oct),h10=fbm(x1,z0,oct),h11=fbm(x1,z1,oct),h01=fbm(x0,z1,oct);
+    const p00=project(x0,h00,z0),p10=project(x1,h10,z0),p11=project(x1,h11,z1),p01=project(x0,h01,z1);
+    if(!p00||!p10||!p11||!p01){
+      if(depth<maxDepth && half>0.03){ const hh=half/2;
+        recurse(qx-hh,qz-hh,hh,depth+1);recurse(qx+hh,qz-hh,hh,depth+1);recurse(qx+hh,qz+hh,hh,depth+1);recurse(qx-hh,qz+hh,hh,depth+1); }
+      return;
+    }
+    const minx=Math.min(p00.sx,p10.sx,p11.sx,p01.sx), maxx=Math.max(p00.sx,p10.sx,p11.sx,p01.sx);
+    const miny=Math.min(p00.sy,p10.sy,p11.sy,p01.sy), maxy=Math.max(p00.sy,p10.sy,p11.sy,p01.sy);
+    if(maxx<0||minx>W||maxy<0||miny>H){ culled++; return; }          // off-screen
+    const zc=(p00.z+p10.z+p11.z+p01.z)*0.25;
+    if(zc>FOG_FAR){ culled++; return; }                               // far -> fog fills behind
+    const approx=focal*2*half/Math.max(zc,ZCLAMP);                    // distance-based LOD (robust vs. shear)
+    const ccx=(p00.sx+p11.sx)*0.5, ccy=(p00.sy+p11.sy)*0.5;
+    const dN=Math.hypot(ccx-cxp,ccy-cyc)/(0.5*Math.hypot(W,H));
+    const tgt=targetPx*(foveaOn?(1+foveaK*dN):1);                     // fovea: relax target off-centre
+    if(approx>tgt && depth<maxDepth){
+      const hh=half/2;
+      recurse(qx-hh,qz-hh,hh,depth+1); recurse(qx+hh,qz-hh,hh,depth+1);
+      recurse(qx+hh,qz+hh,hh,depth+1); recurse(qx-hh,qz+hh,hh,depth+1);
+    } else {
+      const realpx=focal*2*half/zc, hAvg=(h00+h10+h11+h01)*0.25;
+      leaves.push({p00,p10,p11,p01,c0:[x0,h00,z0],c1:[x1,h10,z0],c3:[x0,h01,z1],hAvg,zc,px:realpx,depth});
+      if(depth>deepest) deepest=depth;
+      sizeSum+=realpx; if(realpx<3) near3++;
+    }
+  }
+
+  // ---------- background (horizon sits off-screen; the plain recedes into fog) ----------
+  function drawBg(){
+    const g=ctx.createLinearGradient(0,0,0,H);
+    g.addColorStop(0,'#061420'); g.addColorStop(0.55,'#04101a'); g.addColorStop(1,'#03080e');
+    ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+    const sp=project(7,1.0,eye.z+FOG_FAR*0.9);   // far pink sphere (samsara), fogged
+    if(sp){ const R=Math.max(5,focal*0.7/sp.z);
+      const rg=ctx.createRadialGradient(sp.sx,sp.sy,0,sp.sx,sp.sy,R*4);
+      rg.addColorStop(0,'rgba(255,105,180,.40)'); rg.addColorStop(.4,'rgba(255,105,180,.14)'); rg.addColorStop(1,'rgba(255,105,180,0)');
+      ctx.fillStyle=rg; ctx.beginPath(); ctx.arc(sp.sx,sp.sy,R*4,0,7); ctx.fill();
+    }
+  }
+
+  // ---------- render ----------
+  function render(){
+    ctx.clearRect(0,0,W,H);
+    focal=(H/2)/Math.tan((fovDeg*Math.PI/180)/2);
+    cxp=W/2; cyc=H/2;
+    drawBg();
+    leaves.length=0; culled=0; deepest=0; near3=0; sizeSum=0; capped=false;
+    recurse(eye.x, eye.z+ROOT_ZNEAR+ROOT_HALF, ROOT_HALF, 0);
+    // far -> near
+    leaves.sort((a,b)=>b.zc-a.zc);
+    for(let i=0;i<leaves.length;i++){
+      const L=leaves[i];
+      ctx.fillStyle=shadeQuad(L.c0,L.c1,L.c3,L.hAvg,L.zc);
+      ctx.beginPath();
+      ctx.moveTo(L.p00.sx,L.p00.sy); ctx.lineTo(L.p10.sx,L.p10.sy);
+      ctx.lineTo(L.p11.sx,L.p11.sy); ctx.lineTo(L.p01.sx,L.p01.sy); ctx.closePath();
+      ctx.fill();
+      if(wire && L.px>4){ ctx.strokeStyle='rgba(0,255,213,.16)'; ctx.lineWidth=DPR*0.5; ctx.stroke(); }
+    }
+    updateHUD();
+  }
+
+  // ---------- HUD ----------
+  function T(id,v){ const e=document.getElementById(id); if(e)e.textContent=v; }
+  function updateHUD(){
+    const tri=leaves.length, avg= tri? sizeSum/tri : 0, nearPct= tri? 100*near3/tri : 0;
+    T('hEye','mono'); T('hH',eye.y.toFixed(1)); T('hFov',fovDeg+'°'); T('hT',targetPx);
+    T('hD',maxDepth); T('hOct',octAt(deepest)+' ('+deepest+'↓)');
+    const te=document.getElementById('hTri'); if(te){ te.textContent=tri.toLocaleString('en-US'); te.style.color=capped?'#ffd36a':'#00ffd5'; }
+    T('hAvg',avg.toFixed(1)+'px'); T('hSub',nearPct.toFixed(0)+'%'); T('hCull',culled.toLocaleString('en-US'));
+    T('hFps',fps.toFixed(0)+' fps'); T('hMs',(msAcc).toFixed(1)); T('hSim',loop.simSteps); T('hAcc',loop.acc.toFixed(4));
+    const w=document.getElementById('waste'); if(w){ w.innerHTML=avg.toFixed(1)+'<small> px · avg triangle</small>'; w.classList.toggle('warn', avg<3||capped); }
+    T('mW',nearPct.toFixed(0));
+    const v=document.getElementById('verdict');
+    if(!capped && avg>=8){ v.classList.remove('warn'); v.innerHTML='<b>Compute buys resolution</b> — triangles sit well above pixel size. This is the "yes" in fractalize → quality.'; }
+    else if(avg>=3){ v.classList.toggle('warn',capped); v.innerHTML=(capped?'<b>Compute ceiling</b> — you hit the triangle budget. ':'<b>Nearing the wall</b> — ')+'detail per triangle is shrinking toward pixel size ('+nearPct.toFixed(0)+'% already pixel-scale).'; }
+    else { v.classList.add('warn'); v.innerHTML='<b>At the pixel wall</b> — triangles are pixel-sized; extra compute is now invisible. Spend it with the <b>fovea</b> instead.'; }
+  }
+
+  // ---------- loop (samsara loop law) ----------
+  function step(dt){ if(playing){ eye.z += speed*dt; eye.y += 0; } }
+  function frame(ms){
+    if(!loop.last) loop.last=ms;
+    let elapsed=ms-loop.last; loop.last=ms;
+    if(elapsed>loop.maxFrameMs) elapsed=loop.maxFrameMs;   // governor
+    loop.acc+=elapsed/1000; loop.simSteps=0;
+    while(loop.acc>=loop.fixedDt && loop.simSteps<loop.maxSimPerFrame){  // fixed step + clamp
+      step(loop.fixedDt); loop.acc-=loop.fixedDt; loop.simSteps++;
+    }
+    const t0=performance.now();
+    render();
+    const t1=performance.now(); msAcc=msAcc*0.85+(t1-t0)*0.15;
+    frameCt++; if(ms-fpsT>500){ fps=frameCt*1000/(ms-fpsT); frameCt=0; fpsT=ms; }
+    requestAnimationFrame(frame);
+  }
+
+  // ---------- resize ----------
+  function resize(){
+    DPR=Math.min(2,window.devicePixelRatio||1);
+    const wrap=document.getElementById('canvasWrap');
+    W=Math.round(wrap.clientWidth*DPR); H=Math.round(wrap.clientHeight*DPR);
+    cv.width=W; cv.height=H; cv.style.width=wrap.clientWidth+'px'; cv.style.height=wrap.clientHeight+'px';
+    cxp=W/2; cyc=H/2;
+  }
+
+  // ---------- controls ----------
+  function bindR(id,mid,fn,fmt){
+    const s=document.getElementById(id), c=document.getElementById(mid);
+    s.addEventListener('input',e=>{ fn(+e.target.value); if(c)c.textContent=fmt(); });
+  }
+  document.getElementById('dTarget').addEventListener('input',e=>{ targetPx=+e.target.value;
+    T('cT',targetPx); T('mT',targetPx); const m=document.getElementById('mTr'); if(m)m.value=targetPx; });
+  document.getElementById('mTr').addEventListener('input',e=>{ targetPx=+e.target.value; T('cT',targetPx); T('mT',targetPx); document.getElementById('dTarget').value=targetPx; });
+  document.getElementById('dDepth').addEventListener('input',e=>{ maxDepth=+e.target.value; T('cD',maxDepth); });
+  document.getElementById('dFov').addEventListener('input',e=>{ foveaK=(+e.target.value)/10; T('cK',foveaK.toFixed(1)); });
+  document.getElementById('dH').addEventListener('input',e=>{ eye.y=(+e.target.value)/50; T('cH',eye.y.toFixed(1)); });
+  document.getElementById('dFOV').addEventListener('input',e=>{ fovDeg=+e.target.value; T('cFov',fovDeg); });
+  document.getElementById('dS').addEventListener('input',e=>{ speed=(+e.target.value)/16; T('cS',speed.toFixed(1)); });
+  document.getElementById('tFovea').addEventListener('change',e=>foveaOn=e.target.checked);
+  document.getElementById('tWire').addEventListener('change',e=>wire=e.target.checked);
+  document.getElementById('tFog').addEventListener('change',e=>fog=e.target.checked);
+  document.getElementById('tPlay').addEventListener('change',e=>playing=e.target.checked);
+  addEventListener('keydown',e=>{ if(e.code==='Space'){ e.preventDefault(); playing=!playing; document.getElementById('tPlay').checked=playing; }});
+
+  // drag to look up/down (pitch)
+  let dragging=false, lastY=0;
+  const wrap=document.getElementById('canvasWrap');
+  function down(y){ dragging=true; lastY=y; }
+  function move(y){ if(!dragging)return; pitch=Math.max(0.08,Math.min(1.15, pitch + (y-lastY)*0.0018)); lastY=y; }
+  wrap.addEventListener('mousedown',e=>down(e.clientY));
+  addEventListener('mousemove',e=>move(e.clientY));
+  addEventListener('mouseup',()=>dragging=false);
+  wrap.addEventListener('touchstart',e=>{ down(e.touches[0].clientY); },{passive:true});
+  wrap.addEventListener('touchmove',e=>{ move(e.touches[0].clientY); },{passive:true});
+  wrap.addEventListener('touchend',()=>dragging=false);
+
+  // ---------- go ----------
+  (function initUI(){
+    const set=(id,val)=>{ const e=document.getElementById(id); if(e) e.value=val; };
+    set('dTarget',targetPx); set('mTr',targetPx); T('cT',targetPx); T('mT',targetPx);
+    set('dDepth',maxDepth); T('cD',maxDepth);
+    set('dFov',Math.round(foveaK*10)); T('cK',foveaK.toFixed(1));
+    set('dH',Math.round(eye.y*50)); T('cH',eye.y.toFixed(1));
+    set('dFOV',fovDeg); T('cFov',fovDeg);
+    set('dS',Math.round(speed*16)); T('cS',speed.toFixed(1));
+  })();
+  let rz; addEventListener('resize',()=>{ clearTimeout(rz); rz=setTimeout(resize,120); });
+  resize();
+  requestAnimationFrame(frame);
+})();
+</script>
+</body></html>

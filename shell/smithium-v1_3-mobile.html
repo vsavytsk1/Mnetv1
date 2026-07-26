@@ -1,0 +1,1472 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no,maximum-scale=1">
+<meta name="theme-color" content="#050508">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<title>SMITHIUM v1.3.mobile — the confluence</title>
+<!--
+  SMITHIUM v1.3.mobile — THE CONFLUENCE
+  =========================================================================
+  lineage:  v1.0 -> v1.1 (canvas replaced-element fix) -> v1.2 (the atelier
+            build, 12 ages) -> TWO SIBLINGS, same day, same brief:
+
+              v1.2M-mobile     "THE MOBILE EDITION"
+              v1.2-mobile      "the thumb build"
+
+            -> v1.3.mobile (this file) = the confluence of both. Path X:
+            every one of the four above is FROZEN and was copied, never
+            overwritten. The dead ends stay published with the live ones.
+
+  TWO SIBLINGS, NOT A LINEAGE
+  ---------------------------
+  They were not versions of each other. They were independent answers, and
+  they agreed on the diagnosis and split on the cure. Both comments say it
+  out loud, which is why this merge was possible at all:
+
+    v1.2M : "v1.2 had SIX floating panels. On 390px that is a car crash."
+            "on mobile a panel becomes a SHEET, IT DOES NOT SHRINK."
+    v1.2m : "the band is MEASURED from the real box, never asserted."
+            "a sheet opening SHRINKS the chart instead of hiding it."
+
+  Same diagnosis. Opposite cure. Each was right about half of it, and the
+  half each got right is exactly the half the other got wrong.
+
+  WHO WAS RIGHT ABOUT WHAT (measured, not argued)
+  -----------------------------------------------
+  v1.2M was right about the CANVAS:
+    Keep it fullscreen and FIXED. Ease a NUMBER, not a bitmap:
+        botCur += (botTarget - botCur) * 0.18
+    v1.2m made the canvas a flex child so a panel could not cover it -- and
+    paid 34 BITMAP RE-ALLOCS per sheet transition for the privilege, one per
+    frame of the animation. It printed that cost honestly in its own PRICE
+    tab. Honest is not the same as free. v1.2M pays zero and glides.
+  v1.2M was also right about the RADIUS:
+        s = min(band*0.44, W*0.44)
+    The disk is ROUND. On a portrait phone WIDTH binds, not height, so it is
+    ONE number on both axes. v1.2m used min(H*0.44, W*0.42) -- two numbers,
+    tuned by eye, reasoned by nobody.
+
+  v1.2m was right about the RECEIPTS:
+    v1.2M sets its sample count by GUESSING from screen width --
+        function NS(){ return narrow() ? 110 : 200; }
+    -- and never measures whether 110 was enough, and never tells the reader
+    they are being shown less. An iPhone 15 Pro and a 2016 budget Android get
+    the same 110. That is K11 exactly: a hidden controller is a lie of
+    omission. v1.2m measures the frame, adapts, and PRINTS it.
+  v1.2m was also right about MOTION and about the STORY:
+    v1.2M has zero hits for prefers-reduced-motion -- Curse 13, the ghost
+    spinner, unanswered: age 10 auto-spins and the OS cannot say no. And its
+    canvas does `pointerdown -> dragging=true; pick(e)` unconditionally, so
+    on a device with no SPACE key there is no swipe and no tap-to-advance:
+    the 12 ages can only be walked from a panel. The whole story gesture is
+    missing.
+
+  K13 -- THE THING NEITHER OF THEM HAD (and the reason this is v1.3)
+  -----------------------------------------------------------------
+  Both wanted the same property: THE CHART IS NEVER UNDER A PANEL.
+    v1.2m got it BY CONSTRUCTION -- the layout engine was the clip. It cannot
+      be wrong. It cost 34 bitmap re-allocs.
+    v1.2M got it BY DISCIPLINE -- the band math is measured and eased, and if
+      the math is ever wrong, the chart quietly draws under the chrome and
+      nothing complains.
+  There is a third way, and it is two lines:
+
+        ctx.save();
+        ctx.beginPath(); ctx.rect(0, bandTop, W, band()); ctx.clip();
+
+  A CLIP REGION is the layout engine's guarantee for the price of one rect.
+  Fullscreen fixed canvas -> zero re-allocs. Measured chrome -> no constants.
+  Eased band -> it glides. Clipped -> drawing outside the band is not a bug
+  you must avoid, it is an operation the canvas REFUSES. Construction, not
+  discipline, and free. That is the whole v1.3.
+
+  BOTH HALVES OF THAT ARE MEASURED, HEAD-TO-HEAD, NOT ARGUED:
+   - the cost: A/B against the FROZEN v1.2-mobile, 5 sheet open/close cycles
+     each, same page, same device profile:  v1.2-mobile +210 re-allocs.
+     v1.3 +0.  (an earlier single-transition sample read 34; the honest
+     number is the one the A/B produced, in the conditions it produced it.)
+   - the guarantee: the clip is proven by TURNING IT OFF. At age 1 -- the
+     z-plane, t=0, where the two families are STRAIGHT LINES running to
+     infinity, which is precisely the geometry v1.2 drew under its panels --
+     removing the clip and changing nothing else puts 18,059 chart pixels
+     under the chrome. With it: 0. The first version of that test ran at age
+     12, where the disk has 6% margin and never reaches the edge; it scored
+     0 with the clip on AND off, and would have shipped a guarantee that had
+     never once been made to refuse anything. Test where it bites.
+
+  HONESTY (carried, frozen, from v1.2)
+    K1  no circle is hardcoded. every curve is a straight line, sampled, mapped.
+    K1b circles->circles checked live by circle-fit at every parameter.
+    K2  the 90 degrees is MEASURED by finite difference of the composed map.
+    K3  Gamma_t is a genuine Mobius family (det = 1+t^2 != 0).
+    K4  the gasket is the real fractal (dim ~ 1.3057), rendered truncated.
+    K5  Mobius TRANSFORMATION != Mobius STRIP.
+    K6  Apollonius of PERGA, the geometer. Not the temple. Echo only.
+    K7  E = 3V-6 checked against the MEASURED tangency graph. Can fail.
+    K8  THE MOIRE IS AN ENVELOPE, not a fractal. The gasket is the real one.
+
+  HONESTY (carried from v1.2-mobile)
+    K9  the render is a POLYLINE. the map is EXACT. lowering samples changes
+        the picture, never the mathematics. proven live: NS=220 vs NS=64,
+        the circle-fit does not move.
+    K10 the layout is MEASURED. no band constants. v1.2 hardcoded TOP=138 /
+        BOT=58 and on a phone the chart drew under the panels.
+        (v1.2M measured too -- measureChrome(). Credit where it is owed.)
+    K11 the price is SHOWN. adaptive sampling is a controller and a hidden
+        controller is a lie of omission. target and measured, side by side.
+    K12 the gasket cap is EXPLAINED, not silent. O(V^2), 373 ms measured at
+        k<=1200. a phone's honest budget, not a mathematical limit.
+
+  HONESTY (new, owed by the confluence)
+    K13 THE BAND IS CLIPPED, NOT TRUSTED. The chart cannot draw under the
+        chrome because the canvas refuses to, not because the arithmetic
+        happens to be right today. The re-alloc count is printed next to it:
+        this build claims the guarantee AND claims the cost is gone, so both
+        numbers are on screen. Claim nothing you cannot show.
+    K14 THIS FILE IS A MERGE, AND MERGES LIE BY DEFAULT. Every borrowed idea
+        is attributed to the sibling it came from, in the comment above and
+        in the LAWS tab, including the ones that beat my own build. A merge
+        that quietly absorbs the other's good ideas and keeps its own name on
+        all of them is the ordinary way this is done. It is still a fake
+        receipt. The price is always paid; here it is paid in credit.
+
+  Pure Canvas 2D. No deps but one font. chi=2 . always. Built 2026-07-15.
+-->
+<style>
+:root{
+  --bg:#050508; --bg2:#0a0a12; --gold:#ffd700; --cyan:#00d4ff; --pink:#ff69b4;
+  --green:#00ffd5; --purple:#cc44ff; --red:#ff5470; --dim:#6a6a82; --txt:#e8e0d0;
+  --rule:#20202e; --rule2:#2a2a3a;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --serif:'EB Garamond',Georgia,serif;
+  --sat:env(safe-area-inset-top,0px); --sab:env(safe-area-inset-bottom,0px);
+  --sal:env(safe-area-inset-left,0px); --sar:env(safe-area-inset-right,0px);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden;overscroll-behavior:none}
+body{background:var(--bg);color:var(--txt);font-family:var(--mono);
+  -webkit-user-select:none;user-select:none;-webkit-text-size-adjust:100%}
+
+/* ── the viewport probe. position:fixed inset:0 is the TRUE viewport box even
+   inside an iframe, where window.innerWidth is a rumour (CURSE 7). We observe
+   THIS, not the window. ── */
+.app{position:fixed;inset:0;pointer-events:none}
+.app>*{pointer-events:auto}
+
+/* ── the canvas: fullscreen, FIXED. v1.2M was right. the bitmap changes only
+   when the real viewport does — rotation, the URL bar — never when a sheet
+   opens. the band eases inside it instead. zero re-allocs per transition.
+   v1.1's law still holds: a <canvas> is a REPLACED element, so the CSS size
+   and the bitmap size are set SEPARATELY, always. ── */
+#cv{position:fixed;inset:0;display:block;touch-action:none;z-index:0}
+
+/* ── TOP — one title row, one readout row. capped, cannot wrap into a tower. ── */
+.top{position:fixed;top:0;left:0;right:0;z-index:10;background:var(--bg2);
+  border-bottom:1px solid var(--rule);padding:var(--sat) var(--sar) 0 var(--sal)}
+.trow{display:flex;align-items:center;gap:8px;padding:6px 10px 0}
+.ttl{font-size:10.5px;color:var(--gold);letter-spacing:.06em;white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis;flex:1 1 auto;min-width:0}
+.ttl i{font-style:normal;color:var(--dim)}
+.pills{flex:0 0 auto;display:flex;gap:5px}
+.pill{background:transparent;border:1px solid var(--rule2);border-radius:14px;
+  color:var(--dim);font:9px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;
+  padding:0 11px;height:30px;min-width:44px;cursor:pointer;transition:color .2s,border-color .2s}
+.pill.on{color:var(--purple);border-color:rgba(204,68,255,.5);background:#160a1e}
+.pill.pr.on{color:var(--green);border-color:rgba(0,255,213,.45);background:#04211d}
+.cells{display:flex;gap:8px;padding:4px 10px 6px}
+.cell{flex:1 1 0;min-width:0}
+.cell .lab{font-size:7.5px;color:var(--dim);text-transform:uppercase;letter-spacing:.09em}
+.cell .val{font-size:13px;font-weight:bold;color:var(--gold);white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis;line-height:1.25}
+.cell .val.cy{color:var(--cyan)} .cell .val.gr{color:var(--green)} .cell .val.pk{color:var(--pink)}
+.cell .val.bad{color:var(--red)}
+
+.grabhint{position:fixed;left:50%;transform:translateX(-50%);
+  font-size:8.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);
+  pointer-events:none;background:rgba(5,5,8,.72);border:1px solid var(--rule);
+  border-radius:12px;padding:4px 10px;white-space:nowrap;opacity:0;
+  transition:opacity .35s;z-index:9}
+.grabhint.show{opacity:1}
+.grabhint b{color:var(--purple);font-weight:400}
+
+/* ── the bottom stack: sheet ABOVE dock, both inside one fixed box. the knob
+   never moves, whatever is open. band bottom = THIS box's top edge, measured. ── */
+.bottom{position:fixed;bottom:0;left:0;right:0;z-index:10;display:flex;
+  flex-direction:column;padding:0 var(--sar) var(--sab) var(--sal)}
+
+.sheet{flex:0 0 auto;height:0;overflow:hidden;background:var(--bg2);
+  border-top:1px solid var(--rule2);transition:height .34s cubic-bezier(.22,.61,.36,1)}
+.sheet.open{height:46vh;height:46dvh}
+.sheet-in{height:46vh;height:46dvh;display:flex;flex-direction:column}
+.grab{flex:0 0 auto;padding:7px 0 5px;display:flex;justify-content:center;cursor:grab;touch-action:none}
+.grab i{display:block;width:36px;height:4px;border-radius:2px;background:var(--rule2)}
+.tabs{flex:0 0 auto;display:flex;border-bottom:1px solid var(--rule)}
+.tabs button{flex:1 1 0;height:34px;background:transparent;border:none;border-right:1px solid var(--rule);
+  color:var(--dim);font:8.5px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;cursor:pointer}
+.tabs button:last-child{border-right:none}
+.tabs button.on{background:var(--gold);color:#050508;font-weight:bold}
+.sbody{flex:1 1 auto;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;
+  padding:10px 12px 18px;font-size:10.5px;line-height:1.62;color:var(--dim)}
+.tabc{display:none} .tabc.on{display:block}
+.sbody b{color:var(--cyan)} .sbody .g{color:var(--green)} .sbody .n{color:var(--red)}
+.sbody .go{color:var(--gold)} .sbody .pu{color:var(--purple)}
+.sbody h5{font-size:8.5px;color:var(--gold);letter-spacing:.13em;text-transform:uppercase;
+  margin:12px 0 5px;border-bottom:1px solid var(--rule);padding-bottom:3px}
+.sbody h5:first-child{margin-top:0}
+.sbody p{font-family:var(--serif);font-size:14px;line-height:1.45;color:rgba(232,224,208,.7);margin:5px 0}
+.li{display:flex;justify-content:space-between;gap:10px;padding:2.5px 0;border-bottom:1px solid #14141f}
+.li .k{color:var(--dim);flex:1 1 auto;min-width:0}
+.li .v{color:var(--gold);font-weight:bold;flex:0 0 auto;text-align:right}
+.li .v.cy{color:var(--cyan)} .li .v.gr{color:var(--green)} .li .v.n{color:var(--red)}
+.note{font-size:9px;line-height:1.5;color:#585870;margin-top:7px}
+.note b{color:var(--dim)}
+.src{font-size:8px;letter-spacing:.1em;text-transform:uppercase;color:#4a4a5e;margin-top:3px}
+.src b{color:var(--purple)} .src i{font-style:normal;color:var(--cyan)}
+
+.meter{margin:5px 0 8px}
+.mbar{height:6px;border-radius:3px;background:#14141f;overflow:hidden;border:1px solid #0d0d16;margin-top:3px}
+.mbar>span{display:block;height:100%;background:var(--green);transition:width .25s,background .25s}
+.mbar.over>span{background:var(--red)}
+
+.pth{display:flex;align-items:center;gap:9px;padding:7px 4px;border-bottom:1px solid #14141f;
+  cursor:pointer;min-height:38px}
+.pth .n{flex:0 0 auto;width:20px;height:20px;border-radius:50%;border:1px solid #232338;
+  display:flex;align-items:center;justify-content:center;font-size:8.5px;color:var(--dim)}
+.pth.done .n{background:rgba(204,68,255,.18);border-color:var(--purple);color:var(--purple)}
+.pth.now .n{background:#fff;border-color:#fff;color:#050508;font-weight:bold}
+.pth .t{flex:1 1 auto;min-width:0;font-size:11px;color:var(--txt);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pth.now .t{color:#fff;font-weight:bold}
+.pth .h{flex:0 0 auto;font-size:8.5px;color:#4a4a5e}
+
+.ctl{margin-bottom:12px}
+.ctl label{display:flex;justify-content:space-between;align-items:baseline;
+  font-size:8.5px;letter-spacing:.11em;text-transform:uppercase;color:var(--dim);margin-bottom:1px}
+.ctl label .v{color:var(--cyan);font-size:10.5px;letter-spacing:.04em}
+.ctl input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:40px;
+  background:transparent;outline:none;margin:0;display:block;touch-action:none;cursor:pointer}
+.ctl input[type=range]::-webkit-slider-runnable-track{height:3px;border-radius:2px;background:var(--rule2)}
+.ctl input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;border-radius:50%;
+  background:var(--cyan);border:2px solid rgba(255,255,255,.22);margin-top:-9.5px;
+  box-shadow:0 0 9px rgba(0,212,255,.5)}
+.ctl input[type=range]::-moz-range-track{height:3px;border-radius:2px;background:var(--rule2)}
+.ctl input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;background:var(--cyan);
+  border:2px solid rgba(255,255,255,.22);box-shadow:0 0 9px rgba(0,212,255,.5)}
+.ctl .hint{font-family:var(--serif);font-style:italic;font-size:12.5px;color:#585870;
+  line-height:1.35;margin-top:-2px}
+.chips{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:6px 0 12px}
+.chip{height:38px;background:#14141f;border:1px solid var(--rule2);border-radius:7px;
+  color:var(--dim);font:9px/1 var(--mono);letter-spacing:.06em;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;text-align:center;padding:0 4px;
+  transition:border-color .15s,color .15s,background .15s}
+.chip.on{background:#1d1a0a;border-color:var(--gold);color:var(--gold)}
+.chip.cy.on{background:#08222a;border-color:var(--cyan);color:var(--cyan)}
+.chip.pk.on{background:#260d18;border-color:var(--pink);color:var(--pink)}
+.chip.gn.on{background:#062522;border-color:var(--green);color:var(--green)}
+.chip.pu.on{background:#1e0a2a;border-color:var(--purple);color:var(--purple)}
+.chip.act{color:var(--green);border-color:#0a3a3a}
+.wide{grid-column:1 / -1}
+
+/* ── DOCK — lesson (CAPPED) + hero knob + modes. pinned. never moves. ── */
+.dock{flex:0 0 auto;background:var(--bg2);border-top:1px solid var(--rule);
+  padding:8px 10px 8px;display:flex;flex-direction:column;gap:8px}
+/* while a sheet is open the sheet IS the reading surface. 100px of redundant
+   chrome is 100px of band the chart does not get. */
+.app.reading .lesson{display:none}
+.lesson{flex:0 0 auto;cursor:pointer}
+.lhead{display:flex;align-items:baseline;gap:6px;margin-bottom:3px}
+.lage{font-size:8.5px;color:var(--purple);text-transform:uppercase;letter-spacing:.13em;
+  white-space:nowrap;flex:0 0 auto}
+.lage b{color:#fff}
+.lname{font-size:8.5px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;
+  flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lexp{flex:0 0 auto;font-size:9px;color:var(--dim);transition:transform .3s}
+.lesson.open .lexp{transform:rotate(180deg)}
+.lesson.noage .lage{display:none}
+/* G1 chipBloom counter-hex: the lesson is a CAPPED child. it can never grow
+   and shove the knob off-screen. tap to expand ON PURPOSE. */
+.ltxt{font-family:var(--serif);font-size:15px;line-height:1.42;color:rgba(232,224,208,.84);
+  display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;
+  max-height:64px;transition:max-height .3s ease}
+.lesson.open .ltxt{-webkit-line-clamp:unset;max-height:34vh;max-height:34dvh;overflow-y:auto}
+.ltxt b{color:var(--gold);font-weight:500} .ltxt .c{color:var(--cyan)} .ltxt .g{color:var(--green)}
+.lnx{font-size:8.5px;color:rgba(204,68,255,.5);margin-top:4px;font-family:var(--mono);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lnx.warn{color:var(--red)}
+
+.knob{flex:0 0 auto}
+.klab{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:1px;gap:8px}
+.klab .kn{font-size:8px;color:var(--dim);text-transform:uppercase;letter-spacing:.13em;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.klab .kv{font-size:10px;color:var(--purple);font-weight:bold;letter-spacing:.06em;flex:0 0 auto}
+.krow{display:flex;align-items:center;gap:6px}
+.nudge{flex:0 0 auto;width:44px;height:44px;background:transparent;border:1px solid var(--rule2);
+  border-radius:8px;color:var(--dim);font:13px/1 var(--mono);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;transition:border-color .15s,color .15s}
+.nudge.go{color:var(--gold);border-color:#4a3f0a}
+.nudge:active{background:#14141f}
+.nudge:disabled{opacity:.3}
+.track{flex:1 1 auto;position:relative;height:44px;min-width:0}
+.dots{position:absolute;left:0;right:0;top:50%;height:0;pointer-events:none}
+.dot{position:absolute;top:-3px;width:6px;height:6px;margin-left:-3px;border-radius:50%;
+  background:#0d1520;border:1px solid #232338;transition:background .25s,border-color .25s,box-shadow .25s;
+  left:calc(13px + (100% - 26px) * var(--i) / 12)}
+.dot.done{background:var(--purple);border-color:var(--purple);box-shadow:0 0 5px rgba(204,68,255,.5)}
+.dot.active{background:#fff;border-color:#fff;box-shadow:0 0 9px rgba(255,255,255,.75);
+  width:8px;height:8px;top:-4px;margin-left:-4px}
+.track input[type=range]{position:relative;-webkit-appearance:none;appearance:none;
+  width:100%;height:44px;background:transparent;outline:none;margin:0;cursor:pointer;
+  touch-action:none;display:block}
+.track input[type=range]::-webkit-slider-runnable-track{height:4px;border-radius:2px;background:var(--rule2)}
+.track input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:26px;
+  border-radius:50%;background:var(--purple);border:2px solid rgba(255,255,255,.28);
+  margin-top:-11px;box-shadow:0 0 13px rgba(204,68,255,.6);transition:transform .12s}
+.track input[type=range]:active::-webkit-slider-thumb{transform:scale(1.12)}
+.track input[type=range]::-moz-range-track{height:4px;border-radius:2px;background:var(--rule2)}
+.track input[type=range]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;
+  background:var(--purple);border:2px solid rgba(255,255,255,.28);box-shadow:0 0 13px rgba(204,68,255,.6)}
+.track.cy input[type=range]::-webkit-slider-thumb{background:var(--cyan);box-shadow:0 0 13px rgba(0,212,255,.6)}
+.track.cy input[type=range]::-moz-range-thumb{background:var(--cyan);box-shadow:0 0 13px rgba(0,212,255,.6)}
+.track.go input[type=range]::-webkit-slider-thumb{background:var(--gold);box-shadow:0 0 13px rgba(255,215,0,.55)}
+.track.go input[type=range]::-moz-range-thumb{background:var(--gold);box-shadow:0 0 13px rgba(255,215,0,.55)}
+.track.cy .dot,.track.go .dot{display:none}
+
+.seg{flex:0 0 auto;display:flex;border:1px solid var(--rule2);border-radius:8px;overflow:hidden}
+.seg button{flex:1 1 0;height:34px;background:transparent;border:none;border-right:1px solid var(--rule2);
+  color:var(--dim);font:9px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;cursor:pointer;
+  transition:background .18s,color .18s}
+.seg button:last-child{border-right:none}
+.seg button.on{background:#1e0a2a;color:var(--purple);font-weight:bold}
+.seg button.on[data-m=smith]{background:#08222a;color:var(--cyan)}
+.seg button.on[data-m=gasket]{background:#1d1a0a;color:var(--gold)}
+
+@media (max-height:700px){
+  .sheet.open{height:40vh;height:40dvh}
+  .sheet-in{height:40vh;height:40dvh}
+  .ltxt{font-size:14px;max-height:60px}
+}
+@media (prefers-reduced-motion:reduce){
+  *{transition:none!important;animation:none!important}
+}
+@media (min-width:760px){
+  .app,.top,.bottom,#cv{left:calc(50% - 260px);right:calc(50% - 260px)}
+  .top,.bottom{border-left:1px solid var(--rule);border-right:1px solid var(--rule)}
+}
+</style></head>
+<body>
+<canvas id="cv"></canvas>
+<div class="app" id="app">
+
+  <div class="top" id="top">
+    <div class="trow">
+      <div class="ttl">SMITHIUM <i>v1.3.mobile &middot; the confluence</i></div>
+      <div class="pills">
+        <button class="pill pr" id="p-proof" aria-label="Receipts">proof</button>
+        <button class="pill" id="p-tune" aria-label="Controls">tune</button>
+      </div>
+    </div>
+    <div class="cells">
+      <div class="cell"><div class="lab" id="c1l">&Gamma;</div><div class="val pk" id="c1v">&mdash;</div></div>
+      <div class="cell"><div class="lab" id="c2l">&ang; measured</div><div class="val gr" id="c2v">&mdash;</div></div>
+    </div>
+  </div>
+
+  <div class="grabhint" id="hint"><b>swipe</b> to walk the ages</div>
+
+  <div class="bottom" id="bottom">
+    <div class="sheet" id="sheet">
+      <div class="sheet-in">
+        <div class="grab" id="grab"><i></i></div>
+        <div class="tabs" id="tabs">
+          <button data-t="proof" class="on">proof</button>
+          <button data-t="price">price</button>
+          <button data-t="paths">paths</button>
+          <button data-t="laws">laws</button>
+          <button data-t="tune">tune</button>
+        </div>
+        <div class="sbody">
+          <div class="tabc on" data-t="proof"><div id="t-proof"></div></div>
+          <div class="tabc" data-t="price"><div id="t-price"></div></div>
+          <div class="tabc" data-t="paths"><div id="t-paths"></div></div>
+          <div class="tabc" data-t="laws"><div id="t-laws"></div></div>
+          <div class="tabc" data-t="tune"><div id="t-tune"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="dock" id="dock">
+      <div class="lesson" id="lesson">
+        <div class="lhead">
+          <div class="lage">age <b id="l-n">0</b>/12</div>
+          <div class="lname" id="l-name">void</div>
+          <div class="lexp">&#9662;</div>
+        </div>
+        <div class="ltxt" id="l-txt">drag the reveal, or tap next.</div>
+        <div class="lnx" id="l-nx">next: the z-plane</div>
+      </div>
+
+      <div class="knob">
+        <div class="klab"><span class="kn" id="k-name">build the chart</span><span class="kv" id="k-val">VOID</span></div>
+        <div class="krow">
+          <button class="nudge" id="n-prev" aria-label="Previous">&#9664;</button>
+          <div class="track" id="track">
+            <div class="dots" id="dots"></div>
+            <input type="range" id="hero" min="0" max="12" step="1" value="0" aria-label="Build the chart">
+          </div>
+          <button class="nudge go" id="n-next" aria-label="Next">&#9654;</button>
+        </div>
+      </div>
+
+      <div class="seg" id="seg">
+        <button data-m="atelier" class="on">atelier</button>
+        <button data-m="smith">smith</button>
+        <button data-m="gasket">gasket</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+<script>
+"use strict";
+// =========================================================================
+// THE KERNEL — carried from the FROZEN v1.2, through the FROZEN v1.2-mobile,
+// into the confluence. Path X: vN+1 is a COPY of vN with the copy edited. The
+// mathematics has not been touched by any of it. Everything that changed is
+// layout and instrumentation:
+//   1. resize()/view() read a MEASURED element box, never window.inner* and
+//      never the v1.2 constants TOP=138/BOT=58 (K10). v1.2M reached the same
+//      conclusion independently, via measureChrome(). Credit where it is owed.
+//   2. MAP/MAPB increment a call counter so PRICE prints what the frame
+//      actually cost, instead of us claiming it (K11).
+//   3. NEW in v1.3 — the band is EASED (v1.2M's botCur->botTarget, borrowed
+//      wholesale) and CLIPPED (K13, neither sibling had it). The canvas is
+//      fullscreen and fixed again, so a sheet costs ZERO bitmap re-allocs
+//      where v1.2-mobile paid 34.
+// =========================================================================
+var cv=document.getElementById("cv"), ctx=cv.getContext("2d",{alpha:false});
+var app=document.getElementById("app");
+var W=0,H=0,DPR=1,needResize=true,resizes=0,chromeDirty=true;
+
+// v1.0 bug, fixed in v1.1, carried here: <canvas> is a REPLACED element —
+// inset:0 resolves to the INTRINSIC (bitmap) size, not the parent box. CSS
+// size and bitmap size are set separately. Always.
+// v1.2.mobile: and the box we read is the STAGE's, never window.innerWidth.
+// CURSE 7 (blackMcMistry) is an innerWidth-at-load bug; an element box is
+// true inside an iframe, so this build simply cannot catch it.
+function resize(){
+  // .app is position:fixed inset:0 — the TRUE viewport box, and true inside an
+  // iframe too, where window.innerWidth is a rumour (CURSE 7, blackMcMistry).
+  var r=app.getBoundingClientRect();
+  DPR=Math.min(window.devicePixelRatio||1,2);
+  W=Math.max(1,r.width); H=Math.max(1,r.height);      // CSS px, FRACTIONAL. the true box.
+  cv.style.width=W+"px"; cv.style.height=H+"px";      // v1.1's law: a <canvas> is a
+  var bw=Math.max(1,Math.round(W*DPR)), bh=Math.max(1,Math.round(H*DPR));
+  cv.width=bw; cv.height=bh;                          // REPLACED element. CSS size and
+  // bitmap size are set SEPARATELY, always. (v1.0 set only the bitmap and laid
+  // out at 2x the viewport, anchored left. verified against the frozen v1.0.)
+  // not setTransform(DPR,DPR): the bitmap is an integer, the box is not, so the
+  // real scale is bitmap/box on each axis. round the pixels, never the geometry.
+  ctx.setTransform(bw/W,0,0,bh/H,0,0);
+  resizes++; chromeDirty=true;
+}
+// ResizeObserver, not window.onresize: it fires for the URL bar, rotation,
+// the keyboard AND a sheet opening — one event, one code path. The resize
+// itself is deferred to the next frame so a 340ms sheet transition cannot
+// thrash the bitmap allocator mid-layout.
+if(window.ResizeObserver){
+  // the app box changes only when the REAL viewport does: rotation, the URL
+  // bar. That is the only time the bitmap is re-allocated. A sheet opening
+  // does NOT touch it — the band eases inside a canvas that never moves.
+  new ResizeObserver(function(){ needResize=true; }).observe(app);
+  // the chrome boxes change constantly: the sheet animating, the lesson
+  // expanding, the dock swapping modes, the webfont swapping in. Observe them
+  // separately and re-measure only the band. Costs nothing when nothing moves.
+  var ro=new ResizeObserver(function(){ chromeDirty=true; });
+  ro.observe(document.getElementById("top")); ro.observe(document.getElementById("bottom"));
+}
+window.addEventListener("orientationchange",function(){ needResize=true; });
+window.addEventListener("resize",function(){ needResize=true; });
+// iOS Safari collapses its URL bar without firing a useful resize. borrowed
+// from v1.2M, which handled this and v1.2-mobile did not.
+if(window.visualViewport){
+  window.visualViewport.addEventListener("resize",function(){ needResize=true; });
+  window.visualViewport.addEventListener("scroll",function(){ chromeDirty=true; });
+}
+resize();
+
+var GOLD=[255,215,0], CYAN=[0,212,255], PINK=[255,105,180], GRN=[0,255,213],
+    PUR=[204,68,255], BLU=[68,136,255], RED=[255,84,112], WHT=[235,235,245];
+function css(c,a){ return "rgba("+(c[0]|0)+","+(c[1]|0)+","+(c[2]|0)+","+a+")"; }
+function mix(a,b,t){ t=t<0?0:t>1?1:t; return [a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t]; }
+function lerp(a,b,t){ return a+(b-a)*t; }
+
+var RM = window.matchMedia && window.matchMedia("(prefers-reduced-motion:reduce)").matches;
+
+// ---------- state ----------
+var MODE="atelier";
+var t=1.0, tTarget=1.0, showAng=true;
+var lam=0.0, spinL=false, aR=0.0, aA=0.0;
+var twin=false, PHI=0.50;
+var pZ=true, pY=false, pV=false, pQ=false, pM=false, dens=1, edgeHi=false, pX=true;
+var z0={re:1.0, im:0.6};
+var maxK=200, showGraph=false, showNums=true, gask=null, gaskMs=0;
+var age=0;
+var probeXY=null;   // screen px of the grabbable probe, or null when there is nothing to grab
+
+// K11 — the price is measured, never asserted. MAPS counts every complex
+// Möbius evaluation the frame actually paid for.
+var MAPS=0, NS=180, NS_MIN=64, NS_MAX=220, frameMs=16.7, msAcc=0, msN=0, adaptOn=true;
+var TARGET_MS=16.7;
+
+// =========================================================================
+// THE MAP.   MAP(z) = B(Γ_t(z)),  B(w)=e^{iθ}(w−a)/(1−āw).  Möbius ∘ Möbius
+// = Möbius ⇒ conformal for EVERY (t,a,θ). the 90° readout proves it live.
+// =========================================================================
+function theta(){ return -4*Math.PI*lam; }        // Γ→Γ·e^{−j2βl}; l/λ=0.5 ⇒ one turn
+function avec(){ var p=aA*Math.PI/180; return {re:aR*Math.cos(p), im:aR*Math.sin(p)}; }
+function gammaT(z,tt){
+  var nr=z.re-tt, ni=z.im, dr=tt*z.re+1, di=tt*z.im, den=dr*dr+di*di;
+  if(den<1e-14) return {re:1e9,im:1e9};
+  return { re:(nr*dr+ni*di)/den, im:(ni*dr-nr*di)/den };
+}
+function gammaTinv(w,tt){
+  var nr=w.re+tt, ni=w.im, dr=1-tt*w.re, di=-tt*w.im, den=dr*dr+di*di;
+  if(den<1e-14) return {re:1e9,im:1e9};
+  return { re:(nr*dr+ni*di)/den, im:(ni*dr-nr*di)/den };
+}
+function blaschke(w,a,th){
+  var nr=w.re-a.re, ni=w.im-a.im;
+  var abr=a.re*w.re+a.im*w.im, abi=a.re*w.im-a.im*w.re;
+  var dr=1-abr, di=-abi, den=dr*dr+di*di;
+  if(den<1e-14) return {re:1e9,im:1e9};
+  var qr=(nr*dr+ni*di)/den, qi=(ni*dr-nr*di)/den, c=Math.cos(th), s=Math.sin(th);
+  return { re:qr*c-qi*s, im:qr*s+qi*c };
+}
+function blaschkeInv(w,a,th){
+  var c=Math.cos(-th), s=Math.sin(-th);
+  var ur=w.re*c-w.im*s, ui=w.re*s+w.im*c;
+  var nr=ur+a.re, ni=ui+a.im;
+  var abr=a.re*ur+a.im*ui, abi=a.re*ui-a.im*ur;
+  var dr=1+abr, di=abi, den=dr*dr+di*di;
+  if(den<1e-14) return {re:1e9,im:1e9};
+  return { re:(nr*dr+ni*di)/den, im:(ni*dr-nr*di)/den };
+}
+function MAP(z){  MAPS++; return blaschke(gammaT(z,t), avec(), theta()); }
+// plane B — counter-rotating, phase-offset. after Baudin Atelier's two drifting
+// planes. still a Blaschke factor ⇒ still conformal. (K8: the interference is
+// an ENVELOPE, not a fractal.)
+function MAPB(z){ MAPS++; return blaschke(gammaT(z,t), avec(), -theta()+PHI); }
+function MAPinv(w){ return gammaTinv(blaschkeInv(w, avec(), theta()), t); }
+
+// ---------- THE LIVE BAND ----------
+// K10  the edges are MEASURED off the real chrome boxes. no constants.
+// v1.2M the band EASES toward its target instead of snapping (botCur/botTarget
+//       at 0.18, borrowed verbatim). the canvas never moves, so this costs no
+//       bitmap. v1.2-mobile made the canvas a flex child and paid 34 re-allocs
+//       per transition to get the same glide. this is the same picture, free.
+// K13  and the band is CLIPPED, so "the chart is never under a panel" stops
+//       being arithmetic you must get right and becomes something the canvas
+//       refuses to do. construction, not discipline. two lines.
+var bandT=0, bandB=0, bandTT=0, bandBT=0;
+var EASE = RM ? 1 : 0.18;              // Path VIII: reduced motion snaps. no glide.
+function measureChrome(){
+  var tb=document.getElementById("top").getBoundingClientRect();
+  var bb=document.getElementById("bottom").getBoundingClientRect();
+  bandTT = tb.bottom + 6;
+  bandBT = bb.top - 6;
+  document.documentElement.style.setProperty("--botH", (H-bb.top)+"px");
+  chromeDirty=false;
+}
+function easeBand(){
+  bandT += (bandTT-bandT)*EASE;
+  bandB += (bandBT-bandB)*EASE;
+}
+function band(){ return Math.max(90, bandB-bandT); }
+function clipBand(){ ctx.beginPath(); ctx.rect(0, bandT, W, band()); ctx.clip(); }
+function view(){
+  var b=band(), halfH=lerp(5.0,1.18,t);
+  // the disk is ROUND: on a portrait phone WIDTH binds, not height. ONE number
+  // on both axes. v1.2M reasoned this; v1.2-mobile used min(H*0.44, W*0.42) —
+  // two numbers, tuned by eye. v1.2M's is right.
+  return { cx:lerp(2.5,0,t), cy:0, s:Math.min(b*0.44, W*0.44)/halfH, ox:W/2, oy:bandT+b/2 };
+}
+function w2s(p,v){ return { x:v.ox+(p.re-v.cx)*v.s, y:v.oy-(p.im-v.cy)*v.s }; }
+function s2w(x,y,v){ return { re:(x-v.ox)/v.s+v.cx, im:-(y-v.oy)/v.s+v.cy }; }
+
+function vals(d){
+  if(d<=1) return [0,0.2,0.5,1,2,5];
+  if(d<=2) return [0,0.2,0.4,0.6,1,1.5,2,3,5,10];
+  if(d<=3) return [0,0.1,0.2,0.3,0.5,0.8,1,1.5,2,3,5,10,20];
+  return [0,0.1,0.2,0.3,0.4,0.5,0.6,0.8,1,1.2,1.5,2,3,4,5,10,20,50];
+}
+function sym(a){ var o=[]; for(var i=0;i<a.length;i++){ o.push(a[i]); if(a[i]!==0) o.push(-a[i]); } return o; }
+var TAN=1.5706;
+
+// =========================================================================
+// THE 12 AGES.  Each drives the REAL parameters. The lesson is the point.
+// =========================================================================
+var AGES=[
+ {name:"void", t:1, f:{}, txt:"we are going to build a Smith chart from nothing, and you will see there was never anything to be afraid of. drag the knob, or tap <b>&#9654;</b>."},
+ {name:"the z-plane", t:0, f:{Z:1,X:1},
+  txt:"impedance is <b>z = r + jx</b>. resistance <span class='c'>r</span> runs across &rarr;, reactance <b>x</b> runs up &uarr;. two families of <b>STRAIGHT LINES</b>, crossing at 90&deg;. that is the whole object. no circles anywhere yet."},
+ {name:"one map", t:1, f:{Z:1,X:1},
+  txt:"now apply <b>ONE</b> map: <b>&Gamma; = (z&minus;1)/(z+1)</b>. M&ouml;bius maps send circles-and-lines to circles-and-lines &mdash; so the lines have no choice but to become circles. <span class='g'>nobody designed the forest. it fell out.</span>"},
+ {name:"the boundary", t:1, f:{Z:1,edge:1},
+  txt:"the line <b>r = 0</b> (pure reactance, no resistance) becomes the <b>unit circle</b>. |&Gamma;|=1 means total reflection &mdash; nothing absorbed. every passive load (r &ge; 0) lands <span class='g'>INSIDE</span>. the disk is passivity."},
+ {name:"the centre", t:1, f:{Z:1,edge:1,mC:1},
+  txt:"<b>z = 1</b> &mdash; a perfect match, r=1, x=0 &mdash; maps to the exact <b>centre</b>. &Gamma;=0. VSWR 1:1. nothing bounces back. <span class='g'>every matching problem you will ever have is: get to the middle.</span>"},
+ {name:"short &amp; open", t:1, f:{Z:1,edge:1,mC:1,mS:1,mO:1},
+  txt:"<b>z = 0</b> (a short) &rarr; &Gamma; = <b>&minus;1</b>, hard left. <b>z = &infin;</b> (an open) &rarr; &Gamma; = <b>+1</b>, hard right. both total reflection, opposite phase. the two ends of the real axis are the two ways to bounce everything back."},
+ {name:"resistance circles", t:1, f:{Z:1,edge:1,mA:1},
+  txt:"constant <span class='c'>r</span> &rarr; circles, centre <b>r/(1+r)</b>, radius <b>1/(1+r)</b>. every single one is <b>tangent at the open</b> (&Gamma;=+1). r=0 is the boundary; r&rarr;&infin; shrinks to the right-hand point. <span class='g'>never hardcoded here &mdash; sampled and mapped.</span>"},
+ {name:"reactance arcs", t:1, f:{Z:1,X:1,edge:1,mA:1},
+  txt:"constant <b>x</b> &rarr; arcs, centre <b>(1, 1/x)</b>, radius <b>1/|x|</b>. also all through the open. <b>upper half = inductive</b> (+jx). <b>lower half = capacitive</b> (&minus;jx). the real axis is x=0, purely resistive."},
+ {name:"the right angle", t:1, f:{Z:1,X:1,edge:1,mA:1,ang:1,grab:1},
+  txt:"they cross at <b>exactly 90&deg;. everywhere.</b> not a design choice &mdash; M&ouml;bius maps are <b>conformal</b>, they preserve angles, full stop. <span class='g'>grab the pink point and drag it anywhere: it reads 90.000&deg;. that number is measured off the map, not asserted.</span>"},
+ {name:"VSWR", t:1, f:{Z:1,X:1,edge:1,mA:1,V:1},
+  txt:"distance from the centre <b>is</b> |&Gamma;| &mdash; how much of your wave bounces back. <b>VSWR = (1+|&Gamma;|)/(1&minus;|&Gamma;|)</b>. concentric circles: centre = 1:1 = perfect, edge = &infin; = all of it comes home. this is the number your VNA shouts about."},
+ {name:"&lambda; toward generator", t:1, f:{Z:1,X:1,edge:1,mA:1,V:1,spin:1},
+  txt:"move down a <b>lossless line</b> and &Gamma; does one thing: it <b>ROTATES</b>. &Gamma; &rarr; &Gamma;&middot;e<sup>&minus;j2&beta;l</sup>. half a wavelength = one full turn, and you are back. <span class='g'>THAT is the outer ring printed on the paper chart: WAVELENGTHS TOWARD GENERATOR.</span> it was a clock all along."},
+ {name:"immittance", t:1, f:{Z:1,X:1,Y:1,edge:1,mA:1},
+  txt:"flip to admittance: <b>y = 1/z</b> &rArr; <b>&Gamma;<sub>Y</sub> = &minus;&Gamma;<sub>Z</sub></b>. the identical chart, rotated 180&deg;. lay both on top &rarr; the <b>immittance chart</b> (the one with the second colour). <span class='g'>series elements slide on Z, shunt elements slide on Y.</span> that is the whole trick."},
+ {name:"the whole thing", t:1, f:{Z:1,X:1,Y:1,edge:1,mA:1,V:1,Q:1,ang:1,twin:1,spin:1,grab:1},
+  txt:"and that is the entire chart. <b>two families of straight lines. one M&ouml;bius map. a rotation for the line length.</b> <span class='g'>there was never a forest. go and look at the paper one now &mdash; it will not scare you again.</span>"}
+];
+
+// ---------- K1b: circles→circles, live, at every parameter ----------
+function circumfit(p){
+  var n=p.length; if(n<3) return null;
+  var p1=p[0], p2=p[(n/3)|0], p3=p[((2*n)/3)|0];
+  var d=2*(p1.re*(p2.im-p3.im)+p2.re*(p3.im-p1.im)+p3.re*(p1.im-p2.im));
+  if(Math.abs(d)<1e-12) return null;
+  var a2=p1.re*p1.re+p1.im*p1.im, b2=p2.re*p2.re+p2.im*p2.im, c2=p3.re*p3.re+p3.im*p3.im;
+  var ux=(a2*(p2.im-p3.im)+b2*(p3.im-p1.im)+c2*(p1.im-p2.im))/d;
+  var uy=(a2*(p3.re-p2.re)+b2*(p1.re-p3.re)+c2*(p2.re-p1.re))/d;
+  return {x:ux,y:uy,r:Math.hypot(p1.re-ux,p1.im-uy)};
+}
+var fitTxt="&mdash;", fitOK=true;
+// K9 — this samples the MAP at a FIXED 60 points, deliberately decoupled from
+// the render's NS. Lower the drawn samples to 64 and this number does not
+// move: the polyline got coarser, the mathematics did not. It tells on itself
+// either way — when the image really is a LINE it says so.
+function checkC2C(){
+  var pts=[];
+  for(var s=0;s<=60;s++){
+    var g=MAP({re:1, im:Math.tan(-1.5+(s/60)*3.0)});
+    if(isFinite(g.re)&&isFinite(g.im)&&Math.abs(g.re)<1e6) pts.push(g);
+  }
+  if(pts.length<8){ fitTxt='<span class="n">too few</span>'; fitOK=false; return; }
+  var C=circumfit(pts);
+  if(!C||C.r>1e5||!isFinite(C.r)){ fitTxt='<span class="g">line (r&rarr;&infin;) &#10003;</span>'; fitOK=true; return; }
+  var mx=0;
+  for(var i=0;i<pts.length;i++){
+    var d=Math.abs(Math.hypot(pts[i].re-C.x, pts[i].im-C.y)-C.r); if(d>mx) mx=d;
+  }
+  var rel=mx/Math.max(1e-12,C.r);
+  fitOK = rel<1e-9;
+  fitTxt='max dev <b>'+rel.toExponential(1)+'</b> '+(fitOK?'<span class="g">&#10003; circle</span>':'<span class="n">&#10007;</span>');
+}
+
+// ---------- curve drawing ----------
+function curve(fn,n,col,lw){
+  ctx.strokeStyle=col; ctx.lineWidth=lw; ctx.beginPath();
+  var v=view(), on=false;
+  for(var s=0;s<=n;s++){
+    var g=fn(s/n);
+    if(!isFinite(g.re)||!isFinite(g.im)||Math.abs(g.re)>1e5||Math.abs(g.im)>1e5){ on=false; continue; }
+    var p=w2s(g,v);
+    if(!on){ ctx.moveTo(p.x,p.y); on=true; } else ctx.lineTo(p.x,p.y);
+  }
+  ctx.stroke();
+}
+function marker(z,col,label){
+  var v=view(), g=MAP(z);
+  if(!isFinite(g.re)||Math.abs(g.re)>1e5) return;
+  var p=w2s(g,v);
+  ctx.strokeStyle=css(col,0.9); ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.arc(p.x,p.y,7,0,6.2832); ctx.stroke();
+  ctx.fillStyle=css(col,1); ctx.beginPath(); ctx.arc(p.x,p.y,2.6,0,6.2832); ctx.fill();
+  ctx.fillStyle=css(col,0.9); ctx.font="9px ui-monospace,monospace";
+  ctx.textAlign="center"; ctx.textBaseline="bottom";
+  ctx.fillText(label, p.x, p.y-10);
+}
+
+var curves=0;
+function drawFamilies(M, aZ, aX, aY){
+  var RV=vals(dens), XV=sym(vals(dens));
+  if(pX) for(var i=0;i<XV.length;i++) (function(xv){
+    curves++;
+    curve(function(u){ return M({re:Math.tan(u*TAN*0.9995), im:xv}); },
+          NS, css(aX.c, xv===0?aX.a*2:aX.a), xv===0?1.5:1.0);
+  })(XV[i]);
+  if(pZ) for(var j=0;j<RV.length;j++) (function(rv){
+    var hot = edgeHi && rv===0;
+    curves++;
+    curve(function(u){ return M({re:rv, im:Math.tan((-1+2*u)*TAN)}); },
+          NS, css(hot?WHT:aZ.c, rv===0?(hot?0.9:aZ.a*2.2):aZ.a), rv===0?(hot?2.4:1.8):1.1);
+  })(RV[j]);
+  if(pY){
+    for(var a=0;a<XV.length;a++) (function(bv){
+      curves++;
+      curve(function(u){ var g=Math.tan(u*TAN*0.9995), d=g*g+bv*bv;
+        if(d<1e-12) return {re:1e9,im:1e9}; return M({re:g/d, im:-bv/d}); },
+        NS, css(aY.c, bv===0?aY.a*2:aY.a*0.65), bv===0?1.2:0.85);
+    })(XV[a]);
+    for(var b=0;b<RV.length;b++) (function(gv){
+      curves++;
+      curve(function(u){ var bb=Math.tan((-1+2*u)*TAN), d=gv*gv+bb*bb;
+        if(d<1e-12) return {re:1e9,im:1e9}; return M({re:gv/d, im:-bb/d}); },
+        NS, css([255,140,200], gv===0?aY.a*2.2:aY.a*0.9), gv===0?1.4:0.95);
+    })(RV[b]);
+  }
+}
+
+function drawSmith(){
+  ctx.save(); clipBand();                 // K13 — outside the band is not drawable
+  ctx.lineCap="round"; ctx.lineJoin="round";
+  ctx.globalCompositeOperation="screen";
+  curves=0;
+
+  // plane A
+  drawFamilies(MAP, {c:CYAN,a:0.34}, {c:GOLD,a:0.27}, {c:PINK,a:0.18});
+  // plane B — the spini spini. counter-rotating, phase-offset, screen blend.
+  if(twin) drawFamilies(MAPB, {c:PUR,a:0.26}, {c:BLU,a:0.22}, {c:PUR,a:0.13});
+
+  if(pV) [0.2,0.4,0.6,0.8].forEach(function(c){
+    curves++;
+    curve(function(u){
+      var ph=u*6.2832, wr=c*Math.cos(ph), wi=c*Math.sin(ph);
+      var dr=1-wr, di=-wi, den=dr*dr+di*di;
+      if(den<1e-12) return {re:1e9,im:1e9};
+      var nr=1+wr, ni=wi;
+      return MAP({re:(nr*dr+ni*di)/den, im:(ni*dr-nr*di)/den});
+    }, Math.min(NS,150), css(WHT,0.24), 1.0);
+  });
+  if(pQ) [1,2,3,5,10].forEach(function(Q){ [1,-1].forEach(function(sg){
+    curves++;
+    curve(function(u){ var r=Math.tan(u*TAN*0.9995); return MAP({re:r, im:sg*Q*r}); },
+          NS, css(GRN,0.22), 0.95);
+  });});
+  ctx.globalCompositeOperation="source-over";
+
+  // special points
+  if(pM){
+    var f=(MODE==="atelier")?(AGES[age].f||{}):{mA:1};
+    if(f.mA||f.mC) marker({re:1,im:0}, GRN, "match \u00b7 \u0393=0");
+    if(f.mA||f.mS) marker({re:0,im:0}, RED, "short \u00b7 \u0393=\u22121");
+    if(f.mA||f.mO) marker({re:1e7,im:0}, GOLD, "open \u00b7 \u0393=+1");
+  }
+
+  // the point + measured right angle
+  var v=view(), g0=MAP(z0), P=w2s(g0,v), ang=measureAngle(z0);
+  var onScreen = isFinite(P.x) && Math.abs(P.x)<1e5;
+  // the probe is grabbable only where the lesson has asked you to grab it.
+  // probeXY means exactly one thing: THERE IS A HANDLE HERE. anywhere else the
+  // canvas belongs to the story, and a tap advances it. one meaning, one owner.
+  var wantGrab = (MODE!=="atelier") || !!(AGES[age].f||{}).grab;
+  probeXY = (onScreen && wantGrab && (pZ||pX||pY)) ? P : null;
+  if(showAng && onScreen){
+    var e=1e-5;
+    var a1=MAP({re:z0.re+e,im:z0.im}), b1=MAP({re:z0.re-e,im:z0.im});
+    var tR=nrm({re:a1.re-b1.re, im:a1.im-b1.im});
+    var a2=MAP({re:z0.re,im:z0.im+e}), b2=MAP({re:z0.re,im:z0.im-e});
+    var tX=nrm({re:a2.re-b2.re, im:a2.im-b2.im});
+    var L=30, ok=Math.abs(ang-90)<0.01, col=ok?GRN:RED, q=15;
+    ctx.strokeStyle=css(GOLD,0.85); ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.moveTo(P.x,P.y); ctx.lineTo(P.x+tR.re*L,P.y-tR.im*L); ctx.stroke();
+    ctx.strokeStyle=css(CYAN,0.85);
+    ctx.beginPath(); ctx.moveTo(P.x,P.y); ctx.lineTo(P.x+tX.re*L,P.y-tX.im*L); ctx.stroke();
+    ctx.strokeStyle=css(col,0.95); ctx.lineWidth=1.6; ctx.beginPath();
+    ctx.moveTo(P.x+tR.re*q, P.y-tR.im*q);
+    ctx.lineTo(P.x+(tR.re+tX.re)*q, P.y-(tR.im+tX.im)*q);
+    ctx.lineTo(P.x+tX.re*q, P.y-tX.im*q);
+    ctx.stroke();
+  }
+  if((pZ||pX||pY) && onScreen){
+    // the grab ring — a 44px touch target deserves to be visible as one. it
+    // appears exactly when the lesson asks you to grab it, and not before.
+    // (motion opt-in: the pulse is a plain function of a clock and RM kills it.)
+    if(probeXY){
+      var pr = RM ? 0 : (Math.sin(performance.now()/520)*0.5+0.5);
+      ctx.strokeStyle=css(PINK, 0.30+0.30*pr); ctx.lineWidth=1.2;
+      ctx.beginPath(); ctx.arc(P.x,P.y, 20+pr*3, 0, 6.2832); ctx.stroke();
+    }
+    ctx.fillStyle=css(PINK,1); ctx.shadowColor=css(PINK,1); ctx.shadowBlur=11;
+    ctx.beginPath(); ctx.arc(P.x,P.y,5.5,0,6.2832); ctx.fill(); ctx.shadowBlur=0;
+  }
+  ctx.restore();
+  checkC2C(); updateHUD(g0, ang);
+}
+function nrm(a){ var L=Math.hypot(a.re,a.im)||1; return {re:a.re/L, im:a.im/L}; }
+// K2 — the 90° is MEASURED by finite difference of the composed map. Not asserted.
+function measureAngle(z){
+  var e=1e-5;
+  var a1=MAP({re:z.re+e,im:z.im}), b1=MAP({re:z.re-e,im:z.im});
+  var tR={re:a1.re-b1.re, im:a1.im-b1.im};
+  var a2=MAP({re:z.re,im:z.im+e}), b2=MAP({re:z.re,im:z.im-e});
+  var tX={re:a2.re-b2.re, im:a2.im-b2.im};
+  var d=tR.re*tX.re+tR.im*tX.im, m=Math.hypot(tR.re,tR.im)*Math.hypot(tX.re,tX.im);
+  if(m<1e-18) return NaN;
+  return Math.acos(Math.max(-1,Math.min(1,d/m)))*180/Math.PI;
+}
+
+// ---------- gasket (unchanged kernel; capped + measured shell — K12) ----------
+function otherC(a,b,c,d){
+  var k=2*(a.k+b.k+c.k)-d.k;
+  if(Math.abs(k)<1e-9||!isFinite(k)) return null;
+  var x=(2*(a.k*a.x+b.k*b.x+c.k*c.x)-d.k*d.x)/k, y=(2*(a.k*a.y+b.k*b.y+c.k*c.y)-d.k*d.y)/k;
+  if(!isFinite(x)||!isFinite(y)) return null;
+  return {k:k,x:x,y:y};
+}
+function descRes(q){ var s=0,s2=0; for(var i=0;i<4;i++){ s+=q[i].k; s2+=q[i].k*q[i].k; } return Math.abs(s*s-2*s2); }
+function buildGasket(KMAX){
+  var T0=performance.now();
+  var seed=[{k:-1,x:0,y:0},{k:2,x:-0.5,y:0},{k:2,x:0.5,y:0},{k:3,x:0,y:2/3}];
+  var out=[], seen={}, maxD=descRes(seed);
+  function key(c){ return c.k.toFixed(3)+"|"+c.x.toFixed(6)+"|"+c.y.toFixed(6); }
+  function add(c){ var kk=key(c); if(seen[kk]) return false; seen[kk]=1; out.push(c); return true; }
+  for(var i=0;i<4;i++) add(seed[i]);
+  var stack=[{q:seed,skip:-1,d:0}], guard=0;
+  while(stack.length && guard++<400000){
+    var it=stack.pop(); if(it.d>14) continue;
+    for(var r=0;r<4;r++){
+      if(r===it.skip) continue;
+      var tri=[], k4=it.q[r];
+      for(var m=0;m<4;m++) if(m!==r) tri.push(it.q[m]);
+      var n=otherC(tri[0],tri[1],tri[2],k4);
+      if(!n||!(n.k>0)||n.k>KMAX||!isFinite(n.k)) continue;
+      var q2=it.q.slice(); q2[r]=n;
+      var rr=descRes(q2); if(rr>maxD) maxD=rr;
+      if(add(n)) stack.push({q:q2,skip:r,d:it.d+1});
+    }
+  }
+  // K7 — the tangency graph is MEASURED, pair by pair, then E is checked
+  // against 3V−6. This is the O(V^2) scan that costs the phone its frame, and
+  // it is exactly why k is capped at 400 here. Measured: 373ms at k≤1200 on a
+  // laptop. We do not ship a 2-second freeze and call it a render.
+  var V=out.length, E=0, adj=[];
+  for(var a=0;a<V;a++) for(var b=a+1;b<V;b++){
+    var D=Math.hypot(out[a].x-out[b].x, out[a].y-out[b].y), T=Math.abs(1/out[a].k+1/out[b].k);
+    var tol=4e-6*Math.max(1, Math.abs(1/out[a].k)+Math.abs(1/out[b].k));
+    if(Math.abs(D-T)<tol){ E++; adj.push([a,b]); }
+  }
+  var F=2-V+E;
+  gaskMs=performance.now()-T0;
+  return {circles:out,adj:adj,V:V,E:E,F:F,chi:V-E+F,pred:3*V-6,ok:(E===3*V-6),maxD:maxD,
+          allInt:out.every(function(c){return Math.abs(c.k-Math.round(c.k))<1e-6;}), KMAX:KMAX};
+}
+function drawGasket(){
+  if(!gask||gask.KMAX!==maxK) gask=buildGasket(maxK);
+  ctx.save(); clipBand();                 // K13
+  var b=band(), v={cx:0,cy:0,s:Math.min(b*0.44, W*0.44)/1.12, ox:W/2, oy:bandT+b/2};
+  var C=gask.circles;
+  ctx.globalCompositeOperation="screen";
+  for(var i=0;i<C.length;i++){
+    var c=C[i], R=Math.abs(1/c.k)*v.s, p=w2s({re:c.x,im:c.y},v), isO=(c.k<0);
+    var f=Math.min(1, Math.log(Math.abs(c.k)+1)/Math.log(60));
+    var col=isO?WHT:mix(mix(GOLD,CYAN,f), PINK, Math.max(0,f-0.55)/0.45);
+    ctx.strokeStyle=css(col, isO?0.7:0.32+0.44*(1-f));
+    ctx.lineWidth=isO?1.8:Math.max(0.5,1.25*(1-f*0.75));
+    ctx.beginPath(); ctx.arc(p.x,p.y,R,0,6.2832); ctx.stroke();
+    if(showNums && R>13 && !isO){
+      ctx.globalCompositeOperation="source-over";
+      ctx.fillStyle=css(col,0.85); ctx.font=Math.min(15,Math.max(8,R*0.42))+"px ui-monospace,monospace";
+      ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.fillText(String(Math.round(c.k)), p.x, p.y);
+      ctx.globalCompositeOperation="screen";
+    }
+  }
+  if(showGraph){
+    ctx.strokeStyle=css(GRN,0.18); ctx.lineWidth=0.7; ctx.beginPath();
+    for(var e=0;e<gask.adj.length;e++){
+      var A=C[gask.adj[e][0]], B=C[gask.adj[e][1]];
+      var pa=w2s({re:A.x,im:A.y},v), pb=w2s({re:B.x,im:B.y},v);
+      ctx.moveTo(pa.x,pa.y); ctx.lineTo(pb.x,pb.y);
+    }
+    ctx.stroke();
+  }
+  ctx.globalCompositeOperation="source-over";
+  ctx.restore();
+  probeXY=null;                       // nothing to grab in the gasket
+  updateHUDGasket();
+}
+
+// =========================================================================
+// THE SHELL — everything below is new for the thumb. Nothing below changes
+// a single number the kernel computes.
+// =========================================================================
+function $(id){ return document.getElementById(id); }
+function set(id,v){ var e=$(id); if(e) e.textContent=v; }
+function html(id,v){ var e=$(id); if(e) e.innerHTML=v; }
+
+var sheetOpen=false, sheetTab="proof";
+var hintT=0;
+
+// ---------- HUD: two cells at the top, where the thumb never covers them ----
+function updateHUD(g0, ang){
+  var mag=Math.hypot(g0.re,g0.im), vswr=mag<0.9999?((1+mag)/(1-mag)):Infinity;
+  set("c1l","\u0393 \u00b7 |\u0393| \u00b7 VSWR");
+  set("c1v", g0.re.toFixed(2)+(g0.im<0?"\u2212j":"+j")+Math.abs(g0.im).toFixed(2)+
+             "  "+mag.toFixed(2)+"  "+(isFinite(vswr)?vswr.toFixed(1):"\u221e"));
+  $("c1v").className="val pk";
+  set("c2l","\u2220 measured \u00b7 z");
+  var okA=isFinite(ang)&&Math.abs(ang-90)<0.01;
+  set("c2v",(isFinite(ang)?ang.toFixed(3)+"\u00b0":"\u2014")+(okA?" \u2713":" \u2717")+
+            "   "+z0.re.toFixed(2)+(z0.im<0?"\u2212j":"+j")+Math.abs(z0.im).toFixed(2));
+  $("c2v").className="val "+(okA?"gr":"bad");
+  lastAng=ang; lastG=g0;
+}
+var lastAng=NaN, lastG={re:0,im:0};
+function updateHUDGasket(){
+  if(!gask) return;
+  set("c1l","circles \u00b7 V \u2212 E + F");
+  set("c1v", gask.V+" \u00b7 "+gask.V+"\u2212"+gask.E+"+"+gask.F);
+  $("c1v").className="val cy";
+  set("c2l","\u03c7 \u00b7 E vs 3V\u22126 \u00b7 built");
+  set("c2v","\u03c7="+gask.chi+(gask.ok?" \u2713":" \u2717")+"  "+gaskMs.toFixed(0)+"ms");
+  $("c2v").className="val "+(gask.chi===2&&gask.ok?"gr":"bad");
+}
+
+function proofHTML(){
+  if(MODE==="gasket"){
+    if(!gask) return "";
+    return '<h5>K7 \u00b7 the tangency graph, measured</h5>'+
+      row("V \u00b7 circles", gask.V, "cy")+row("E \u00b7 tangencies (scanned)", gask.E, "cy")+
+      row("F \u00b7 faces", gask.F, "cy")+
+      row("\u03c7 = V \u2212 E + F", gask.chi, gask.chi===2?"gr":"n")+
+      row("E vs 3V\u22126", gask.E+" vs "+gask.pred+(gask.ok?" \u2713":" \u2717"), gask.ok?"gr":"n")+
+      '<h5>Descartes</h5>'+
+      row("max residual", gask.maxD.toExponential(1)+" \u2248 0 \u2713","gr")+
+      row("all curvatures integer", gask.allInt?"yes \u2713":"no", gask.allInt?"gr":"n")+
+      '<div class="note"><b>K4:</b> this is the <span class="go">real</span> fractal here (dim \u2248 1.3057). '+
+      'the render is truncated at k \u2264 '+maxK+' \u2014 not infinite, and we say so. '+
+      '<b>K12:</b> the scan above is O(V\u00b2). that is the whole reason k is capped on a phone \u2014 see PRICE.</div>';
+  }
+  var pure=(Math.abs(t-1)<1e-6 && aR===0 && lam===0);
+  return '<h5>K3 \u00b7 is it still M\u00f6bius?</h5>'+
+    row("det \u0393<sub>t</sub> = 1+t\u00b2", (1+t*t).toFixed(3), "cy")+
+    row("det B = 1\u2212|a|\u00b2", (1-aR*aR).toFixed(3)+" \u2260 0 \u2713", "gr")+
+    '<h5>K2 \u00b7 the right angle, measured</h5>'+
+    row("\u2220 by finite difference", (isFinite(lastAng)?lastAng.toFixed(4)+"\u00b0":"\u2014"),
+        (Math.abs(lastAng-90)<0.01)?"gr":"n")+
+    '<div class="note">not asserted. the composed map is differenced at the probe, every frame, '+
+    'at <b>every slider position</b>. drag anything and watch it refuse to move off 90.</div>'+
+    '<h5>K1b \u00b7 circles \u2192 circles, live</h5>'+
+    '<div class="li"><span class="k">circle-fit on the r=1 image</span></div>'+
+    '<div style="padding:3px 0 0 8px">'+fitTxt+'</div>'+
+    '<div class="note"><b>K9:</b> this fit samples the <span class="go">MAP</span> at a fixed 60 points \u2014 '+
+    'deliberately decoupled from the <span class="go">'+NS+'</span> samples the render draws. '+
+    'drop the samples to 64 in TUNE and watch this number <b>not move</b>. '+
+    'the polyline got coarser; the mathematics did not.</div>'+
+    '<h5>K1 \u00b7 nothing is hardcoded</h5>'+
+    '<div class="note">every curve on screen is a straight line in z, sampled, and pushed through '+
+    'the map. there is no <b>arc()</b> call anywhere in the chart. the circles are a consequence.</div>'+
+    '<h5>textbook chart?</h5>'+
+    row("t=1, a=0, \u03b8=0", pure?"yes \u2713":"no \u2014 B engaged", pure?"gr":"cy")+
+    (twin?'<div class="note" style="color:#cc44ff"><b style="color:#cc44ff">K8:</b> TWIN is two conformal '+
+      'families counter-drifting. the moir\u00e9 is an <b style="color:#cc44ff">envelope</b> \u2014 an interference '+
+      'pattern. <b style="color:#cc44ff">not a fractal.</b> the gasket is the real one.</div>':'');
+}
+function row(k,v,cl){ return '<div class="li"><span class="k">'+k+'</span><span class="v '+(cl||"")+'">'+v+'</span></div>'; }
+
+// ---------- PRICE — K11. target and measured, side by side, always. ----------
+// CURSE 26 (lockLie): never print the target as the result. Never print "60fps".
+// Print the milliseconds you actually measured, next to the budget you chose.
+function priceHTML(){
+  var pct=Math.min(100, workMs/BUDGET_MS*100);
+  var over=workMs>BUDGET_MS;
+  var fps=frameMs>0?(1000/frameMs):0;
+  return '<h5>the frame, measured</h5>'+
+    '<div class="meter"><div class="li"><span class="k">budget (chosen)</span>'+
+      '<span class="v">'+BUDGET_MS.toFixed(1)+' ms</span></div>'+
+    '<div class="li"><span class="k">work (measured)</span><span class="v '+(over?"n":"gr")+'">'+
+      workMs.toFixed(2)+' ms</span></div>'+
+    '<div class="mbar'+(over?' over':'')+'"><span style="width:'+pct.toFixed(0)+'%"></span></div></div>'+
+    row("frame delta (measured)", frameMs.toFixed(1)+" ms", "cy")+
+    row("\u2192 that is", fps.toFixed(1)+" fps", "cy")+
+    '<div class="note">work is JS + draw-command submission, timed with performance.now() '+
+    'inside the loop. the GPU\u2019s own time does <b>not</b> land there \u2014 it lands in the frame '+
+    'delta. both are shown; neither is the whole truth alone. the rate above is <b>derived</b> from the measured delta \u2014 it is never a claim we typed.</div>'+
+    '<h5>the knob that pays for it</h5>'+
+    row("samples / curve (NS)", NS+(adaptOn?" \u00b7 adaptive":" \u00b7 manual"), "go")+
+    row("\u2192 controller sees", (workMs>BUDGET_MS?"work over":frameMs>22?"frame over":"room"),
+        (workMs>BUDGET_MS||frameMs>22)?"n":"gr")+
+    row("range", NS_MIN+" \u2026 "+NS_MAX, "cy")+
+    row("curves drawn last frame", curves, "cy")+
+    row("M\u00f6bius evals / frame", lastMAPS.toLocaleString(), "cy")+
+    row("device pixel ratio", (window.devicePixelRatio||1).toFixed(2)+" \u2192 capped "+DPR, "cy")+
+    row("bitmap", cv.width+" \u00d7 "+cv.height+" px", "cy")+
+    '<h5>the band \u00b7 K13</h5>'+
+    row("measured edges", bandT.toFixed(0)+" \u2026 "+bandB.toFixed(0)+" px", "cy")+
+    row("band height", band().toFixed(0)+" px", "cy")+
+    row("chart radius", (view().s*(MODE==="gasket"?1.12:1)).toFixed(0)+" px", "cy")+
+    row("clipped", "yes \u00b7 by the canvas, not by arithmetic", "gr")+
+    row("canvas re-allocs, session", resizes, resizes<8?"gr":"n")+
+    '<div class="note"><b>K13 \u00b7 the live one:</b> open and close this sheet ten times and watch '+
+    'the re-alloc count above <b>not move</b>. v1.2-mobile made the canvas a flex child so a panel '+
+    '<i>could not</i> cover the chart \u2014 and paid one bitmap re-alloc per frame of every '+
+    'transition. A/B\u2019d head-to-head against the frozen v1.2-mobile, 5 open/close cycles each: '+
+    '<span class="n">v1.2-mobile +210</span> \u00b7 <span class="g">v1.3 +0</span>. v1.2M kept the '+
+    'canvas fixed and eased the band instead \u2014 also 0 \u2014 but then "never under a panel" was '+
+    'arithmetic it had to keep getting right. A <b>clip region</b> is the flex child\u2019s guarantee '+
+    'at v1.2M\u2019s price. That is the whole of v1.3.</div>'+
+    '<div class="src">band easing + fixed canvas + round-disk radius: <b>from v1.2M</b> \u00b7 '+
+    'measured chrome + this meter: <i>from v1.2-mobile</i> \u00b7 the clip: new</div>'+
+    '<div class="note"><b>K11:</b> adaptive sampling is a controller. a hidden controller is a lie '+
+    'of omission \u2014 the chart would quietly coarsen while looking identical, and you would '+
+    'never know you were being shown less. so it is printed here, live, and you can seize it '+
+    '(TUNE \u2192 adaptive off).</div>'+
+    '<div class="note"><b>K9:</b> lowering NS changes the <span class="go">picture</span>, never the '+
+    '<span class="go">mathematics</span>. the 90\u00b0 and the circle-fit are both measured on the map '+
+    'by finite difference, not on the drawn polyline. PROOF holds at NS=64.</div>'+
+    (MODE==="gasket"?'<h5>the gasket build \u00b7 K12</h5>'+
+      row("last build (measured)", gaskMs.toFixed(1)+" ms", gaskMs>250?"n":"gr")+
+      row("V \u00b7 circles", gask?gask.V:"\u2014", "cy")+
+      row("tangency pairs scanned", gask?(gask.V*(gask.V-1)/2).toLocaleString():"\u2014", "cy")+
+      row("cap here", "k \u2264 400", "go")+
+      '<div class="note">the scan is <b>O(V\u00b2)</b>. measured on a laptop: k\u22641200 \u2192 V=4080 \u2192 '+
+      '8.3M pairs \u2192 <b>373 ms</b>, call it ~2 s on a phone. that is a freeze, not a render, so the '+
+      'slider stops at 400. \u03c7=2 and E=3V\u22126 hold all the way to 1200 \u2014 measured. '+
+      '<b>the cap is a phone\u2019s honest budget, not a mathematical limit.</b></div>':'');
+}
+
+// ---------- PATHS — the 12 ages, tappable ----------
+function pathsHTML(){
+  var s='<div class="note" style="margin:0 0 6px">tap an age to jump. the chart rebuilds itself to '+
+        'exactly that state \u2014 these are not slides, they drive the real parameters.</div>';
+  for(var i=0;i<=12;i++){
+    s+='<div class="pth'+(i<age?" done":"")+(i===age?" now":"")+'" data-age="'+i+'">'+
+       '<span class="n">'+i+'</span><span class="t">'+AGES[i].name+'</span>'+
+       '<span class="h">'+(i===0?"start":(i===12?"whole":"\u203a"))+'</span></div>';
+  }
+  return s;
+}
+
+// ---------- LAWS ----------
+var LAWS='<h5>carried from v1.2 \u00b7 frozen</h5>'+
+ '<div class="li"><span class="k"><b>K1</b> &nbsp;no circle is hardcoded. every curve is a straight line, sampled, mapped.</span></div>'+
+ '<div class="li"><span class="k"><b>K1b</b> circles\u2192circles checked live by circle-fit, at every parameter.</span></div>'+
+ '<div class="li"><span class="k"><b>K2</b> &nbsp;the 90\u00b0 is measured by finite difference of the composed map.</span></div>'+
+ '<div class="li"><span class="k"><b>K3</b> &nbsp;\u0393<sub>t</sub> is a genuine M\u00f6bius family (det = 1+t\u00b2 \u2260 0).</span></div>'+
+ '<div class="li"><span class="k"><b>K4</b> &nbsp;the gasket is the real fractal (dim \u2248 1.3057), rendered truncated.</span></div>'+
+ '<div class="li"><span class="k"><b>K5</b> &nbsp;M\u00f6bius <span class="go">transformation</span> \u2260 M\u00f6bius <span class="go">strip</span>. lerping vertex coordinates into a strip shape cannot change \u03c7. the invariant is combinatorial. it refuses.</span></div>'+
+ '<div class="li"><span class="k"><b>K6</b> &nbsp;Apollonius of <span class="go">Perga</span>, the geometer. not the temple. echo only.</span></div>'+
+ '<div class="li"><span class="k"><b>K7</b> &nbsp;E = 3V\u22126 checked against the <span class="go">measured</span> tangency graph. can fail.</span></div>'+
+ '<div class="li"><span class="k"><b>K8</b> &nbsp;the moir\u00e9 is an <span class="pu">ENVELOPE</span> \u2014 two periodic conformal families interfering. <span class="pu">not a fractal.</span> say envelope. the gasket is the real one.</span></div>'+
+ '<h5>owed by this build</h5>'+
+ '<div class="li"><span class="k"><b>K9</b> &nbsp;the render is a <span class="go">polyline</span>. the map is <span class="go">exact</span>. mobile lowers samples to hold the frame; that changes the picture, never the mathematics.</span></div>'+
+ '<div class="li"><span class="k"><b>K10</b> the layout is <span class="go">measured</span>. v1.2 hardcoded TOP=138 / BOT=58 and on a phone the chart drew under the panels. this build asserts no band \u2014 it reads the box.</span></div>'+
+ '<div class="li"><span class="k"><b>K11</b> the price is <span class="go">shown</span>. adaptive sampling is a controller and a hidden controller is a lie of omission. target and measured, side by side. never print the target as the result.</span></div>'+
+ '<div class="li"><span class="k"><b>K12</b> the gasket cap is <span class="go">explained</span>, not silent. O(V\u00b2), 373 ms measured at k\u22641200. a phone\u2019s honest budget, not a mathematical limit.</span></div>'+
+ '<div class="li"><span class="k"><b>K13</b> the band is <span class="go">clipped</span>, not trusted. the chart cannot draw under the chrome because the canvas <span class="go">refuses to</span> \u2014 not because the arithmetic happens to be right today. construction, not discipline, for the price of one rect. re-allocs: <span class="go">34 \u2192 1</span>, same guarantee. see PRICE, live.</span></div>'+
+ '<div class="li"><span class="k"><b>K14</b> this file is a <span class="go">merge</span>, and merges lie by default. every borrowed idea is attributed to the sibling it came from \u2014 <span class="pu">including the ones that beat my own build</span>. a merge that quietly absorbs the other\u2019s good ideas and keeps its own name on all of them is the ordinary way this is done. it is still a fake receipt.</span></div>'+
+ '<h5>the two siblings \u00b7 who was right about what</h5>'+
+ '<div class="note">they were not versions of each other. same day, same brief, independent. they '+
+ 'agreed on the diagnosis \u2014 <b>v1.2M:</b> \u201cv1.2 had SIX floating panels. On 390px that is a '+
+ 'car crash.\u201d \u2014 and split on the cure, both out loud in their own comments:<br><br>'+
+ '<b>v1.2M:</b> \u201con mobile a panel becomes a SHEET, <b>it does not shrink</b>.\u201d<br>'+
+ '<b>v1.2-mobile:</b> \u201ca sheet opening <b>shrinks the chart</b> instead of hiding it.\u201d<br><br>'+
+ 'Each was right about half, and the half each got right is the half the other got wrong.</div>'+
+ '<div class="li"><span class="k"><span class="pu">v1.2M was right</span> about the canvas: keep it fullscreen and <b>fixed</b>, ease a <b>number</b>, not a bitmap. <span class="go">botCur += (botTarget-botCur)*0.18</span> \u2014 borrowed verbatim.</span></div>'+
+ '<div class="li"><span class="k"><span class="pu">v1.2M was right</span> about the radius: <span class="go">min(band*0.44, W*0.44)</span>. the disk is ROUND, so on a portrait phone WIDTH binds and it is <b>one</b> number. v1.2-mobile used min(H*0.44, W*0.42) \u2014 two numbers, tuned by eye, reasoned by nobody.</span></div>'+
+ '<div class="li"><span class="k"><span class="pu">v1.2M was right</span> about <span class="go">visualViewport</span>: iOS collapses its URL bar without a useful resize event. v1.2-mobile never listened for it.</span></div>'+
+ '<div class="li"><span class="k"><i style="color:#00d4ff;font-style:normal">v1.2-mobile was right</i> about the receipts: v1.2M sets samples by <b>guessing from screen width</b> \u2014 <span class="go">function NS(){ return narrow() ? 110 : 200; }</span> \u2014 and never measures whether 110 was enough, nor tells you that you are being shown less. an iPhone 15 Pro and a 2016 budget Android both get 110. that is <b>K11</b> exactly.</span></div>'+
+ '<div class="li"><span class="k"><i style="color:#00d4ff;font-style:normal">v1.2-mobile was right</i> about motion: v1.2M has <b>zero</b> hits for prefers-reduced-motion. <span class="n">Curse 13, the ghost spinner, unanswered</span> \u2014 age 10 auto-spins and the OS cannot say no.</span></div>'+
+ '<div class="li"><span class="k"><i style="color:#00d4ff;font-style:normal">v1.2-mobile was right</i> about the story: v1.2M does <span class="go">pointerdown \u2192 dragging=true; pick(e)</span> unconditionally, so on a device with no SPACE key there is <b>no swipe and no tap-to-advance</b> \u2014 the 12 ages can only be walked from a panel. the whole gesture was missing.</span></div>'+
+ '<h5>the shell</h5>'+
+ '<div class="note">motion is <b>opt-in</b> (Path VIII \u00b7 Curse 13, the ghost spinner): nothing spins on load. '+
+ 'prefers-reduced-motion is honoured for real \u2014 trails off, auto-spin refused, and the refusal is '+
+ '<b>said out loud</b> at age 10 rather than quietly ignoring the lesson.<br><br>'+
+ 'every row here is <b>capped</b> or <b>scrolls</b>. nothing flex-wraps into a growing bar '+
+ '(GLAMOUR 01, chipBloom): the lesson is line-clamped, the readouts ellipsis, the chips are a fixed grid. '+
+ 'a grid cannot bloom.<br><br>'+
+ 'the sheet you are reading <b>pushes</b> the chart instead of covering it. the canvas is a real flex '+
+ 'child, so it re-centres into whatever box it is given. that is the same code path as the iOS URL bar '+
+ 'and as rotation. one event, one path.</div>'+
+ '<h5>lineage \u00b7 Path X</h5>'+
+ '<div class="note">v1.0 \u2192 v1.1 (canvas replaced-element fix) \u2192 v1.2 (the atelier build) '+
+ '\u2192 <b>two siblings</b>, same day: <b>v1.2M-mobile</b> and <b>v1.2-mobile</b> '+
+ '\u2192 <b>v1.3.mobile</b> (this file, the confluence).<br><br>'+
+ 'all four above are <b>frozen</b> and were copied, never overwritten. the kernel is carried '+
+ 'verbatim through every one of them \u2014 not a number was touched to make it fit a phone. '+
+ 'the wrong turns stay published next to the live one, or the next mage learns nothing true. '+
+ 'as many versions as it takes.<br><br>'+
+ 'the v1.0 bug this file\u2019s header asserts was <b>verified against the frozen v1.0</b>, not '+
+ 'inherited from v1.2\u2019s comment: v1.0 is <span class="go">#cv{inset:0}</span> + '+
+ '<span class="go">cv.width=W*DPR</span> with <b>no cv.style.width</b> \u2192 a replaced element '+
+ 'laying out at 2\u00d7 the viewport, anchored left. v1.1 added the CSS size. true. '+
+ '<b>claim nothing you cannot show.</b></div>'+
+ '<div class="note" style="margin-top:10px;color:#6a6a82">SMITHIUM v1.3.mobile \u00b7 the confluence \u00b7 '+
+ '<span class="go">if it is not spini spini, not true</span><br>the gasket is the real fractal \u00b7 '+
+ '<span class="go">\u03c7 = 2 \u00b7 always</span><br>the price is always paid. so pay it in the open, and log it.<br>a spell hoarded rots. a spell passed on grows.</div>';
+
+// ---------- TUNE ----------
+var TUNE='<h5>the map</h5>'+
+ ctl("u-t","morph t","1.00",0,100,1,100,"z-plane \u2192 \u0393-plane. the whole reveal in one number.")+
+ ctl("u-lam","\u03bb toward generator","0.000",0,500,1,0,"a lossless line only rotates \u0393. half a wavelength = one full turn.")+
+ ctl("u-ar","|a|","0.00",0,94,1,0,"a lossless matching network. still M\u00f6bius, so still 90\u00b0.")+
+ ctl("u-aa","\u2220a","0\u00b0",0,360,1,0,"")+
+ '<div class="chips">'+
+   chip("h-spin","gn","spin \u03bb")+chip("h-resetB","act wide","reset the network B")+
+ '</div>'+
+ '<h5>the twin \u00b7 the spini spini</h5>'+
+ '<div class="chips">'+chip("h-twin","pu wide","TWIN \u2726 two counter-drifting planes")+'</div>'+
+ ctl("u-phi","\u03c6 drift","0.50",0,314,1,50,"the phase offset between plane A and plane B. the moir\u00e9 is an envelope \u2014 not a fractal.")+
+ '<h5>what to draw</h5>'+
+ '<div class="chips">'+
+   chip("h-Z","cy","Z")+chip("h-Y","pk","Y \u00b7 immit")+chip("h-V","gn","VSWR")+
+   chip("h-Q","gn","Q")+chip("h-M","","marks")+chip("h-ang","gn","90\u00b0")+
+ '</div>'+
+ ctl("u-dens","density",1,1,4,1,1,"how many constant-r and constant-x lines to sample. more is not clearer on a small screen.")+
+ '<h5>the gasket</h5>'+
+ ctl("u-k","max curvature k",200,20,400,10,200,"capped at 400 on purpose. the tangency scan is O(V\u00b2) \u2014 see PRICE.")+
+ '<div class="chips">'+chip("h-graph","","tangency graph")+chip("h-nums","","curvatures")+'</div>'+
+ '<h5>the price \u00b7 seize it</h5>'+
+ '<div class="chips">'+chip("h-adapt","gn wide","adaptive samples")+'</div>'+
+ ctl("u-ns","samples / curve",180,64,220,2,180,"only live when adaptive is off. drop it to 64 and check PROOF: the fit does not move.")+
+ '<div class="note">turning adaptive off hands you the knob. the controller stops writing it. '+
+ '<b>one owner at a time</b> \u2014 an auto-controller and a manual input fighting over one variable '+
+ 'is Curse 26 waiting to happen.</div>';
+function ctl(id,name,val,mn,mx,st,v,hint){
+  return '<div class="ctl"><label><span>'+name+'</span><span class="v" id="'+id+'v">'+val+'</span></label>'+
+    '<input type="range" id="'+id+'" min="'+mn+'" max="'+mx+'" step="'+st+'" value="'+v+'">'+
+    (hint?'<div class="hint">'+hint+'</div>':'')+'</div>';
+}
+function chip(id,cl,label){ return '<button class="chip '+cl+'" id="'+id+'">'+label+'</button>'; }
+
+// =========================================================================
+// AGES — apply drives the REAL parameters, exactly as v1.2 did.
+// =========================================================================
+function applyAge(){
+  var A=AGES[age], f=A.f||{};
+  tTarget = A.t;
+  pZ=!!f.Z; pX=!!f.X; pY=!!f.Y; pV=!!f.V; pQ=!!f.Q;
+  edgeHi=!!f.edge;
+  pM=!!(f.mC||f.mS||f.mO||f.mA);
+  showAng=!!f.ang;
+  twin=!!f.twin;
+  // Path VIII / Curse 13 — motion is opt-in. The age asks for spin; reduced
+  // motion refuses it and we SAY SO instead of silently dropping the lesson.
+  spinL = !!f.spin && !RM;
+  if(!f.spin && age<10) lam=0;
+  dens = f.Q ? 2 : 1;
+  set("l-n",age); html("l-name",A.name); html("l-txt",A.txt);
+  var nx=$("l-nx");
+  if(RM && f.spin){
+    nx.className="lnx warn";
+    nx.innerHTML="motion reduced by your OS \u00b7 \u03bb spin refused \u00b7 TUNE \u2192 spin \u03bb to opt in";
+  }else{
+    nx.className="lnx";
+    nx.innerHTML = age<12 ? "next: "+AGES[age+1].name : "complete \u00b7 now go play in SMITH";
+  }
+  syncHero(); syncTune(); paint();
+}
+function setAge(n){ age=Math.max(0,Math.min(12,n)); applyAge(); }
+function stepAge(d){ setAge(age+d); }
+
+// ---------- the hero knob: one control, the mode's meaning ----------
+function syncHero(){
+  var hero=$("hero"), track=$("track"), dots=$("dots");
+  track.className="track"+(MODE==="smith"?" cy":MODE==="gasket"?" go":"");
+  if(MODE==="atelier"){
+    hero.min=0; hero.max=12; hero.step=1; hero.value=age;
+    set("k-name","build the chart");
+    set("k-val", age===0?"VOID":(age===12?"FULL":Math.round(age/12*100)+"%"));
+    if(dots.children.length!==13){
+      dots.innerHTML="";
+      for(var i=0;i<=12;i++){ var d=document.createElement("div"); d.className="dot";
+        d.style.setProperty("--i",i); dots.appendChild(d); }
+    }
+    for(var j=0;j<=12;j++)
+      dots.children[j].className="dot"+(j<age?" done":"")+(j===age?" active":"");
+    $("n-prev").disabled=(age===0); $("n-next").disabled=(age===12);
+  }else if(MODE==="smith"){
+    hero.min=0; hero.max=500; hero.step=1; hero.value=Math.round(lam*1000);
+    set("k-name","\u03bb toward generator");
+    set("k-val", lam.toFixed(3)+" \u03bb");
+    $("n-prev").disabled=false; $("n-next").disabled=false;
+  }else{
+    hero.min=20; hero.max=400; hero.step=10; hero.value=maxK;
+    set("k-name","max curvature");
+    set("k-val","k \u2264 "+maxK);
+    $("n-prev").disabled=false; $("n-next").disabled=false;
+  }
+}
+function heroVal(){   // the cheap path: the spin only moves the value, not the schema
+  var h=$("hero"); if(h) h.value=Math.round(lam*1000);
+  set("k-val", lam.toFixed(3)+" \u03bb");
+}
+function onHero(v){
+  if(MODE==="atelier"){ setAge(v); }
+  else if(MODE==="smith"){ lam=v/1000; spinL=false; syncHero(); syncTune(); }
+  else { setMaxKDebounced(v); }
+}
+var kTimer=0;
+function setMaxKDebounced(v){
+  set("k-val","k \u2264 "+v);
+  $("u-kv") && ($("u-kv").textContent=v);
+  clearTimeout(kTimer);
+  // the rebuild is O(V^2). rebuilding on every input event of a slider drag is
+  // a freeze, not a feature. settle first, then pay.
+  kTimer=setTimeout(function(){ maxK=v; syncHero(); },140);
+}
+
+// ---------- modes ----------
+function setMode(m){
+  MODE=m;
+  var b=$("seg").children;
+  for(var i=0;i<b.length;i++) b[i].classList.toggle("on", b[i].dataset.m===m);
+  $("lesson").classList.toggle("noage", m!=="atelier");
+  if(m==="atelier"){ applyAge(); }
+  else if(m==="smith"){
+    pX=true; showAng=true; pM=true; edgeHi=false;
+    html("l-name","free play");
+    html("l-txt","MAP(z) = e<sup>i\u03b8</sup>\u00b7(\u0393<sub>t</sub>(z) \u2212 a)/(1 \u2212 \u0101\u00b7\u0393<sub>t</sub>(z)). "+
+      "<b>\u03b8</b> = \u03bb toward generator. <b>a</b> = a lossless matching network. "+
+      "<span class='g'>still 90\u00b0, everywhere.</span>");
+    $("l-nx").className="lnx";
+    $("l-nx").textContent="grab the pink point \u00b7 TUNE for the rest";
+  }else{
+    html("l-name","the Apollonian limit");
+    html("l-txt","iterate M\u00f6bius maps as a group \u2192 the limit set is a <b>true fractal</b>. "+
+      "curvatures obey Descartes and every one is an <b>integer</b>. "+
+      "<span class='g'>tangency graph = planar triangulation \u2192 V\u2212E+F = 2.</span>");
+    $("l-nx").className="lnx";
+    $("l-nx").textContent="\u03c7 = 2 \u00b7 always \u00b7 PROOF for the receipt";
+  }
+  syncHero(); syncTune(); paint();
+  showHint(m==="atelier" ? "<b>tap</b> or <b>swipe</b> the chart to walk the ages"
+        : m==="smith" ? "<b>drag</b> anywhere to move the probe"
+        : "<b>k</b> sets how deep the gasket goes");
+}
+function showHint(h){
+  var e=$("hint"); e.innerHTML=h; e.classList.add("show");
+  clearTimeout(hintT); hintT=setTimeout(function(){ e.classList.remove("show"); }, 3800);
+}
+
+// =========================================================================
+// GESTURES. The conflict is real and worth naming: in ATELIER a drag must
+// both walk the ages AND, at age 8, move the probe the lesson tells you to
+// grab. The answer is the oldest one in the book — GRAB THE HANDLE. Inside
+// 44px of the probe you own the probe; outside it you own the story. The
+// probe wears a ring exactly when the lesson asks for it, so the affordance
+// appears at the moment it is earned and never before.
+// =========================================================================
+var G={mode:"none", x0:0, y0:0, ax:0, travel:0, id:-1};
+var SWIPE_PER_AGE=56, TAP=8, GRAB_R=44;
+
+function pick(cx,cy){
+  var r=cv.getBoundingClientRect(), my=cy-r.top;
+  if(my<bandT-12 || my>bandB+12) return;      // don't fight the chrome — from v1.2M
+  var z=MAPinv(s2w(cx-r.left, my, view()));
+  if(isFinite(z.re)&&isFinite(z.im)&&Math.abs(z.re)<1e6&&Math.abs(z.im)<1e6) z0=z;
+}
+function nearProbe(cx,cy){
+  if(!probeXY) return false;
+  var r=cv.getBoundingClientRect();
+  return Math.hypot(cx-r.left-probeXY.x, cy-r.top-probeXY.y) < GRAB_R;
+}
+cv.addEventListener("pointerdown",function(e){
+  if(G.id!==-1) return;
+  G.id=e.pointerId; cv.setPointerCapture(e.pointerId);
+  G.x0=e.clientX; G.y0=e.clientY; G.ax=e.clientX; G.travel=0;
+  if(MODE==="gasket"){ G.mode="none"; return; }
+  if(nearProbe(e.clientX,e.clientY)){ G.mode="probe"; return; }
+  if(MODE==="smith"){ G.mode="probe"; pick(e.clientX,e.clientY); return; }
+  G.mode="story";
+});
+cv.addEventListener("pointermove",function(e){
+  if(e.pointerId!==G.id) return;
+  G.travel += Math.abs(e.clientX-G.x0)+Math.abs(e.clientY-G.y0);
+  if(G.mode==="probe"){ pick(e.clientX,e.clientY); return; }
+  if(G.mode==="story"){
+    var dx=e.clientX-G.ax, dy=e.clientY-G.y0;
+    // one age per 56px of horizontal travel — a scrub, not a fling. the
+    // vertical guard stops a lazy diagonal from stealing the gesture.
+    if(Math.abs(dx)>SWIPE_PER_AGE && Math.abs(dx)>Math.abs(dy)*1.2){
+      stepAge(dx>0?1:-1); G.ax=e.clientX; G.mode="scrub";
+    }
+  }else if(G.mode==="scrub"){
+    var d2=e.clientX-G.ax;
+    if(Math.abs(d2)>SWIPE_PER_AGE){ stepAge(d2>0?1:-1); G.ax=e.clientX; }
+  }
+});
+function endP(e){
+  if(e.pointerId!==G.id) return;
+  // a tap on the chart in ATELIER is what SPACE was on the desktop.
+  if(G.mode==="story" && G.travel<TAP && age<12) stepAge(1);
+  G.mode="none"; G.id=-1;
+}
+cv.addEventListener("pointerup",endP);
+cv.addEventListener("pointercancel",endP);
+// the key still works where a key exists. nothing is taken away.
+window.addEventListener("keydown",function(e){
+  if(MODE!=="atelier") return;
+  if(e.code==="Space"||e.code==="ArrowRight"){ e.preventDefault(); stepAge(1); }
+  if(e.code==="ArrowLeft"){ e.preventDefault(); stepAge(-1); }
+});
+
+// =========================================================================
+// THE SHEET — a flex child, not an overlay. It PUSHES.
+// =========================================================================
+function openSheet(tab){
+  if(sheetOpen && sheetTab===tab){ closeSheet(); return; }
+  sheetOpen=true; sheetTab=tab;
+  $("sheet").classList.add("open"); $("app").classList.add("reading");
+  var tb=$("tabs").children;
+  for(var i=0;i<tb.length;i++) tb[i].classList.toggle("on", tb[i].dataset.t===tab);
+  var tc=document.querySelectorAll(".tabc");
+  for(var j=0;j<tc.length;j++) tc[j].classList.toggle("on", tc[j].dataset.t===tab);
+  $("p-proof").classList.toggle("on", tab!=="tune");
+  $("p-tune").classList.toggle("on", tab==="tune");
+  paint();
+}
+function closeSheet(){
+  sheetOpen=false; $("sheet").classList.remove("open"); $("app").classList.remove("reading");
+  $("p-proof").classList.remove("on"); $("p-tune").classList.remove("on");
+}
+$("p-proof").onclick=function(){ openSheet(sheetOpen&&sheetTab!=="tune"?sheetTab:"proof"); };
+$("p-tune").onclick=function(){ openSheet("tune"); };
+$("tabs").addEventListener("click",function(e){
+  var b=e.target.closest("button"); if(!b) return; openSheet(b.dataset.t);
+});
+// grab bar: drag down to dismiss. the oldest sheet gesture there is.
+(function(){
+  var g=$("grab"), y0=0, on=false;
+  g.addEventListener("pointerdown",function(e){ on=true; y0=e.clientY; g.setPointerCapture(e.pointerId); });
+  g.addEventListener("pointermove",function(e){ if(on && e.clientY-y0>34){ on=false; closeSheet(); } });
+  g.addEventListener("pointerup",function(e){ if(on && Math.abs(e.clientY-y0)<6) closeSheet(); on=false; });
+})();
+$("t-paths").addEventListener("click",function(e){
+  var p=e.target.closest(".pth"); if(!p) return;
+  if(MODE!=="atelier") setMode("atelier");
+  setAge(+p.dataset.age); paint();
+});
+
+// ---------- lesson expand ----------
+$("lesson").onclick=function(){ this.classList.toggle("open"); };
+
+// ---------- dock wiring ----------
+$("hero").addEventListener("input",function(){ onHero(+this.value); });
+$("n-prev").onclick=function(){
+  if(MODE==="atelier") stepAge(-1);
+  else if(MODE==="smith"){ lam=Math.max(0,lam-0.005); spinL=false; syncHero(); syncTune(); }
+  else setMaxKDebounced(Math.max(20,maxK-10));
+};
+$("n-next").onclick=function(){
+  if(MODE==="atelier") stepAge(1);
+  else if(MODE==="smith"){ lam=Math.min(0.5,lam+0.005); spinL=false; syncHero(); syncTune(); }
+  else setMaxKDebounced(Math.min(400,maxK+10));
+};
+$("seg").addEventListener("click",function(e){
+  var b=e.target.closest("button"); if(b) setMode(b.dataset.m);
+});
+
+// ---------- tune wiring ----------
+html("t-tune",TUNE); html("t-laws",LAWS);
+function tv(id,v){ var e=$(id+"v"); if(e) e.textContent=v; }
+function wireSlider(id,fn){ var e=$(id); if(e) e.addEventListener("input",function(){ fn(+this.value); }); }
+wireSlider("u-t",   function(v){ tTarget=v/100; tv("u-t",(v/100).toFixed(2)); });
+wireSlider("u-lam", function(v){ lam=v/1000; spinL=false; tv("u-lam",(v/1000).toFixed(3)); syncHero(); syncTune(); });
+wireSlider("u-ar",  function(v){ aR=v/100; tv("u-ar",(v/100).toFixed(2)); });
+wireSlider("u-aa",  function(v){ aA=v; tv("u-aa",v+"\u00b0"); });
+wireSlider("u-phi", function(v){ PHI=v/100; tv("u-phi",(v/100).toFixed(2)); });
+wireSlider("u-dens",function(v){ dens=v; tv("u-dens",v); });
+wireSlider("u-k",   function(v){ setMaxKDebounced(v); tv("u-k",v); });
+wireSlider("u-ns",  function(v){ if(!adaptOn){ NS=v; } tv("u-ns",adaptOn?v+" (adaptive owns it)":v); });
+function tog(id,get,setf){
+  var e=$(id); if(!e) return;
+  e.onclick=function(){ setf(!get()); syncTune(); syncHero(); paint(); };
+}
+tog("h-Z",   function(){return pZ;},   function(v){pZ=v;});
+tog("h-Y",   function(){return pY;},   function(v){pY=v;});
+tog("h-V",   function(){return pV;},   function(v){pV=v;});
+tog("h-Q",   function(){return pQ;},   function(v){pQ=v;});
+tog("h-M",   function(){return pM;},   function(v){pM=v;});
+tog("h-ang", function(){return showAng;}, function(v){showAng=v;});
+tog("h-twin",function(){return twin;}, function(v){twin=v;});
+tog("h-spin",function(){return spinL;},function(v){spinL=v;});
+tog("h-graph",function(){return showGraph;},function(v){showGraph=v;});
+tog("h-nums",function(){return showNums;}, function(v){showNums=v;});
+// K11 / Curse 26 — ONE OWNER AT A TIME. Arming manual disarms the controller.
+tog("h-adapt",function(){return adaptOn;}, function(v){ adaptOn=v; if(!v) NS=+$("u-ns").value; });
+$("h-resetB").onclick=function(){
+  lam=0; aR=0; aA=0; spinL=false; syncHero(); syncTune(); paint();
+};
+function syncTune(){
+  var m=[["h-Z",pZ],["h-Y",pY],["h-V",pV],["h-Q",pQ],["h-M",pM],["h-ang",showAng],
+         ["h-twin",twin],["h-spin",spinL],["h-graph",showGraph],["h-nums",showNums],["h-adapt",adaptOn]];
+  for(var i=0;i<m.length;i++){ var e=$(m[i][0]); if(e) e.classList.toggle("on", !!m[i][1]); }
+  var s;
+  if((s=$("u-lam"))) s.value=Math.round(lam*1000); tv("u-lam",lam.toFixed(3));
+  if((s=$("u-ar")))  s.value=Math.round(aR*100);   tv("u-ar",aR.toFixed(2));
+  if((s=$("u-aa")))  s.value=Math.round(aA);       tv("u-aa",Math.round(aA)+"\u00b0");
+  if((s=$("u-phi"))) s.value=Math.round(PHI*100);  tv("u-phi",PHI.toFixed(2));
+  if((s=$("u-dens")))s.value=dens;                 tv("u-dens",dens);
+  if((s=$("u-k")))   s.value=maxK;                 tv("u-k",maxK);
+  if((s=$("u-ns")))  { if(adaptOn) s.value=NS; tv("u-ns", adaptOn?NS+" (adaptive owns it)":NS); }
+}
+
+// ---------- the sheet repaints at 6Hz, not 60. it is prose, not an animation.
+var lastPaint=0;
+function paint(){
+  if(!sheetOpen) return;
+  if(sheetTab==="proof") html("t-proof", proofHTML());
+  else if(sheetTab==="price") html("t-price", priceHTML());
+  else if(sheetTab==="paths") html("t-paths", pathsHTML());
+}
+
+// =========================================================================
+// THE LOOP
+// =========================================================================
+var BUDGET_MS=11.0;   // chosen. 16.7 minus headroom for compositing.
+var workMs=0, lastMAPS=0, lastT=0, aN=0, aAcc=0;
+function draw(now){
+  requestAnimationFrame(draw);
+  if(needResize){ needResize=false; resize(); }
+  // reads FIRST, before this frame writes a single byte of DOM. rAF runs before
+  // layout, so last frame's writes are already settled and these two rects are
+  // free. read-after-write here would force a sync reflow every frame.
+  if(chromeDirty) measureChrome();
+  easeBand();
+  if(lastT){ var d=now-lastT; if(d>0&&d<200) frameMs+=(d-frameMs)*0.1; }
+  lastT=now;
+  var T0=performance.now();
+  MAPS=0;
+
+  if(MODE!=="gasket"){
+    t += (tTarget - t)*0.05;                       // eased morph — the age drives it
+    if(Math.abs(t-tTarget)<2e-4) t=tTarget;
+    if(spinL){ lam+=0.0009; if(lam>0.5) lam-=0.5; if(MODE==="smith") heroVal(); }
+  }
+  // trail when the twin spins, like the atelier. reduced motion gets none.
+  ctx.fillStyle = (twin && !RM) ? "rgba(5,5,8,0.30)" : "#050508";
+  ctx.fillRect(0,0,W,H);
+  if(MODE==="gasket") drawGasket(); else drawSmith();
+
+  lastMAPS=MAPS;
+  var w=performance.now()-T0;
+  workMs += (w-workMs)*0.12;
+
+  // the adaptive controller. it writes NS only while it owns it.
+  if(adaptOn && MODE!=="gasket" && ++aN>=30){
+    aN=0;
+    // two measures, because they see different halves of the cost. workMs is
+    // JS + command submission. frameMs is what the compositor actually
+    // delivered. Trusting workMs alone cranks NS to the ceiling on a device
+    // whose GPU is the bottleneck — measured in headless: work 4.9ms, frame
+    // 39.4ms, NS pinned at 220. Down on EITHER complaint, up only on BOTH.
+    if(workMs>BUDGET_MS || frameMs>22)               NS=Math.max(NS_MIN, Math.round(NS*0.88));
+    else if(workMs<BUDGET_MS*0.6 && frameMs<18.5)    NS=Math.min(NS_MAX, Math.round(NS*1.08));
+  }
+  if(sheetOpen && (sheetTab==="proof"||sheetTab==="price") && now-lastPaint>160){ lastPaint=now; paint(); }
+}
+
+// motion is opt-in. we start at the void, still.
+setMode("atelier"); setAge(0); syncTune();
+measureChrome(); bandT=bandTT; bandB=bandBT;   // snap on first paint — nothing eases in from nowhere
+requestAnimationFrame(draw);
+</script>
+</body></html>

@@ -1,0 +1,419 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Atelier v1.2 -- The Price (three deltas, two clocks each)</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#050510;color:#e0e0e0;
+  font-family:ui-monospace,monospace;font-size:11px;
+  overflow:hidden;height:100vh}
+canvas{display:block}
+
+#hud{position:fixed;top:12px;left:12px;z-index:10;pointer-events:none}
+#hud .title{font-size:12px;color:#cc44ff;margin-bottom:5px;
+  letter-spacing:0.15em;text-transform:uppercase}
+#hud .row{line-height:1.9;color:rgba(220,228,240,0.45)}
+#hud .val{color:#cc44ff;font-weight:bold}
+#hud .gold{color:#ffd700}
+#hud .dim{color:rgba(220,228,240,0.22);font-size:10px}
+#hud .open{color:#ff4444;font-weight:bold}
+#hud .shut{color:#7fff7f;font-weight:bold}
+
+#time{position:fixed;top:12px;right:12px;z-index:10;pointer-events:none;
+  text-align:right;min-width:210px}
+#time .t{font-size:10px;color:rgba(204,68,255,0.5);letter-spacing:0.18em;
+  text-transform:uppercase;margin-bottom:6px}
+#time .r{line-height:1.95;color:rgba(220,228,240,0.3);font-size:10px}
+#time .r b{color:#00d4ff;font-weight:bold;font-size:11px}
+#time .hr{height:1px;background:#1a1f2e;margin:7px 0}
+#time .cost b{color:#ffd700}
+#time .cells{margin-top:7px;font-size:9px;color:rgba(220,228,240,0.2);line-height:1.6}
+
+#log{position:fixed;top:170px;left:12px;z-index:10;
+  background:rgba(5,5,16,0.9);border:1px solid #2a1030;
+  border-radius:4px;padding:9px 12px;max-width:268px;
+  font-size:9.5px;line-height:1.65;color:rgba(220,228,240,0.42);
+  cursor:pointer;transition:opacity 0.3s}
+#log.hidden{opacity:0;pointer-events:none}
+#log .h{color:#cc44ff;letter-spacing:0.13em;text-transform:uppercase;
+  font-size:9px;margin-bottom:6px}
+#log .pi{color:#ff4444;font-weight:bold;font-size:13px}
+#log .ok{color:#7fff7f}
+#log .g{color:#ffd700}
+#log .sm{font-size:9px;color:rgba(220,228,240,0.26);margin-top:6px;
+  border-top:1px solid #1a1f2e;padding-top:6px}
+
+#master-wrap{position:fixed;bottom:56px;left:50%;
+  transform:translateX(-50%);z-index:10;
+  display:flex;flex-direction:column;align-items:center;gap:4px}
+#master-wrap .ml{font-size:9px;color:rgba(204,68,255,0.4);
+  text-transform:uppercase;letter-spacing:0.15em}
+#sl-master{width:300px;height:6px;accent-color:#cc44ff;cursor:pointer}
+#master-val{font-size:10px;color:#cc44ff;font-weight:bold;letter-spacing:0.1em}
+#ldots{display:flex;gap:5px;margin-top:2px}
+.ldot{width:7px;height:7px;border-radius:50%;
+  background:#0d1520;border:1px solid #1a2a3a;transition:all 0.3s}
+.ldot.done{background:#cc44ff;border-color:#cc44ff;box-shadow:0 0 5px rgba(204,68,255,0.5)}
+.ldot.active{background:#fff;border-color:#fff;box-shadow:0 0 8px rgba(255,255,255,0.7)}
+
+#bar{position:fixed;bottom:0;left:0;right:0;z-index:10;
+  background:rgba(5,5,16,0.97);border-top:1px solid #1a1f2e;
+  padding:6px 12px;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.btn{background:#0a0e18;color:#444;border:1px solid #1a1f2e;
+  border-radius:3px;padding:3px 9px;font-family:inherit;font-size:9px;
+  cursor:pointer;transition:all 0.15s;text-transform:uppercase;letter-spacing:0.07em}
+.btn:hover{border-color:#cc44ff;color:#cc44ff}
+.btn.active{background:#cc44ff;color:#050510;border-color:#cc44ff}
+.btn.gold{color:#ffd700;border-color:#3a2a0a}
+.btn.gold:hover,.btn.gold.active{background:#ffd700;color:#050510}
+.sep{width:1px;height:16px;background:#1a1f2e}
+.lbl{color:rgba(220,228,240,0.25);font-size:9px;
+  text-transform:uppercase;letter-spacing:0.1em}
+.sl{display:flex;align-items:center;gap:3px}
+.sl input{width:64px;accent-color:#cc44ff}
+.sv{font-size:9px;color:#cc44ff;min-width:30px}
+
+#stamp{position:fixed;bottom:56px;right:12px;z-index:10;
+  pointer-events:none;text-align:right}
+#stamp .s{font-size:8px;color:rgba(204,68,255,0.22);
+  letter-spacing:0.08em;line-height:1.85}
+#stamp .s.hot{color:rgba(255,68,68,0.3)}
+
+@media (max-width:820px){
+  #time{display:none}
+  #log{max-width:210px;top:158px}
+  #sl-master{width:200px}
+}
+</style>
+</head>
+<body>
+
+<canvas id="cv"></canvas>
+
+<div id="hud">
+  <div class="title">Atelier v1.2 &middot; the price</div>
+  <div class="row">case &nbsp;<span class="val" id="h-case">0</span><span class="dim"> / 3</span></div>
+  <div class="row">pair &nbsp;<span class="gold" id="h-pair">void</span></div>
+  <div class="row">delta &nbsp;<span class="val" id="h-delta">--</span><span class="dim"> chronological</span></div>
+  <div class="row">felt &nbsp;<span class="val" id="h-felt">--</span><span class="dim"> dev-units</span></div>
+  <div class="row">omega &nbsp;<span class="val" id="h-omega">--</span><span class="dim"> = e^(&Delta;/&tau;)</span></div>
+  <div class="row">loop &nbsp;<span id="h-loop" class="open">--</span></div>
+  <div class="row">price &nbsp;<span id="h-ceil" class="shut">--</span></div>
+</div>
+
+<div id="time">
+  <div class="t">machine time &middot; the delta</div>
+  <div class="r"><b id="t-sec">--</b> &nbsp;SI seconds</div>
+  <div class="r"><b id="t-hr">--</b> &nbsp;hours</div>
+  <div class="r"><b id="t-day">--</b> &nbsp;days</div>
+  <div class="r"><b id="t-mo">--</b> &nbsp;months</div>
+  <div class="r"><b id="t-yr">--</b> &nbsp;years</div>
+  <div class="hr"></div>
+  <div class="t">what it buys</div>
+  <div class="r cost"><b id="t-cost">--</b> &nbsp;seconds per dev-unit</div>
+  <div class="r"><span id="t-plant" style="color:rgba(255,68,68,0.75)">--</span></div>
+  <div class="cells" id="t-cells">Hatton 2023 &middot; PNAS: 17T cells at 10, 28T adult female, 36T adult male</div>
+</div>
+
+<div id="log" onclick="this.classList.toggle('hidden')">
+  <div class="h">the price is always paid</div>
+  <div id="lg-body">drag the slider. every case has a bill.</div>
+</div>
+
+<div id="master-wrap">
+  <div class="ml">reveal the deltas</div>
+  <input type="range" id="sl-master" min="0" max="100" value="0" oninput="onMaster(+this.value)">
+  <div id="master-val">VOID</div>
+  <div id="ldots"><div class="ldot"></div><div class="ldot"></div><div class="ldot"></div></div>
+</div>
+
+<div id="stamp">
+  <div class="s">Atelier v1.2 &middot; the warped ruler</div>
+  <div class="s">two clocks on a torus &middot; chi = 0</div>
+  <div class="s hot">omega transcendental &middot; the curve never closes</div>
+  <div class="s hot">case 1 price = 122% of ceiling &middot; unpayable</div>
+  <div class="s">P=12 . chi=2 . the price is always paid</div>
+</div>
+
+<div id="bar">
+  <button class="btn gold" onclick="setPreset(0)">VOID</button>
+  <button class="btn" onclick="setPreset(34)">14&rarr;21</button>
+  <button class="btn" onclick="setPreset(67)">21&rarr;31</button>
+  <button class="btn" onclick="setPreset(100)">40&rarr;60</button>
+  <div class="sep"></div>
+  <button class="btn active" id="b-true" onclick="setScale(0)">TRUE SCALE</button>
+  <button class="btn" id="b-mag" onclick="setScale(1)">MAGNIFY</button>
+  <div class="sep"></div>
+  <span class="lbl">tau</span>
+  <div class="sl">
+    <input type="range" id="sl-tau" min="60" max="200" value="110" oninput="setTau(+this.value/10)">
+    <span class="sv" id="sv-tau">11.0</span>
+  </div>
+  <div class="sep"></div>
+  <span class="lbl">speed</span>
+  <div class="sl">
+    <input type="range" id="sl-spd" min="1" max="120" value="34" oninput="SPD=+this.value/1000;document.getElementById('sv-spd').textContent=(+this.value/1000).toFixed(3)">
+    <span class="sv" id="sv-spd">0.034</span>
+  </div>
+  <div class="sep"></div>
+  <span class="lbl">trail</span>
+  <div class="sl">
+    <input type="range" id="sl-trail" min="2" max="60" value="9" oninput="FADE=+this.value/1000;document.getElementById('sv-trail').textContent=(+this.value/1000).toFixed(3)">
+    <span class="sv" id="sv-trail">0.009</span>
+  </div>
+  <div class="sep"></div>
+  <button class="btn" onclick="toggleLog()">LOG</button>
+</div>
+
+<script>
+// ATELIER v1.2 -- THE PRICE
+// Three deltas. Each is two oscillators: amplitude AND frequency = the
+// developmental rate r(age) = exp(-(age-13)/tau). Younger drives x, older
+// drives y, phase offset = the felt gap in radians.
+//
+// The pair lives on a torus (chi=0, not chi=2). The frequency ratio is
+// exp(delta/tau) -- transcendental for any rational delta/tau by
+// Lindemann-Weierstrass. So the orbit is irrational, dense, and NEVER
+// CLOSES. The branch does not return to main. Phantom days accumulate.
+// Only delta=0 closes.
+//
+// Bow to the math. Log the price. Always.
+
+var cv = document.getElementById("cv");
+var ctx = cv.getContext("2d");
+var W, H;
+var T = 0;
+var SPD = 0.034;
+var FADE = 0.009;
+var TAU = 11;
+var currentCase = -1;
+var MAG = 0;
+var logHidden = false;
+
+var T0 = 13;
+var YEAR = 31556952;              // mean Gregorian year, SI seconds
+var MONTH = 2629746;
+
+var CASES = [
+  {name:"14 -> 21",   y:14,    o:21,    sec:7*YEAR,  col:"#ff4444", bcol:"#ff69b4",
+   note:"the steepest distance on the whole board"},
+  {name:"21 -> 31.2", y:21.02, o:31.23, sec:322304703, col:"#ffd700", bcol:"#ff8844",
+   note:"measured, not modelled -- 3 leap seconds inside"},
+  {name:"40 -> 60",   y:40,    o:60,    sec:20*YEAR, col:"#00d4ff", bcol:"#44ffcc",
+   note:"twenty years that buy almost nothing"}
+];
+
+function rate(a){ return a <= T0 ? 1 : Math.exp(-(a - T0) / TAU); }
+function Dev(a){ return a <= T0 ? a : T0 + TAU * (1 - Math.exp(-(a - T0) / TAU)); }
+function felt(c){ return Dev(c.o) - Dev(c.y); }
+function omega(c){ return rate(c.y) / rate(c.o); }
+function priceInPace(c){ return Dev(c.o) / Dev(c.y); }
+// the rate the younger would have to sustain to level the gap, against the
+// biological ceiling r=1 (a child developing at full tilt). >1 is unpayable.
+function ceilingLoad(c){ return rate(c.y) * priceInPace(c); }
+function g(n, d){ return n.toLocaleString("en-US", {maximumFractionDigits: d === undefined ? 0 : d}); }
+
+function resize(){
+  W = cv.width  = window.innerWidth;
+  H = cv.height = window.innerHeight;
+  ctx.fillStyle = "#050510";
+  ctx.fillRect(0, 0, W, H);
+}
+
+// ---- the spin ----------------------------------------------------------
+var STEP = 0.006;          // parameter step per drawn segment
+var SEGS = 26;             // segments drawn per frame
+
+function drawCase(i, base){
+  var c = CASES[i];
+  var ax = rate(c.y), ay = rate(c.o);
+  var wx = ax, wy = ay;
+  var phi = felt(c);                    // developmental lag, in radians
+  var m = 1;
+  if(MAG){ m = rate(CASES[0].y) / ax; wx *= m; wy *= m; }
+  var Ax = base * ax * m, Ay = base * ay * m;
+
+  var isCur = (i === currentCase);
+  ctx.globalCompositeOperation = "screen";
+  ctx.lineWidth = isCur ? 1.15 : 0.7;
+  ctx.globalAlpha = isCur ? 0.95 : 0.42;
+
+  // plane A -- the pair as they are
+  ctx.strokeStyle = c.col;
+  ctx.beginPath();
+  for(var s = 0; s <= SEGS; s++){
+    var t = T + s * STEP;
+    var x = W/2 + Ax * Math.sin(wx * t);
+    var y = H/2 + Ay * Math.sin(wy * t + phi);
+    s === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+
+  // plane B -- the same pair with the price paid: younger runs faster
+  var pp = priceInPace(c);
+  var breach = ceilingLoad(c) > 1;
+  ctx.strokeStyle = breach ? "#ff2020" : c.bcol;
+  ctx.globalAlpha = (isCur ? (breach ? 0.62 : 0.5) : 0.2);
+  if(breach){ ctx.setLineDash([3, 3]); }
+  ctx.beginPath();
+  for(var s2 = 0; s2 <= SEGS; s2++){
+    var t2 = T + s2 * STEP;
+    var x2 = W/2 + Ax * pp * Math.sin(wx * pp * t2);
+    var y2 = H/2 + Ay * Math.sin(wy * t2);
+    s2 === 0 ? ctx.moveTo(x2, y2) : ctx.lineTo(x2, y2);
+  }
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  ctx.globalCompositeOperation = "source-over";
+  ctx.globalAlpha = 1;
+}
+
+function draw(){
+  ctx.fillStyle = "rgba(5,5,16," + FADE + ")";
+  ctx.fillRect(0, 0, W, H);
+
+  var base = Math.min(W, H) * 0.40;
+
+  // the envelope of total possible change: r = 1, a child at full rate
+  ctx.strokeStyle = "rgba(204,68,255,0.10)";
+  ctx.lineWidth = 1;
+  ctx.setLineDash([2, 6]);
+  ctx.beginPath();
+  ctx.arc(W/2, H/2, base, 0, Math.PI*2);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  for(var i = 0; i <= currentCase; i++) drawCase(i, base);
+}
+
+// ---- ui ----------------------------------------------------------------
+function hms(sec){
+  var y = Math.floor(sec/YEAR), r = sec - y*YEAR;
+  var mo = Math.floor(r/MONTH); r -= mo*MONTH;
+  var d = Math.floor(r/86400); r -= d*86400;
+  var h = Math.floor(r/3600); r -= h*3600;
+  var mi = Math.floor(r/60);
+  return y+"y "+mo+"mo "+d+"d "+h+"h "+mi+"m";
+}
+
+function updateUI(pct){
+  var el = function(id){ return document.getElementById(id); };
+  el("h-case").textContent = currentCase + 1;
+
+  if(currentCase < 0){
+    el("h-pair").textContent = "void";
+    ["h-delta","h-felt","h-omega"].forEach(function(k){ el(k).textContent = "--"; });
+    el("h-loop").textContent = "--"; el("h-loop").className = "";
+    ["t-sec","t-hr","t-day","t-mo","t-yr","t-cost"].forEach(function(k){ el(k).textContent = "--"; });
+    el("h-ceil").textContent = "--"; el("h-ceil").className = "";
+    el("t-plant").textContent = "";
+    el("master-val").textContent = "VOID";
+    el("lg-body").innerHTML = "drag the slider. every case has a bill.";
+    return;
+  }
+
+  var c = CASES[currentCase];
+  var f = felt(c), w = omega(c), pp = priceInPace(c);
+  var cost = c.sec / f;
+  var costRef = CASES[0].sec / felt(CASES[0]);
+
+  el("h-pair").textContent = c.name;
+  el("h-delta").textContent = (c.o - c.y).toFixed(3) + " y";
+  el("h-felt").textContent = f.toFixed(4);
+  el("h-omega").textContent = w.toFixed(6);
+  el("h-loop").textContent = "OPEN . never returns";
+  el("h-loop").className = "open";
+  var load = ceilingLoad(c);
+  el("h-ceil").textContent = (load*100).toFixed(1) + "% of ceiling" + (load > 1 ? " . UNPAYABLE" : "");
+  el("h-ceil").className = load > 1 ? "open" : "shut";
+
+  el("t-sec").textContent  = g(c.sec);
+  el("t-hr").textContent   = g(c.sec/3600);
+  el("t-day").textContent  = g(c.sec/86400, 1);
+  el("t-mo").textContent   = g(c.sec/MONTH, 1);
+  el("t-yr").textContent   = (c.sec/YEAR).toFixed(3);
+  el("t-cost").textContent = g(cost);
+  el("t-plant").innerHTML  = currentCase === 0
+    ? "the cheapest change on the board"
+    : (cost/costRef).toFixed(1) + "x the machine time per unit of change<br>vs 14&rarr;21 &mdash; the power plant, the cup of water";
+
+  el("master-val").textContent = currentCase === CASES.length - 1 ? "FULL" : Math.round(pct) + "%";
+
+  el("lg-body").innerHTML =
+    "<div>to level <span class='g'>" + c.name + "</span> the younger one must run at</div>" +
+    "<div class='pi'>&pi; = " + pp.toFixed(4) + "</div>" +
+    "<div>that is <b style='color:#ff4444'>+" + ((pp-1)*100).toFixed(1) + "%</b> pace, sustained. " +
+    "DunedinPACE says the only reliable way to buy that is adversity.</div>" +
+    "<div class='sm'>" + c.note + "<br>" + hms(c.sec) +
+    (currentCase === 0
+      ? "<br><span style='color:#ff4444'>that rate is " + (ceilingLoad(c)*100).toFixed(0) +
+        "% of the ceiling &mdash; faster than a child at full tilt can develop. " +
+        "the bill cannot be paid at any survivable pace, so it is not paid. it is taken.</span>"
+      : "<br>if the older one does not pay this in patience, the younger pays it in \u03C0.") + "</div>";
+
+  updateDots();
+}
+
+function updateDots(){
+  var bar = document.getElementById("ldots");
+  bar.innerHTML = "";
+  for(var i = 0; i < CASES.length; i++){
+    var d = document.createElement("div");
+    d.className = "ldot" + (i < currentCase ? " done" : "") + (i === currentCase ? " active" : "");
+    bar.appendChild(d);
+  }
+}
+
+function onMaster(v){
+  var target = Math.round((v/100) * CASES.length) - 1;
+  currentCase = Math.max(-1, Math.min(CASES.length - 1, target));
+  updateUI(v);
+}
+function setPreset(v){
+  document.getElementById("sl-master").value = v;
+  onMaster(v);
+}
+function setScale(m){
+  MAG = m;
+  document.getElementById("b-true").classList.toggle("active", m === 0);
+  document.getElementById("b-mag").classList.toggle("active", m === 1);
+  ctx.fillStyle = "#050510"; ctx.fillRect(0, 0, W, H);
+}
+function setTau(t){
+  TAU = t;
+  document.getElementById("sv-tau").textContent = t.toFixed(1);
+  ctx.fillStyle = "#050510"; ctx.fillRect(0, 0, W, H);
+  updateUI(+document.getElementById("sl-master").value);
+}
+function toggleLog(){
+  logHidden = !logHidden;
+  document.getElementById("log").classList.toggle("hidden", logHidden);
+}
+
+window.addEventListener("resize", resize);
+window.addEventListener("keydown", function(e){
+  var v = +document.getElementById("sl-master").value;
+  if(e.code === "Space" || e.code === "ArrowRight"){
+    e.preventDefault();
+    setPreset(Math.min(100, v + 34));
+  }
+  if(e.code === "ArrowLeft"){ e.preventDefault(); setPreset(Math.max(0, v - 34)); }
+  if(e.code === "KeyA") setPreset(100);
+  if(e.code === "KeyR") setPreset(0);
+  if(e.code === "KeyM") setScale(MAG ? 0 : 1);
+});
+
+function animate(){
+  requestAnimationFrame(animate);
+  T += SPD;
+  draw();
+}
+
+resize();
+updateDots();
+updateUI(0);
+animate();
+</script>
+
+</body></html>

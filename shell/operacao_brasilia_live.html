@@ -1,0 +1,230 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>OPERACAO BRASIL 2026 - BRASILIA - agent Taraz</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<style>
+  :root{
+    --bg:#050508; --gold:#ffd700; --cyan:#00d4ff; --amber:#ffb454; --dim:#6a6a82; --txt:#e8e0d0;
+    --safe:#00ff88; --nogo:#ff3355; --panel:rgba(8,8,16,.90); --edge:#20202e;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;background:var(--bg);color:var(--txt);font-family:var(--mono);overflow:hidden}
+  #map{position:fixed;inset:0;background:#05060b;cursor:crosshair}
+  .leaflet-container{background:#05060b;font-family:var(--mono)}
+  .leaflet-tile{filter:saturate(.85) brightness(.92)}
+  .leaflet-control-attribution{background:rgba(5,5,8,.75)!important;color:#55556a!important;font-size:8px!important;border-radius:5px}
+  .leaflet-control-attribution a{color:#7a7a94!important}
+
+  .pin{position:relative;width:20px;height:20px;display:flex;align-items:center;justify-content:center}
+  .pin .core{width:9px;height:9px;border-radius:50%;background:var(--cyan);box-shadow:0 0 0 2px #050508}
+  .pin .ring{position:absolute;inset:0;border-radius:50%;border:1px solid var(--cyan);opacity:.6;animation:pulse 2.4s ease-out infinite}
+  .pin.star .core{width:11px;height:11px;background:var(--gold);box-shadow:0 0 0 2px #050508,0 0 10px var(--gold)}
+  .pin.star .ring{border-color:var(--gold)}
+  .pin.secured .core{background:var(--safe)!important;box-shadow:0 0 0 2px #050508,0 0 10px var(--safe)!important}
+  .pin.secured .ring{border-color:var(--safe)}
+  @keyframes pulse{0%{transform:scale(.6);opacity:.7}100%{transform:scale(2.1);opacity:0}}
+  @media (prefers-reduced-motion:reduce){.pin .ring{animation:none;opacity:.35}}
+  .rdot{width:7px;height:7px;border-radius:50%;background:var(--cyan);box-shadow:0 0 8px var(--cyan);pointer-events:none}
+  .leaflet-tooltip.lbl{background:transparent;border:none;box-shadow:none;color:var(--cyan);font:10px var(--mono);text-shadow:0 0 5px #000,0 0 5px #000;padding:0;white-space:nowrap}
+  .leaflet-tooltip.lbl.star{color:var(--gold);font-weight:bold}
+  .leaflet-tooltip.lbl::before{display:none}
+
+  #top{position:fixed;top:8px;left:8px;right:8px;z-index:600;display:flex;gap:10px;align-items:flex-start;pointer-events:none;flex-wrap:wrap}
+  #ttlbox{background:var(--panel);border:1px solid var(--edge);border-radius:8px;padding:7px 11px;max-width:560px;pointer-events:auto}
+  #ttl{color:var(--gold);font-size:13px;letter-spacing:.05em}
+  #sub{color:var(--dim);font-size:9.5px;margin-top:2px;line-height:1.4}
+  #hint{color:var(--cyan);font-size:9px;margin-top:3px}
+  #score{margin-left:auto;background:var(--panel);border:1px solid var(--edge);border-radius:8px;padding:6px 9px;font-size:9px;color:var(--dim);text-align:right;pointer-events:auto}
+  #score b{color:var(--safe);font-size:12px}
+
+  #info{position:fixed;top:74px;right:8px;z-index:600;width:260px;background:var(--panel);border:1px solid var(--edge);border-radius:8px;padding:10px 12px;display:none}
+  #info.show{display:block}
+  #info .nm{color:var(--gold);font-size:12px;font-weight:bold;margin-bottom:2px;line-height:1.3}
+  #info .ar{color:var(--amber);font-size:9px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px}
+  #info .ds{color:var(--txt);font-size:10.5px;line-height:1.55}
+  #info .trap{margin-top:7px;background:rgba(255,51,85,.09);border:1px solid rgba(255,51,85,.45);border-radius:6px;padding:5px 7px;color:#ff8fa3;font-size:9.5px;line-height:1.5}
+  #info .meta{color:var(--dim);font-size:9px;margin-top:7px;border-top:1px solid var(--edge);padding-top:6px;line-height:1.5}
+  #info .row{display:flex;gap:6px;margin-top:8px}
+  #info .row button,#info .row a{flex:1;background:#14141f;border:1px solid #2a2a3a;border-radius:6px;color:var(--cyan);font:9.5px var(--mono);padding:7px 6px;cursor:pointer;text-align:center;text-decoration:none}
+  #info .row button.sec{border-color:var(--safe);color:var(--safe)}
+  #info .row button.done{background:rgba(0,255,136,.10)}
+
+  #tools{position:fixed;bottom:0;left:0;right:0;z-index:600;background:rgba(8,8,16,.95);border-top:1px solid var(--edge);padding:8px 10px;display:flex;gap:9px;align-items:center;flex-wrap:wrap;justify-content:center}
+  .tool{background:#14141f;border:1px solid #2a2a3a;border-radius:6px;color:var(--cyan);font:11px var(--mono);padding:7px 11px;cursor:pointer;display:flex;align-items:center;gap:6px;user-select:none}
+  .tool:hover{border-color:var(--cyan)}
+  .tool.safe.on{border-color:var(--safe);color:var(--safe);border-width:2px;padding:6px 10px}
+  .tool.nogo.on{border-color:var(--nogo);color:var(--nogo);border-width:2px;padding:6px 10px}
+  .tool.on{border-width:2px;padding:6px 10px}
+  .dot{width:9px;height:9px;border-radius:50%}
+  .dot.s{background:var(--safe)} .dot.n{background:var(--nogo)}
+  .sep{width:1px;height:22px;background:var(--edge)}
+  #brushsz{display:flex;flex-direction:column;gap:1px;min-width:118px}
+  #brushsz label{font-size:8px;color:var(--dim);text-transform:uppercase}
+  #brushsz .v{font-size:8px;color:var(--gold)}
+  input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:4px;background:#2a2a3a;border-radius:3px;outline:none}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--cyan);cursor:pointer;border:2px solid #050508}
+  input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:var(--cyan);cursor:pointer;border:2px solid #050508}
+
+  #brief{position:fixed;bottom:58px;left:8px;z-index:600;max-width:340px;background:var(--panel);border:1px solid #3a2a1a;border-radius:8px;padding:8px 11px;font-size:9px;color:#c7894a;line-height:1.6;display:none}
+  #brief.show{display:block}
+  #brief b{color:var(--gold)} #brief .safe{color:var(--safe)} #brief .nogo{color:var(--nogo)}
+  #brief .traps{margin-top:6px;border-top:1px solid var(--edge);padding-top:6px;color:#ff8fa3}
+  #briefbtn{position:fixed;bottom:58px;right:8px;z-index:600}
+  #briefbtn button{background:#14141f;border:1px solid #3a2a1a;border-radius:6px;color:#c7894a;font:9px var(--mono);padding:7px 11px;cursor:pointer}
+  #warn{position:fixed;top:74px;left:8px;z-index:590;background:rgba(255,180,84,.10);border:1px solid rgba(255,180,84,.4);border-radius:7px;padding:6px 9px;font-size:8.5px;color:var(--amber);max-width:250px;line-height:1.5;display:none}
+  .stamp{position:fixed;bottom:60px;left:50%;transform:translateX(-50%);z-index:585;font-size:8px;color:rgba(0,212,255,.28);letter-spacing:.08em;text-align:center;pointer-events:none;white-space:nowrap}
+  @media(max-width:640px){ .stamp{display:none} #brief{max-width:calc(100vw - 16px)} #info{width:calc(100vw - 16px)} #warn{display:none!important} }
+</style>
+</head>
+<body>
+<div id="map"></div>
+<div id="top">
+  <div id="ttlbox">
+    <div id="ttl">OPERAÇÃO BRASIL 2026 - BRASÍLIA theater - agent Taraz</div>
+    <div id="sub">the racionalismo utópico on the real streets, 12-15 July - the Eixo Monumental + Asa Sul. every pin is Niemeyer & Costa. tap a node for intel, then paint the blocks you know cold.</div>
+    <div id="hint">drag to pan · scroll / pinch to zoom · tap a node for intel · pick a brush below to paint your knowledge</div>
+  </div>
+  <div id="score">TARGETS SECURED · <b id="scv">0</b>/<span id="sct">0</span></div>
+</div>
+<div id="warn"></div>
+<div id="info"></div>
+<div id="brief">
+  <b>the analyst's brief:</b><br>
+  <b>1</b> tap any glowing node → full architectural intel + <b>SECURE</b> it once Taraz has it.<br>
+  <b>2</b> <span class="safe">SAFE ZONE</span> brush → paint the blocks you know cold.<br>
+  <b>3</b> <span class="nogo">NO-GO</span> brush → paint zones you don't know a single street. One block off and no shoes.<br>
+  <b>4</b> the cyan dashed line is the dossier's day-order path · gold pins = must-sees.<br>
+  <b>5</b> ERASE removes strokes · SAVE keeps paint + secured targets in this browser.
+  <div class="traps"><b>⚠ intel the plan missed (Brasília):</b><br>
+  · <b>Mon 13 Jul is Day 5</b> — Itamaraty <u>and</u> Memorial JK are <b>closed Mondays</b>. Re-time both to Wed Day 7.<br>
+  · <b>Torre de TV mirante</b> reported closed for works — verify before the Uber; the exterior still delivers.<br>
+  · <b>Igrejinha de Fátima</b> opens mornings/evenings only — catch it early on the SQS 308 walk.<br>
+  · honesty: coords + hours are real (Google Places); the zones are YOUR lived knowledge, not official safety data. Trust your gut, stay safe safe safe.</div>
+</div>
+<div id="briefbtn"><button id="bb">the brief ▸</button></div>
+<div class="stamp">OPERAÇÃO BRASIL · MNet · for agent Taraz · one wrong turn and no shoes · safe safe safe</div>
+<div id="tools">
+  <div class="tool safe" id="t-safe"><span class="dot s"></span>safe zone</div>
+  <div class="tool nogo" id="t-nogo"><span class="dot n"></span>no-go</div>
+  <div class="tool" id="t-erase">◇ erase</div>
+  <div class="sep"></div>
+  <div id="brushsz"><label>brush radius · <span class="v" id="bsv">250 m</span></label><input id="s-brush" type="range" min="80" max="1000" step="10" value="250"></div>
+  <div class="sep"></div>
+  <div class="tool" id="t-route">route: on</div>
+  <div class="tool" id="t-save">⬇ save</div>
+  <div class="tool" id="t-clear">✕ clear paint</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+(function(){
+  if(typeof L==='undefined'||!L.map){ document.getElementById('warn').style.display='block';
+    document.getElementById('warn').textContent='Map engine did not load (offline or blocked). Open this file in a browser with internet for the live streets.'; return; }
+  const C='#00d4ff',SAFE='#00ff88',NOGO='#ff3355';
+  const PID='https://www.google.com/maps/search/?api=1&query=x&query_place_id=';
+  const CITYKEY='bsb';
+  const DATA=[
+    {n:'Congresso Nacional',a:'Praça dos 3 Poderes',lat:-15.7997119,lng:-47.8641629,arch:'Oscar Niemeyer · 1960',day:5,star:1,pid:'ChIJuXVjvzg7WpMRP5_RrPrKtgU',h:'Mon–Fri 08:00–17:00 (free tour)',d:'The dome + the bowl + the twin towers — the icon of the entire Plano Piloto. The free guided tour gets you inside.',trap:'Bring photo ID. English tours are less frequent than PT — they hand you an English printout to follow.'},
+    {n:'Catedral de Brasília',a:'Esplanada dos Ministérios',lat:-15.7982965,lng:-47.8755467,arch:'Oscar Niemeyer · 1970',day:5,star:1,pid:'ChIJkZofTCI7WpMRGY1p6TGy-1U',h:'Daily · daytime',d:'16 hyperboloid concrete ribs reaching up; light is the whole building. Niemeyer at the absolute peak.',trap:'Shoulders & knees covered to enter. Come back after dark for the exterior.'},
+    {n:'Palácio Itamaraty',a:'Bloco H · Esplanada',lat:-15.8006786,lng:-47.8672965,arch:'Oscar Niemeyer · 1970',day:5,star:1,pid:'ChIJB1dBAh47WpMRNcjExvu1kpY',h:'Tue–Sun 08:30–18:00',d:'The glass box, the asymmetric arches, the water mirror, the greenery-filled in-between spaces — Brazilian modern at its most refined.',trap:'⚠ CLOSED MONDAYS — and dossier Day 5 IS a Monday. Move it to Day 7 (Wed) or you hit a locked door.'},
+    {n:'Palácio do Planalto',a:'Praça dos 3 Poderes',lat:-15.7990489,lng:-47.8607689,arch:'Oscar Niemeyer · 1960',day:5,star:1,pid:'ChIJ0-cd45owWpMREMqBWW9axMc',h:'Mon–Fri 09:00–18:00',d:'The long ramp, the slender colonnade, a reflecting pond as the only thing between you and the President. Open Mondays — keep it on Day 5.'},
+    {n:'Memorial JK',a:'Eixo Monumental',lat:-15.7842063,lng:-47.9133544,arch:'Oscar Niemeyer · 1981',day:5,star:1,pid:'ChIJsaNDbnw6WpMRBWuFQRuyCiM',h:'Tue–Sun 09:00–18:00',d:'A low, earthbound mausoleum melting into the ground, one slender column rising with JK on top. The subterranean entrance is the masterstroke.',trap:'⚠ CLOSED MONDAYS + CASH ONLY R$10 — Day 5 is Monday. Re-time to Day 7.'},
+    {n:'Torre de TV',a:'Eixo Monumental',lat:-15.7906572,lng:-47.8929154,arch:'Niemeyer / Costa axis',day:7,star:1,pid:'ChIJ77dWhao7WpMRs-nM_kni9gs',h:'Mirante · free',d:'Read the bird from above: the perfect intersection of the Monumental and Rodoviário axes, the whole plan in one glance.',trap:'⚠ Mirante reported CLOSED for works in recent visits — verify before the Uber. The exterior + fair below still deliver.'},
+    {n:'Superquadra SQS 308',a:'Asa Sul',lat:-15.8143058,lng:-47.9054365,arch:'Costa + Burle Marx',day:6,star:1,pid:'ChIJWYOAFrc6WpMRhP_8SjqbkRI',h:'Open · residential',d:'The habitational cell — cobogó, pilotis, human-scale utopian urbanism you actually walk through. The idea of Brasília, lived.',trap:'It is a living neighborhood — walk it slow and quiet.'},
+    {n:'Igrejinha de Fátima',a:'Asa Sul · SQS 307/308',lat:-15.8139836,lng:-47.9037236,arch:'Niemeyer + Athos Bulcão · 1958',day:6,star:0,pid:'ChIJdekavrc6WpMREmtgMMMB0dU',h:'Mornings & evenings only',d:'The FIRST church of Brasília — small, wrapped in blue Athos Bulcão tiles, nature meeting the sacred.',trap:'Open roughly 06:30–08:00 & 18:30–20:00 only — catch it early on the SQS walk.'}
+   ];
+
+  // in-memory store with localStorage fallback (preview-safe)
+  const store={ get(k){ try{return localStorage.getItem(k);}catch(e){return this._m&&this._m[k]||null;} },
+                set(k,v){ try{localStorage.setItem(k,v);}catch(e){ (this._m=this._m||{})[k]=v; } }, _m:{} };
+
+  const map=L.map('map',{zoomControl:false,attributionControl:true,worldCopyJump:false}).setView([DATA[0].lat,DATA[0].lng],13);
+  const TRANSPARENT='data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==';
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{
+    subdomains:'abcd',maxZoom:20,detectRetina:true,errorTileUrl:TRANSPARENT,
+    attribution:'© OpenStreetMap · © CARTO · targets: Google Places'
+  }).addTo(map);
+
+  // deterministic stacking: paint < route < markers
+  map.createPane('paintPane'); map.getPane('paintPane').style.zIndex=380; map.getPane('paintPane').style.pointerEvents='none';
+  map.createPane('routePane'); map.getPane('routePane').style.zIndex=420; map.getPane('routePane').style.pointerEvents='none';
+
+  let routeOn=true, brush=null, brushR=250, painting=false, anim=0;
+  let markers=[], routeDot=null, routeOrder=[];
+  const paintLayer=L.layerGroup().addTo(map), routeLayer=L.layerGroup().addTo(map);
+  let strokes=[], secured={};
+  try{const s=JSON.parse(store.get('taraz_'+CITYKEY+'_paint'));if(Array.isArray(s))strokes=s;}catch(e){}
+  try{const s=JSON.parse(store.get('taraz_'+CITYKEY+'_secured'));if(s&&typeof s==='object')secured=s;}catch(e){}
+
+  const bounds=L.latLngBounds(DATA.map(p=>[p.lat,p.lng]));
+
+  function drawPaint(){ paintLayer.clearLayers();
+    strokes.forEach(s=>{ const col=s.type==='safe'?SAFE:NOGO;
+      L.circle([s.lat,s.lng],{pane:'paintPane',radius:s.r,stroke:false,fillColor:col,fillOpacity:.14,interactive:false}).addTo(paintLayer); }); }
+
+  function render(){
+    markers.forEach(m=>map.removeLayer(m)); markers=[];
+    routeLayer.clearLayers(); if(routeDot){map.removeLayer(routeDot);routeDot=null;}
+    drawPaint();
+    if(routeOn){
+      routeOrder=DATA.map((p,i)=>({p,i})).sort((a,b)=>a.p.day-b.p.day).map(o=>[o.p.lat,o.p.lng]);
+      L.polyline(routeOrder,{pane:'routePane',color:C,weight:1.5,opacity:.5,dashArray:'5 6'}).addTo(routeLayer);
+      routeDot=L.marker(routeOrder[0],{icon:L.divIcon({className:'',html:'<div class="rdot"></div>',iconSize:[7,7],iconAnchor:[3,3]}),interactive:false,keyboard:false}).addTo(map);
+    }
+    DATA.forEach(p=>{ const sec=!!secured[p.n];
+      const cls='pin'+(p.star?' star':'')+(sec?' secured':'');
+      const icon=L.divIcon({className:'',html:'<div class="'+cls+'"><span class="ring"></span><span class="core"></span></div>',iconSize:[20,20],iconAnchor:[10,10]});
+      const m=L.marker([p.lat,p.lng],{icon,title:p.n}).addTo(map);
+      m.bindTooltip(p.n,{permanent:p.star===1,direction:'top',offset:[0,-9],className:'lbl'+(p.star?' star':'')});
+      m.on('click',()=>showInfo(p)); markers.push(m); });
+    updateScore();
+  }
+
+  function paintAt(latlng){
+    if(brush==='erase'){ strokes=strokes.filter(s=>map.distance([s.lat,s.lng],latlng)>(s.r+brushR)*0.4); }
+    else{ const last=strokes[strokes.length-1];
+      if(last&&last.type===brush&&map.distance([last.lat,last.lng],latlng)<brushR*0.35) return;
+      strokes.push({lat:latlng.lat,lng:latlng.lng,r:brushR,type:brush}); }
+    drawPaint();
+  }
+  const el=map.getContainer();
+  el.addEventListener('pointerdown',e=>{ if(!brush)return; painting=true; try{el.setPointerCapture(e.pointerId);}catch(x){} paintAt(map.mouseEventToLatLng(e)); });
+  el.addEventListener('pointermove',e=>{ if(!brush||!painting)return; paintAt(map.mouseEventToLatLng(e)); });
+  window.addEventListener('pointerup',()=>{painting=false;});
+
+  const info=document.getElementById('info');
+  function showInfo(p){ const sec=!!secured[p.n]; const star=p.star?' · ★ must-see':'';
+    info.classList.add('show');
+    info.innerHTML='<div class="nm">'+p.n+'</div><div class="ar">'+p.a+'</div><div class="ds">'+p.d+'</div>'+
+      (p.trap?'<div class="trap">'+p.trap+'</div>':'')+
+      '<div class="meta">'+p.arch+'<br>Day '+p.day+star+' · '+p.h+'</div>'+
+      '<div class="row"><button class="sec'+(sec?' done':'')+'" id="secbtn">'+(sec?'✓ secured':'secure target')+'</button>'+
+      '<a target="_blank" rel="noopener" href="'+PID+p.pid+'">recon ▸</a></div>';
+    document.getElementById('secbtn').onclick=()=>{ if(secured[p.n])delete secured[p.n]; else secured[p.n]=1; render(); showInfo(p); };
+    map.panTo([p.lat,p.lng]);
+  }
+  map.on('click',()=>{ if(!brush) info.classList.remove('show'); });
+  function updateScore(){ document.getElementById('scv').textContent=DATA.filter(p=>secured[p.n]).length; document.getElementById('sct').textContent=DATA.length; }
+
+  function setBrush(b){ brush=b; ['safe','nogo','erase'].forEach(x=>document.getElementById('t-'+x).classList.toggle('on',b===x));
+    if(b){ map.dragging.disable(); el.style.cursor='none'; } else { map.dragging.enable(); el.style.cursor='crosshair'; } }
+  document.getElementById('t-safe').onclick=()=>setBrush(brush==='safe'?null:'safe');
+  document.getElementById('t-nogo').onclick=()=>setBrush(brush==='nogo'?null:'nogo');
+  document.getElementById('t-erase').onclick=()=>setBrush(brush==='erase'?null:'erase');
+  document.getElementById('s-brush').addEventListener('input',e=>{brushR=+e.target.value;document.getElementById('bsv').textContent=brushR+' m';});
+  document.getElementById('t-route').onclick=function(){ routeOn=!routeOn; this.textContent='route: '+(routeOn?'on':'off'); this.style.color=routeOn?C:'#6a6a82'; render(); };
+  document.getElementById('t-clear').onclick=()=>{ strokes=[]; drawPaint(); };
+  document.getElementById('t-save').onclick=function(){ store.set('taraz_'+CITYKEY+'_paint',JSON.stringify(strokes)); store.set('taraz_'+CITYKEY+'_secured',JSON.stringify(secured));
+    const o=this.textContent; this.textContent='saved ✓'; setTimeout(()=>this.textContent=o,1200); };
+  document.getElementById('bb').onclick=function(){ const b=document.getElementById('brief'); b.classList.toggle('show'); this.textContent=b.classList.contains('show')?'the brief ▾':'the brief ▸'; };
+
+  const reduce=window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+  function tick(){ if(routeDot&&!reduce&&routeOrder.length>1){ const seg=routeOrder.length-1; anim=(anim+0.0016)%1; const f=anim*seg; const i=Math.min(seg-1,Math.floor(f)); const t=f-i; const a=routeOrder[i],b=routeOrder[i+1]; routeDot.setLatLng([a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t]); } requestAnimationFrame(tick); }
+
+  map.fitBounds(bounds,{padding:[70,70]});
+  render(); tick();
+})();
+</script>
+</body></html>

@@ -1,0 +1,213 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>Showerium v1.0 -- mama's bitchy thermo, one shower</title>
+<style>
+  :root{
+    --bg:#050508; --gold:#ffd700; --cyan:#00d4ff; --pink:#ff69b4; --green:#00ffd5;
+    --esp:#c7894a; --red:#ff5470; --amber:#ffb454; --dim:#6a6a82; --txt:#e8e0d0;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{background:var(--bg);color:var(--txt);font-family:var(--mono);width:100%;min-height:100%;overflow-x:hidden}
+  body{padding:10px 10px 24px;max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:10px}
+  .card{background:rgba(8,8,16,0.85);border:1px solid #20202e;border-radius:10px;padding:10px 12px}
+  #ttl{color:var(--gold);font-size:14px;letter-spacing:0.04em}
+  #sub{color:var(--dim);font-size:10px;margin-top:2px;line-height:1.4}
+  #note{color:var(--esp);font-size:10px;margin-top:5px;line-height:1.4}
+  #note b{color:var(--gold)}
+  #stats{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+  .mc{background:rgba(8,8,16,0.9);border:1px solid #20202e;border-radius:8px;padding:7px 9px}
+  .mc .lab{font-size:8px;color:var(--dim);text-transform:uppercase;letter-spacing:0.06em}
+  .mc .val{font-size:17px;font-weight:bold;color:var(--gold);margin-top:1px}
+  #boardwrap{width:100%;background:rgba(8,8,16,0.6);border:1px solid #20202e;border-radius:10px;overflow:hidden}
+  #cv{display:block;width:100%;height:auto}
+  .sliders{display:flex;flex-direction:column;gap:13px}
+  .srow{display:grid;grid-template-columns:1fr auto;gap:3px 10px;align-items:center}
+  .srow label{font-size:11.5px;color:var(--dim)}
+  .srow .v{font-size:12px;color:var(--gold);font-weight:bold;text-align:right;min-width:54px}
+  .srow .hint{grid-column:1 / -1;font-size:10px;color:#55556a;margin-top:-1px}
+  .srow input[type=range]{grid-column:1 / -1;appearance:none;-webkit-appearance:none;width:100%;height:24px;background:transparent;outline:none;cursor:pointer}
+  .srow input[type=range]::-webkit-slider-runnable-track{height:5px;background:#2a2a3a;border-radius:4px}
+  .srow input[type=range]::-moz-range-track{height:5px;background:#2a2a3a;border-radius:4px}
+  .srow input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;margin-top:-9px;width:22px;height:22px;border-radius:50%;background:var(--gold);border:3px solid #050508;cursor:pointer}
+  .srow input[type=range]::-moz-range-thumb{width:22px;height:22px;border:3px solid #050508;border-radius:50%;background:var(--gold);cursor:pointer}
+  .btns{display:flex;gap:8px;flex-wrap:wrap}
+  button{flex:1;min-width:74px;background:#14141f;border:1px solid #2a2a3a;border-radius:8px;color:var(--gold);
+    font:12px var(--mono);padding:10px 6px;cursor:pointer;transition:all .12s}
+  button:hover{border-color:var(--gold)} button:active{transform:scale(0.98)}
+  button.cyan{color:var(--cyan);border-color:#1e4a55}
+  .wip{background:rgba(8,8,16,0.85);border:1px solid #c7894a;border-radius:10px;padding:8px 11px;font-size:10px;color:var(--esp);line-height:1.5}
+  .wip b{color:var(--gold)}
+  .stamp{text-align:center;font-size:8px;color:rgba(0,212,255,0.3);letter-spacing:0.08em;line-height:1.7}
+  @media (min-width:640px){
+    body{max-width:900px;padding:14px 16px 28px;gap:12px}
+    #cv{max-height:420px;object-fit:contain}
+    .sliders{display:grid;grid-template-columns:1fr 1fr;gap:10px 16px}
+    .srow{background:rgba(12,12,22,0.5);border:1px solid #1a1a28;border-radius:8px;padding:9px 12px 11px}
+    .srow:hover{border-color:#2a2a3a}
+    .srow input[type=range]{height:20px;margin-top:4px}
+    .srow input[type=range]::-webkit-slider-thumb{margin-top:-6px;width:16px;height:16px;border-width:2px;box-shadow:0 0 0 0 rgba(255,215,0,0);transition:box-shadow .14s}
+    .srow input[type=range]:hover::-webkit-slider-thumb{box-shadow:0 0 9px 1px rgba(255,215,0,0.55)}
+    .srow input[type=range]::-moz-range-thumb{width:16px;height:16px;border-width:2px}
+  }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <div id="ttl">SHOWERIUM v1.0 — mama's bitchy thermo · one shower</div>
+  <div id="sub">step 1 of the journey: just ONE shower. how much raw power does it take to heat moving water? mama nature charges by the delta, and water fights every joule.</div>
+  <div id="note">the whole law on one line: <b>power = flow × ΔT × 4.186</b> kJ per litre per °C. water's specific heat is brutal — that's why heating it is the expensive part, not moving it.</div>
+</div>
+
+<div id="stats">
+  <div class="mc"><div class="lab">heating power</div><div class="val" id="s-kw" style="color:var(--cyan)">−</div></div>
+  <div class="mc"><div class="lab">= kettles at once</div><div class="val" id="s-ket">−</div></div>
+  <div class="mc"><div class="lab">10-min energy</div><div class="val" id="s-kwh" style="color:var(--green)">−</div></div>
+</div>
+
+<div id="boardwrap"><canvas id="cv" width="760" height="360"></canvas></div>
+
+<div class="card sliders">
+  <div class="srow"><label>flow rate</label><span class="v" id="fv">11 L/min</span>
+    <input id="flow" type="range" min="3" max="60" step="0.5" value="11">
+    <div class="hint">aerated head ≈ 6 · normal ≈ 9–12 · rainfall ≈ 11–15 · NYC waterfall ≈ 40–60</div></div>
+  <div class="srow"><label>cold inlet temp (T_in)</label><span class="v" id="tiv">16 °C</span>
+    <input id="tin" type="range" min="2" max="25" step="1" value="16">
+    <div class="hint">Greece ≈ 16 · Germany ≈ 9 · Sweden winter ≈ 4 · the colder the inlet, the bigger the bill</div></div>
+  <div class="srow"><label>shower temp (T_out)</label><span class="v" id="tov">40 °C</span>
+    <input id="tout" type="range" min="30" max="45" step="1" value="40">
+    <div class="hint">warm ≈ 38 · hot ≈ 40 · very hot ≈ 42 · scald risk above 43</div></div>
+</div>
+
+<div class="btns">
+  <button id="b-greek" class="cyan">Vlad's Greek shower</button>
+  <button id="b-low">low-flow head</button>
+  <button id="b-power">power shower</button>
+  <button id="b-nyc">NYC waterfall</button>
+</div>
+
+<div class="wip">
+  <b>honesty (K1–K3) — mama thermo's receipts:</b><br>
+  <b>K1</b> exact textbook law: P = ṁ·c·ΔT, with c = 4.186 kJ/kg·°C and 1 L ≈ 1 kg. This is the <i>heating</i> power — the thermal duty to lift the water from inlet to shower temp. Real and exact.<br>
+  <b>K2</b> this is the power the water carries away, ignoring pipe/heater losses (real heaters are ~90–99% efficient for electric, less for gas) and the pump work to pressurise (tiny next to the heat). The heat is the whole story.<br>
+  <b>K3</b> "= kettles" uses a 3 kW kettle. The stamp is a signature, not a P=12 claim — no twelve of anything in a shower.
+</div>
+
+<div class="stamp">SHOWERIUM v1.0 · genesis kernel · MNet palette · P=12 · χ=2 · always</div>
+
+<script>
+// SHOWERIUM v1.0 -- single-shower thermodynamics. P = flow * c * dT, verified before ship.
+// Bow to the boskis: Genesis kernel, MNet palette, honesty caveats. Stamp is a signature.
+(function(){
+  var cv=document.getElementById('cv'), ctx=cv.getContext('2d');
+  var CW=760, CH=360;
+  function fit(){ var dpr=Math.min(window.devicePixelRatio||1,2); cv.width=CW*dpr; cv.height=CH*dpr; ctx.setTransform(dpr,0,0,dpr,0,0); }
+  fit(); addEventListener('resize',fit);
+
+  var GOLD='#ffd700', CYAN='#00d4ff', PINK='#ff69b4', GREEN='#00ffd5', RED='#ff5470', AMBER='#ffb454', DIM='#6a6a82';
+  var TWO=Math.PI*2, T=0, C_WATER=4.186, KETTLE=3.0;
+
+  var P={ flow:11, tin:16, tout:40 };
+  function kW(){ return (P.flow/60)*C_WATER*(P.tout-P.tin); }
+
+  // animated droplets
+  var drops=[];
+  function seed(){ drops=[]; for(var i=0;i<70;i++) drops.push({x:Math.random(),y:Math.random(),s:0.4+Math.random()*0.6}); }
+  seed();
+
+  function tempColor(dT){
+    // colder inlet / bigger dT -> hotter colour (more energy). map dT 10..40 -> cyan..red
+    var t=Math.max(0,Math.min(1,(dT-10)/30));
+    var r=Math.round(0+t*255), g=Math.round(212-t*150), b=Math.round(255-t*200);
+    return 'rgb('+r+','+g+','+b+')';
+  }
+
+  function draw(){
+    var k=kW(), dT=P.tout-P.tin;
+    ctx.fillStyle='#0a0a12'; ctx.fillRect(0,0,CW,CH);
+
+    // LEFT: the shower — head, falling water, figure silhouette
+    var sx=CW*0.26, headY=40;
+    // shower arm + head
+    ctx.strokeStyle=DIM; ctx.lineWidth=3;
+    ctx.beginPath(); ctx.moveTo(sx,18); ctx.lineTo(sx,headY); ctx.stroke();
+    ctx.fillStyle='#9aa'; ctx.beginPath(); ctx.ellipse(sx,headY,34,7,0,0,TWO); ctx.fill();
+
+    // falling water — density & colour track flow & dT
+    var flowN=Math.max(0,Math.min(1,(P.flow-3)/57));
+    var nd=Math.round(20+flowN*90);
+    var col=tempColor(dT);
+    for(var i=0;i<nd;i++){
+      var d=drops[i%drops.length];
+      var x=sx-30+((d.x*60)+ (i*7))%60;
+      var y=headY+8 + ((T*(2+flowN*5)*d.s + d.y*260))% (CH-headY-60);
+      ctx.strokeStyle=col; ctx.globalAlpha=0.25+0.45*flowN; ctx.lineWidth=1+flowN;
+      ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x,y+8+flowN*8); ctx.stroke();
+    }
+    ctx.globalAlpha=1;
+    // floor pool
+    ctx.fillStyle=col; ctx.globalAlpha=0.18;
+    ctx.beginPath(); ctx.ellipse(sx,CH-34,60,12,0,0,TWO); ctx.fill(); ctx.globalAlpha=1;
+    // labels
+    ctx.fillStyle=CYAN; ctx.font='10px ui-monospace,Consolas,monospace'; ctx.textAlign='center';
+    ctx.fillText(P.tin.toFixed(0)+'°C in', sx-70, CH-60);
+    ctx.fillStyle=col; ctx.fillText('→ '+P.tout.toFixed(0)+'°C', sx, headY-16);
+    ctx.fillStyle=GOLD; ctx.fillText(P.flow.toFixed(1)+' L/min', sx+74, CH-60);
+
+    // RIGHT: the power gauge — a vertical bar that fills, with kettle ticks
+    var gx=CW*0.62, gw=Math.min(CW*0.30,260), gy=44, gh=CH-100;
+    ctx.strokeStyle='#2a2a3a'; ctx.lineWidth=1; ctx.strokeRect(gx,gy,gw,gh);
+    // scale: 0..40 kW
+    var maxKW=40;
+    var fillFrac=Math.max(0,Math.min(1,k/maxKW));
+    var fillH=gh*fillFrac;
+    var gcol = k>30?RED : k>18?AMBER : CYAN;
+    ctx.fillStyle=gcol; ctx.globalAlpha=0.85;
+    ctx.fillRect(gx+2, gy+gh-fillH+0, gw-4, fillH); ctx.globalAlpha=1;
+    // kettle tick marks every 3 kW
+    ctx.strokeStyle='rgba(255,255,255,0.12)'; ctx.lineWidth=1;
+    ctx.fillStyle=DIM; ctx.font='8px ui-monospace,Consolas,monospace'; ctx.textAlign='left';
+    for(var kk=0;kk<=maxKW;kk+=6){
+      var yy=gy+gh-gh*(kk/maxKW);
+      ctx.beginPath(); ctx.moveTo(gx,yy); ctx.lineTo(gx+gw,yy); ctx.stroke();
+      ctx.fillText(kk+'kW', gx+gw+4, yy+3);
+    }
+    // big number on the bar
+    ctx.fillStyle=GOLD; ctx.font='bold 22px ui-monospace,Consolas,monospace'; ctx.textAlign='center';
+    ctx.fillText(k.toFixed(1)+' kW', gx+gw/2, gy-14);
+    // kettle equivalent caption
+    ctx.fillStyle=gcol; ctx.font='11px ui-monospace,Consolas,monospace';
+    ctx.fillText('= '+(k/KETTLE).toFixed(1)+' kettles boiling at once', gx+gw/2, gy+gh+22);
+
+    // stats
+    document.getElementById('s-kw').textContent=k.toFixed(1)+' kW';
+    document.getElementById('s-ket').textContent=(k/KETTLE).toFixed(1)+'×';
+    document.getElementById('s-kwh').textContent=(k*(10/60)).toFixed(2)+' kWh';
+  }
+
+  function loop(){ T+=1; draw(); requestAnimationFrame(loop); }
+
+  function bind(id,key,fmt){ var el=document.getElementById(id),
+    o=document.getElementById(id==='flow'?'fv':id==='tin'?'tiv':'tov');
+    el.addEventListener('input',function(){ P[key]=+el.value; o.textContent=fmt(P[key]); }); }
+  bind('flow','flow',function(v){return v.toFixed(1)+' L/min';});
+  bind('tin','tin',function(v){return v.toFixed(0)+' °C';});
+  bind('tout','tout',function(v){return v.toFixed(0)+' °C';});
+
+  function setAll(f,ti,to){
+    P.flow=f; P.tin=ti; P.tout=to;
+    document.getElementById('flow').value=f; document.getElementById('fv').textContent=f.toFixed(1)+' L/min';
+    document.getElementById('tin').value=ti; document.getElementById('tiv').textContent=ti.toFixed(0)+' °C';
+    document.getElementById('tout').value=to; document.getElementById('tov').textContent=to.toFixed(0)+' °C';
+  }
+  document.getElementById('b-greek').onclick=function(){ setAll(11,16,40); };
+  document.getElementById('b-low').onclick=function(){ setAll(6,16,40); };
+  document.getElementById('b-power').onclick=function(){ setAll(15,16,41); };
+  document.getElementById('b-nyc').onclick=function(){ setAll(60,12,41); };
+
+  loop();
+})();
+</script>
+</body></html>

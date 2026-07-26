@@ -1,0 +1,332 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Transmutation Volume v1.1 · Baudin Atelier</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#050510;color:#e0e0e0;
+  font-family:ui-monospace,"SFMono-Regular",monospace;font-size:11px;
+  overflow:hidden;height:100vh}
+canvas{display:block}
+#hud{position:fixed;top:12px;left:12px;z-index:10;pointer-events:none}
+#hud .title{font-size:12px;color:#cc44ff;margin-bottom:4px;letter-spacing:.15em;text-transform:uppercase}
+#hud .title .v{color:#ffd700}
+#hud .row{line-height:1.85;color:rgba(220,228,240,.45)}
+#hud .val{color:#cc44ff;font-weight:bold}
+#hud .gold{color:#ffd700}
+#hud .yes{color:#7fff7f;font-weight:bold}
+#hud .no{color:#ff7f7f;font-weight:bold}
+#hud .dim{color:rgba(220,228,240,.22);font-size:10px}
+#log{position:fixed;top:150px;left:12px;z-index:10;background:rgba(5,5,16,.88);
+  border:1px solid #1a1f2e;border-radius:4px;padding:7px 11px;max-width:250px;
+  max-height:150px;overflow-y:auto;font-size:9px;line-height:1.55;
+  color:rgba(255,180,180,.7);cursor:pointer;transition:opacity .3s}
+#log.hidden{opacity:0;pointer-events:none}
+#log .e{border-bottom:1px solid #1a0505;padding:1px 0}
+#log .ok{color:#7fff7f}
+#log .pur{color:#cc44ff}
+#log .gld{color:#ffd700}
+#master-wrap{position:fixed;bottom:56px;left:50%;transform:translateX(-50%);z-index:10;
+  display:flex;flex-direction:column;align-items:center;gap:4px}
+#master-wrap .ml{font-size:9px;color:rgba(204,68,255,.4);text-transform:uppercase;letter-spacing:.15em}
+#sl-master{width:320px;height:6px;accent-color:#cc44ff;cursor:pointer}
+#master-val{font-size:10px;color:#cc44ff;font-weight:bold;letter-spacing:.1em}
+#ldots{display:flex;gap:4px;margin-top:2px}
+.ldot{width:6px;height:6px;border-radius:50%;background:#0d1520;border:1px solid #1a2a3a;transition:all .3s}
+.ldot.done{background:#cc44ff;border-color:#cc44ff;box-shadow:0 0 5px rgba(204,68,255,.5)}
+.ldot.active{background:#fff;border-color:#fff;box-shadow:0 0 8px rgba(255,255,255,.7)}
+#bar{position:fixed;bottom:0;left:0;right:0;z-index:10;background:rgba(5,5,16,.97);
+  border-top:1px solid #1a1f2e;padding:5px 12px;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.btn{background:#0a0e18;color:#556;border:1px solid #1a1f2e;border-radius:3px;padding:3px 9px;
+  font-family:inherit;font-size:9px;cursor:pointer;transition:all .15s;text-transform:uppercase;letter-spacing:.07em}
+.btn:hover{border-color:#cc44ff;color:#cc44ff}
+.btn.active{background:#cc44ff;color:#050510;border-color:#cc44ff}
+.btn.gold{color:#ffd700;border-color:#3a2a0a}
+.btn.gold:hover,.btn.gold.active{background:#ffd700;color:#050510}
+.sep{width:1px;height:16px;background:#1a1f2e}
+.lbl{color:rgba(220,228,240,.28);font-size:9px;text-transform:uppercase;letter-spacing:.1em}
+.sl{display:flex;align-items:center;gap:3px}
+.sl input{width:58px;accent-color:#cc44ff}
+.sv{font-size:9px;color:#cc44ff;min-width:30px}
+#stamp{position:fixed;bottom:56px;right:12px;z-index:10;pointer-events:none;text-align:right}
+#stamp .s{font-size:8px;color:rgba(204,68,255,.22);letter-spacing:.08em;line-height:1.8}
+#stamp .s.g{color:rgba(255,215,0,.25)}
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+
+<div id="hud">
+  <div class="title">Transmutation Volume <span class="v">v1.1</span></div>
+  <div class="row">figure &nbsp;<span class="gold" id="h-sym">{5/2}</span></div>
+  <div class="row">points n &nbsp;<span class="val" id="h-n">5</span> &nbsp; skip k &nbsp;<span class="val" id="h-k">2</span></div>
+  <div class="row">gcd(n,k) &nbsp;<span class="val" id="h-gcd">1</span> &nbsp; rings &nbsp;<span class="val" id="h-comp">1</span></div>
+  <div class="row">unbroken line &nbsp;<span id="h-uni" class="yes">yes</span></div>
+  <div class="row">hour &nbsp;<span class="gold" id="h-hour">13:00</span> &nbsp; slices &nbsp;<span class="val" id="h-sl">0</span></div>
+  <div class="dim" id="h-hint">raise the pact to build the volume</div>
+</div>
+
+<div id="log" onclick="this.classList.toggle('hidden')">
+  <div class="e pur">SPACE=pact+  A=full  R=void  S=spin  L=log</div>
+  <div class="e ok">Transmutation Volume v1.1 ready</div>
+</div>
+
+<div id="master-wrap">
+  <div class="ml">final pact · pour the mana</div>
+  <input type="range" id="sl-master" min="0" max="100" value="0" oninput="setMana(+this.value)">
+  <div id="master-val">VOID</div>
+  <div id="ldots"></div>
+</div>
+
+<div id="stamp">
+  <div class="s">Baudin Atelier · sigil volume</div>
+  <div class="s g">one line iff gcd(n,k)=1</div>
+  <div class="s">always</div>
+</div>
+
+<div id="bar">
+  <button class="btn gold" onclick="preset(0)">VOID</button>
+  <button class="btn" onclick="preset(50)">HALF</button>
+  <button class="btn" onclick="preset(100)">FULL</button>
+  <div class="sep"></div>
+  <button class="btn active" id="m-star" onclick="setMode('star')">STAR</button>
+  <button class="btn" id="m-complete" onclick="setMode('complete')">Kn</button>
+  <button class="btn" id="m-cycle" onclick="setMode('cycle')">RING</button>
+  <div class="sep"></div>
+  <span class="lbl">n</span><div class="sl"><input type="range" id="sl-n" min="3" max="24" value="5" oninput="setN(+this.value)"><span class="sv" id="sv-n">5</span></div>
+  <span class="lbl">k</span><div class="sl"><input type="range" id="sl-k" min="1" max="4" value="2" oninput="setK(+this.value)"><span class="sv" id="sv-k">2</span></div>
+  <span class="lbl">hour</span><div class="sl"><input type="range" id="sl-hour" min="0" max="240" value="130" oninput="setHour(+this.value/10)"><span class="sv" id="sv-hour">13:00</span></div>
+  <span class="lbl">spin</span><div class="sl"><input type="range" id="sl-spin" min="0" max="100" value="30" oninput="SPIN=+this.value/2500;document.getElementById('sv-spin').textContent=(+this.value)"><span class="sv" id="sv-spin">30</span></div>
+  <span class="lbl">twist</span><div class="sl"><input type="range" id="sl-twist" min="0" max="100" value="34" oninput="setTwist(+this.value)"><span class="sv" id="sv-twist">0.34</span></div>
+  <div class="sep"></div>
+  <button class="btn" onclick="document.getElementById('log').classList.toggle('hidden')">LOG</button>
+</div>
+
+<script>
+// ============ Transmutation Volume v1.1 ============
+// The {n/k} graph sigil, extruded + twisted into a spinning 3D prism.
+// Atelier design language. Screen-blend phosphor. Two drifting planes.
+// The law: a single unbroken line exists iff gcd(n,k)=1. Bow to the math.
+var cv=document.getElementById('cv'), ctx=cv.getContext('2d');
+var W,H,DPR;
+var T=0, SPIN=0.012;
+var MAXSLICES=15;
+
+var S={n:5,k:2,mode:'star',hour:13,mana:0,twist:0.34};
+
+// ---- palette as rgb arrays (never parse a computed string -> no NaN) ----
+var PURP=[204,68,255], GOLD=[255,215,0], PINK=[255,68,180], WHITE=[255,255,255];
+function css(c,a){return 'rgba('+(c[0]|0)+','+(c[1]|0)+','+(c[2]|0)+','+a+')';}
+function lerp3(a,b,t){t=t<0?0:t>1?1:t;return [a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t];}
+
+// ---- graph theory ----
+function gcd(a,b){a=Math.abs(a);b=Math.abs(b);while(b){var t=a%b;a=b;b=t;}return a;}
+function starEdges(n,k){
+  var d=gcd(n,k), rings=[], s, cur, ring;
+  for(s=0;s<d;s++){ring=[];cur=s;do{ring.push(cur);cur=(cur+k)%n;}while(cur!==s);rings.push(ring);}
+  var e=[]; for(var r=0;r<rings.length;r++){var R=rings[r];for(var i=0;i<R.length;i++)e.push([R[i],R[(i+1)%R.length]]);}
+  return {edges:e,d:d};
+}
+function completeEdges(n){var e=[];for(var i=0;i<n;i++)for(var j=i+1;j<n;j++)e.push([i,j]);return {edges:e,d:1};}
+function edgesFor(n,k,mode){
+  if(mode==='complete')return completeEdges(n);
+  if(mode==='cycle')return starEdges(n,1);
+  return starEdges(n,k);
+}
+function unicursal(n,k,mode){
+  if(mode==='complete')return n%2===1;   // Eulerian iff n odd
+  if(mode==='cycle')return true;          // single cycle
+  return gcd(n,k)===1;                     // one Hamiltonian circuit
+}
+
+// ---- 3D ----
+var CAM=7.2, R3=2.15, ZSPAN=2.05;
+function rot(p,ax,ay){
+  // rotate around X then Y
+  var cy1=Math.cos(ax),sy1=Math.sin(ax);
+  var y=p[1]*cy1 - p[2]*sy1, z=p[1]*sy1 + p[2]*cy1, x=p[0];
+  var cx1=Math.cos(ay),sx1=Math.sin(ay);
+  var x2=x*cx1 + z*sx1, z2=-x*sx1 + z*cx1;
+  return [x2,y,z2];
+}
+function project(p,cx,cy,focal){
+  var denom=CAM-p[2]; if(denom<0.4)denom=0.4;
+  var f=focal/denom;
+  return [cx+p[0]*f, cy-p[1]*f, f];
+}
+function dayFactor(h){var d=Math.sin(((h-6)/12)*Math.PI);return (d<-1?-1:d>1?1:d);}
+
+function resize(){
+  DPR=Math.min(window.devicePixelRatio||1,2);
+  W=window.innerWidth; H=window.innerHeight;
+  cv.width=Math.round(W*DPR); cv.height=Math.round(H*DPR);
+}
+
+function draw(){
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+  // phosphor trail (atelier signature): fade instead of clear
+  ctx.fillStyle='rgba(5,5,16,0.25)';
+  ctx.fillRect(0,0,W,H);
+
+  var n=S.n,k=S.k,mode=S.mode;
+  var G=edgesFor(n,k,mode), edges=G.edges;
+  var uni=unicursal(n,k,mode);
+  var df=dayFactor(S.hour);
+  var dfp=df<0?0:df;                                  // 0..1 daylight
+  var primary=lerp3(PURP,GOLD,dfp);                    // purple by night -> gold by noon
+  var cx=W/2, cy=H/2, focal=Math.min(W,H)*0.62;
+
+  var rotX=0.12+(1-dfp)*1.02;                          // hour tilts the disk (edge-on at night/twilight)
+  var rotYbase=T*Math.max(0.0001,1)*1;                 // spin handled by T accumulation
+  var slicesShown=Math.round(S.mana*MAXSLICES);
+  var half=(MAXSLICES-1)/2;
+
+  // build + project vertices for shown slices, for two drifting planes
+  function planePoints(dir,phase){
+    var pts=[]; // pts[s][i] = projected [sx,sy,f,z]
+    for(var s=0;s<MAXSLICES;s++){
+      var row=[];
+      var sc=s-half;
+      var z=(half===0?0:sc/half)*ZSPAN;
+      var twistOff=sc*S.twist + phase;
+      var ry=rotYbase*dir;
+      for(var i=0;i<n;i++){
+        var a=-Math.PI/2 + i*2*Math.PI/n + twistOff;
+        var p3=[Math.cos(a)*R3, Math.sin(a)*R3, z];
+        p3=rot(p3,rotX,ry);
+        row.push(project(p3,cx,cy,focal));
+      }
+      pts.push(row);
+    }
+    return pts;
+  }
+
+  function drawPlane(pts,col,baseAlpha){
+    ctx.globalCompositeOperation='screen';
+    ctx.lineCap='round';
+    // in-slice sigil edges
+    for(var s=0;s<slicesShown;s++){
+      var edgeAlpha=baseAlpha*(0.35+0.65*(1-Math.abs(s-half)/(half+1)));
+      ctx.strokeStyle=css(col,edgeAlpha);
+      ctx.lineWidth=0.9;
+      ctx.beginPath();
+      for(var e=0;e<edges.length;e++){
+        var A=pts[s][edges[e][0]], B=pts[s][edges[e][1]];
+        ctx.moveTo(A[0],A[1]); ctx.lineTo(B[0],B[1]);
+      }
+      ctx.stroke();
+    }
+    // struts between consecutive slices (make it read as a volume)
+    ctx.strokeStyle=css(col,baseAlpha*0.28);
+    ctx.lineWidth=0.6;
+    ctx.beginPath();
+    for(var s2=0;s2<slicesShown-1;s2++){
+      for(var i=0;i<n;i++){
+        var P=pts[s2][i], Q=pts[s2+1][i];
+        ctx.moveTo(P[0],P[1]); ctx.lineTo(Q[0],Q[1]);
+      }
+    }
+    ctx.stroke();
+    ctx.globalCompositeOperation='source-over';
+  }
+
+  // Plane A (primary, spin +) and Plane B (drift purple/pink, spin -, phase)
+  var ptsA=planePoints(1,0);
+  var ptsB=planePoints(-1,Math.PI/6);
+  var driftCol=lerp3(PINK,PURP,0.45);
+  drawPlane(ptsB,driftCol,0.5);
+  drawPlane(ptsA,primary,0.72);
+
+  // nodes on the central slice (the graph vertices)
+  if(slicesShown>0){
+    var mid=Math.round(half), row=ptsA[mid];
+    for(var i=0;i<n;i++){
+      ctx.fillStyle=css(primary,0.85);
+      ctx.beginPath();ctx.arc(row[i][0],row[i][1],1.8,0,Math.PI*2);ctx.fill();
+    }
+  }
+
+  // core + seal
+  var sealed=S.mana>=0.99 && uni;
+  var coreCol=sealed?WHITE:primary;
+  var pulse=0.55+0.45*Math.sin(T*40);
+  var glow=6+S.mana*26;
+  ctx.globalCompositeOperation='screen';
+  ctx.shadowColor=css(coreCol,1); ctx.shadowBlur=glow;
+  ctx.fillStyle=css(coreCol,(0.5+0.5*S.mana)*pulse);
+  ctx.beginPath();ctx.arc(cx,cy,1.6+S.mana*3.6,0,Math.PI*2);ctx.fill();
+  ctx.shadowBlur=0;
+  if(sealed){
+    var ph=(T*24)%1;
+    ctx.strokeStyle=css(lerp3(WHITE,GOLD,ph),(1-ph)*0.7);
+    ctx.lineWidth=1.6*(1-ph)+0.4;
+    ctx.beginPath();ctx.arc(cx,cy,focal*0.12+ph*focal*0.9,0,Math.PI*2);ctx.stroke();
+  }
+  ctx.globalCompositeOperation='source-over';
+
+  updateHUD(n,k,mode,G.d,uni,slicesShown,sealed);
+}
+
+// ---- HUD / dots ----
+var lastSealed=false;
+function updateHUD(n,k,mode,d,uni,slices,sealed){
+  var sym = mode==='complete'?('K'+sub(n)) : mode==='cycle'?('C'+sub(n)) : ('{'+n+'/'+k+'}');
+  set('h-sym',sym); set('h-n',n); set('h-k',mode==='star'?k:'—');
+  set('h-gcd',mode==='star'?d:'1'); set('h-comp',mode==='star'?d:'1');
+  var u=document.getElementById('h-uni');
+  u.textContent=uni?'yes':'no'; u.className=uni?'yes':'no';
+  set('h-hour',fmtHour(S.hour)); set('h-sl',slices);
+  set('master-val', S.mana<=0?'VOID':S.mana>=0.999?'FULL':Math.round(S.mana*100)+'%');
+  set('h-hint', slices===0?'raise the pact to build the volume'
+    : sealed?'the volume closes — one unbroken line'
+    : uni?'keep pouring — it will seal':'this figure breaks into '+d+' rings');
+  if(sealed && !lastSealed) lg('SEALED · '+sym+' closes in one line · descent','gld');
+  lastSealed=sealed;
+  // dots (12) track the pact
+  var lit=Math.round(S.mana*12), bar=document.getElementById('ldots');
+  if(bar.children.length!==12){bar.innerHTML='';for(var i=0;i<12;i++)bar.appendChild(document.createElement('div'));}
+  for(var i=0;i<12;i++){var c='ldot';if(i<lit)c+=' done';if(i===lit-1)c+=' active';bar.children[i].className=c;}
+}
+function sub(x){var m={0:'₀',1:'₁',2:'₂',3:'₃',4:'₄',5:'₅',6:'₆',7:'₇',8:'₈',9:'₉'};return (''+x).split('').map(function(d){return m[d];}).join('');}
+function set(id,v){document.getElementById(id).textContent=v;}
+function fmtHour(h){var hh=Math.floor(h)%24,mm=Math.round((h-Math.floor(h))*60);if(mm===60){mm=0;hh=(hh+1)%24;}return (hh<10?'0':'')+hh+':'+(mm<10?'0':'')+mm;}
+
+// ---- log ----
+function lg(msg,cls){var el=document.getElementById('log'),d=document.createElement('div');
+  d.className='e'+(cls?' '+cls:'');d.textContent=msg;el.insertBefore(d,el.firstChild);
+  while(el.children.length>18)el.removeChild(el.lastChild);}
+
+// ---- controls ----
+function setMana(v){S.mana=v/100;}
+function preset(v){document.getElementById('sl-master').value=v;setMana(v);}
+function setMode(m){S.mode=m;['star','complete','cycle'].forEach(function(x){
+  document.getElementById('m-'+x).classList.toggle('active',x===m);});
+  lg(m==='star'?'figure: star {n/k}':m==='complete'?'figure: complete Kn':'figure: ring Cn','pur');}
+function clampK(){var kIn=document.getElementById('sl-k');kIn.max=S.n-1;if(S.k>S.n-1){S.k=S.n-1;kIn.value=S.k;document.getElementById('sv-k').textContent=S.k;}}
+function setN(v){S.n=v;set('sv-n',v);clampK();logFig();}
+function setK(v){S.k=v;set('sv-k',v);logFig();}
+function setHour(v){S.hour=v;set('sv-hour',fmtHour(v));}
+function setTwist(v){S.twist=v/100;set('sv-twist',(v/100).toFixed(2));}
+function logFig(){
+  if(S.mode!=='star')return;
+  var d=gcd(S.n,S.k);
+  if(d===1)lg('{'+S.n+'/'+S.k+'}  gcd=1 · one unbroken line','ok');
+  else lg('{'+S.n+'/'+S.k+'}  gcd='+d+' · '+d+' rings, broken','pur');
+}
+
+window.addEventListener('resize',resize);
+window.addEventListener('keydown',function(e){
+  var m=document.getElementById('sl-master'), v=+m.value;
+  if(e.code==='Space'||e.code==='ArrowRight'){e.preventDefault();v=Math.min(100,v+Math.round(100/12));m.value=v;setMana(v);}
+  if(e.code==='ArrowLeft'){e.preventDefault();v=Math.max(0,v-Math.round(100/12));m.value=v;setMana(v);}
+  if(e.code==='KeyA')preset(100);
+  if(e.code==='KeyR')preset(0);
+  if(e.code==='KeyS'){SPIN=SPIN>0?0:0.012;lg(SPIN>0?'spin on':'spin paused','pur');}
+  if(e.code==='KeyL')document.getElementById('log').classList.toggle('hidden');
+});
+
+function animate(){requestAnimationFrame(animate);T+=SPIN;draw();}
+resize();clampK();setHour(13);animate();
+lg('P=15 slices · chi bows to gcd','pur');
+</script>
+</body></html>

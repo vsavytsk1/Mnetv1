@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%}
+  body{background:#070a0e;color:#e0e0e0;font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;overflow:hidden}
+  input[type=range]{-webkit-appearance:none;height:4px;border-radius:3px;background:linear-gradient(90deg,#214a6a,#ffd700);outline:none;cursor:pointer}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:#ffd700;border:2px solid #070a0e;cursor:pointer;box-shadow:0 0 8px rgba(255,215,0,.6)}
+  .kbtn{background:#0b1118;border:1px solid #1e3145;color:#7d93a8;border-radius:4px;padding:6px 13px;font-family:'IBM Plex Mono',monospace;font-size:9px;cursor:pointer;text-transform:uppercase;letter-spacing:.09em;white-space:nowrap;transition:all .15s}
+  .kbtn:hover{color:#eaf3ff;border-color:#3f6488}
+</style>
+</helmet>
+<div style="height:100vh;display:flex;flex-direction:column;max-width:1000px;margin:0 auto">
+
+  <!-- HEADER -->
+  <div style="flex:0 0 auto;padding:14px 20px 8px">
+    <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap">
+      <span style="font:600 17px/1 'Spectral',serif;color:#e8edf3">🏔️ El Click</span>
+      <span style="font:500 8px/1 'IBM Plex Mono',monospace;color:#536576;letter-spacing:.18em;text-transform:uppercase">Principia mAlgebra · why the second language is uphill</span>
+    </div>
+    <p style="margin:8px 0 0;font:400 12.5px/1.55 'Spectral',serif;color:#9fb0c0;max-width:74ch">The childhood graph (<b style="color:#5fb3ff">L1</b>) is a deep, cheap, automatic well — the monkey reuses it to keep one stable self. A new language (<b style="color:#ffd700">L2</b>) is a well you must <i>carve</i> against that pull. Feed immersion and watch the marble. Stop, and watch it slide back.</p>
+  </div>
+
+  <!-- CANVAS -->
+  <div style="flex:1 1 auto;position:relative;min-height:0;padding:6px 20px">
+    <canvas id="k-canvas" style="width:100%;height:100%;display:block;border:1px solid #11202e;border-radius:8px;background:radial-gradient(120% 100% at 50% 0%,#0a131c,#070a0e 75%)"></canvas>
+    <div id="k-flash" style="position:absolute;left:50%;top:30px;transform:translateX(-50%);font:600 22px/1 'Spectral',serif;color:#ffd700;opacity:0;transition:opacity .4s;pointer-events:none;text-shadow:0 0 18px rgba(255,215,0,.6)"></div>
+  </div>
+
+  <!-- CONTROLS -->
+  <div style="flex:0 0 auto;padding:8px 20px 6px;display:flex;align-items:center;gap:18px;flex-wrap:wrap;border-top:1px solid #11202e">
+    <div style="display:flex;align-items:center;gap:9px">
+      <span style="font:500 8px/1 'IBM Plex Mono',monospace;color:#5a7184;letter-spacing:.14em;text-transform:uppercase">immersion</span>
+      <input id="k-eff" type="range" min="0" max="100" step="1" value="0" style="width:200px">
+      <span id="k-effval" style="font:600 12px/1 'Spectral',serif;color:#ffd700;min-width:34px">0%</span>
+    </div>
+    <button class="kbtn" id="k-letgo" onClick="{{ onLetGo }}">stop · let time pass</button>
+    <button class="kbtn" onClick="{{ onReset }}">reset</button>
+    <div style="flex:1"></div>
+    <div style="display:flex;gap:18px">
+      <div style="display:flex;flex-direction:column;align-items:center"><span id="k-l1" style="font:600 14px/1 'Spectral',serif;color:#5fb3ff">—</span><span style="font:500 7px/1 'IBM Plex Mono',monospace;color:#4a5b6b;letter-spacing:.1em;text-transform:uppercase">L1 depth</span></div>
+      <div style="display:flex;flex-direction:column;align-items:center"><span id="k-l2" style="font:600 14px/1 'Spectral',serif;color:#ffd700">—</span><span style="font:500 7px/1 'IBM Plex Mono',monospace;color:#4a5b6b;letter-spacing:.1em;text-transform:uppercase">L2 depth</span></div>
+      <div style="display:flex;flex-direction:column;align-items:center"><span id="k-bar" style="font:600 14px/1 'Spectral',serif;color:#ff8a5a">—</span><span style="font:500 7px/1 'IBM Plex Mono',monospace;color:#4a5b6b;letter-spacing:.1em;text-transform:uppercase">barrier</span></div>
+      <div style="display:flex;flex-direction:column;align-items:center"><span id="k-hrs" style="font:600 14px/1 'Spectral',serif;color:#7fff9f">0</span><span style="font:500 7px/1 'IBM Plex Mono',monospace;color:#4a5b6b;letter-spacing:.1em;text-transform:uppercase">hours in</span></div>
+    </div>
+  </div>
+
+  <!-- STATUS + CAVEATS -->
+  <div style="flex:0 0 auto;padding:4px 20px 12px">
+    <div id="k-status" style="font:500 9px/1.4 'IBM Plex Mono',monospace;color:#5fb3ff;letter-spacing:.06em;min-height:13px">the marble rests in L1 — the childhood graph. it is cheap and automatic. push immersion to start carving L2.</div>
+    <div style="margin-top:7px;display:flex;gap:14px;flex-wrap:wrap">
+      <span style="font:400 8px/1.4 'IBM Plex Mono',monospace;color:#3f5163"><b style="color:#5a7184">K1</b> illustration of an energy-landscape model (Hopfield / free-energy descent), not a neural measurement</span>
+      <span style="font:400 8px/1.4 'IBM Plex Mono',monospace;color:#3f5163"><b style="color:#5a7184">K2</b> entrenchment · L1 transfer · fossilization · attrition are real named phenomena — the model is qualitative</span>
+      <span style="font:400 8px/1.4 'IBM Plex Mono',monospace;color:#3f5163"><b style="color:#5a7184">K3</b> what's REAL here: the marble is true Langevin gradient-descent on U(x); the wells deepen/decay by the actual formula</span>
+      <span style="font:400 8px/1.4 'IBM Plex Mono',monospace;color:#3f5163"><b style="color:#5a7184">K4</b> "personality split" = Cultural Frame Switching (Hong &amp; Benet-Martínez 2000) — here a bistable-basin metaphor, not an identity claim</span>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{
+  &quot;$preview&quot;: { &quot;width&quot;: 1000, &quot;height&quot;: 720 }
+}">
+class Component extends DCLogic {
+  componentDidMount(){
+    this.cv=document.getElementById('k-canvas'); this.ctx=this.cv.getContext('2d');
+    // model params
+    this.xL1=0.26; this.xL2=0.74; this.w1=0.12; this.w2=0.12;
+    this.A1=1.0;            // L1 depth — entrenched, constant & deep
+    this.A2=0.10;           // L2 depth — grows with immersion, decays without
+    this.x=0.26; this.v=0;  // marble (neural routing) state
+    this.eff=0;             // current immersion 0..1
+    this.hours=0;           // accumulated effort
+    this.basin='L1'; this.clicked=false;
+    document.getElementById('k-eff').addEventListener('input',e=>{ this.eff=(+e.target.value)/100; document.getElementById('k-effval').textContent=e.target.value+'%'; });
+    this._resize(); window.addEventListener('resize',()=>this._resize());
+    this._loop();
+  }
+  componentWillUnmount(){ if(this._raf)cancelAnimationFrame(this._raf); }
+
+  _resize(){ const r=this.cv.getBoundingClientRect(); const dpr=window.devicePixelRatio||1;
+    this.cv.width=r.width*dpr; this.cv.height=r.height*dpr; this.ctx.setTransform(dpr,0,0,dpr,0,0); this.W=r.width; this.H=r.height; }
+
+  // potential & force
+  _g(x,xc,w){ return Math.exp(-((x-xc)*(x-xc))/(2*w*w)); }
+  _U(x){ return -(this.A1*this._g(x,this.xL1,this.w1) + this.A2*this._g(x,this.xL2,this.w2)); }
+  _F(x){ // -dU/dx
+    const t1=this.A1*this._g(x,this.xL1,this.w1)*((x-this.xL1)/(this.w1*this.w1));
+    const t2=this.A2*this._g(x,this.xL2,this.w2)*((x-this.xL2)/(this.w2*this.w2));
+    return -(t1+t2);
+  }
+  _barrier(){ // max U between the wells, relative to L1 floor
+    let mx=-1e9, bx=0.5;
+    for(let x=this.xL1;x<=this.xL2;x+=0.005){ const u=this._U(x); if(u>mx){mx=u;bx=x;} }
+    return {top:mx, x:bx, hL1:mx-this._U(this.xL1), hL2:mx-this._U(this.xL2)};
+  }
+
+  _step(dt){
+    // L2 well tracks immersion: deepen when practicing, decay (attrition) when not
+    const target=0.10+1.05*this.eff;
+    const rate=this.eff>0.02 ? 0.9 : 0.22;          // carving is faster than forgetting, but forgetting is real
+    this.A2 += (target-this.A2)*rate*dt;
+    this.A2=Math.max(0.08,Math.min(1.18,this.A2));
+    this.hours += this.eff*dt*4;
+    // Langevin: gradient descent + practice-noise + friction
+    const noise=(Math.random()*2-1)*0.9*this.eff;     // you only jostle the system by USING it
+    this.v += (this._F(this.x)*1.0 + noise - 1.7*this.v)*dt;
+    this.x += this.v*dt;
+    if(this.x<0.02){this.x=0.02;this.v*=-0.3;} if(this.x>0.98){this.x=0.98;this.v*=-0.3;}
+    // basin + click detection
+    const b=this._barrier();
+    const nb = this.x<b.x ? 'L1':'L2';
+    if(nb!==this.basin){
+      if(nb==='L2'){ this._flash('CLICK ⚡'); this._status('IT MOVED. the marble crossed into L2 — the path re-routed. this is the click 2 years of classes can miss.'); this.clicked=true; }
+      else { this._flash('slid back'); this._status('attrition: L2 decayed below the barrier and the monkey rolled home to L1. energy in — or you forget.'); }
+      this.basin=nb;
+    } else {
+      // ambient status
+      if(this.eff>0.02 && this.basin==='L1' && b.hL1>0.45) this._status('climbing… immersion '+Math.round(this.eff*100)+'%, but the barrier ('+b.hL1.toFixed(2)+') still holds. push harder or stay longer — this is the plateau.');
+      else if(this.basin==='L2' && this.A2>0.85 && this.A1-this.A2<0.25) this._status('balanced bilingual: two deep wells, low barrier. the marble can sit in either — switching selves is now cheap (cultural frame switching).');
+    }
+    this.B=b;
+  }
+
+  _loop(){
+    let last=performance.now();
+    const tick=now=>{ let dt=(now-last)/1000; last=now; dt=Math.min(0.05,dt);
+      this._step(dt*1.6); this._draw(); this._readouts();
+      this._raf=requestAnimationFrame(tick); };
+    this._raf=requestAnimationFrame(tick);
+  }
+
+  _px(x){ return 20+x*(this.W-40); }
+  _py(u){ // map U (roughly -1.2..0) to canvas y; deeper = lower
+    const top=this.H*0.18, bot=this.H*0.92; const uMin=-1.25, uMax=0.05;
+    return top + (u-uMax)/(uMin-uMax)*(bot-top);
+  }
+  _draw(){
+    const c=this.ctx, W=this.W, H=this.H; c.clearRect(0,0,W,H);
+    // landscape curve
+    c.beginPath();
+    for(let i=0;i<=240;i++){ const x=i/240; const px=this._px(x), py=this._py(this._U(x)); if(i===0)c.moveTo(px,py); else c.lineTo(px,py); }
+    const grad=c.createLinearGradient(0,H*0.18,0,H);
+    grad.addColorStop(0,'rgba(40,70,100,.05)'); grad.addColorStop(1,'rgba(20,40,60,.32)');
+    c.lineTo(this._px(1),H); c.lineTo(this._px(0),H); c.closePath(); c.fillStyle=grad; c.fill();
+    // curve stroke
+    c.beginPath();
+    for(let i=0;i<=240;i++){ const x=i/240; const px=this._px(x), py=this._py(this._U(x)); if(i===0)c.moveTo(px,py); else c.lineTo(px,py); }
+    c.strokeStyle='rgba(150,180,210,.5)'; c.lineWidth=2; c.stroke();
+    // well labels
+    c.textAlign='center';
+    c.fillStyle='#5fb3ff'; c.font="600 13px Spectral,serif";
+    c.fillText('L1 · childhood core', this._px(this.xL1), this._py(this._U(this.xL1))+22);
+    c.fillStyle='rgba(95,179,255,.5)'; c.font="500 8px 'IBM Plex Mono',monospace";
+    c.fillText('cheap · automatic · stable self', this._px(this.xL1), this._py(this._U(this.xL1))+36);
+    c.fillStyle='#ffd700'; c.font="600 13px Spectral,serif";
+    c.fillText('L2 · new language', this._px(this.xL2), this._py(this._U(this.xL2))+22);
+    c.fillStyle='rgba(255,215,0,.5)'; c.font="500 8px 'IBM Plex Mono',monospace";
+    c.fillText(this.A2<0.3?'barely carved':(this.A2<0.8?'forming…':'proceduralized'), this._px(this.xL2), this._py(this._U(this.xL2))+36);
+    // barrier marker (the mountain top)
+    if(this.B){ const bx=this._px(this.B.x), by=this._py(this.B.top);
+      c.strokeStyle='rgba(255,138,90,.4)'; c.setLineDash([3,4]); c.beginPath(); c.moveTo(bx,by); c.lineTo(bx,H*0.95); c.stroke(); c.setLineDash([]);
+      c.fillStyle='rgba(255,138,90,.8)'; c.font="500 8px 'IBM Plex Mono',monospace"; c.fillText('▲ the mountain', bx, by-8);
+    }
+    // marble
+    const mx=this._px(this.x), my=this._py(this._U(this.x))-7;
+    c.beginPath(); c.arc(mx,my,7,0,7); 
+    c.fillStyle = this.basin==='L1' ? '#5fb3ff' : '#ffd700';
+    c.shadowColor=c.fillStyle; c.shadowBlur=18; c.fill(); c.shadowBlur=0;
+    c.fillStyle='rgba(255,255,255,.85)'; c.beginPath(); c.arc(mx-2,my-2,2,0,7); c.fill();
+    // marble label
+    c.fillStyle='rgba(220,230,240,.7)'; c.font="500 8px 'IBM Plex Mono',monospace"; c.textAlign='center';
+    c.fillText('the monkey’s routing', mx, my-16);
+  }
+
+  _readouts(){
+    document.getElementById('k-l1').textContent=this.A1.toFixed(2);
+    document.getElementById('k-l2').textContent=this.A2.toFixed(2);
+    document.getElementById('k-bar').textContent=this.B?this.B.hL1.toFixed(2):'—';
+    document.getElementById('k-hrs').textContent=Math.round(this.hours);
+  }
+  _status(t){ const s=document.getElementById('k-status'); if(s)s.textContent=t; }
+  _flash(t){ const f=document.getElementById('k-flash'); if(!f)return; f.textContent=t; f.style.color=t.indexOf('CLICK')>=0?'#ffd700':'#ff8a5a'; f.style.opacity='1'; setTimeout(()=>f.style.opacity='0',900); }
+
+  letGo(){ this.eff=0; document.getElementById('k-eff').value=0; document.getElementById('k-effval').textContent='0%'; this._status('you stopped. immersion 0 — now time passes and L2 decays. watch the marble.'); }
+  reset(){ this.A2=0.10; this.x=0.26; this.v=0; this.eff=0; this.hours=0; this.basin='L1'; this.clicked=false; document.getElementById('k-eff').value=0; document.getElementById('k-effval').textContent='0%'; this._status('reset — marble back in L1, the childhood graph.'); }
+
+  renderVals(){ return { onLetGo:()=>this.letGo(), onReset:()=>this.reset() }; }
+}
+</script>
+</body>
+</html>

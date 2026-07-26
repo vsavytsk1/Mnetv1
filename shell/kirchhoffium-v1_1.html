@@ -1,0 +1,669 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>KIRCHHOFFIUM v1.1 — the min-cut of the world · submarine cable resilience</title>
+<!--
+  KIRCHHOFFIUM v1.1 — WHERE ARE THE CHOKEPOINTS
+  =================================================================
+  Named for Gustav Kirchhoff, whose 1847 circuit laws ARE graph theory — current
+  conservation at a node IS the incidence matrix — written a century before
+  anyone gave it that name. Flow on a graph. The same L = D − A that was the
+  vibration modes, the CNT junctions, and the internet. Fourth appearance.
+
+  =================================================================
+  v1.1 — THE CURSE THAT KILLED v1.0, LOGGED FOR THE SCROLL
+  =================================================================
+
+  ## CURSE 30 -- The Dead Draft (corpseParse)
+
+  You hand-index a graph. Halfway through you REALISE hand-indexing is
+  error-prone and rewrite it name-based with a lookup. That diagnosis was
+  correct. That fix was correct. And then you leave the abandoned draft in the
+  file. The corpse contains one malformed token -- `[37,44_]`, a numeric
+  separator at the end of a literal. SyntaxError.
+
+  ```
+  SYMPTOM:
+    The page renders its CHROME -- title, panels, buttons, legend -- and then
+    nothing. Every single readout shows "—". Not one of them. ALL of them.
+    Console: "Uncaught SyntaxError: Numeric separators are not allowed at the
+    end of numeric literals." No canvas. No graph. No error from any function,
+    because no function ever existed.
+
+  ROOT CAUSE:
+    A SyntaxError is PARSE-TIME and GLOBAL. JavaScript does not reach the
+    statement, decide it is unreachable, and skip it. It must PARSE the entire
+    script before it executes one byte of it. Dead code still has to parse.
+    So the corpse of an abandoned draft killed 500 lines of live, correct code
+    that sat below it. The fix was right. The CLEANUP was the failure.
+
+  THE SIGNATURE (this is the whole diagnostic, learn it):
+    ALL readouts blank  = the script never parsed. Nothing ran. Look for a
+                          SyntaxError. Do not debug your logic; you have none.
+    SOME readouts blank = the script parsed and a function is wrong. NOW debug.
+    Total silence is a parse failure. Partial failure is a logic bug.
+    Read WHICH ONES are dead before you touch anything.
+
+  THE FIX:
+    Delete the corpse. Not comment it. Not leave it "for reference". DELETE it.
+    Per CURSE 3: never patch a corrupted file -- rewrite it clean. This file is
+    that rewrite. There is exactly ONE edge builder in it now.
+
+  FAMILY:
+    Cousin of CURSE 16 (Shadow Duplicate) -- both are "the old version is still
+    in the file." But they bite differently and the distinction matters:
+      CURSE 16: two LIVE copies fight at RUNTIME. State splits. Ghost behavior.
+      CURSE 30: one DEAD copy kills everything at PARSE time. Total silence.
+    Cousin of CURSE 23 (Python Leak) -- both are one wrong token in a language
+    that will not forgive it, invisible until the browser opens.
+
+  THIS IS PATH I VIOLATED -- THE CLOSED LOOP:
+    "Every branch returns to main. Every action closes. Or the phantom days
+     accumulate. An abandoned branch does not terminate -- it runs
+     phantom_days += 1_000_000_000 alone in the dark."
+    The scroll wrote the diagnosis before the bug happened. And note: the scroll
+    uses numeric separators CORRECTLY (between digits). The corpse used one at
+    the END. The counterexample was already in the grimoire.
+
+  THE PRICE (paid, in the open, logged):
+    I noticed the hazard. I fixed the hazard. I did not close the loop. The
+    price was the whole file, and Vlad paid it by opening a black page.
+
+  Curse count: 30. Dead code still has to parse. Delete the corpse, do not
+  comment it. Total silence = SyntaxError, not a logic bug. Always.
+  =================================================================
+
+  ALSO FIXED IN v1.1 (found while rewriting clean, per PATTERN 3):
+   · Stoer-Wagner had TWO functions computing the same quantity, one called with
+     4 args and defined with 2. It worked by luck. Now: one function, one truth.
+   · A silently-dropped edge CHANGES THE MIN-CUT. v1.0's idx() returned -1 on a
+     typo and skipped the edge without a word -- a fake receipt (CURSE 26
+     family: the screen must never disagree with the truth). v1.1 VALIDATES the
+     graph on build and reports every failure LOUDLY in a KERNEL CHECK chip.
+   · Removed the pendant vertex (Helsinki had degree 1), which made the global
+     min-cut trivially 1. It is now a real number.
+
+  THE QUESTION: "where are the real chokepoints of the submarine internet?"
+  The honest answer is a computation. Four of them, live, no editorialising:
+
+    1. ARTICULATION POINTS + BRIDGES (Hopcroft-Tarjan). A node whose removal
+       DISCONNECTS the graph. One DFS. Lit RED.
+    2. GLOBAL MIN-CUT (Stoer-Wagner). The fewest cables whose loss splits the
+       network in two. λ(G), the edge connectivity.
+    3. s-t MAX-FLOW / MIN-CUT (Edmonds-Karp). Menger: maxflow = mincut.
+    4. ALGEBRAIC CONNECTIVITY λ₂ (Fiedler). The SAME eigenvalue that was the
+       fundamental frequency in the vibration sims. Robustifying the internet IS
+       maximising the Fiedler value.
+
+  HONESTY (K1-K6):
+   K1  SCHEMATIC of the real network -- major hubs + documented trunk corridors,
+       NOT the 500+ cable database. The chokepoint TOPOLOGY is real; the cable
+       COUNT is not. Said, not hidden.
+   K2  every algorithm is EXACT on the graph shown. Computed, not asserted.
+   K3  real chokepoints are GEOGRAPHIC (a strait), not just topological. Two
+       "independent" cables in the SAME strait are ONE anchor. Marked separately.
+   K4  DEFENSIVE tool. It only knows how to find weakness in order to fix it.
+       The answer to attack is boring (an anchor). The answer to defense is
+       interesting (topology).
+   K5  unit edge weights. Real capacity varies by orders of magnitude.
+   K6  KERNEL CHECK is live. If the graph fails to build, the chip goes RED and
+       says which name broke. Silence is not permitted to look like success.
+
+  Pure Canvas 2D. No deps. chi=2 · always. Built 2026-07-16.
+-->
+<style>
+:root{
+  --bg:#050508; --gold:#ffd700; --cyan:#00d4ff; --pink:#ff69b4; --green:#00ffd5;
+  --purple:#cc44ff; --red:#ff3355; --amber:#ffb454; --dim:#6a6a82; --txt:#e8e0d0;
+  --rule:#20202e; --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--txt);font-family:var(--mono);overflow:hidden}
+#cv{position:fixed;top:0;left:0;display:block;cursor:crosshair}
+#hud{position:fixed;top:0;left:0;right:0;padding:9px 13px;display:flex;gap:10px;align-items:flex-start;
+  pointer-events:none;font-size:11px;z-index:10;flex-wrap:wrap}
+#hud>div{pointer-events:auto;background:rgba(8,8,16,.85);border:1px solid var(--rule);border-radius:8px;padding:7px 10px}
+#ttl{color:var(--gold);font-size:13px;letter-spacing:.05em}
+#sub{color:var(--dim);font-size:10px;margin-top:2px;max-width:430px;line-height:1.42}
+#sub b{color:var(--cyan)} #sub .g{color:var(--green)} #sub .r{color:var(--red)}
+#read{display:flex;gap:5px;flex-wrap:wrap}
+.mc{background:rgba(8,8,16,.86);border:1px solid var(--rule);border-radius:6px;padding:4px 8px;min-width:62px}
+.mc .lab{font-size:8px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em}
+.mc .val{font-size:14px;font-weight:bold;color:var(--gold)}
+.mc .val.cyan{color:var(--cyan)} .mc .val.green{color:var(--green)} .mc .val.red{color:var(--red)}
+#kpanel{position:fixed;top:92px;right:13px;z-index:10;background:rgba(8,8,16,.9);
+  border:1px solid var(--rule);border-radius:8px;padding:8px 10px;max-width:262px;max-height:66vh;overflow-y:auto}
+#kpanel .kt{font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.1em;margin-bottom:5px}
+#kpanel .kt b{color:var(--gold)}
+#klines{font-size:9.5px;line-height:1.65;color:var(--dim)}
+#klines b{color:var(--cyan)} #klines .g{color:var(--green)} #klines .r{color:var(--red)}
+#klines .kk{color:var(--gold)} #klines .sec{margin-top:6px;padding-top:5px;border-top:1px solid var(--rule)}
+#bar{position:fixed;left:50%;transform:translateX(-50%);bottom:8px;display:flex;flex-wrap:wrap;
+  gap:5px 9px;align-items:center;justify-content:center;background:rgba(8,8,16,.95);
+  border:1px solid var(--rule);border-radius:10px;padding:7px 12px;z-index:11;max-width:98vw}
+button{background:#14141f;border:1px solid #2a2a3a;border-radius:5px;color:var(--gold);
+  font:10px var(--mono);padding:4px 8px;cursor:pointer;transition:all .12s}
+button:hover{border-color:var(--gold)} button.on{background:#1d1a0a;border-color:var(--gold)}
+button.cyan{color:var(--cyan)} button.cyan.on{border-color:var(--cyan);background:#08222a}
+button.gn{color:var(--green)} button.gn.on{border-color:var(--green);background:#062522}
+button.rd{color:var(--red)} button.rd.on{border-color:var(--red);background:#2a0810}
+.klbl{color:var(--dim);font-size:9px;text-transform:uppercase;letter-spacing:.04em}
+.sep{width:1px;height:18px;background:#2a2a3a;margin:0 1px}
+#stamp{position:fixed;bottom:8px;right:13px;color:var(--dim);font-size:9px;text-align:right;z-index:9;line-height:1.5}
+#stamp b{color:var(--gold)}
+</style></head>
+<body>
+<canvas id="cv"></canvas>
+
+<div id="hud">
+  <div>
+    <div id="ttl">KIRCHHOFFIUM v1.1 · the min-cut of the world</div>
+    <div id="sub">the chokepoints are a <b>computation</b>, not an opinion. <span class="r">red = articulation point</span> — cut it and the network splits. <span class="g">lay a cable and watch λ₂ climb.</span></div>
+  </div>
+  <div id="read">
+    <div class="mc"><div class="lab">kernel check</div><div class="val green" id="m-kern">—</div></div>
+    <div class="mc"><div class="lab">nodes · edges</div><div class="val cyan" id="m-ne">—</div></div>
+    <div class="mc"><div class="lab">components</div><div class="val" id="m-comp">—</div></div>
+    <div class="mc"><div class="lab">artic. pts</div><div class="val red" id="m-art">—</div></div>
+    <div class="mc"><div class="lab">global min-cut</div><div class="val" id="m-cut">—</div></div>
+    <div class="mc"><div class="lab">λ₂ Fiedler</div><div class="val green" id="m-fied">—</div></div>
+    <div class="mc"><div class="lab">s→t flow</div><div class="val" id="m-flow">—</div></div>
+  </div>
+</div>
+
+<div id="kpanel"><div class="kt">prove by <b>computation</b> · K1–K6</div><div id="klines">booting…</div></div>
+
+<div id="bar">
+  <button id="b-art" class="rd on" onclick="showArt=!showArt;this.classList.toggle('on',showArt)">articulation pts</button>
+  <button id="b-cut" class="on" onclick="showCut=!showCut;this.classList.toggle('on',showCut)">bridges</button>
+  <button id="b-geo" class="on" onclick="showGeo=!showGeo;this.classList.toggle('on',showGeo)">geo chokepoints</button>
+  <div class="sep"></div>
+  <button id="b-flow" class="cyan on" onclick="setMode('flow')">s→t flow</button>
+  <button id="b-cutmode" class="rd" onclick="setMode('cut')">cut cable</button>
+  <button id="b-add" class="gn" onclick="setMode('add')">＋ lay cable</button>
+  <button onclick="resetGraph()">reset</button>
+  <div class="sep"></div>
+  <span class="klbl">λ₂ =</span><span id="fiedbar" style="font-size:10px;color:var(--green);font-weight:bold">—</span>
+</div>
+
+<div id="stamp">
+  KIRCHHOFFIUM v1.1 · Kirchhoff 1847 = graph theory before the name<br>
+  <b>CURSE 30 slain</b>: dead code still has to parse · schematic (K1) · exact (K2)<br>
+  raise λ₂ = harder to cut · chi=2 · always
+</div>
+
+<script>
+"use strict";
+var cv=document.getElementById("cv"), ctx=cv.getContext("2d");
+var W=0,H=0,DPR=1;
+function resize(){
+  DPR=Math.min(window.devicePixelRatio||1,2);
+  W=window.innerWidth; H=window.innerHeight;
+  cv.style.width=W+"px"; cv.style.height=H+"px";
+  cv.width=Math.round(W*DPR); cv.height=Math.round(H*DPR);
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+}
+window.addEventListener("resize",resize); resize();
+
+var GOLD=[255,215,0],CYAN=[0,212,255],PINK=[255,105,180],GRN=[0,255,213],
+    PUR=[204,68,255],RED=[255,51,85],AMB=[255,180,84],WHT=[235,235,245],GRY=[110,115,135];
+function css(c,a){ return "rgba("+(c[0]|0)+","+(c[1]|0)+","+(c[2]|0)+","+a+")"; }
+function mix(a,b,t){ t=t<0?0:t>1?1:t; return [a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t]; }
+
+// =========================================================================
+// THE GRAPH — a schematic of the real submarine network (K1).
+// [name, lng, lat, isGeoChokepoint]. Coordinates real; edges = the documented
+// major corridors. ONE builder. By name. No hand indices. No corpse. (CURSE 30)
+// =========================================================================
+var NODES=[
+  ["New York",     -74,  40.7, 0], ["Virginia Bch", -76,  36.8, 0],
+  ["Miami",        -80,  25.8, 1], ["Los Angeles", -118,  34.0, 0],
+  ["Oregon",      -124,  45.0, 0], ["Halifax",      -63,  44.6, 0],
+  ["Fortaleza",    -38,  -3.7, 1], ["Rio",          -43, -22.9, 0],
+  ["Las Toninas",  -57, -36.0, 0], ["Panama",       -80,   9.0, 1],
+  ["Valparaiso",   -71, -33.0, 0],
+  ["Cornwall",      -5,  50.2, 0], ["Marseille",      5,  43.3, 1],
+  ["Lisbon",        -9,  38.7, 0], ["Bilbao",        -3,  43.3, 0],
+  ["Amsterdam",      5,  52.4, 0], ["Stavanger",      6,  59.0, 0],
+  ["Helsinki",      25,  60.2, 0],
+  ["Alexandria",    30,  31.2, 1], ["Casablanca",    -8,  33.6, 0],
+  ["Dakar",        -17,  14.7, 0], ["Lagos",          3,   6.5, 0],
+  ["Cape Town",     18, -33.9, 1], ["Djibouti",      43,  11.6, 1],
+  ["Mombasa",       40,  -4.0, 0],
+  ["Jeddah",        39,  21.5, 1], ["Fujairah",      56,  25.1, 1],
+  ["Mumbai",        72,  19.0, 1], ["Chennai",       80,  13.0, 0],
+  ["Colombo",       80,   6.9, 1],
+  ["Singapore",    103,   1.3, 1], ["Jakarta",      106,  -6.2, 0],
+  ["Luzon Strait", 121,  20.5, 1], ["Hong Kong",    114,  22.3, 0],
+  ["Shanghai",     121,  31.0, 0], ["Tokyo",        140,  35.6, 0],
+  ["Busan",        129,  35.0, 0], ["Perth",        116, -32.0, 0],
+  ["Sydney",       151, -33.9, 0], ["Auckland",     175, -36.8, 0],
+  ["Guam",         145,  13.4, 1], ["Hawaii",      -158,  21.3, 1]
+];
+var EDGE_NAMES=[
+  ["New York","Halifax"],["New York","Cornwall"],["Halifax","Cornwall"],
+  ["Virginia Bch","Cornwall"],["New York","Virginia Bch"],["Virginia Bch","Lisbon"],
+  ["New York","Lisbon"],["Miami","New York"],
+  ["Cornwall","Amsterdam"],["Cornwall","Bilbao"],["Amsterdam","Stavanger"],
+  ["Stavanger","Helsinki"],["Helsinki","Amsterdam"],["Bilbao","Lisbon"],
+  ["Lisbon","Marseille"],["Marseille","Amsterdam"],
+  ["Miami","Fortaleza"],["Fortaleza","Rio"],["Rio","Las Toninas"],
+  ["Las Toninas","Valparaiso"],["Miami","Panama"],["Panama","Valparaiso"],
+  ["Fortaleza","Lisbon"],["Fortaleza","Dakar"],
+  ["Marseille","Alexandria"],["Lisbon","Casablanca"],["Casablanca","Dakar"],
+  ["Alexandria","Jeddah"],["Jeddah","Djibouti"],["Djibouti","Fujairah"],
+  ["Djibouti","Mombasa"],["Fujairah","Mumbai"],["Jeddah","Mumbai"],
+  ["Dakar","Lagos"],["Lagos","Cape Town"],["Cape Town","Mombasa"],
+  ["Cape Town","Perth"],["Mombasa","Mumbai"],
+  ["Mumbai","Colombo"],["Colombo","Chennai"],["Chennai","Singapore"],
+  ["Colombo","Singapore"],["Mumbai","Chennai"],
+  ["Singapore","Jakarta"],["Singapore","Luzon Strait"],["Luzon Strait","Hong Kong"],
+  ["Hong Kong","Shanghai"],["Shanghai","Busan"],["Busan","Tokyo"],
+  ["Luzon Strait","Guam"],["Jakarta","Perth"],["Singapore","Hong Kong"],
+  ["Perth","Sydney"],["Shanghai","Luzon Strait"],
+  ["Tokyo","Guam"],["Guam","Hawaii"],["Hawaii","Los Angeles"],["Hawaii","Oregon"],
+  ["Tokyo","Oregon"],["Guam","Sydney"],["Sydney","Auckland"],["Auckland","Hawaii"],
+  ["Oregon","Los Angeles"],["Los Angeles","Panama"]
+];
+
+// K6 — the graph VALIDATES itself. A silently dropped edge changes the min-cut,
+// which is a fake receipt (CURSE 26 family). Failures are reported, loudly.
+var EDGES=[], addedEdges=[], BUILD_ERRORS=[];
+function idx(name){ for(var i=0;i<NODES.length;i++){ if(NODES[i][0]===name) return i; } return -1; }
+function buildEdges(){
+  EDGES=[]; BUILD_ERRORS=[];
+  var seen={};
+  for(var i=0;i<EDGE_NAMES.length;i++){
+    var na=EDGE_NAMES[i][0], nb=EDGE_NAMES[i][1];
+    var a=idx(na), b=idx(nb);
+    if(a<0){ BUILD_ERRORS.push("no node: \""+na+"\""); continue; }
+    if(b<0){ BUILD_ERRORS.push("no node: \""+nb+"\""); continue; }
+    if(a===b){ BUILD_ERRORS.push("self-loop: \""+na+"\""); continue; }
+    var key=Math.min(a,b)+"-"+Math.max(a,b);
+    if(seen[key]){ BUILD_ERRORS.push("dup edge: "+na+"–"+nb); continue; }
+    seen[key]=1;
+    EDGES.push({a:a,b:b,cut:false});
+  }
+}
+buildEdges();
+
+// ---------- projection ----------
+function project(){
+  var pad=40, w=W-2*pad, h=H-150-40;
+  return { toX:function(lng){ return pad + (lng+180)/360*w; },
+           toY:function(lat){ return 96 + (90-lat)/180*h; } };
+}
+function nodeXY(i){ var p=project(); return {x:p.toX(NODES[i][1]), y:p.toY(NODES[i][2])}; }
+
+// =========================================================================
+// GRAPH ALGORITHMS — all exact, all live, all computed. (K2)
+// =========================================================================
+function activeEdges(){
+  var out=[];
+  for(var i=0;i<EDGES.length;i++){ if(!EDGES[i].cut) out.push(EDGES[i]); }
+  for(var j=0;j<addedEdges.length;j++){ if(!addedEdges[j].cut) out.push(addedEdges[j]); }
+  return out;
+}
+function adjList(){
+  var n=NODES.length, adj=[];
+  for(var i=0;i<n;i++) adj.push([]);
+  var e=activeEdges();
+  for(var k=0;k<e.length;k++){ adj[e[k].a].push(e[k].b); adj[e[k].b].push(e[k].a); }
+  return adj;
+}
+function weightMatrix(){
+  var n=NODES.length, w=[];
+  for(var i=0;i<n;i++) w.push(new Array(n).fill(0));
+  var e=activeEdges();
+  for(var k=0;k<e.length;k++){ w[e[k].a][e[k].b]+=1; w[e[k].b][e[k].a]+=1; }
+  return w;
+}
+function components(adj){
+  var n=adj.length, comp=new Array(n).fill(-1), c=0;
+  for(var s=0;s<n;s++){
+    if(comp[s]!==-1) continue;
+    var st=[s]; comp[s]=c;
+    while(st.length){
+      var u=st.pop();
+      for(var i=0;i<adj[u].length;i++){ var v=adj[u][i]; if(comp[v]===-1){ comp[v]=c; st.push(v); } }
+    }
+    c++;
+  }
+  return {comp:comp, count:c};
+}
+// Hopcroft–Tarjan: articulation points + bridges, one DFS
+function artBridges(adj){
+  var n=adj.length, disc=new Array(n).fill(-1), low=new Array(n).fill(0),
+      isArt=new Array(n).fill(false), bridges=[], timer=0;
+  function dfs(u,parent){
+    disc[u]=low[u]=timer++; var children=0;
+    for(var i=0;i<adj[u].length;i++){
+      var v=adj[u][i];
+      if(v===parent) continue;
+      if(disc[v]===-1){
+        children++; dfs(v,u);
+        if(low[v]<low[u]) low[u]=low[v];
+        if(parent!==-1 && low[v]>=disc[u]) isArt[u]=true;
+        if(low[v]>disc[u]) bridges.push([u,v]);
+      } else if(disc[v]<low[u]) low[u]=disc[v];
+    }
+    if(parent===-1 && children>1) isArt[u]=true;
+  }
+  for(var s=0;s<n;s++){ if(disc[s]===-1) dfs(s,-1); }
+  return {isArt:isArt, bridges:bridges};
+}
+// Stoer–Wagner global min-cut. ONE function. ONE truth. (v1.0 had two, and
+// called one of them with the wrong arity. It worked by luck.)
+function stoerWagner(){
+  var n=NODES.length;
+  if(components(adjList()).count>1) return 0;      // already split
+  var w=weightMatrix();
+  var present=[]; for(var v=0;v<n;v++) present.push(v);
+  var best=Infinity;
+  while(present.length>1){
+    var inA=new Array(n).fill(false), wsum=new Array(n).fill(0);
+    var a0=present[0]; inA[a0]=true;
+    for(var i=0;i<present.length;i++) wsum[present[i]]=w[a0][present[i]];
+    var prev=a0, last=a0, cutOfPhase=0;
+    for(var added=1; added<present.length; added++){
+      var sel=-1, mx=-1;
+      for(var j=0;j<present.length;j++){
+        var vv=present[j];
+        if(!inA[vv] && wsum[vv]>mx){ mx=wsum[vv]; sel=vv; }
+      }
+      if(sel<0) break;
+      inA[sel]=true; prev=last; last=sel;
+      cutOfPhase=mx;                                // w(last, A) = the cut of this phase
+      for(var j2=0;j2<present.length;j2++){
+        var v2=present[j2];
+        if(!inA[v2]) wsum[v2]+=w[sel][v2];
+      }
+    }
+    if(cutOfPhase<best) best=cutOfPhase;
+    for(var t=0;t<present.length;t++){              // merge last into prev
+      var vt=present[t];
+      if(vt===last||vt===prev) continue;
+      w[prev][vt]+=w[last][vt];
+      w[vt][prev]=w[prev][vt];
+    }
+    present=present.filter(function(x){ return x!==last; });
+  }
+  return best===Infinity?0:best;
+}
+// Edmonds–Karp s–t max-flow. Menger: maxflow = min edges to sever s from t.
+function maxflow(s,t){
+  if(s===t||s<0||t<0) return null;
+  var n=NODES.length, cap=[];
+  for(var i=0;i<n;i++) cap.push(new Array(n).fill(0));
+  var e=activeEdges();
+  for(var k=0;k<e.length;k++){ cap[e[k].a][e[k].b]+=1; cap[e[k].b][e[k].a]+=1; }
+  var flow=0, guard=0;
+  while(guard++<5000){
+    var par=new Array(n).fill(-1); par[s]=s;
+    var q=[s], found=false;
+    while(q.length && !found){
+      var u=q.shift();
+      for(var v=0;v<n;v++){
+        if(par[v]===-1 && cap[u][v]>0){ par[v]=u; if(v===t){ found=true; break; } q.push(v); }
+      }
+    }
+    if(par[t]===-1) break;
+    var aug=Infinity, cur=t;
+    while(cur!==s){ if(cap[par[cur]][cur]<aug) aug=cap[par[cur]][cur]; cur=par[cur]; }
+    cur=t;
+    while(cur!==s){ cap[par[cur]][cur]-=aug; cap[cur][par[cur]]+=aug; cur=par[cur]; }
+    flow+=aug;
+  }
+  return flow;
+}
+// λ₂ — the Fiedler value. Power-iterate (κI − L) deflated against 1.
+// Same L = D − A as the vibration modes. Fourth appearance of the Laplacian.
+function fiedler(){
+  var n=NODES.length;
+  if(components(adjList()).count>1) return 0;       // disconnected ⇒ λ₂ = 0 exactly
+  var L=[];
+  for(var i=0;i<n;i++) L.push(new Array(n).fill(0));
+  var e=activeEdges();
+  for(var k=0;k<e.length;k++){
+    L[e[k].a][e[k].a]++; L[e[k].b][e[k].b]++;
+    L[e[k].a][e[k].b]--; L[e[k].b][e[k].a]--;
+  }
+  var kappa=2*n;
+  var x=new Array(n);
+  for(var i2=0;i2<n;i2++) x[i2]=Math.sin(i2*1.7)+0.3*Math.cos(i2*0.9);
+  function deflate(v){ var m=0; for(var i=0;i<n;i++) m+=v[i]; m/=n; for(var i=0;i<n;i++) v[i]-=m; }
+  function normalize(v){ var s=0; for(var i=0;i<n;i++) s+=v[i]*v[i]; s=Math.sqrt(s)||1; for(var i=0;i<n;i++) v[i]/=s; }
+  deflate(x); normalize(x);
+  var lambda=0;
+  for(var it=0; it<400; it++){
+    var y=new Array(n);
+    for(var i3=0;i3<n;i3++){
+      var s2=kappa*x[i3];
+      for(var j=0;j<n;j++) s2-=L[i3][j]*x[j];
+      y[i3]=s2;
+    }
+    deflate(y); normalize(y);
+    x=y;
+  }
+  for(var i4=0;i4<n;i4++){                          // Rayleigh quotient of L
+    var s3=0; for(var j2=0;j2<n;j2++) s3+=L[i4][j2]*x[j2];
+    lambda+=x[i4]*s3;
+  }
+  return Math.max(0,lambda);
+}
+
+// ---------- state ----------
+var showArt=true, showCut=true, showGeo=true;
+var MODE="flow";
+var sNode=idx("Marseille"), tNode=idx("Singapore");
+var addFrom=-1, hoverNode=-1, hoverEdge=-1;
+var cache={};
+
+function recompute(){
+  var adj=adjList();
+  cache.comp=components(adj);
+  cache.ab=artBridges(adj);
+  cache.cut=stoerWagner();
+  cache.fied=fiedler();
+  cache.flow=maxflow(sNode,tNode);
+  var ke=document.getElementById("m-kern");
+  if(BUILD_ERRORS.length){ ke.textContent="FAIL "+BUILD_ERRORS.length; ke.style.color="#ff3355"; }
+  else { ke.textContent="OK"; ke.style.color="#00ffd5"; }
+  set("m-ne", NODES.length+" · "+activeEdges().length);
+  set("m-comp", cache.comp.count);
+  var na=0; for(var i=0;i<cache.ab.isArt.length;i++){ if(cache.ab.isArt[i]) na++; }
+  set("m-art", na);
+  set("m-cut", cache.comp.count>1?"SPLIT":cache.cut);
+  set("m-fied", cache.fied.toFixed(4));
+  set("m-flow", cache.flow===null?"—":cache.flow);
+  set("fiedbar", cache.fied.toFixed(4));
+  updatePanel();
+}
+function set(id,v){ var e=document.getElementById(id); if(e)e.textContent=v; }
+
+// ---------- draw ----------
+function draw(){
+  requestAnimationFrame(draw);
+  ctx.fillStyle="#050508"; ctx.fillRect(0,0,W,H);
+  var p=project();
+  ctx.strokeStyle=css(WHT,0.04); ctx.lineWidth=1;
+  for(var lng=-180;lng<=180;lng+=30){ ctx.beginPath(); ctx.moveTo(p.toX(lng),96); ctx.lineTo(p.toX(lng),H-54); ctx.stroke(); }
+  for(var lat=-60;lat<=75;lat+=30){ ctx.beginPath(); ctx.moveTo(40,p.toY(lat)); ctx.lineTo(W-40,p.toY(lat)); ctx.stroke(); }
+  ctx.fillStyle=css(WHT,0.10); ctx.font="8px ui-monospace,monospace"; ctx.textAlign="left";
+  ctx.fillText("equator", 44, p.toY(0)-3);
+  ctx.lineCap="round";
+
+  var all=EDGES.concat(addedEdges);
+  var bridgeSet={};
+  if(cache.ab){
+    for(var b=0;b<cache.ab.bridges.length;b++){
+      var br=cache.ab.bridges[b];
+      bridgeSet[br[0]+"-"+br[1]]=1; bridgeSet[br[1]+"-"+br[0]]=1;
+    }
+  }
+  for(var i=0;i<all.length;i++){
+    var e=all[i], A=nodeXY(e.a), B=nodeXY(e.b), isAdded=(i>=EDGES.length);
+    if(e.cut){
+      ctx.strokeStyle=css(RED,0.26); ctx.lineWidth=1; ctx.setLineDash([2,4]);
+      ctx.beginPath(); ctx.moveTo(A.x,A.y); ctx.lineTo(B.x,B.y); ctx.stroke(); ctx.setLineDash([]);
+      var mx=(A.x+B.x)/2, my=(A.y+B.y)/2;
+      ctx.strokeStyle=css(RED,0.8); ctx.lineWidth=1.4;
+      ctx.beginPath(); ctx.moveTo(mx-4,my-4); ctx.lineTo(mx+4,my+4);
+      ctx.moveTo(mx+4,my-4); ctx.lineTo(mx-4,my+4); ctx.stroke();
+      continue;
+    }
+    var isBridge = showCut && bridgeSet[e.a+"-"+e.b];
+    var col = isAdded?GRN : (isBridge?RED:CYAN);
+    var alpha = isBridge?0.85 : (i===hoverEdge?0.9:0.34);
+    ctx.strokeStyle=css(col,alpha); ctx.lineWidth=isBridge?2:(i===hoverEdge?2.2:1);
+    if(isAdded) ctx.setLineDash([5,3]);
+    ctx.beginPath(); ctx.moveTo(A.x,A.y); ctx.lineTo(B.x,B.y); ctx.stroke(); ctx.setLineDash([]);
+  }
+  if(MODE==="flow" && sNode>=0 && tNode>=0){
+    var Sx=nodeXY(sNode), Tx=nodeXY(tNode);
+    ctx.strokeStyle=css(GOLD,0.5); ctx.lineWidth=1; ctx.setLineDash([1,4]);
+    ctx.beginPath(); ctx.arc(Sx.x,Sx.y,10,0,6.2832); ctx.stroke();
+    ctx.beginPath(); ctx.arc(Tx.x,Tx.y,10,0,6.2832); ctx.stroke(); ctx.setLineDash([]);
+  }
+  for(var i2=0;i2<NODES.length;i2++){
+    var xy=nodeXY(i2), nd=NODES[i2];
+    var isArt = showArt && cache.ab && cache.ab.isArt[i2];
+    var isGeo = showGeo && nd[3];
+    var r=3.2, col=WHT, a=0.8;
+    if(isGeo){ col=AMB; a=0.9; r=3.6; }
+    if(isArt){ col=RED; a=1; r=4.4; }
+    if(i2===sNode && MODE==="flow"){ col=GOLD; r=5; }
+    if(i2===tNode && MODE==="flow"){ col=CYAN; r=5; }
+    if(i2===addFrom && MODE==="add"){ col=GRN; r=5; }
+    if(cache.comp && cache.comp.count>1 && !isArt && !isGeo){
+      var tints=[[120,200,255],[255,140,120],[180,255,150],[220,160,255],[255,220,120]];
+      col=tints[cache.comp.comp[i2]%5]; a=0.9;
+    }
+    if(isArt){ ctx.strokeStyle=css(RED,0.5); ctx.lineWidth=1;
+      ctx.beginPath(); ctx.arc(xy.x,xy.y,r+4,0,6.2832); ctx.stroke(); }
+    if(isGeo){ ctx.strokeStyle=css(AMB,0.4); ctx.lineWidth=1; ctx.setLineDash([2,2]);
+      ctx.beginPath(); ctx.arc(xy.x,xy.y,r+6,0,6.2832); ctx.stroke(); ctx.setLineDash([]); }
+    ctx.fillStyle=css(col,a); ctx.shadowColor=css(col,0.8); ctx.shadowBlur=(isArt||isGeo)?7:0;
+    ctx.beginPath(); ctx.arc(xy.x,xy.y,r,0,6.2832); ctx.fill(); ctx.shadowBlur=0;
+    if(i2===hoverNode || isArt || nd[3]){
+      ctx.fillStyle=css(isArt?RED:(isGeo?AMB:WHT),0.85);
+      ctx.font="8.5px ui-monospace,monospace"; ctx.textAlign="center"; ctx.textBaseline="bottom";
+      ctx.fillText(nd[0], xy.x, xy.y-r-3);
+    }
+  }
+  ctx.textAlign="left"; ctx.textBaseline="alphabetic"; ctx.font="9px ui-monospace,monospace";
+  var lx=44, ly=H-72;
+  ctx.fillStyle=css(RED,0.9); ctx.beginPath(); ctx.arc(lx,ly,4,0,6.2832); ctx.fill();
+  ctx.fillStyle=css(WHT,0.6); ctx.fillText("articulation point — removal SPLITS the network", lx+9, ly+3);
+  ctx.fillStyle=css(AMB,0.9); ctx.beginPath(); ctx.arc(lx,ly+15,4,0,6.2832); ctx.fill();
+  ctx.fillStyle=css(WHT,0.6); ctx.fillText("geographic chokepoint — a strait (K3)", lx+9, ly+18);
+  ctx.strokeStyle=css(RED,0.9); ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(lx-4,ly+30); ctx.lineTo(lx+4,ly+30); ctx.stroke();
+  ctx.fillStyle=css(WHT,0.6); ctx.fillText("bridge — the ONE cable holding a region on", lx+9, ly+33);
+}
+
+function updatePanel(){
+  if(!cache.ab) return;
+  var arts=[], geos=[];
+  for(var i=0;i<NODES.length;i++){ if(cache.ab.isArt[i]) arts.push(NODES[i][0]); }
+  for(var j=0;j<NODES.length;j++){ if(NODES[j][3]) geos.push(NODES[j][0]); }
+  var split=cache.comp.count>1;
+  document.getElementById("klines").innerHTML=
+  '<div class="kk">K6 · KERNEL CHECK</div>'+
+  (BUILD_ERRORS.length
+    ? '<div class="r">✗ GRAPH DID NOT BUILD CLEAN:<br>'+BUILD_ERRORS.join("<br>")+'</div>'
+    : '<div class="g">✓ '+EDGE_NAMES.length+'/'+EDGE_NAMES.length+' edge names resolved. no silent drops.</div>')+
+  '<div style="font-size:8.5px">a dropped edge CHANGES the min-cut. a silent drop is a fake receipt. it reports or it does not ship.</div>'+
+
+  '<div class="sec"><span class="kk">THE CHOKEPOINTS</span> (computed)</div>'+
+  (split?'<div class="r">⚠ SPLIT into '+cache.comp.count+' pieces. λ₂ = 0. a region is dark.</div>':'')+
+  '<div>articulation points ('+arts.length+'):<br>'+
+    (arts.length? '<span class="r">'+arts.join(" · ")+'</span>'
+                : '<span class="g">none — every hub has a backup path ✓</span>')+
+    '<br><span style="font-size:8.5px">removing ANY one disconnects the graph. Hopcroft–Tarjan, one DFS.</span></div>'+
+
+  '<div class="sec">global min-cut = <b>'+(split?"0 (already split)":cache.cut)+'</b><br>'+
+    '<span style="font-size:8.5px">fewest cables whose loss splits the network in two (Stoer–Wagner). this is λ(G), the edge connectivity — literally "how many cuts to isolate a half."</span></div>'+
+
+  '<div class="sec">λ₂ Fiedler = <b>'+cache.fied.toFixed(4)+'</b><br>'+
+    '<span style="font-size:8.5px">2nd Laplacian eigenvalue — the SAME λ that was the fundamental frequency in the vibration sims. higher = harder to cut. <b class="g">lay a cable, watch it climb.</b></span></div>'+
+
+  '<div class="sec"><span class="kk">K3 · geographic chokepoints</span><br><span style="color:#ffb454">'+geos.join(" · ")+'</span>'+
+    '<br><span style="font-size:8.5px">two "independent" cables in the SAME strait are ONE anchor. the graph cannot see this. the ocean enforces it. Suez/Red Sea, Bab-el-Mandeb (Djibouti), Luzon, the Singapore funnel, Marseille, Fortaleza, Hawaii/Guam.</span></div>'+
+
+  '<div class="sec">s→t : '+(sNode>=0?NODES[sNode][0]:"?")+' → '+(tNode>=0?NODES[tNode][0]:"?")+
+    ' · max-flow = min-cut = <b>'+(cache.flow===null?"—":cache.flow)+'</b><br>'+
+    '<span style="font-size:8.5px">independent paths = cuts needed to sever them (Menger). Edmonds–Karp.</span></div>'+
+
+  '<div class="sec" style="font-size:8.5px"><span class="kk">K1</span> SCHEMATIC — major hubs + trunk corridors, NOT the 500-cable DB. topology real, count not. <span class="kk">K2</span> every number computed on the shown graph. <span class="kk">K4</span> defensive: it finds weakness to FIX it. <span class="kk">K5</span> unit weights.</div>';
+}
+
+// ---------- interaction ----------
+function nearestNode(mx,my){
+  var best=-1, bd=18;
+  for(var i=0;i<NODES.length;i++){
+    var xy=nodeXY(i), d=Math.hypot(xy.x-mx,xy.y-my);
+    if(d<bd){ bd=d; best=i; }
+  }
+  return best;
+}
+function distSeg(px,py,x1,y1,x2,y2){
+  var dx=x2-x1, dy=y2-y1, L2=dx*dx+dy*dy;
+  if(L2<1e-6) return Math.hypot(px-x1,py-y1);
+  var t=Math.max(0,Math.min(1,((px-x1)*dx+(py-y1)*dy)/L2));
+  return Math.hypot(px-(x1+t*dx), py-(y1+t*dy));
+}
+function nearestEdge(mx,my){
+  var all=EDGES.concat(addedEdges), best=-1, bd=8;
+  for(var i=0;i<all.length;i++){
+    var e=all[i]; if(e.cut) continue;
+    var A=nodeXY(e.a), B=nodeXY(e.b);
+    var d=distSeg(mx,my,A.x,A.y,B.x,B.y);
+    if(d<bd){ bd=d; best=i; }
+  }
+  return best;
+}
+cv.addEventListener("mousemove",function(ev){
+  hoverNode=nearestNode(ev.clientX,ev.clientY);
+  hoverEdge=(hoverNode<0)?nearestEdge(ev.clientX,ev.clientY):-1;
+});
+cv.addEventListener("click",function(ev){
+  var ni=nearestNode(ev.clientX,ev.clientY);
+  if(MODE==="add"){
+    if(ni>=0){
+      if(addFrom<0) addFrom=ni;
+      else if(ni!==addFrom){ addedEdges.push({a:addFrom,b:ni,cut:false}); addFrom=-1; recompute(); }
+    }
+    return;
+  }
+  if(MODE==="flow"){
+    if(ni>=0){ if(ev.shiftKey) tNode=ni; else sNode=ni; recompute(); }
+    return;
+  }
+  if(MODE==="cut"){
+    var all=EDGES.concat(addedEdges);
+    if(ni>=0){
+      for(var i=0;i<all.length;i++){ if(all[i].a===ni||all[i].b===ni) all[i].cut=true; }
+      recompute(); return;
+    }
+    var ei=nearestEdge(ev.clientX,ev.clientY);
+    if(ei>=0){ all[ei].cut=true; recompute(); }
+  }
+});
+function setMode(m){
+  MODE=m; addFrom=-1;
+  document.getElementById("b-flow").classList.toggle("on",m==="flow");
+  document.getElementById("b-cutmode").classList.toggle("on",m==="cut");
+  document.getElementById("b-add").classList.toggle("on",m==="add");
+  document.getElementById("sub").innerHTML = m==="cut"
+    ? 'CUT MODE — <span class="r">click a cable or a hub to sever it.</span> watch components, min-cut and λ₂ respond.'
+    : m==="add"
+    ? 'LAY MODE — <span class="g">click two hubs to lay a new cable.</span> watch λ₂ climb. that is the policy tool.'
+    : 'FLOW MODE — <b>click a hub = source</b>, <b>shift-click = sink</b>. max-flow = min cuts to sever them.';
+}
+function resetGraph(){ buildEdges(); addedEdges=[]; addFrom=-1; recompute(); }
+
+resize(); setMode("flow"); recompute();
+requestAnimationFrame(draw);
+</script>
+</body></html>

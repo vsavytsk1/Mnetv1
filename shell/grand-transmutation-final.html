@@ -1,0 +1,249 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>The Grand Transmutation Circle · FINAL — new-moon lock over Corinth</title>
+<style>
+:root{--bg:#05050a;--gold:#ffd700;--purp:#cc44ff;--cyan:#00d4ff;--pink:#ff69b4;--silver:#cfd8e6;--white:#e8ecf6;--dim:#6a6a82;
+ --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--white);font-family:var(--mono);overflow:hidden}
+#cv{position:fixed;inset:0;display:block;cursor:grab}#cv.drag{cursor:grabbing}
+#hud{position:fixed;top:10px;left:12px;z-index:10;pointer-events:none;max-width:330px}
+#ttl{color:var(--gold);font-size:13px;letter-spacing:.06em;text-transform:uppercase}#ttl .p{color:var(--purp)}
+#hud .row{line-height:1.75;color:rgba(232,236,246,.5);font-size:11px}
+#hud .g{color:var(--gold)}.pu{color:var(--purp)}.cy{color:var(--cyan)}.pk{color:var(--pink)}.sl{color:var(--silver)}
+#hud .lock{font-size:12px;font-weight:bold}
+#hud .dim{color:rgba(232,236,246,.28);font-size:10px;line-height:1.5;margin-top:4px}
+#conj{position:fixed;top:12px;right:12px;z-index:10;background:rgba(8,8,16,.86);border:1px solid #20202e;border-radius:8px;padding:9px 11px;width:172px}
+#conj .ct{font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px}
+#conj canvas{display:block;border:1px solid #16202e;border-radius:4px;background:#03030a}
+#conj .cl{font-size:10px;line-height:1.7;margin-top:6px;color:var(--dim)}
+#conj .cl b{color:var(--gold)}#conj .cl .lk{color:#00ffd5;font-weight:bold}#conj .cl .no{color:#ff5470}
+#bar{position:fixed;left:50%;transform:translateX(-50%);bottom:10px;display:flex;flex-wrap:wrap;gap:7px 11px;
+ align-items:center;background:rgba(8,8,16,.92);border:1px solid #20202e;border-radius:10px;padding:9px 14px;z-index:10;max-width:97vw;justify-content:center}
+.klbl{color:var(--dim);font-size:9px;text-transform:uppercase;letter-spacing:.08em}
+input[type=range]{appearance:none;-webkit-appearance:none;width:70px;height:4px;background:#2a2a3a;border-radius:3px;outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:var(--gold);cursor:pointer}
+input[type=range]::-moz-range-thumb{width:12px;height:12px;border:none;border-radius:50%;background:var(--gold);cursor:pointer}
+input#s-time{width:150px}input#s-time::-webkit-slider-thumb{background:var(--cyan)}
+.v2{color:var(--gold);font-size:9px;min-width:24px;text-align:right}
+.sep{width:1px;height:15px;background:#20202e}
+button{background:#14141f;border:1px solid #2a2a3a;border-radius:6px;color:var(--gold);font:11px var(--mono);padding:5px 9px;cursor:pointer;transition:all .12s}
+button:hover{border-color:var(--gold)}button.on{border-color:var(--cyan);color:var(--cyan)}
+button.moon{color:var(--cyan);border-color:#0a2a3a}button.moon.on{border-color:var(--cyan)}
+button.gt{color:#00ffd5;border-color:#0a3a3a}
+#stamp{position:fixed;bottom:10px;right:12px;color:var(--dim);font-size:9px;text-align:right;z-index:9;line-height:1.5}#stamp b{color:var(--gold)}
+</style></head>
+<body>
+<canvas id="cv"></canvas>
+
+<div id="hud">
+  <div id="ttl">Grand Transmutation <span class="p">Circle</span> · final</div>
+  <div class="row">core <span class="pu" id="h-core">{8/3}</span> · ring <span class="g" id="h-ring">{12/5}</span> · agapi q <span class="pk" id="h-q">0.71</span></div>
+  <div class="row">Corinth · <span class="g" id="h-time">12:27 EEST</span> · <span class="sl">14 Jul 2026</span></div>
+  <div class="row lock" id="h-lock">armed — scrub to the new moon</div>
+  <div class="dim">reads the sky, doesn't command it · new moon = conjunction, not eclipse · χ=2</div>
+</div>
+
+<div id="conj">
+  <div class="ct">new-moon lock · Sun ☉ Moon ☾</div>
+  <canvas id="cj" width="150" height="96"></canvas>
+  <div class="cl">
+    <div>elongation <b id="c-el">−0.18°</b></div>
+    <div>Moon lat <b id="c-lat">+3.2°</b> <span style="color:#6a6a82">(no eclipse)</span></div>
+    <div id="c-lk" class="no">not locked</div>
+  </div>
+</div>
+
+<div id="bar">
+  <span class="klbl">time (± new moon)</span><input id="s-time" type="range" min="-30" max="30" value="-18" step="0.2" oninput="TMIN=+this.value;tgt=null"><span class="v2" id="v-time">−18m</span>
+  <button id="b-nm" class="gt" onclick="tgt=0">→ new moon</button>
+  <div class="sep"></div>
+  <span class="klbl">flatten</span><input id="s-flat" type="range" min="0" max="100" value="0" oninput="FLAT=+this.value/100;view()"><span class="v2" id="v-flat">3D</span>
+  <span class="klbl">tilt</span><input id="s-tilt" type="range" min="-120" max="120" value="90" oninput="TILT=+this.value/100"><span class="v2" id="v-tilt">.90</span>
+  <span class="klbl">spin</span><input id="s-spin" type="range" min="0" max="100" value="20" oninput="SPIN=+this.value/6000"><span class="v2" id="v-spin">20</span>
+  <div class="sep"></div>
+  <span class="klbl">core</span><input id="s-cn" type="range" min="3" max="12" value="8" oninput="setCN(+this.value)"><span class="v2" id="v-cn">8</span>
+  <input id="s-ck" type="range" min="1" max="7" value="3" oninput="setCK(+this.value)"><span class="v2" id="v-ck">3</span>
+  <span class="klbl">ring</span><input id="s-rn" type="range" min="5" max="18" value="12" oninput="setRN(+this.value)"><span class="v2" id="v-rn">12</span>
+  <input id="s-rk" type="range" min="1" max="8" value="5" oninput="setRK(+this.value)"><span class="v2" id="v-rk">5</span>
+  <span class="klbl">q</span><input id="s-q" type="range" min="45" max="130" value="71" oninput="Q=+this.value/100"><span class="v2" id="v-q">.71</span>
+</div>
+
+<div id="stamp">Grand Transmutation · HELENA<br>the moonest moon · 12:45 EEST · locks in longitude, 3.2° miss<br>as above, so below · χ=2 · always</div>
+
+<script>
+"use strict";
+var cv=document.getElementById("cv"),ctx=cv.getContext("2d");
+var cj=document.getElementById("cj"),cjx=cj.getContext("2d");
+var W,H,DPR;
+function resize(){DPR=Math.min(window.devicePixelRatio||1,2);W=window.innerWidth;H=window.innerHeight;cv.width=Math.round(W*DPR);cv.height=Math.round(H*DPR);}
+window.addEventListener("resize",resize);resize();
+
+var CN=8,CK=3,RN=12,RK=5,Q=0.71,FLAT=0,TILT=0.90,SPIN=20/6000;
+var TMIN=-18,tgt=null,ACT=0,lockHold=0;
+var theta=0,ry=0.4,rx=0.90,dragging=false,lx=0,ly=0;
+var NMOON=Date.UTC(2026,6,14,9,45,42,615);   // exact new moon (engine), UTC
+
+var GOLD=[255,215,0],PURP=[204,68,255],CYAN=[0,212,255],PINK=[255,105,180],SILV=[207,216,230],WHITE=[232,236,246],GRN=[0,255,213];
+function css(c,a){return "rgba("+(c[0]|0)+","+(c[1]|0)+","+(c[2]|0)+","+a+")";}
+function mix(a,b,t){t=t<0?0:t>1?1:t;return [a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t];}
+function gcd(a,b){a=Math.abs(a);b=Math.abs(b);while(b){var t=a%b;a=b;b=t;}return a;}
+function starEdges(n,k){var d=gcd(n,k),e=[],s,cur,ring;for(s=0;s<d;s++){ring=[];cur=s;do{ring.push(cur);cur=(cur+k)%n;}while(cur!==s);for(var i=0;i<ring.length;i++)e.push([ring[i],ring[(i+1)%ring.length]]);}return e;}
+var ROSE=[{f:1,r:1},{f:-5,r:0.55},{f:7,r:0.28}];
+function tip(t){var x=0,y=0;for(var j=0;j<ROSE.length;j++){x+=ROSE[j].r*Math.cos(ROSE[j].f*t);y+=ROSE[j].r*Math.sin(ROSE[j].f*t);}return [x,y];}
+function intersect(x0,y0,x1,y1,R){var dx=x1-x0,dy=y1-y0,dd=Math.hypot(dx,dy);if(dd<1e-6||dd>2*R)return null;var a=dd/2,h2=R*R-a*a;if(h2<0)return null;var h=Math.sqrt(h2),xm=x0+dx/2,ym=y0+dy/2;return [[xm+h*dy/dd,ym-h*dx/dd],[xm-h*dy/dd,ym+h*dx/dd]];}
+
+// ---- ephemeris (validated Schlyter) ----
+var D2R=Math.PI/180,R2D=180/Math.PI;
+function rev(x){return ((x%360)+360)%360;}
+function sd(x){return Math.sin(x*D2R);}function cd(x){return Math.cos(x*D2R);}function td(x){return Math.tan(x*D2R);}
+function asd(x){return Math.asin(Math.max(-1,Math.min(1,x)))*R2D;}function at2(y,x){return Math.atan2(y,x)*R2D;}
+function jd(dt){return dt.getTime()/86400000+2440587.5;}function dS(dt){return jd(dt)-2451543.5;}
+function ec(M,e){var E=M+e*R2D*sd(M)*(1+e*cd(M));for(var k=0;k<8;k++){var dE=(E-e*R2D*sd(E)-M)/(1-e*cd(E));E-=dE;if(Math.abs(dE)<1e-7)break;}return E;}
+function sunLon(d){var w=282.9404+4.70935e-5*d,e=0.016709-1.151e-9*d,M=rev(356.0470+0.9856002585*d);var E=ec(M,e);return rev(at2(Math.sqrt(1-e*e)*sd(E),cd(E)-e)+w);}
+function moonLB(d){var N=rev(125.1228-0.0529538083*d),i=5.1454,w=rev(318.0634+0.1643573223*d),a=60.2666,e=0.054900,M=rev(115.3654+13.0649929509*d);
+ var E=ec(M,e),xv=a*(cd(E)-e),yv=a*Math.sqrt(1-e*e)*sd(E),v=at2(yv,xv),r=Math.sqrt(xv*xv+yv*yv);
+ var xh=r*(cd(N)*cd(v+w)-sd(N)*sd(v+w)*cd(i)),yh=r*(sd(N)*cd(v+w)+cd(N)*sd(v+w)*cd(i)),zh=r*sd(v+w)*sd(i);
+ var lon=at2(yh,xh),lat=at2(zh,Math.sqrt(xh*xh+yh*yh));
+ var Ms=rev(356.0470+0.9856002585*d),ws=282.9404+4.70935e-5*d,Ls=rev(Ms+ws),Lm=rev(M+w+N),Dm=rev(Lm-Ls),F=rev(Lm-N);
+ lon=rev(lon-1.274*sd(M-2*Dm)+0.658*sd(2*Dm)-0.186*sd(Ms)-0.059*sd(2*M-2*Dm)-0.057*sd(M-2*Dm+Ms)+0.053*sd(M+2*Dm)+0.046*sd(2*Dm-Ms)+0.041*sd(M-Ms)-0.035*sd(Dm)-0.031*sd(M+Ms)-0.015*sd(2*F-2*Dm)+0.011*sd(M-4*Dm));
+ lat=lat-0.173*sd(F-2*Dm)-0.055*sd(M-F-2*Dm)-0.046*sd(M+F-2*Dm)+0.033*sd(F+2*Dm)+0.017*sd(2*M+F);
+ return {lon:rev(lon),lat:lat};
+}
+function eclEq(lon,lat,d){var o=23.4393-3.563e-7*d;return {ra:rev(at2(sd(lon)*cd(o)-td(lat)*sd(o),cd(lon))),dec:asd(sd(lat)*cd(o)+cd(lat)*sd(o)*sd(lon))};}
+function lst(dt){var d=dS(dt),Ls=rev(rev(356.0470+0.9856002585*d)+(282.9404+4.70935e-5*d)),G0=rev(Ls+180);var UT=dt.getUTCHours()+dt.getUTCMinutes()/60+dt.getUTCSeconds()/3600;return rev(G0+UT*15.04106864+22.9573);}
+function altaz(ra,dec,dt){var Hh=rev(lst(dt)-ra);return {alt:asd(sd(37.9407)*sd(dec)+cd(37.9407)*cd(dec)*cd(Hh)),az:rev(at2(sd(Hh),cd(Hh)*sd(37.9407)-td(dec)*cd(37.9407))+180)};}
+
+// ---- combined transform (validated) ----
+var CAM=4.0;
+function w2s(p,cx,cy,scale){var f=scale*CAM;
+  var cX=Math.cos(rx),sX=Math.sin(rx),y1=p[1]*cX-p[2]*sX,z1=p[1]*sX+p[2]*cX;
+  var cY=Math.cos(ry),sY=Math.sin(ry),x2=p[0]*cY+z1*sY,z2=-p[0]*sY+z1*cY;
+  var d=CAM-z2;if(d<0.4)d=0.4;var s3=f/d;var ax=cx+x2*s3,ay=cy-y1*s3;
+  var bx=cx+(p[0]*cY-p[1]*sY)*scale,by=cy-(p[0]*sY+p[1]*cY)*scale;
+  return [ax+(bx-ax)*FLAT,ay+(by-ay)*FLAT,z2];}
+
+function draw(){
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+  ctx.fillStyle="rgba(5,5,10,0.34)";ctx.fillRect(0,0,W,H);
+
+  // --- time / celestial lock ---
+  if(tgt!==null){TMIN+=(tgt-TMIN)*0.05;document.getElementById("s-time").value=TMIN.toFixed(1);}
+  var dt=new Date(NMOON+TMIN*60000), d=dS(dt);
+  var sl=sunLon(d), ml=moonLB(d), elong=ml.lon-sl; if(elong>180)elong-=360; if(elong<-180)elong+=360;
+  var locked=Math.abs(elong)<0.008;
+  if(Math.abs(elong)<0.008)lockHold++;else lockHold=0;
+  var target=Math.abs(elong)<0.03?1:0;
+  ACT+=(target-ACT)*0.06;                       // activation eases in near conjunction
+  var glow=1+ACT*0.9;
+
+  var cx=W/2,cy=H/2,scale=Math.min(W,H)*0.34;
+  rx=FLAT>0.5?rx:TILT;
+  ctx.globalCompositeOperation="screen";ctx.lineCap="round";ctx.lineJoin="round";
+
+  // Layer 1: agapi vesica circles
+  var Rv=0.48,dd=Q*Rv,cen=[];
+  for(var i=0;i<RN;i++){var a=i/RN*6.2832;cen.push([Math.cos(a)*dd,Math.sin(a)*dd]);}
+  for(var i2=0;i2<RN;i2++){ctx.strokeStyle=css(GOLD,0.13*glow);ctx.lineWidth=0.8;ctx.beginPath();
+    for(var t=0;t<=44;t++){var th=t/44*6.2832;var P=w2s([cen[i2][0]+Math.cos(th)*Rv,cen[i2][1]+Math.sin(th)*Rv,0],cx,cy,scale);t?ctx.lineTo(P[0],P[1]):ctx.moveTo(P[0],P[1]);}ctx.stroke();}
+  var ang=Math.acos(Math.max(-1,Math.min(1,1-2*Q*Q)))*180/Math.PI,orth=Math.abs(ang-90)<0.6;
+  for(var a2=0;a2<RN;a2++)for(var b2=a2+1;b2<RN;b2++){var pts=intersect(cen[a2][0],cen[a2][1],cen[b2][0],cen[b2][1],Rv);if(!pts)continue;
+    var diam=(RN%2===0)&&((b2-a2)===RN/2),pc=diam&&orth?GRN:PINK;
+    for(var pi=0;pi<2;pi++){var P=w2s([pts[pi][0],pts[pi][1],0],cx,cy,scale);ctx.fillStyle=css(pc,(diam?0.85:0.35)*glow);ctx.beginPath();ctx.arc(P[0],P[1],diam?2.3:1.3,0,6.2832);ctx.fill();}}
+
+  // Layer 2: inscribed star {RN/RK} + outer ring
+  var rr=0.74,pts2=[];
+  for(var s2=0;s2<RN;s2++){var a=s2/RN*6.2832-1.5708;pts2.push(w2s([Math.cos(a)*rr,Math.sin(a)*rr,0],cx,cy,scale));}
+  var e2=starEdges(RN,RK);ctx.strokeStyle=css(GOLD,0.65*glow);ctx.lineWidth=1.3;ctx.beginPath();
+  for(var q2=0;q2<e2.length;q2++){var A=pts2[e2[q2][0]],B=pts2[e2[q2][1]];ctx.moveTo(A[0],A[1]);ctx.lineTo(B[0],B[1]);}ctx.stroke();
+  ctx.strokeStyle=css(GOLD,0.3*glow);ctx.lineWidth=1;ctx.beginPath();
+  for(var t3=0;t3<=72;t3++){var th=t3/72*6.2832;var P=w2s([Math.cos(th)*0.86,Math.sin(th)*0.86,0],cx,cy,scale);t3?ctx.lineTo(P[0],P[1]):ctx.moveTo(P[0],P[1]);}ctx.stroke();
+  for(var v2=0;v2<RN;v2++){ctx.fillStyle=css(GOLD,0.8*glow);ctx.beginPath();ctx.arc(pts2[v2][0],pts2[v2][1],2,0,6.2832);ctx.fill();}
+
+  // Layer 3: Fourier rose
+  var rs=0.20;ctx.strokeStyle=css(CYAN,0.55*glow);ctx.lineWidth=1.1;ctx.beginPath();
+  for(var t4=0;t4<=240;t4++){var qq=tip(t4/240*6.2832);var P=w2s([qq[0]*rs,qq[1]*rs,0.02],cx,cy,scale);t4?ctx.lineTo(P[0],P[1]):ctx.moveTo(P[0],P[1]);}ctx.stroke();
+
+  // Layer 4: CORE transmutation volume
+  var SL=13,half=(SL-1)/2,Rc=0.27,twist=0.26,zc=0.42,edgesC=starEdges(CN,CK),sp=[];
+  for(var s=0;s<SL;s++){var sc=s-half,z=(sc/half)*zc,tw=sc*twist,row=[];for(var i=0;i<CN;i++){var a=-1.5708+i/CN*6.2832+tw;row.push(w2s([Math.cos(a)*Rc,Math.sin(a)*Rc,z],cx,cy,scale));}sp.push(row);}
+  ctx.strokeStyle=css(PURP,0.20*glow);ctx.lineWidth=0.6;ctx.beginPath();
+  for(var sb=0;sb<SL-1;sb++)for(var ib=0;ib<CN;ib++){var P=sp[sb][ib],Qp=sp[sb+1][ib];ctx.moveTo(P[0],P[1]);ctx.lineTo(Qp[0],Qp[1]);}ctx.stroke();
+  for(var s4=0;s4<SL;s4++){var col=mix(PURP,GOLD,Math.abs(s4-half)/half),em=0.35+0.65*(1-Math.abs(s4-half)/(half+1));
+    ctx.strokeStyle=css(col,em*0.8*glow);ctx.lineWidth=s4===half?1.6:0.9;ctx.beginPath();
+    for(var q4=0;q4<edgesC.length;q4++){var A=sp[s4][edgesC[q4][0]],B=sp[s4][edgesC[q4][1]];ctx.moveTo(A[0],A[1]);ctx.lineTo(B[0],B[1]);}ctx.stroke();}
+
+  // Sun & Moon markers on outer ring (real sky azimuth) — the drivers
+  var seq=eclEq(sl,0,d),saa=altaz(seq.ra,seq.dec,dt);
+  var meq=eclEq(ml.lon,ml.lat,d),maa=altaz(meq.ra,meq.dec,dt);
+  function ring(az,rad){var a=(az-90)*D2R;return w2s([Math.cos(a)*rad,Math.sin(a)*rad,0.03],cx,cy,scale);}
+  var Sp=ring(saa.az,0.93),Mp=ring(maa.az,0.93);
+  ctx.strokeStyle=css(mix(GOLD,SILV,0.5),0.4+ACT*0.4);ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(Sp[0],Sp[1]);ctx.lineTo(Mp[0],Mp[1]);ctx.stroke();
+  ctx.fillStyle=css(GOLD,0.95);ctx.shadowColor=css(GOLD,1);ctx.shadowBlur=12+ACT*14;ctx.beginPath();ctx.arc(Sp[0],Sp[1],6,0,6.2832);ctx.fill();
+  ctx.fillStyle=css(SILV,0.95);ctx.shadowColor=css(SILV,1);ctx.shadowBlur=8;ctx.beginPath();ctx.arc(Mp[0],Mp[1],4.5,0,6.2832);ctx.fill();ctx.shadowBlur=0;
+
+  // Gate — flares on the lock
+  var pulse=0.5+0.5*Math.sin(performance.now()*0.002);
+  var gate=w2s([0,0,0],cx,cy,scale);
+  ctx.strokeStyle=css(mix(CYAN,GRN,ACT),(0.3+pulse*0.3+ACT*0.4));ctx.lineWidth=2;ctx.beginPath();ctx.arc(gate[0],gate[1],11+pulse*3+ACT*6,0,6.2832);ctx.stroke();
+  ctx.fillStyle=css(mix(GOLD,WHITE,ACT),1);ctx.shadowColor=css(GOLD,1);ctx.shadowBlur=8+ACT*30;ctx.beginPath();ctx.arc(gate[0],gate[1],5+ACT*2,0,6.2832);ctx.fill();ctx.shadowBlur=0;
+  if(ACT>0.3){var ph=(performance.now()*0.0005)%1;ctx.strokeStyle=css(mix(WHITE,GOLD,ph),(1-ph)*0.5*ACT);ctx.lineWidth=1.6*(1-ph)+0.3;ctx.beginPath();ctx.arc(gate[0],gate[1],ph*scale*0.95,0,6.2832);ctx.stroke();}
+
+  ctx.globalCompositeOperation="source-over";
+  drawConj(elong,ml.lat,locked);
+
+  // HUD
+  set("h-core","{"+CN+"/"+CK+"}");set("h-ring","{"+RN+"/"+RK+"}");set("h-q",Q.toFixed(2));
+  var lc=new Date(dt.getTime()+3*3600000);
+  set("h-time",String(lc.getUTCHours()).padStart(2,"0")+":"+String(lc.getUTCMinutes()).padStart(2,"0")+":"+String(lc.getUTCSeconds()).padStart(2,"0")+" EEST");
+  var hl=document.getElementById("h-lock");
+  if(locked){hl.textContent="◈ NEW MOON — TRANSMUTATION LOCK";hl.style.color="#00ffd5";}
+  else if(ACT>0.15){hl.textContent="conjunction near — circle warming";hl.style.color="#ffd700";}
+  else{hl.textContent="armed — scrub to the new moon";hl.style.color="rgba(232,236,246,.5)";}
+  document.getElementById("v-time").textContent=(TMIN>=0?"+":"")+TMIN.toFixed(0)+"m";
+}
+
+function drawConj(elong,lat,locked){
+  var w=150,h=96;cjx.clearRect(0,0,w,h);cjx.fillStyle="#03030a";cjx.fillRect(0,0,w,h);
+  var scale=16;                                  // px per degree (zoom the near-miss)
+  var cX=w/2, cY=h/2 + lat*scale*0.5;            // Sun near center; Moon offset by lat above
+  // meridian (conjunction line)
+  cjx.strokeStyle=locked?"rgba(0,255,213,0.8)":"rgba(120,120,150,0.25)";cjx.lineWidth=locked?1.4:1;
+  cjx.beginPath();cjx.moveTo(cX,6);cjx.lineTo(cX,h-6);cjx.stroke();
+  // Sun (fixed reference at meridian)
+  cjx.fillStyle="#ffd700";cjx.shadowColor="#ffd700";cjx.shadowBlur=10;cjx.beginPath();cjx.arc(cX,cY,6,0,6.2832);cjx.fill();cjx.shadowBlur=0;
+  // Moon offset by (elong horizontally, lat vertically)
+  var mx=cX+elong*scale*3, my=cY-lat*scale;      // exaggerate elong x3 for visibility
+  cjx.fillStyle="#cfd8e6";cjx.shadowColor="#cfd8e6";cjx.shadowBlur=6;cjx.beginPath();cjx.arc(mx,my,4.5,0,6.2832);cjx.fill();cjx.shadowBlur=0;
+  // labels
+  cjx.fillStyle="rgba(255,215,0,.55)";cjx.font="8px "+getComputedStyle(document.body).fontFamily;cjx.fillText("☉",cX-3,cY+16);
+  cjx.fillStyle="rgba(207,216,230,.6)";cjx.fillText("☾",mx-3,my-8);
+  set("c-el",(elong>=0?"+":"")+elong.toFixed(3)+"°");
+  set("c-lat",(lat>=0?"+":"")+lat.toFixed(1)+"°");
+  var lk=document.getElementById("c-lk");
+  if(locked){lk.textContent="◈ CONJUNCTION LOCK";lk.className="lk";}
+  else{lk.textContent="Δλ="+Math.abs(elong*60).toFixed(1)+"′ — approaching";lk.className="no";}
+}
+function set(id,v){var e=document.getElementById(id);if(e)e.textContent=v;}
+
+// controls
+function view(){document.getElementById("v-flat").textContent=FLAT<0.02?"3D":FLAT>0.98?"2D":Math.round(FLAT*100)+"%";}
+function clampCK(){var e=document.getElementById("s-ck");e.max=CN-1;if(CK>CN-1){CK=CN-1;e.value=CK;set("v-ck",CK);}}
+function clampRK(){var e=document.getElementById("s-rk");e.max=RN-1;if(RK>RN-1){RK=RN-1;e.value=RK;set("v-rk",RK);}}
+function setCN(v){CN=v;set("v-cn",v);clampCK();}function setCK(v){CK=v;set("v-ck",v);}
+function setRN(v){RN=v;set("v-rn",v);clampRK();}function setRK(v){RK=v;set("v-rk",v);}
+document.getElementById("s-tilt").addEventListener("input",function(){set("v-tilt",TILT.toFixed(2));});
+document.getElementById("s-spin").addEventListener("input",function(e){set("v-spin",e.target.value);});
+document.getElementById("s-flat").addEventListener("input",view);
+
+cv.addEventListener("mousedown",function(e){dragging=true;cv.classList.add("drag");lx=e.clientX;ly=e.clientY;});
+window.addEventListener("mouseup",function(){dragging=false;cv.classList.remove("drag");});
+window.addEventListener("mousemove",function(e){if(!dragging)return;ry+=(e.clientX-lx)*0.008;rx+=(e.clientY-ly)*0.008;rx=Math.max(-1.5,Math.min(1.5,rx));lx=e.clientX;ly=e.clientY;});
+cv.addEventListener("touchstart",function(e){dragging=true;lx=e.touches[0].clientX;ly=e.touches[0].clientY;},{passive:true});
+window.addEventListener("touchend",function(){dragging=false;});
+window.addEventListener("touchmove",function(e){if(!dragging)return;ry+=(e.touches[0].clientX-lx)*0.008;rx+=(e.touches[0].clientY-ly)*0.008;rx=Math.max(-1.5,Math.min(1.5,rx));lx=e.touches[0].clientX;ly=e.touches[0].clientY;},{passive:true});
+
+function frame(){requestAnimationFrame(frame);if(!dragging)ry+=SPIN;theta+=0.014;draw();}
+view();frame();
+</script>
+</body></html>

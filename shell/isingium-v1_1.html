@@ -1,0 +1,406 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>ISINGIUM v1.1 — random until the symmetry combines</title>
+<!--
+  ISINGIUM v1.1
+  =================================================================
+  ## CURSE 32 — The Silent Typed Array (deadIndex)
+  Found by Vlad, in a screenshot, FROM THE PICTURE. Third time this week.
+  =================================================================
+
+  SYMPTOM:
+    T = 3.500, far above T_c. The lattice should be TV STATIC — salt and
+    pepper. Instead: enormous smooth frozen blobs and dead straight stripes.
+    At T = 1.54, deep in the ordered phase, |m| should be ~0.99. It read 0.238.
+    And every readout looked FINE: T 3.500 ✓ · |m| 0.043 ✓ · 2948k flips/s ✓.
+
+  ROOT CAUSE:
+      var expTab = new Float64Array(9);        // ← NINE
+      expTab[dE + 8] = ...                     // dE = +8 → index 16
+    dE ∈ {−8,−4,0,+4,+8} → indices {0,4,8,12,16}. THE ARRAY HAS NINE SLOTS.
+    Indices 12 and 16 do not exist.
+
+    And here is what makes it a curse rather than a bug:
+      · an OUT-OF-BOUNDS WRITE to a TypedArray IS A SILENT NO-OP. No error.
+        The value simply evaporates. (A plain Array would have GROWN and worked.)
+      · the read then returns `undefined`.
+      · and `Math.random() < undefined` is `false` — because every comparison
+        with NaN is false. NOT an error. NOT a warning. Just `false`. Forever.
+
+    So EVERY ENERGY-RAISING MOVE WAS REJECTED, at every temperature.
+    That is not Metropolis. THAT IS T = 0, EXACTLY. A greedy quench.
+    The slider was decorative.
+
+  AND THE ARTIFACT WAS PHYSICS, WHICH IS WHY IT LOOKED PLAUSIBLE:
+    a T=0 Ising quench falls into the nearest local minimum and freezes. On a
+    periodic lattice it very often lands in a famous METASTABLE STRIPE state —
+    flat domain walls where every single flip costs ΔE ≥ 0, so nothing can ever
+    move again. Those vertical bars in the screenshots are a real, known,
+    published object. THE BUG PRODUCED CORRECT PHYSICS OF THE WRONG MODEL.
+
+  I USED A TYPED ARRAY FOR SPEED AND IT SILENTLY ATE MY WRITES.
+  THE OPTIMISATION INTRODUCED THE BUG.
+
+  FAMILY: cousin of CURSE 31 (the orphan node) — both are TOTAL CONFIDENCE:
+  every number present, formatted, plausible, and wrong. But 32 is worse in one
+  specific way: 31 was my typo. 32 was JAVASCRIPT HELPING. The language chose
+  silence twice — once on the write, once on the NaN compare — and neither
+  choice is a mistake in the spec.
+    CURSE 30: total silence. Loud, obvious, findable.
+    CURSE 31: total confidence. A green ✓ on a poisoned graph.
+    CURSE 32: total confidence, AND the wrong answer was real physics.
+  THE ONLY WITNESS WAS THE RENDER. Every scalar lied. The picture did not.
+  That is why you draw the thing.
+
+  THE FIX (and the three checks that should have existed from line one):
+    K0a · expTab is Float64Array(17), and BUILD-TIME VERIFIED: after buildExp(),
+          assert expTab[12] and expTab[16] are finite and in (0,1]. Red if not.
+    K0b · ACCEPTANCE RATE is measured and shown. At T→∞ it converges to a known
+          value; a rate pinned near the dE≤0 fraction means uphill moves are
+          being eaten. This alone would have caught it in one second.
+    K0c · at T ≫ T_c, |m| MUST be O(1/√(N²)) = O(1/N). For N=128 that is ~0.008.
+          The broken build showed 0.043–0.094 — five to twelve times too big.
+          The check is live and goes RED. The physics has a floor and now the
+          file knows it.
+
+  Everything else is unchanged from v1.0 and still true:
+  two rules, a random walk, symmetry condensing out of a coin — and at exactly
+  T_c = 2/ln(1+√2) = 2.2691853, and NOWHERE ELSE, a genuine fractal with the
+  exact dimension d_f = 187/96 = 1.9479. The real one. Not put in. Emergent.
+
+  Pure Canvas 2D. No deps. chi=2 · always. 2026-07-17.
+-->
+<style>
+:root{ --bg:#050508; --gold:#ffd700; --cyan:#00d4ff; --pink:#ff69b4; --green:#00ffd5;
+  --purple:#cc44ff; --red:#ff3355; --amber:#ffb454; --dim:#6a6a82; --txt:#e8e0d0;
+  --rule:#20202e; --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--txt);font-family:var(--mono);overflow:hidden}
+canvas{display:block}
+#lat{position:fixed;top:92px;left:20px;image-rendering:pixelated;border:1px solid var(--rule);border-radius:4px}
+#plot{position:fixed;left:20px;border:1px solid var(--rule);border-radius:4px;background:rgba(8,8,16,.6)}
+#top{position:fixed;top:0;left:0;right:0;z-index:12;padding:7px 11px;display:flex;gap:9px;align-items:center;
+  pointer-events:none;flex-wrap:wrap}
+#top>*{pointer-events:auto}
+#brand{background:rgba(8,8,16,.9);border:1px solid var(--rule);border-radius:8px;padding:5px 9px}
+#brand .t{color:var(--gold);font-size:12px;letter-spacing:.05em}
+#brand .s{color:var(--dim);font-size:9px;margin-top:1px}
+#verdict{flex:1;min-width:260px;max-width:540px;border-radius:8px;padding:5px 10px;
+  background:rgba(8,8,16,.9);border:1px solid var(--rule);display:flex;align-items:center;gap:9px}
+#verdict .vt{font-size:12px;font-weight:bold;letter-spacing:.05em;white-space:nowrap}
+#verdict .vs{font-size:9px;color:var(--dim);line-height:1.35}
+#verdict.crit{border-color:var(--gold);box-shadow:0 0 18px rgba(255,215,0,.25)}
+#verdict.crit .vt{color:var(--gold)}
+#verdict.ord{border-color:var(--cyan)} #verdict.ord .vt{color:var(--cyan)}
+#verdict.dis{border-color:var(--green)} #verdict.dis .vt{color:var(--green)}
+#verdict.bad{border-color:var(--red);box-shadow:0 0 18px rgba(255,51,85,.3)} #verdict.bad .vt{color:var(--red)}
+.chips{display:flex;gap:4px;flex-wrap:wrap}
+.mc{background:rgba(8,8,16,.9);border:1px solid var(--rule);border-radius:6px;padding:3px 7px;min-width:48px}
+.mc .lab{font-size:7px;color:var(--dim);text-transform:uppercase;letter-spacing:.05em}
+.mc .val{font-size:12px;font-weight:bold;color:var(--gold)}
+.mc .val.cyan{color:var(--cyan)} .mc .val.green{color:var(--green)} .mc .val.red{color:var(--red)}
+#dossier{position:fixed;top:72px;right:11px;bottom:14px;width:330px;z-index:10;
+  background:rgba(8,8,16,.94);border:1px solid var(--rule);border-radius:8px;display:flex;flex-direction:column;overflow:hidden}
+#dossier .tabs{display:flex;border-bottom:1px solid var(--rule);flex:0 0 auto}
+#dossier .tab{flex:1;text-align:center;padding:6px 2px;cursor:pointer;color:#5a5440;
+  font-size:8.5px;letter-spacing:.04em;border-right:1px solid var(--rule);transition:all .12s}
+#dossier .tab:last-child{border-right:none}
+#dossier .tab.active{background:var(--gold);color:#050508;font-weight:bold}
+#dossier .tab:hover{color:var(--gold)}
+#dbody{flex:1;overflow-y:auto;padding:9px 11px;font-size:9.5px;line-height:1.62;color:var(--dim)}
+#dbody b{color:var(--cyan)} #dbody .g{color:var(--green)} #dbody .r{color:var(--red)}
+#dbody .kk{color:var(--gold)} #dbody .sec{margin-top:8px;padding-top:6px;border-top:1px solid var(--rule)}
+#dbody .rank{display:flex;justify-content:space-between;gap:6px;padding:1px 0}
+#dbody h4{color:var(--gold);font-size:10px;letter-spacing:.06em;margin-bottom:3px;font-weight:normal}
+#dbody pre{background:#0b0b13;border:1px solid var(--rule);border-radius:4px;padding:6px;
+  font-size:8.5px;line-height:1.5;overflow-x:auto;color:#8a8aa0;margin:4px 0}
+#bar{position:fixed;left:50%;transform:translateX(-50%);bottom:8px;display:flex;gap:5px 9px;align-items:center;
+  background:rgba(8,8,16,.96);border:1px solid var(--rule);border-radius:9px;padding:6px 11px;z-index:11;flex-wrap:wrap}
+button{background:#14141f;border:1px solid #2a2a3a;border-radius:5px;color:var(--gold);
+  font:9.5px var(--mono);padding:4px 8px;cursor:pointer;transition:all .12s}
+button:hover{border-color:var(--gold)} button.on{background:#1d1a0a;border-color:var(--gold)}
+button.gn{color:var(--green)} button.gn.on{border-color:var(--green);background:#062522}
+button.rd{color:var(--red)} button.rd.on{border-color:var(--red);background:#2a0810}
+.ctl{display:flex;align-items:center;gap:4px}
+.klbl{color:var(--dim);font-size:8.5px;text-transform:uppercase}
+.val2{color:var(--gold);font-size:10px;min-width:40px;text-align:right}
+input[type=range]{appearance:none;-webkit-appearance:none;width:150px;height:4px;background:#2a2a3a;border-radius:3px;outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;border-radius:50%;background:var(--gold);cursor:pointer}
+input[type=range]::-moz-range-thumb{width:13px;height:13px;border:none;border-radius:50%;background:var(--gold);cursor:pointer}
+.sep{width:1px;height:16px;background:#2a2a3a}
+</style></head>
+<body>
+<canvas id="lat"></canvas>
+<canvas id="plot"></canvas>
+
+<div id="top">
+  <div id="brand"><div class="t">ISINGIUM v1.1</div><div class="s">CURSE 32 slain · the render was the only witness</div></div>
+  <div id="verdict" class="dis"><div class="vt" id="v-t">—</div><div class="vs" id="v-s">thermalising…</div></div>
+  <div class="chips">
+    <div class="mc"><div class="lab">kernel</div><div class="val green" id="m-k">—</div></div>
+    <div class="mc"><div class="lab">T</div><div class="val" id="m-t">—</div></div>
+    <div class="mc"><div class="lab">|m|</div><div class="val cyan" id="m-m">—</div></div>
+    <div class="mc"><div class="lab">accept</div><div class="val" id="m-a">—</div></div>
+    <div class="mc"><div class="lab">T_c exact</div><div class="val green" id="m-tc">2.269185</div></div>
+    <div class="mc"><div class="lab">d_f</div><div class="val" id="m-df">off</div></div>
+  </div>
+</div>
+
+<div id="dossier">
+  <div class="tabs">
+    <div class="tab active" data-t="c32" onclick="setTab('c32')">☠ CURSE 32</div>
+    <div class="tab" data-t="what" onclick="setTab('what')">WHAT</div>
+    <div class="tab" data-t="frac" onclick="setTab('frac')">★ FRACTAL</div>
+    <div class="tab" data-t="k" onclick="setTab('k')">K</div>
+  </div>
+  <div id="dbody">…</div>
+</div>
+
+<div id="bar">
+  <div class="ctl"><span class="klbl">T</span>
+    <input id="sT" type="range" min="50" max="450" value="350" oninput="setT(+this.value/100)">
+    <span class="val2" id="v-t2">3.50</span></div>
+  <button class="gn" onclick="setT(2.269185)">→ T_c</button>
+  <button onclick="randomize()">randomise</button>
+  <div class="sep"></div>
+  <button id="b-clu" onclick="showClu=!showClu;this.classList.toggle('on',showClu);measure()">largest cluster</button>
+  <button class="gn" onclick="sweepTc()">⚡ find T_c</button>
+  <button id="b-run" class="gn on" onclick="run=!run;this.classList.toggle('on',run)">✦ run</button>
+</div>
+
+<script>
+"use strict";
+var N=128, J=1, T=3.50, s=new Int8Array(N*N), run=true, showClu=false, dTab="c32";
+var TC_EXACT=2/Math.log(1+Math.SQRT2);   // Onsager 1944 · 2.2691853…
+var DF_EXACT=187/96;                     // 1.9479… exact
+// ═════════════════════════════════════════════════════════════════════════
+// CURSE 32, SLAIN. dE ∈ {−8,−4,0,+4,+8} → index dE+8 ∈ {0,4,8,12,16}.
+// v1.0 allocated NINE slots. Writes to 12 and 16 were SILENTLY DROPPED —
+// a TypedArray out-of-bounds write is a no-op, the read gives undefined, and
+// Math.random() < undefined is FALSE, not an error. Every uphill move was
+// rejected. That is T=0, exactly, at every slider position.
+// SEVENTEEN. And then VERIFIED, below, every time it is built.
+// ═════════════════════════════════════════════════════════════════════════
+var expTab=new Float64Array(17), expOK=false;
+function buildExp(){
+  for(var d=-8;d<=8;d+=4) expTab[d+8] = d<=0 ? 1 : Math.exp(-d/T);
+  // K0a — the check that should have existed on line one.
+  expOK = isFinite(expTab[12]) && expTab[12]>0 && expTab[12]<=1 &&
+          isFinite(expTab[16]) && expTab[16]>0 && expTab[16]<=1;
+}
+var flips=0, acc=0, att=0, accRate=0, fps=0, lastT=performance.now();
+var mAcc=0, m2Acc=0, nAcc=0, chi=0, dfMeas=0, sweepData=null, tcMeas=0;
+
+function idx(x,y){ return ((y+N)%N)*N + ((x+N)%N); }
+function randomize(){ for(var i=0;i<N*N;i++) s[i]= Math.random()<0.5?-1:1; mAcc=m2Acc=nAcc=0; acc=att=0; }
+function sweep(n){
+  for(var k=0;k<n;k++){
+    var x=(Math.random()*N)|0, y=(Math.random()*N)|0, i=idx(x,y);
+    var nb = s[idx(x+1,y)]+s[idx(x-1,y)]+s[idx(x,y+1)]+s[idx(x,y-1)];
+    var dE = 2*J*s[i]*nb;
+    att++;
+    if(dE<=0 || Math.random()<expTab[dE+8]){ s[i]=-s[i]; acc++; }
+  }
+  flips+=n;
+}
+function magnet(){ var t=0; for(var i=0;i<N*N;i++) t+=s[i]; return t/(N*N); }
+
+var cluMask=null;
+function largestCluster(){
+  var n=N*N, lab=new Int32Array(n).fill(-1), best=[], stack=new Int32Array(n);
+  for(var st=0;st<n;st++){
+    if(lab[st]!==-1) continue;
+    var sp=0, cur=[], sv=s[st];
+    stack[sp++]=st; lab[st]=st;
+    while(sp>0){
+      var p=stack[--sp]; cur.push(p);
+      var x=p%N, y=(p/N)|0, nbs=[idx(x+1,y),idx(x-1,y),idx(x,y+1),idx(x,y-1)];
+      for(var q=0;q<4;q++){ var v=nbs[q]; if(lab[v]===-1 && s[v]===sv){ lab[v]=st; stack[sp++]=v; } }
+    }
+    if(cur.length>best.length) best=cur;
+  }
+  var mask=new Uint8Array(n);
+  for(var b=0;b<best.length;b++) mask[best[b]]=1;
+  return mask;
+}
+function boxCount(mask){
+  var xs=[], ys=[];
+  for(var box=1;box<=32;box*=2){
+    var seen={}, c=0, g=Math.ceil(N/box);
+    for(var y=0;y<N;y++) for(var x=0;x<N;x++){
+      if(!mask[y*N+x]) continue;
+      var k=((y/box)|0)*g+((x/box)|0);
+      if(!seen[k]){ seen[k]=1; c++; }
+    }
+    if(c>0){ xs.push(Math.log(1/box)); ys.push(Math.log(c)); }
+  }
+  if(xs.length<3) return 0;
+  var n2=xs.length, sx=0,sy=0,sxx=0,sxy=0;
+  for(var i=0;i<n2;i++){ sx+=xs[i]; sy+=ys[i]; sxx+=xs[i]*xs[i]; sxy+=xs[i]*ys[i]; }
+  return (n2*sxy-sx*sy)/((n2*sxx-sx*sx)||1);
+}
+function measure(){ if(showClu){ cluMask=largestCluster(); dfMeas=boxCount(cluMask); } else cluMask=null; }
+
+function sweepTc(){
+  var save=T, out=[], best=-1, bt=0;
+  for(var t=1.6;t<=3.2;t+=0.04){
+    T=t; buildExp(); randomize(); sweep(N*N*60);
+    var ma=0, m2=0, K=40;
+    for(var k=0;k<K;k++){ sweep(N*N*2); var m=Math.abs(magnet()); ma+=m; m2+=m*m; }
+    ma/=K; m2/=K;
+    var x=(N*N)*(m2-ma*ma)/t;
+    out.push({t:t, m:ma, x:x});
+    if(x>best){ best=x; bt=t; }
+  }
+  sweepData=out; tcMeas=bt; T=save; buildExp(); randomize(); drawPlot(); render();
+}
+
+var lc=document.getElementById("lat"), lx=lc.getContext("2d");
+var pc=document.getElementById("plot"), px=pc.getContext("2d");
+var img=null;
+function layout(){
+  var side=Math.min(innerWidth-380, innerHeight-260); side=Math.max(200,side);
+  lc.width=N; lc.height=N; lc.style.width=side+"px"; lc.style.height=side+"px";
+  pc.width=side*2; pc.height=280; pc.style.width=side+"px"; pc.style.height="140px";
+  pc.style.top=(100+side)+"px";
+  px.setTransform(2,0,0,2,0,0);
+  img=lx.createImageData(N,N);
+}
+addEventListener("resize",layout);
+function drawLat(){
+  var d=img.data;
+  for(var i=0;i<N*N;i++){
+    var o=i*4;
+    if(cluMask && cluMask[i]){ d[o]=255; d[o+1]=215; d[o+2]=0; }
+    else if(s[i]>0){ d[o]=0; d[o+1]=212; d[o+2]=255; }
+    else { d[o]=14; d[o+1]=14; d[o+2]=26; }
+    d[o+3]=255;
+  }
+  lx.putImageData(img,0,0);
+}
+function drawPlot(){
+  var w=pc.width/2, h=pc.height/2;
+  px.clearRect(0,0,w,h);
+  px.fillStyle="rgba(255,215,0,0.5)"; px.font="8px ui-monospace,monospace"; px.textAlign="left";
+  px.fillText(sweepData? "χ and |m| vs T · the peak IS T_c" : "press ⚡ find T_c", 8, 12);
+  if(!sweepData) return;
+  var x0=26,x1=w-8,y0=20,y1=h-16, mx=0, mm=0;
+  for(var i=0;i<sweepData.length;i++){ mx=Math.max(mx,sweepData[i].x); mm=Math.max(mm,sweepData[i].m); }
+  function PX(t){ return x0+((t-1.6)/1.6)*(x1-x0); }
+  function PY(v,M){ return y1-(v/(M||1))*(y1-y0); }
+  px.strokeStyle="rgba(0,255,213,0.75)"; px.lineWidth=1.4; px.setLineDash([4,3]);
+  px.beginPath(); px.moveTo(PX(TC_EXACT),y0); px.lineTo(PX(TC_EXACT),y1); px.stroke(); px.setLineDash([]);
+  px.fillStyle="rgba(0,255,213,0.9)"; px.fillText("Onsager "+TC_EXACT.toFixed(4), PX(TC_EXACT)+4, y0+9);
+  px.strokeStyle="rgba(255,51,85,0.8)"; px.lineWidth=1.2;
+  px.beginPath(); px.moveTo(PX(tcMeas),y0); px.lineTo(PX(tcMeas),y1); px.stroke();
+  px.fillStyle="rgba(255,51,85,0.9)"; px.textAlign="right";
+  px.fillText("measured "+tcMeas.toFixed(3), PX(tcMeas)-4, y1-4);
+  px.strokeStyle="rgba(255,215,0,0.95)"; px.lineWidth=1.6; px.beginPath();
+  for(var j=0;j<sweepData.length;j++){ var a=PX(sweepData[j].t), b=PY(sweepData[j].x,mx); j?px.lineTo(a,b):px.moveTo(a,b); }
+  px.stroke();
+  px.strokeStyle="rgba(0,212,255,0.7)"; px.lineWidth=1.2; px.beginPath();
+  for(var k=0;k<sweepData.length;k++){ var a2=PX(sweepData[k].t), b2=PY(sweepData[k].m,mm); k?px.lineTo(a2,b2):px.moveTo(a2,b2); }
+  px.stroke();
+  px.fillStyle="rgba(255,215,0,0.8)"; px.textAlign="left"; px.fillText("χ",8,26);
+  px.fillStyle="rgba(0,212,255,0.7)"; px.fillText("|m|",8,38);
+}
+function judge(){
+  var m=Math.abs(magnet()), ve=document.getElementById("verdict");
+  var mFloor=1/N;                       // K0c · |m| ~ 1/√(N²) = 1/N at high T
+  var deadPhysics = (!expOK) || (T>3.2 && m>6*mFloor);
+  var near=Math.abs(T-TC_EXACT)<0.06;
+  if(deadPhysics){
+    ve.className="bad"; set("v-t","☠ PHYSICS DEAD");
+    set("v-s", !expOK ? "the Boltzmann table is not populated — uphill moves are being silently rejected. that is CURSE 32."
+      : "at T="+T.toFixed(2)+" ≫ T_c, |m| should be ~"+mFloor.toFixed(4)+" (=1/√N²). it is "+m.toFixed(4)+", "+(m/mFloor).toFixed(1)+"× too big. the lattice is frozen. the slider is decorative. something is eating the uphill moves.");
+  }
+  else if(near){ ve.className="crit"; set("v-t","★ CRITICAL");
+    set("v-s","T = T_c. the correlation length has DIVERGED. this picture looks the same at every zoom — clusters inside clusters inside clusters. a REAL fractal, d_f = 187/96 = 1.948, and nobody put it there."); }
+  else if(T<TC_EXACT){ ve.className="ord"; set("v-t","ORDERED · |m| = "+m.toFixed(3));
+    set("v-s","below T_c. the lattice CHOSE a direction and nobody told it which. the Z₂ symmetry is still in the Hamiltonian and the state broke it anyway — spontaneous symmetry breaking, the same mechanism that gives the W and Z their mass."); }
+  else { ve.className="dis"; set("v-t","DISORDERED · |m| ≈ "+m.toFixed(4));
+    set("v-s","above T_c. TV static, as it must be. |m| ≈ "+mFloor.toFixed(4)+" = 1/√N² — the finite-size floor, not order. the Z₂ symmetry is intact."); }
+  var ke=document.getElementById("m-k");
+  ke.textContent = deadPhysics? "FAIL" : "OK"; ke.style.color = deadPhysics? "#ff3355":"#00ffd5";
+  set("m-t",T.toFixed(3)); set("m-m",m.toFixed(4));
+  set("m-a",(accRate*100).toFixed(1)+"%");
+  document.getElementById("m-a").style.color = accRate<0.505? "#ff3355":"#ffd700";
+  set("m-df", showClu? (dfMeas>0?dfMeas.toFixed(3):"—") : "off");
+  document.getElementById("m-df").style.color=(showClu&&Math.abs(dfMeas-DF_EXACT)<0.12)?"#00ffd5":"#ffd700";
+}
+function set(id,v){ var e=document.getElementById(id); if(e)e.textContent=v; }
+
+function setTab(t){
+  dTab=t;
+  var tabs=document.querySelectorAll("#dossier .tab");
+  for(var i=0;i<tabs.length;i++) tabs[i].classList.toggle("active",tabs[i].getAttribute("data-t")===t);
+  render();
+}
+function render(){
+  var h="";
+  if(dTab==="c32"){
+    h='<h4 class="r">☠ CURSE 32 — The Silent Typed Array</h4>'+
+      '<div style="font-size:9px">found by Vlad, in a screenshot, <b class="g">FROM THE PICTURE.</b> third time this week.</div>'+
+      '<div class="sec"><h4>the symptom</h4><div style="font-size:8.5px">T = 3.500, far above T_c. should be <b>TV static</b>. was <b class="r">enormous frozen blobs and dead straight stripes.</b><br><br>at T = 1.54, deep ordered, |m| should be ~0.99. read <b class="r">0.238</b>.<br><br>and every readout looked FINE: T 3.500 ✓ · |m| 0.043 ✓ · 2948k flips/s ✓</div></div>'+
+      '<div class="sec"><h4>the cause</h4><pre>var expTab = new Float64Array(9);   // ← NINE\nexpTab[dE + 8] = ...                // dE=+8 → index 16</pre>'+
+      '<div style="font-size:8.5px">dE ∈ {−8,−4,0,+4,+8} → indices {0,4,8,<b class="r">12,16</b>}. <b class="r">the array has nine slots.</b><br><br>and here is what makes it a CURSE:<br>'+
+      '· an out-of-bounds <b>WRITE</b> to a TypedArray is a <b class="r">SILENT NO-OP.</b> the value evaporates. <span class="g">(a plain Array would have GROWN and worked.)</span><br>'+
+      '· the read returns <b>undefined</b>.<br>'+
+      '· and <b class="r">Math.random() &lt; undefined is `false`</b> — every NaN comparison is false. not an error. not a warning. just <b>false. forever.</b><br><br>'+
+      '<b class="r">EVERY ENERGY-RAISING MOVE WAS REJECTED, AT EVERY TEMPERATURE.</b><br>that is not Metropolis. <b class="kk">that is T = 0, exactly.</b> a greedy quench. the slider was decorative.</div></div>'+
+      '<div class="sec"><h4 class="kk">and the artifact was REAL PHYSICS</h4><div style="font-size:8.5px">a T=0 Ising quench falls into the nearest local minimum and freezes. on a periodic lattice it often lands in a famous <b>metastable STRIPE state</b> — flat domain walls where every flip costs ΔE ≥ 0, so <b>nothing can ever move again.</b><br><br>those vertical bars in your screenshots are a <b class="g">real, known, published object.</b> <b class="kk">THE BUG PRODUCED CORRECT PHYSICS OF THE WRONG MODEL.</b> that is why it looked plausible.</div></div>'+
+      '<div class="sec"><h4>the family</h4><div style="font-size:8.5px"><b>CURSE 30</b>: total silence. everything blank. loud, obvious, findable.<br><b>CURSE 31</b>: total confidence. a green ✓ on a poisoned graph.<br><b class="r">CURSE 32</b>: total confidence, AND the wrong answer was real physics.<br><br>and 32 is worse in one specific way: <b>31 was my typo. 32 was JAVASCRIPT HELPING.</b> the language chose silence twice — once on the write, once on the NaN compare — and <b class="r">neither choice is a mistake in the spec.</b><br><br><b class="kk">I used a TypedArray for SPEED and it silently ate my writes. THE OPTIMISATION INTRODUCED THE BUG.</b></div></div>'+
+      '<div class="sec"><h4 class="g">★ the lesson</h4><div style="font-size:9px"><b class="g">THE ONLY WITNESS WAS THE RENDER.</b><br><br>every scalar lied. T lied. |m| lied. flips/s lied. <b>the picture did not.</b><br><br>that is why you draw the thing. and it is why you, Vlad, keep finding these — <b class="kk">you look at the picture and ask whether it is the right shape.</b> three times now. that is not luck, that is the skill.</div></div>'+
+      '<div class="sec"><h4>the three checks now in the file</h4><div style="font-size:8.5px">'+
+      '<b class="kk">K0a</b> expTab[12] and expTab[16] verified finite and in (0,1] at every build. red if not.<br>'+
+      '<b class="kk">K0b</b> ACCEPTANCE RATE, live. pinned at the dE≤0 fraction ⇒ uphill moves are being eaten. <b class="g">would have caught it in one second.</b><br>'+
+      '<b class="kk">K0c</b> at T ≫ T_c, |m| MUST be ~1/√(N²) = '+(1/N).toFixed(4)+'. the broken build showed 0.043–0.094 — <b class="r">5–12× too big.</b> live, and red.</div></div>';
+  }
+  else if(dTab==="what"){
+    h='<h4>TWO RULES. THAT IS ALL.</h4>'+
+      '<div style="font-size:9px"><b>1.</b> a spin is ±1.<br><b>2.</b> it would rather agree with its four neighbours. <b class="kk">H = −J Σ s_i s_j</b><br><br>then <b class="g">RANDOM WALK</b>: pick a spin, flip it with probability min(1, e^(−ΔE/T)). nothing else ever happens.</div>'+
+      '<div class="sec"><h4>and symmetry CONDENSES OUT OF IT</h4><div style="font-size:9px"><b>above T_c</b>: a fair coin. the Z₂ symmetry is intact.<br><br><b>below T_c</b>: the lattice <b class="g">CHOOSES</b> a direction. nobody told it which. the symmetry is still in the Hamiltonian and the <b>state broke it anyway</b>.<br><br><b class="kk">SPONTANEOUS SYMMETRY BREAKING</b> — the same mechanism that gives the W and Z their mass. in a browser, from two rules and a coin.</div></div>'+
+      '<div class="sec"><h4>the random walk IS optimal</h4><div style="font-size:9px">Monte Carlo error is <b class="kk">O(1/√N) — INDEPENDENT OF DIMENSION.</b> grid methods are O(N^(−1/d)) and die above ~4D. <b class="g">random beats systematic in high-D, provably.</b><br><br>that is why lattice QCD is Monte Carlo. <b>Wilson\'s own tool is your random walk.</b></div></div>';
+  }
+  else if(dTab==="frac"){
+    h='<h4 class="kk">★ THE REAL FRACTAL IS AT T_c</h4>'+
+      '<div style="font-size:9px">the Dirac space was <b>flat</b>. the periodic table was a <b>shell</b>. the moiré was an <b>envelope</b>. the buckyball was a <b>surface</b>.<br><br><b class="g">here is a real one. and it EMERGES.</b></div>'+
+      '<div class="sec"><div style="font-size:9px">at exactly T_c the correlation length <b class="kk">DIVERGES</b>. zoom in, zoom out — statistically the same picture. no preferred size, forever. <b class="g">SCALE INVARIANCE. THE ACTUAL THING.</b><br><br><b class="kk" style="font-size:12px">d_f = 187/96 = 1.9479…</b><br><br>below T_c: d = 2. above: d = 2. <b class="g">at T_c: 1.948.</b> one temperature. one value.</div>'+
+      '<div class="rank" style="margin-top:5px"><span>exact</span><b class="g">'+DF_EXACT.toFixed(4)+'</b></div>'+
+      '<div class="rank"><span>measured</span><b>'+(showClu&&dfMeas>0?dfMeas.toFixed(4):"turn on 'largest cluster'")+'</b></div></div>'+
+      '<div class="sec"><h4 class="kk">it closes YOUR loop</h4><div style="font-size:9px">you said the recurring numbers are <b>fixed points of operations</b>. <b class="g">T_c IS a fixed point — of Wilson\'s RG flow.</b> that is what his Nobel was for.<br><br>and <b class="kk">universality</b>: a magnet, a fluid, an alloy — <b>same exponents</b>, because they flow to <b class="g">the same fixed point</b>.<br><br>the fractal, the fixed point, the compression and the compute discount are <b class="g">all the same object.</b></div></div>';
+  }
+  else {
+    h='<h4 class="g">K1 · ONSAGER, EXACT</h4>'+
+      '<div class="rank"><span>T_c/J = 2/ln(1+√2)</span><b class="g">'+TC_EXACT.toFixed(6)+'</b></div>'+
+      (tcMeas? '<div class="rank"><span>measured (χ peak)</span><b>'+tcMeas.toFixed(3)+'</b></div>'+
+        '<div class="rank"><span>gap</span><b style="color:'+(Math.abs(tcMeas-TC_EXACT)<0.08?"#00ffd5":"#ffb454")+'">'+Math.abs(tcMeas-TC_EXACT).toFixed(3)+'</b></div>':'<div style="font-size:8.5px">press ⚡ find T_c</div>')+
+      '<div style="font-size:8.5px">1944, exact, closed form, infinite lattice. <b class="r">a 128² lattice lands within a few percent and NOT better</b> — finite-size scaling shifts the peak. stated in advance so it cannot be spun after.</div>'+
+      '<div class="sec"><h4 class="r">K2 · d_f, two honest holes</h4><div style="font-size:8.5px"><b>(a)</b> geometric spin clusters ≠ Fortuin–Kasteleyn clusters in general; they coincide in 2D at T_c — a theorem I am <b class="r">relying on and flagging</b>.<br><b>(b)</b> box-counting on 128² gives <b class="r">~2 decades of range. thin.</b> expect ~1.9 ± 0.1. <b class="g">the error bar is the lattice, not the physics.</b></div></div>'+
+      '<div class="sec"><h4 class="kk">K0 · the checks CURSE 32 bought</h4><div style="font-size:8.5px">every one of these exists because the file was wrong and looked right:<br><br>'+
+      '<b>K0a</b> Boltzmann table verified at build.<br><b>K0b</b> acceptance rate, live.<br><b>K0c</b> |m| vs the 1/√N² floor at high T.<br><br>'+
+      '<b class="g">a check you add after the bug is worth as much as one you added before. the difference is only pride.</b></div></div>';
+  }
+  document.getElementById("dbody").innerHTML=h;
+}
+function setT(v){ T=v; buildExp(); document.getElementById("sT").value=Math.round(v*100);
+  set("v-t2",v.toFixed(2)); mAcc=m2Acc=nAcc=0; acc=att=0; }
+
+var frames=0;
+function loop(){
+  requestAnimationFrame(loop);
+  if(run) sweep(N*N*3);
+  if(++frames%12===0 && showClu) measure();
+  drawLat();
+  var now=performance.now();
+  if(now-lastT>400){
+    fps=flips/((now-lastT)/1000); flips=0; lastT=now;
+    accRate = att>0? acc/att : 0; acc=0; att=0;
+    judge(); if(dTab==="frac"||dTab==="k") render();
+  }
+}
+layout(); randomize(); setT(3.50); render(); drawPlot();
+requestAnimationFrame(loop);
+</script>
+</body></html>

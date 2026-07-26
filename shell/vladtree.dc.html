@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Spectral:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%}
+  body{background:#050510;color:#e0e0e0;font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;overflow:hidden}
+  @keyframes vtpulse{0%,100%{box-shadow:0 0 0 rgba(255,215,0,0)}50%{box-shadow:0 0 26px rgba(255,215,0,.5)}}
+  .knode{position:absolute;width:104px;background:rgba(8,10,22,.96);border:1px solid rgba(0,212,255,.12);border-radius:7px;text-align:center;cursor:pointer;transition:border-color .2s,box-shadow .2s,opacity .2s,transform .2s}
+  .knode:hover{border-color:rgba(0,212,255,.55);box-shadow:0 0 14px rgba(0,212,255,.14);transform:translateY(-2px)}
+  .knode.clean{border-color:rgba(255,215,0,.32)}
+  .knode.dim{opacity:.16}
+  .knode.lit{border-color:#ffd700!important;box-shadow:0 0 22px rgba(255,215,0,.3)!important;opacity:1!important}
+  .knode.lit .k-word{color:#ffd700!important}
+  .knode.related{border-color:rgba(0,255,213,.45)!important;opacity:.8!important}
+  .knode.target{animation:vtpulse 1.6s ease-in-out infinite;border-color:#ffd700!important;opacity:1!important}
+  .k-word{font-size:21px;line-height:1.15;padding:8px 4px 2px;color:#e8e8ee;font-family:'Spectral',serif;font-weight:600}
+  .k-rom{font-size:9px;color:#00d4ff;padding:0 4px 3px;font-family:'IBM Plex Mono',monospace}
+  .k-root{font-size:8.5px;color:#6a7a8a;padding:2px 4px;border-top:1px solid rgba(0,212,255,.08);font-style:italic;font-family:'Spectral',serif}
+  .k-gloss{font-size:7px;color:#3a4658;padding:1px 4px 3px;text-transform:uppercase;letter-spacing:.07em}
+  .k-dots{display:flex;gap:3px;justify-content:center;padding:0 4px 6px}
+  .k-dot{width:6px;height:6px;border-radius:50%;border:1px solid rgba(255,255,255,.18)}
+  .k-dot.kept{background:#ffd700;border-color:#ffd700;box-shadow:0 0 5px rgba(255,215,0,.5)}
+  svg.edges{position:absolute;top:0;left:0;pointer-events:none;overflow:visible}
+  svg.edges line{stroke:rgba(0,212,255,.10);stroke-width:1}
+  svg.edges line.flit{stroke:rgba(0,255,213,.5);stroke-width:1.5}
+  .vtbtn{background:#0a0e18;border:1px solid #1a2a3a;color:#7787;border-radius:4px;padding:5px 12px;font-family:'IBM Plex Mono',monospace;font-size:9px;cursor:pointer;text-transform:uppercase;letter-spacing:.09em;white-space:nowrap;transition:all .15s}
+  .vtbtn:hover{color:#e0e0e0;border-color:#4a6a8a}
+  .vtbtn.on{color:#ffd700;border-color:rgba(255,215,0,.5);background:rgba(255,215,0,.06)}
+  .flagbtn{background:transparent;border:1px solid transparent;border-radius:7px;padding:3px 6px;font-size:19px;cursor:pointer;line-height:1;transition:all .15s;filter:grayscale(.65) opacity(.6)}
+  .flagbtn:hover{filter:grayscale(0) opacity(1);transform:translateY(-1px)}
+  .flagbtn.on{filter:grayscale(0) opacity(1);border-color:rgba(255,215,0,.5);background:rgba(255,215,0,.07)}
+</style>
+</helmet>
+<div style="height:100vh;display:flex;flex-direction:column">
+
+  <!-- HEADER -->
+  <div style="flex:0 0 auto;display:flex;align-items:center;gap:16px;padding:9px 16px;border-bottom:1px solid #141a28;background:rgba(3,4,12,.9)">
+    <div style="display:flex;align-items:baseline;gap:9px">
+      <span style="font:600 15px/1 'Spectral',serif;color:#cdd4dd;letter-spacing:.01em">vladTree</span>
+      <span style="font:500 8px/1 'IBM Plex Mono',monospace;color:#5f6b7a;letter-spacing:.18em;text-transform:uppercase">Principia mAlgebra · Lenguage</span>
+    </div>
+    <div style="width:1px;height:20px;background:#1c2434"></div>
+    <span style="font:500 8px/1 'IBM Plex Mono',monospace;color:#445;letter-spacing:.14em;text-transform:uppercase">home</span>
+    <div id="vt-flags" style="display:flex;gap:3px"></div>
+    <div style="flex:1"></div>
+    <div style="display:flex;gap:6px">
+      <button class="vtbtn on" id="vt-m-explore" onClick="{{ onExplore }}">explore</button>
+      <button class="vtbtn" id="vt-m-match" onClick="{{ onMatchMode }}">match</button>
+      <button class="vtbtn" id="vt-m-jump" onClick="{{ onJumpMode }}">treeJumping</button>
+    </div>
+  </div>
+
+  <!-- GRID -->
+  <div id="vt-grid" style="flex:1 1 auto;position:relative;overflow:hidden">
+    <div id="vt-plane" style="position:absolute;transform-origin:0 0">
+      <svg class="edges" id="vt-svg"></svg>
+    </div>
+    <div id="vt-hint" style="position:absolute;left:50%;bottom:14px;transform:translateX(-50%);font:500 8px/1.5 'IBM Plex Mono',monospace;color:#2f3a48;letter-spacing:.12em;text-transform:uppercase;text-align:center;pointer-events:none">drag to pan · scroll to zoom · click a node</div>
+  </div>
+
+  <!-- FOOTER PANEL (mode-dependent) -->
+  <div style="flex:0 0 auto;min-height:96px;background:rgba(3,3,14,.98);border-top:1px solid #141a28;padding:10px 16px;display:flex;flex-direction:column;gap:8px">
+
+    <!-- MATCH ROW -->
+    <div id="vt-match-bar" style="display:none;gap:8px;align-items:center">
+      <input id="vt-input" type="text" placeholder="type anything — night · noche · ночь · νύχτα · novyy …" style="flex:1;background:#0a0e18;border:1px solid #1a2a3a;border-radius:4px;padding:7px 11px;font-family:'Spectral',serif;font-size:14px;color:#e0e0e0;outline:none">
+      <button class="vtbtn" onClick="{{ onMatch }}">match</button>
+      <button class="vtbtn" onClick="{{ onClear }}">clear</button>
+    </div>
+
+    <!-- JUMP ROW -->
+    <div id="vt-jump-bar" style="display:none;align-items:center;gap:14px">
+      <div style="display:flex;flex-direction:column;gap:2px">
+        <span style="font:500 8px/1 'IBM Plex Mono',monospace;color:#445;letter-spacing:.14em;text-transform:uppercase">say this in</span>
+        <span id="vt-jp-flag" style="font-size:26px;line-height:1">🇬🇷</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:3px">
+        <span id="vt-jp-prompt" style="font:600 22px/1 'Spectral',serif;color:#e8e8ee">—</span>
+        <span id="vt-jp-answer" style="font:500 13px/1 'IBM Plex Mono',monospace;color:#ffd700;min-height:15px"></span>
+      </div>
+      <div style="flex:1"></div>
+      <div style="display:flex;gap:6px">
+        <button class="vtbtn" id="vt-jp-reveal" onClick="{{ onReveal }}">reveal</button>
+        <button class="vtbtn" id="vt-jp-got" onClick="{{ onGot }}" style="display:none;color:#7fff7f;border-color:#2a4a2a">got it ✓</button>
+        <button class="vtbtn" id="vt-jp-miss" onClick="{{ onMiss }}" style="display:none;color:#ff7a6b;border-color:#4a2a2a">missed ✗</button>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px">
+        <span id="vt-jp-score" style="font:600 16px/1 'Spectral',serif;color:#ffd700">0</span>
+        <span style="font:500 7px/1 'IBM Plex Mono',monospace;color:#445;letter-spacing:.14em;text-transform:uppercase">streak · leaps</span>
+      </div>
+    </div>
+
+    <!-- CHIPS + STATUS -->
+    <div id="vt-chips" style="display:flex;gap:6px;flex-wrap:wrap;align-content:flex-start;min-height:20px;max-height:42px;overflow-y:auto"></div>
+    <div id="vt-status" style="font:500 8px/1.4 'IBM Plex Mono',monospace;color:#3a4658;letter-spacing:.1em;text-transform:uppercase">explore the tree — every node is a concept · the trunk is its deepest root · gold dots are the tongues that kept it</div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{
+  &quot;$preview&quot;: { &quot;width&quot;: 1280, &quot;height&quot;: 800 }
+}">
+class Component extends DCLogic {
+  // ---- language config (Mundo Lingo flags) ----
+  get LANGS(){ return [
+    {k:'es', flag:'🇦🇷', label:'Español', script:false},
+    {k:'en', flag:'🇬🇧', label:'English', script:false},
+    {k:'pt', flag:'🇵🇹', label:'Português', script:false},
+    {k:'ru', flag:'🇷🇺', label:'Русский', script:true},
+    {k:'uk', flag:'🇺🇦', label:'Українська', script:true},
+    {k:'el', flag:'🇬🇷', label:'Ελληνικά', script:true},
+  ]; }
+
+  // ---- the seed: ~18 deep concepts, each across 6 languages ----
+  // keep[] = which tongues kept the node's primary deep root (gold dots).
+  get DATA(){ return [
+    {id:'two',  fam:'number', root:'*dwóh₁', gloss:'two',
+     w:{es:'dos',en:'two',pt:'dois',ru:'два',uk:'два',el:'δύο'}, rom:{ru:'dva',uk:'dva',el:'dýo'}, keep:['es','en','pt','ru','uk','el']},
+    {id:'three',fam:'number', root:'*tréyes', gloss:'three',
+     w:{es:'tres',en:'three',pt:'três',ru:'три',uk:'три',el:'τρία'}, rom:{ru:'tri',uk:'try',el:'tría'}, keep:['es','en','pt','ru','uk','el']},
+    {id:'ten',  fam:'number', root:'*déḱm̥', gloss:'ten',
+     w:{es:'diez',en:'ten',pt:'dez',ru:'десять',uk:'десять',el:'δέκα'}, rom:{ru:'désyat’',uk:'désyat’',el:'déka'}, keep:['es','en','pt','ru','uk','el']},
+
+    {id:'mother',fam:'kin', root:'*méh₂tēr', gloss:'mother',
+     w:{es:'madre',en:'mother',pt:'mãe',ru:'мать',uk:'мати',el:'μητέρα'}, rom:{ru:'mat’',uk:'máty',el:'mitéra'}, keep:['es','en','pt','ru','uk','el']},
+    {id:'father',fam:'kin', root:'*ph₂tḗr', gloss:'father',
+     w:{es:'padre',en:'father',pt:'pai',ru:'отец',uk:'батько',el:'πατέρας'}, rom:{ru:'otéts',uk:'bát’ko',el:'patéras'}, keep:['es','en','pt','el']},
+    {id:'brother',fam:'kin', root:'*bʰréh₂tēr', gloss:'brother',
+     w:{es:'hermano',en:'brother',pt:'irmão',ru:'брат',uk:'брат',el:'αδελφός'}, rom:{ru:'brat',uk:'brat',el:'adelfós'}, keep:['en','ru','uk']},
+
+    {id:'heart',fam:'body', root:'*ḱērd', gloss:'heart',
+     w:{es:'corazón',en:'heart',pt:'coração',ru:'сердце',uk:'серце',el:'καρδιά'}, rom:{ru:'sérdtse',uk:'sértse',el:'kardiá'}, keep:['es','en','pt','ru','uk','el']},
+    {id:'foot',fam:'body', root:'*pṓds', gloss:'foot',
+     w:{es:'pie',en:'foot',pt:'pé',ru:'нога',uk:'нога',el:'πόδι'}, rom:{ru:'nogá',uk:'nohá',el:'pódi'}, keep:['es','en','pt','el']},
+    {id:'tooth',fam:'body', root:'*h₃dónts', gloss:'tooth',
+     w:{es:'diente',en:'tooth',pt:'dente',ru:'зуб',uk:'зуб',el:'δόντι'}, rom:{ru:'zub',uk:'zub',el:'dónti'}, keep:['es','en','pt','el']},
+
+    {id:'night',fam:'cosmos', root:'*nókʷts', gloss:'night',
+     w:{es:'noche',en:'night',pt:'noite',ru:'ночь',uk:'ніч',el:'νύχτα'}, rom:{ru:'noch’',uk:'nich',el:'nýchta'}, keep:['es','en','pt','ru','uk','el']},
+    {id:'sun',fam:'cosmos', root:'*sóh₂wl̥', gloss:'sun',
+     w:{es:'sol',en:'sun',pt:'sol',ru:'солнце',uk:'сонце',el:'ήλιος'}, rom:{ru:'sólntse',uk:'sóntse',el:'ílios'}, keep:['es','en','pt','ru','uk','el']},
+    {id:'star',fam:'cosmos', root:'*h₂stḗr', gloss:'star',
+     w:{es:'estrella',en:'star',pt:'estrela',ru:'звезда',uk:'зірка',el:'αστέρι'}, rom:{ru:'zvezdá',uk:'zírka',el:'astéri'}, keep:['es','en','pt','el']},
+    {id:'water',fam:'cosmos', root:'*wódr̥', gloss:'water',
+     w:{es:'agua',en:'water',pt:'água',ru:'вода',uk:'вода',el:'νερό'}, rom:{ru:'vodá',uk:'vodá',el:'neró (ὕδωρ hýdor)'}, keep:['en','ru','uk','el']},
+    {id:'fire',fam:'cosmos', root:'*péh₂wr̥', gloss:'fire',
+     w:{es:'fuego',en:'fire',pt:'fogo',ru:'огонь',uk:'вогонь',el:'φωτιά'}, rom:{ru:'ogón’ (ignis)',uk:'vohón’',el:'fotiá (πῦρ pŷr)'}, keep:['en','el']},
+
+    {id:'new',fam:'quality', root:'*néwos', gloss:'new',
+     w:{es:'nuevo',en:'new',pt:'novo',ru:'новый',uk:'новий',el:'νέος'}, rom:{ru:'nóvyy',uk:'novýy',el:'néos'}, keep:['es','en','pt','ru','uk','el']},
+
+    {id:'know',fam:'mind', root:'*ǵneh₃', gloss:'know',
+     w:{es:'conocer',en:'know',pt:'conhecer',ru:'знать',uk:'знати',el:'γνωρίζω'}, rom:{ru:'znat’',uk:'znáty',el:'gnorízo'}, keep:['es','en','pt','ru','uk','el']},
+    {id:'name',fam:'mind', root:'*h₁nómn̥', gloss:'name',
+     w:{es:'nombre',en:'name',pt:'nome',ru:'имя',uk:'ім’я',el:'όνομα'}, rom:{ru:'ímya',uk:'im’yá',el:'ónoma'}, keep:['es','en','pt','ru','uk','el']},
+    {id:'stand',fam:'mind', root:'*steh₂', gloss:'stand',
+     w:{es:'estar',en:'stand',pt:'estar',ru:'стоять',uk:'стояти',el:'στέκομαι'}, rom:{ru:'stoyát’',uk:'stoyáty',el:'stékome'}, keep:['es','en','pt','ru','uk','el']},
+  ]; }
+
+  // family constellations → edges (link each family as a chain)
+  get FAMS(){ return ['number','kin','body','cosmos','quality','mind']; }
+
+  state = { home:'es', mode:'explore' };
+
+  componentDidMount(){
+    this.POS = {}; this.nodeEls = {}; this.edgeEls = [];
+    this.pan = {x:60, y:40, z:1}; this.drag = false; this.lm = {x:0,y:0};
+    this._buildFlags();
+    this._layout();
+    this._buildNodes();
+    this._buildEdges();
+    this._applyTransform();
+    this._wirePanZoom();
+    this._renderHome();
+    const inp = document.getElementById('vt-input');
+    if(inp) inp.addEventListener('keydown', e=>{ if(e.key==='Enter') this.match(); });
+  }
+
+  // ---------- layout: clustered by family ----------
+  _layout(){
+    const fam = {}; this.FAMS.forEach((f,i)=>fam[f]=i);
+    const counts = {};
+    const COLW = 250, ROWH = 168, ox=20, oy=20, perRow=3;
+    this.DATA.forEach(nd=>{
+      const fi = fam[nd.fam];
+      const c = (counts[nd.fam]||0); counts[nd.fam]=c+1;
+      // each family gets a horizontal band; members flow in a small 3-wide block
+      const col = c % perRow, row = Math.floor(c/perRow);
+      this.POS[nd.id] = { x: ox + col*128 + fi*0, y: oy + fi*ROWH + row*70,
+                          // spread families across x too for a constellation feel
+                          };
+      this.POS[nd.id].x = ox + (fi%2)*430 + col*132;
+      this.POS[nd.id].y = oy + Math.floor(fi/2)*250 + row*72 + (col*6);
+    });
+  }
+
+  _buildFlags(){
+    const host = document.getElementById('vt-flags'); if(!host) return;
+    host.innerHTML='';
+    this.LANGS.forEach(L=>{
+      const b=document.createElement('button');
+      b.className='flagbtn'+(L.k===this.state.home?' on':'');
+      b.id='flag-'+L.k; b.textContent=L.flag; b.title=L.label;
+      b.onclick=()=>this.setHome(L.k);
+      host.appendChild(b);
+    });
+  }
+
+  _buildNodes(){
+    const plane=document.getElementById('vt-plane');
+    this.DATA.forEach(nd=>{
+      const p=this.POS[nd.id];
+      const div=document.createElement('div');
+      div.className='knode'+(nd.keep.length===6?' clean':'');
+      div.id='vt-'+nd.id;
+      div.style.left=p.x+'px'; div.style.top=p.y+'px';
+      div.onclick=()=>this.clickNode(nd);
+      div.innerHTML =
+        '<div class="k-word" data-word></div>'+
+        '<div class="k-rom" data-rom></div>'+
+        '<div class="k-root">'+nd.root+'</div>'+
+        '<div class="k-gloss">'+nd.gloss+'</div>'+
+        '<div class="k-dots">'+ this.LANGS.map(L=>
+           '<span class="k-dot'+(nd.keep.indexOf(L.k)>=0?' kept':'')+'" title="'+L.label+(nd.keep.indexOf(L.k)>=0?' kept the root':' took another root')+'"></span>'
+         ).join('')+'</div>';
+      plane.appendChild(div);
+      this.nodeEls[nd.id]=div;
+    });
+  }
+
+  _buildEdges(){
+    const svg=document.getElementById('vt-svg');
+    const byFam={}; this.DATA.forEach(nd=>{ (byFam[nd.fam]=byFam[nd.fam]||[]).push(nd.id); });
+    Object.values(byFam).forEach(ids=>{
+      for(let i=0;i<ids.length-1;i++){
+        const a=this.POS[ids[i]], b=this.POS[ids[i+1]];
+        const ln=document.createElementNS('http://www.w3.org/2000/svg','line');
+        ln.setAttribute('x1',a.x+52); ln.setAttribute('y1',a.y+50);
+        ln.setAttribute('x2',b.x+52); ln.setAttribute('y2',b.y+50);
+        ln.dataset.a=ids[i]; ln.dataset.b=ids[i+1];
+        svg.appendChild(ln); this.edgeEls.push(ln);
+      }
+    });
+    let mx=0,my=0; Object.values(this.POS).forEach(p=>{ mx=Math.max(mx,p.x+140); my=Math.max(my,p.y+170); });
+    svg.setAttribute('width',mx); svg.setAttribute('height',my);
+  }
+
+  _renderHome(){
+    const L=this.state.home;
+    const isScript = this.LANGS.find(x=>x.k===L).script;
+    this.DATA.forEach(nd=>{
+      const el=this.nodeEls[nd.id]; if(!el) return;
+      el.querySelector('[data-word]').textContent = nd.w[L];
+      const rom = isScript ? (nd.rom[L]||'') : '';
+      el.querySelector('[data-rom]').textContent = rom;
+    });
+    this.LANGS.forEach(x=>{ const b=document.getElementById('flag-'+x.k); if(b) b.classList.toggle('on',x.k===L); });
+  }
+
+  setHome(k){ this.setState({home:k}); this._renderHome(); if(this.state.mode==='jump') this._renderJump(); }
+
+  // ---------- transform / pan-zoom ----------
+  _applyTransform(){ const pl=document.getElementById('vt-plane'); pl.style.transform=`translate(${this.pan.x}px,${this.pan.y}px) scale(${this.pan.z})`; }
+  _wirePanZoom(){
+    const grid=document.getElementById('vt-grid');
+    grid.addEventListener('pointerdown',e=>{ if(e.target.closest('.knode'))return; this.drag=true; this.lm={x:e.clientX,y:e.clientY}; });
+    document.addEventListener('pointermove',e=>{ if(!this.drag)return; this.pan.x+=(e.clientX-this.lm.x); this.pan.y+=(e.clientY-this.lm.y); this.lm={x:e.clientX,y:e.clientY}; this._applyTransform(); });
+    document.addEventListener('pointerup',()=>{ this.drag=false; });
+    grid.addEventListener('wheel',e=>{ e.preventDefault(); const oz=this.pan.z; this.pan.z=Math.max(.4,Math.min(2.2,this.pan.z*(e.deltaY>0?.9:1.11)));
+      const r=grid.getBoundingClientRect(); const cx=e.clientX-r.left, cy=e.clientY-r.top;
+      this.pan.x=cx-(cx-this.pan.x)*(this.pan.z/oz); this.pan.y=cy-(cy-this.pan.y)*(this.pan.z/oz); this._applyTransform(); },{passive:false});
+  }
+
+  // ---------- modes ----------
+  setMode(m){
+    this.setState({mode:m});
+    document.getElementById('vt-m-explore').classList.toggle('on',m==='explore');
+    document.getElementById('vt-m-match').classList.toggle('on',m==='match');
+    document.getElementById('vt-m-jump').classList.toggle('on',m==='jump');
+    document.getElementById('vt-match-bar').style.display = m==='match'?'flex':'none';
+    document.getElementById('vt-jump-bar').style.display = m==='jump'?'flex':'none';
+    this._clearLights(); this._chips([]);
+    if(m==='explore'){ this._status('explore the tree — click a node to open all six tongues + the deep root'); }
+    if(m==='match'){ this._status('type a word in ANY of your languages — the same node lights up across the whole tree'); const i=document.getElementById('vt-input'); if(i){i.value='';i.focus();} }
+    if(m==='jump'){ this.jumpScore=0; this.jumpStart(); }
+  }
+
+  // ---------- explore: click a node → reveal all 6 ----------
+  clickNode(nd){
+    if(this.state.mode==='jump'){ this._revealJump(); return; }
+    this._clearLights(); this.nodeEls[nd.id].classList.add('lit'); this._litRelatives([nd.id]);
+    const chips = this.LANGS.map(L=>({flag:L.flag, w:nd.w[L.k], rom:(nd.rom[L.k]||''), kept:nd.keep.indexOf(L.k)>=0}));
+    this._chips(chips, nd);
+    const lost = this.LANGS.filter(L=>nd.keep.indexOf(L.k)<0).map(L=>L.flag).join(' ');
+    this._status(nd.gloss.toUpperCase()+' · root '+nd.root+' · kept by '+nd.keep.length+'/6'+(lost?(' · branch broke at '+lost):' · CLEAN — every tongue kept it'));
+  }
+
+  // ---------- match: type any language → light node ----------
+  match(){
+    const raw=(document.getElementById('vt-input').value||'').toLowerCase().trim();
+    if(!raw){ this._clearLights(); this._chips([]); return; }
+    const norm=s=>s.toLowerCase().replace(/[’']/g,'').normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+    const hits=[];
+    this.DATA.forEach(nd=>{
+      let score=0;
+      if(norm(nd.gloss)===norm(raw)) score+=10;
+      this.LANGS.forEach(L=>{
+        const w=norm(nd.w[L.k]||''), r=norm(nd.rom[L.k]||'');
+        if(w && (norm(raw)===w || norm(raw).indexOf(w)>=0 || w.indexOf(norm(raw))>=0)) score+=8;
+        if(r && r.split(/[^a-z]+/).some(tok=>tok && tok===norm(raw))) score+=6;
+      });
+      if(norm(nd.gloss).indexOf(norm(raw))>=0) score+=3;
+      if(score>0) hits.push({nd,score});
+    });
+    hits.sort((a,b)=>b.score-a.score);
+    const ids=hits.map(h=>h.nd.id);
+    this._clearLights();
+    this.DATA.forEach(nd=>{ this.nodeEls[nd.id].classList.add(ids.indexOf(nd.id)>=0?'lit':'dim'); });
+    this._litRelatives(ids);
+    if(hits.length){
+      const nd=hits[0].nd;
+      this._chips(this.LANGS.map(L=>({flag:L.flag,w:nd.w[L.k],rom:(nd.rom[L.k]||''),kept:nd.keep.indexOf(L.k)>=0})), nd);
+      this._status(hits.length+' node(s) lit · "'+raw+'" → '+nd.gloss.toUpperCase()+' ('+nd.root+')');
+    } else { this._chips([]); this._status('no match — try a word in español/english/português/русский/українська/ελληνικά'); }
+  }
+  clearMatch(){ const i=document.getElementById('vt-input'); if(i)i.value=''; this._clearLights(); this._chips([]); this._status('type a word in ANY of your languages'); }
+
+  // ---------- treeJumping: Portia plans her leap ----------
+  jumpStart(){
+    this.jumpScore=this.jumpScore||0;
+    this.current=this.DATA[Math.floor(Math.random()*this.DATA.length)];
+    this._newTarget();
+    this._renderJump();
+  }
+  _newTarget(){
+    // pick a target language different from home, prefer one that KEPT the root sometimes, but allow all
+    const opts=this.LANGS.filter(L=>L.k!==this.state.home);
+    this.targetLang=opts[Math.floor(Math.random()*opts.length)].k;
+    this.revealed=false;
+  }
+  _renderJump(){
+    const nd=this.current; if(!nd) return;
+    const tl=this.LANGS.find(x=>x.k===this.targetLang);
+    document.getElementById('vt-jp-flag').textContent=tl.flag;
+    // prompt = the word in HOME language (what you know) → recall it in target
+    document.getElementById('vt-jp-prompt').textContent=nd.w[this.state.home];
+    document.getElementById('vt-jp-answer').textContent=this.revealed?(nd.w[this.targetLang]+(nd.rom[this.targetLang]?('  '+nd.rom[this.targetLang]):'')):'';
+    document.getElementById('vt-jp-reveal').style.display=this.revealed?'none':'inline-block';
+    document.getElementById('vt-jp-got').style.display=this.revealed?'inline-block':'none';
+    document.getElementById('vt-jp-miss').style.display=this.revealed?'inline-block':'none';
+    document.getElementById('vt-jp-score').textContent=this.jumpScore;
+    // highlight node on grid + center-ish
+    this._clearLights(); this.nodeEls[nd.id].classList.add('target'); this._litRelatives([nd.id]);
+    this._status('treeJumping · recall “'+nd.w[this.state.home]+'” ('+this.state.home.toUpperCase()+') in '+tl.label+' — then leap to a root-neighbor');
+  }
+  _revealJump(){ this.revealed=true; this._renderJump(); }
+  _jumpNext(ok){
+    if(ok) this.jumpScore++;
+    // LEAP: prefer a family neighbor (the canopy hop); else random
+    const fam=this.DATA.filter(n=>n.fam===this.current.fam && n.id!==this.current.id);
+    const pool=fam.length?fam:this.DATA.filter(n=>n.id!==this.current.id);
+    this.current=pool[Math.floor(Math.random()*pool.length)];
+    this._newTarget(); this._renderJump();
+  }
+
+  // ---------- shared render helpers ----------
+  _clearLights(){ this.DATA.forEach(nd=>{ const e=this.nodeEls[nd.id]; e.classList.remove('lit','dim','related','target'); }); this.edgeEls.forEach(l=>l.classList.remove('flit')); }
+  _litRelatives(ids){
+    this.edgeEls.forEach(l=>{
+      if(ids.indexOf(l.dataset.a)>=0 || ids.indexOf(l.dataset.b)>=0){
+        l.classList.add('flit');
+        [l.dataset.a,l.dataset.b].forEach(id=>{ if(ids.indexOf(id)<0){ const e=this.nodeEls[id]; if(e&&!e.classList.contains('lit')&&!e.classList.contains('target')){ e.classList.remove('dim'); e.classList.add('related'); } } });
+      }
+    });
+  }
+  _chips(list, nd){
+    const host=document.getElementById('vt-chips'); if(!host) return; host.innerHTML='';
+    if(nd){ const r=document.createElement('span'); r.style.cssText='font:italic 600 12px/1.6 Spectral,serif;color:#6a7a8a;padding:2px 8px;border-right:1px solid #1c2434;margin-right:2px'; r.textContent=nd.root; host.appendChild(r); }
+    list.forEach(c=>{
+      const s=document.createElement('span');
+      s.style.cssText='display:inline-flex;align-items:center;gap:6px;background:'+(c.kept?'rgba(255,215,0,.10)':'rgba(120,130,150,.08)')+';border:1px solid '+(c.kept?'rgba(255,215,0,.3)':'rgba(120,130,150,.2)')+';border-radius:11px;padding:2px 10px;font:500 13px/1.4 Spectral,serif;color:'+(c.kept?'#ffd700':'#9aa6b4')+'';
+      s.innerHTML='<span style="font-size:14px;filter:grayscale('+(c.kept?'0':'.4')+')">'+c.flag+'</span> '+c.w+(c.rom?(' <span style="font:400 9px/1 IBM Plex Mono,monospace;color:#5f6b7a">'+c.rom+'</span>'):'');
+      host.appendChild(s);
+    });
+  }
+  _status(t){ const s=document.getElementById('vt-status'); if(s) s.textContent=t; }
+
+  renderVals(){
+    return {
+      onExplore:()=>this.setMode('explore'),
+      onMatchMode:()=>this.setMode('match'),
+      onJumpMode:()=>this.setMode('jump'),
+      onMatch:()=>this.match(),
+      onClear:()=>this.clearMatch(),
+      onReveal:()=>this._revealJump(),
+      onGot:()=>this._jumpNext(true),
+      onMiss:()=>this._jumpNext(false),
+    };
+  }
+}
+</script>
+</body>
+</html>

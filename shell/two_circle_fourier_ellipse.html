@@ -1,0 +1,144 @@
+<style>
+  .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0}
+  .row{display:flex;align-items:center;gap:12px;margin:0 0 14px}
+  .row label{font-size:14px;color:var(--color-text-secondary);min-width:118px}
+  .row output{font-size:14px;font-weight:500;min-width:48px;text-align:right;font-family:var(--font-mono)}
+  .stage{width:100%;max-width:520px;margin:0 auto 1.25rem;display:block;background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);aspect-ratio:1/1}
+  .mcard{background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:.85rem 1rem}
+  .mcard .lab{font-size:13px;color:var(--color-text-secondary);margin:0 0 4px}
+  .mcard .val{font-size:22px;font-weight:500;margin:0}
+</style>
+
+<h2 class="sr-only">Interactive Fourier epicycle: two rotating circles whose vector tips add together to trace an ellipse, with sliders for each circle's radius and the rotation speed, and a toggle for whether the circles spin in opposite directions.</h2>
+
+<canvas id="cv" class="stage" width="520" height="520" role="img" aria-label="Animation of two rotating circles tracing an ellipse"></canvas>
+
+<div class="row"><label for="r1">Circle 1 radius</label><input type="range" id="r1" min="0" max="1.5" step="0.05" value="1.2" style="flex:1"><output id="r1o">1.20</output></div>
+<div class="row"><label for="r2">Circle 2 radius</label><input type="range" id="r2" min="0" max="1.5" step="0.05" value="0.6" style="flex:1"><output id="r2o">0.60</output></div>
+<div class="row"><label for="spd">Speed</label><input type="range" id="spd" min="0.25" max="2.5" step="0.05" value="1" style="flex:1"><output id="spo">1.00×</output></div>
+
+<div style="display:flex;flex-wrap:wrap;gap:10px;margin:0 0 1.25rem">
+  <button id="dir" type="button">Counter-rotating: on</button>
+  <button id="play" type="button"><i class="ti ti-player-pause" aria-hidden="true"></i> Pause</button>
+  <button id="reset" type="button"><i class="ti ti-refresh" aria-hidden="true"></i> Reset</button>
+</div>
+
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px">
+  <div class="mcard"><p class="lab">Shape traced</p><p class="val" id="shape">ellipse</p></div>
+  <div class="mcard"><p class="lab">Horizontal semi-axis</p><p class="val" id="sh">1.80</p></div>
+  <div class="mcard"><p class="lab">Vertical semi-axis</p><p class="val" id="sv">0.60</p></div>
+</div>
+
+<script>
+(function(){
+  const cv=document.getElementById('cv');
+  const ctx=cv.getContext('2d');
+  const css=getComputedStyle(document.documentElement);
+  const cvar=(n,f)=>{const v=css.getPropertyValue(n).trim();return v||f;};
+  const AXIS=cvar('--color-border-secondary','rgba(0,0,0,0.25)');
+  const SURF=cvar('--color-background-secondary','#f4f3ee');
+  const C1='#378ADD', C2='#D85A30', TR='#7F77DD';
+  const dpr=Math.min(window.devicePixelRatio||1,2);
+  let size=520;
+  function fit(){
+    const w=cv.clientWidth||cv.getBoundingClientRect().width||520;
+    size=Math.max(220,Math.round(w));
+    cv.width=Math.round(size*dpr);
+    cv.height=Math.round(size*dpr);
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+  }
+
+  const S={r1:1.2,r2:0.6,speed:1,counter:true,running:true,theta:0,trail:[]};
+  let lastT=null;
+  const TWO=Math.PI*2;
+
+  const $=id=>document.getElementById(id);
+  const r1=$('r1'),r2=$('r2'),spd=$('spd');
+  const r1o=$('r1o'),r2o=$('r2o'),spo=$('spo');
+  const dirBtn=$('dir'),playBtn=$('play'),resetBtn=$('reset');
+  const shapeEl=$('shape'),shEl=$('sh'),svEl=$('sv');
+  const clearTrail=()=>{S.trail.length=0;};
+
+  r1.addEventListener('input',()=>{S.r1=parseFloat(r1.value);r1o.textContent=S.r1.toFixed(2);clearTrail();});
+  r2.addEventListener('input',()=>{S.r2=parseFloat(r2.value);r2o.textContent=S.r2.toFixed(2);clearTrail();});
+  spd.addEventListener('input',()=>{S.speed=parseFloat(spd.value);spo.textContent=S.speed.toFixed(2)+'×';});
+  dirBtn.addEventListener('click',()=>{S.counter=!S.counter;dirBtn.textContent='Counter-rotating: '+(S.counter?'on':'off');clearTrail();});
+  playBtn.addEventListener('click',()=>{S.running=!S.running;playBtn.innerHTML=S.running?'<i class="ti ti-player-pause" aria-hidden="true"></i> Pause':'<i class="ti ti-player-play" aria-hidden="true"></i> Play';});
+  resetBtn.addEventListener('click',()=>{S.theta=0;clearTrail();});
+
+  function frame(now){
+    if(lastT==null)lastT=now;
+    let dt=(now-lastT)/1000; lastT=now;
+    if(dt<0)dt=0; if(dt>0.05)dt=0.05;
+    const omega=S.speed*(Math.PI/3);
+    if(S.running){
+      S.theta+=omega*dt;
+      const th=S.theta;
+      const p1x=S.r1*Math.cos(th), p1y=S.r1*Math.sin(th);
+      const a2=(S.counter?-1:1)*th;
+      const p2x=p1x+S.r2*Math.cos(a2), p2y=p1y+S.r2*Math.sin(a2);
+      S.trail.push({th:th,x:p2x,y:p2y});
+      while(S.trail.length && (th-S.trail[0].th)>TWO) S.trail.shift();
+    }
+    draw();
+    updateReadouts();
+    requestAnimationFrame(frame);
+  }
+
+  function draw(){
+    const cw=size, ch=size, cx=cw/2, cy=ch/2;
+    const maxR=3.2, scale=(Math.min(cw,ch)/2-16)/maxR;
+    const PX=(x,y)=>[cx+x*scale, cy-y*scale];
+    ctx.clearRect(0,0,cw,ch);
+
+    ctx.strokeStyle=AXIS; ctx.lineWidth=1; ctx.globalAlpha=0.6;
+    ctx.beginPath(); ctx.moveTo(8,cy); ctx.lineTo(cw-8,cy); ctx.moveTo(cx,8); ctx.lineTo(cx,ch-8); ctx.stroke();
+    ctx.globalAlpha=1;
+
+    const th=S.theta;
+    const p1x=S.r1*Math.cos(th), p1y=S.r1*Math.sin(th);
+    const a2=(S.counter?-1:1)*th;
+    const p2x=p1x+S.r2*Math.cos(a2), p2y=p1y+S.r2*Math.sin(a2);
+
+    if(S.trail.length>1){
+      ctx.strokeStyle=TR; ctx.lineWidth=2.5; ctx.lineJoin='round'; ctx.lineCap='round';
+      ctx.beginPath();
+      for(let i=0;i<S.trail.length;i++){const p=PX(S.trail[i].x,S.trail[i].y); i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]);}
+      ctx.stroke();
+    }
+
+    ctx.globalAlpha=0.35; ctx.lineWidth=1.5;
+    ctx.strokeStyle=C1; ctx.beginPath(); ctx.arc(cx,cy,S.r1*scale,0,TWO); ctx.stroke();
+    const c2=PX(p1x,p1y);
+    ctx.strokeStyle=C2; ctx.beginPath(); ctx.arc(c2[0],c2[1],S.r2*scale,0,TWO); ctx.stroke();
+    ctx.globalAlpha=1;
+
+    const o=PX(0,0), a=PX(p1x,p1y), b=PX(p2x,p2y);
+    ctx.lineWidth=2;
+    ctx.strokeStyle=C1; ctx.beginPath(); ctx.moveTo(o[0],o[1]); ctx.lineTo(a[0],a[1]); ctx.stroke();
+    ctx.strokeStyle=C2; ctx.beginPath(); ctx.moveTo(a[0],a[1]); ctx.lineTo(b[0],b[1]); ctx.stroke();
+
+    ctx.fillStyle=C1; ctx.beginPath(); ctx.arc(a[0],a[1],3.5,0,TWO); ctx.fill();
+    ctx.fillStyle=SURF; ctx.beginPath(); ctx.arc(b[0],b[1],6.5,0,TWO); ctx.fill();
+    ctx.fillStyle=TR; ctx.beginPath(); ctx.arc(b[0],b[1],4.5,0,TWO); ctx.fill();
+    ctx.fillStyle=AXIS; ctx.beginPath(); ctx.arc(o[0],o[1],2.5,0,TWO); ctx.fill();
+  }
+
+  function updateReadouts(){
+    const sh=S.r1+S.r2;
+    const sv=S.counter?Math.abs(S.r1-S.r2):(S.r1+S.r2);
+    let shape;
+    if(sh<0.001 && sv<0.001) shape='point';
+    else if(Math.abs(sh-sv)<0.03) shape='circle';
+    else if(Math.min(sh,sv)<0.03) shape='line segment';
+    else shape='ellipse';
+    shapeEl.textContent=shape;
+    shEl.textContent=sh.toFixed(2);
+    svEl.textContent=sv.toFixed(2);
+  }
+
+  if(window.ResizeObserver){ new ResizeObserver(()=>fit()).observe(cv); }
+  window.addEventListener('resize',fit);
+  fit(); requestAnimationFrame(frame);
+})();
+</script>

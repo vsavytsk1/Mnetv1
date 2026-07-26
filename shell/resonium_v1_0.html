@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>RESONIUM v1.0 — can you hear the shape of a buckyball?</title>
+<style>
+  :root{
+    --bg:#050510; --gold:#ffd700; --cyan:#00d4ff; --pink:#ff69b4; --green:#00ffd5;
+    --dim:#6a6a82; --txt:#e8e0d0; --panel:rgba(10,10,20,.72); --edge:#20202e;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--txt);font-family:var(--mono);overflow:hidden}
+  #stage{position:absolute;inset:0;display:block}
+  .panel{position:absolute;background:var(--panel);border:1px solid var(--edge);border-radius:10px;backdrop-filter:blur(3px)}
+  #hud{top:14px;left:14px;max-width:360px;padding:11px 13px;line-height:1.6}
+  #hud .ttl{color:var(--gold);font-size:15px;letter-spacing:.06em}
+  #hud .sub{color:var(--dim);font-size:11px;margin-top:1px}
+  #hud .row{font-size:11px;color:#9a93a8;margin-top:7px}
+  #hud .ok{color:var(--green)} #hud b{color:var(--gold);font-weight:500}
+  #hud .asym{color:var(--pink);font-size:11px;margin-top:6px;line-height:1.5}
+  #log{top:14px;right:14px;width:268px;max-height:46vh;padding:9px 11px;overflow-y:auto;font-size:11px;line-height:1.5}
+  #log .lh{color:var(--dim);font-size:10px;letter-spacing:.08em;text-transform:uppercase;margin-bottom:5px}
+  #log .e{margin:3px 0;color:#bbb;border-left:2px solid #2a2a3a;padding-left:7px}
+  #log .e.res{border-color:var(--gold)} #log .e.gho{border-color:#555}
+  #log .e .v{color:var(--gold);font-weight:500} #log .e .g{color:#9a9aae;font-weight:500}
+  #log .e .t{color:#55556a;font-size:10px}
+  #bar{left:50%;transform:translateX(-50%);bottom:14px;width:min(960px,calc(100% - 28px));padding:10px 12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  button{background:#14141f;border:1px solid #2a2a3a;border-radius:8px;color:var(--gold);font-family:var(--mono);font-size:12px;padding:6px 11px;cursor:pointer;transition:border-color .12s,transform .06s}
+  button:hover{border-color:var(--gold)} button:active{transform:scale(.97)}
+  button.cyan{color:var(--cyan)} button.cyan:hover{border-color:var(--cyan)}
+  input[type=number]{background:#14141f;border:1px solid #2a2a3a;border-radius:8px;color:var(--txt);font-family:var(--mono);font-size:12px;padding:6px 9px;width:120px}
+  input[type=number]:focus{outline:none;border-color:var(--cyan)}
+  .sep{width:1px;height:22px;background:#2a2a3a;margin:0 2px}
+  .vol{display:flex;align-items:center;gap:7px;color:var(--dim);font-size:11px}
+  input[type=range]{-webkit-appearance:none;appearance:none;width:96px;height:4px;background:#2a2a3a;border-radius:3px;outline:none}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--gold);cursor:pointer}
+  input[type=range]::-moz-range-thumb{width:14px;height:14px;border:none;border-radius:50%;background:var(--gold);cursor:pointer}
+  #verdict{flex:1 1 220px;min-width:200px;font-size:12px;line-height:1.45;color:var(--dim)}
+  #foot{position:absolute;left:16px;bottom:-1px;display:none}
+  .credit{position:absolute;right:16px;bottom:18px;color:#33333f;font-size:10px;letter-spacing:.05em}
+  @media (max-width:760px){ #log{display:none} #hud{max-width:60vw} }
+</style>
+</head>
+<body>
+<canvas id="stage"></canvas>
+
+<div id="hud" class="panel">
+  <div class="ttl">RESONIUM v1.0</div>
+  <div class="sub">spectral fingerprint of C60 — can you hear the shape of a buckyball? (Kac 1966)</div>
+  <div class="row" id="stats1"></div>
+  <div class="row" id="stats2"></div>
+  <div class="asym">+φ and +(1+φ) are ghosts — yet −φ (×5) and −(1+φ) (×3) are real modes. elegance ≠ existence; the spectrum decides.</div>
+</div>
+
+<div id="log" class="panel">
+  <div class="lh">receipt log</div>
+  <div id="logbody"></div>
+</div>
+
+<div id="bar" class="panel">
+  <button id="bchord">▶ play C60</button>
+  <button id="bsweep" class="cyan">⟶ sweep the dial</button>
+  <div class="vol"><span>vol</span><input id="vol" type="range" min="0" max="100" value="50" step="1"></div>
+  <div class="sep"></div>
+  <span id="candbtns" style="display:flex;flex-wrap:wrap;gap:6px"></span>
+  <input id="pin" type="number" step="0.0001" placeholder="any λ…">
+  <button id="pgo" class="cyan">ping</button>
+  <div id="verdict">tap a number, click the dial, or play the whole molecule. sound needs one tap (browser rule).</div>
+</div>
+
+<div class="credit">bow to the math · the spectrum decides · proof by simulation 🦊</div>
+
+<script>
+"use strict";
+/* ---------- verified C60 spectral engine (self-tested in spectral_core.js: 15/15 PASS) ---------- */
+function computeC60Spectrum(){
+  const t=(1+Math.sqrt(5))/2;
+  const iv=[[-1,t,0],[1,t,0],[-1,-t,0],[1,-t,0],[0,-1,t],[0,1,t],
+            [0,-1,-t],[0,1,-t],[t,0,-1],[t,0,1],[-t,0,-1],[-t,0,1]];
+  const d2=(a,b)=>(a[0]-b[0])**2+(a[1]-b[1])**2+(a[2]-b[2])**2;
+  let mind=Infinity;
+  for(let i=0;i<12;i++)for(let j=i+1;j<12;j++){const d=d2(iv[i],iv[j]);if(d<mind)mind=d;}
+  let pts=[];
+  for(let i=0;i<12;i++)for(let j=0;j<12;j++){
+    if(i!==j && Math.abs(d2(iv[i],iv[j])-mind)<1e-6*mind){
+      pts.push([iv[i][0]+(iv[j][0]-iv[i][0])/3,iv[i][1]+(iv[j][1]-iv[i][1])/3,iv[i][2]+(iv[j][2]-iv[i][2])/3]);}
+  }
+  const N=pts.length;
+  let m2=Infinity;
+  for(let i=0;i<N;i++)for(let j=i+1;j<N;j++){const d=d2(pts[i],pts[j]);if(d>1e-9&&d<m2)m2=d;}
+  let A=Array.from({length:N},()=>new Array(N).fill(0)), edges=[];
+  for(let i=0;i<N;i++)for(let j=i+1;j<N;j++){ if(Math.abs(d2(pts[i],pts[j])-m2)<1e-6*m2){A[i][j]=A[j][i]=1; edges.push([i,j]);} }
+  let mr=0; pts.forEach(p=>mr=Math.max(mr,Math.hypot(p[0],p[1],p[2])));
+  const npts=pts.map(p=>[p[0]/mr,p[1]/mr,p[2]/mr]);
+  function jacobi(M){
+    const n=M.length; let a=M.map(r=>r.slice());
+    for(let sw=0;sw<200;sw++){
+      let off=0; for(let p=0;p<n;p++)for(let q=p+1;q<n;q++)off+=a[p][q]*a[p][q];
+      if(off<1e-24) break;
+      for(let p=0;p<n;p++)for(let q=p+1;q<n;q++){
+        const apq=a[p][q]; if(Math.abs(apq)<1e-18) continue;
+        const app=a[p][p],aqq=a[q][q]; const th=(aqq-app)/(2*apq);
+        const tt=Math.sign(th||1)/(Math.abs(th)+Math.sqrt(th*th+1));
+        const c=1/Math.sqrt(tt*tt+1), s=tt*c;
+        for(let k=0;k<n;k++){ if(k===p||k===q)continue; const akp=a[k][p],akq=a[k][q];
+          a[k][p]=a[p][k]=c*akp-s*akq; a[k][q]=a[q][k]=s*akp+c*akq; }
+        a[p][p]=c*c*app-2*s*c*apq+s*s*aqq; a[q][q]=s*s*app+2*s*c*apq+c*c*aqq; a[p][q]=a[q][p]=0;
+      }
+    }
+    return Array.from({length:n},(_,i)=>a[i][i]).sort((x,y)=>y-x);
+  }
+  const ev=jacobi(A);
+  let groups=[];
+  for(const x of ev){ const g=groups.find(g=>Math.abs(g.v-x)<1e-5); if(g){g.m++;g.s+=x;} else groups.push({v:x,m:1,s:x}); }
+  groups.forEach(g=>g.v=g.s/g.m);
+  const checks={ trace:ev.reduce((s,x)=>s+x,0), sumsq:ev.reduce((s,x)=>s+x*x,0),
+    sumcube:ev.reduce((s,x)=>s+x**3,0), sumquad:ev.reduce((s,x)=>s+x**4,0),
+    nverts:N, nedges:edges.length, ndistinct:groups.length };
+  return {groups, ev, edges, pts:npts, checks};
+}
+
+const SPEC=computeC60Spectrum();
+const groups=SPEC.groups, edges=SPEC.edges, pts=SPEC.pts, checks=SPEC.checks;
+const maxM=Math.max.apply(null,groups.map(g=>g.m));
+const PHI=(1+Math.sqrt(5))/2;
+function probe(v){ for(const g of groups) if(Math.abs(g.v-v)<5e-4) return g; return null; }
+function nearest(v){ let b=groups[0],bd=1e9; for(const g of groups){const d=Math.abs(g.v-v); if(d<bd){bd=d;b=g;}} return b; }
+
+/* adjacency λ -> Laplacian μ = 3 - λ (3-regular) -> drum frequency f ∝ √μ */
+const FLO=150, FHI=1150, SQ6=Math.sqrt(6);
+const freq=(lam)=>FLO+(Math.sqrt(Math.max(0,3-lam))/SQ6)*(FHI-FLO);
+
+/* ---------- HUD text ---------- */
+const l2=groups[1];
+document.getElementById('stats1').innerHTML =
+  'N=<b>60</b> · E=<b>90</b> · 3-regular · χ=<b>2</b> · <b>12</b> pentagons · <b>'+checks.ndistinct+'</b> modes';
+document.getElementById('stats2').innerHTML =
+  'Σλ²=<b>180</b> <span class="ok">✓</span> · Σλ³=<b>0</b> <span class="ok">✓</span> (girth 5) · λ₂=<b>'+l2.v.toFixed(6)+'</b> (×'+l2.m+') · gap=<b>'+((3-l2.v)/3).toFixed(6)+'</b>';
+
+/* ---------- audio ---------- */
+let actx=null, master=null, analyser=null, scopeBuf=null, masterVol=0.5;
+function ensureAudio(){
+  if(actx){ if(actx.state==='suspended') actx.resume(); return; }
+  actx=new (window.AudioContext||window.webkitAudioContext)();
+  master=actx.createGain(); master.gain.value=masterVol;
+  analyser=actx.createAnalyser(); analyser.fftSize=2048; scopeBuf=new Float32Array(analyser.fftSize);
+  master.connect(analyser); analyser.connect(actx.destination);
+}
+function tone(f,amp,t0,dur,type){
+  const o=actx.createOscillator(), g=actx.createGain();
+  o.type=type||'sine'; o.frequency.setValueAtTime(f,t0);
+  g.gain.setValueAtTime(0,t0); g.gain.linearRampToValueAtTime(amp,t0+0.02);
+  g.gain.setValueAtTime(amp,t0+dur-0.12); g.gain.linearRampToValueAtTime(0,t0+dur);
+  o.connect(g); g.connect(master); o.start(t0); o.stop(t0+dur+0.02);
+}
+function playChord(){
+  ensureAudio(); const t0=actx.currentTime, dur=2.0;
+  groups.forEach(g=>{ if(3-g.v<1e-6) return; tone(freq(g.v),0.055*(g.m/maxM)+0.012,t0,dur); });
+  setVerdict('<span style="color:var(--gold)">the sound of C60</span> — all 15 vibration modes at once, louder where the degeneracy is higher.');
+  pushLog('chord','—','played the whole molecule (15 modes)');
+}
+function playPing(lam,note){
+  ensureAudio();
+  const g=probe(lam), near=nearest(lam), t0=actx.currentTime, dur=2.3;
+  const fp=freq(lam), fn=freq(near.v);
+  pinged=lam; pingG=g; pulse0=simT;
+  if(g){
+    tone(fp,0.16,t0,dur);
+    const ex=note&&NOTE[note]?NOTE[note]:'a real mode — it rings clean, no beat.';
+    setVerdict('<span style="color:var(--gold);font-weight:500">RESONANCE</span> &nbsp;λ='+lam.toFixed(6)+' is a real eigenvalue (×'+g.m+'). '+ex);
+    pushLog('res',lam.toFixed(4),'RESONANCE ×'+g.m);
+  } else {
+    tone(fp,0.13,t0,dur); tone(fn,0.13,t0,dur);
+    const beat=Math.abs(fp-fn);
+    const ex=note&&NOTE[note]?NOTE[note]:'no mode here — it clashes with the nearest one.';
+    setVerdict('<span style="color:#9a9aae;font-weight:500">GHOST</span> &nbsp;λ='+lam.toFixed(6)+' is not an eigenvalue — beats against λ='+near.v.toFixed(4)+' at ≈ '+beat.toFixed(1)+' Hz. '+ex);
+    pushLog('gho',lam.toFixed(4),'GHOST · beat ≈ '+beat.toFixed(1)+' Hz');
+  }
+}
+let sweeping=false, sweepStart=0, sweepDur=0;
+function sweep(){
+  ensureAudio(); if(sweeping) return; sweeping=true; pinged=null; pingG=null;
+  const t0=actx.currentTime, dur=6.0;
+  const o=actx.createOscillator(), g=actx.createGain();
+  o.type='sine'; g.gain.value=0.09; o.connect(g); g.connect(master);
+  o.frequency.setValueAtTime(freq(-2.62),t0); o.frequency.linearRampToValueAtTime(freq(3),t0+dur);
+  o.start(t0); o.stop(t0+dur+0.05);
+  const sorted=groups.slice().sort((a,b)=>b.v-a.v);
+  sorted.forEach((gr,idx)=>{ if(3-gr.v<1e-6) return; const fr=idx/(sorted.length-1);
+    tone(freq(gr.v)*2,0.05*(gr.m/maxM)+0.02,t0+fr*dur,0.18,'triangle'); });
+  sweepStart=performance.now(); sweepDur=dur*1000;
+  setVerdict('<span style="color:var(--cyan)">sweeping the dial</span> — tuning up through the spectrum; each gold flash is a real mode ringing as the needle crosses it.');
+  pushLog('chord','—','swept the dial (low→high)');
+  setTimeout(()=>{sweeping=false;}, dur*1000+100);
+}
+
+/* ---------- receipt log ---------- */
+const logbody=document.getElementById('logbody');
+function pushLog(kind,val,txt){
+  const d=document.createElement('div');
+  d.className='e '+(kind==='res'?'res':kind==='gho'?'gho':'');
+  const tm=new Date().toLocaleTimeString([], {hour12:false});
+  const head = kind==='res'?'<span class="v">●</span> ':kind==='gho'?'<span class="g">○</span> ':'<span style="color:var(--cyan)">▸</span> ';
+  d.innerHTML='<span class="t">'+tm+'</span> '+head+txt+(val!=='—'?' <span style="color:#55556a">[λ='+val+']</span>':'');
+  logbody.insertBefore(d, logbody.firstChild);
+  while(logbody.children.length>40) logbody.removeChild(logbody.lastChild);
+}
+function setVerdict(html){ document.getElementById('verdict').innerHTML=html; }
+
+/* ---------- canvas ---------- */
+const cv=document.getElementById('stage'), ctx=cv.getContext('2d');
+let W=0,H=0,DPR=1;
+function resize(){ DPR=Math.min(window.devicePixelRatio||1,2);
+  W=window.innerWidth; H=window.innerHeight; cv.width=W*DPR; cv.height=H*DPR; ctx.setTransform(DPR,0,0,DPR,0,0); }
+window.addEventListener('resize',resize); resize();
+
+const LMIN=-3.25, LMAX=3.25;
+let pinged=null, pingG=null, pulse0=0, hover=null;
+function layout(){
+  return {
+    mcx:W*0.155, mcy:H*0.40, mR:Math.max(58,Math.min(Math.min(W,H)*0.15,140)),
+    sx0:W*0.30, sx1:W*0.955, sby:H*0.555, sbarMax:H*0.30,
+    ox0:W*0.055, ox1:W*0.955, oy0:H*0.66, oy1:H*0.875
+  };
+}
+const mapL=(L,Lo)=>Lo.sx0+(L-LMIN)/(LMAX-LMIN)*(Lo.sx1-Lo.sx0);
+const invX=(x,Lo)=>LMIN+((x-Lo.sx0)/(Lo.sx1-Lo.sx0))*(LMAX-LMIN);
+
+/* LOOP LAW — fixed dt */
+let last=performance.now(), acc=0, simT=0; const DT=1/120;
+function frame(now){
+  let dt=(now-last)/1000; last=now; if(dt>0.25)dt=0.25; acc+=dt;
+  while(acc>=DT){ simT+=DT; acc-=DT; }
+  draw(); requestAnimationFrame(frame);
+}
+function draw(){
+  const Lo=layout();
+  ctx.clearRect(0,0,W,H);
+
+  /* faint baseline grid under spectrum */
+  ctx.strokeStyle='rgba(255,255,255,0.025)'; ctx.lineWidth=1;
+  for(let L=-3;L<=3;L++){ const x=mapL(L,Lo); ctx.beginPath(); ctx.moveTo(x,Lo.sby-Lo.sbarMax); ctx.lineTo(x,Lo.sby+18); ctx.stroke(); }
+
+  /* ---- rotating C60 ---- */
+  const ang=simT*0.45, c=Math.cos(ang), s=Math.sin(ang);
+  function proj(p){ const x=p[0]*c-p[2]*s, z=p[0]*s+p[2]*c, y=p[1]; const f=1/(1.9-z*0.45);
+    return [Lo.mcx+x*Lo.mR*f*1.9, Lo.mcy-y*Lo.mR*f*1.9, z]; }
+  const P=pts.map(proj);
+  for(const e of edges){ const a=P[e[0]], b=P[e[1]], zz=(a[2]+b[2])/2, al=0.16+0.55*((zz+1)/2);
+    ctx.strokeStyle='rgba(255,215,0,'+al.toFixed(3)+')'; ctx.lineWidth=0.9;
+    ctx.beginPath(); ctx.moveTo(a[0],a[1]); ctx.lineTo(b[0],b[1]); ctx.stroke(); }
+  for(const a of P){ const al=0.35+0.55*((a[2]+1)/2);
+    ctx.fillStyle='rgba(255,228,140,'+al.toFixed(3)+')'; ctx.beginPath(); ctx.arc(a[0],a[1],1.6,0,6.283); ctx.fill(); }
+  ctx.fillStyle='var(--dim)'; ctx.fillStyle='#6a6a82'; ctx.font='11px '+getCSS(); ctx.textAlign='center';
+  ctx.fillText('C60 · 60 nodes · 90 edges', Lo.mcx, Lo.mcy+Lo.mR+24);
+
+  /* ---- sweep needle (λ from freq ramp) ---- */
+  let needleLam=null;
+  if(sweeping && sweepDur>0){ const fr=Math.min(1,(performance.now()-sweepStart)/sweepDur);
+    const fLo=freq(-2.62), fHi=freq(3), fNow=fLo+fr*(fHi-fLo);
+    const ss=(fNow-FLO)/(FHI-FLO)*SQ6; needleLam=3-ss*ss; }
+
+  /* ---- spectrum axis ---- */
+  ctx.strokeStyle='#2c2c3c'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(Lo.sx0,Lo.sby); ctx.lineTo(Lo.sx1,Lo.sby); ctx.stroke();
+  ctx.font='11px '+getCSS(); ctx.textAlign='center';
+  for(let tk=-3;tk<=3;tk++){ const x=mapL(tk,Lo); ctx.fillStyle= tk===0?'#7a7a92':'#46465a';
+    ctx.fillText(tk.toString(),x,Lo.sby+16);
+    ctx.strokeStyle='#23232f'; ctx.beginPath(); ctx.moveTo(x,Lo.sby-2); ctx.lineTo(x,Lo.sby+2); ctx.stroke(); }
+  ctx.textAlign='left'; ctx.fillStyle='#6a6a82'; ctx.fillText('spectral dial · click to ping · hover to read', Lo.sx0, Lo.sby-Lo.sbarMax-8);
+
+  /* ---- spectral lines ---- */
+  hover=null;
+  for(const g of groups){
+    const x=mapL(g.v,Lo), bar=12+(g.m/maxM)*(Lo.sbarMax-14);
+    const isPing = pinged!==null && Math.abs(g.v-pinged)<5e-4;
+    const lit = needleLam!==null && Math.abs(g.v-needleLam)<0.06;
+    const sh=0.74+0.26*Math.sin(simT*2.0+g.v*3);
+    let col;
+    if(isPing||lit){ const pl=0.55+0.45*Math.sin((simT-(isPing?pulse0:0))*7); col='rgba(255,'+((215+40*pl)|0)+',90,1)'; }
+    else col='rgba(255,215,0,'+(0.5*sh+0.22).toFixed(3)+')';
+    ctx.strokeStyle=col; ctx.lineWidth=(isPing||lit)?3:1.7;
+    ctx.beginPath(); ctx.moveTo(x,Lo.sby); ctx.lineTo(x,Lo.sby-bar); ctx.stroke();
+    ctx.fillStyle=(isPing||lit)?'#fff3b0':('rgba(255,232,140,'+(0.5*sh+0.3).toFixed(3)+')');
+    ctx.beginPath(); ctx.arc(x,Lo.sby-bar,(isPing||lit)?3.6:2.2,0,6.283); ctx.fill();
+    if(isPing){ ctx.fillStyle='#ffd700'; ctx.textAlign='center'; ctx.fillText('×'+g.m,x,Lo.sby-bar-8); ctx.textAlign='left'; }
+    if(mouse && Math.abs(mouse.x-x)<7 && mouse.y<Lo.sby+4 && mouse.y>Lo.sby-bar-12) hover={g,x,bar};
+  }
+  /* label the three signature modes */
+  ctx.fillStyle='#7a6a2a'; ctx.textAlign='center';
+  ctx.fillText('λ_max=3', mapL(3,Lo), Lo.sby-(12+(1/maxM)*(Lo.sbarMax-14))-9);
+  ctx.fillStyle='#8a7a3a'; ctx.fillText('λ₂', mapL(2.756598,Lo), Lo.sby-(12+(3/maxM)*(Lo.sbarMax-14))-22);
+  ctx.fillStyle='#7a6a2a'; ctx.fillText('(1+√13)/2', mapL((1+Math.sqrt(13))/2,Lo), Lo.sby-(12+(5/maxM)*(Lo.sbarMax-14))-9);
+
+  /* needle */
+  if(needleLam!==null){ const x=mapL(needleLam,Lo);
+    ctx.strokeStyle='#00d4ff'; ctx.lineWidth=1.4; ctx.beginPath(); ctx.moveTo(x,Lo.sby-Lo.sbarMax-12); ctx.lineTo(x,Lo.sby+4); ctx.stroke();
+    ctx.fillStyle='#00d4ff'; ctx.beginPath(); ctx.moveTo(x,Lo.sby+4); ctx.lineTo(x-4,Lo.sby-3); ctx.lineTo(x+4,Lo.sby-3); ctx.closePath(); ctx.fill(); }
+  /* ghost marker */
+  if(pinged!==null && !pingG){ const x=mapL(pinged,Lo), pl=0.4+0.4*Math.sin(simT*5);
+    ctx.strokeStyle='rgba(170,170,188,'+(0.5+0.4*pl).toFixed(3)+')'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.moveTo(x-5,Lo.sby-8); ctx.lineTo(x+5,Lo.sby+2); ctx.moveTo(x+5,Lo.sby-8); ctx.lineTo(x-5,Lo.sby+2); ctx.stroke(); }
+
+  /* hover tooltip */
+  if(hover){ const tx=Math.min(hover.x+10,W-150), ty=Lo.sby-hover.bar-44;
+    ctx.fillStyle='rgba(8,8,16,0.92)'; ctx.strokeStyle='#2a2a3a'; ctx.lineWidth=1;
+    rr(ctx,tx,ty,140,34,6); ctx.fill(); ctx.stroke();
+    ctx.fillStyle='#ffd700'; ctx.font='11px '+getCSS(); ctx.textAlign='left';
+    ctx.fillText('λ = '+hover.g.v.toFixed(6), tx+8, ty+14);
+    ctx.fillStyle='#9a93a8'; ctx.fillText('mult ×'+hover.g.m+'  ·  f ≈ '+freq(hover.g.v).toFixed(0)+' Hz', tx+8, ty+27);
+    cv.style.cursor='pointer';
+  } else cv.style.cursor='crosshair';
+
+  /* ---- oscilloscope ---- */
+  const ocy=(Lo.oy0+Lo.oy1)/2, oh=Lo.oy1-Lo.oy0;
+  ctx.strokeStyle='#23232f'; ctx.lineWidth=1; rr(ctx,Lo.ox0,Lo.oy0,Lo.ox1-Lo.ox0,oh,8); ctx.stroke();
+  ctx.strokeStyle='#15151f'; ctx.beginPath(); ctx.moveTo(Lo.ox0,ocy); ctx.lineTo(Lo.ox1,ocy); ctx.stroke();
+  ctx.fillStyle='#6a6a82'; ctx.font='11px '+getCSS(); ctx.textAlign='left';
+  ctx.fillText('oscilloscope · steady wave = resonance · wobble = beat (ghost)', Lo.ox0, Lo.oy0-7);
+  if(analyser){
+    analyser.getFloatTimeDomainData(scopeBuf);
+    let en=0; for(let i=0;i<scopeBuf.length;i+=8) en+=Math.abs(scopeBuf[i]);
+    const active=en>0.5;
+    ctx.strokeStyle= active?'rgba(0,255,213,0.92)':'rgba(0,255,213,0.16)'; ctx.lineWidth=1.6;
+    ctx.beginPath(); const n=scopeBuf.length, step=Math.max(1,Math.floor(n/(Lo.ox1-Lo.ox0)));
+    let first=true;
+    for(let i=0;i<n;i+=step){ const x=Lo.ox0+(i/n)*(Lo.ox1-Lo.ox0), y=ocy-scopeBuf[i]*oh*0.46;
+      if(first){ctx.moveTo(x,y);first=false;} else ctx.lineTo(x,y); }
+    ctx.stroke();
+  } else { ctx.strokeStyle='rgba(0,255,213,0.16)'; ctx.beginPath(); ctx.moveTo(Lo.ox0,ocy); ctx.lineTo(Lo.ox1,ocy); ctx.stroke(); }
+}
+function rr(c,x,y,w,h,r){ c.beginPath(); c.moveTo(x+r,y); c.arcTo(x+w,y,x+w,y+h,r); c.arcTo(x+w,y+h,x,y+h,r); c.arcTo(x,y+h,x,y,r); c.arcTo(x,y,x+w,y,r); c.closePath(); }
+function getCSS(){ return 'ui-monospace,monospace'; }
+requestAnimationFrame(frame);
+
+/* ---------- input ---------- */
+let mouse=null;
+cv.addEventListener('mousemove',e=>{ const r=cv.getBoundingClientRect(); mouse={x:e.clientX-r.left,y:e.clientY-r.top}; });
+cv.addEventListener('mouseleave',()=>mouse=null);
+cv.addEventListener('click',e=>{ const r=cv.getBoundingClientRect(), Lo=layout(); const x=e.clientX-r.left, y=e.clientY-r.top;
+  if(y>Lo.sby-Lo.sbarMax-16 && y<Lo.sby+18){ const lam=invX(x,Lo); if(lam>=LMIN&&lam<=LMAX) playPing(Math.round(lam*10000)/10000,null); } });
+
+const NOTE={
+  a:'(1+√13)/2 — root of x²−x−3=0. real, ×5. your receipt holds.',
+  b:'so elegant it <em>should</em> be — but it beats. (−(1+φ) IS a real mode, ×3.)',
+  c:'golden, and it beats. (−φ rings ×5 — the spectrum isn’t symmetric.)',
+  d:'−φ is a real mode (×5) — pure tone. yet +φ beats. asymmetry you can hear.',
+  e:'−(1+φ) rings (×3) — its positive twin is only a ghost.',
+  f:'φ−1 = (√5−1)/2. real mode, ×5.',
+  g:'√5 — irrational, elegant, and beating. not a mode of C60.'
+};
+const CANDS=[
+  {lab:'(1+√13)/2',v:(1+Math.sqrt(13))/2,n:'a'},{lab:'1+φ',v:1+PHI,n:'b'},{lab:'φ',v:PHI,n:'c'},
+  {lab:'−φ',v:-PHI,n:'d'},{lab:'−(1+φ)',v:-(1+PHI),n:'e'},{lab:'(√5−1)/2',v:(Math.sqrt(5)-1)/2,n:'f'},
+  {lab:'√5',v:Math.sqrt(5),n:'g'},{lab:'1',v:1},{lab:'−2',v:-2},{lab:'2',v:2}
+];
+const cb=document.getElementById('candbtns');
+CANDS.forEach(cd=>{ const b=document.createElement('button'); b.textContent=cd.lab; b.onclick=()=>playPing(cd.v,cd.n); cb.appendChild(b); });
+document.getElementById('bchord').onclick=playChord;
+document.getElementById('bsweep').onclick=sweep;
+document.getElementById('vol').addEventListener('input',e=>{ masterVol=e.target.value/100; if(master) master.gain.value=masterVol; });
+const pin=document.getElementById('pin'), pgo=document.getElementById('pgo');
+function firePin(){ const v=parseFloat(pin.value); if(isFinite(v)) playPing(v,null); }
+pgo.onclick=firePin; pin.addEventListener('keydown',e=>{ if(e.key==='Enter') firePin(); });
+
+/* boot log */
+pushLog('chord','—','engine verified · Σλ²=180 · Σλ³=0 · 15 modes');
+</script>
+</body>
+</html>

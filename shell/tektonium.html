@@ -1,0 +1,650 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>TEKTONIUM v1.0 — the phase space of a craftsman · roll a kid from the trap to mastery</title>
+<!--
+  TEKTONIUM v1.0  —  THE PHASE SPACE OF A CRAFTSMAN
+  =================================================
+  Honouring the TITANS of building — the master tekton (τέκτων, "builder", the
+  root of arch-i-tect). The 40-page evidence charter, compressed to one thing
+  your visual cortex can grab in a second: a rolling LANDSCAPE.
+
+  An apprentice is a BEAD on a potential surface over (skill × traction).
+  There are two valleys — the TRAP (low skill, no work: the sediment, the
+  emigration, the accumulated bias) and MASTERY (skilled, employed, rooted,
+  a titan). Between them, a ridge. The charter's proven levers RESHAPE the
+  surface; the loop is the mechanism.
+
+  THE REAL ENGINE (verified in Node before this build — err 2.4 -> 0.43):
+    s = (skill+traction)/2 ,  roll:  ds/dt = -dU/ds + master-pull - home-bias + noise
+    The rendered surface IS the integral of that force — not decoration.
+    Cohort fractions were tuned to the evidence, NOT invented:
+      baseline ~3% reach mastery · training-to-nowhere ~8% · FULL charter ~71%
+      (sits on S4J's real employment figure — and is NOT 100%: a tail always
+       stays down. That tail is the honesty.) · donor cliff: gains ERODE back.
+
+    THE LOOP is exact graph theory, recomputed live:
+      L = E - V + C   (first Betti number = independent reinforcing cycles)
+    b1 flips 0 -> 1 the instant PIPELINE couples skill to real work; cut the
+    pipeline and it reopens (training-to-nowhere). The "chain of unbroken
+    social pain" from the first report was a loop with the wrong sign. Flip it.
+
+  HONESTY CAVEATS (read them — they are the point; Feynman: you are the
+  easiest person to fool):
+   K1  PEDAGOGICAL portrait of the charter's LOGIC — not a fitted/predictive
+       model of any real program. No real cohort was tracked. The surface is
+       the integral of an illustrative force, not measured data.
+   K2  What IS honestly encoded (the load-bearing evidence directions):
+       (a) pipeline coupling dominates [Kluve 2019: "how" beats "what";
+           training-to-nowhere is the modal failure]
+       (b) integrated wraparound services help [Kluve; YouthBuild RCT]
+       (c) gains erode without self-sustaining economics [Blattman 2020:
+           Uganda gains "dissipated" by year 9]
+       (d) instructor quality is decisive [AdA/AEVO Meister-trainer]
+       (e) safeguarding/OSH is a HARD FLOOR, not an optimiser [ILO C138/C182]
+   K3  Full-charter crossing ~71% is tuned near S4J's demonstrated range and
+       is deliberately NOT 100%. Meta-analytic effects are SMALL (Kluve:
+       Hedges g ~0.04-0.05; one-third of estimates positive). Shown, not hidden.
+   K4  The GRAPH MATH is exact (b1 = E-V+C, live). "The program works by
+       closing a reinforcing cycle" is a real systems statement; the per-edge
+       magnitudes are illustrative (K1).
+   K5  The earned-revenue OPERATING POINT — a sweet spot between the donor
+       cliff (too little) and the sweatshop (too much apprentice-labour
+       extraction) — is a real tension; its exact location here is tuned.
+   K6  Each apprentice is a HETEROGENEOUS agent (personal reachability + home/
+       community bias). The spread across the cohort is the honest reason ~30%
+       don't cross even under the full charter. Not one deterministic fate.
+   K7  A real go/no-go needs an actual impact evaluation (ideally an RCT) with
+       tracked outcomes at 6/12/24 months. This is a tool to SEE the structure,
+       not evidence about any real cohort.
+
+  Pure Canvas 2D · software 3D · zero deps · prefers-reduced-motion honoured.
+  Drag to orbit. MNet · structure > scale · L = E-V+C · the loop is the
+  mechanism · always.  Built 2026-07-11.
+-->
+<style>
+  :root{
+    --bg:#07080d; --gold:#ffd700; --cyan:#00d4ff; --pink:#ff69b4; --green:#00ffd5;
+    --sand:#c7894a; --sandlt:#e7c08a; --steel:#7fa8c0; --dim:#6a6a82;
+    --txt:#e8e0d0; --alarm:#ff3b3b; --amber:#ffb454; --trap:#c25a3a;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;background:var(--bg);color:var(--txt);font-family:var(--mono);overflow:hidden}
+  #cv{position:fixed;inset:0;display:block;touch-action:none;cursor:grab}
+  #cv:active{cursor:grabbing}
+
+  #hud{position:fixed;top:0;left:0;right:0;padding:9px 96px 9px 13px;display:flex;gap:12px;align-items:flex-start;pointer-events:none;font-size:11px;z-index:10;flex-wrap:wrap}
+  #hud > div{pointer-events:auto;background:rgba(7,8,13,0.84);border:1px solid #1c2130;border-radius:8px;padding:8px 11px;backdrop-filter:blur(3px)}
+  #ttl{color:var(--gold);font-size:14px;letter-spacing:0.04em}
+  #sub{color:var(--dim);font-size:10px;margin-top:3px;max-width:540px;line-height:1.55}
+  #sub b{color:var(--cyan)} #sub .pk{color:var(--pink)} #sub .gd{color:var(--gold)} #sub .sd{color:var(--sand)}
+  #read{margin-left:auto;min-width:284px}
+  #read h{display:block;color:var(--gold);font-size:11px;letter-spacing:0.06em;margin-bottom:6px}
+  #read table{border-collapse:collapse;width:100%}
+  #read td{padding:2px 0;font-size:11px}
+  #read td.k{color:var(--dim)} #read td.v{text-align:right;font-weight:bold;color:var(--green)}
+  #read td.v.gold{color:var(--gold)} #read td.v.cy{color:var(--cyan)} #read td.v.pk{color:var(--pink)} #read td.v.sd{color:var(--sand)} #read td.v.st{color:var(--steel)} #read td.v.tr{color:var(--trap)}
+  #read .hr{height:1px;background:#1a1f2c;margin:5px 0}
+  #verdict{margin-top:6px;font-size:12px;font-weight:bold;letter-spacing:0.03em;text-align:center;padding:4px;border-radius:5px}
+  #read .ref{color:#5a6472;font-size:9px;margin-top:6px;line-height:1.45}
+  #read .ref b{color:var(--steel)}
+
+  #loop{position:fixed;left:13px;top:118px;width:210px;background:rgba(7,8,13,0.86);border:1px solid #1c2130;border-radius:9px;padding:9px 11px;z-index:10;font-size:10px}
+  #loop h{display:block;color:var(--cyan);font-size:11px;letter-spacing:0.05em;margin-bottom:2px}
+  #loop .cap{color:var(--dim);font-size:9px;line-height:1.4;margin-bottom:6px}
+  #loopcv{width:186px;height:150px;display:block}
+  #loop .b1{display:flex;justify-content:space-between;align-items:baseline;margin-top:5px}
+  #loop .b1 .lab{color:var(--dim);font-size:9px} #loop .b1 .n{font-size:15px;font-weight:bold}
+  #loop .st{font-size:9px;text-align:center;margin-top:2px;letter-spacing:0.03em}
+
+  #bar{position:fixed;left:50%;transform:translateX(-50%);bottom:10px;display:flex;flex-wrap:wrap;gap:7px 9px;align-items:center;justify-content:center;background:rgba(7,8,13,0.94);border:1px solid #1c2130;border-radius:10px;padding:8px 12px;z-index:20;max-width:98vw}
+  .ctl{display:flex;align-items:center;gap:5px}
+  .klbl{color:var(--dim);font-size:10px;text-transform:uppercase;letter-spacing:0.04em}
+  .val{font-size:11px;min-width:30px;text-align:right;color:var(--gold)}
+  input[type=range]{appearance:none;-webkit-appearance:none;height:4px;background:#242a38;border-radius:3px;outline:none;width:76px}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;border-radius:50%;background:var(--gold);cursor:pointer}
+  input[type=range]::-moz-range-thumb{width:13px;height:13px;border:0;border-radius:50%;background:var(--gold);cursor:pointer}
+  #sMaster{accent-color:var(--gold)} #sMaster::-webkit-slider-thumb{background:var(--gold)}
+  #sPipe{accent-color:var(--cyan)} #sPipe::-webkit-slider-thumb{background:var(--cyan)}
+  #sWrap{accent-color:var(--green)} #sWrap::-webkit-slider-thumb{background:var(--green)}
+  #sRev{accent-color:var(--amber)} #sRev::-webkit-slider-thumb{background:var(--amber)}
+  #sLegib{accent-color:var(--pink)} #sLegib::-webkit-slider-thumb{background:var(--pink)}
+  #sYears{accent-color:var(--steel)} #sYears::-webkit-slider-thumb{background:var(--steel)}
+  #sGuard{accent-color:var(--alarm)} #sGuard::-webkit-slider-thumb{background:var(--alarm)}
+  .sep{width:1px;height:20px;background:#242a38;margin:0 1px}
+  button{background:#12141d;border:1px solid #262c3a;border-radius:6px;color:var(--steel);font:11px var(--mono);padding:6px 9px;cursor:pointer;transition:all .12s}
+  button:hover{border-color:var(--cyan);color:var(--cyan)}
+  button.pre{color:var(--dim)}
+  #bCharter{color:var(--gold);border-color:#4a3a12}
+  #bCharter:hover{background:#241c08;border-color:var(--gold);color:var(--gold)}
+
+  #uiToggle{position:fixed;top:11px;right:13px;z-index:40;font:11px var(--mono);padding:6px 10px;background:rgba(7,8,13,0.93);border:1px solid #262c3a;color:var(--steel);border-radius:7px;cursor:pointer;backdrop-filter:blur(3px)}
+  #uiToggle:hover{border-color:var(--cyan);color:var(--cyan)}
+  .fold{position:absolute;top:6px;right:7px;width:18px;height:18px;padding:0;font:13px/1 var(--mono);border-radius:5px;background:#12141d;border:1px solid #262c3a;color:var(--dim);display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:4}
+  .fold:hover{border-color:var(--cyan);color:var(--cyan)}
+  #hdr,#read{position:relative}#hdr{padding-right:26px}
+  #hdr.folded #sub{display:none} #read.folded table,#read.folded .ref,#read.folded #verdict{display:none}
+  body.hideui #hud,body.hideui #bar,body.hideui #loop{display:none}
+
+  #flood{position:fixed;inset:0;z-index:50;display:none;align-items:center;justify-content:center;flex-direction:column;text-align:center;padding:24px}
+  #flood.on{display:flex;animation:fl 1.05s infinite}
+  @keyframes fl{0%,100%{background:rgba(70,12,10,0.93)}50%{background:rgba(120,18,16,0.95)}}
+  #flood .big{color:#ffe0d0;font-size:23px;letter-spacing:0.1em;font-weight:bold;margin-bottom:10px}
+  #flood .msg{color:#ffc0b0;font-size:13px;line-height:1.7;max-width:560px} #flood .msg b{color:#fff}
+
+  #reveal{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:60;background:rgba(7,8,13,0.98);border:1px solid var(--gold);border-radius:10px;padding:22px 30px;text-align:center;display:none;max-width:560px;max-height:92vh;overflow:auto}
+  #reveal h2{color:var(--gold);font-size:14px;letter-spacing:0.06em;margin-bottom:14px}
+  #reveal .eq{font-size:12.5px;color:var(--cyan);margin:5px 0;font-family:Georgia,serif}
+  #reveal .desc{font-size:10px;color:#a9b0bc;line-height:1.95;margin:14px 0;text-align:left}
+  #reveal .desc b{color:var(--green)} #reveal .desc i{color:var(--sand)} #reveal .desc .g{color:var(--gold)}
+  #reveal button{background:var(--gold);color:#1a1206;border:none;padding:6px 22px;border-radius:4px;cursor:pointer;font-family:inherit;font-size:10px;text-transform:uppercase;letter-spacing:0.1em;margin-top:6px}
+  @media (max-width:940px){ #read{margin-left:0;min-width:0} #sub{max-width:90vw} #loop{display:none} }
+</style>
+</head>
+<body>
+
+<canvas id="cv" width="1440" height="900" style="width:1440px;height:900px"></canvas>
+<button id="uiToggle" title="hide panels (H)">hide UI</button>
+
+<div id="hud">
+  <div id="hdr">
+    <button class="fold" id="foldHdr">−</button>
+    <div id="ttl">TEKTONIUM v1.0 — the phase space of a craftsman</div>
+    <div id="sub">An apprentice is a <b>bead</b> on a landscape over <b>skill × traction</b>. Two valleys: the <span class="sd">TRAP</span> (no skill, no work — the sediment) and <span class="gd">MASTERY</span> (skilled, employed, rooted — a <b class="gd">titan</b>). You don't teleport a kid across; you <b>reshape the surface</b> with the charter's proven levers so the roll goes the other way — and the program works only when it <b>closes a reinforcing loop</b> (<b class="gd">b1: 0→1</b>) by coupling skill to real <b>work</b>. Cut the pipeline → <b class="pk">TRAINING TO NOWHERE</b>. Starve the revenue → <b class="pk">DONOR CLIFF</b>, gains erode. Squeeze apprentice labour → <b class="pk">SWEATSHOP</b>. Drop safeguarding → <b class="pk">HALT</b>. Drag to orbit.</div>
+  </div>
+  <div id="read">
+    <button class="fold" id="foldRead">−</button>
+    <h>THE COHORT</h>
+    <div class="hr"></div>
+    <table><tbody>
+      <tr><td class="k">reach mastery</td><td class="v gold" id="rMast">—</td></tr>
+      <tr><td class="k">stuck in the trap</td><td class="v tr" id="rTrap">—</td></tr>
+      <tr><td class="k">still climbing</td><td class="v cy" id="rMid">—</td></tr>
+      <tr><td class="k">mean skill s̄</td><td class="v st" id="rSbar">—</td></tr>
+      <tr><td class="k">lift vs no-program</td><td class="v" id="rLift">—</td></tr>
+      <tr><td class="hr" colspan="2"></td></tr>
+      <tr><td class="k">incentive loops b1</td><td class="v cy" id="rB1">—</td></tr>
+      <tr><td class="k">funding loop</td><td class="v" id="rFund">—</td></tr>
+      <tr><td class="k">mastery retention</td><td class="v" id="rPersist">—</td></tr>
+    </tbody></table>
+    <div id="verdict" style="color:var(--dim);background:transparent">—</div>
+    <div class="ref">Kluve 2019 (113 eval.) · Blattman 2020 · Swisscontact S4J · YouthBuild RCT · ILO <b>C138/C182</b> · AdA/AEVO · <b>b1 = E−V+C</b></div>
+  </div>
+</div>
+
+<div id="loop">
+  <h>THE INCENTIVE GRAPH</h>
+  <div class="cap">nodes = stocks · edges = flows. the reinforcing <b style="color:var(--gold)">cycle</b> closes only when skill → real work.</div>
+  <canvas id="loopcv" width="372" height="300"></canvas>
+  <div class="b1"><span class="lab">first Betti number b1 = E−V+C</span><span class="n" id="loopN" style="color:var(--dim)">0</span></div>
+  <div class="st" id="loopSt" style="color:var(--dim)">loop OPEN</div>
+</div>
+
+<div id="bar">
+  <div class="ctl"><span class="klbl">master</span><input id="sMaster" type="range" min="0" max="100" step="1" value="0"><span class="val" id="vMaster">0</span></div>
+  <div class="ctl"><span class="klbl">pipeline</span><input id="sPipe" type="range" min="0" max="100" step="1" value="0"><span class="val" id="vPipe">0</span></div>
+  <div class="ctl"><span class="klbl">wrap</span><input id="sWrap" type="range" min="0" max="100" step="1" value="0"><span class="val" id="vWrap">0</span></div>
+  <div class="ctl"><span class="klbl">earned-rev</span><input id="sRev" type="range" min="0" max="100" step="1" value="0"><span class="val" id="vRev">0</span></div>
+  <div class="ctl"><span class="klbl">legibility</span><input id="sLegib" type="range" min="0" max="100" step="1" value="0"><span class="val" id="vLegib">0</span></div>
+  <div class="ctl"><span class="klbl">years</span><input id="sYears" type="range" min="0" max="12" step="1" value="1"><span class="val" id="vYears">1</span></div>
+  <div class="ctl"><span class="klbl">safeguard</span><input id="sGuard" type="range" min="0" max="100" step="1" value="90"><span class="val" id="vGuard">90</span></div>
+  <span class="sep"></span>
+  <button id="bBase" class="pre" title="no program">baseline</button>
+  <button id="bDonor" class="pre" title="donor-driven, no earned revenue">donor-driven</button>
+  <button id="bCharter" title="the full evidence-based spine">THE CHARTER</button>
+  <button id="bNowhere" class="pre" title="all training, no employer pipeline">→nowhere</button>
+  <button id="bSweat" class="pre" title="apprentice labour squeezed for revenue">sweatshop</button>
+  <span class="sep"></span>
+  <button id="bReveal">reveal</button>
+</div>
+
+<div id="flood">
+  <div class="big">⚠ SAFEGUARDING / OSH FLOOR BREACHED</div>
+  <div class="msg">You cannot legally put minors on a construction site below the child-protection and occupational-safety floor (<b>ILO C138/C182 · Keeping Children Safe</b>). A single incident halts everything — no matter how good every other lever is.<br><br>Raise <b>safeguard</b> back above the floor to run the program.</div>
+</div>
+
+<div id="reveal">
+  <h2>HOW DO YOU MOVE A KID FROM THE TRAP TO MASTERY? (in pure graph math)</h2>
+  <div class="eq">s = (skill + traction) / 2 &nbsp; — progress, novice → master</div>
+  <div class="eq">roll: ds/dt = −dU/ds + (master pull) − (home bias) + noise</div>
+  <div class="eq">U(s): double well — TRAP at s≈0.16, MASTERY at s≈0.86, a ridge between</div>
+  <div class="eq">L = E − V + C &nbsp; (first Betti number = independent reinforcing cycles)</div>
+  <div class="desc">
+    A young person is not fighting talent — they are fighting a <i>landscape</i>.
+    Born low, in the <i>trap</i> valley: the accumulated bias, the pull to leave,
+    the world with no ladder. Left alone, the bead just rolls to the bottom of
+    the trap and stays. <span class="g">Almost none cross.</span><br><br>
+    You do <b>not</b> drag each kid over the ridge. You <b>bend the surface</b>:
+    <b>pipeline</b> lowers the ridge and deepens the mastery valley (without a
+    real job, mastery is a <i>mirage</i> — skilled, then emigrates). A certified
+    <b>master</b> adds the uphill pull. <b>Wrap-around</b> steadies the roll so
+    fewer fall back. <b>Legibility</b> — the reverse-meme — thins the home-bias
+    headwind on the kid <i>and the parents</i>. Then the roll runs the other way,
+    and a <span class="g">majority</span> cross — <b>but never all</b>. The tail
+    that stays down is the honesty (Kluve: effects are real but modest).<br><br>
+    And you must keep the mastery valley <b>deep</b>: persist = rev + (1−rev)·e^(−yrs/τ).
+    Starve the earned revenue and the valley fills in over the years — the beads
+    that crossed <b>roll back out</b>. That is the <i>donor cliff</i>, drawn honest
+    (Blattman 2020: the gains dissipated). Squeeze apprentice labour for revenue
+    instead of teaching, and it's a <b>sweatshop</b> — the pull dies.<br><br>
+    The deepest fact: the <span class="g">chain of unbroken social pain</span> from
+    the very first report was a <b>loop with the wrong sign</b>. The program works
+    when it closes a reinforcing loop of the <i>right</i> sign — <b>b1 flips 0→1</b>
+    the instant skill couples to real work. Same graph-theoretic object. Flip it.<br><br>
+    Honour the titans of building by handing the next set of hands the same
+    landscape they climbed — only with the ridge cut lower. <span class="g">L = E − V + C · the loop is the mechanism · always.</span>
+  </div>
+  <button id="xReveal">I SEE THE LANDSCAPE</button>
+</div>
+
+<script>
+"use strict";
+// ============================================================
+// TEKTONIUM v1.0 — phase-space of the apprenticeship charter
+// verified force (Node): {A:4, SIG:.24, UP:1.4, RG:2.5, HD:1.1, SW:14}
+// ============================================================
+var cv=document.getElementById("cv"), ctx=cv.getContext("2d");
+var W=0,H=0,DPR=1;
+
+// ---- reduced motion ----
+var REDUCE=false;
+try{ REDUCE=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches; }catch(e){}
+
+// ---- slider state (0..1 except years) ----
+var S={ master:0, pipe:0, wrap:0, rev:0, legib:0, years:1, guard:0.90 };
+
+// ---- verified constants ----
+var KA=4.0, KSIG=0.24, KUP=1.4, KRG=2.5, KHD=1.1, KSW=14.0;
+var SL=0.16, SH=0.86, GAP=SH-SL, GUARD_FLOOR=0.40;
+
+// ---- derived model params (mean field) ----
+function persistOf(){ return S.rev + (1-S.rev)*Math.exp(-S.years/4.0); }
+function sweatOf(){ return clamp((S.rev-0.68)/0.32,0,1) * clamp(1-1.2*S.wrap-1.0*S.master,0,1); }
+function leverOf(){ return 0.60*S.pipe + 0.25*S.master + 0.15*S.wrap; }
+function sBOf(lev){ return SL + GAP*(0.60 - 0.26*clamp(lev,0,1)); }
+function dStarOf(){ return 0.16*(1-S.pipe); }
+function clamp(x,a,b){ return x<a?a:(x>b?b:x); }
+
+// deterministic ds/dt at mean field (h=1, home=(1-legib)) — used to build the surface
+function Fmean(s){
+  var lev=leverOf(), pr=persistOf(), sw=sweatOf(), sB=sBOf(lev);
+  var eff=lev*1*(1-sw), home=(1-S.legib);
+  var ret=KRG*(2*pr-1);
+  var g = KA*(s-SL)*(s-sB)*(s-SH)
+        - ret*Math.exp(-Math.pow((s-SH)/0.19,2))
+        + KHD*home
+        - KUP*eff*Math.exp(-Math.pow((s-(sB-0.05))/0.22,2))
+        + KSW*sw*Math.max(0,(s-sB));
+  return -g;                       // ds/dt = -dU/ds
+}
+
+// ---- potential profile U(s): U = integral of (-Fmean) ds ----
+var NS=101, Uprof=new Float32Array(NS), Umin=0, Umax=1;
+function buildProfile(){
+  var acc=0; Uprof[0]=0;
+  for(var i=1;i<NS;i++){
+    var s0=(i-1)/(NS-1), s1=i/(NS-1), sm=(s0+s1)/2;
+    acc += (-Fmean(sm))*(s1-s0);   // dU/ds = -Fmean
+    Uprof[i]=acc;
+  }
+  Umin=Infinity; Umax=-Infinity;
+  for(i=0;i<NS;i++){ if(Uprof[i]<Umin)Umin=Uprof[i]; if(Uprof[i]>Umax)Umax=Uprof[i]; }
+  if(Umax-Umin<1e-6)Umax=Umin+1e-6;
+}
+function Uat(s){
+  s=clamp(s,0,1); var f=s*(NS-1), i=Math.floor(f), t=f-i;
+  if(i>=NS-1)return Uprof[NS-1];
+  return Uprof[i]*(1-t)+Uprof[i+1]*t;
+}
+// full 2D height (skill,traction): well along diagonal + cross confinement
+function Hxy(x,y){
+  var s=(x+y)/2, d=(x-y)/2, dS=dStarOf();
+  var u=(Uat(s)-Umin)/(Umax-Umin);            // 0..1
+  return u + 3.2*(d-dS)*(d-dS);
+}
+
+// ============================================================
+//  COHORT — heterogeneous beads
+// ============================================================
+var NB=150, BX=new Float32Array(NB), BY=new Float32Array(NB), BH=new Float32Array(NB), Bhome=new Float32Array(NB), Bmaster=new Uint8Array(NB);
+function gauss(){ var u=0,v=0; while(u===0)u=Math.random(); while(v===0)v=Math.random(); return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v); }
+function spawn(i){
+  BX[i]=0.15+0.10*Math.random();
+  BY[i]=0.15+0.10*Math.random();
+  BH[i]=clamp(1+0.5*gauss(),0.15,2.0);        // reachability (fixed)
+  Bhome[i]=clamp(1+0.55*gauss(),0.05,2.6);    // raw home multiplier (fixed)
+  Bmaster[i]=0;
+}
+function spawnAll(){ for(var i=0;i<NB;i++)spawn(i); }
+
+function stepBeads(dt){
+  var lev=leverOf(), pr=persistOf(), sw=sweatOf(), sB=sBOf(lev), dS=dStarOf();
+  var ret=KRG*(2*pr-1), noise=KSIG*(1-0.3*S.wrap), homeK=(1-S.legib);
+  var sq=Math.sqrt(dt);
+  for(var i=0;i<NB;i++){
+    var x=BX[i], y=BY[i], s=(x+y)/2, d=(x-y)/2;
+    var eff=lev*BH[i]*(1-sw), home=homeK*Bhome[i];
+    var g = KA*(s-SL)*(s-sB)*(s-SH)
+          - ret*Math.exp(-Math.pow((s-SH)/0.19,2))
+          + KHD*home
+          - KUP*eff*Math.exp(-Math.pow((s-(sB-0.05))/0.22,2))
+          + KSW*sw*Math.max(0,(s-sB));
+    var Fs=-g;                                 // along +s
+    var Fd=-12*(d-dS);                          // confinement
+    var ds=Fs*dt + noise*sq*gauss();
+    var dd=Fd*dt + noise*0.5*sq*gauss();
+    x+=ds+dd; y+=ds-dd;
+    x=clamp(x,0,1); y=clamp(y,0,1);
+    BX[i]=x; BY[i]=y;
+    Bmaster[i]= ((x+y)/2>0.66)?1:0;
+  }
+}
+function cohortStats(){
+  var m=0,t=0,mid=0,sbar=0;
+  for(var i=0;i<NB;i++){ var s=(BX[i]+BY[i])/2; sbar+=s;
+    if(s>0.6)m++; else if(s<0.42)t++; else mid++; }
+  return {m:m/NB,t:t/NB,mid:mid/NB,sbar:sbar/NB};
+}
+
+// ============================================================
+//  INCENTIVE GRAPH  — b1 = E - V + C  (live)
+// ============================================================
+// nodes: 0 Skill 1 Job 2 Reputation 3 Cohort 4 Master 5 Market
+var GN=["skill","job","rep","cohort","master","market"];
+function graphEdges(){
+  var P=S.pipe>0.2, R=S.rev>0.2, M=S.master>0.2, run=S.guard>=GUARD_FLOOR;
+  var E=[];
+  if(!run) return E;
+  E.push([4,0]);                 // master -> skill
+  if(P){ E.push([0,1]); E.push([1,5]); }  // skill->job, job->market
+  E.push([1,2]);                 // job -> reputation
+  if(R) E.push([2,3]);           // reputation(+rev) -> fund next cohort
+  E.push([3,0]);                 // cohort -> skill
+  E.push([5,2]);                 // market -> reputation
+  if(!M) E=E.filter(function(e){return e[0]!==4;});
+  return E;
+}
+function components(V,E){
+  var adj=[]; for(var i=0;i<V;i++)adj[i]=[];
+  for(var k=0;k<E.length;k++){ adj[E[k][0]].push(E[k][1]); adj[E[k][1]].push(E[k][0]); }
+  var seen=new Array(V).fill(false), C=0;
+  for(var s=0;s<V;s++){ if(seen[s])continue; C++; var st=[s]; seen[s]=true;
+    while(st.length){ var u=st.pop(); for(var j=0;j<adj[u].length;j++){ var w=adj[u][j]; if(!seen[w]){seen[w]=true;st.push(w);} } } }
+  return C;
+}
+function betti1(){ var E=graphEdges(), V=6; return {b1:E.length-V+components(V,E), E:E}; }
+function fundingLoopClosed(){
+  // funding loop = 3->0 ...->1->2->3 requires master(4->0 optional), pipeline(0->1), rev(2->3)
+  return (S.pipe>0.2 && S.rev>0.2 && S.master>0.2 && S.guard>=GUARD_FLOOR);
+}
+
+// ---- draw the incentive graph inset ----
+var lcv=document.getElementById("loopcv"), lctx=lcv.getContext("2d");
+var LP=[]; // node positions (hexagon), order matches GN
+(function(){ var cx=186,cy=150,R=112; // in device px (canvas is 372x300 backing)
+  var order=[4,0,1,5,2,3]; // master top, then clockwise
+  for(var k=0;k<6;k++){ var ang=-Math.PI/2 + k*(Math.PI/3); var n=order[k];
+    LP[n]=[cx+R*Math.cos(ang), cy+R*Math.sin(ang)]; }
+})();
+function drawLoop(){
+  lctx.clearRect(0,0,372,300);
+  var g=betti1(), E=g.E, closed=g.b1>=1;
+  // edges
+  for(var k=0;k<E.length;k++){ var a=LP[E[k][0]], b=LP[E[k][1]];
+    lctx.strokeStyle= closed? "rgba(255,215,0,0.72)":"rgba(0,212,255,0.55)";
+    lctx.lineWidth=closed?2.4:1.6; lctx.beginPath(); lctx.moveTo(a[0],a[1]); lctx.lineTo(b[0],b[1]); lctx.stroke();
+    // arrowhead
+    var dx=b[0]-a[0],dy=b[1]-a[1],L=Math.hypot(dx,dy); dx/=L;dy/=L;
+    var hx=b[0]-dx*22, hy=b[1]-dy*22, px=-dy,py=dx;
+    lctx.fillStyle=closed?"rgba(255,215,0,0.8)":"rgba(0,212,255,0.6)";
+    lctx.beginPath(); lctx.moveTo(b[0]-dx*15,b[1]-dy*15); lctx.lineTo(hx+px*5,hy+py*5); lctx.lineTo(hx-px*5,hy-py*5); lctx.closePath(); lctx.fill();
+  }
+  // nodes
+  for(var n=0;n<6;n++){ var p=LP[n];
+    var on = n===4? S.master>0.2 : n===1? S.pipe>0.2 : n===5? S.pipe>0.2 : n===3? true : true;
+    lctx.fillStyle= on? (closed?"#1a1608":"#0c1420") : "#0c0c14";
+    lctx.strokeStyle= on? (closed?"#ffd700":"#00d4ff"):"#33384a"; lctx.lineWidth=2;
+    lctx.beginPath(); lctx.arc(p[0],p[1],21,0,6.2832); lctx.fill(); lctx.stroke();
+    lctx.fillStyle= on? (closed?"#ffd700":"#9fd8ec"):"#555b6b";
+    lctx.font="bold 13px ui-monospace,monospace"; lctx.textAlign="center"; lctx.textBaseline="middle";
+    lctx.fillText(GN[n], p[0], p[1]);
+  }
+}
+
+// ============================================================
+//  3D PROJECTION  (software, samsara-style)
+// ============================================================
+var NG=26;                                   // grid resolution per side
+var yaw=0.7, pitch=0.62, camScale=1;
+var autoYaw=!REDUCE;
+var Hgrid=[];                                // cached heights [NG+1][NG+1]
+function rebuildGrid(){
+  buildProfile();
+  Hgrid=[];
+  for(var i=0;i<=NG;i++){ Hgrid[i]=[]; for(var j=0;j<=NG;j++){ Hgrid[i][j]=Hxy(i/NG, j/NG); } }
+}
+function project(x,y,h){
+  // world centered; z up = height*zScale
+  var wx=x-0.5, wy=y-0.5, wz=-(h*0.62);       // wells (low h) sit up toward viewer-bottom
+  var ca=Math.cos(yaw), sa=Math.sin(yaw);
+  var rx=wx*ca - wy*sa, ry=wx*sa + wy*ca;
+  var cp=Math.cos(pitch), sp=Math.sin(pitch);
+  var sx=rx;
+  var sy=ry*sp + wz*cp;                        // height pushes up screen (screen-y down)
+  var depth=ry*cp - wz*sp;
+  var sc=camScale;
+  return { X: W/2 + sx*sc, Y: H/2 + sy*sc - H*0.02, d:depth };
+}
+// color for a cell by identity (mastery/trap) + depth in its well
+function cellColor(gx,gy,h){
+  var mast = clamp((gx+gy-1.05)/0.9,0,1);      // 0 far from mastery .. 1 at mastery corner
+  var trap = clamp((0.85-(gx+gy))/0.9,0,1);
+  var low = clamp(1-h,0,1);                     // deeper well -> brighter glow
+  var r,g,b;
+  if(mast>trap){ // gold-ish mastery side
+    r=120+120*mast*low; g=95+130*mast*low; b=30+40*mast*low;
+  } else { // trap side: sand/amber to dim
+    r=90+120*trap*low; g=55+55*trap*low; b=40+30*trap*low;
+  }
+  // ridge / neutral dim steel
+  var neutral=1-Math.max(mast,trap);
+  r=r*(1-neutral)+58*neutral; g=g*(1-neutral)+70*neutral; b=b*(1-neutral)+92*neutral;
+  var base=0.32+0.55*low;                       // shade
+  return "rgb("+((r*base)|0)+","+((g*base)|0)+","+((b*base)|0)+")";
+}
+
+// ============================================================
+//  RENDER
+// ============================================================
+var quads=[];
+function drawSurface(){
+  quads.length=0;
+  for(var i=0;i<NG;i++){ for(var j=0;j<NG;j++){
+    var gx=i/NG, gy=j/NG;
+    var p00=project(gx, gy, Hgrid[i][j]);
+    var p10=project((i+1)/NG, gy, Hgrid[i+1][j]);
+    var p11=project((i+1)/NG,(j+1)/NG, Hgrid[i+1][j+1]);
+    var p01=project(gx,(j+1)/NG, Hgrid[i][j+1]);
+    var hAvg=(Hgrid[i][j]+Hgrid[i+1][j]+Hgrid[i+1][j+1]+Hgrid[i][j+1])/4;
+    quads.push({d:(p00.d+p10.d+p11.d+p01.d)/4, p:[p00,p10,p11,p01],
+                col:cellColor((gx+0.5/NG),(gy+0.5/NG),hAvg)});
+  }}
+  quads.sort(function(a,b){return b.d-a.d;});   // far first (painter)
+  for(var q=0;q<quads.length;q++){ var Q=quads[q], P=Q.p;
+    ctx.beginPath(); ctx.moveTo(P[0].X,P[0].Y);
+    ctx.lineTo(P[1].X,P[1].Y); ctx.lineTo(P[2].X,P[2].Y); ctx.lineTo(P[3].X,P[3].Y); ctx.closePath();
+    ctx.fillStyle=Q.col; ctx.fill();
+    ctx.strokeStyle="rgba(10,14,22,0.55)"; ctx.lineWidth=0.5; ctx.stroke();
+  }
+}
+function drawTitans(){
+  // masters at the mastery floor — honour the titans
+  var spots=[[0.86,0.86],[0.80,0.90],[0.90,0.80]];
+  for(var k=0;k<spots.length;k++){ var p=project(spots[k][0],spots[k][1],Hxy(spots[k][0],spots[k][1]));
+    var run=S.guard>=GUARD_FLOOR;
+    ctx.fillStyle=run?"rgba(255,215,0,0.95)":"rgba(120,110,70,0.6)";
+    ctx.shadowColor="rgba(255,215,0,0.8)"; ctx.shadowBlur=run?14:0;
+    star(p.X,p.Y,7,4); ctx.shadowBlur=0;
+  }
+}
+function star(x,y,rO,rI){
+  ctx.beginPath();
+  for(var i=0;i<10;i++){ var r=(i%2===0)?rO:rI, a=-Math.PI/2 + i*Math.PI/5;
+    var px=x+r*Math.cos(a), py=y+r*Math.sin(a); i?ctx.lineTo(px,py):ctx.moveTo(px,py); }
+  ctx.closePath(); ctx.fill();
+}
+function drawBeads(){
+  var arr=[];
+  for(var i=0;i<NB;i++){ var s=(BX[i]+BY[i])/2, p=project(BX[i],BY[i],Hxy(BX[i],BY[i]));
+    arr.push({d:p.d,X:p.X,Y:p.Y,s:s}); }
+  arr.sort(function(a,b){return b.d-a.d;});
+  for(var k=0;k<arr.length;k++){ var b=arr[k], col, glow;
+    if(b.s>0.6){ col="rgba(255,215,0,0.98)"; glow="rgba(255,215,0,0.9)"; }
+    else if(b.s<0.42){ col="rgba(194,90,58,0.9)"; glow="rgba(194,90,58,0.5)"; }
+    else { col="rgba(0,212,255,0.95)"; glow="rgba(0,212,255,0.7)"; }
+    ctx.fillStyle=col; ctx.shadowColor=glow; ctx.shadowBlur=b.s>0.6?9:5;
+    ctx.beginPath(); ctx.arc(b.X,b.Y,b.s>0.6?3.4:2.7,0,6.2832); ctx.fill();
+  }
+  ctx.shadowBlur=0;
+}
+function drawAxes(){
+  ctx.font="10px ui-monospace,monospace"; ctx.textAlign="center"; ctx.textBaseline="middle";
+  var o=project(0,0,Hxy(0,0)), xE=project(1,0,Hxy(1,0)), yE=project(0,1,Hxy(0,1));
+  ctx.strokeStyle="rgba(127,168,192,0.35)"; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(o.X,o.Y); ctx.lineTo(xE.X,xE.Y); ctx.moveTo(o.X,o.Y); ctx.lineTo(yE.X,yE.Y); ctx.stroke();
+  ctx.fillStyle="rgba(127,168,192,0.7)";
+  ctx.fillText("skill →", (o.X+xE.X)/2, (o.Y+xE.Y)/2+14);
+  ctx.save(); ctx.translate((o.X+yE.X)/2-16,(o.Y+yE.Y)/2); ctx.rotate(-0.5); ctx.fillText("traction →",0,0); ctx.restore();
+  // valley labels
+  var tp=project(0.16,0.16,Hxy(0.16,0.16)), mp=project(0.86,0.86,Hxy(0.86,0.86));
+  ctx.fillStyle="rgba(194,90,58,0.85)"; ctx.fillText("THE TRAP", tp.X, tp.Y-16);
+  ctx.fillStyle="rgba(255,215,0,0.9)"; ctx.fillText("MASTERY", mp.X, mp.Y-30);
+}
+
+// ============================================================
+//  READOUTS
+// ============================================================
+var baseMast=0.03;                              // no-program reference for "lift"
+function setTxt(id,t){ var e=document.getElementById(id); if(e)e.textContent=t; }
+function refreshReadout(st){
+  setTxt("rMast",(st.m*100).toFixed(0)+"%");
+  setTxt("rTrap",(st.t*100).toFixed(0)+"%");
+  setTxt("rMid",(st.mid*100).toFixed(0)+"%");
+  setTxt("rSbar",st.sbar.toFixed(2));
+  var lift=(st.m-baseMast)*100;
+  var le=document.getElementById("rLift"); if(le){ le.textContent=(lift>=0?"+":"")+lift.toFixed(0)+" pts"; le.className="v"+(lift>25?" gold":lift>8?" cy":lift<=1?" tr":""); }
+  var g=betti1();
+  var be=document.getElementById("rB1"); if(be){ be.textContent=g.b1; be.className="v"+(g.b1>=1?" gold":" tr"); }
+  var fund=fundingLoopClosed();
+  var fe=document.getElementById("rFund"); if(fe){ fe.textContent=fund?"closed ✦":"open"; fe.className="v"+(fund?" gold":" tr"); }
+  var pr=persistOf(), hl=(pr<0.999)? (4.0*Math.log(2)/Math.max(0.05,-Math.log(Math.max(0.001,pr)))) : 99;
+  var pe=document.getElementById("rPersist"); if(pe){ pe.textContent=(pr*100).toFixed(0)+"%"; pe.className="v"+(pr>0.7?" cy":pr<0.4?" pk":""); }
+  // loop inset text
+  setTxt("loopN", g.b1);
+  var ln=document.getElementById("loopN"); if(ln)ln.style.color=g.b1>=1?"#ffd700":"#6a6a82";
+  var ls=document.getElementById("loopSt"); if(ls){ ls.textContent=g.b1>=1?"VIRTUOUS LOOP CLOSED ✦":"loop OPEN — no self-sustaining cycle"; ls.style.color=g.b1>=1?"#ffd700":"#6a6a82"; }
+  // verdict
+  verdict(st,g,pr);
+}
+function verdict(st,g,pr){
+  var v=document.getElementById("verdict"); if(!v)return;
+  var txt,col,bg;
+  if(S.guard<GUARD_FLOOR){ txt="HALT · safeguarding breach"; col="#ff3b3b"; bg="rgba(255,59,59,0.16)"; }
+  else if(leverOf()>0.05 && S.pipe<0.15){ txt="TRAINING TO NOWHERE · loop open"; col="#ff69b4"; bg="rgba(255,59,59,0.13)"; }
+  else if(sweatOf()>0.3){ txt="MISSION DRIFT · sweatshop, not school"; col="#ff3b3b"; bg="rgba(255,59,59,0.14)"; }
+  else if(pr<0.4 && S.pipe>0.2 && S.master>0.2){ txt="DONOR CLIFF · gains eroding"; col="#ffb454"; bg="rgba(255,180,84,0.13)"; }
+  else if(g.b1>=1 && st.m>0.5){ txt="VIRTUOUS LOOP CLOSED ✦"; col="#00ffd5"; bg="rgba(0,255,213,0.12)"; }
+  else if(g.b1>=1){ txt="loop closed · still climbing"; col="#ffd700"; bg="rgba(255,215,0,0.10)"; }
+  else if(leverOf()<0.05){ txt="no program · the sediment holds"; col="#c25a3a"; bg="rgba(194,90,58,0.10)"; }
+  else { txt="marginal · reshape the surface"; col="#6a6a82"; bg="transparent"; }
+  v.textContent=txt; v.style.color=col; v.style.background=bg;
+}
+
+// ============================================================
+//  LOOP
+// ============================================================
+var lastTS=performance.now(), fpsEMA=60, statCache={m:0,t:0,mid:0,sbar:0.15}, statT=0;
+function frame(now){
+  var dt=Math.min((now-lastTS)/1000,0.05); lastTS=now;
+  if(dt>0) fpsEMA=fpsEMA*0.92+(1/dt)*0.08;
+
+  var breach = S.guard<GUARD_FLOOR;
+  document.getElementById("flood").classList.toggle("on", breach);
+
+  if(autoYaw && !dragging) yaw += dt*0.18;
+
+  if(!breach){
+    var sub=REDUCE?1:2;
+    for(var k=0;k<sub;k++) stepBeads(0.02);
+  }
+
+  ctx.clearRect(0,0,W,H);
+  // subtle vignette sky
+  var gsky=ctx.createLinearGradient(0,0,0,H); gsky.addColorStop(0,"#090a11"); gsky.addColorStop(1,"#05060b");
+  ctx.fillStyle=gsky; ctx.fillRect(0,0,W,H);
+
+  drawSurface();
+  drawAxes();
+  drawTitans();
+  if(!breach) drawBeads();
+
+  statT+=dt; if(statT>0.12){ statCache=cohortStats(); statT=0; refreshReadout(statCache); }
+  drawLoop();
+
+  requestAnimationFrame(frame);
+}
+
+// ============================================================
+//  CONTROLS
+// ============================================================
+function bindPct(id,key){ var e=document.getElementById(id);
+  e.addEventListener("input",function(){ S[key]=(+this.value)/100; document.getElementById("v"+id.slice(1)).textContent=this.value; rebuildGrid(); }); }
+bindPct("sMaster","master"); bindPct("sPipe","pipe"); bindPct("sWrap","wrap");
+bindPct("sRev","rev"); bindPct("sLegib","legib"); bindPct("sGuard","guard");
+document.getElementById("sYears").addEventListener("input",function(){ S.years=+this.value; setTxt("vYears",this.value); rebuildGrid(); });
+
+function setAll(o){
+  S.master=o.master; S.pipe=o.pipe; S.wrap=o.wrap; S.rev=o.rev; S.legib=o.legib; S.years=o.years; S.guard=o.guard;
+  var map={sMaster:"master",sPipe:"pipe",sWrap:"wrap",sRev:"rev",sLegib:"legib",sGuard:"guard"};
+  for(var id in map){ var v=Math.round(S[map[id]]*100); document.getElementById(id).value=v; document.getElementById("v"+id.slice(1)).textContent=v; }
+  document.getElementById("sYears").value=S.years; setTxt("vYears",S.years);
+  rebuildGrid(); spawnAll();
+}
+document.getElementById("bBase").onclick=function(){ setAll({master:0,pipe:0,wrap:0,rev:0,legib:0,years:1,guard:0.90}); };
+document.getElementById("bDonor").onclick=function(){ setAll({master:0.8,pipe:0.55,wrap:0.5,rev:0.1,legib:0.3,years:8,guard:0.75}); };
+document.getElementById("bCharter").onclick=function(){ setAll({master:0.85,pipe:0.85,wrap:0.8,rev:0.8,legib:0.6,years:3,guard:0.92}); };
+document.getElementById("bNowhere").onclick=function(){ setAll({master:0.9,pipe:0.0,wrap:0.7,rev:0.5,legib:0.5,years:2,guard:0.85}); };
+document.getElementById("bSweat").onclick=function(){ setAll({master:0.4,pipe:0.85,wrap:0.2,rev:1.0,legib:0.5,years:2,guard:0.85}); };
+
+document.getElementById("bReveal").onclick=function(){ document.getElementById("reveal").style.display="block"; };
+document.getElementById("xReveal").onclick=function(){ document.getElementById("reveal").style.display="none"; };
+document.addEventListener("click",function(e){ var r=document.getElementById("reveal"); if(r.style.display==="block"&&!r.contains(e.target)&&e.target.id!=="bReveal") r.style.display="none"; });
+
+function fold(b,p){ var B=document.getElementById(b),P=document.getElementById(p); if(B&&P)B.addEventListener("click",function(){ P.classList.toggle("folded"); B.textContent=P.classList.contains("folded")?"+":"−"; }); }
+fold("foldHdr","hdr"); fold("foldRead","read");
+document.getElementById("uiToggle").addEventListener("click",function(){ document.body.classList.toggle("hideui"); this.textContent=document.body.classList.contains("hideui")?"show UI":"hide UI"; });
+window.addEventListener("keydown",function(e){ if(e.key==="h"||e.key==="H")document.getElementById("uiToggle").click(); if(e.key===" "){autoYaw=!autoYaw;e.preventDefault();} });
+
+// ---- drag to orbit ----
+var dragging=false,lastX=0,lastY=0;
+cv.addEventListener("pointerdown",function(e){dragging=true;lastX=e.clientX;lastY=e.clientY;autoYaw=false;});
+window.addEventListener("pointerup",function(){dragging=false;});
+window.addEventListener("pointermove",function(e){ if(!dragging)return;
+  yaw+=(e.clientX-lastX)*0.006; pitch=clamp(pitch+(e.clientY-lastY)*0.004,0.18,1.28);
+  lastX=e.clientX; lastY=e.clientY; });
+
+// ============================================================
+//  INIT
+// ============================================================
+function resize(){ DPR=Math.min(window.devicePixelRatio||1,2); W=window.innerWidth; H=window.innerHeight;
+  cv.width=W*DPR; cv.height=H*DPR; cv.style.width=W+"px"; cv.style.height=H+"px"; ctx.setTransform(DPR,0,0,DPR,0,0);
+  camScale=Math.min(W,H)*0.62;
+}
+window.addEventListener("resize",resize);
+resize();
+rebuildGrid();
+spawnAll();
+requestAnimationFrame(frame);
+</script>
+</body></html>

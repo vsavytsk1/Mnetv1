@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>AKROKORINTHIUM v1.0 -- Acrocorinth, the spring & the gods' triangle</title>
+<!--
+  AKROKORINTHIUM v1.0 -- the rock of Acrocorinth, rebuilt in the kernel
+  =====================================================================
+  Sibling of APOLLONIUM. There the Temple of Apollo stood alone; here it
+  becomes ONE CORNER of the divine triangle, and the whole 575 m rock rises
+  around the thing that actually mattered: the water.
+
+  THE MYTH (cited -- Pausanias, Description of Greece II):
+    - 2.1.6: Briareus, one of the Hundred-Handed, arbitrated a quarrel
+        between POSEIDON and HELIOS. Verdict: the ISTHMUS to Poseidon,
+        the SUMMIT OF ACROCORINTH to Helios. Helios yielded his height to
+        APHRODITE -- whose small temple crowned the peak (2.5.1: an armed
+        Aphrodite, Helios, and Eros with a bow).
+    - 2.5.1: "the spring behind the temple was the gift of Asopus to
+        Sisyphus" -- and Pausanias adds that this spring and Peirene in
+        the city below "are the same water, flowing underground."
+
+  THE CENTER -- UPPER PEIRENE (cited):
+    - a natural spring INSIDE the walls, at the south end of the summit,
+      running underground. Because a besieged garrison could always drink,
+      Acrocorinth was starved out, blockaded, bought -- almost never stormed.
+      the water is the soul of this sim. it glows. it was here before the gods.
+
+  THE ROCK (cited):
+    - monolithic limestone, 575 m above the plain; ~3 km of circuit wall;
+      largest fortress in the Peloponnese; it commands the Isthmus, the land
+      gate to the Peloponnese. continuously held from Archaic times to the 1820s.
+
+  THE THREE CORNERS on the plain:
+    - APHRODITE  = the summit temple (the height)           -- rose
+    - HELIOS/APOLLO = the Doric temple in the city below     -- gold  (see APOLLONIUM)
+    - POSEIDON   = Isthmia, his sanctuary + the Isthmian Games -- cyan
+
+  FLAGGED (honest): the triangle's distances are COMPRESSED for the eye and
+  its bearings are APPROXIMATE (real: Apollo temple ~1.7 km N of the summit,
+  Isthmia ~12 km ENE). The rock's crags and the triple-gate walls are
+  STYLIZED, not surveyed. The spring's underground chamber is suggested, not
+  mapped. Everything cited above is real; everything here flagged is a model.
+
+  SHELL: Atelier conventions. LOOP LAW dt = 1/120. Canvas2D. Zero deps.
+  spini spini for the pocket: flick to spin, pinch to zoom, GYRO to tilt,
+  double-tap resets. prefers-reduced-motion honoured. 2026-07-26.
+-->
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100dvh}
+body{background:#06060f;color:#e8e0d0;font-family:ui-monospace,monospace;
+  font-size:11px;overflow:hidden;overscroll-behavior:none;
+  -webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+canvas{display:block;touch-action:none;-webkit-touch-callout:none}
+#hud{position:fixed;top:12px;left:12px;z-index:10;pointer-events:none}
+#hud .title{font-size:12px;color:#ffd700;margin-bottom:2px;letter-spacing:0.12em;text-transform:uppercase}
+#hud .sub{font-size:9px;color:rgba(232,224,208,0.4);margin-bottom:5px;letter-spacing:0.05em}
+#hud .row{line-height:1.85;color:rgba(232,224,208,0.5)}
+#hud .val{color:#00d4ff;font-weight:bold}
+#hud .gold{color:#ffd700;font-weight:bold}
+#hud .rose{color:#ffb4cf;font-weight:bold}
+#hud .stone{color:#d8c9a8}
+#hud .dim{color:rgba(232,224,208,0.25);font-size:10px}
+#badge{display:inline-block;padding:1px 7px;border:1px solid #3a3526;border-radius:3px;color:#7a7256;transition:all 0.4s}
+#badge.earned{color:#06060f;background:#ffd700;border-color:#ffd700;box-shadow:0 0 14px rgba(255,215,0,0.55)}
+#log{position:fixed;top:180px;left:12px;z-index:10;background:rgba(6,6,15,0.9);
+  border:1px solid #2a2618;border-radius:4px;padding:7px 11px;max-width:290px;max-height:172px;
+  overflow-y:auto;font-size:9px;line-height:1.55;color:rgba(232,224,208,0.75);cursor:pointer;transition:opacity 0.3s}
+#log.hidden{opacity:0;pointer-events:none}
+#log .e{border-bottom:1px solid #1c1810;padding:1px 0}
+#log .ok{color:#9be89b}#log .cyan{color:#00d4ff}#log .gold{color:#ffd700}
+#log .rose{color:#ffb4cf}#log .stone{color:#d8c9a8}#log .src{color:rgba(232,224,208,0.4)}
+#master-wrap{position:fixed;bottom:calc(52px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);
+  z-index:10;display:flex;flex-direction:column;align-items:center;gap:4px}
+#master-wrap .ml{font-size:9px;color:rgba(255,215,0,0.5);text-transform:uppercase;letter-spacing:0.15em}
+#sl-master{width:min(320px,82vw);height:6px;accent-color:#ffd700;cursor:pointer}
+#master-val{font-size:10px;color:#ffd700;font-weight:bold;letter-spacing:0.08em;text-align:center}
+#stamp{position:fixed;bottom:calc(52px + env(safe-area-inset-bottom));right:12px;z-index:10;pointer-events:none;text-align:right}
+#stamp .s{font-size:8px;color:rgba(255,215,0,0.25);letter-spacing:0.06em;line-height:1.8}
+#bar{position:fixed;bottom:0;left:0;right:0;z-index:10;background:rgba(6,6,15,0.97);border-top:1px solid #2a2618;
+  display:flex;align-items:center;gap:6px;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;
+  -webkit-overflow-scrolling:touch;scrollbar-width:none;
+  padding:5px 12px;padding-bottom:calc(5px + env(safe-area-inset-bottom));
+  padding-left:calc(12px + env(safe-area-inset-left));padding-right:calc(12px + env(safe-area-inset-right))}
+#bar::-webkit-scrollbar{display:none}
+#bar>*{flex:0 0 auto}
+.btn{background:#0c0c16;color:#5a5440;border:1px solid #2a2618;border-radius:3px;padding:3px 8px;
+  font-family:inherit;font-size:9px;cursor:pointer;transition:all 0.15s;text-transform:uppercase;letter-spacing:0.06em}
+.btn:hover{border-color:#ffd700;color:#ffd700}
+.btn.active{background:#ffd700;color:#06060f;border-color:#ffd700}
+.sep{width:1px;height:16px;background:#2a2618}
+.lbl{color:rgba(232,224,208,0.28);font-size:9px;text-transform:uppercase;letter-spacing:0.09em;min-width:28px;text-align:right}
+.sl{display:flex;align-items:center;gap:3px}
+.sl input{width:80px;accent-color:#00d4ff;cursor:pointer}
+.sv{font-size:9px;color:#00d4ff;min-width:26px}
+#hint{position:fixed;left:50%;top:calc(50% + 96px);transform:translateX(-50%);z-index:11;pointer-events:none;
+  font-size:10px;letter-spacing:0.08em;color:rgba(255,215,0,0.82);background:rgba(6,6,15,0.55);
+  padding:5px 13px;border:1px solid rgba(255,215,0,0.28);border-radius:20px;text-transform:uppercase;
+  text-align:center;white-space:nowrap;transition:opacity 1.1s ease}
+#hint.gone{opacity:0}
+@media (max-width:600px){
+  #hud{font-size:10px}#hud .row{line-height:1.66}
+  #stamp{display:none}
+  #log{max-height:34vh;max-width:82vw}
+  .btn{padding:6px 11px;font-size:10px}
+  .sl input{width:96px;height:24px}
+  .lbl{min-width:22px}
+  #master-wrap .ml{font-size:8px}
+}
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+<div id="hint">drag to spin &middot; pinch to zoom &middot; double-tap resets</div>
+<div id="hud">
+  <div class="title">Acrocorinth &middot; the spring & the triangle</div>
+  <div class="sub">&#916; Poseidon &middot; Helios &middot; Aphrodite &middot; AKROKORINTHIUM v1.0</div>
+  <div class="row">the rock <span id="badge">--</span> <span class="dim">575 m limestone</span></div>
+  <div class="row">circuit wall <span class="val">~3</span> km &nbsp;summit <span class="val">~250k</span> m&sup2;</div>
+  <div class="row">center <span class="gold">UPPER PEIRENE</span> <span class="dim">the spring, the hub</span></div>
+  <div class="row">corners <span class="val">POSEIDON</span> &middot; <span class="gold">HELIOS</span> &middot; <span class="rose">APHRODITE</span></div>
+  <div class="row">the division <span class="gold" id="h-stage">--</span> &nbsp;fps <span class="val" id="h-fps">--</span></div>
+</div>
+<div id="log" onclick="toggleLog()"></div>
+<div id="master-wrap">
+  <div class="ml" id="ml-label">the division &mdash; as the land lies &rarr; as the gods split it</div>
+  <input type="range" id="sl-master" min="0" max="100" value="0" step="0.5" oninput="onMaster(+this.value)">
+  <div id="master-val">AS THE LAND LIES</div>
+</div>
+<div id="stamp">
+  <div class="s">Briareus split the land: sea, sun, love</div>
+  <div class="s">the spring was here before the gods</div>
+  <div class="s">distances compressed &middot; bearings approx</div>
+</div>
+<div id="bar">
+  <span class="lbl">view</span>
+  <button class="btn" id="b-rock" onclick="jumpRock()">THE ROCK</button>
+  <button class="btn" id="b-myth" onclick="jumpMyth()">THE MYTH</button>
+  <div class="sep"></div>
+  <button class="btn active" id="b-spring" onclick="toggleSpring()">SPRING</button>
+  <button class="btn active" id="b-walls" onclick="toggleWalls()">WALLS</button>
+  <button class="btn active" id="b-tri" onclick="toggleTri()">TRIANGLE</button>
+  <button class="btn" id="b-seas" onclick="toggleSeas()">SEAS</button>
+  <button class="btn active" id="b-labels" onclick="toggleLabels()">LABELS</button>
+  <div class="sep"></div>
+  <span class="lbl">zoom</span>
+  <div class="sl"><input type="range" id="sl-zoom" min="55" max="180" value="100" oninput="setZoom(+this.value)"><span class="sv" id="sv-zoom">1.00</span></div>
+  <span class="lbl">spin</span>
+  <div class="sl"><input type="range" id="sl-spin" min="0" max="40" value="12" oninput="setSpin(+this.value)"><span class="sv" id="sv-spin">0.12</span></div>
+  <div class="sep"></div>
+  <button class="btn active" id="b-spin" onclick="toggleSpin()">SPIN</button>
+  <button class="btn" id="b-gyro" onclick="toggleGyro()">GYRO</button>
+  <button class="btn" id="b-log" onclick="toggleLog()">LOG</button>
+</div>
+<script>
+// AKROKORINTHIUM v1.0 -- Acrocorinth. proof by kernel. the water is the soul.
+var RM=false; try{RM=window.matchMedia('(prefers-reduced-motion: reduce)').matches;}catch(e){}
+var TAU=Math.PI*2;
+
+// ---- geometry constants (scene units; real metres cited in the log) ----
+var RB=6.0;              // rock base radius
+var H=4.3;               // summit height
+var PLATEAU_T=0.17;      // fraction of radius that is flat summit
+var CRAG=0.24;           // crag amplitude
+var NR=13, NA=38;        // rock mesh resolution
+var SPX=0.0, SPZ=0.7;    // spring position on the plateau (south of the temple)
+var TER=15;              // terrain half-size
+
+// ---- the three mythic corners (world positions; distances COMPRESSED, flagged) ----
+var V_APH=[0.0, H+0.05, -0.6];   // Aphrodite -- the summit temple
+var V_APO=[-1.7, 0.05, -4.4];    // Helios / Apollo -- the temple in the city below (N)
+var V_POS=[5.4, 0.05, -5.8];     // Poseidon -- Isthmia (ENE, farther)
+
+var SPRING=true, WALLS=true, TRI=true, SEAS=false, LABELS=true;
+var spin=RM?0:0.12, spinOn=!RM, reveal=0, stageIdx=0;
+var yaw=0.70, pitch=0.30, dragging=false, lastX=0, lastY=0, fpsEMA=60;
+var velYaw=0, velPitch=0, dirty=true, lastTap=0, pointers=new Map(), pinchD0=0, camDist0=0, lastMoveT=0;
+var gyroOn=false, gBase=null, gTargetYaw=0.70, gTargetPitch=0.30;
+var SCALE_M=0.14, CY_M=2.1, camDist=1.00;
+
+var STAGES=['THE ROCK & THE SPRING','THE WATER WAS HERE FIRST','POSEIDON TAKES THE ISTHMUS',
+            'HELIOS TAKES THE HEIGHT','HELIOS YIELDS TO APHRODITE','THE TRIANGLE CLOSES'];
+
+function lg(m,c){var el=document.getElementById('log');var d=document.createElement('div');
+  d.className='e'+(c?' '+c:'');d.innerHTML=m;el.insertBefore(d,el.firstChild);
+  while(el.children.length>60)el.removeChild(el.lastChild);}
+function toggleLog(){document.getElementById('log').classList.toggle('hidden');}
+function smooth(a,b,x){if(x<=a)return 0;if(x>=b)return 1;var t=(x-a)/(b-a);return t*t*(3-2*t);}
+
+// ---- face accumulation (painter's kernel, shared with APOLLONIUM) ----
+var FACES=[];
+function clearFaces(){FACES.length=0;}
+function nrm(p0,p1,p2){var ax=p1[0]-p0[0],ay=p1[1]-p0[1],az=p1[2]-p0[2];
+  var bx=p2[0]-p0[0],by=p2[1]-p0[1],bz=p2[2]-p0[2];
+  var nx=ay*bz-az*by,ny=az*bx-ax*bz,nz=ax*by-ay*bx;
+  var L2=Math.hypot(nx,ny,nz)||1;return [nx/L2,ny/L2,nz/L2];}
+function addFace(pts,col,alpha,glow){
+  if(alpha===undefined)alpha=1; if(alpha<=0.02)return;
+  FACES.push({p:pts,n:nrm(pts[0],pts[1],pts[2]),c:col,a:alpha,g:glow||0});}
+function addBox(cx,cy,cz,sx,sy,sz,col,alpha,glow){
+  var x0=cx-sx/2,x1=cx+sx/2,y0=cy-sy/2,y1=cy+sy/2,z0=cz-sz/2,z1=cz+sz/2;
+  addFace([[x0,y1,z0],[x1,y1,z0],[x1,y1,z1],[x0,y1,z1]],col,alpha,glow);
+  addFace([[x0,y0,z1],[x1,y0,z1],[x1,y0,z0],[x0,y0,z0]],col,alpha,glow);
+  addFace([[x0,y0,z1],[x0,y1,z1],[x1,y1,z1],[x1,y0,z1]],col,alpha,glow);
+  addFace([[x1,y0,z0],[x1,y1,z0],[x0,y1,z0],[x0,y0,z0]],col,alpha,glow);
+  addFace([[x1,y0,z1],[x1,y1,z1],[x1,y1,z0],[x1,y0,z0]],col,alpha,glow);
+  addFace([[x0,y0,z0],[x0,y1,z0],[x0,y1,z1],[x0,y0,z1]],col,alpha,glow);
+}
+function addTube(cx,cz,y0,y1,r0,r1,sides,col,alpha,glow){
+  for(var k=0;k<sides;k++){
+    var a0=k/sides*TAU, a1=(k+1)/sides*TAU;
+    var c0=Math.cos(a0),s0=Math.sin(a0),c1=Math.cos(a1),s1=Math.sin(a1);
+    addFace([[cx+r0*c0,y0,cz+r0*s0],[cx+r0*c1,y0,cz+r0*s1],
+             [cx+r1*c1,y1,cz+r1*s1],[cx+r1*c0,y1,cz+r1*s0]],col,alpha,glow);
+  }
+}
+
+// ---- the rock ----
+function peakProfile(t){ if(t<PLATEAU_T) return 1.0;
+  var u=(t-PLATEAU_T)/(1-PLATEAU_T); return Math.pow(Math.cos(u*Math.PI/2),1.25); }
+function cragNoise(a,t){ var n=Math.sin(a*3+1.7)*0.5+Math.sin(a*5+0.4)*0.3+Math.sin(a*8+2.1)*0.18;
+  return n*CRAG*(t*(1-t)*4); }
+function rockPt(t,a){ var r=t*RB; var y=H*peakProfile(t)+cragNoise(a,t); return [Math.cos(a)*r,y,Math.sin(a)*r]; }
+function addRock(){
+  for(var i=0;i<NR;i++){ var t0=i/NR,t1=(i+1)/NR;
+    for(var j=0;j<NA;j++){ var a0=j/NA*TAU,a1=(j+1)/NA*TAU;
+      var p00=rockPt(t0,a0),p10=rockPt(t1,a0),p11=rockPt(t1,a1),p01=rockPt(t0,a1);
+      var hh=(p00[1]+p11[1])*0.5;
+      var base=138 - hh*3;
+      addFace([p00,p10,p11,p01],[base+12,base+2,base-16],1,0);
+    }
+  }
+}
+
+// ---- terrain + seas ----
+function addTerrain(){
+  addFace([[-TER,-0.02,-TER],[TER,-0.02,-TER],[TER,-0.02,TER],[-TER,-0.02,TER]],[50,52,40],1,0);
+  if(SEAS){ var sea=[26,60,88];
+    addFace([[-TER,-0.015,-TER],[TER,-0.015,-TER],[TER,-0.015,-TER*0.60],[-TER,-0.015,-TER*0.60]],sea,0.92,0.08); // Corinthian Gulf (N)
+    addFace([[TER*0.58,-0.015,-TER],[TER,-0.015,-TER],[TER,-0.015,TER],[TER*0.58,-0.015,TER]],sea,0.88,0.08);     // Saronic (E)
+  }
+}
+
+// ---- fortress walls (stylized triple circuit + west gate) ----
+function addWalls(){
+  var col=[178,152,106], rw=PLATEAU_T*RB*0.98, wy=H, wh=0.30, seg=46;
+  for(var k=0;k<seg;k++){ var a=k/seg*TAU;
+    if(Math.cos(a)<-0.84) continue;                 // gap for the west approach
+    var a2=(k+1)/seg*TAU;
+    var p0=[Math.cos(a)*rw,wy,Math.sin(a)*rw], p1=[Math.cos(a2)*rw,wy,Math.sin(a2)*rw];
+    addFace([p0,p1,[p1[0],wy+wh,p1[2]],[p0[0],wy+wh,p0[2]]],col,1,0);
+    addFace([p0,[p0[0],wy+wh,p0[2]],[p1[0],wy+wh,p1[2]],p1],[col[0]+10,col[1]+10,col[2]+8],1,0);
+  }
+  // three stepped gate-arcs down the west slope (the famous triple gate)
+  var gcol=[188,162,114];
+  for(var s=0;s<3;s++){ var rr=rw+0.55+s*0.62, yy=H-0.45-s*0.55;
+    for(var m=-2;m<=2;m++){ if(m===0) continue; var aa=Math.PI+m*0.17, aa2=aa+0.13;
+      var q0=[Math.cos(aa)*rr,yy,Math.sin(aa)*rr], q1=[Math.cos(aa2)*rr,yy,Math.sin(aa2)*rr];
+      addFace([q0,q1,[q1[0],yy+0.34,q1[2]],[q0[0],yy+0.34,q0[2]]],gcol,1,0);
+    }
+  }
+}
+
+// ---- the spring (the soul) ----
+function addSpring(){
+  var glow=SPRING?0.75:0, wcol=[42,158,190], rim=[150,140,116];
+  addTube(SPX,SPZ, H-0.02, H+0.14, 0.58,0.56, 20, rim, 1, 0);          // stone rim
+  addTube(SPX,SPZ, H+0.10, H+0.13, 0.50,0.50, 20, wcol, 1, glow);       // water surface (glow)
+  addTube(SPX,SPZ, H-2.4, H+0.11, 0.30,0.44, 14, wcol, 0.9, glow*0.85); // shaft into the rock
+}
+
+// ---- corner geometry (small 3D markers, revealed by the master slider) ----
+function addAltar(x,y,z,col,alpha){ if(alpha<=0.02)return; addBox(x,y+0.28,z,0.56,0.56,0.56,col,alpha,0.12); }
+function addMiniTemple(x,z,alpha){ if(alpha<=0.02)return; var col=[201,184,150];
+  for(var ci=-1;ci<=1;ci+=2)for(var cj=-1;cj<=1;cj+=2) addTube(x+ci*0.5,z+cj*0.36,0.05,1.15,0.12,0.10,8,col,alpha,0);
+  addBox(x,1.28,z,1.5,0.16,1.05,col,alpha,0);
+  addFace([[x-0.85,1.36,z-0.62],[x+0.85,1.36,z-0.62],[x,1.78,z]],col,alpha,0);
+  addFace([[x,1.78,z],[x+0.85,1.36,z+0.62],[x-0.85,1.36,z+0.62]],col,alpha,0);
+}
+
+// ---- assemble scene for a given reveal ----
+function buildScene(){
+  clearFaces();
+  addTerrain();
+  addRock();
+  if(WALLS) addWalls();
+  addSpring();
+  // corners rise with the myth
+  var aphA=smooth(0.05,0.28,reveal), posA=smooth(0.20,0.42,reveal), apoA=smooth(0.45,0.65,reveal);
+  addAltar(V_APH[0],V_APH[1],V_APH[2],[210,150,178],aphA);   // Aphrodite (rose) at summit
+  addAltar(V_POS[0],V_POS[1],V_POS[2],[60,150,190],posA);    // Poseidon (cyan) on plain
+  addMiniTemple(V_APO[0],V_APO[2],apoA);                     // Helios/Apollo temple on plain
+  addAltar(V_APO[0]+1.4,V_APO[1],V_APO[2],[210,180,110],apoA*0.7);
+}
+
+// ---- projection / render (shared kernel) ----
+var cv=document.getElementById('cv'), ctx=cv.getContext('2d');
+var Wd=0,Hd=0,CX=0,CY=0,SCpix=1,DPR=1;
+function resize(){
+  DPR=Math.min(window.devicePixelRatio||1, FACES.length>3000?1.25:2);
+  Wd=window.innerWidth; Hd=window.innerHeight;
+  cv.width=Wd*DPR; cv.height=Hd*DPR; cv.style.width=Wd+'px'; cv.style.height=Hd+'px';
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+  CX=Wd/2; CY=Hd*0.50; SCpix=Math.min(Wd,Hd)*0.42;
+}
+window.addEventListener('resize',resize);
+window.addEventListener('orientationchange',function(){setTimeout(resize,180);});
+function proj(p){
+  var x=p[0]*SCALE_M, y=(p[1]-CY_M)*SCALE_M, z=p[2]*SCALE_M;
+  var cyw=Math.cos(yaw),syw=Math.sin(yaw),cp=Math.cos(pitch),sp=Math.sin(pitch);
+  var x1=x*cyw+z*syw, z1=-x*syw+z*cyw;
+  var y2=y*cp-z1*sp, z2=y*sp+z1*cp;
+  var d=6.0/camDist, f=d/(d-z2);
+  return [CX+x1*SCpix*f, CY-y2*SCpix*f, z2, f];
+}
+var SUN=(function(){var v=[0.40,0.86,0.32];var L2=Math.hypot(v[0],v[1],v[2]);return [v[0]/L2,v[1]/L2,v[2]/L2];})();
+function shade(c,n,a,g){
+  var d=n[0]*SUN[0]+n[1]*SUN[1]+n[2]*SUN[2]; if(d<0)d=-d*0.35;
+  var lite=0.42+0.62*d, r=c[0]*lite, gg=c[1]*lite, b=c[2]*lite;
+  if(g>0){ r=r+(120-r)*g*0.4; gg=gg+(230-gg)*g*0.4; b=b+(255-b)*g*0.5; }   // water glow -> cyan
+  return 'rgba('+Math.min(255,r|0)+','+Math.min(255,gg|0)+','+Math.min(255,b|0)+','+a+')';
+}
+function dawnSky(){
+  var grd=ctx.createLinearGradient(0,0,0,Hd);
+  grd.addColorStop(0,'#06060f'); grd.addColorStop(0.60,'#0a0913');
+  grd.addColorStop(0.82,'#161a2a'); grd.addColorStop(1,'#22304a');
+  ctx.fillStyle=grd; ctx.fillRect(0,0,Wd,Hd);
+  var gx=CX+Math.cos(yaw*0.5)*Wd*0.20, gy=Hd*0.80;
+  var sun=ctx.createRadialGradient(gx,gy,2,gx,gy,Hd*0.5);
+  sun.addColorStop(0,'rgba(255,210,90,0.42)'); sun.addColorStop(0.5,'rgba(255,170,60,0.08)'); sun.addColorStop(1,'rgba(255,170,60,0)');
+  ctx.fillStyle=sun; ctx.fillRect(0,0,Wd,Hd);
+}
+
+// ---- the myth overlay: triangle, corners, labels, spring bloom ----
+function glowLine(a,b,frac,rgb){ if(frac<=0.02)return;
+  var x2=a[0]+(b[0]-a[0])*frac, y2=a[1]+(b[1]-a[1])*frac;
+  ctx.save(); ctx.shadowColor='rgba('+rgb+',0.9)'; ctx.shadowBlur=10;
+  ctx.strokeStyle='rgba('+rgb+',0.85)'; ctx.lineWidth=1.6;
+  ctx.beginPath(); ctx.moveTo(a[0],a[1]); ctx.lineTo(x2,y2); ctx.stroke(); ctx.restore();
+}
+function drawSun(P,alpha){ if(alpha<=0.05)return; ctx.save();
+  ctx.shadowColor='rgba(255,215,0,0.9)'; ctx.shadowBlur=16;
+  ctx.fillStyle='rgba(255,225,120,'+(0.85*alpha)+')'; ctx.beginPath(); ctx.arc(P[0],P[1],7,0,TAU); ctx.fill();
+  ctx.strokeStyle='rgba(255,215,0,'+(0.9*alpha)+')'; ctx.lineWidth=1.4;
+  for(var i=0;i<12;i++){var a=i/12*TAU; ctx.beginPath();
+    ctx.moveTo(P[0]+Math.cos(a)*10,P[1]+Math.sin(a)*10); ctx.lineTo(P[0]+Math.cos(a)*15,P[1]+Math.sin(a)*15); ctx.stroke();}
+  ctx.restore();
+}
+function drawTrident(P,alpha){ if(alpha<=0.05)return; ctx.save();
+  ctx.shadowColor='rgba(0,212,255,0.9)'; ctx.shadowBlur=12; ctx.strokeStyle='rgba(0,212,255,'+(0.9*alpha)+')'; ctx.lineWidth=1.8;
+  var x=P[0],y=P[1];
+  ctx.beginPath(); ctx.moveTo(x,y+13); ctx.lineTo(x,y-10); ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(x-7,y-6); ctx.lineTo(x-7,y-15); ctx.moveTo(x,y-8); ctx.lineTo(x,y-17);
+  ctx.moveTo(x+7,y-6); ctx.lineTo(x+7,y-15); ctx.moveTo(x-7,y-6); ctx.lineTo(x+7,y-6);
+  ctx.stroke(); ctx.restore();
+}
+function drawStar(P,alpha){ if(alpha<=0.05)return; ctx.save();
+  ctx.shadowColor='rgba(255,150,190,0.9)'; ctx.shadowBlur=14; ctx.fillStyle='rgba(255,182,210,'+(0.9*alpha)+')';
+  var x=P[0],y=P[1],n=5,R=9,r=4; ctx.beginPath();
+  for(var i=0;i<2*n;i++){var rad=(i%2?r:R),a=i/(2*n)*TAU-Math.PI/2, px=x+Math.cos(a)*rad, py=y+Math.sin(a)*rad;
+    if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);}
+  ctx.closePath(); ctx.fill(); ctx.restore();
+}
+function label(P,ttl,sub,tmpl,alpha){ if(alpha<=0.05)return; ctx.save(); ctx.textAlign='left';
+  ctx.font='bold 11px ui-monospace'; ctx.fillStyle=tmpl.replace('A',(0.95*alpha).toFixed(2)); ctx.fillText(ttl,P[0]+11,P[1]-4);
+  ctx.font='9px ui-monospace'; ctx.fillStyle=tmpl.replace('A',(0.6*alpha).toFixed(2)); ctx.fillText(sub,P[0]+11,P[1]+8);
+  ctx.restore();
+}
+function springBloom(P,t){
+  var pulse=0.6+0.4*Math.sin(t*2.2), R=44*pulse+8;
+  var g=ctx.createRadialGradient(P[0],P[1],1,P[0],P[1],R);
+  g.addColorStop(0,'rgba(120,232,255,'+(0.55*pulse)+')'); g.addColorStop(0.4,'rgba(255,215,0,'+(0.18*pulse)+')'); g.addColorStop(1,'rgba(255,215,0,0)');
+  ctx.fillStyle=g; ctx.beginPath(); ctx.arc(P[0],P[1],R,0,TAU); ctx.fill();
+  for(var i=0;i<3;i++){ var ph=((t*0.5+i/3)%1), rr=8+ph*48;
+    ctx.strokeStyle='rgba(0,212,255,'+(0.35*(1-ph))+')'; ctx.lineWidth=1.2; ctx.beginPath(); ctx.arc(P[0],P[1],rr,0,TAU); ctx.stroke(); }
+  ctx.fillStyle='rgba(200,246,255,'+(0.9*pulse)+')'; ctx.beginPath(); ctx.arc(P[0],P[1],2.6,0,TAU); ctx.fill();
+}
+function drawMyth(now){
+  var t=now/1000, Aph=proj(V_APH), Apo=proj(V_APO), Pos=proj(V_POS), Spr=proj([SPX,H+0.12,SPZ]);
+  if(TRI){
+    // spring is the hub: cyan radii out to each corner
+    glowLine(Spr,Aph, smooth(0.05,0.24,reveal)*0.6,'0,212,255');
+    glowLine(Spr,Pos, smooth(0.20,0.42,reveal)*0.6,'0,212,255');
+    glowLine(Spr,Apo, smooth(0.45,0.65,reveal)*0.6,'0,212,255');
+    // the triangle closes, edge by edge
+    glowLine(Aph,Pos, smooth(0.20,0.45,reveal),'255,215,0');
+    glowLine(Aph,Apo, smooth(0.45,0.70,reveal),'255,215,0');
+    glowLine(Pos,Apo, smooth(0.70,1.00,reveal),'255,215,0');
+  }
+  drawStar(Aph, smooth(0.05,0.28,reveal));
+  drawTrident(Pos, smooth(0.20,0.42,reveal));
+  drawSun(Apo, smooth(0.45,0.65,reveal));
+  if(LABELS){
+    label(Aph,'APHRODITE','the height \u00b7 summit','rgba(255,190,212,A)', smooth(0.05,0.28,reveal));
+    label(Pos,'POSEIDON','the Isthmus \u00b7 Isthmia','rgba(0,212,255,A)', smooth(0.20,0.44,reveal));
+    label(Apo,'HELIOS \u00b7 APOLLO','the temple below','rgba(255,215,0,A)', smooth(0.45,0.66,reveal));
+  }
+  springBloom(Spr,t);   // always -- the center, brightest
+}
+
+// ---- draw ----
+function draw(now){
+  if(dirty){buildScene();dirty=false;}
+  dawnSky();
+  var arr=FACES, n=arr.length;
+  for(var i=0;i<n;i++){ var f=arr[i], pp=f.p, m=pp.length, zsum=0; f._pp=new Array(m);
+    for(var k=0;k<m;k++){var q=proj(pp[k]); f._pp[k]=q; zsum+=q[2];} f._z=zsum/m; }
+  arr.sort(function(a,b){return a._z-b._z;});
+  for(var i2=0;i2<n;i2++){ var f=arr[i2], pp=f._pp;
+    ctx.beginPath(); ctx.moveTo(pp[0][0],pp[0][1]);
+    for(var k=1;k<pp.length;k++) ctx.lineTo(pp[k][0],pp[k][1]); ctx.closePath();
+    ctx.fillStyle=shade(f.c,f.n,f.a,f.g); ctx.fill();
+    if(f.g>0.3){ ctx.strokeStyle='rgba(0,212,255,'+(0.20*f.a)+')'; ctx.lineWidth=0.6; ctx.stroke(); }
+  }
+  drawMyth(now);
+  updateHud(now);
+}
+function updateHud(now){
+  var full=reveal>=0.999;
+  document.getElementById('badge').textContent = 'monolith';
+  document.getElementById('badge').classList.toggle('earned', full);
+  document.getElementById('h-stage').innerHTML = STAGES[stageIdx];
+  document.getElementById('h-fps').textContent = fpsEMA.toFixed(0);
+}
+
+// ---- UI ----
+function onMaster(v){ reveal=v/100; dirty=true;
+  var idx = reveal<0.02?0 : reveal<0.20?1 : reveal<0.45?2 : reveal<0.70?3 : reveal<0.90?4 : 5;
+  document.getElementById('master-val').innerHTML =
+    reveal<0.02 ? 'AS THE LAND LIES' : reveal>=0.999 ? 'AS THE GODS SPLIT IT' : STAGES[idx];
+  if(idx!==stageIdx){ stageIdx=idx; lg('&middot; '+STAGES[idx], idx>=4?'rose':(idx>=2?'gold':'cyan')); }
+}
+function setMaster(v){document.getElementById('sl-master').value=v; onMaster(v);}
+function jumpRock(){animateTo(0);} function jumpMyth(){animateTo(100);}
+var animT=null;
+function animateTo(target){ if(animT)cancelAnimationFrame(animT); var start=reveal*100, t0=performance.now();
+  function st(t){var k=Math.min(1,(t-t0)/1200), e=k*k*(3-2*k); setMaster(start+(target-start)*e); if(k<1)animT=requestAnimationFrame(st);}
+  animT=requestAnimationFrame(st);}
+function toggleSpring(){SPRING=!SPRING;dirty=true;document.getElementById('b-spring').classList.toggle('active',SPRING);
+  lg(SPRING?'spring on -- the water glows, the soul carried in':'spring off','cyan');}
+function toggleWalls(){WALLS=!WALLS;dirty=true;document.getElementById('b-walls').classList.toggle('active',WALLS);
+  lg(WALLS?'walls on -- triple circuit + west gate (stylized)':'walls off','stone');}
+function toggleTri(){TRI=!TRI;document.getElementById('b-tri').classList.toggle('active',TRI);
+  lg(TRI?'triangle on -- the gods\' division':'triangle off','gold');}
+function toggleSeas(){SEAS=!SEAS;dirty=true;document.getElementById('b-seas').classList.toggle('active',SEAS);
+  lg(SEAS?'seas: Corinthian Gulf (N) + Saronic (E) -- schematic':'seas off','cyan');}
+function toggleLabels(){LABELS=!LABELS;document.getElementById('b-labels').classList.toggle('active',LABELS);}
+function setZoom(v){camDist=v/100;document.getElementById('sv-zoom').textContent=camDist.toFixed(2);}
+function setSpin(v){spin=v/100;document.getElementById('sv-spin').textContent=spin.toFixed(2);}
+function toggleSpin(){spinOn=!spinOn;document.getElementById('b-spin').classList.toggle('active',spinOn);
+  lg(spinOn?'idle spin on':'idle spin off','cyan');}
+function resetView(){yaw=0.70;pitch=0.30;velYaw=0;velPitch=0;camDist=1.00;gBase=null;
+  var z=document.getElementById('sl-zoom');z.value=100;document.getElementById('sv-zoom').textContent='1.00'; lg('view reset','cyan');}
+function hideHint(){var h=document.getElementById('hint'); if(h) h.classList.add('gone');}
+
+function toggleGyro(){
+  if(gyroOn){ endGyro(); return; }
+  try{
+    if(typeof DeviceOrientationEvent!=='undefined' && typeof DeviceOrientationEvent.requestPermission==='function'){
+      DeviceOrientationEvent.requestPermission().then(function(st){ if(st==='granted') startGyro(); else lg('gyro permission denied','src'); })
+        .catch(function(){ lg('gyro unavailable','src'); });
+    } else if(typeof DeviceOrientationEvent!=='undefined'){ startGyro(); }
+    else { lg('no orientation sensor here','src'); }
+  }catch(e){ lg('gyro error','src'); }
+}
+function startGyro(){ gBase=null; gyroOn=true; document.getElementById('b-gyro').classList.add('active');
+  window.addEventListener('deviceorientation',onGyro); lg('gyro on -- tilt to orbit','gold'); hideHint(); }
+function endGyro(){ gyroOn=false; document.getElementById('b-gyro').classList.remove('active');
+  window.removeEventListener('deviceorientation',onGyro); lg('gyro off','cyan'); }
+function onGyro(e){ if(e.gamma==null||e.beta==null) return; if(!gBase) gBase={g:e.gamma,b:e.beta};
+  gTargetYaw = 0.70 + (e.gamma-gBase.g)*0.026;
+  gTargetPitch = Math.max(-0.05,Math.min(1.1, 0.30 + (e.beta-gBase.b)*0.016)); }
+
+// ---- input: drag-orbit + flick-inertia + pinch-zoom + double-tap ----
+function pmDown(e){
+  pointers.set(e.pointerId,{x:e.clientX,y:e.clientY}); hideHint();
+  var tn=performance.now();
+  if(pointers.size===1){
+    dragging=true; lastX=e.clientX; lastY=e.clientY; velYaw=0; velPitch=0; lastMoveT=tn;
+    if(tn-lastTap<300) resetView(); lastTap=tn;
+  } else if(pointers.size===2){
+    dragging=false; var p=[]; pointers.forEach(function(v){p.push(v);});
+    pinchD0=Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y); camDist0=camDist;
+  }
+}
+function pmMove(e){
+  if(!pointers.has(e.pointerId)) return; pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(pointers.size>=2){ var p=[]; pointers.forEach(function(v){p.push(v);});
+    var d=Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y);
+    if(pinchD0>0){ camDist=Math.max(0.55,Math.min(1.8,camDist0*(d/pinchD0)));
+      var z=document.getElementById('sl-zoom'); z.value=Math.round(camDist*100); document.getElementById('sv-zoom').textContent=camDist.toFixed(2); }
+    return; }
+  if(!dragging) return;
+  var now=performance.now(), dts=Math.max(0.008,(now-lastMoveT)/1000); lastMoveT=now;
+  var dx=(e.clientX-lastX)*0.006, dy=(e.clientY-lastY)*0.004;
+  yaw+=dx; pitch=Math.max(-0.05,Math.min(1.1,pitch+dy));
+  velYaw=Math.max(-6,Math.min(6,dx/dts)); velPitch=Math.max(-4,Math.min(4,dy/dts));
+  lastX=e.clientX; lastY=e.clientY;
+}
+function pmUp(e){
+  pointers.delete(e.pointerId); if(pointers.size<2) pinchD0=0;
+  if(pointers.size===0){ dragging=false; }
+  else { var first=null; pointers.forEach(function(v){ if(first===null) first=v; });
+    dragging=true; lastX=first.x; lastY=first.y; lastMoveT=performance.now(); }
+}
+cv.addEventListener('pointerdown',pmDown);
+window.addEventListener('pointermove',pmMove);
+window.addEventListener('pointerup',pmUp);
+window.addEventListener('pointercancel',pmUp);
+
+// ---- LOOP (LOOP LAW dt=1/120) ----
+var ACC=0,DT=1/120,lastT=performance.now();
+function step(dt){
+  if(dragging){ return; }
+  if(gyroOn){ var k=Math.min(1,8*dt); yaw+=(gTargetYaw-yaw)*k; pitch+=(gTargetPitch-pitch)*k; return; }
+  yaw += ((spinOn?spin:0)+velYaw)*dt;
+  pitch += velPitch*dt; pitch=Math.max(-0.05,Math.min(1.1,pitch));
+  var dk=Math.pow(0.2,dt); velYaw*=dk; velPitch*=dk;
+  if(Math.abs(velYaw)<0.02) velYaw=0; if(Math.abs(velPitch)<0.02) velPitch=0;
+}
+function loop(now){ requestAnimationFrame(loop);
+  var el=(now-lastT)/1000; lastT=now; if(el>0.25)el=0.25;
+  if(el>0)fpsEMA=fpsEMA*0.94+(1/el)*0.06;
+  ACC+=el; while(ACC>=DT){step(DT);ACC-=DT;}
+  draw(now);
+}
+(function init(){
+  buildScene(); resize(); setMaster(0);
+  lg('AKROKORINTHIUM v1.0 -- Acrocorinth, the spring & the triangle. always.','ok');
+  lg('flick to spin &middot; pinch to zoom &middot; double-tap resets','cyan');
+  lg('GYRO: tilt the phone to orbit &middot; slide THE DIVISION to split the land','cyan');
+  lg('--- RECEIPTS (Pausanias, Description of Greece II) ---','cyan');
+  lg('2.1.6: Briareus gives the ISTHMUS to Poseidon,','stone');
+  lg('the SUMMIT to Helios -- who yields it to Aphrodite','rose');
+  lg('2.5.1: the spring behind the temple, Asopus\' gift to Sisyphus','gold');
+  lg('&mdash; "the same water as Peirene below, flowing underground"','gold');
+  lg('the rock: 575 m limestone, ~3 km wall, it commands the Isthmus','stone');
+  lg('the spring is why it was starved, never stormed','cyan');
+  lg('FLAGGED: distances compressed, bearings approx, walls stylized','src');
+  lg('src: ASCSA Corinth Excavations &middot; kastra.eu &middot; APOLLONIUM (the temple)','src');
+  if(window.innerWidth<600){ document.getElementById('log').classList.add('hidden'); }
+  setTimeout(hideHint,6500);
+  requestAnimationFrame(loop);
+})();
+</script>
+</body></html>

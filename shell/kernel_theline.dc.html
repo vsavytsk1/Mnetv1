@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%}
+  body{background:#080507;color:#e0e0e0;font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;overflow:hidden}
+  input[type=range]{-webkit-appearance:none;height:4px;border-radius:3px;outline:none;cursor:pointer}
+  #l-press{background:linear-gradient(90deg,#2c5a6a,#ff3a1a)}
+  #l-risk{background:linear-gradient(90deg,#3a3a5a,#7fff9f)}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:#ffd700;border:2px solid #080507;cursor:pointer;box-shadow:0 0 8px rgba(255,215,0,.6)}
+  .lbtn{background:#140c10;border:1px solid #3a2230;color:#b08896;border-radius:4px;padding:6px 13px;font-family:'IBM Plex Mono',monospace;font-size:9px;cursor:pointer;text-transform:uppercase;letter-spacing:.09em;white-space:nowrap;transition:all .15s}
+  .lbtn:hover{color:#ffe0ea;border-color:#6a3a4e}
+  .lbtn.gold{color:#ffd700;border-color:rgba(255,215,0,.5)}
+  #l-gut{position:absolute;inset:0;pointer-events:none;background:radial-gradient(circle at 50% 60%,transparent 45%,rgba(220,30,10,.5) 100%);opacity:0;transition:opacity .25s;z-index:5}
+</style>
+</helmet>
+<div style="height:100vh;display:flex;flex-direction:column;max-width:1000px;margin:0 auto">
+
+  <!-- HEADER -->
+  <div style="flex:0 0 auto;padding:14px 20px 6px">
+    <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap">
+      <span style="font:600 17px/1 'Spectral',serif;color:#f0e6ea">⚡ La Línea</span>
+      <span style="font:500 8px/1 'IBM Plex Mono',monospace;color:#76616b;letter-spacing:.18em;text-transform:uppercase">Principia mAlgebra · the run-or-stay threshold</span>
+    </div>
+    <p style="margin:8px 0 0;font:400 12.5px/1.55 'Spectral',serif;color:#bba6b0;max-width:78ch">Mama nature's most powerful machine: the line where the supercomputer decides <b style="color:#7fff9f">stay &amp; learn</b> or <b style="color:#ff6a4a">collapse &amp; run</b>. Arousal sharpens you — until it tips and the compute flees. Ride just under the line and the gut-adrenaline writes the language in. Push past it and the monkey bolts. <b style="color:#ffd700">Lock your line.</b></p>
+  </div>
+
+  <!-- CANVAS -->
+  <div style="flex:1 1 auto;position:relative;min-height:0;padding:6px 20px">
+    <canvas id="l-canvas" style="width:100%;height:100%;display:block;border:1px solid #2a1018;border-radius:8px;background:radial-gradient(120% 100% at 50% 0%,#140a10,#080507 75%)"></canvas>
+    <div id="l-gut"></div>
+    <div id="l-flash" style="position:absolute;left:50%;top:26px;transform:translateX(-50%);font:600 18px/1 'Spectral',serif;opacity:0;transition:opacity .35s;pointer-events:none"></div>
+  </div>
+
+  <!-- SLIDERS -->
+  <div style="flex:0 0 auto;padding:8px 20px 4px;display:flex;align-items:center;gap:22px;flex-wrap:wrap;border-top:1px solid #2a1018">
+    <div style="display:flex;align-items:center;gap:9px">
+      <span style="font:500 8px/1 'IBM Plex Mono',monospace;color:#8a6a76;letter-spacing:.13em;text-transform:uppercase">🐅 pressure</span>
+      <input id="l-press" type="range" min="0" max="100" step="1" value="20" style="width:190px">
+      <span id="l-pressval" style="font:600 12px/1 'Spectral',serif;color:#ff8a5a;min-width:34px">20%</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:9px">
+      <span style="font:500 8px/1 'IBM Plex Mono',monospace;color:#6a8a76;letter-spacing:.13em;text-transform:uppercase">🧠 risk appetite</span>
+      <input id="l-risk" type="range" min="0" max="100" step="1" value="50" style="width:150px">
+      <span id="l-riskval" style="font:600 12px/1 'Spectral',serif;color:#7fff9f;min-width:34px">50%</span>
+    </div>
+    <button class="lbtn gold" id="l-lock" onClick="{{ onLock }}">🔒 lock my line</button>
+    <button class="lbtn" onClick="{{ onReset }}">reset</button>
+  </div>
+
+  <!-- READOUTS + STATUS + CAVEATS -->
+  <div style="flex:0 0 auto;padding:6px 20px 12px">
+    <div style="display:flex;gap:20px;flex-wrap:wrap;margin-bottom:6px">
+      <div style="display:flex;flex-direction:column"><span id="l-state" style="font:600 13px/1.2 'Spectral',serif;color:#ffd700">resting</span><span style="font:500 7px/1 'IBM Plex Mono',monospace;color:#5a4a52;letter-spacing:.1em;text-transform:uppercase">state of the monkey</span></div>
+      <div style="flex:1"></div>
+      <div style="display:flex;flex-direction:column;align-items:center"><span id="l-arousal" style="font:600 13px/1.2 'Spectral',serif;color:#ff8a5a">—</span><span style="font:500 7px/1 'IBM Plex Mono',monospace;color:#5a4a52;letter-spacing:.1em;text-transform:uppercase">arousal</span></div>
+      <div style="display:flex;flex-direction:column;align-items:center"><span id="l-learn" style="font:600 13px/1.2 'Spectral',serif;color:#7fff9f">—</span><span style="font:500 7px/1 'IBM Plex Mono',monospace;color:#5a4a52;letter-spacing:.1em;text-transform:uppercase">learning rate</span></div>
+      <div style="display:flex;flex-direction:column;align-items:center"><span id="l-line" style="font:600 13px/1.2 'Spectral',serif;color:#ff5a3a">—</span><span style="font:500 7px/1 'IBM Plex Mono',monospace;color:#5a4a52;letter-spacing:.1em;text-transform:uppercase">flight line</span></div>
+      <div style="display:flex;flex-direction:column;align-items:center"><span id="l-locked" style="font:600 13px/1.2 'Spectral',serif;color:#ffd700">—</span><span style="font:500 7px/1 'IBM Plex Mono',monospace;color:#5a4a52;letter-spacing:.1em;text-transform:uppercase">your locked line</span></div>
+    </div>
+    <div id="l-status" style="font:500 9px/1.4 'IBM Plex Mono',monospace;color:#b08896;letter-spacing:.06em;min-height:13px">push the tiger up slowly. feel where the gut tightens — and where it would snap and run.</div>
+    <div style="margin-top:7px;display:flex;gap:14px;flex-wrap:wrap">
+      <span style="font:400 8px/1.4 'IBM Plex Mono',monospace;color:#4a3a42"><b style="color:#8a6a76">K1</b> models Yerkes–Dodson (1908): performance rises with arousal then collapses past an optimum — illustration, not a measurement</span>
+      <span style="font:400 8px/1.4 'IBM Plex Mono',monospace;color:#4a3a42"><b style="color:#8a6a76">K2</b> the "flight line" ≈ the defense-cascade tipping point; the inverted-U is a real but simplified, debated model</span>
+      <span style="font:400 8px/1.4 'IBM Plex Mono',monospace;color:#4a3a42"><b style="color:#8a6a76">K3</b> what's REAL here: the curve &amp; the marble run the actual formula live; the optimum sits just below YOUR line</span>
+      <span style="font:400 8px/1.4 'IBM Plex Mono',monospace;color:#4a3a42"><b style="color:#8a6a76">K4</b> risk appetite shifting the line is individual-difference psychology (sensation-seeking) — here a tunable parameter, not a clinical claim</span>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{
+  &quot;$preview&quot;: { &quot;width&quot;: 1000, &quot;height&quot;: 720 }
+}">
+class Component extends DCLogic {
+  componentDidMount(){
+    this.cv=document.getElementById('l-canvas'); this.ctx=this.cv.getContext('2d');
+    this.P=0.20;            // pressure (tiger) 0..1
+    this.R=0.50;            // risk appetite 0..1
+    this.A=0.05;            // current arousal (lags pressure)
+    this.locked=null;       // locked line {P,A}
+    document.getElementById('l-press').addEventListener('input',e=>{ this.P=(+e.target.value)/100; document.getElementById('l-pressval').textContent=e.target.value+'%'; });
+    document.getElementById('l-risk').addEventListener('input',e=>{ this.R=(+e.target.value)/100; document.getElementById('l-riskval').textContent=e.target.value+'%'; });
+    this._resize(); window.addEventListener('resize',()=>this._resize());
+    this._loop();
+  }
+  componentWillUnmount(){ if(this._raf)cancelAnimationFrame(this._raf); }
+  _resize(){ const r=this.cv.getBoundingClientRect(); const dpr=window.devicePixelRatio||1; this.cv.width=r.width*dpr; this.cv.height=r.height*dpr; this.ctx.setTransform(dpr,0,0,dpr,0,0); this.W=r.width; this.H=r.height; }
+
+  // ---- the model ----
+  _flightLine(){ return 0.42 + 0.46*this.R; }      // personal collapse threshold (risk appetite moves it)
+  _optimum(){ return this._flightLine()-0.10; }     // the sweet spot rides just under the line
+  _bored(){ return 0.18; }
+  // learning as a function of arousal A: bored→0, bell peak at optimum, hard collapse at flight line
+  _learn(A){
+    const fl=this._flightLine(), opt=this._optimum();
+    if(A>=fl) return 0.03;                                  // ran — compute fled
+    const ramp=Math.min(1, Math.max(0,(A-0.04)/(this._bored()-0.0)) ); // wake-up from boredom
+    const bell=Math.exp(-((A-opt)*(A-opt))/(2*0.11*0.11));
+    return Math.max(0.0, Math.min(1, 0.15*ramp + 0.9*bell*(A<fl?1:0)) );
+  }
+
+  _step(dt){
+    // arousal chases pressure, with a little physiological jitter
+    this.A += (this.P - this.A)*Math.min(1,dt*2.2) + (Math.random()*2-1)*0.006;
+    this.A=Math.max(0,Math.min(1,this.A));
+  }
+
+  _loop(){ let last=performance.now();
+    const tick=now=>{ let dt=(now-last)/1000; last=now; dt=Math.min(0.05,dt);
+      this._step(dt); this._draw(); this._readouts(); this._raf=requestAnimationFrame(tick); };
+    this._raf=requestAnimationFrame(tick);
+  }
+
+  _ax(A){ return 40+A*(this.W-70); }
+  _ay(L){ const top=this.H*0.16, bot=this.H*0.86; return bot-(L*(bot-top)); }
+
+  _draw(){
+    const c=this.ctx, W=this.W, H=this.H; if(!W)return; c.clearRect(0,0,W,H);
+    const fl=this._flightLine(), opt=this._optimum(), bored=this._bored();
+    // zone bands
+    const band=(x0,x1,col)=>{ c.fillStyle=col; c.fillRect(this._ax(x0),H*0.14,this._ax(x1)-this._ax(x0),H*0.74); };
+    band(0,bored,'rgba(90,90,110,.10)');         // bored
+    band(bored,fl,'rgba(60,160,90,.10)');        // learning
+    band(fl,1,'rgba(200,40,20,.14)');            // panic/run
+    // axis labels
+    c.fillStyle='#5a4a52'; c.font="500 8px 'IBM Plex Mono',monospace"; c.textAlign='center';
+    c.fillText('BORED', this._ax(bored/2), H*0.93);
+    c.fillText('ENGAGED · LEARNING', this._ax((bored+fl)/2), H*0.93);
+    c.fillStyle='#a8463a'; c.fillText('PANIC · RUN', this._ax((fl+1)/2), H*0.93);
+    c.fillStyle='#5a4a52'; c.save(); c.translate(14,H*0.5); c.rotate(-Math.PI/2); c.fillText('learning / encoding →', 0,0); c.restore();
+    c.fillText('arousal (tiger pressure) →', W*0.5, H*0.99);
+    // the curve
+    c.beginPath();
+    for(let i=0;i<=240;i++){ const A=i/240; const x=this._ax(A), y=this._ay(this._learn(A)); if(i===0)c.moveTo(x,y); else c.lineTo(x,y); }
+    c.strokeStyle='rgba(180,200,210,.55)'; c.lineWidth=2; c.stroke();
+    // optimum marker
+    c.setLineDash([2,3]); c.strokeStyle='rgba(127,255,159,.5)'; c.beginPath(); c.moveTo(this._ax(opt),H*0.14); c.lineTo(this._ax(opt),H*0.88); c.stroke();
+    c.fillStyle='rgba(127,255,159,.85)'; c.font="500 8px 'IBM Plex Mono',monospace"; c.fillText('the line ▲ (peak)', this._ax(opt), H*0.12);
+    // flight line
+    c.strokeStyle='rgba(255,70,40,.7)'; c.beginPath(); c.moveTo(this._ax(fl),H*0.10); c.lineTo(this._ax(fl),H*0.88); c.stroke(); c.setLineDash([]);
+    c.fillStyle='rgba(255,90,60,.9)'; c.fillText('⚡ FLIGHT — compute collapses', this._ax(fl), H*0.08);
+    // locked line
+    if(this.locked){ c.strokeStyle='rgba(255,215,0,.8)'; c.setLineDash([5,3]); c.beginPath(); c.moveTo(this._ax(this.locked.A),H*0.12); c.lineTo(this._ax(this.locked.A),H*0.88); c.stroke(); c.setLineDash([]);
+      c.fillStyle='#ffd700'; c.fillText('🔒 your line', this._ax(this.locked.A), H*0.10); }
+    // the marble (current arousal)
+    const mx=this._ax(this.A), my=this._ay(this._learn(this.A))-8;
+    const past=this.A>=fl;
+    c.beginPath(); c.arc(mx,my,8,0,7); c.fillStyle=past?'#ff5a3a':(this.A>opt-0.06&&this.A<fl?'#ffd700':'#7fb0ff');
+    c.shadowColor=c.fillStyle; c.shadowBlur=20; c.fill(); c.shadowBlur=0;
+    c.fillStyle='rgba(255,255,255,.85)'; c.beginPath(); c.arc(mx-2,my-2,2.4,0,7); c.fill();
+    // gut vignette: tightens approaching the line, snaps red past it
+    const prox=Math.max(0, (this.A-(opt-0.12))/(fl-(opt-0.12)) );
+    const gut=document.getElementById('l-gut');
+    if(gut) gut.style.opacity = past? '0.85' : (prox>0? (prox*0.5).toFixed(2):'0');
+  }
+
+  _readouts(){
+    const fl=this._flightLine(), opt=this._optimum(), L=this._learn(this.A), past=this.A>=fl;
+    document.getElementById('l-arousal').textContent=this.A.toFixed(2);
+    document.getElementById('l-learn').textContent=(L*100).toFixed(0)+'%';
+    document.getElementById('l-line').textContent=fl.toFixed(2);
+    document.getElementById('l-locked').textContent=this.locked?this.locked.A.toFixed(2):'—';
+    const st=document.getElementById('l-state'), msg=document.getElementById('l-status');
+    if(this.A<this._bored()){ st.textContent='bored — no tiger'; st.style.color='#7787a0'; msg.textContent='arousal too low. the monkey reuses the old graph and ignores you. no tiger = no learning.'; }
+    else if(past){ st.textContent='PANIC — running'; st.style.color='#ff5a3a'; msg.textContent='past the line. the compute collapsed, the monkey bolted. this is "2 years of class then quit" — too much, too fast.'; }
+    else if(this.A>opt-0.05){ st.textContent='ON THE LINE — peak'; st.style.color='#ffd700'; msg.textContent='riding just under flight. gut tight, adrenaline hot, encoding maxed. THIS is where the language gets carved. lock it.'; }
+    else { st.textContent='engaged — learning'; st.style.color='#7fff9f'; msg.textContent='warming up. push the tiger a little higher toward your line for the hot zone.'; }
+  }
+
+  lock(){ const fl=this._flightLine(); this.locked={P:this.P,A:this.A};
+    const f=document.getElementById('l-flash'); if(f){ f.textContent='🔒 line locked'; f.style.color='#ffd700'; f.style.opacity='1'; setTimeout(()=>f.style.opacity='0',1000); }
+    const near=Math.abs(this.A-this._optimum())<0.07;
+    document.getElementById('l-status').textContent = near
+      ? 'locked at arousal '+this.A.toFixed(2)+' — right on the edge. this is your tiger setting: pressure '+Math.round(this.P*100)+'%. feed THIS to the bush.'
+      : 'locked at arousal '+this.A.toFixed(2)+'. '+(this.A<this._optimum()?'a touch cold — you can take more tiger.':'past the peak — ease the tiger back a notch.');
+  }
+  reset(){ this.locked=null; this.P=0.20; this.R=0.50; this.A=0.05;
+    document.getElementById('l-press').value=20; document.getElementById('l-pressval').textContent='20%';
+    document.getElementById('l-risk').value=50; document.getElementById('l-riskval').textContent='50%';
+    document.getElementById('l-status').textContent='reset. push the tiger up slowly and feel for your line.';
+  }
+  renderVals(){ return { onLock:()=>this.lock(), onReset:()=>this.reset() }; }
+}
+</script>
+</body>
+</html>

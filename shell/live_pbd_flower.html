@@ -1,0 +1,386 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>live pbd · pent + 5 hex · flower</title>
+<style>
+  :root{
+    --bg:#050510;
+    --pent:#ff6b35;
+    --hex:#00d4ff;
+    --text:#e0f0ff;
+    --text2:#7090a0;
+    --gold:#ffd700;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;overflow:hidden;background:var(--bg);
+    color:var(--text);font-family:'Share Tech Mono','Consolas','Menlo',monospace}
+  #c{display:block;width:100%;height:100%;cursor:grab;touch-action:none}
+  #c:active{cursor:grabbing}
+
+  .hud{position:fixed;pointer-events:none;font-size:11px;letter-spacing:.05em;color:var(--text2)}
+  .hud b{color:var(--text);font-weight:400}
+  .tag{font-size:9px;letter-spacing:.18em;color:#506070;text-transform:uppercase;margin-bottom:6px}
+  #tl{top:14px;left:14px;line-height:1.55}
+  #br{bottom:14px;right:14px;text-align:right;line-height:1.55}
+  #bl{bottom:14px;left:14px;font-size:10px;color:#506070}
+  #bl b{color:var(--text2);font-weight:400}
+  .info-pent{color:var(--pent)}
+  .info-hex{color:var(--hex)}
+  .info-hot{color:var(--gold)}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<div id="tl" class="hud">
+  <div class="tag">live pbd · drag pent · hexes follow via constraints</div>
+  <div>particles  <b id="np">0</b></div>
+  <div>sticks     <b id="ns">0</b></div>
+  <div>iters      <b id="ni">8</b></div>
+  <div>frame      <b id="ms">0.0</b> ms</div>
+  <div>hover      <b id="hh">—</b></div>
+</div>
+
+<div id="bl">
+  drag · pull the pentagon &nbsp;·&nbsp; hover any face &nbsp;·&nbsp; <b>R</b> · reset
+</div>
+
+<script>
+// ─── §A canvas + DPR ───────────────────────────────────────────────────────
+const cvs = document.getElementById('c');
+const ctx = cvs.getContext('2d');
+let W = 0, H = 0, DPR = 1;
+
+function resize(){
+  DPR = Math.min(devicePixelRatio || 1, 2);
+  W = innerWidth; H = innerHeight;
+  cvs.style.width  = W + 'px';
+  cvs.style.height = H + 'px';
+  cvs.width  = Math.round(W * DPR);
+  cvs.height = Math.round(H * DPR);
+}
+resize();
+addEventListener('resize', () => { resize(); buildShape(); });
+
+// ─── §B verlet PBD primitives ─────────────────────────────────────────────
+//
+//   Each frame:
+//     1. integrate    pos += (pos − prev) · friction
+//     2. relax        for each stick, project endpoints to rest length, N iters
+//     3. measure      energy_per_hex = Σ (current_length − rest_length)² over its sticks
+//
+let particles = [];
+let sticks    = [];
+const ITERS    = 8;
+const FRICTION = 0.985;
+
+function P(x, y){
+  const p = { x, y, px: x, py: y };
+  particles.push(p);
+  return p;
+}
+function S(a, b, len){
+  const rest = len ?? Math.hypot(b.x - a.x, b.y - a.y);
+  const s = { a, b, rest, curr: rest };
+  sticks.push(s);
+  return s;
+}
+
+function step(){
+  for (const p of particles){
+    const vx = (p.x - p.px) * FRICTION;
+    const vy = (p.y - p.py) * FRICTION;
+    p.px = p.x; p.py = p.y;
+    p.x += vx;  p.y += vy;
+  }
+}
+
+function relax(iters){
+  for (let k = 0; k < iters; k++){
+    for (const s of sticks){
+      const dx = s.b.x - s.a.x;
+      const dy = s.b.y - s.a.y;
+      const d  = Math.hypot(dx, dy);
+      s.curr = d;
+      if (d < 1e-6) continue;
+      const diff = (d - s.rest) / d * 0.5;
+      const cx = dx * diff, cy = dy * diff;
+      s.a.x += cx; s.a.y += cy;
+      s.b.x -= cx; s.b.y -= cy;
+    }
+  }
+}
+
+// ─── §C build · 1 pent + 5 hex flower ──────────────────────────────────────
+//
+//   Pent shares an EDGE with each hex by particle reference (corners 0,1 of
+//   each hex ARE the same JS objects as two adjacent pent corners). Adjacent
+//   hexes share a single pent vertex but no edge — that's where the 12°
+//   angular defect lives, visible as a small gap.
+//
+let pent  = null;
+let hexes = [];
+
+function buildShape(){
+  particles = [];
+  sticks    = [];
+  hexes     = [];
+
+  const cx = W / 2, cy = H / 2;
+  const R  = Math.min(W, H) * 0.08;
+
+  // Pentagon: center + 5 corners, edges + spokes for rigidity
+  const pC = P(cx, cy);
+  const pV = [];
+  for (let i = 0; i < 5; i++){
+    const a = -Math.PI/2 + i * 2*Math.PI/5;
+    pV.push(P(cx + R * Math.cos(a), cy + R * Math.sin(a)));
+  }
+  const pSticks = [];
+  for (let i = 0; i < 5; i++){
+    pSticks.push(S(pV[i], pV[(i+1) % 5]));
+    pSticks.push(S(pC,    pV[i]));
+  }
+  pent = { kind: 'pent', index: -1, center: pC, corners: pV, sticks: pSticks };
+
+  // 5 hexagons, one per pent edge
+  for (let i = 0; i < 5; i++){
+    const a = pV[i], b = pV[(i+1) % 5];
+    const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+    const dx = b.x - a.x, dy = b.y - a.y;
+    const L  = Math.hypot(dx, dy);
+    let nx = -dy / L, ny = dx / L;
+    if ((mx - cx) * nx + (my - cy) * ny < 0){ nx = -nx; ny = -ny; }
+    const apo  = L * Math.sqrt(3) / 2;
+    const hcx  = mx + nx * apo, hcy = my + ny * apo;
+
+    // angle of corner 0 (= a) seen from hex center
+    const a0 = Math.atan2(a.y - hcy, a.x - hcx);
+    const corners = [a, b];
+    for (let j = 2; j < 6; j++){
+      const ang = a0 - j * Math.PI/3;          // canvas-CCW: angle DECREASES
+      corners.push(P(hcx + L * Math.cos(ang), hcy + L * Math.sin(ang)));
+    }
+    const hC = P(hcx, hcy);
+
+    const hSticks = [];
+    // hex edges (skip i=0 — that edge is already a pent edge stick)
+    for (let j = 1; j < 6; j++){
+      hSticks.push(S(corners[j], corners[(j+1) % 6]));
+    }
+    // hex spokes
+    for (let j = 0; j < 6; j++){
+      hSticks.push(S(hC, corners[j]));
+    }
+    hexes.push({ kind: 'hex', index: i, center: hC, corners, sticks: hSticks, energy: 0 });
+  }
+}
+buildShape();
+
+// ─── §D mouse: drag pent center · hover any face ───────────────────────────
+let target  = null;       // {x, y} target for pent center to chase
+let mouse   = { x: 0, y: 0 };
+let dragging = false;
+let hovered = null;       // pent or one of hexes
+
+function pointInPoly(px, py, verts){
+  let inside = false;
+  for (let i = 0, j = verts.length - 1; i < verts.length; j = i++){
+    const xi = verts[i].x, yi = verts[i].y;
+    const xj = verts[j].x, yj = verts[j].y;
+    if (((yi > py) !== (yj > py)) &&
+        (px < (xj - xi) * (py - yi) / (yj - yi) + xi)){
+      inside = !inside;
+    }
+  }
+  return inside;
+}
+
+function updateHover(mx, my){
+  hovered = null;
+  for (const h of hexes){
+    if (pointInPoly(mx, my, h.corners)){ hovered = h; return; }
+  }
+  if (pointInPoly(mx, my, pent.corners)){ hovered = pent; }
+}
+
+cvs.addEventListener('pointerdown', e => {
+  dragging = true;
+  target = { x: e.clientX, y: e.clientY };
+  cvs.setPointerCapture(e.pointerId);
+});
+cvs.addEventListener('pointermove', e => {
+  mouse.x = e.clientX; mouse.y = e.clientY;
+  if (dragging) target = { x: e.clientX, y: e.clientY };
+  updateHover(e.clientX, e.clientY);
+});
+addEventListener('pointerup', () => { dragging = false; target = null; });
+addEventListener('keydown', e => {
+  if (e.key === 'r' || e.key === 'R'){
+    buildShape();
+    target = null; dragging = false; hovered = null;
+  }
+});
+
+// Pull pent center toward target (verlet "trick" — modify pos without prev_pos
+// so step() sees velocity = drag delta on the next frame)
+const PULL_K = 0.08;
+function applyDrag(){
+  if (!target) return;
+  const MAX_STEP = Math.min(W, H) * 0.015;
+  const c = pent.center;
+  const dx = target.x - c.x, dy = target.y - c.y;
+  const d  = Math.hypot(dx, dy);
+  if (d < 0.5) return;
+  const s = Math.min(d * PULL_K, MAX_STEP);
+  c.x += (dx / d) * s;
+  c.y += (dy / d) * s;
+}
+
+// ─── §E energy per face (live, from PBD stick distortion) ──────────────────
+function computeEnergies(){
+  for (const h of hexes){
+    let E = 0;
+    for (const s of h.sticks){ const d = s.curr - s.rest; E += d * d; }
+    h.energy = E;
+  }
+  let Ep = 0;
+  for (const s of pent.sticks){ const d = s.curr - s.rest; Ep += d * d; }
+  pent.energy = Ep;
+}
+
+// HSL color shift: cyan (180°) at rest → gold (45°) under stress
+// Pent gets the same treatment but anchored to its own hue (orange 15°)
+const HEX_HUE_REST = 188;
+const HEX_HUE_HOT  = 45;
+const PENT_HUE_REST = 18;
+const PENT_HUE_HOT  = 5;
+const E_MAX = 15;     // energy where the shift saturates
+
+function faceHue(face){
+  const t = Math.min(1, face.energy / E_MAX);
+  if (face.kind === 'pent') return PENT_HUE_REST * (1-t) + PENT_HUE_HOT * t;
+  return HEX_HUE_REST * (1-t) + HEX_HUE_HOT * t;
+}
+function hsla(h, s, l, a){ return `hsla(${h}, ${s}%, ${l}%, ${a})`; }
+
+// ─── §F render ─────────────────────────────────────────────────────────────
+function pathPoly(corners){
+  ctx.beginPath();
+  ctx.moveTo(corners[0].x, corners[0].y);
+  for (let i = 1; i < corners.length; i++) ctx.lineTo(corners[i].x, corners[i].y);
+  ctx.closePath();
+}
+
+function render(){
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  // semi-transparent clear → soft motion trail
+  ctx.fillStyle = 'rgba(5, 5, 16, 0.22)';
+  ctx.fillRect(0, 0, W, H);
+
+  // ── hexes ──
+  for (const h of hexes){
+    const hov = (h === hovered);
+    const hue = faceHue(h);
+    const sat = 88;
+    // spokes (faint)
+    ctx.strokeStyle = hsla(hue, sat, 60, hov ? 0.32 : 0.14);
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (const c of h.corners){
+      ctx.moveTo(h.center.x, h.center.y);
+      ctx.lineTo(c.x, c.y);
+    }
+    ctx.stroke();
+    // fill
+    pathPoly(h.corners);
+    ctx.fillStyle = hsla(hue, sat, 55, hov ? 0.16 : 0.06);
+    ctx.fill();
+    // edges
+    ctx.strokeStyle = hsla(hue, sat, 60, hov ? 0.98 : 0.66);
+    ctx.lineWidth = hov ? 1.7 : 1.2;
+    ctx.stroke();
+    // center dot
+    ctx.fillStyle = hsla(hue, sat, hov ? 75 : 60, hov ? 1.0 : 0.78);
+    ctx.beginPath();
+    ctx.arc(h.center.x, h.center.y, hov ? 3.6 : 2.4, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // ── pent (drawn last so its edges sit on top of shared hex edges) ──
+  const hovP = (pent === hovered);
+  const huP  = faceHue(pent);
+  ctx.strokeStyle = hsla(huP, 90, 55, hovP ? 0.32 : 0.20);
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  for (const c of pent.corners){
+    ctx.moveTo(pent.center.x, pent.center.y);
+    ctx.lineTo(c.x, c.y);
+  }
+  ctx.stroke();
+  pathPoly(pent.corners);
+  ctx.fillStyle = hsla(huP, 90, 50, hovP ? 0.22 : 0.15);
+  ctx.fill();
+  ctx.strokeStyle = hsla(huP, 90, 55, hovP ? 1.0 : 0.95);
+  ctx.lineWidth = hovP ? 1.9 : 1.7;
+  ctx.stroke();
+  ctx.fillStyle = hsla(huP, 90, hovP ? 65 : 55, 1.0);
+  ctx.beginPath();
+  ctx.arc(pent.center.x, pent.center.y, hovP ? 4.5 : 3.5, 0, Math.PI * 2);
+  ctx.fill();
+
+  // ── target indicator (the leash anchor) ──
+  if (target){
+    const pulse = 0.5 + 0.5 * Math.sin(performance.now() * 0.005);
+    ctx.strokeStyle = `rgba(0, 212, 255, ${0.4 * pulse})`;
+    ctx.lineWidth = 1.4;
+    ctx.beginPath(); ctx.arc(target.x, target.y, 12, 0, Math.PI * 2); ctx.stroke();
+    ctx.strokeStyle = `rgba(0, 212, 255, ${0.15 * pulse})`;
+    ctx.beginPath(); ctx.arc(target.x, target.y, 22, 0, Math.PI * 2); ctx.stroke();
+  }
+}
+
+// ─── §G loop ───────────────────────────────────────────────────────────────
+const npEl = document.getElementById('np');
+const nsEl = document.getElementById('ns');
+const msEl = document.getElementById('ms');
+const hhEl = document.getElementById('hh');
+
+let frameMs = 0;
+function loop(){
+  const t0 = performance.now();
+
+  applyDrag();
+  step();
+  relax(ITERS);
+  computeEnergies();
+
+  // NaN guard — should never fire under PBD, but if it ever did, heal silently
+  for (const p of particles){
+    if (!isFinite(p.x) || !isFinite(p.y)){ buildShape(); break; }
+  }
+
+  render();
+  frameMs = performance.now() - t0;
+
+  npEl.textContent = particles.length;
+  nsEl.textContent = sticks.length;
+  msEl.textContent = frameMs.toFixed(1);
+
+  if (hovered){
+    const t = Math.min(1, hovered.energy / E_MAX);
+    const cls = hovered.kind === 'pent' ? 'info-pent'
+              : (t > 0.25 ? 'info-hot' : 'info-hex');
+    const name = hovered.kind === 'pent' ? 'pent' : `hex ${hovered.index}`;
+    hhEl.innerHTML = `<span class="${cls}">${name}</span> · E = <b>${hovered.energy.toFixed(3)}</b>`;
+  } else {
+    hhEl.textContent = '—';
+  }
+
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
+</body>
+</html>

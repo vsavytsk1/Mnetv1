@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>v1.1 · The Warped Ruler · Developmental Distance</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@200;300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --void:#0A0F1C;
+    --panel:rgba(255,255,255,0.020);
+    --dawn:#8E86FF;
+    --noon:#FFCE63;
+    --chalk:#E4DECF;
+    --slate:#818DA6;
+    --slate-2:#4B5471;
+    --hair:rgba(255,255,255,0.072);
+    --hair-2:rgba(255,255,255,0.038);
+    --lock:#FF6B5E;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:
+      radial-gradient(1100px 620px at 18% -8%, #17193a 0%, rgba(23,25,58,0) 62%),
+      radial-gradient(900px 700px at 92% 6%, #241f10 0%, rgba(36,31,16,0) 55%),
+      var(--void);
+    background-attachment:fixed;
+    color:var(--slate);
+    font-family:"JetBrains Mono",ui-monospace,monospace;
+    font-weight:300;
+    padding:44px 20px 72px;
+    -webkit-font-smoothing:antialiased;
+    overflow-x:hidden;
+  }
+  .stage{width:100%;max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:38px}
+
+  .eyebrow{display:flex;align-items:center;gap:11px;font-size:10.5px;letter-spacing:0.26em;text-transform:uppercase;color:var(--slate-2);flex-wrap:wrap}
+  .eyebrow .v{color:var(--chalk)}
+  .eyebrow .rule{flex:1;min-width:20px;height:1px;background:var(--hair)}
+
+  h1{font-family:"Instrument Serif",Georgia,serif;font-weight:400;font-size:clamp(33px,6.8vw,58px);line-height:0.99;color:#F0EDE4;letter-spacing:-0.01em}
+  h1 em{font-style:italic;color:var(--chalk)}
+  .dek{margin-top:14px;font-size:13px;line-height:1.66;max-width:57ch}
+  .dek b{font-weight:400;color:var(--chalk)}
+
+  h2{font-weight:500;font-size:10.5px;letter-spacing:0.3em;text-transform:uppercase;color:var(--slate-2)}
+  .sechead{display:flex;align-items:center;gap:13px;margin-bottom:15px}
+  .sechead .rule{flex:1;height:1px;background:var(--hair)}
+
+  .card{border:1px solid var(--hair);border-radius:14px;overflow:hidden;background:linear-gradient(180deg,var(--panel),rgba(255,255,255,0))}
+  .rulerwrap{height:clamp(280px,44vw,330px)}
+  #ruler{display:block;width:100%;height:100%}
+  .rlegend{display:flex;flex-wrap:wrap;gap:7px 20px;padding:13px 20px;border-top:1px solid var(--hair);font-size:10.5px;background:var(--panel)}
+  .rlegend i{display:inline-block;width:15px;height:3px;margin-right:7px;vertical-align:middle;border-radius:2px}
+
+  /* controls */
+  .ctl{padding:16px 20px 18px}
+  .ctl + .ctl{border-top:1px solid var(--hair-2)}
+  .ctl .lab{display:flex;justify-content:space-between;align-items:baseline;gap:12px;font-size:10.5px;letter-spacing:0.14em;text-transform:uppercase;color:var(--slate-2)}
+  .ctl .lab .val{font-size:15px;letter-spacing:0.02em;text-transform:none;font-variant-numeric:tabular-nums;font-weight:300}
+  .ctl.a .lab .val{color:var(--dawn)}
+  .ctl.b .lab .val{color:var(--noon)}
+  .ctl.t .lab .val{color:var(--chalk)}
+  .ctl .hint{margin-top:5px;font-size:10.5px;color:var(--slate-2);line-height:1.5}
+  input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:24px;background:transparent;margin-top:6px;cursor:ew-resize}
+  input[type=range]::-webkit-slider-runnable-track{height:2px;background:var(--hair)}
+  input[type=range]::-moz-range-track{height:2px;background:var(--hair)}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;border-radius:50%;background:var(--chalk);margin-top:-5.5px}
+  input[type=range]::-moz-range-thumb{width:13px;height:13px;border:0;border-radius:50%;background:var(--chalk)}
+  .ctl.a input[type=range]::-webkit-slider-thumb{background:var(--dawn);box-shadow:0 0 11px rgba(142,134,255,.6)}
+  .ctl.a input[type=range]::-moz-range-thumb{background:var(--dawn)}
+  .ctl.b input[type=range]::-webkit-slider-thumb{background:var(--noon);box-shadow:0 0 11px rgba(255,206,99,.6)}
+  .ctl.b input[type=range]::-moz-range-thumb{background:var(--noon)}
+  input[type=range]:focus-visible{outline:2px solid var(--chalk);outline-offset:4px;border-radius:4px}
+  .pair{display:grid;grid-template-columns:1fr 1fr}
+  .pair > div{border-top:1px solid var(--hair-2)}
+  .pair > div:nth-child(even){border-left:1px solid var(--hair-2)}
+
+  .out{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid var(--hair)}
+  .out .o{padding:16px 20px 18px}
+  .out .o:nth-child(even){border-left:1px solid var(--hair)}
+  .out .k{display:block;font-size:9.5px;letter-spacing:0.2em;text-transform:uppercase;color:var(--slate-2);margin-bottom:7px;line-height:1.5}
+  .out .n{font-size:clamp(22px,5.6vw,32px);font-weight:200;color:var(--chalk);font-variant-numeric:tabular-nums;line-height:1.05}
+  .out .n small{font-size:0.4em;color:var(--slate-2);letter-spacing:0.12em;text-transform:uppercase}
+  .out .s{margin-top:7px;font-size:10.5px;line-height:1.55;color:var(--slate-2)}
+  .out .s b{color:var(--slate);font-weight:400}
+
+  .presets{display:flex;flex-wrap:wrap;gap:0;border-top:1px solid var(--hair)}
+  .presets button{flex:1 1 auto;min-width:33%;padding:12px 8px;border:0;border-right:1px solid var(--hair-2);background:rgba(255,255,255,0.012);color:var(--slate-2);font-family:inherit;font-size:9.5px;letter-spacing:0.16em;text-transform:uppercase;cursor:pointer;transition:color .16s,background .16s}
+  .presets button:last-child{border-right:0}
+  .presets button:hover,.presets button:focus-visible{color:var(--chalk);background:rgba(255,255,255,0.045);outline:none}
+
+  /* bracket table */
+  .brow{display:grid;grid-template-columns:1fr 62px 62px 58px;align-items:center;gap:11px;padding:11px 18px;font-size:11.5px}
+  .brow + .brow{border-top:1px solid var(--hair-2)}
+  .brow.head{font-size:9px;letter-spacing:0.16em;text-transform:uppercase;color:var(--slate-2);background:rgba(255,255,255,0.015)}
+  .brow .p{color:var(--slate);letter-spacing:0.02em}
+  .brow .c,.brow .f,.brow .r{text-align:right;font-variant-numeric:tabular-nums}
+  .brow .c{color:var(--slate-2)}
+  .brow .f{color:var(--chalk)}
+  .brow .r{color:var(--slate-2);font-size:10.5px}
+  .brow.mine{background:linear-gradient(90deg,rgba(255,206,99,0.075),rgba(255,206,99,0))}
+  .brow.mine .p,.brow.mine .f{color:var(--noon)}
+  .brow.hot .f{color:var(--lock)}
+
+  /* inversion demo */
+  .inv2{padding:18px 20px 20px}
+  .ibar{margin-bottom:15px}
+  .ibar:last-child{margin-bottom:0}
+  .ibar .top{display:flex;justify-content:space-between;align-items:baseline;gap:12px;font-size:11.5px;margin-bottom:7px}
+  .ibar .top .nm{color:var(--slate)}
+  .ibar .top .dv{font-variant-numeric:tabular-nums;font-size:15px;font-weight:300}
+  .ibar .track{height:9px;background:rgba(255,255,255,0.035);border-radius:5px;overflow:hidden}
+  .ibar .fill{height:100%;border-radius:5px}
+  .ibar .cap{margin-top:6px;font-size:10.5px;color:var(--slate-2);line-height:1.5}
+
+  /* lock */
+  .locked{border:1px solid rgba(255,107,94,0.34);border-radius:14px;overflow:hidden;background:linear-gradient(180deg,rgba(255,107,94,0.05),rgba(255,107,94,0))}
+  .locked .lhead{padding:13px 20px;border-bottom:1px solid rgba(255,107,94,0.2);font-size:9.5px;letter-spacing:0.24em;text-transform:uppercase;color:var(--lock)}
+  .locked .lbody{padding:17px 20px;font-size:12px;line-height:1.72}
+  .locked b{font-weight:500;color:var(--chalk)}
+  .locked .hard{color:var(--lock);font-weight:500}
+
+  .bars{border:1px solid var(--hair);border-radius:13px;overflow:hidden}
+  .bar-item{padding:15px 20px;font-size:11.8px;line-height:1.68}
+  .bar-item + .bar-item{border-top:1px solid var(--hair-2)}
+  .bar-item .t{display:block;font-size:9.5px;letter-spacing:0.22em;text-transform:uppercase;color:var(--slate-2);margin-bottom:7px}
+  .bar-item b{font-weight:500;color:var(--chalk)}
+  .bar-item .g{color:var(--noon)}
+  .bar-item .p{color:var(--dawn)}
+
+  .foot{font-size:12px;line-height:1.72;color:var(--slate-2);max-width:60ch}
+  .foot em{color:var(--noon);font-style:normal}
+
+  @media (max-width:560px){
+    body{padding:30px 13px 56px}
+    .stage{gap:30px}
+    .out,.pair{grid-template-columns:1fr}
+    .out .o:nth-child(even),.pair > div:nth-child(even){border-left:0}
+    .brow{grid-template-columns:1fr 46px 50px 44px;gap:8px;padding:10px 14px;font-size:10.8px}
+    .presets button{min-width:50%}
+  }
+</style>
+</head>
+<body>
+<main class="stage">
+
+  <div class="eyebrow">
+    <span class="v">v1.1</span>
+    <span>developmental distance · not chronological</span>
+    <span class="rule"></span>
+    <span>τ exposed</span>
+  </div>
+
+  <header>
+    <h1>The years get <em>shorter</em>.</h1>
+    <p class="dek">v1.0 measured the gap in seconds, which is the one unit that definitely doesn't matter. Your correction: what a gap costs isn't years, it's <b>developmental distance</b> — and the exchange rate collapses with age. Seven years at 14 buys an enormous amount of change. Twenty years at 40 buys almost none. So the ruler isn't uniform, and this page bends it.</p>
+  </header>
+
+  <!-- ═══ SIGNATURE: THE WARPED RULER ═══ -->
+  <section class="card">
+    <div class="rulerwrap"><canvas id="ruler" role="img" aria-label="Two stacked scales. The upper is chronological age, evenly spaced from 0 to 80. The lower is developmental distance, where the same 80 years compress into about 24 units, with the compression severe after age 30. Three example age gaps are marked on both, and they swap relative widths."></canvas></div>
+    <div class="rlegend">
+      <span><i style="background:var(--lock)"></i>14 → 21 · seven years</span>
+      <span><i style="background:var(--noon)"></i>21 → 31.2 · this pair</span>
+      <span><i style="background:var(--dawn)"></i>40 → 60 · twenty years</span>
+    </div>
+  </section>
+
+  <!-- ═══ THE ENGINE ═══ -->
+  <section>
+    <div class="sechead"><h2>Two clocks, two paces</h2><span class="rule"></span></div>
+    <div class="card">
+      <div class="pair">
+        <div class="ctl a">
+          <div class="lab"><span>Older · age</span><span class="val" id="vAgeA">31.2</span></div>
+          <input type="range" id="ageA" min="18" max="75" step="0.1" value="31.2" aria-label="Older partner chronological age">
+        </div>
+        <div class="ctl b">
+          <div class="lab"><span>Younger · age</span><span class="val" id="vAgeB">21.0</span></div>
+          <input type="range" id="ageB" min="18" max="75" step="0.1" value="21.0" aria-label="Younger partner chronological age">
+        </div>
+        <div class="ctl a">
+          <div class="lab"><span>Older · pace π</span><span class="val" id="vPaceA">1.00</span></div>
+          <input type="range" id="paceA" min="0.6" max="1.6" step="0.01" value="1" aria-label="Older partner developmental pace">
+          <div class="hint" id="hPaceA">average load</div>
+        </div>
+        <div class="ctl b">
+          <div class="lab"><span>Younger · pace π</span><span class="val" id="vPaceB">1.00</span></div>
+          <input type="range" id="paceB" min="0.6" max="1.6" step="0.01" value="1" aria-label="Younger partner developmental pace">
+          <div class="hint" id="hPaceB">average load</div>
+        </div>
+      </div>
+      <div class="ctl t">
+        <div class="lab"><span>τ · the compression constant</span><span class="val" id="vTau">11.0 y</span></div>
+        <input type="range" id="tau" min="6" max="20" step="0.1" value="11" aria-label="Compression time constant tau">
+        <div class="hint">The one free parameter, left in the open because everything below moves when you drag it. τ is the half-life-ish of change: development runs at full rate to 13, then decays with time constant τ. At τ=6 a teen gap is 54× a midlife gap; at τ=20 it's 1.7×. Default 11 was chosen to reproduce <b>your</b> two intuitions, not fitted to anyone's data.</div>
+      </div>
+      <div class="out">
+        <div class="o">
+          <span class="k">Felt gap · developmental years</span>
+          <div class="n" id="feltN">—</div>
+          <div class="s" id="feltS">—</div>
+        </div>
+        <div class="o">
+          <span class="k">Same distance, priced at 45</span>
+          <div class="n" id="transN">—</div>
+          <div class="s" id="transS">—</div>
+        </div>
+      </div>
+      <div class="presets">
+        <button data-p="31.2,21.0,1,1">this pair</button>
+        <button data-p="60,40,1,1">40 &amp; 60</button>
+        <button data-p="35,25,1,1">25 &amp; 35</button>
+        <button data-p="31.2,21.0,0.85,1.3">younger had it harder</button>
+        <button data-p="31.2,21.0,1.3,0.85">older had it harder</button>
+        <button data-p="45,26,1,1">45 &amp; 26</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ THE BRACKET TABLE ═══ -->
+  <section>
+    <div class="sechead"><h2>What the exchange rate actually is</h2><span class="rule"></span></div>
+    <div class="card" id="btable"></div>
+  </section>
+
+  <!-- ═══ THE INVERSION ═══ -->
+  <section>
+    <div class="sechead"><h2>Your second observation, run backwards</h2><span class="rule"></span></div>
+    <div class="card">
+      <div class="inv2">
+        <div class="ibar">
+          <div class="top"><span class="nm">16, and has been through it · π = 1.40</span><span class="dv" style="color:var(--lock)">21.88</span></div>
+          <div class="track"><span class="fill" style="background:var(--lock);width:91%"></span></div>
+          <div class="cap">Reads as developmentally older than the 30-year-old below by <b style="color:var(--chalk);font-weight:400">5.6 units</b>.</div>
+        </div>
+        <div class="ibar">
+          <div class="top"><span class="nm">30, and has never hit anything hard · π = 0.75</span><span class="dv" style="color:var(--dawn)">16.24</span></div>
+          <div class="track"><span class="fill" style="background:var(--dawn);width:68%"></span></div>
+          <div class="cap">At π = 1.00 these two would read 15.63 and 21.65. The pace multiplier doesn't shift them — it <b style="color:var(--chalk);font-weight:400">swaps them</b>.</div>
+        </div>
+      </div>
+      <div class="bar-item" style="border-top:1px solid var(--hair)">
+        These are two people, not a couple — the panel is deliberately not a pair evaluator. It exists to show that π is strong enough to invert the order, which is exactly what you described seeing, and exactly why the next panel is locked.
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ THE LOCK ═══ -->
+  <section class="locked">
+    <div class="lhead">Hard stop · the model does not run below 18</div>
+    <div class="lbody">
+      The sliders clamp at 18 and that's structural, not decorative. Here is the failure mode this model has, stated plainly: it converts <b>"she's mature for her age"</b> into a number, and that sentence is the single most common rationalisation in every exploitation case ever recorded. So the guardrail has to be built into the physics rather than bolted on.<br><br>
+      The correction that saves your theory: <span class="hard">a high π in a minor is a vulnerability marker, not a capacity certificate.</span> The adultification literature is blunt about it — kids carrying adult responsibilities are alienated from peers and authority figures by their precocious knowledge, and presenting as more mature <b>strips away protections</b> rather than earning standing. The thing that makes them read 45 is the same thing that makes them easiest to take. Fast development is a scar, and a scar is not consent.<br><br>
+      So: your model explains why a 14/21 gap feels catastrophic — it genuinely is the largest developmental distance on the whole board. It does not, and must not, run in the other direction to make one feel smaller. <span class="hard">18 is a floor, not a curve.</span>
+    </div>
+  </section>
+
+  <!-- ═══ ERROR BARS ═══ -->
+  <section>
+    <div class="sechead"><h2>What's real here and what I made up</h2><span class="rule"></span></div>
+    <div class="bars">
+      <div class="bar-item">
+        <span class="t">π is not a metaphor — it has a blood test</span>
+        <b>DunedinPACE</b> reports biological years elapsed per calendar year, built from 19 organ-system decline indicators tracked across two decades in the Dunedin 1972–73 birth cohort. Population centre 1.00, roughly <b>0.6 to 1.4</b> in practice. It runs <span class="p">fast in young adults with childhood adversity across five separate datasets</span>, and in the E-Risk cohort the acceleration was already visible <b>by age 18</b> in kids who grew up poor or were victimised early. Your "went through the most hard stuff" has a methylation signature. π is that number, borrowed.
+      </div>
+      <div class="bar-item">
+        <span class="t">The decaying rate is real; my curve is not</span>
+        Quoidbach, Gilbert &amp; Wilson measured personality, values and preferences in <b>over 19,000 people aged 18 to 68</b> and found that everyone at every age reported enormous change behind them and predicted almost none ahead — the end-of-history illusion. Change per decade does fall with age. But <b>r(t) = e^−(t−13)/τ is my invention</b>, a shape picked because it reproduces your two intuitions. It is a metaphor engine with one dial showing, not a measurement.
+      </div>
+      <div class="bar-item">
+        <span class="t">And your core claim already has support you didn't know about</span>
+        In a 16-to-35 sample, <b>psychosocial maturity predicted risk-taking behaviour better than chronological age did</b>. That's your whole thesis in one result: the number on the birth certificate is a worse instrument than the thing it's standing in for. Steinberg's dual-systems work says the same — cognitive capacity arrives around 16, psychosocial maturity keeps arriving into the mid-20s, and the two come apart, which is exactly the gap your "16 acting 45" and your "30 acting 13" are both living in.
+      </div>
+      <div class="bar-item">
+        <span class="t">One thing the model can't see</span>
+        Developmental distance is not the same as <b>leverage</b>. Two people can sit half a unit apart on this ruler and still be wildly asymmetric in money, housing, visa status, language, social network, or who can walk away cheaply. That asymmetry is what "manipulative" usually names, and it doesn't live on this axis at all. v1.2, if you want it: same warp, but the y-axis is exit cost.
+      </div>
+    </div>
+  </section>
+
+  <p class="foot">v1.0 gave you a millisecond and a Victorian aphorism. v1.1 gives you a <em>ruler that bends</em> and one exposed constant, which is more honest and less satisfying — as it should be, since the thing being measured stopped being a date and started being a person. Drag τ until the numbers stop flattering anyone. 🌘</p>
+
+</main>
+
+<script>
+(function(){
+  "use strict";
+  var $ = function(id){ return document.getElementById(id); };
+  var T0 = 13;                                   // full-rate development to 13
+  var state = { ageA:31.2, ageB:21.0, paceA:1, paceB:1, tau:11 };
+
+  function Dbase(a, tau){ return a <= T0 ? a : T0 + tau*(1 - Math.exp(-(a-T0)/tau)); }
+  function dev(a, pace, tau){ return Dbase(a, tau) * pace; }
+  /* invert: what chronological gap at `anchor` yields felt distance f */
+  function equivGapAt(anchor, f, tau){
+    var target = Dbase(anchor, tau) - f;
+    if(target <= 0) return null;
+    var lo = 0, hi = anchor;
+    for(var i=0;i<60;i++){ var m=(lo+hi)/2; if(Dbase(m,tau) < target) lo=m; else hi=m; }
+    return anchor - (lo+hi)/2;
+  }
+  function paceWord(p){
+    if(p >= 1.30) return 'heavy adversity load';
+    if(p >= 1.12) return 'above-average load';
+    if(p >  0.90) return 'average load';
+    if(p >  0.75) return 'sheltered';
+    return 'very sheltered · prolonged';
+  }
+  var C = {};
+  function loadColors(){
+    var s = getComputedStyle(document.documentElement);
+    ['dawn','noon','chalk','slate','slate-2','lock'].forEach(function(k){
+      C[k.replace('-','')] = s.getPropertyValue('--'+k).trim();
+    });
+  }
+
+  /* ── the warped ruler ──────────────────────────── */
+  var MAXAGE = 80;
+  var BRACKETS = [
+    {lo:14,   hi:21,   c:'lock', label:'14→21'},
+    {lo:21.0, hi:31.2, c:'noon', label:'this pair'},
+    {lo:40,   hi:60,   c:'dawn', label:'40→60'}
+  ];
+  function drawRuler(){
+    var cv = $('ruler'); if(!cv) return;
+    var dpr = Math.min(window.devicePixelRatio||1, 2);
+    var r = cv.getBoundingClientRect();
+    cv.width = Math.round(r.width*dpr); cv.height = Math.round(r.height*dpr);
+    var ctx = cv.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0);
+    var W = r.width, H = r.height, padL = 22, padR = 22;
+    var span = W - padL - padR;
+    var tau = state.tau;
+    var Xc = function(a){ return padL + a/MAXAGE*span; };
+    var Xd = function(a){ return padL + Dbase(a,tau)/MAXAGE*span; };
+    var yTop = H*0.30, yBot = H*0.745;
+    ctx.clearRect(0,0,W,H);
+    ctx.font = '9px "JetBrains Mono", monospace';
+
+    /* connector fan: every two years of life, drawn to where it lands */
+    ctx.strokeStyle = 'rgba(255,255,255,0.055)'; ctx.lineWidth = 1;
+    for(var a=0; a<=MAXAGE; a+=2){
+      ctx.beginPath(); ctx.moveTo(Xc(a), yTop+6); ctx.lineTo(Xd(a), yBot-6); ctx.stroke();
+    }
+
+    function rail(y, X, ticks, labelFn, labelDy){
+      ctx.strokeStyle = 'rgba(255,255,255,0.34)'; ctx.lineWidth = 1.2;
+      ctx.beginPath(); ctx.moveTo(X(0), y); ctx.lineTo(X(MAXAGE), y); ctx.stroke();
+      ctx.textAlign = 'center';
+      ticks.forEach(function(t){
+        var x = X(t);
+        ctx.strokeStyle = 'rgba(255,255,255,0.34)'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(x, y-4); ctx.lineTo(x, y+4); ctx.stroke();
+        var lb = labelFn(t);
+        if(lb !== null){ ctx.fillStyle = C.slate2; ctx.fillText(lb, x, y + labelDy); }
+      });
+    }
+    rail(yTop, Xc, [0,10,20,30,40,50,60,70,80], function(t){ return t; }, -11);
+    rail(yBot, Xd, [0,10,20,30,50,80], function(t){ return (t<=30 || t===80) ? t : null; }, 16);
+
+    ctx.textAlign = 'left'; ctx.fillStyle = C.slate2;
+    ctx.fillText('CHRONOLOGICAL AGE', padL, yTop - 40);
+    ctx.fillText('DEVELOPMENTAL DISTANCE  ·  \u03C4 = ' + tau.toFixed(1), padL, yBot + 48);
+    ctx.textAlign = 'right';
+    ctx.fillText('80 years \u2192 ' + Dbase(80,tau).toFixed(1) + ' units', W - padR, yBot + 48);
+
+    /* the three brackets, on both rails */
+    ctx.lineCap = 'round';
+    BRACKETS.forEach(function(b){
+      var col = C[b.c];
+      ctx.strokeStyle = col; ctx.lineWidth = 4;
+      ctx.beginPath(); ctx.moveTo(Xc(b.lo), yTop - 25); ctx.lineTo(Xc(b.hi), yTop - 25); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(Xd(b.lo), yBot + 31); ctx.lineTo(Xd(b.hi), yBot + 31); ctx.stroke();
+      ctx.lineWidth = 1.4; ctx.globalAlpha = 0.8;
+      [b.lo, b.hi].forEach(function(a){
+        ctx.beginPath(); ctx.moveTo(Xc(a), yTop+6); ctx.lineTo(Xd(a), yBot-6); ctx.stroke();
+      });
+      ctx.globalAlpha = 1;
+    });
+    ctx.lineCap = 'butt';
+
+    /* live markers for whatever the sliders currently say */
+    [[state.ageA,'dawn'],[state.ageB,'noon']].forEach(function(m){
+      ctx.fillStyle = C[m[1]];
+      ctx.beginPath(); ctx.arc(Xc(m[0]), yTop, 3.4, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(Xd(m[0]), yBot, 3.4, 0, Math.PI*2); ctx.fill();
+    });
+  }
+
+  /* ── bracket table ─────────────────────────────── */
+  var ROWS = [
+    ['14 → 21',        14, 21],
+    ['16 → 24',        16, 24],
+    ['21 → 31.2',      21.02, 31.23],
+    ['25 → 35',        25, 35],
+    ['30 → 40',        30, 40],
+    ['29.3 → 32',      29.3, 32],
+    ['40 → 60',        40, 60],
+    ['60 → 80',        60, 80]
+  ];
+  function buildTable(){
+    var tau = state.tau;
+    var html = '<div class="brow head"><span>pair</span><span class="c">chrono</span><span class="f">felt</span><span class="r">rate</span></div>';
+    ROWS.forEach(function(r){
+      var c = r[2]-r[1], f = Dbase(r[2],tau)-Dbase(r[1],tau);
+      var cls = r[0].indexOf('21 →') === 0 ? ' mine' : (r[0].indexOf('14 →') === 0 ? ' hot' : '');
+      var note = r[0] === '29.3 → 32' ? ' <span style="color:var(--slate-2)">· Europe\u2019s average couple</span>' : '';
+      html += '<div class="brow'+cls+'"><span class="p">'+r[0]+note+'</span>' +
+              '<span class="c">'+c.toFixed(2)+'</span>' +
+              '<span class="f">'+f.toFixed(2)+'</span>' +
+              '<span class="r">'+(f/c).toFixed(2)+'</span></div>';
+    });
+    var a = Dbase(21,tau), b = Dbase(14,tau), d = Dbase(60,tau) - Dbase(40,tau);
+    html += '<div class="bar-item" style="border-top:1px solid var(--hair)">Seven years at 14 is <b>'+
+            ((a-b)/d).toFixed(1)+'×</b> the developmental distance of twenty years at 40 — from a chronological gap <b>65% smaller</b>. That inversion is the whole thing you were pointing at, and it survives every value of τ above 6. Note also where this pair lands: <b>'+
+            (Dbase(31.23,tau)-Dbase(21.02,tau)).toFixed(2)+'</b> against a 14/21 pair\u2019s <b>'+(a-b).toFixed(2)+'</b> — a larger gap on the calendar, a smaller one on the ruler.</div>';
+    $('btable').innerHTML = html;
+  }
+
+  /* ── main render ───────────────────────────────── */
+  function render(){
+    var tau = state.tau;
+    var dA = dev(state.ageA, state.paceA, tau), dB = dev(state.ageB, state.paceB, tau);
+    var felt = dA - dB, chrono = state.ageA - state.ageB;
+
+    $('vAgeA').textContent = state.ageA.toFixed(1);
+    $('vAgeB').textContent = state.ageB.toFixed(1);
+    $('vPaceA').textContent = state.paceA.toFixed(2);
+    $('vPaceB').textContent = state.paceB.toFixed(2);
+    $('vTau').textContent = tau.toFixed(1) + ' y';
+    $('hPaceA').textContent = paceWord(state.paceA);
+    $('hPaceB').textContent = paceWord(state.paceB);
+
+    var inverted = felt < 0;
+    $('feltN').innerHTML = (inverted ? '−' : '') + Math.abs(felt).toFixed(3) + ' <small>dev-y</small>';
+    $('feltN').style.color = inverted ? C.lock : C.chalk;
+    $('feltS').innerHTML = 'from <b>' + chrono.toFixed(2) + '</b> chronological years · exchange rate <b>' +
+      (chrono !== 0 ? (felt/chrono).toFixed(2) : '—') + '</b>' +
+      (inverted ? '<br><span style="color:var(--lock)">the younger one reads older</span>' : '');
+
+    var g = equivGapAt(45, Math.abs(felt), tau);
+    if(inverted || g === null){
+      $('transN').innerHTML = '—';
+      $('transS').textContent = inverted ? 'the translator is undefined when the order flips' :
+        'this distance is larger than 45 years of development contains';
+    } else {
+      $('transN').innerHTML = g.toFixed(1) + ' <small>years</small>';
+      $('transS').innerHTML = 'the same felt distance, if both were <b>'+((45-g).toFixed(1))+'</b> and <b>45</b>. ' +
+        'Priced at 65 it would be <b>' + (function(){ var q = equivGapAt(65, Math.abs(felt), tau); return q === null ? '—' : q.toFixed(1); })() + '</b> years.';
+    }
+    drawRuler(); buildTable();
+  }
+
+  /* ── wiring ────────────────────────────────────── */
+  [['ageA','ageA'],['ageB','ageB'],['paceA','paceA'],['paceB','paceB'],['tau','tau']].forEach(function(m){
+    $(m[0]).addEventListener('input', function(e){
+      state[m[1]] = parseFloat(e.target.value);
+      if(state.ageB > state.ageA){                 // keep the labels honest
+        if(m[1] === 'ageB'){ state.ageA = state.ageB; $('ageA').value = state.ageA; }
+        else { state.ageB = state.ageA; $('ageB').value = state.ageB; }
+      }
+      render();
+    });
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('.presets button'), function(btn){
+    btn.addEventListener('click', function(){
+      var p = btn.getAttribute('data-p').split(',').map(parseFloat);
+      state.ageA = p[0]; state.ageB = p[1]; state.paceA = p[2]; state.paceB = p[3];
+      $('ageA').value = p[0]; $('ageB').value = p[1]; $('paceA').value = p[2]; $('paceB').value = p[3];
+      render();
+    });
+  });
+  window.addEventListener('resize', drawRuler);
+  loadColors(); render();
+  if(document.fonts && document.fonts.ready){ document.fonts.ready.then(render); }
+})();
+</script>
+</body>
+</html>

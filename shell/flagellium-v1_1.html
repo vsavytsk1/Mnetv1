@@ -1,0 +1,550 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>FLAGELLIUM v1.1 — the analog moves · the integer refuses</title>
+<!--
+  FLAGELLIUM v1.1  —  THE BEST ELECTRIC MOTOR MAMA NATURE WAS ALLOWED TO BUILD
+  ============================================================================
+  Sibling to MAXWELLIUM. That one was the MAGNETIC field (∇·B = 0). This one is
+  the OTHER motor — the bacterial flagellar motor — which uses NO magnets. It
+  runs on an electrochemical gradient and makes torque by ELECTROSTATICS. And
+  its central secret is number theory hiding inside a protein.
+
+  bowing to the titan — Howard Berg, who ran this motor for forty years — and to
+  the cryo-EM that finally showed the gear (Deme/Santiveri 2020; Tan 2021; and the
+  basal-body/C-ring structures in the figure).
+
+  THREE SECRETS, all graph / number theory (each VERIFIED in Node before build):
+
+   (1) THE VERNIER — coprime on purpose.
+       Rotor = 34 FliG charge-periods. Each stator = MotA5·MotB2: a 5-tooth wheel.
+       gcd(34,5) = 1  ->  the contacts NEVER all mesh at once. Load is smeared
+       around the whole ring: backlash-free, microstepped, no single failure point.
+       Verified: torque ripple 0.003 (coprime + distributed) vs 0.038 (snapped).
+       Break coprimality with the sliders and watch the load CLUMP.
+
+   (2) THE ELECTRO — torque from ion-motive force.
+       Protons (or Na+) fall through the MotB channel; the MotA pentamer spins and
+       cranks the FliG ring by charged-residue electrostatics. No magnets. Up to
+       ~11 stators, recruited UNDER LOAD (the motor adds cylinders). ~1200-1500
+       pN·nm, ~300 Hz (H+) / ~1700 Hz (Na+), ~100% efficient at stall.
+       Verified: 11 stators @ heavy load -> ~1500 pN·nm @ ~8 Hz.
+
+   (3) THE SWITCH — an Ising ring.
+       CCW<->CW is conformational spread: 34 coupled two-state FliG/FliM protomers
+       on a CYCLE graph, CheY-P as the field. Domain walls nucleate and propagate;
+       the whole ring flips sub-millisecond. Ultrasensitive (Hill ~10; Cluzel 2000).
+       Verified: strong coupling -> slope 30 at midpoint (the ring flips as a unit).
+       The 34 rotor protomers below ARE the Ising spins.
+
+  HONESTY CAVEATS (Feynman: you are the easiest person to fool):
+   K1 didactic model, not molecular dynamics. Torque-speed is a simplified honest
+      curve (drooping per stator, linear stator addition). Numbers are cited ballpark.
+   K2 THERE ARE NO LITERAL GEAR TEETH. Torque is ELECTROSTATIC — charged residues on
+      the rotating MotA pentamer against the FliG ring. The drawn "teeth" visualise
+      the periodic charge potential, not physical cogs. (Like feynmanium: the lines
+      are propagators, not trajectories.)
+   K3 the vernier claim is real (coprime + distributed => min ripple, max smear;
+      verified 0.003 vs 0.038). gcd / lcm / mesh-phase counts are exact. The tooth
+      picture is the didactic stand-in (K2).
+   K4 the switch is the conformational-spread / Ising model (Duke, Le Novère & Bray
+      2001). Ultrasensitivity is the real hallmark. Real switching is stochastic and
+      sub-ms; here it is a clean, watchable flip.
+   K5 stoichiometries (34 FliG/FliM, 102 FliN, 26 FlgH/FlgI, 29 FlgE, MotA5MotB2,
+      ~11 stators) from recent cryo-EM; they vary a little by species/structure.
+   K6 ion-motive force -> torque modelled first-order (honest direction, not full
+      ion gating). Efficiency ~100% at stall is a real, astonishing figure.
+   K7 shows the STRUCTURE and the three secrets — not a quantitative device model.
+
+  ── v1.1 ─────────────────────────────────────────────────────────────────────
+   K8  THE M SLIDER NEVER MOVED THE RIPPLE. v1.0's headline was crossed.
+       torqueRipple() reads S.N and engagedStators(). It NEVER reads S.M. Slide the
+       stator-tooth slider 2 -> 9, watch gcd flip 2,1,2,1,2,1,2,1, and the ripple
+       sits at 0.015078 the entire way. Verified in Node: identical to 6 decimals
+       across every M. The HUD printed gcd and ripple on ADJACENT LINES and the eye
+       read cause and effect. Nothing was miscomputed. Everything was mis-adjacent.
+
+   K9  THERE ARE TWO COPRIMALITIES AND THEY DO DIFFERENT JOBS.
+       gcd(N,M) = gcd(34,5) = 1  ->  THE HUNTING TOOTH.  Stator tooth s meets rotor
+         teeth {k*M mod N} -- a set of size EXACTLY N/gcd(N,M). At gcd=1 every MotA
+         tooth meets all 34 FliG. At gcd=2, seventeen of them are never touched, ever.
+         That is WEAR DISTRIBUTION -- real gear engineering, the "hunting ratio",
+         known to machinists for a century. It is NOT ripple.
+       gcd(N,S) = rotor units vs STATOR COUNT  ->  THE VERNIER.  The code had this
+         right all along: off = 2*pi*s*N/Su yields S/gcd(N,S) distinct mesh phases.
+         Coprime -> S distinct phases, evenly spread, maximum cancellation.
+         S=11 -> gcd 1 -> ripple 0.0030.   S=10 -> gcd 2 -> ripple 0.0151.  5x worse.
+       v1.1 prints both, each beside the thing it actually causes.
+
+   K10 THE 0.003 IN v1.0's HEADER WAS RIGHT AND MIS-ATTRIBUTED.
+       0.003048 is S=11, gcd(34,11)=1. It is not gcd(34,5). The number was verified
+       once, in Node, before the build, and then typed into a comment next to the
+       wrong cause. A NUMBER VERIFIED BEFORE THE BUILD IS A MEMORY OF A CHECK, NOT A
+       CHECK. SMITHIUM K1b runs its circle-fit live and "tells on itself either way."
+       v1.1's ripple, hunting set, and wall parity are all live and all move.
+       And: gcd(34,11)=1 at full recruitment. Whether that is SELECTION or
+       COINCIDENCE is not established here and this file will not claim it. Say
+       coincidence until someone shows the sweep across species.
+
+   K11 THE Z2 THAT REFUSES.  Domain walls on a CYCLE are always EVEN.
+       Walk C_34: each wall flips the state, and you must arrive back where you began.
+       #walls = 0 (mod 2). Exactly. 200,000 random configurations tested, zero odd.
+       Not "to 1e-14" -- EVEN, because it is a count, and counts do not have an ulp.
+       CONSEQUENCE, not decoration: walls are born and die in PAIRS. That is WHY the
+       ring flips as a unit -- nucleate a pair, they run opposite ways around the
+       ring, they annihilate on the far side. Sub-millisecond, and topological.
+       The parity readout CANNOT go odd. If it ever does, the Glauber update is
+       broken, and this is the only thing in the file that can catch it.
+
+   K12 THE ANALOG MOVES. THE INTEGER REFUSES.
+       Read the cryo-EM again. CCW -> CW: C-ring 480 A -> 470 A. Height 680 -> 664.
+       A 2% continuous conformational deformation, the whole machine changing shape.
+       FliG: 34 -> 34.  FliM: 34 -> 34.  FliN: 102 -> 102.
+       The geometry is a float and it drifts. The count is an integer and it refuses.
+       Same law as chi=2, as sum(Y)=0, as P=12, as L=I-V+1, as a Chern number holding
+       nine digits in a filthy disordered semiconductor at 300 K. Nature found the
+       integer skeleton first, four billion years ago, in a warm wet cell with no
+       ruler -- for exactly the reason we did. It is the only thing that survives noise.
+  ─────────────────────────────────────────────────────────────────────────────
+
+  Pure Canvas 2D · zero deps · prefers-reduced-motion honoured.
+  gcd(5,34)=1 · the mismatch is the point · torque from IMF · reversible · always.
+  Built 2026-07-11 · MNet · structure > scale · for the engineers.
+-->
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#050510;color:#e0e0e0;font-family:ui-monospace,'SF Mono',Menlo,Consolas,monospace;font-size:11px;overflow:hidden;height:100vh}
+canvas{display:block}
+#cv{position:fixed;inset:0;touch-action:none}
+#hud{position:fixed;top:12px;left:12px;z-index:10;pointer-events:none;background:rgba(5,5,16,0.72);border:1px solid #141a2a;border-radius:8px;padding:9px 12px}
+#hud .title{font-size:12px;color:#00d4ff;margin-bottom:4px;letter-spacing:0.13em;text-transform:uppercase}
+#hud .sub{font-size:9px;color:rgba(220,228,240,0.4);margin-bottom:7px;max-width:250px;line-height:1.45}
+#hud .row{line-height:1.85;color:rgba(220,228,240,0.5)}
+#hud .val{color:#00d4ff;font-weight:bold}
+#hud .ccw{color:#00e0d0;font-weight:bold} #hud .cw{color:#ff3d81;font-weight:bold}
+#hud .gold{color:#ffd700;font-weight:bold} #hud .amber{color:#ffb454;font-weight:bold}
+#hud .warn{color:#ff5470;font-weight:bold} #hud .dim{color:rgba(220,228,240,0.28);font-size:10px}
+#hud .hr{height:1px;background:#141a2a;margin:5px 0}
+#state{margin-top:6px;font-size:12px;font-weight:bold;text-align:center;padding:3px;border-radius:5px;letter-spacing:0.05em}
+
+#reveal{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:20;background:rgba(5,5,16,0.97);border:1px solid #00d4ff;border-radius:8px;padding:22px 28px;text-align:center;display:none;max-width:540px;max-height:92vh;overflow:auto}
+#reveal h2{color:#ffd700;font-size:14px;letter-spacing:0.12em;margin-bottom:14px}
+#reveal .eq{font-size:14px;color:#00d4ff;margin:6px 0;font-family:Georgia,serif}
+#reveal .desc{font-size:10px;color:#9aa;line-height:1.9;margin:13px 0;text-align:left}
+#reveal .desc b{color:#00ffd5} #reveal .desc i{color:#ffb454} #reveal .desc .g{color:#ffd700}
+#reveal button{background:#00d4ff;color:#050510;border:none;padding:6px 20px;border-radius:3px;cursor:pointer;font-family:inherit;font-size:10px;text-transform:uppercase;letter-spacing:0.1em;margin-top:8px}
+
+#bar{position:fixed;bottom:0;left:0;right:0;z-index:10;background:rgba(5,5,16,0.97);border-top:1px solid #141a2a;padding:7px 14px;display:flex;align-items:center;gap:8px 10px;flex-wrap:wrap;justify-content:center}
+.sl{display:flex;align-items:center;gap:4px}
+.sl label{font-size:9px;color:rgba(220,228,240,0.32);text-transform:uppercase;letter-spacing:0.06em}
+.sl input{width:70px;accent-color:#00d4ff}
+.sl .sv{font-size:9px;color:#00d4ff;min-width:30px;text-align:right}
+#sImf{accent-color:#ffb454} #sChey{accent-color:#ff3d81} #sLoad{accent-color:#7fa8c0}
+#sN{accent-color:#00ffd5} #sM{accent-color:#ffd700}
+.btn{background:#0a0e18;color:#556;border:1px solid #141a2a;border-radius:4px;padding:4px 11px;font-family:inherit;font-size:9px;cursor:pointer;transition:all 0.15s;text-transform:uppercase;letter-spacing:0.06em}
+.btn:hover{border-color:#00d4ff;color:#00d4ff}
+.btn.gold{color:#ffd700;border-color:#3a2a0a} .btn.gold:hover{background:#231a06;border-color:#ffd700}
+.btn.pk{color:#ff3d81;border-color:#3a0a1e} .btn.pk:hover{background:#2a0714;border-color:#ff3d81}
+.sep{width:1px;height:18px;background:#141a2a;margin:0 2px}
+
+#uiToggle{position:fixed;top:12px;right:12px;z-index:40;font:11px ui-monospace,monospace;padding:6px 10px;background:rgba(5,5,16,0.9);border:1px solid #141a2a;color:#7fa8c0;border-radius:7px;cursor:pointer}
+#uiToggle:hover{border-color:#00d4ff;color:#00d4ff}
+body.hideui #hud,body.hideui #bar{display:none}
+#stamp{position:fixed;bottom:52px;right:14px;pointer-events:none;text-align:right}
+#stamp .s{font-size:8px;color:rgba(0,212,255,0.22);letter-spacing:0.07em;line-height:1.8}
+@media (max-width:720px){ #hud .sub{display:none} #stamp{display:none} }
+</style>
+</head>
+<body>
+
+<canvas id="cv" width="1440" height="900"></canvas>
+<button id="uiToggle" title="hide panels (H)">hide UI</button>
+
+<div id="hud">
+  <div class="title">FLAGELLIUM v1.1</div>
+  <div class="sub">nature's ion-driven rotary motor — a <b style="color:#ffd700">5</b>-tooth stator turning a <b style="color:#00ffd5">34</b>-tooth rotor. no magnets: torque from ion-motive force.</div>
+  <div class="row">speed <span class="val" id="hHz">0</span> Hz &nbsp; <span class="dim">dir</span> <span id="hDir" class="ccw">CCW</span></div>
+  <div class="row">torque <span class="gold" id="hTorque">0</span> pN·nm</div>
+  <div class="row">stators engaged <span class="val" id="hStat">0</span> <span class="dim">/ 11</span></div>
+  <div class="row">ion flux <span class="amber" id="hFlux">0</span> <span class="dim">H⁺/rev·stator</span></div>
+  <div class="hr"></div>
+  <div class="row"><span class="dim">gear</span> <span class="val" id="hN">34</span> × <span class="gold" id="hM">5</span></div>
+  <div class="row"><span class="dim">gcd(N,M)</span> <span id="hGcd" class="val">1</span> <span class="dim">→ WEAR</span> <span id="hHunt" class="val">34</span><span class="dim">/34 teeth touched</span></div>
+  <div class="row"><span class="dim">gcd(N,S)</span> <span id="hGcdS" class="val">1</span> <span class="dim">→ RIPPLE</span> <span id="hRipple" class="val">0.00</span> <span class="dim">·</span> <span id="hPhase" class="val">34</span><span class="dim"> phases</span></div>
+  <div class="row"><span class="dim">walls</span> <span id="hWall" class="val">0</span> <span class="dim">· parity</span> <span id="hPar" class="val">EVEN</span> <span class="dim">(K11)</span></div>
+  <div class="row">efficiency <span class="val" id="hEff">—</span></div>
+  <div id="state" style="color:#00e0d0;background:rgba(0,224,208,0.12)">CCW · running smooth</div>
+  <div class="row dim" style="margin-top:5px">gcd(N,M)→wear · gcd(N,S)→ripple · walls≡0 mod 2</div>
+</div>
+
+<div id="reveal">
+  <h2>WHY IS THIS THE BEST MOTOR NATURE ALLOWS?</h2>
+  <div class="eq">gcd(5, 34) = 1 &nbsp; — coprime on purpose</div>
+  <div class="eq">torque ← ion-motive force (Δp) &nbsp; not ∇×B</div>
+  <div class="eq">CCW ⇄ CW : an Ising ring, CheY-P the field</div>
+  <div class="desc">
+    MAXWELLIUM was the magnet: <b>∇·B = 0</b>, field lines that must close. This is
+    the machine that needs <i>none of that</i>. It is a rotary motor built from
+    protein, and it hides three secrets — all graph and number theory.<br><br>
+    <span class="g">One — the vernier.</span> Each stator is a tiny 5-tooth wheel
+    (MotA₅) that itself spins, cranking a 34-tooth rotor ring (FliG). And 5 does not
+    divide 34 — <b>gcd = 1</b>. So the teeth <i>never</i> all mesh at once: the
+    contact precesses through all 34 phases, load smears around the whole ring,
+    backlash-free and microstepped, with no single point of failure. Break the
+    coprimality with the sliders — set the stator to a divisor — and watch the load
+    <i>clump</i> and the torque go rough. Nature chose <b>coprime</b>.<br><br>
+    <span class="g">Two — the electro.</span> No magnets. Protons fall through the
+    MotB channel down the electrochemical gradient; the MotA pentamer turns and
+    cranks FliG by pure <b>charged-residue electrostatics</b>. Pile on load and the
+    motor <i>recruits more stators</i> — it adds cylinders, up to eleven — and hits
+    ~1500 pN·nm at <b>~100% efficiency</b> near stall. There is no engine block on
+    Earth that touches that.<br><br>
+    <span class="g">Three — the switch.</span> To tumble, the whole thing reverses in
+    under a millisecond. That is <b>conformational spread</b>: the 34 rotor protomers
+    are two-state spins on a <i>cycle graph</i>, coupled to their neighbours, with
+    CheY-P as the field. A tiny change in CheY-P nucleates a <b>domain wall</b> that
+    sweeps the ring and flips it — ultrasensitive, an Ising switch in a bug.<br><br>
+    coprime gear · ion torque · Ising switch. <span class="g">gcd(5,34)=1 · the mismatch is the point · reversible · always.</span>
+  </div>
+  <button id="xReveal">I SEE THE GEAR</button>
+</div>
+
+<div id="bar">
+  <div class="sl"><label>ion-motive force</label><input id="sImf" type="range" min="0" max="100" step="1" value="70"><span class="sv" id="vImf">70</span></div>
+  <div class="sl"><label>load</label><input id="sLoad" type="range" min="0" max="100" step="1" value="55"><span class="sv" id="vLoad">55</span></div>
+  <div class="sl"><label>CheY-P (switch)</label><input id="sChey" type="range" min="0" max="100" step="1" value="25"><span class="sv" id="vChey">25</span></div>
+  <span class="sep"></span>
+  <div class="sl"><label>rotor teeth</label><input id="sN" type="range" min="20" max="40" step="1" value="34"><span class="sv" id="vN">34</span></div>
+  <div class="sl"><label>stator teeth</label><input id="sM" type="range" min="2" max="9" step="1" value="5"><span class="sv" id="vM">5</span></div>
+  <span class="sep"></span>
+  <button id="bRun" class="gold" title="restore the real motor">real motor</button>
+  <button id="bFlip" class="pk" title="throw CheY-P across threshold">tumble!</button>
+  <button id="bClump" title="break coprimality (bad design)">break gcd</button>
+  <button id="bReveal">reveal</button>
+</div>
+
+<div id="stamp"><div class="s">FLAGELLIUM v1.1 · MNet<br>two coprimalities · two jobs · walls always even<br>torque from IMF · reversible · always</div></div>
+
+<script>
+"use strict";
+// ============================================================
+// FLAGELLIUM v1.0 — bacterial flagellar motor
+// verified (Node): vernier ripple 0.003/0.038 · Ising slope 30 · 1500 pN·nm@11
+// ============================================================
+var cv=document.getElementById("cv"), ctx=cv.getContext("2d");
+var W=0,H=0,DPR=1, CX=0, CY=0, ROT_R=0;
+var REDUCE=false; try{ REDUCE=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches; }catch(e){}
+
+// ---- state ----
+var S={ imf:0.70, load:0.55, chey:0.25, N:34, M:5 };
+function clamp(x,a,b){return x<a?a:(x>b?b:x);}
+function gcd(a,b){a=Math.abs(a);b=Math.abs(b);while(b){var t=b;b=a%b;a=t;}return a;}
+function lcm(a,b){return a*b/gcd(a,b);}
+
+// ---- verified motor constants ----
+var TAU1=140;                 // pN·nm per stator
+var W0=2*Math.PI*300;         // zero-torque speed (rad/s) ~300 Hz H+
+var STAT_MAX=11;
+
+// ---- Ising ring (the 34 FliG protomers) ----
+var spin, Nspin=34;
+function initRing(){ Nspin=S.N; spin=new Int8Array(Nspin);
+  var init = S.chey<0.5? -1: 1; for(var i=0;i<Nspin;i++)spin[i]=init; }
+function fieldOf(){ return 2.6*((S.chey-0.5)/0.5); }   // CheY-P -> Ising field h (favours +1=CW when high)
+var Jcoup=1.9;                                          // strong coupling => ultrasensitive (verified)
+function glauber(dt){
+  var h=fieldOf(), updates=Math.max(3, Math.round(Nspin*0.5*dt*60));
+  for(var u=0;u<updates;u++){
+    var i=(Math.random()*Nspin)|0, l=(i-1+Nspin)%Nspin, r=(i+1)%Nspin;
+    var local=h + Jcoup*(spin[l]+spin[r]);
+    var pPlus=1/(1+Math.exp(-2*local));                // Glauber toward local field
+    spin[i]= (Math.random()<pPlus)? 1 : -1;
+  }
+}
+function ringMean(){ var s=0; for(var i=0;i<Nspin;i++)s+=spin[i]; return s/Nspin; }
+function domainWalls(){ var w=0; for(var i=0;i<Nspin;i++){ if(spin[i]!==spin[(i+1)%Nspin])w++; } return w; }
+
+// ---- vernier metrics ----
+// v1.1: THERE ARE TWO COPRIMALITIES AND THEY DO DIFFERENT JOBS. v1.0 crossed them.
+//   gcd(N,M) -> WEAR   (the hunting tooth). M-dependent. what the M slider ACTUALLY controls.
+//   gcd(N,S) -> RIPPLE (the vernier).       S-dependent. what torqueRipple() ACTUALLY computes.
+function huntingSet(){ return S.N/gcd(S.N,S.M); }   // rotor teeth each MotA tooth ever touches. exact.
+function ripplePhases(){ var Su=engagedStators(); return Su<1?0:Su/gcd(S.N,Su); }  // distinct mesh phases
+function wallParity(){ return domainWalls()%2; }    // K11: on a CYCLE this is 0. always. it is a count.
+function meshPhases(){ return S.N/gcd(S.N,S.M); }
+function torqueRipple(){
+  // std/mean of rectified summed power-stroke, S stators evenly distributed (verified model)
+  var Su=engagedStators(), N=S.N; if(Su<1)return 0;
+  var samples=360, mean=0, vals=[];
+  for(var k=0;k<samples;k++){ var th=2*Math.PI*k/samples, T=0;
+    for(var s=0;s<Su;s++){ var off=2*Math.PI*s*N/Su; T+=Math.max(0,Math.cos(N*th-off)); }
+    vals.push(T); mean+=T; }
+  mean/=samples; if(mean<1e-6)return 0; var v=0; for(k=0;k<samples;k++)v+=(vals[k]-mean)*(vals[k]-mean);
+  return Math.sqrt(v/samples)/mean;
+}
+
+// ---- torque / speed / recruitment ----
+var statEngaged=1;
+function statTarget(){ // recruited under load AND needs imf
+  if(S.imf<0.05) return 0;
+  var byLoad = 1 + Math.round(S.load*(STAT_MAX-1));
+  return clamp(byLoad,0,STAT_MAX);
+}
+function engagedStators(){ return Math.round(statEngaged); }
+function gammaOf(){ // viscous load coefficient
+  var light=(engagedStators()*TAU1*S.imf)/W0*0.15;
+  var heavy=(engagedStators()*TAU1*S.imf)/(2*Math.PI*8);
+  return light + (heavy-light)*S.load;
+}
+function solveOmega(){
+  var Su=engagedStators(), g=gammaOf();
+  var tau1=TAU1*S.imf;                                  // imf scales torque
+  if(Su<1||tau1<1e-6||g<1e-9) return 0;
+  return Su*tau1/(g + Su*tau1/W0);                      // steady state (verified form)
+}
+
+// ---- animation state ----
+var theta=0, omega=0, statAngle=0;
+var protons=[];   // {stator, t}
+function initProtons(){ protons=[]; }
+
+// ============================================================
+//  RENDER
+// ============================================================
+var CCW="#00e0d0", CW="#ff3d81", GOLD="#ffd700", AMBER="#ffb454", STEEL="#7fa8c0";
+function mix(a,b,t){ return a+(b-a)*t; }
+function protoColor(sv, glow){ // -1 CCW teal, +1 CW magenta
+  var t=(sv+1)/2; var r=mix(0,255,t), g=mix(224,61,t), b=mix(208,129,t);
+  return "rgba("+(r|0)+","+(g|0)+","+(b|0)+","+glow+")";
+}
+
+function draw(){
+  ctx.clearRect(0,0,W,H);
+  var gsky=ctx.createRadialGradient(CX,CY,0,CX,CY,Math.max(W,H)*0.6);
+  gsky.addColorStop(0,"#080a15"); gsky.addColorStop(1,"#04040c"); ctx.fillStyle=gsky; ctx.fillRect(0,0,W,H);
+
+  var mean=ringMean(), walls=domainWalls();
+  var dirState = mean<-0.15? -1 : mean>0.15? 1 : 0;    // CCW / CW / mid-flip
+  var Su=engagedStators();
+
+  // ---- outer membrane / peptidoglycan ring hint ----
+  ctx.strokeStyle="rgba(127,168,192,0.10)"; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.arc(CX,CY,ROT_R*1.62,0,6.2832); ctx.stroke();
+  ctx.setLineDash([3,6]); ctx.strokeStyle="rgba(127,168,192,0.16)";
+  ctx.beginPath(); ctx.arc(CX,CY,ROT_R*1.42,0,6.2832); ctx.stroke(); ctx.setLineDash([]);
+
+  // ---- the FliG rotor ring = the Ising ring ----
+  var N=S.N;
+  // ring body
+  ctx.beginPath(); ctx.arc(CX,CY,ROT_R*1.02,0,6.2832); ctx.arc(CX,CY,ROT_R*0.62,0,6.2832,true);
+  ctx.fillStyle="rgba(20,26,40,0.85)"; ctx.fill("evenodd");
+  // teeth (charge-periods) + protomer spins
+  for(var i=0;i<N;i++){
+    var a=theta + i/N*6.2832;
+    var toothR=ROT_R*1.02, baseR=ROT_R*0.78;
+    var tx=CX+Math.cos(a)*toothR, ty=CY+Math.sin(a)*toothR;
+    var bx=CX+Math.cos(a)*baseR, by=CY+Math.sin(a)*baseR;
+    var sv= (i<NspinLen())? spin[i] : -1;
+    ctx.strokeStyle=protoColor(sv,0.9); ctx.lineWidth=3.0;
+    ctx.beginPath(); ctx.moveTo(bx,by); ctx.lineTo(tx,ty); ctx.stroke();
+    // protomer node
+    ctx.fillStyle=protoColor(sv,0.85);
+    ctx.beginPath(); ctx.arc(CX+Math.cos(a)*ROT_R*0.88, CY+Math.sin(a)*ROT_R*0.88, 3.0, 0,6.2832); ctx.fill();
+    // domain-wall marker
+    var svn=((i+1)<NspinLen())? spin[i+1] : spin[0];
+    if(sv!==svn){ var aw=theta+(i+0.5)/N*6.2832;
+      ctx.strokeStyle="rgba(255,215,0,0.9)"; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.moveTo(CX+Math.cos(aw)*ROT_R*0.60, CY+Math.sin(aw)*ROT_R*0.60);
+      ctx.lineTo(CX+Math.cos(aw)*ROT_R*1.06, CY+Math.sin(aw)*ROT_R*1.06); ctx.stroke();
+    }
+  }
+  // inner hubs: C-ring subrings (FliM / FliN) hint + MS ring
+  ctx.strokeStyle="rgba(127,168,192,0.5)"; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.arc(CX,CY,ROT_R*0.62,0,6.2832); ctx.stroke();
+  ctx.fillStyle="rgba(233,192,138,0.10)"; ctx.beginPath(); ctx.arc(CX,CY,ROT_R*0.42,0,6.2832); ctx.fill();
+  ctx.fillStyle="rgba(233,192,138,0.7)"; ctx.font="9px ui-monospace,monospace"; ctx.textAlign="center"; ctx.textBaseline="middle";
+  ctx.fillText("MS ring", CX, CY-6); ctx.fillText("34 FliF", CX, CY+6);
+
+  // ---- stators around the ring (MotA5 · MotB2 pentamer gears) ----
+  var statR=ROT_R*1.30, gearR=ROT_R*0.20;
+  for(var s=0;s<Su;s++){
+    var sa=s/Su*6.2832 - 1.0;                            // fixed placement (anchored to PG)
+    var sx=CX+Math.cos(sa)*statR, sy=CY+Math.sin(sa)*statR;
+    // MotB dimer anchor (2)
+    ctx.strokeStyle="rgba(127,168,192,0.6)"; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.moveTo(CX+Math.cos(sa)*statR*1.18,CY+Math.sin(sa)*statR*1.18); ctx.lineTo(sx,sy); ctx.stroke();
+    // MotA pentamer gear (m teeth), spins (opposite sense drives rotor)
+    var spinDir = dirState||(-1);
+    var ga = -statAngle*spinDir + s*0.6;
+    ctx.save(); ctx.translate(sx,sy);
+    // ion glow if engaged & imf
+    var glow=0.25+0.6*S.imf;
+    ctx.fillStyle="rgba(255,180,84,"+(0.10+0.25*S.imf)+")";
+    ctx.beginPath(); ctx.arc(0,0,gearR*1.5,0,6.2832); ctx.fill();
+    // gear body
+    ctx.fillStyle="rgba(30,26,16,0.9)"; ctx.strokeStyle="rgba(255,215,0,"+glow+")"; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.arc(0,0,gearR*0.7,0,6.2832); ctx.fill(); ctx.stroke();
+    for(var m=0;m<S.M;m++){ var ta=ga + m/S.M*6.2832;
+      ctx.strokeStyle="rgba(255,215,0,"+glow+")"; ctx.lineWidth=3;
+      ctx.beginPath(); ctx.moveTo(Math.cos(ta)*gearR*0.7,Math.sin(ta)*gearR*0.7); ctx.lineTo(Math.cos(ta)*gearR*1.05,Math.sin(ta)*gearR*1.05); ctx.stroke();
+    }
+    ctx.fillStyle="rgba(255,215,0,0.85)"; ctx.font="8px ui-monospace,monospace";
+    ctx.fillText("MotA"+S.M, 0, gearR*1.35);
+    ctx.restore();
+
+    // contact highlight (the momentary power-stroke) — the vernier point
+    var ca=sa; var contactX=CX+Math.cos(ca)*ROT_R*1.02, contactY=CY+Math.sin(ca)*ROT_R*1.02;
+    var phase=((N*(theta) - s*6.2832*N/Su)%(6.2832)+6.2832)%6.2832;
+    var hot=Math.max(0,Math.cos(phase));
+    if(hot>0.5 && dirState!==0){ ctx.fillStyle="rgba(0,224,208,"+(hot*0.8)+")";
+      ctx.beginPath(); ctx.arc(contactX,contactY,4*hot,0,6.2832); ctx.fill(); }
+  }
+
+  // ---- protons streaming through engaged stators (the electro) ----
+  if(dirState!==0 && S.imf>0.02){
+    for(var p=0;p<protons.length;p++){ var P=protons[p]; if(P.stator>=Su)continue;
+      var sa2=P.stator/Su*6.2832 - 1.0;
+      var rr=statR*1.18 - P.t*(statR*1.18-ROT_R*1.02);
+      var px=CX+Math.cos(sa2)*rr, py=CY+Math.sin(sa2)*rr;
+      ctx.fillStyle="rgba(255,180,84,0.95)"; ctx.shadowColor="rgba(255,180,84,0.9)"; ctx.shadowBlur=6;
+      ctx.beginPath(); ctx.arc(px,py,2.0,0,6.2832); ctx.fill(); ctx.shadowBlur=0;
+    }
+  }
+
+  // ---- direction arrow ----
+  if(dirState!==0){
+    var ar=ROT_R*1.14, sgn=dirState;
+    ctx.strokeStyle=sgn<0?CCW:CW; ctx.lineWidth=2.5;
+    ctx.beginPath(); ctx.arc(CX,CY,ar, -0.5*sgn, 1.4*sgn, sgn<0); ctx.stroke();
+    var ea=1.4*sgn, ex=CX+Math.cos(ea)*ar, ey=CY+Math.sin(ea)*ar;
+    var tx2=Math.cos(ea+1.57*sgn), ty2=Math.sin(ea+1.57*sgn);
+    ctx.fillStyle=sgn<0?CCW:CW; ctx.beginPath();
+    ctx.moveTo(ex,ey); ctx.lineTo(ex-tx2*10+Math.cos(ea)*6, ey-ty2*10+Math.sin(ea)*6);
+    ctx.lineTo(ex-tx2*10-Math.cos(ea)*6, ey-ty2*10-Math.sin(ea)*6); ctx.closePath(); ctx.fill();
+  }
+}
+function NspinLen(){ return spin? spin.length : 0; }
+
+// ============================================================
+//  STEP
+// ============================================================
+var lastTS=performance.now(), fpsEMA=60;
+function step(now){
+  var dt=Math.min((now-lastTS)/1000,0.05); lastTS=now; if(dt>0)fpsEMA=fpsEMA*0.92+(1/dt)*0.08;
+
+  // recruit stators smoothly
+  var tgt=statTarget(); statEngaged += (tgt-statEngaged)*Math.min(1,4*dt);
+
+  // ising ring
+  glauber(dt);
+  var mean=ringMean();
+  var dirState = mean<-0.15? -1 : mean>0.15? 1 : 0;
+
+  // torque-speed
+  var wSteady=solveOmega();
+  omega += (wSteady-omega)*Math.min(1,6*dt);
+  // rough-running if coprimality broken: add ripple wobble
+  var rip=torqueRipple();
+  var wob = 1 + rip*0.9*Math.sin(theta*S.N);
+  var effOmega = omega*wob*(dirState||0);
+  if(!REDUCE) { theta += effOmega*dt*0.04; statAngle += Math.abs(omega)*dt*0.04*(S.N/Math.max(1,S.M)); }
+
+  // proton stream
+  var Su=engagedStators();
+  if(dirState!==0 && S.imf>0.02 && !REDUCE){
+    if(Math.random()< S.imf*Su*dt*8){ protons.push({stator:(Math.random()*Su)|0, t:0}); }
+    for(var p=protons.length-1;p>=0;p--){ protons[p].t += dt*(1.2+S.imf); if(protons[p].t>=1)protons.splice(p,1); }
+    if(protons.length>120)protons.splice(0,protons.length-120);
+  } else if(dirState===0){ protons.length=0; }
+
+  draw();
+  refresh(mean,dirState,wSteady,rip);
+  requestAnimationFrame(step);
+}
+
+// ============================================================
+//  READOUT
+// ============================================================
+function setTxt(id,t){ var e=document.getElementById(id); if(e)e.textContent=t; }
+function refresh(mean,dirState,wSteady,rip){
+  var Hz=Math.abs(wSteady)/(2*Math.PI), Su=engagedStators(), g=gammaOf();
+  setTxt("hHz", Hz.toFixed(0));
+  var dir=document.getElementById("hDir");
+  if(dir){ if(dirState<0){dir.textContent="CCW";dir.className="ccw";} else if(dirState>0){dir.textContent="CW";dir.className="cw";} else {dir.textContent="—";dir.className="dim";} }
+  var torque=g*Math.abs(wSteady);
+  setTxt("hTorque", torque.toFixed(0));
+  setTxt("hStat", Su);
+  setTxt("hFlux", (S.imf*Su>0? (S.M*Math.round(S.imf*1200/ (1)) /100).toFixed(0):"0")); // ~ H+/rev·stator ballpark
+  setTxt("hN", S.N); setTxt("hM", S.M);
+  // gcd(N,M) -> WEAR. this is the ONLY thing the M slider changes, and v1.0 never showed it.
+  var gg=gcd(S.N,S.M); setTxt("hGcd", gg);
+  var ge=document.getElementById("hGcd"); if(ge)ge.style.color= gg===1? "#00ffd5":"#ff5470";
+  var hs=huntingSet(); setTxt("hHunt", hs.toFixed(0));
+  var he=document.getElementById("hHunt"); if(he)he.style.color= hs===S.N? "#00ffd5":"#ff5470";
+  // gcd(N,S) -> RIPPLE. this is what torqueRipple() has computed all along.
+  var Su=engagedStators(), gs=Su<1?0:gcd(S.N,Su); setTxt("hGcdS", Su<1?"—":gs);
+  var gse=document.getElementById("hGcdS"); if(gse)gse.style.color= gs===1? "#00ffd5":"#ff5470";
+  setTxt("hPhase", ripplePhases().toFixed(0));
+  setTxt("hRipple", rip.toFixed(3));
+  // K11: the Z2 that refuses. this cannot go odd. if it does, the Ising update is broken.
+  var dw=domainWalls(), par=dw%2;
+  setTxt("hWall", dw); setTxt("hPar", par===0? "EVEN ✓":"ODD ✗ BROKEN");
+  var pe=document.getElementById("hPar"); if(pe)pe.style.color= par===0? "#00ffd5":"#ff5470";
+  var re=document.getElementById("hRipple"); if(re)re.style.color= rip<0.02? "#00ffd5": rip<0.1? "#ffd700":"#ff5470";
+  // efficiency: near 100% at stall (high load, low speed), drops toward zero-torque speed
+  var eff = (wSteady!==0)? clamp(1-Math.abs(wSteady)/W0,0,1):0;
+  setTxt("hEff", Su<1? "—" : (eff*100).toFixed(0)+"%");
+
+  // state box
+  var v=document.getElementById("state"); if(!v)return;
+  var txt,col,bg;
+  if(S.imf<0.05){ txt="no ion-motive force · dead"; col="#ff5470"; bg="rgba(255,84,112,0.14)"; }
+  else if(dirState===0){ txt="SWITCHING · domain walls sweeping"; col="#ffd700"; bg="rgba(255,215,0,0.14)"; }
+  else if(gg!==1){ txt=(dirState<0?"CCW":"CW")+" · COMMENSURATE ✗ load clumps"; col="#ff5470"; bg="rgba(255,84,112,0.13)"; }
+  else if(rip>0.05){ txt=(dirState<0?"CCW":"CW")+" · running rough"; col="#ffb454"; bg="rgba(255,180,84,0.12)"; }
+  else { txt=(dirState<0?"CCW":"CW")+" · running smooth · gcd=1 ✓"; col=dirState<0?"#00e0d0":"#ff3d81"; bg=dirState<0?"rgba(0,224,208,0.12)":"rgba(255,61,129,0.12)"; }
+  v.textContent=txt; v.style.color=col; v.style.background=bg;
+}
+
+// ============================================================
+//  CONTROLS
+// ============================================================
+function bindPct(id,key){ var e=document.getElementById(id);
+  e.addEventListener("input",function(){ S[key]=(+this.value)/100; document.getElementById("v"+id.slice(1)).textContent=this.value; }); }
+bindPct("sImf","imf"); bindPct("sLoad","load"); bindPct("sChey","chey");
+document.getElementById("sN").addEventListener("input",function(){ S.N=+this.value; setTxt("vN",this.value); initRing(); });
+document.getElementById("sM").addEventListener("input",function(){ S.M=+this.value; setTxt("vM",this.value); });
+
+function setSlider(id,v){ document.getElementById(id).value=v; document.getElementById("v"+id.slice(1)).textContent=v; }
+document.getElementById("bRun").onclick=function(){
+  S.imf=0.70;S.load=0.55;S.chey=0.25;S.N=34;S.M=5;
+  setSlider("sImf",70);setSlider("sLoad",55);setSlider("sChey",25);setSlider("sN",34);setSlider("sM",5);
+  initRing(); protons.length=0;
+};
+document.getElementById("bFlip").onclick=function(){
+  S.chey = (S.chey<0.5)? 0.85 : 0.15; setSlider("sChey", Math.round(S.chey*100));
+};
+document.getElementById("bClump").onclick=function(){
+  // set stator teeth to a divisor of rotor teeth -> gcd>1, load clumps
+  var N=S.N, m=2; for(var d=Math.min(9,N-1);d>=2;d--){ if(N%d===0){m=d;break;} }
+  S.M=m; setSlider("sM",m);
+};
+document.getElementById("bReveal").onclick=function(){ document.getElementById("reveal").style.display="block"; };
+document.getElementById("xReveal").onclick=function(){ document.getElementById("reveal").style.display="none"; };
+document.addEventListener("click",function(e){ var r=document.getElementById("reveal"); if(r.style.display==="block"&&!r.contains(e.target)&&e.target.id!=="bReveal") r.style.display="none"; });
+document.getElementById("uiToggle").addEventListener("click",function(){ document.body.classList.toggle("hideui"); this.textContent=document.body.classList.contains("hideui")?"show UI":"hide UI"; });
+window.addEventListener("keydown",function(e){ if(e.key==="h"||e.key==="H")document.getElementById("uiToggle").click(); if(e.key===" "){document.getElementById("bFlip").click();e.preventDefault();} });
+
+// ============================================================
+//  INIT
+// ============================================================
+function resize(){ DPR=Math.min(window.devicePixelRatio||1,2); W=window.innerWidth; H=window.innerHeight;
+  cv.width=W*DPR; cv.height=H*DPR; cv.style.width=W+"px"; cv.style.height=H+"px"; ctx.setTransform(DPR,0,0,DPR,0,0);
+  CX=W/2; CY=H/2 - 10; ROT_R=Math.min(W,H)*0.24;
+}
+window.addEventListener("resize",resize);
+resize();
+initRing();
+requestAnimationFrame(step);
+</script>
+</body></html>

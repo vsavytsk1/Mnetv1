@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HOLDINGIUM v1.1 — build the ownership graph · play in graph space</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#06060f; --bg2:#0a0b16; --panel:#0d0e1a; --line:#1d1e33;
+    --ink:#e8e0d0; --dim:#8c8470; --dimmer:#5a5440;
+    --gold:#ffd700; --amber:#e8b84a; --ember:#e2534b; --cyan:#00d4ff;
+    --disp:'Cinzel',Georgia,serif; --mono:'IBM Plex Mono',ui-monospace,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:radial-gradient(1200px 700px at 30% -10%,#0d0d1c,#06060f 60%);color:var(--ink);font-family:var(--mono);}
+  body{padding:18px;max-width:1340px;margin:0 auto;line-height:1.45}
+  a{color:var(--amber);text-decoration:none}
+  header{border-bottom:1px solid var(--line);padding-bottom:12px;margin-bottom:14px}
+  h1{font-family:var(--disp);font-size:23px;letter-spacing:.14em;margin:0;color:var(--gold);font-weight:700;
+     text-shadow:0 0 22px rgba(255,215,0,.28)}
+  .sub{font-size:12px;color:var(--dim);margin-top:6px;letter-spacing:.02em}
+  .stamp{font-size:10.5px;color:var(--dimmer);letter-spacing:.18em;text-transform:uppercase;margin-top:7px}
+  .grid{display:grid;grid-template-columns:1fr 372px;gap:14px;align-items:start}
+  @media(max-width:940px){.grid{grid-template-columns:1fr}}
+  .card{background:linear-gradient(180deg,var(--panel),var(--bg2));border:1px solid var(--line);border-radius:11px;overflow:hidden}
+  .card h2{font-family:var(--disp);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--amber);
+    margin:0;padding:10px 13px;border-bottom:1px solid var(--line);background:rgba(0,0,0,.25);font-weight:500}
+  .bar{display:flex;flex-wrap:wrap;gap:7px;align-items:center;padding:9px 12px;border-bottom:1px solid var(--line)}
+  input[type=text]{font:500 12px var(--mono);color:var(--ink);background:#14121c;border:1px solid #2a2740;
+    border-radius:6px;padding:6px 9px;width:150px}
+  input[type=text]:focus{outline:none;border-color:var(--amber)}
+  select{font:500 11px var(--mono);color:var(--ink);background:#14121c;border:1px solid #2a2740;border-radius:6px;padding:6px}
+  button{font:600 11px var(--mono);letter-spacing:.03em;color:var(--ink);background:#161422;
+    border:1px solid #2f2b45;border-radius:6px;padding:6px 11px;cursor:pointer}
+  button:hover{border-color:var(--amber);color:#fff5dd}
+  button:focus-visible,canvas:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+  button.armed{border-color:var(--gold);color:var(--gold);background:#241d0a;box-shadow:0 0 14px rgba(255,215,0,.2)}
+  button.warn:hover{border-color:var(--ember);color:#ffdcd7}
+  .canvaswrap{position:relative;background:#05050c}
+  canvas{display:block;width:100%;height:auto;touch-action:none}
+  .status{position:absolute;left:12px;bottom:10px;font-size:11px;color:var(--dim);
+    background:rgba(6,6,15,.72);border:1px solid var(--line);border-radius:6px;padding:5px 9px;pointer-events:none;max-width:70%}
+  .hint{font-size:11px;color:var(--dim);padding:9px 13px;background:rgba(0,0,0,.2);border-top:1px solid var(--line)}
+  .panelbody{padding:12px}
+  .muted{color:var(--dim)}
+  .row{display:flex;justify-content:space-between;gap:10px;padding:3px 0;border-bottom:1px dotted var(--line);font-size:12px}
+  .row:last-child{border-bottom:0}.k{color:var(--dim)}.v{color:#fff5dd;font-weight:600;text-align:right}
+  .chain{margin:9px 0;font-size:11.5px}
+  .hop{display:flex;align-items:center;gap:7px;padding:3px 0}
+  .dot{width:9px;height:9px;border-radius:50%;flex:0 0 auto;box-shadow:0 0 8px currentColor}
+  .pill{font-size:9.5px;padding:1px 7px;border-radius:20px;letter-spacing:.05em;font-weight:600}
+  .prot{color:#1a1405;background:var(--gold)}.extr{color:#1a0505;background:var(--ember)}
+  .verdict{margin-top:10px;padding:9px 10px;border-radius:7px;font-size:12px;line-height:1.5;border:1px solid var(--line)}
+  .formula{font-size:11px;color:var(--dim);background:rgba(0,0,0,.28);border:1px solid var(--line);border-radius:7px;padding:9px 10px;margin-top:10px;line-height:1.6}
+  .formula b{color:var(--amber);font-weight:600}
+  .legend{display:flex;flex-wrap:wrap;gap:12px;font-size:11px;color:var(--dim);margin-top:10px;align-items:center}
+  .legend span{display:inline-flex;align-items:center;gap:5px}
+  .selbtns{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0 4px}
+  .caveat{font-size:11px;color:var(--dimmer);line-height:1.6;margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
+  .caveat b{color:var(--dim)}
+</style>
+</head>
+<body>
+<header>
+  <h1>Holdingium <span style="color:var(--dimmer);font-size:15px">v1.1</span></h1>
+  <div class="sub">Build a corporate ownership graph node by node, then play with it in graph space. Gold owners let engineering breathe; ember owners bleed it. Watch the value flow along the edges.</div>
+  <div class="stamp">force graph · gold = patient capital · ember = extraction · particles show which way value moves</div>
+</header>
+
+<div class="grid">
+  <div class="card">
+    <h2>Ownership graph — drag to move · click a company to inspect</h2>
+    <div class="bar">
+      <input id="name" type="text" placeholder="new company name…" aria-label="new company name">
+      <select id="kind" aria-label="node type"><option value="op">operating</option><option value="holder">owner</option></select>
+      <button id="btnAdd">+ Add company</button>
+      <button id="btnEdge">Add ownership… <span class="muted">(owner → company)</span></button>
+      <button id="btnReset">Reset</button>
+    </div>
+    <div class="canvaswrap">
+      <canvas id="cv" width="900" height="560" tabindex="0" role="img" aria-label="Corporate ownership force graph"></canvas>
+      <div class="status" id="status">Drag companies around. Click one to inspect its owners and score.</div>
+    </div>
+    <div class="hint">Gold edges = patient owners (capital flows <em>down</em> to shield). Ember edges = hungry owners (value pulled <em>up</em> and out). Build your own: name a company, Add, then Add ownership to wire it up.</div>
+  </div>
+
+  <div>
+    <div class="card">
+      <h2>Phase space — autonomy × extraction</h2>
+      <div class="canvaswrap"><canvas id="ph" width="372" height="300" role="img" aria-label="Phase space of operating companies"></canvas></div>
+      <div class="hint">Every operating company floats here. Bottom-right, in the gold zone = optimal: high self-control, low extraction. Where papa wants to work.</div>
+    </div>
+    <div class="card" style="margin-top:14px">
+      <h2 id="selHead">Inspector</h2>
+      <div class="panelbody" id="panel"><div class="muted">Click a company in the graph to see its path to the top and its engineering breathing-room score.</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="caveat">
+  <b>Honest boundaries.</b> Heuristic model, tunable weights — not a claim about any real company's internals. Single-parent forest (real ownership webs have many parents; a known simplification). Named companies are stable, well-documented examples pinned to <em>archetypes</em>; the graph is yours to edit. Incomplete is fine. Fake is not.
+  <div style="margin-top:8px">score = autonomy × (1 − extraction) · the center holds and is not shown · built for the job hunt · v1.1</div>
+</div>
+
+<script>
+"use strict";
+/* ============ palette ============ */
+var GOLD=[255,215,0], AMBER=[232,184,74], EMBER=[226,83,75];
+function rgb(a){return "rgb("+a[0]+","+a[1]+","+a[2]+")";}
+function rgba(a,al){return "rgba("+a[0]+","+a[1]+","+a[2]+","+al+")";}
+function lerp(a,b,t){return [a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t];}
+function scoreRGB(s){return s<0.5?lerp(EMBER,AMBER,s/0.5):lerp(AMBER,GOLD,(s-0.5)/0.5);}
+
+/* ============ seed universe (archetypes + real-example labels) ============ */
+/* pressure<0 patient/protective · pressure>0 extractive */
+function seed(){
+  var N=[
+    ["H1","Patient Holdco","holder",0,"e.g. Berkshire"],
+    ["A1","Rail Freight Co","op",0.86,"e.g. BNSF"],
+    ["A2","Precision Casting","op",0.80,"e.g. Precision Castparts"],
+    ["F1","Charitable Foundation","holder",0,"e.g. Bosch Stiftung"],
+    ["F2","Industrial Trust","holder",0,"holds the votes"],
+    ["B0","Engineering GmbH","op",0.90,"e.g. Robert Bosch GmbH"],
+    ["B1","Mobility Division","op",0.84,"drives, sensors"],
+    ["B2","Power Tools Division","op",0.82,"hardware"],
+    ["P1","PE Buyout Fund","holder",0,"debt · strip · flip"],
+    ["P2","Leveraged RollupCo","holder",0,"debt-loaded platform"],
+    ["C1","Acquired Machine Shop","op",0.74,"strong shop, hungry owner"],
+    ["C2","Acquired Controls Firm","op",0.72,"good IP, being milked"],
+    ["Q1","Public Conglomerate","holder",0,"quarterly · activist"],
+    ["Q2","Division Under Pressure","op",0.70,"cut to hit the number"],
+    ["E1","Founder-Led Co","op",0.92,"founder super-voting shares"],
+    ["S1","State Holding","holder",0,"sovereign · political"],
+    ["S2","National Champion","op",0.76,"patient but non-eng goals"]
+  ];
+  var E=[
+    ["H1","A1",-0.15],["H1","A2",-0.10],
+    ["F1","F2",-0.20],["F2","B0",-0.25],["B0","B1",-0.10],["B0","B2",-0.10],
+    ["P1","P2",0.55],["P2","C1",0.50],["P2","C2",0.50],
+    ["Q1","Q2",0.35],["S1","S2",0.10]
+  ];
+  var W=900,H=560,nodes=N.map(function(r,i){
+    var ang=i/N.length*6.283;
+    return {id:r[0],name:r[1],kind:r[2],autonomy:r[3],ex:r[4],
+      x:W/2+Math.cos(ang)*180+(Math.random()-0.5)*30,
+      y:H/2+Math.sin(ang)*130+(Math.random()-0.5)*30,vx:0,vy:0};
+  });
+  var edges=E.map(function(e){return {parent:e[0],child:e[1],pressure:e[2],ph:Math.random()};});
+  return {nodes:nodes,edges:edges};
+}
+var G=seed(), selected=null, mode="idle", edgeFrom=null, drag=null, uid=100;
+var PROT=-0.15, EXTR=0.5;
+
+/* ============ graph helpers ============ */
+function node(id){for(var i=0;i<G.nodes.length;i++)if(G.nodes[i].id===id)return G.nodes[i];return null;}
+function parentEdge(id){for(var i=0;i<G.edges.length;i++)if(G.edges[i].child===id)return G.edges[i];return null;}
+function childrenOf(id){return G.edges.filter(function(e){return e.parent===id;}).map(function(e){return e.child;});}
+function pathEdges(id){var p=[],cur=id,e;while((e=parentEdge(cur))){p.push(e);cur=e.parent;if(p.length>20)break;}return p;}
+function isDescendant(a,b){var s=childrenOf(b),seen={},x;while(s.length){x=s.pop();if(x===a)return true;if(seen[x])continue;seen[x]=1;s=s.concat(childrenOf(x));}return false;}
+function clamp(v,lo,hi){return v<lo?lo:v>hi?hi:v;}
+function score(n){
+  if(n.kind!=="op")return null;
+  var path=pathEdges(n.id),drain=0,shield=0;
+  path.forEach(function(e){if(e.pressure>0)drain+=e.pressure;else shield+=-e.pressure;});
+  var extraction=clamp(drain-0.4*shield,0,1);
+  return {autonomy:n.autonomy,extraction:extraction,S:clamp(n.autonomy*(1-extraction),0,1),path:path};
+}
+
+/* ============ physics (force-directed, gentle swirl) ============ */
+var W=900,H=560,REP=2600,K=0.018,REST=118,CEN=0.0022,SWIRL=0.00007,DAMP=0.9,VMAX=7;
+function step(){
+  var i,j,a,b,dx,dy,d2,d,f,n=G.nodes.length;
+  for(i=0;i<n;i++){a=G.nodes[i];
+    for(j=i+1;j<n;j++){b=G.nodes[j];
+      dx=a.x-b.x;dy=a.y-b.y;d2=dx*dx+dy*dy+0.01;d=Math.sqrt(d2);
+      f=REP/d2; var ux=dx/d,uy=dy/d;
+      a.vx+=ux*f;a.vy+=uy*f;b.vx-=ux*f;b.vy-=uy*f;
+    }}
+  G.edges.forEach(function(e){
+    a=node(e.parent);b=node(e.child);if(!a||!b)return;
+    dx=b.x-a.x;dy=b.y-a.y;d=Math.sqrt(dx*dx+dy*dy)+0.01;f=K*(d-REST);
+    var ux=dx/d,uy=dy/d;a.vx+=ux*f;a.vy+=uy*f;b.vx-=ux*f;b.vy-=uy*f;
+  });
+  for(i=0;i<n;i++){a=G.nodes[i];
+    dx=W/2-a.x;dy=H/2-a.y;a.vx+=dx*CEN;a.vy+=dy*CEN;         // centering
+    a.vx+=-dy*SWIRL;a.vy+=dx*SWIRL;                          // gentle swirl -> spin
+    a.vx*=DAMP;a.vy*=DAMP;
+    var sp=Math.sqrt(a.vx*a.vx+a.vy*a.vy);if(sp>VMAX){a.vx=a.vx/sp*VMAX;a.vy=a.vy/sp*VMAX;}
+    if(drag&&drag.id===a.id)continue;
+    a.x+=a.vx;a.y+=a.vy;
+    a.x=clamp(a.x,26,W-26);a.y=clamp(a.y,26,H-40);
+  }
+}
+
+/* ============ draw graph ============ */
+var cv=document.getElementById("cv"),ctx=cv.getContext("2d"),DPR=Math.min(2,window.devicePixelRatio||1);
+function fit(c){var cssw=c.clientWidth||c.width;var scale=cssw/c.width;c.height=Math.round(c.width* (c===cv?H/W:300/372));
+  c.style.height=(c.height*scale)+"px";}
+function setupHiDPI(){
+  cv.width=W*DPR;cv.height=H*DPR;cv.style.width="100%";cv.style.aspectRatio=W+"/"+H;ctx.scale(DPR,DPR);
+}
+setupHiDPI();
+function radiusOf(n){return n.kind==="op"?(6+9*score(n).S):9;}
+function drawGraph(){
+  ctx.clearRect(0,0,W,H);
+  // edges + particles
+  G.edges.forEach(function(e){
+    var a=node(e.parent),b=node(e.child);if(!a||!b)return;
+    var patient=e.pressure<=0, col=patient?AMBER:EMBER, mag=Math.abs(e.pressure);
+    ctx.save();
+    ctx.strokeStyle=rgba(col,0.28+0.4*clamp(mag/0.6,0,1));
+    ctx.lineWidth=patient?1.4:2.0;ctx.shadowColor=rgba(col,0.5);ctx.shadowBlur=patient?4:7;
+    ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();
+    ctx.restore();
+    // particles: hungry -> flow child->parent (out/up); patient -> parent->child (down/in)
+    var np=patient?2:3, spd=patient?0.004:0.006+0.006*clamp(mag/0.6,0,1);
+    for(var p=0;p<np;p++){
+      var t=(e.ph+p/np)%1; e.ph=(e.ph+spd/np)% (np); // advance
+      var tt=patient?t:(1-t);
+      var px=a.x+(b.x-a.x)*tt, py=a.y+(b.y-a.y)*tt;
+      ctx.save();ctx.fillStyle=rgb(col);ctx.shadowColor=rgb(col);ctx.shadowBlur=8;
+      ctx.beginPath();ctx.arc(px,py,patient?1.5:2.1,0,6.283);ctx.fill();ctx.restore();
+    }
+    e.ph=(e.ph+spd)%1;
+  });
+  // nodes
+  G.nodes.forEach(function(n){
+    var sel=selected===n.id, r=radiusOf(n);
+    if(n.kind==="op"){
+      var s=score(n),col=scoreRGB(s.S);
+      ctx.save();ctx.shadowColor=rgb(col);ctx.shadowBlur=8+16*s.S;
+      ctx.fillStyle="#0e0d16";ctx.beginPath();ctx.arc(n.x,n.y,r,0,6.283);ctx.fill();
+      ctx.lineWidth=sel?3:2;ctx.strokeStyle=sel?rgb(GOLD):rgb(col);ctx.stroke();ctx.restore();
+    }else{
+      // owner = diamond, dim gold
+      ctx.save();ctx.translate(n.x,n.y);ctx.rotate(Math.PI/4);
+      ctx.shadowColor=rgba(AMBER,0.5);ctx.shadowBlur=sel?12:5;
+      ctx.fillStyle="#0c0b13";ctx.strokeStyle=sel?rgb(GOLD):rgba(AMBER,0.65);ctx.lineWidth=sel?2.6:1.6;
+      ctx.beginPath();ctx.rect(-r,-r,2*r,2*r);ctx.fill();ctx.stroke();ctx.restore();
+    }
+    // label
+    ctx.save();ctx.font=(n.kind==="op"?"600 11px ":"500 11px ")+"'IBM Plex Mono',monospace";
+    ctx.textAlign="center";ctx.textBaseline="top";
+    ctx.fillStyle=n.kind==="op"?rgba(scoreRGB(score(n).S),sel?1:0.92):rgba(AMBER,sel?1:0.8);
+    ctx.shadowColor="#000";ctx.shadowBlur=3;
+    ctx.fillText(n.name,n.x,n.y+r+3);
+    if(n.kind==="op"){ctx.font="600 10px 'IBM Plex Mono',monospace";ctx.fillStyle=rgb(scoreRGB(score(n).S));
+      ctx.fillText(score(n).S.toFixed(2),n.x,n.y+r+16);}
+    ctx.restore();
+  });
+}
+
+/* ============ phase space inset ============ */
+var ph=document.getElementById("ph"),pc=ph.getContext("2d");
+ph.width=372*DPR;ph.height=300*DPR;ph.style.width="100%";ph.style.aspectRatio="372/300";pc.scale(DPR,DPR);
+function drawPhase(){
+  var Wp=372,Hp=300,L=40,R=12,T=14,B=38,pw=Wp-L-R,ph2=Hp-T-B;
+  function X(a){return L+a*pw;}function Y(e){return T+(1-e)*ph2;}
+  pc.clearRect(0,0,Wp,Hp);
+  // optimal zone bottom-right, gold
+  pc.save();pc.fillStyle=rgba(GOLD,0.06);pc.strokeStyle=rgba(GOLD,0.35);pc.setLineDash([3,3]);
+  pc.fillRect(X(0.7),Y(0.25),X(1)-X(0.7),Y(0)-Y(0.25));pc.strokeRect(X(0.7),Y(0.25),X(1)-X(0.7),Y(0)-Y(0.25));pc.restore();
+  pc.fillStyle=rgba(GOLD,0.7);pc.font="9px 'IBM Plex Mono',monospace";pc.textAlign="right";pc.fillText("optimal",X(0.99),Y(0.02)-4);
+  // grid
+  pc.strokeStyle="rgba(29,30,51,0.9)";pc.lineWidth=0.5;pc.fillStyle="#5a5440";pc.textAlign="center";pc.font="9px 'IBM Plex Mono',monospace";
+  [0,0.25,0.5,0.75,1].forEach(function(g){
+    pc.beginPath();pc.moveTo(X(g),T);pc.lineTo(X(g),T+ph2);pc.stroke();
+    pc.beginPath();pc.moveTo(L,Y(g));pc.lineTo(L+pw,Y(g));pc.stroke();
+    pc.fillText(g,X(g),Hp-24);pc.save();pc.textAlign="right";pc.fillText(g,L-6,Y(g)+3);pc.restore();
+  });
+  pc.fillStyle="#8c8470";pc.fillText("engineering autonomy →",L+pw/2,Hp-8);
+  pc.save();pc.translate(12,T+ph2/2);pc.rotate(-Math.PI/2);pc.fillText("← owner extraction",0,0);pc.restore();
+  // points
+  G.nodes.filter(function(n){return n.kind==="op";}).forEach(function(n){
+    var s=score(n),cx=X(s.autonomy),cy=Y(s.extraction),rr=3.5+6*s.S,sel=selected===n.id,col=scoreRGB(s.S);
+    pc.save();pc.shadowColor=rgb(col);pc.shadowBlur=sel?14:6+8*s.S;pc.fillStyle=rgb(col);
+    pc.globalAlpha=sel?1:0.9;pc.beginPath();pc.arc(cx,cy,rr,0,6.283);pc.fill();
+    if(sel){pc.lineWidth=2;pc.strokeStyle=rgb(GOLD);pc.stroke();}pc.restore();
+    if(sel||s.S>0.62||s.S<0.4){pc.fillStyle=sel?rgb(GOLD):rgba(AMBER,0.85);pc.font="9px 'IBM Plex Mono',monospace";
+      pc.textAlign="center";pc.fillText(n.name.replace(/ (Co|Firm|Division|Shop|Champion)$/,""),cx,cy-rr-3);}
+  });
+}
+
+/* ============ inspector ============ */
+function renderPanel(){
+  var head=document.getElementById("selHead"),body=document.getElementById("panel");
+  if(!selected||!node(selected)){body.innerHTML='<div class="muted">Click a company in the graph to see its path to the top and its engineering breathing-room score.</div>';head.textContent="Inspector";return;}
+  var n=node(selected);head.textContent=n.name;
+  var del='<div class="selbtns"><button class="warn" onclick="spinOut()">Spin out → standalone</button>'
+         +'<button class="warn" onclick="delNode()">Delete node</button>';
+  if(n.kind!=="op"){
+    body.innerHTML='<div class="row"><span class="k">type</span><span class="v">owner / capital node</span></div>'
+      +'<div class="row"><span class="k">example</span><span class="v">'+n.ex+'</span></div>'
+      +'<div class="row"><span class="k">owns</span><span class="v">'+(childrenOf(n.id).length||'—')+' node(s)</span></div>'
+      +del+'</div>'
+      +'<div class="muted" style="margin-top:8px">A capital-allocation node — no engineering happens here. Click a company it owns to score the real work.</div>';
+    return;
+  }
+  var s=score(n),pe=parentEdge(n.id);
+  var chain='<div class="chain"><div class="muted" style="margin-bottom:5px">path to the top</div>'
+    +'<div class="hop"><span class="dot" style="color:'+rgb(scoreRGB(s.S))+'"></span><b>'+n.name+'</b> <span class="muted">· autonomy '+n.autonomy.toFixed(2)+'</span></div>';
+  s.path.forEach(function(e){var par=node(e.parent),prot=e.pressure<=0;
+    chain+='<div class="hop"><span class="dot" style="color:'+(prot?rgb(AMBER):rgb(EMBER))+'"></span>'
+      +'<span class="pill '+(prot?'prot':'extr')+'">'+(prot?'patient':'hungry')+' '+(e.pressure>0?'+':'')+e.pressure.toFixed(2)+'</span>'
+      +'<span class="muted">'+par.name+'</span></div>';});
+  chain+='</div>';
+  var v,vc;
+  if(s.S>=0.62){v="Optimal. A capable shop under a patient owner — engineering breathes. Aim here.";vc=GOLD;}
+  else if(s.S>=0.42){v="Mixed. Real capability, but the owner is pulling on it. Workable — watch the edges drift.";vc=AMBER;}
+  else{v="Suffocated. Strong engineers, hungry owner. The talent is real; the structure drains it. Great acquisition target, rough place to build.";vc=EMBER;}
+  var flip = pe? '<button onclick="flipParent()">Flip this owner: '+(pe.pressure<=0?'patient → hungry':'hungry → patient')+'</button>' : '<span class="muted" style="font-size:11px">standalone — no owner to flip</span>';
+  body.innerHTML=
+     '<div class="row"><span class="k">example</span><span class="v">'+n.ex+'</span></div>'
+    +'<div class="row"><span class="k">autonomy (x)</span><span class="v">'+s.autonomy.toFixed(2)+'</span></div>'
+    +'<div class="row"><span class="k">extraction (y)</span><span class="v">'+s.extraction.toFixed(2)+'</span></div>'
+    +'<div class="row"><span class="k">breathing room</span><span class="v" style="color:'+rgb(scoreRGB(s.S))+'">'+s.S.toFixed(2)+'</span></div>'
+    +chain
+    +'<div class="selbtns">'+flip+'</div>'+del+'</div>'
+    +'<label class="muted" style="font-size:11px;display:block;margin:8px 0 3px">intrinsic autonomy — stronger / weaker shop</label>'
+    +'<input id="autoSlider" type="range" min="0" max="100" value="'+Math.round(n.autonomy*100)+'" style="width:100%">'
+    +'<div class="verdict" style="border-color:'+rgba(vc,0.4)+';background:'+rgba(vc,0.08)+'">'+v+'</div>'
+    +'<div class="formula"><b>score</b> = autonomy × (1 − extraction)<br>extraction = clamp( Σ hungry − 0.4·Σ patient , 0, 1 )<br>'
+    +'<span style="color:var(--dimmer)">patient owners don\'t just avoid draining — they shield.</span></div>'
+    +'<div class="legend"><span><span class="dot" style="color:'+rgb(GOLD)+'"></span>patient</span>'
+    +'<span><span class="dot" style="color:'+rgb(EMBER)+'"></span>hungry</span>'
+    +'<span><span class="dot" style="color:'+rgb(GOLD)+'"></span>selected</span></div>';
+  var sl=document.getElementById("autoSlider");
+  if(sl)sl.addEventListener("input",function(){n.autonomy=(+sl.value)/100;renderPanel();document.getElementById("autoSlider").focus();});
+}
+
+/* ============ actions ============ */
+function setStatus(m){document.getElementById("status").textContent=m;}
+function flipParent(){var e=parentEdge(selected);if(!e)return;e.pressure=e.pressure<=0?EXTR:PROT;renderPanel();}
+function spinOut(){var e=parentEdge(selected);if(!e){setStatus(node(selected).name+" is already standalone.");return;}
+  G.edges=G.edges.filter(function(x){return x!==e;});setStatus("Spun out "+node(selected).name+" — zero extraction.");renderPanel();}
+function delNode(){if(!selected)return;var nm=node(selected).name;
+  G.edges=G.edges.filter(function(e){return e.parent!==selected&&e.child!==selected;});
+  G.nodes=G.nodes.filter(function(n){return n.id!==selected;});selected=null;setStatus("Deleted "+nm+".");renderPanel();}
+document.getElementById("btnAdd").addEventListener("click",function(){
+  var nm=document.getElementById("name").value.trim();if(!nm){setStatus("Type a name first.");return;}
+  var kind=document.getElementById("kind").value,id="n"+(uid++);
+  G.nodes.push({id:id,name:nm,kind:kind,autonomy:kind==="op"?0.8:0,ex:kind==="op"?"your company":"your owner",
+    x:W/2+(Math.random()-0.5)*80,y:H/2+(Math.random()-0.5)*80,vx:0,vy:0});
+  document.getElementById("name").value="";selected=id;renderPanel();
+  setStatus("Added "+nm+". Use ‘Add ownership’ to wire an owner to it.");});
+document.getElementById("btnEdge").addEventListener("click",function(){
+  if(mode==="edge"){mode="idle";edgeFrom=null;this.classList.remove("armed");setStatus("Cancelled.");return;}
+  mode="edge";edgeFrom=null;this.classList.add("armed");setStatus("Click the OWNER, then the company it owns.");});
+document.getElementById("btnReset").addEventListener("click",function(){G=seed();selected=null;mode="idle";edgeFrom=null;
+  document.getElementById("btnEdge").classList.remove("armed");renderPanel();setStatus("Reset to the seed universe.");});
+
+/* ============ pointer interaction ============ */
+function toLocal(ev){var r=cv.getBoundingClientRect();var cx=(ev.touches?ev.touches[0].clientX:ev.clientX)-r.left;
+  var cy=(ev.touches?ev.touches[0].clientY:ev.clientY)-r.top;return {x:cx*(W/r.width),y:cy*(H/r.height)};}
+function hit(p){var best=null,bd=1e9;G.nodes.forEach(function(n){var d=Math.hypot(n.x-p.x,n.y-p.y),r=radiusOf(n)+8;
+  if(d<r&&d<bd){bd=d;best=n;}});return best;}
+function onDown(ev){var p=toLocal(ev),n=hit(p);
+  if(mode==="edge"){
+    if(n){ if(!edgeFrom){edgeFrom=n;setStatus("Owner: "+n.name+". Now click the company it owns.");}
+      else if(n.id!==edgeFrom.id){ if(isDescendant(edgeFrom.id,n.id)){setStatus("That makes a cycle — pick a company outside the owner's own tree.");}
+        else{var ce=parentEdge(n.id);if(ce)ce.parent=edgeFrom.id;else G.edges.push({parent:edgeFrom.id,child:n.id,pressure:PROT,ph:Math.random()});
+          setStatus(edgeFrom.name+" now owns "+n.name+" (patient — flip it in the inspector).");}
+        mode="idle";edgeFrom=null;document.getElementById("btnEdge").classList.remove("armed");selected=n.id;renderPanel();}
+    }
+    return;
+  }
+  if(n){drag={id:n.id,dx:p.x-n.x,dy:p.y-n.y};selected=n.id;renderPanel();}
+  else{selected=null;renderPanel();}
+  ev.preventDefault();
+}
+function onMove(ev){if(!drag)return;var p=toLocal(ev);var n=node(drag.id);if(n){n.x=clamp(p.x-drag.dx,26,W-26);n.y=clamp(p.y-drag.dy,26,H-40);n.vx=0;n.vy=0;}ev.preventDefault();}
+function onUp(){drag=null;}
+cv.addEventListener("mousedown",onDown);window.addEventListener("mousemove",onMove);window.addEventListener("mouseup",onUp);
+cv.addEventListener("touchstart",onDown,{passive:false});cv.addEventListener("touchmove",onMove,{passive:false});cv.addEventListener("touchend",onUp);
+
+/* ============ loop ============ */
+var reduce=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+function loop(){step();drawGraph();drawPhase();requestAnimationFrame(loop);}
+renderPanel();
+if(reduce){for(var i=0;i<180;i++)step();drawGraph();drawPhase();} else loop();
+</script>
+</body>
+</html>

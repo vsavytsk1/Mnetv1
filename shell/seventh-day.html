@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Last Second of the 7th</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --void:#0A0F1C;
+    --void-2:#0E1526;
+    --panel:rgba(255,255,255,0.022);
+    --cesium:#EDC65A;          /* warm cesium gold — the primary readout */
+    --cesium-glow:rgba(237,198,90,0.55);
+    --cesium-hi:#FFF0C0;
+    --signal:#58E0D0;          /* cool signal-teal — secondary data */
+    --slate:#7C88A1;
+    --slate-dim:#495271;
+    --hair:rgba(255,255,255,0.075);
+    --alert:#FF6B5E;
+  }
+
+  *{box-sizing:border-box;margin:0;padding:0}
+
+  html,body{height:100%}
+
+  body{
+    background:
+      radial-gradient(1200px 700px at 50% -10%, #12203a 0%, rgba(18,32,58,0) 60%),
+      radial-gradient(900px 900px at 85% 120%, #101a30 0%, rgba(16,26,48,0) 55%),
+      var(--void);
+    color:var(--slate);
+    font-family:"IBM Plex Mono",monospace;
+    min-height:100%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:48px 20px;
+    -webkit-font-smoothing:antialiased;
+    overflow-x:hidden;
+  }
+
+  .stage{
+    width:100%;
+    max-width:720px;
+    display:flex;
+    flex-direction:column;
+    gap:34px;
+  }
+
+  /* ── eyebrow ── */
+  .eyebrow{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    font-size:11px;
+    letter-spacing:0.32em;
+    text-transform:uppercase;
+    color:var(--slate-dim);
+  }
+  .eyebrow .dot{
+    width:6px;height:6px;border-radius:50%;
+    background:var(--signal);
+    box-shadow:0 0 10px var(--signal);
+    animation:pulse 2s ease-in-out infinite;
+  }
+  .eyebrow .rule{flex:1;height:1px;background:var(--hair)}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.25}}
+
+  /* ── headline ── */
+  .headline h1{
+    font-family:"Space Grotesk",sans-serif;
+    font-weight:500;
+    font-size:clamp(28px,5.4vw,44px);
+    line-height:1.04;
+    color:#EAF0FB;
+    letter-spacing:-0.015em;
+  }
+  .headline p{
+    margin-top:12px;
+    font-size:13px;
+    line-height:1.6;
+    color:var(--slate);
+    max-width:52ch;
+  }
+
+  /* ── hero readout ── */
+  .hero{
+    position:relative;
+    border:1px solid var(--hair);
+    border-radius:14px;
+    background:linear-gradient(180deg, var(--panel), rgba(255,255,255,0));
+    padding:34px 28px 26px;
+    text-align:center;
+    overflow:hidden;
+  }
+  .hero .cap{
+    font-size:10.5px;
+    letter-spacing:0.34em;
+    text-transform:uppercase;
+    color:var(--slate-dim);
+  }
+  .hero .secs{
+    font-weight:300;
+    font-size:clamp(46px,13vw,104px);
+    line-height:1;
+    color:var(--cesium);
+    letter-spacing:0.01em;
+    margin:14px 0 6px;
+    text-shadow:0 0 26px var(--cesium-glow);
+    font-variant-numeric:tabular-nums;
+    word-break:break-word;
+  }
+  .hero .unit{
+    font-size:12px;
+    letter-spacing:0.18em;
+    text-transform:uppercase;
+    color:var(--slate);
+  }
+  .hero .brk{
+    margin-top:18px;
+    padding-top:16px;
+    border-top:1px dashed var(--hair);
+    font-size:clamp(16px,4.4vw,22px);
+    font-weight:400;
+    color:#C9D3E6;
+    letter-spacing:0.06em;
+    font-variant-numeric:tabular-nums;
+  }
+
+  /* ── signature: cesium waveform ── */
+  .sig{display:flex;flex-direction:column;gap:10px}
+  .wave-wrap{
+    height:88px;
+    border:1px solid var(--hair);
+    border-radius:12px;
+    background:
+      linear-gradient(180deg, rgba(88,224,208,0.03), rgba(0,0,0,0)),
+      var(--void-2);
+    overflow:hidden;
+  }
+  #wave{display:block;width:100%;height:100%}
+  .sig .lbl{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    gap:14px;
+    font-size:11px;
+    color:var(--slate-dim);
+    letter-spacing:0.05em;
+  }
+  .sig .lbl b{
+    font-weight:500;
+    color:var(--signal);
+    letter-spacing:0.02em;
+  }
+
+  /* ── live unix now ── */
+  .now{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    gap:16px;
+    padding:16px 20px;
+    border:1px solid var(--hair);
+    border-radius:12px;
+    background:var(--panel);
+    flex-wrap:wrap;
+  }
+  .now .k{
+    font-size:10.5px;
+    letter-spacing:0.28em;
+    text-transform:uppercase;
+    color:var(--slate-dim);
+  }
+  .now .v{
+    font-size:clamp(18px,5vw,26px);
+    font-weight:400;
+    color:#C9D3E6;
+    font-variant-numeric:tabular-nums;
+    letter-spacing:0.03em;
+  }
+  .now .v .tick{color:var(--signal)}
+
+  /* ── target instant panel ── */
+  .target{
+    border:1px solid var(--hair);
+    border-radius:12px;
+    overflow:hidden;
+  }
+  .target .thead{
+    padding:11px 18px;
+    font-size:10.5px;
+    letter-spacing:0.3em;
+    text-transform:uppercase;
+    color:var(--slate-dim);
+    border-bottom:1px solid var(--hair);
+    background:rgba(255,255,255,0.015);
+  }
+  .row{
+    display:grid;
+    grid-template-columns:104px 1fr auto;
+    align-items:baseline;
+    gap:14px;
+    padding:13px 18px;
+    font-size:13px;
+  }
+  .row + .row{border-top:1px solid var(--hair)}
+  .row .z{
+    color:var(--slate);
+    letter-spacing:0.14em;
+    text-transform:uppercase;
+    font-size:10.5px;
+  }
+  .row .stamp{
+    color:#DCE4F2;
+    font-variant-numeric:tabular-nums;
+    letter-spacing:0.04em;
+    font-weight:400;
+  }
+  .row .off{
+    color:var(--slate-dim);
+    font-size:11px;
+    letter-spacing:0.05em;
+    text-align:right;
+  }
+  .row.home .stamp{color:var(--cesium)}
+  .row.home .z{color:var(--cesium)}
+  .tai{
+    padding:11px 18px;
+    border-top:1px dashed var(--hair);
+    font-size:11px;
+    color:var(--slate-dim);
+    letter-spacing:0.04em;
+    line-height:1.5;
+  }
+  .tai b{color:var(--signal);font-weight:500}
+
+  /* ── footnote ── */
+  .foot{
+    font-size:12px;
+    line-height:1.65;
+    color:var(--slate-dim);
+    letter-spacing:0.02em;
+    max-width:56ch;
+  }
+  .foot em{color:var(--cesium);font-style:normal}
+
+  /* ── expired state ── */
+  body.done .hero .secs{color:var(--slate);text-shadow:none}
+  body.done .hero .cap::after{content:" · elapsed";color:var(--alert)}
+
+  @media (max-width:520px){
+    body{padding:32px 14px}
+    .row{grid-template-columns:1fr auto;row-gap:4px}
+    .row .off{grid-column:1 / -1;text-align:left}
+  }
+
+  @media (prefers-reduced-motion:reduce){
+    .eyebrow .dot{animation:none}
+  }
+</style>
+</head>
+<body>
+  <main class="stage">
+
+    <div class="eyebrow">
+      <span class="dot"></span>
+      <span>Atomic readout · Anywhere-on-Earth</span>
+      <span class="rule"></span>
+      <span>UTC−12 rollover</span>
+    </div>
+
+    <header class="headline">
+      <h1>The last second of the 7th.</h1>
+      <p>Counting down to the instant <b>2026-07-07</b> no longer exists in any time zone on the planet — when the final holdout at UTC−12 ticks over to the 8th.</p>
+    </header>
+
+    <section class="hero">
+      <div class="cap" id="cap">Seconds remaining · Unix Δ</div>
+      <div class="secs" id="secs">—</div>
+      <div class="unit" id="unit">seconds until the date leaves Earth</div>
+      <div class="brk" id="brk">—</div>
+    </section>
+
+    <section class="sig">
+      <div class="wave-wrap"><canvas id="wave"></canvas></div>
+      <div class="lbl">
+        <span>Cesium-133 hyperfine transition</span>
+        <b>9,192,631,770 Hz</b>
+      </div>
+    </section>
+
+    <section class="now">
+      <span class="k">Unix now · machine heartbeat</span>
+      <span class="v"><span class="tick" id="unixnow">—</span></span>
+    </section>
+
+    <section class="target">
+      <div class="thead">Target instant · one moment, three faces</div>
+      <div class="row">
+        <span class="z">UTC</span>
+        <span class="stamp">2026-07-08&nbsp;&nbsp;12:00:00</span>
+        <span class="off">the committee's verdict</span>
+      </div>
+      <div class="row home">
+        <span class="z">Corinth</span>
+        <span class="stamp">2026-07-08&nbsp;&nbsp;15:00:00</span>
+        <span class="off">EEST · UTC+3</span>
+      </div>
+      <div class="row">
+        <span class="z">Last zone</span>
+        <span class="stamp">2026-07-08&nbsp;&nbsp;00:00:00</span>
+        <span class="off">AoE · UTC−12</span>
+      </div>
+      <div class="tai">At that instant the atoms don't read 12:00:00 — raw atomic time (<b>TAI</b>) reads <b>12:00:37</b>. Those 37 seconds are every leap second surgically jammed in since 1972 to keep the cesium politely agreeing with a wobbling Earth.</div>
+    </section>
+
+    <p class="foot">This clock runs on <em>your</em> machine — which, unlike the model that built it, is allowed to know exactly what <em>now</em> is. So the one number I couldn't give you in chat is finally ticking above. Kudos, titans.</p>
+
+  </main>
+
+<script>
+  const TARGET = 1783512000;   // 2026-07-08T12:00:00Z — the 7th, gone worldwide
+  const $ = id => document.getElementById(id);
+  const g = n => n.toLocaleString('en-US');
+  const pad = (n,w=2) => String(n).padStart(w,'0');
+
+  function tick(){
+    const now = Date.now()/1000;
+    let rem = TARGET - now;
+    const over = rem <= 0;
+    const r = Math.max(0, Math.floor(rem));
+
+    $('secs').textContent = g(r);
+
+    let s = r;
+    const d = Math.floor(s/86400); s -= d*86400;
+    const h = Math.floor(s/3600);  s -= h*3600;
+    const m = Math.floor(s/60);    s -= m*60;
+    $('brk').textContent = `${d}d ${pad(h)}h ${pad(m)}m ${pad(s)}s`;
+
+    $('unixnow').textContent = g(Math.floor(now));
+
+    if(over && !document.body.classList.contains('done')){
+      document.body.classList.add('done');
+      $('brk').textContent = '0d 00h 00m 00s';
+      $('unit') && ($('unit').textContent = 'the 7th has left the building — everywhere');
+    }
+  }
+  tick();
+  setInterval(tick, 250);
+
+  /* ── cesium oscillation waveform ── */
+  const cv = $('wave'), ctx = cv.getContext('2d');
+  const reduce = matchMedia('(prefers-reduced-motion:reduce)').matches;
+  const GOLD = getComputedStyle(document.documentElement).getPropertyValue('--cesium').trim();
+  let W=0,H=0,dpr=1;
+
+  function resize(){
+    dpr = Math.min(window.devicePixelRatio||1, 2);
+    const r = cv.getBoundingClientRect();
+    W = r.width; H = r.height;
+    cv.width = Math.round(W*dpr); cv.height = Math.round(H*dpr);
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    if(reduce) draw(0);
+  }
+
+  function draw(t){
+    ctx.clearRect(0,0,W,H);
+    const mid = H/2, amp = H*0.30, cycles = 6.5;
+
+    // faint baseline
+    ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(0,mid); ctx.lineTo(W,mid); ctx.stroke();
+
+    // the oscillation
+    ctx.strokeStyle = GOLD;
+    ctx.lineWidth = 1.6;
+    ctx.shadowColor = 'rgba(237,198,90,0.55)';
+    ctx.shadowBlur = 12;
+    ctx.beginPath();
+    for(let x=0;x<=W;x++){
+      const phase = (x/W)*cycles*Math.PI*2 - t*2.1;
+      const env = 0.72 + 0.28*Math.sin((x/W)*Math.PI);   // gentle amplitude envelope
+      const y = mid + Math.sin(phase)*amp*env;
+      x===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+    }
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+  }
+
+  if(reduce){
+    resize();
+    window.addEventListener('resize', resize);
+  } else {
+    resize();
+    window.addEventListener('resize', resize);
+    let start = performance.now();
+    (function loop(now){
+      draw((now-start)/1000);
+      requestAnimationFrame(loop);
+    })(start);
+  }
+</script>
+</body>
+</html>

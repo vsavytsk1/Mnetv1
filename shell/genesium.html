@@ -1,0 +1,512 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>GENESIUM · code read as DNA — a polyhedron sews the source; two strands meet in phase space</title>
+<!--
+  GENESIUM · θεά-lineage (apollonium / aracnium / feynmanium / helenium kernel)
+  reading GENESIS v8.1 (Vladyslav Savytskyy) as a strand, and comparing it to
+  its sibling helenium. bytes -> bases -> geometry.
+  =========================================================================
+  Feynman's rule, kept: do not fool yourself. What is real here, and what is
+  flavour, stated plainly so you can catch it.
+
+  THE REAL ENGINE (exact):
+    Every file byte is split into four 2-bit values, MSB first, and labelled
+        00->A  01->C  10->G  11->T
+    an exact bijection: 1 byte <-> 4 bases. Two files become two base-4
+    strands. Then two exact operations:
+      1. SELF-SIMILARITY (Transcribe view): index every length-k word in the
+         genesis strand; a chord joins two loci that carry the IDENTICAL word.
+      2. CROSS-RECURRENCE (Align view): a dot-plot / recurrence matrix where
+         cell (i,j) is lit iff word_k(genesis, i) == word_k(helenium, j).
+         Diagonal runs are shared substrings. This is the same object used to
+         compare genomes and to read phase-space recurrence in dynamics.
+    The polyhedra are exact: vertices placed by coordinate, edges by nearest-
+    neighbour distance, and V - E + F = 2 holds for all six (the C60 buckyball
+    included: 60 - 90 + 32 = 2). Euler is what genesis is built on.
+
+  HONESTY CAVEATS (read them — they are the point):
+   K1 REAL. byte->base bijection, k-word equality (chords + dot-plot), match
+      density, longest shared run, and V-E+F=2 are all exact and computed live.
+   K2 FLAVOUR. "DNA" is a base-4 re-encoding of arbitrary bytes, NOT biology.
+      No codons, no base-pairing, no genetics. A/C/G/T are four labels for the
+      four 2-bit values, nothing more.
+   K3 THE PLOT IS A CROSS-RECURRENCE / DOT-PLOT. k is the word length (the
+      embedding). A lit cell = a length-k match. The circular PHASE slider just
+      slides one strand to hunt alignments; it carries no meaning of its own.
+   K4 WINDOWED, PREFIX. Each strand is the first 1024 bytes (4096 bases) of its
+      file. The matrix compares a W x W window you move with sliders, not the
+      whole file. The chord loop uses the first 720 bases of genesis.
+   K5 THE POLYHEDRON. It spins for the eye; its centroid is where the sewing
+      thread starts. The centroid, and the ring/rose/helix loop, encode only a
+      base's index, never its value. Euler chi=2 (and pents=12 for C60) is the
+      honest geometry.
+   K6 CHORDS. A chord means two loci share the identical length-k word inside
+      genesis - real self-similarity (HTML repeats, so it webs). The phosphor
+      fade is cosmetic; which chords exist is exact.
+   K7 SIBLINGS, NOT FORCED. genesis is Vladyslav's file; helenium is ours. They
+      open with the same boilerplate, so the plot lights a bright diagonal at
+      the origin on its own. Nothing is aligned or edited to fake a match.
+  =========================================================================
+-->
+<style>
+  :root{
+    --void:#06070f; --void2:#0a0c1c; --panel:rgba(6,8,18,.66);
+    --ink:#d6e2ee; --dim:#7b8398; --faint:#232a44; --wire:#172035;
+    --cy:#35e0d0; --gold:#f2c14e; --mag:#ff6ab0; --blue:#7aa6ff;
+    --A:#35e0d0; --C:#f2c14e; --G:#ff6ab0; --T:#7aa6ff;
+    --serif:"Iowan Old Style","Palatino Linotype",Palatino,"Georgia",serif;
+    --mono:ui-monospace,"SF Mono","Cascadia Code",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;background:radial-gradient(120% 80% at 50% 4%,var(--void2),var(--void) 72%);
+    color:var(--ink);font-family:var(--mono);overflow:hidden}
+  #stage{position:fixed;inset:0;display:grid;grid-template-rows:auto 1fr;height:100%}
+  header{padding:13px 22px 11px;border-bottom:1px solid var(--wire);position:relative;z-index:3}
+  .kick{font-size:10px;letter-spacing:.34em;text-transform:uppercase;color:var(--dim)}
+  .kick b{color:var(--cy);font-weight:600}
+  h1{font-family:var(--serif);font-weight:400;font-size:clamp(18px,3.1vw,29px);line-height:1.05;margin-top:6px;letter-spacing:.004em}
+  h1 .em{font-style:italic;color:var(--gold)}
+  .sub{margin-top:8px;font-size:12px;color:var(--dim);max-width:86ch;line-height:1.55}
+  .sub b{color:var(--ink);font-weight:600} .sub .cy{color:var(--cy)} .sub .go{color:var(--gold)} .sub .mg{color:var(--mag)}
+  #main{position:relative;display:grid;grid-template-columns:1fr 340px;overflow:hidden;min-height:0}
+  @media (max-width:880px){ #main{grid-template-columns:1fr} #side{display:none} }
+  #canvasWrap{position:relative;min-height:0;overflow:hidden}
+  canvas#c{display:block;width:100%;height:100%}
+  #legend{position:absolute;left:16px;bottom:12px;font-size:10.5px;color:var(--dim);line-height:1.85;pointer-events:none;z-index:2}
+  #legend .sw{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px;vertical-align:middle}
+  #legend b{color:var(--ink);font-weight:600}
+  #hint{position:absolute;right:16px;bottom:12px;font-size:10px;color:var(--faint);z-index:2;text-align:right;line-height:1.7}
+  /* side */
+  #side{border-left:1px solid var(--wire);background:var(--panel);overflow-y:auto;padding:15px 18px 22px}
+  .views{display:flex;gap:6px;margin-bottom:4px}
+  .vt{flex:1;font-family:var(--mono);font-size:11px;letter-spacing:.04em;color:var(--dim);background:transparent;
+    border:1px solid var(--wire);border-radius:7px;padding:8px 6px;cursor:pointer;transition:all .14s;text-align:center}
+  .vt:hover{border-color:var(--cy);color:var(--ink)}
+  .vt.on{border-color:var(--cy);color:var(--ink);background:rgba(53,224,208,.08)}
+  .lbl{font-size:9px;letter-spacing:.22em;text-transform:uppercase;color:var(--dim);margin:17px 0 7px}
+  .row{display:flex;justify-content:space-between;align-items:baseline;font-size:12.5px;margin-top:5px;border-bottom:1px dotted var(--wire);padding-bottom:5px}
+  .row .k{color:var(--dim)} .row .v{font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums}
+  .row .v.cy{color:var(--cy)} .row .v.go{color:var(--gold)} .row .v.mg{color:var(--mag)}
+  .big{font-family:var(--serif);font-size:30px;color:var(--cy);line-height:1;margin-top:4px}
+  .big.euler{font-size:26px}
+  .big small{font-family:var(--mono);font-size:11px;color:var(--dim);letter-spacing:0}
+  .bar{height:5px;background:var(--faint);border-radius:3px;margin-top:8px;overflow:hidden}
+  .bar > i{display:block;height:100%;width:0;background:linear-gradient(90deg,#123,var(--cy))}
+  .ctl{margin-top:11px}
+  .ctl .cap{display:flex;justify-content:space-between;font-size:11px;color:var(--dim);margin-bottom:5px}
+  .ctl .cap b{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
+  input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:3px;background:var(--faint);border-radius:3px;outline:none;cursor:pointer}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;border-radius:50%;background:var(--cy);border:1px solid #0a2a28;cursor:pointer}
+  input[type=range]::-moz-range-thumb{width:13px;height:13px;border-radius:50%;background:var(--cy);border:1px solid #0a2a28;cursor:pointer}
+  .chips{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+  .chip{font-family:var(--mono);font-size:10px;letter-spacing:.02em;color:var(--dim);background:transparent;
+    border:1px solid var(--wire);border-radius:999px;padding:5px 10px;cursor:pointer;transition:all .14s;white-space:nowrap}
+  .chip:hover{border-color:var(--gold);color:var(--ink)}
+  .chip.on{border-color:var(--cy);color:var(--ink);background:rgba(53,224,208,.07)}
+  .toggles{display:flex;flex-wrap:wrap;gap:9px 16px;margin-top:12px;font-size:11px;color:var(--dim)}
+  .toggles label{display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none}
+  .toggles input{accent-color:var(--cy);cursor:pointer}
+  .grp{display:none} .grp.on{display:block}
+  .note{font-size:10.5px;color:var(--dim);line-height:1.6;margin-top:16px;border-left:2px solid var(--wire);padding-left:10px}
+  .note b{color:var(--cy)} .note .mg{color:var(--mag)}
+  .foot{font-size:9.5px;color:var(--faint);margin-top:15px;border-top:1px solid var(--wire);padding-top:11px;line-height:1.7}
+  .foot code{color:var(--gold)} .foot b{color:var(--dim)}
+  #mbar{display:none}
+  @media (max-width:880px){
+    #mbar{display:flex;gap:12px;align-items:center;justify-content:center;padding:9px 12px;
+      border-top:1px solid var(--wire);background:var(--panel);font-size:11px;color:var(--dim);position:relative;z-index:3}
+    #stage{grid-template-rows:auto 1fr auto}
+    #mbar input[type=range]{width:110px}
+    #mbar .mv{color:var(--cy);font-weight:600}
+  }
+</style>
+</head>
+<body>
+<div id="stage">
+  <header>
+    <div class="kick">genesium · <b>code read as DNA</b> · a polyhedron sews the source, two strands meet in phase space</div>
+    <h1><span class="em">genesis</span>, transcribed to A·C·G·T — and aligned against its sibling <span class="em">helenium</span></h1>
+    <div class="sub">Every byte becomes four bases (<b>00→A 01→C 10→G 11→T</b>). In <span class="cy">Transcribe</span>, a spinning polyhedron stitches the genesis strand to <b>itself</b> wherever a length-k word repeats. In <span class="go">Align</span>, a <b>cross-recurrence dot-plot</b> shows where genesis and <span class="mg">helenium</span> share code — the bright diagonal is boilerplate they both inherited.</div>
+  </header>
+  <div id="main">
+    <div id="canvasWrap">
+      <canvas id="c"></canvas>
+      <div id="legend">
+        <div><b>bases:</b> <i class="sw" style="background:var(--A)"></i>A <i class="sw" style="background:var(--C)"></i>C <i class="sw" style="background:var(--G)"></i>G <i class="sw" style="background:var(--T)"></i>T &nbsp; <span style="color:var(--faint)">(00·01·10·11)</span></div>
+        <div id="legend2">chords join identical k-words · the solid's centre holds the thread</div>
+      </div>
+      <div id="hint">Tab = switch view · space = pause<br>drag k to change word length</div>
+    </div>
+    <aside id="side">
+      <div class="views">
+        <button class="vt on" data-v="A">Transcribe</button>
+        <button class="vt" data-v="B">Align · phase space</button>
+      </div>
+
+      <!-- VIEW A -->
+      <div class="grp on" id="grpA">
+        <div class="lbl">Polyhedron — Euler invariant</div>
+        <div class="big euler" id="eul">V−E+F = 2</div>
+        <div class="row"><span class="k">vertices V</span><span class="v cy" id="aV">—</span></div>
+        <div class="row"><span class="k">edges E</span><span class="v cy" id="aE">—</span></div>
+        <div class="row"><span class="k">faces F</span><span class="v cy" id="aF">—</span></div>
+        <div class="row"><span class="k">solid</span><span class="v go" id="aName">—</span></div>
+
+        <div class="lbl">Strand — self-similarity</div>
+        <div class="row"><span class="k">word length k</span><span class="v" id="aK">—</span></div>
+        <div class="row"><span class="k">base at needle</span><span class="v" id="aNeedle">—</span></div>
+        <div class="row"><span class="k">repeats of this word</span><span class="v mg" id="aRep">—</span></div>
+
+        <div class="lbl">Controls</div>
+        <div class="chips" id="solids">
+          <button class="chip" data-s="tetra">tetra</button>
+          <button class="chip" data-s="cube">cube</button>
+          <button class="chip" data-s="octa">octa</button>
+          <button class="chip" data-s="dodec">dodec</button>
+          <button class="chip" data-s="icosa">icosa</button>
+          <button class="chip on" data-s="c60">C60</button>
+        </div>
+        <div class="chips" id="loops" style="margin-top:6px">
+          <button class="chip on" data-l="rose">rose loop</button>
+          <button class="chip" data-l="ring">ring</button>
+          <button class="chip" data-l="helix">helix</button>
+        </div>
+        <div class="ctl">
+          <div class="cap">Spin <b id="cSpin">0.5</b></div>
+          <input type="range" id="sSpin" min="0" max="100" value="50" step="1">
+        </div>
+      </div>
+
+      <!-- VIEW B -->
+      <div class="grp" id="grpB">
+        <div class="lbl">Cross-recurrence — genesis × helenium</div>
+        <div class="big" id="ident">—<small> % match density</small></div>
+        <div class="bar"><i id="identbar"></i></div>
+        <div class="row"><span class="k">longest shared run</span><span class="v go" id="bRun">—</span></div>
+        <div class="row"><span class="k">lit cells in window</span><span class="v cy" id="bCells">—</span></div>
+        <div class="row"><span class="k">window W × W</span><span class="v" id="bWin">—</span></div>
+
+        <div class="lbl">Controls · hunt the diagonals</div>
+        <div class="ctl">
+          <div class="cap">word length k <b id="cKb">6</b></div>
+          <input type="range" id="sKb" min="2" max="12" value="6" step="1">
+        </div>
+        <div class="ctl">
+          <div class="cap">window (zoom) <b id="cW">280</b></div>
+          <input type="range" id="sW" min="80" max="440" value="280" step="4">
+        </div>
+        <div class="ctl">
+          <div class="cap">genesis start i <b id="cI">0</b></div>
+          <input type="range" id="sI" min="0" max="3600" value="0" step="1">
+        </div>
+        <div class="ctl">
+          <div class="cap">helenium start j <b id="cJ">0</b></div>
+          <input type="range" id="sJ" min="0" max="3600" value="0" step="1">
+        </div>
+        <div class="ctl">
+          <div class="cap">phase (circular lag) <b id="cP">0</b></div>
+          <input type="range" id="sP" min="0" max="4095" value="0" step="1">
+        </div>
+      </div>
+
+      <div class="toggles">
+        <label><input type="checkbox" id="tSolid" checked> solid</label>
+        <label><input type="checkbox" id="tChords" checked> chords</label>
+        <label><input type="checkbox" id="tPlay" checked> animate</label>
+      </div>
+
+      <div class="note" id="noteA">HTML is dense with repeated tokens, so genesis stitches into a <b>web</b> — every recurring <span class="mg">tag, class, and keyword</span> becomes a chord. Raise <b>k</b> to demand longer matches and the web thins to only the true long repeats.</div>
+      <div class="foot">
+        <b>honest:</b> <code>byte → 4 bases (2 bits each)</code> · k-word equality exact · <code>V−E+F=2</code> for all six solids incl. C60 (60−90+32).<br>
+        <b>flavour:</b> "DNA" is base-4 re-encoding, not biology. See source comment (K1–K7).
+      </div>
+    </aside>
+  </div>
+  <div id="mbar">
+    <span>view</span>
+    <button class="vt on" style="flex:none;padding:5px 10px" id="mView">Transcribe</button>
+    <span>k <span class="mv" id="mK">6</span></span>
+    <input type="range" id="mKr" min="2" max="12" value="6" step="1">
+  </div>
+</div>
+
+<script id="data">
+const SOLIDS={"tetra": {"V": 4, "E": 6, "F": 4, "chi": 2, "verts": [[0.57735, 0.57735, 0.57735], [0.57735, -0.57735, -0.57735], [-0.57735, 0.57735, -0.57735], [-0.57735, -0.57735, 0.57735]], "edges": [[0, 1], [0, 2], [0, 3], [1, 2], [1, 3], [2, 3]]}, "cube": {"V": 8, "E": 12, "F": 6, "chi": 2, "verts": [[-0.57735, -0.57735, -0.57735], [-0.57735, -0.57735, 0.57735], [-0.57735, 0.57735, -0.57735], [-0.57735, 0.57735, 0.57735], [0.57735, -0.57735, -0.57735], [0.57735, -0.57735, 0.57735], [0.57735, 0.57735, -0.57735], [0.57735, 0.57735, 0.57735]], "edges": [[0, 1], [0, 2], [0, 4], [1, 3], [1, 5], [2, 3], [2, 6], [3, 7], [4, 5], [4, 6], [5, 7], [6, 7]]}, "octa": {"V": 6, "E": 12, "F": 8, "chi": 2, "verts": [[1.0, 0.0, 0.0], [-1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, -1.0, 0.0], [0.0, 0.0, 1.0], [0.0, 0.0, -1.0]], "edges": [[0, 2], [0, 3], [0, 4], [0, 5], [1, 2], [1, 3], [1, 4], [1, 5], [2, 4], [2, 5], [3, 4], [3, 5]]}, "icosa": {"V": 12, "E": 30, "F": 20, "chi": 2, "verts": [[0.0, -0.52573, -0.85065], [0.0, -0.52573, 0.85065], [0.0, 0.52573, -0.85065], [0.0, 0.52573, 0.85065], [-0.52573, -0.85065, 0.0], [-0.52573, 0.85065, 0.0], [0.52573, -0.85065, 0.0], [0.52573, 0.85065, 0.0], [-0.85065, 0.0, -0.52573], [-0.85065, 0.0, 0.52573], [0.85065, 0.0, -0.52573], [0.85065, 0.0, 0.52573]], "edges": [[0, 2], [0, 4], [0, 6], [0, 8], [0, 10], [1, 3], [1, 4], [1, 6], [1, 9], [1, 11], [2, 5], [2, 7], [2, 8], [2, 10], [3, 5], [3, 7], [3, 9], [3, 11], [4, 6], [4, 8], [4, 9], [5, 7], [5, 8], [5, 9], [6, 10], [6, 11], [7, 10], [7, 11], [8, 9], [10, 11]]}, "dodec": {"V": 20, "E": 30, "F": 12, "chi": 2, "verts": [[-0.57735, -0.57735, -0.57735], [-0.57735, -0.57735, 0.57735], [-0.57735, 0.57735, -0.57735], [-0.57735, 0.57735, 0.57735], [0.57735, -0.57735, -0.57735], [0.57735, -0.57735, 0.57735], [0.57735, 0.57735, -0.57735], [0.57735, 0.57735, 0.57735], [0.0, -0.35682, -0.93417], [0.0, -0.35682, 0.93417], [0.0, 0.35682, -0.93417], [0.0, 0.35682, 0.93417], [-0.35682, -0.93417, 0.0], [-0.35682, 0.93417, 0.0], [0.35682, -0.93417, 0.0], [0.35682, 0.93417, 0.0], [-0.93417, 0.0, -0.35682], [-0.93417, 0.0, 0.35682], [0.93417, 0.0, -0.35682], [0.93417, 0.0, 0.35682]], "edges": [[0, 8], [0, 12], [0, 16], [1, 9], [1, 12], [1, 17], [2, 10], [2, 13], [2, 16], [3, 11], [3, 13], [3, 17], [4, 8], [4, 14], [4, 18], [5, 9], [5, 14], [5, 19], [6, 10], [6, 15], [6, 18], [7, 11], [7, 15], [7, 19], [8, 10], [9, 11], [12, 14], [13, 15], [16, 17], [18, 19]]}, "c60": {"V": 60, "E": 90, "F": 32, "chi": 2, "verts": [[0.0, -0.20177, -0.97943], [0.0, 0.20177, -0.97943], [-0.20177, -0.73003, -0.65295], [-0.40355, -0.85473, -0.32648], [0.20177, -0.73003, -0.65295], [0.40355, -0.85473, -0.32648], [-0.32648, -0.40355, -0.85473], [-0.65295, -0.20177, -0.73003], [0.32648, -0.40355, -0.85473], [0.65295, -0.20177, -0.73003], [0.0, -0.20177, 0.97943], [0.0, 0.20177, 0.97943], [-0.20177, -0.73003, 0.65295], [-0.40355, -0.85473, 0.32648], [0.20177, -0.73003, 0.65295], [0.40355, -0.85473, 0.32648], [-0.32648, -0.40355, 0.85473], [-0.65295, -0.20177, 0.73003], [0.32648, -0.40355, 0.85473], [0.65295, -0.20177, 0.73003], [-0.20177, 0.73003, -0.65295], [-0.40355, 0.85473, -0.32648], [0.20177, 0.73003, -0.65295], [0.40355, 0.85473, -0.32648], [-0.32648, 0.40355, -0.85473], [-0.65295, 0.20177, -0.73003], [0.32648, 0.40355, -0.85473], [0.65295, 0.20177, -0.73003], [-0.20177, 0.73003, 0.65295], [-0.40355, 0.85473, 0.32648], [0.20177, 0.73003, 0.65295], [0.40355, 0.85473, 0.32648], [-0.32648, 0.40355, 0.85473], [-0.65295, 0.20177, 0.73003], [0.32648, 0.40355, 0.85473], [0.65295, 0.20177, 0.73003], [-0.20177, -0.97943, 0.0], [0.20177, -0.97943, 0.0], [-0.73003, -0.65295, -0.20177], [-0.85473, -0.32648, -0.40355], [-0.73003, -0.65295, 0.20177], [-0.85473, -0.32648, 0.40355], [-0.20177, 0.97943, 0.0], [0.20177, 0.97943, 0.0], [-0.73003, 0.65295, -0.20177], [-0.85473, 0.32648, -0.40355], [-0.73003, 0.65295, 0.20177], [-0.85473, 0.32648, 0.40355], [0.73003, -0.65295, -0.20177], [0.85473, -0.32648, -0.40355], [0.73003, -0.65295, 0.20177], [0.85473, -0.32648, 0.40355], [0.73003, 0.65295, -0.20177], [0.85473, 0.32648, -0.40355], [0.73003, 0.65295, 0.20177], [0.85473, 0.32648, 0.40355], [-0.97943, 0.0, -0.20177], [-0.97943, 0.0, 0.20177], [0.97943, 0.0, -0.20177], [0.97943, 0.0, 0.20177]], "edges": [[0, 1], [0, 6], [0, 8], [1, 24], [1, 26], [2, 3], [2, 4], [2, 6], [3, 36], [3, 38], [4, 5], [4, 8], [5, 37], [5, 48], [6, 7], [7, 25], [7, 39], [8, 9], [9, 27], [9, 49], [10, 11], [10, 16], [10, 18], [11, 32], [11, 34], [12, 13], [12, 14], [12, 16], [13, 36], [13, 40], [14, 15], [14, 18], [15, 37], [15, 50], [16, 17], [17, 33], [17, 41], [18, 19], [19, 35], [19, 51], [20, 21], [20, 22], [20, 24], [21, 42], [21, 44], [22, 23], [22, 26], [23, 43], [23, 52], [24, 25], [25, 45], [26, 27], [27, 53], [28, 29], [28, 30], [28, 32], [29, 42], [29, 46], [30, 31], [30, 34], [31, 43], [31, 54], [32, 33], [33, 47], [34, 35], [35, 55], [36, 37], [38, 39], [38, 40], [39, 56], [40, 41], [41, 57], [42, 43], [44, 45], [44, 46], [45, 56], [46, 47], [47, 57], [48, 49], [48, 50], [49, 58], [50, 51], [51, 59], [52, 53], [52, 54], [53, 58], [54, 55], [55, 59], [56, 57], [58, 59]]}};
+const DNA={"genesis": "ATTAAGACCACACATTCAATCCCACCGCCCAACACCAGAACGGACTCACGTCCGTAATTGATTACGGACTCACGTCCGTAATTGATTACGGACGCCCGACCGCAATTGATTACGTCCGCCCTCACGACAGAACGATCGGACGACCTAGCTATCGCCCTCAATTCAGAGCCCCCCCACACGAGTCATGAAGAGATTGAAGGATTACGTCCGCCCTCACGACAGAACGTGCGACCGTCCGCCATTCAGAGCTCGCGGCCGCCCTCTCTAACGTTCTAGCTCAAGAGAGAACGATCGTTCGTGCTCACGCCCGTGCTCAATTCAGAGCTCTCGGCCGCACTCACGGAATTCCGCACGCCCTCGCGGCCGATCGCCAGTCCTCTCGGCCGCACTCACGGAAGTACGGCCGTGCGGCCTCACGGCCGACCGTAAGTCCTATCGATCGACCGTACGCCATTCATACAGAGATTGAAGGATTACTCACGGCCTCACGTACGCCATTGCACTCACCCATGCACCCCATCAGCCCATAGAACTCGATGAAGTGATACAGAATGAGGAAAGCCAAGAACACGCTAGCGACCGATCTCACGACCGTAAGAACACTCTAGCGACCTAACGGAAGAACACCCTGACTAACGTACGTTCTAGCGCCCTAGATTAAGTTCTCACGGCCTCACGTACGCCATTGAAGGATTACTATCTCACTGCCGTACGCCATTGAAGGCAAACGGCCGTCCTAACGTTCTAGCTCAAGAACTCCCTAGCGTAAGGAAGCTCGGACTCACTCACTAACTATATGGAGTTAGTTCGCGCGTTCGTGCTCACTATAGTGCGCTCGTTCGTTCGCTCGTACGCCCGACCTAACGGCCTATAGTGCGATCGTTCGTCAGTTCGATCTATCTATATAGATTTCGCGCGACCGTCCGGCCGTACTGCATTCCATTCTAGCGAGCGGCCTCACTAGCGTTCGTGATGGCTCTCGCTCGGACTCACAAAATCAATAAATAAATGTATCTATAAATAAATGTATGCATAAATAAAGCGCGCACGGCCTATCTAACGTACGACCTGCATTCCTATCTCTCGACCTAAAGCTAGGCATGTAAGGAGGGCTGTCGAGCGTTCTGAAGTCCTATCGGCCTGGCGGCCGTGCGCTATGGCGAGCGTTCTAGCGCACGCCCTAGAGTCCGAGCGTTCTGAATGTCGTCCGACCTAGCGCTCGGCCGTGATGGATAAATGTCTAACGACCGCACGCACGGCCGTGCGCTATGGATAACTTCAAGGCGAGCGTTCGCACTGCCTGTCGAGCGACCGATCGGTCGCTCTAGCGTTCTCCCGTGCGCAATGGAGATATAAATCCATAAATCCATAAATGAATGTCGATCGTTCGTACGTTCTAGATGGAGATCGATATGACGCAATGACGCCATGAATGTCGCGCGTTCGTGCTCAAGTCCGCGCGACCGTCCGGCCGTACTGCATGGAGCTCAATCGTTCTCCCTAGCGGCCGCCCTAGAGAACATGCGCCCTCTAGCTAGTACGTCCGTTCGTGCGTTCTATCTAACGACCGATCGCCATGTCGTTCTCGCGCCCTAGCGCGCGTACGTTCTCTATGGCGGACGGCCGCACGCACGCCCGTGATGTCTCACGTTCTCCCGATCGGAAGTCCGACCGATCTCACGGCCGTTCGTGATGGCGTGCGTTCGTGCGCCCTTCAAGGCGATCGACCGTGCTCGCGACCTATCTGTCTAACGTTCTATCGGCCTCACGGCCGTTCGTGATGGCGCGCGGCCTGACGCCCGCAATGTCTCACGTTCTAAATGGATAAATGTCGTACGCCCGCGCTCAATGGATAAATGTCTGGAGTCCGGCCGTGCGCACGCCCTGAATGGATAACTTCAAGGAGATCGGACTCCCGCACTGTCTAACGTTCTATCGGCCTCACGGCCGTTCGTGATGGCGCGCGGCCTGACGCCCGCAATGTCTCACGTTCTAAATGGATACATAACTAACTGAATGTCGTACGCCCGCGCTCAATGGATACATAACTAACTGAATGTCTGGAGTCCGGCCGTGCGCACGCCCTGAATGGATCCATGTCTAACGTTCGGCCGTGCTCACGCCCTAGAGTCCGCCCTCGCGCCCGTGCTCACTATATGGCGTGCGTTCGTGCGCCATGTCGCGCGTTCGTGCTCAAGTCCTATCGGCCTGGCGCCATGGATACATAACTAACTGAATGTCGTACGGCCGTGCGCCAGTCCGGACGCCCGGCCGCTCGGACTCAATGGATACAGTGATCTCTTCAAGGAGTGCGTACGAGCGTACTGTCGATCGTTCGTACGTTCTAGATGGAGATATCAATCAATCACTTCAGTGCTCGCGACCGTACTGTCGATCGTTCGTACGTTCTAGATGGAGATATAAATAACGCGCGCGCGCAATCCCTTCAGTGCTCGCTAACTGTCGATCGTTCGTACGTTCTAGATGGAGATCGCGCGCGATCGATGCCGAGATCACTTCAGTGCTCGCGCTCTGTCGATCGTTCGTACGTTCTAGATGGAGATCGCGCGCGCGCAATCTATAAATAACTTCAAGGAGATCTCACGGCCTCACGTACGCCCTGTCTAACGTTCTATCGGCCTCACGGCCGTTCGTGATGGCGCGCGGCCTGACGCCCGCAATGTCTCACGTTCTAAATGGATGACTAACTGAATGTCGTACGCCCGCGCTCAATGGATCCATAAAGCCATGTCTCACTAGCGACCGTGCTATCGCGCGTTCTAGCGTCATGGCTCACTAGCGACCGTGCTATCGTACGACCTCACGCCCCGAAGGAAGTCATCCATAAAGCCAGGCATGTCTGGAGTCCGGCCGTGCGCACGCCCTGAATGGATCCATGTCTAACGTTCGGCCGTGCTCACGCCCTAGAGTCCGCCCTCGCGCCCGTGCTCACTATATGGCGTGCGTTCGTGCGCCATGTAAGGAGAAAGAACGCGCGTTCGTGCTCAAGTCCGCGCGACCGTCCGGCCGTACTGCATGGAGCTCATTCTAGCGAGCGGCCTCACTAGCGTTCGTGAGCTATGTCGCGCGTTCGTGCTCAAGTCCTATCGGCCTGGCGCCATGGATACATACCTAACTGAATGTCGTACGCCCTCACTCACGCCCTAGAGTCCTATCTAACGACCGATCGGCCGTGCGCTATGGATAAAGTGATATCGCCCGTCATGTCGATCGTTCGTACGTTCTAGATGGCTAGCGCTCGAGCGACAGGAATAAAGTAATACATGAATAAAGTAATAGATCCATCCAGTAATAAAGTGATATAGGCCTTCAAGGAGATCGCCCTCCCGTACGCCCTAGCTGTCTAACGTTCTATCGGCCTCACGGCCGTTCGTGATGGCGCGCGGCCTGACGCCCGCAATGTCTCACGTTCTAAATGGATAGATCACTAACTGAATGTCGTACGCCCGCGCTCAATGGATCCATAAAGCCATGTCTCACTAGCGACCGTGCTATCGCGCGTTCTAGCGTCATGGCTCACTAGCGACCGTGCTATCGTACGACCTCACGCCCCGAAGGAAGTCATCCATAAAGCCAGGCATGTCTGGAGTCCGGCCGTGCGCACGCCCTGAATGGATCCATGTCTAACGTTCGGCCGTGCTCACGCCCTAGAGTCCGCCCTCGCGCCCGTGCTCACTATATGGCGTGCGTTCGTGCGCCATGTAAGGAGAAAGAACGCGCGTTCGTGCTCAAGTCCGCGCGACCGTCCGGCCGTACTGCATGGAGCTCATTCTAGCGAGCGGCCTCACTAGCGTTCGTGAGCTATGTCGCGCGTTCGTGCTCAAGTCCTATCGGCCTGGCGCCATGGATAGATAACTAACTGAATGTCGCGCGTTCGTGCTCAAGTCCTCTCGCCCGGCCGCTCGGACTCAATGGATGCATAAATAACTTCAAGGAGATCGCCCTCCCGTACGCCCTAGAGAAAGTGCGTTCGGTCTGTCGATCGTTCGTACGTTCTAGATGGAGATATAAATAACGCGCGCGCGCAATCCCTTCAGATCGCCCTCCCGTACGCCCTAGAGAAAGTGCGAGCGAC", "helenium": "ATTAAGACCACACATTCAATCCCACCGCCCAACACCAGAACGGACTCACGTCCGTAATTGATTACGGACTCACGTCCGTAAGAACGTACGACCGTGCGCTATTCAGAGCGCCCGTGAGAGATTGATTACGGACGCCCGACCGCAATTGAAGGATTACGTCCGCCCTCACGACAGAACGATCGGACGACCTAGCTATCGCCCTCAATTCAGAGCTCCCTCACGCGAGTCATGAAGAGATTGAAGGATTACGTCCGCCCTCACGACAGAACGTGCGACCGTCCGCCATTCAGAGCTCGCGGCCGCCCTCTCTAACGTTCTAGCTCAAGAGAGAACGATCGTTCGTGCTCACGCCCGTGCTCAATTCAGAGCTCTCGGCCGCACTCACGGAATTCCGCACGCCCTCGCGGCCGATCGCCAGTCCTCTCGGCCGCACTCACGGAAGTAAGAACGGCCGTGCGGCCTCACGGCCGACCGTAAGTCCTATCGATCGACCGTACGCCATTCATACAGTAAGAACTCCCTATCGCCCTAGAGTCCTATCGATCGACCGTACGACCGAGCGTACGCCATTCCGTGCGTTAGAGATTGAAGGATTACTCACGGCCTCACGTACGCCATTGCAGACACCCATACACCCATGCAGCCCCCCATCAGAATAAGGTCTAGAATATGGTGATATGGTCCTATGGGTAAGAATATGGCCCTATGGTGTTATGGGTCTATGGTTCTATGGTCTAGAACGCACTAGCGACCTCTCGTGAGAACGAGCTGCAGAACTAGCGTTCTCACGACCTCACGGCCGTGCGCTAGAACGATCGGCCTAGCGATCGTACGCCCTATAGAATGAGGAAAGCCAAGAACGACAGAACGATCGTTCGTGCTCACGTTCTCCCTAGAGAACGGCCTATAGAACGACAGAACTATCTCCCGTCAGAACGTTCGCGAGAACGCCCTAACGGCCGATCTGCCGATCGTACGCCCTATATTAAGTTCTCACGGCCTCACGTACGCCATTGAAGGATTAAGACAGTCAGTCAAGGAGAAAGAACAGACACCCATACACCCATGCAGCCCCCCATCAGAATAAGGTCTAGAATATGGTGATATGGTCCTATGGGTAAGAATATGGCCCTATGGTGTTATGGGTCTATGGTTCTATGGTCTAGAAAGAATAAGGTCTAGAAAGAACTCGATACAGAACGTACGGCCGTGCGCCCGACCGCTCGCCAGAAAGGACGACCTAACGTTCGTACGTACGTTCGTGCGGCCTCCCGTCAGAAAGTTAGAACGACCTAGCGACCGATCGTGCGGCCTCCCGTCAGAAAGTTAGAACGCGCGCCCTGCCGTGCGTCCGACCGTGCGGCCTCCCGTCAGAACGGTCGCCCTAGCGTGCGCCCGTAAGGCAAGGAGAAAGAACGACAGAACGCGCGTACGTTCTCTCGCCCTAGAGAACGTGCGACCGTCCGCCCGCAAGAACGACCGCGCTCACGCCCTAGAGAACAGACGCCCGTACGCCCGTGAGTAAGAACGCACTAGCGACCTCTCGGCCGTGCGCTAGAACAGACGCCCGTACGCCCGTGAGAACTCTCGGCCTCACGGAAGAACACGCGTTCTCCCTAGCGGCCGCCCTAGAGTGAAGGAGAAAGAAATTCATTCATTCATTCATTCATTCATTCATTCATTCATTCATTCATTCATTCATTCATTCATTCATTCATTCATTCATTCATTCATTCATTCATTCATTCATTCATTCATTCATTCATTCATTCATTCATTCATTCATTCATTCATTCATTCATTCATTCATTCATTCATTCATTCATTCATTCATTCATTCATTCATTCATTCATTCATTCATTCATTCATTCATTCATTCATTCATTCATTCATTCATTCATTCATTCATTCATTCATTCATTCATTCATTCATTCATTCAAGGAGAAAGAACACGCGCCCTGCCGTGCGTCCGACCGTGAGCTCTATAGAACTAGCTCCCGTACGCCAGTAAGAACGGTCGCCCTAACTCAATGGAGAACGCACGTTAGAACGTGCGTTCTCAAGAACGCGCGTTCGTTCGTAAGAACTGCCGTTCTCCCTAGCTATCGCCCGTACGCGAGTGAGAACCATCGTTAGAACTCACGGACGGCCTATAGAACGCGCGGCCGTACGCCAGAACTATCTCACGACCTCACGCCCTATAGAACGCCCTGACGACCGATCTCACGTACTGCAAGGAGAAAGAACTCTCGGACGGCCGATCGGAAGAACTAACGACCTAGCTCAAGAACGGCCTATAGAACTAGCGCCCGACCGTAAGAACGTCCGACCTCACGGAAGAACGACCGTGCGCAAGAACTCTCGGACGGCCGATCGGAAGAACTAACGACCTAGCTCAAGAACGGCCTATAGAACGCGCGTACGACCTCGCGTTCTCCCTAGAGTAAGAACGACCGTGCGCAAGAACGTACGCCCTCACTATAGAACTGCCGTTCTCCAGAACGATCGACCTCACGATCGGAAGAACGGCCTCAAGTGAAGGAAGGAGAAAGAACCCACAGACACCAGAACCAGCACCCAACCATAAGAACACCCATGCACTCAGCCATGCACCAGAAAGGACGCCCTGACGACCGATCTCAAGTAAGAACGATCGTTCGTCCTAACTCCCTCACGCCCGCAAGAACGTACGGCCTCGCGCCAGAACGACCTCAAGAACGTACGTTCGACCGCAAGGCATGGAAGGAGAAAGAAAGAAAGAACAACAGAACGATCGTACGTTCTATCGCCCGCAAGAACGATCGTTCGTGCTCACGTTCTCCCTAGAGAACTGGAGGACTATAGGCAGAAATTCAGAACTGAAGGACTATAGGCAGAAAGGTAGAACGGCTAAGGTCTCTGCAGGACTATAGGCAGAACGGCCTATAGAACGACAGAACTAACGCCCTAGCGGCCGTTCGCACGGCCGATAGAACGATCGTTCGTCCTAACGTACGCCCTGAAGAACTATCGGCCGCTCGTGCGACCGTAAGTGAAGGAGAAAGAAAGAAAGAACAGCCTCACTATAGAACACACGGCCTATCGATCTAGCGCCCTCACGCCAGAACACGCGTTCTCCCTAGCGGCCGCCCTAGAGAACCCACTAGCGACCGTGCTATCGCGCGTTCTAGCGTCAGAACGCTCGGCCTCGCGCCCTATAGAACGATCGTTCGCCCGCGCGCGCGGCCGATCGGCCGCCCGTGCTCACTATAAGGAGAAAGAAAGAAAGAAAGAAAGAAAGAAAGAACGATCCTTCGTGAGAAATTCAGAAAGGAATACAGTTCATGAGGCAGAATATGGGATCCTTCGGTAGAAAGAACTGGCCTTCGGTAGAATAAGGTCTAGAACGCCCCTGAGGAAGTCATAGTATTGAAACGGCAGAACGTGAGAACGGTAGAAAGTTAGAACATGAGGCAAGGAGAAAGAAAGAAAGAACGACCGTGCGCAAGAACTCACGGACGCCAGAACGGCCGTGCTCGCGCCCTAGCTATCGCCAAGGAGAAAGAAAGAAAGAAAGAAAGAAAGAAAGAACTGGAGGACTCAAGGCAGAAATTCAGAATATGGGATCCTTCGTGAGAAAGAACGATCCTTCGTGAGAATAAGGTCTAGAACGCCCCTGAGGAAGAAATAGTATTGAAACGGCAGAACGTGAGAACTCAAGAAAGGCAAGGAGAAAGAAAGAAAGAACGGCCTATAGAACGACAGAACCATCCCCCATCAGAACATTCACGAGAACCAGCATTCCCACAACCCCACAGCCATGCACTAGAACCCGCACCCAATCCCACATTCCAGCCATAGAATGAGGAAAGCCAAGAACGCCCTAACGGCCGATCTGCCGATCGTACGCCCTATAGTGAGAACCCGCGCCCGATCTCACGTTCTAGAGAACGTGAGAACGGACGACCTATAGAACGTACGCCCGTGCGCTCTCACGGAAGAACTTACGATCCTTCGTGCTTAAGTAAAGGAGAAAGAAAGAAAGAACTATCTCACGACCTAGCTCACTATAGAACGACCTCAAGAACTAACGGACGACCTATCGCCAGAACGAC"};
+</script>
+
+<script>
+(function(){
+  "use strict";
+  const cv=document.getElementById('c'), ctx=cv.getContext('2d');
+  let DPR=1,W=0,H=0,cx=0,cy=0,minDim=0;
+
+  // ---------- data ----------
+  const B={A:0,C:1,G:2,T:3};
+  const BCOL={A:'#35e0d0',C:'#f2c14e',G:'#ff6ab0',T:'#7aa6ff'};
+  const BDIM={A:'#153733',C:'#3a3016',G:'#3a1a2a',T:'#1a263e'};
+  const G_DNA=DNA.genesis, H_DNA=DNA.helenium;
+  const SOL=SOLIDS;
+  function hx(c){ return [parseInt(c.slice(1,3),16),parseInt(c.slice(3,5),16),parseInt(c.slice(5,7),16)]; }
+  const BRGB={A:hx(BCOL.A),C:hx(BCOL.C),G:hx(BCOL.G),T:hx(BCOL.T)};
+
+  // ---------- k-word ids (rolling, base-4) ----------
+  function kids(seq,k){
+    const n=seq.length-k+1; const a=new Int32Array(Math.max(0,n));
+    if(n<=0) return a;
+    let id=0; for(let i=0;i<k;i++) id=id*4+B[seq[i]];
+    a[0]=id; const pk=Math.pow(4,k-1);
+    for(let i=1;i<n;i++){ id=(id-B[seq[i-1]]*pk)*4+B[seq[i+k-1]]; a[i]=id; }
+    return a;
+  }
+
+  // ---------- state ----------
+  let view='A', k=6, playing=true, showSolid=true, showChords=true;
+  let solidName='c60', loopShape='rose', spin=0.5;
+  let winW=280, iOff=0, jOff=0, phase=0;
+  let angX=0.5, angY=0.2, t=0, lastMs=0;
+  const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(reduce){ playing=false; document.getElementById('tPlay').checked=false; }
+
+  // ---------- view A: loop + chords ----------
+  const LOOPN=720;
+  let loop=[], chordC=null, kidLoop=null, kmap=null;
+  function buildLoop(){
+    loop=[]; const R=minDim*0.37, A=minDim*0.055;
+    for(let i=0;i<LOOPN;i++){
+      const ang=2*Math.PI*i/LOOPN;
+      let r=R;
+      if(loopShape==='rose') r=R*(0.82+0.18*Math.cos(5*ang));
+      else if(loopShape==='helix') r=R+A*Math.sin(9*ang);
+      loop.push({ang,r,base:G_DNA[i]});
+    }
+  }
+  function loopXY(i,rot){ const p=loop[(i%LOOPN+LOOPN)%LOOPN]; const a=p.ang+rot; return [cx+p.r*Math.cos(a),cy+p.r*Math.sin(a)]; }
+  function buildKmap(){
+    kidLoop=kids(G_DNA.slice(0,LOOPN+k),k);
+    kmap=new Map();
+    for(let i=0;i<LOOPN;i++){ const id=kidLoop[i]; let arr=kmap.get(id); if(!arr){arr=[];kmap.set(id,arr);} arr.push(i); }
+  }
+  function ensureChordCanvas(){
+    if(!chordC||chordC.width!==W||chordC.height!==H){ chordC=document.createElement('canvas'); chordC.width=W; chordC.height=H; }
+  }
+
+  // ---------- view B: dot-plot ----------
+  let kidG=null,kidH=null, plot=null, plotDirty=true, stats={cells:0,dens:0,run:0};
+  function rebuildHashes(){ kidG=kids(G_DNA,k); kidH=kids(H_DNA,k); plotDirty=true; }
+  function buildPlot(){
+    const Wn=winW;
+    if(!plot||plot.width!==Wn){ plot=document.createElement('canvas'); plot.width=Wn; plot.height=Wn; }
+    const p=plot.getContext('2d'); const img=p.createImageData(Wn,Wn); const d=img.data;
+    const lenH=kidH.length, lenG=kidG.length;
+    let cells=0, best=0; let prev=new Int32Array(Wn+1);
+    for(let jj=0;jj<Wn;jj++){
+      const cur=new Int32Array(Wn+1);
+      const hj=jOff+((jj+phase)%Wn); // phase shifts within the window, circularly
+      const hid=(hj<lenH)?kidH[hj]:-1;
+      const yrow=(Wn-1-jj)*Wn; // flip y so origin bottom-left
+      for(let ii=0;ii<Wn;ii++){
+        const gi=iOff+ii; const gid=(gi<lenG)?kidG[gi]:-2;
+        if(gid===hid){
+          cur[ii+1]=prev[ii]+1; if(cur[ii+1]>best)best=cur[ii+1];
+          const c=BRGB[G_DNA[gi]]; const idx=(yrow+ii)*4;
+          d[idx]=c[0]; d[idx+1]=c[1]; d[idx+2]=c[2]; d[idx+3]=255;
+          cells++;
+        }
+      }
+      prev=cur;
+    }
+    p.putImageData(img,0,0);
+    stats={cells,dens:100*cells/(Wn*Wn),run:best};
+    plotDirty=false;
+  }
+
+  // ---------- 3D polyhedron ----------
+  function drawSolid(R){
+    const s=SOL[solidName]; const ca=Math.cos(angY),sa=Math.sin(angY),cb=Math.cos(angX),sb=Math.sin(angX);
+    const P=new Array(s.verts.length);
+    for(let i=0;i<s.verts.length;i++){
+      let x=s.verts[i][0],y=s.verts[i][1],z=s.verts[i][2];
+      let x1=x*ca+z*sa, z1=-x*sa+z*ca;                 // yaw
+      let y2=y*cb - z1*sb, z2=y*sb + z1*cb;            // pitch
+      const persp=1/(1.9+z2*0.55);
+      P[i]=[cx+x1*R*persp*1.9, cy+y2*R*persp*1.9, z2];
+    }
+    // edges back-to-front
+    const es=s.edges.map(e=>[e[0],e[1],(P[e[0]][2]+P[e[1]][2])/2]).sort((a,b)=>a[2]-b[2]);
+    for(const [i,j,zz] of es){
+      const a=P[i],b=P[j]; const dep=(zz+1)/2; const al=0.18+0.55*dep;
+      ctx.strokeStyle='rgba(53,224,208,'+al.toFixed(3)+')';
+      ctx.lineWidth=(0.5+1.1*dep)*DPR;
+      ctx.beginPath(); ctx.moveTo(a[0],a[1]); ctx.lineTo(b[0],b[1]); ctx.stroke();
+    }
+    for(const q of P){ const dep=(q[2]+1)/2;
+      ctx.fillStyle='rgba(242,193,78,'+(0.25+0.6*dep).toFixed(3)+')';
+      ctx.beginPath(); ctx.arc(q[0],q[1],(0.7+1.2*dep)*DPR,0,7); ctx.fill(); }
+  }
+
+  // ---------- draw ----------
+  function drawA(){
+    ctx.clearRect(0,0,W,H);
+    // ambient
+    const g=ctx.createRadialGradient(cx,cy,0,cx,cy,minDim*0.55);
+    g.addColorStop(0,'rgba(20,40,60,.30)'); g.addColorStop(.6,'rgba(12,16,36,.12)'); g.addColorStop(1,'rgba(6,7,15,0)');
+    ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+
+    ensureChordCanvas(); const cc=chordC.getContext('2d');
+    // phosphor fade
+    cc.globalCompositeOperation='source-over';
+    cc.fillStyle='rgba(6,7,15,0.055)'; cc.fillRect(0,0,W,H);
+
+    const rot=angY*0.0; // loop static; solid spins
+    const s=Math.floor(t*LOOPN);
+    let repeats=0;
+    if(showChords && kmap){
+      const id=kidLoop[((s%LOOPN)+LOOPN)%LOOPN];
+      const arr=kmap.get(id)||[]; repeats=arr.length;
+      const [sx,sy]=loopXY(s,rot);
+      const col=hx(BCOL[G_DNA[((s%LOOPN)+LOOPN)%LOOPN]]);
+      cc.lineWidth=1; let drawn=0;
+      for(let a=0;a<arr.length && drawn<60;a++){
+        const q=arr[a]; if(q===s%LOOPN) continue; drawn++;
+        const [qx,qy]=loopXY(q,rot);
+        const mx=(sx+qx)/2, my=(sy+qy)/2;               // pull toward centre -> arc
+        const ctrlx=cx+(mx-cx)*0.28, ctrly=cy+(my-cy)*0.28;
+        cc.strokeStyle='rgba('+col[0]+','+col[1]+','+col[2]+',0.34)';
+        cc.beginPath(); cc.moveTo(sx,sy); cc.quadraticCurveTo(ctrlx,ctrly,qx,qy); cc.stroke();
+      }
+    }
+    ctx.drawImage(chordC,0,0);
+
+    // loop base dots
+    for(let i=0;i<LOOPN;i++){
+      const [x,y]=loopXY(i,rot); const near=Math.abs(((i-s)%LOOPN+LOOPN)%LOOPN);
+      const hot = near<8 || near>LOOPN-8;
+      ctx.fillStyle= hot ? BCOL[loop[i].base] : BDIM[loop[i].base];
+      const r=(hot?1.9:1.25)*DPR; ctx.fillRect(x-r/2,y-r/2,r,r);
+    }
+
+    // spinning polyhedron at hub + thread to needle
+    if(showSolid) drawSolid(minDim*0.135);
+    const [nx,ny]=loopXY(s,rot);
+    ctx.strokeStyle='rgba(242,193,78,0.5)'; ctx.lineWidth=DPR;
+    ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(nx,ny); ctx.stroke();
+    ctx.fillStyle='#fff6df'; ctx.beginPath(); ctx.arc(nx,ny,2.3*DPR,0,7); ctx.fill();
+    ctx.strokeStyle='rgba(255,246,223,.3)'; ctx.beginPath(); ctx.arc(nx,ny,5.2*DPR,0,7); ctx.stroke();
+
+    // vignette
+    const vg=ctx.createRadialGradient(cx,cy,minDim*0.34,cx,cy,minDim*0.72);
+    vg.addColorStop(0,'rgba(0,0,0,0)'); vg.addColorStop(1,'rgba(4,5,12,.5)');
+    ctx.fillStyle=vg; ctx.fillRect(0,0,W,H);
+
+    // panel A
+    const s2=SOL[solidName];
+    setTxt('aV',s2.V); setTxt('aE',s2.E); setTxt('aF',s2.F);
+    document.getElementById('eul').innerHTML='V−E+F = '+ (s2.V-s2.E+s2.F);
+    setTxt('aName',solidName.toUpperCase()); setTxt('aK',k);
+    const cb=G_DNA[((s%LOOPN)+LOOPN)%LOOPN]; setTxt('aNeedle','#'+ (s%LOOPN) +'  '+cb);
+    setTxt('aRep',repeats);
+  }
+
+  function drawB(){
+    ctx.clearRect(0,0,W,H);
+    if(plotDirty) buildPlot();
+    // square region
+    const pad=Math.max(18,minDim*0.05);
+    const side=Math.min(W-2*pad, H-2*pad);
+    const ox=(W-side)/2, oy=(H-side)/2;
+    // frame
+    ctx.fillStyle='rgba(10,14,28,.6)'; ctx.fillRect(ox-1,oy-1,side+2,side+2);
+    ctx.imageSmoothingEnabled=false;
+    ctx.drawImage(plot,ox,oy,side,side);
+    // main diagonal reference (only meaningful when i and j origins align)
+    ctx.strokeStyle='rgba(120,140,200,.18)'; ctx.lineWidth=DPR;
+    ctx.beginPath(); ctx.moveTo(ox,oy+side); ctx.lineTo(ox+side,oy); ctx.stroke();
+    // border + axes
+    ctx.strokeStyle='rgba(53,224,208,.35)'; ctx.lineWidth=DPR;
+    ctx.strokeRect(ox,oy,side,side);
+    ctx.fillStyle='rgba(214,226,238,.8)'; ctx.font=(11*DPR)+'px '+getCss('--mono'); ctx.textBaseline='alphabetic';
+    ctx.textAlign='center'; ctx.fillText('genesis  →  (base i, from '+iOff+')', ox+side/2, oy+side+18*DPR);
+    ctx.save(); ctx.translate(ox-14*DPR, oy+side/2); ctx.rotate(-Math.PI/2);
+    ctx.fillStyle='rgba(255,106,176,.85)'; ctx.fillText('helenium  →  (base j, from '+jOff+', lag '+phase+')',0,0); ctx.restore();
+    // scanning highlight along anti-diagonal
+    if(!reduce){
+      const u=(t*2)%1; const yy=oy+side*(1-u);
+      ctx.strokeStyle='rgba(242,193,78,.10)'; ctx.beginPath(); ctx.moveTo(ox,yy); ctx.lineTo(ox+side,yy); ctx.stroke();
+    }
+    // panel B
+    document.getElementById('ident').innerHTML=stats.dens.toFixed(stats.dens<1?3:2)+'<small> % match density</small>';
+    document.getElementById('identbar').style.width=Math.min(100,stats.dens*6)+'%';
+    setTxt('bRun',stats.run+' bases'); setTxt('bCells',stats.cells.toLocaleString('en-US'));
+    setTxt('bWin',winW+' × '+winW);
+  }
+
+  function setTxt(id,v){ const e=document.getElementById(id); if(e) e.textContent=v; }
+  function getCss(v){ return getComputedStyle(document.documentElement).getPropertyValue(v)||'monospace'; }
+
+  function frame(ms){
+    if(!lastMs) lastMs=ms; const dt=Math.min(.05,(ms-lastMs)/1000); lastMs=ms;
+    if(playing){
+      angY+=spin*dt*1.6; angX+=spin*dt*0.9;
+      t=(t+ (0.05+spin*0.10)*dt)%1;
+    }
+    if(view==='A') drawA(); else drawB();
+    requestAnimationFrame(frame);
+  }
+
+  // ---------- resize ----------
+  function resize(){
+    DPR=Math.min(2,window.devicePixelRatio||1);
+    const wrap=document.getElementById('canvasWrap');
+    W=Math.round(wrap.clientWidth*DPR); H=Math.round(wrap.clientHeight*DPR);
+    cv.width=W; cv.height=H; cv.style.width=wrap.clientWidth+'px'; cv.style.height=wrap.clientHeight+'px';
+    cx=W/2; cy=H/2; minDim=Math.min(W,H);
+    buildLoop(); chordC=null;
+  }
+
+  // ---------- controls ----------
+  function setView(v){
+    view=v;
+    document.querySelectorAll('.vt[data-v]').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
+    document.getElementById('grpA').classList.toggle('on',v==='A');
+    document.getElementById('grpB').classList.toggle('on',v==='B');
+    document.getElementById('noteA').style.display = v==='A'?'block':'none';
+    document.getElementById('mView').textContent = v==='A'?'Transcribe':'Align';
+    document.getElementById('legend2').textContent = v==='A'
+      ? "chords join identical k-words · the solid's centre holds the thread"
+      : "lit cell = genesis word i equals helenium word j · diagonals are shared code";
+  }
+  function setK(v){ k=Math.max(2,Math.min(12,v|0));
+    document.getElementById('cKb').textContent=k; document.getElementById('mK').textContent=k;
+    document.getElementById('sKb').value=k; document.getElementById('mKr').value=k; setTxt('aK',k);
+    buildKmap(); rebuildHashes();
+  }
+  document.querySelectorAll('.vt[data-v]').forEach(b=>b.addEventListener('click',()=>setView(b.dataset.v)));
+  document.getElementById('mView').addEventListener('click',()=>setView(view==='A'?'B':'A'));
+  document.getElementById('solids').addEventListener('click',e=>{ const b=e.target.closest('.chip'); if(!b)return;
+    solidName=b.dataset.s; document.querySelectorAll('#solids .chip').forEach(c=>c.classList.toggle('on',c===b)); });
+  document.getElementById('loops').addEventListener('click',e=>{ const b=e.target.closest('.chip'); if(!b)return;
+    loopShape=b.dataset.l; buildLoop(); document.querySelectorAll('#loops .chip').forEach(c=>c.classList.toggle('on',c===b)); });
+  document.getElementById('sSpin').addEventListener('input',e=>{ spin=(+e.target.value)/100; document.getElementById('cSpin').textContent=spin.toFixed(2); });
+  document.getElementById('sKb').addEventListener('input',e=>setK(+e.target.value));
+  document.getElementById('mKr').addEventListener('input',e=>setK(+e.target.value));
+  document.getElementById('sW').addEventListener('input',e=>{ winW=+e.target.value; document.getElementById('cW').textContent=winW; plotDirty=true; });
+  document.getElementById('sI').addEventListener('input',e=>{ iOff=+e.target.value; document.getElementById('cI').textContent=iOff; plotDirty=true; });
+  document.getElementById('sJ').addEventListener('input',e=>{ jOff=+e.target.value; document.getElementById('cJ').textContent=jOff; plotDirty=true; });
+  document.getElementById('sP').addEventListener('input',e=>{ phase=+e.target.value; document.getElementById('cP').textContent=phase; plotDirty=true; });
+  document.getElementById('tSolid').addEventListener('change',e=>showSolid=e.target.checked);
+  document.getElementById('tChords').addEventListener('change',e=>{ showChords=e.target.checked; if(!showChords&&chordC){ const c=chordC.getContext('2d'); c.clearRect(0,0,W,H);} });
+  document.getElementById('tPlay').addEventListener('change',e=>playing=e.target.checked);
+  addEventListener('keydown',e=>{
+    if(e.code==='Space'){ e.preventDefault(); playing=!playing; document.getElementById('tPlay').checked=playing; }
+    else if(e.code==='Tab'){ e.preventDefault(); setView(view==='A'?'B':'A'); }
+  });
+
+  // ---------- go ----------
+  let rz; addEventListener('resize',()=>{ clearTimeout(rz); rz=setTimeout(resize,120); });
+  resize(); setView('A'); setK(6);
+  requestAnimationFrame(frame);
+})();
+</script>
+</body></html>

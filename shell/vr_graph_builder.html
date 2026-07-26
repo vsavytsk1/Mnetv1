@@ -1,0 +1,937 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>vr graph builder · fov-outward · snap · remove · parallel</title>
+<style>
+  :root{
+    --bg:#050510;
+    --pent:#ff6b35;
+    --hex:#00d4ff;
+    --gold:#ffd700;
+    --red:#ff3050;
+    --text:#e0f0ff;
+    --text2:#7090a0;
+    --dim:#506070;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;overflow:hidden;background:var(--bg);
+    color:var(--text);font-family:'Share Tech Mono','Consolas','Menlo',monospace}
+  #app{position:fixed;inset:0;cursor:crosshair}
+  #app.drag{cursor:grabbing}
+  #app.over-face{cursor:pointer}
+
+  .hud{position:fixed;pointer-events:none;font-size:11px;letter-spacing:.05em;color:var(--text2)}
+  .hud b{color:var(--text);font-weight:400}
+  .tag{font-size:9px;letter-spacing:.18em;color:var(--dim);text-transform:uppercase;margin-bottom:6px}
+  #tl{top:14px;left:14px;line-height:1.55;min-width:240px}
+  #tr{top:14px;right:14px;text-align:right;line-height:1.55;min-width:230px}
+  #bl{bottom:14px;left:14px;line-height:1.55;min-width:220px}
+  #br{bottom:14px;right:14px;text-align:right;line-height:1.55}
+  .pent-tone{color:var(--pent)}
+  .hex-tone{color:var(--hex)}
+  .gold-tone{color:var(--gold)}
+  .red-tone{color:var(--red)}
+
+  #mid{position:fixed;left:50%;bottom:60px;transform:translateX(-50%);
+    text-align:center;pointer-events:none;transition:opacity .35s}
+  #mid .big{font-size:13px;letter-spacing:.4em;color:var(--text);text-transform:uppercase}
+  #mid .sub{font-size:10px;letter-spacing:.22em;color:var(--dim);text-transform:uppercase;margin-top:4px}
+  #mid.hidden{opacity:0}
+
+  #vr-btn{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);
+    padding:10px 22px;background:rgba(0,212,255,.12);color:var(--hex);
+    border:1px solid var(--hex);font-family:inherit;font-size:11px;
+    letter-spacing:.3em;text-transform:uppercase;cursor:pointer;display:none}
+  #vr-btn:hover{background:rgba(0,212,255,.22)}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<button id="vr-btn">Enter VR</button>
+
+<div id="mid">
+  <div class="big" id="midbig">click anywhere</div>
+  <div class="sub" id="midsub">seed pent · then hover faces to grow · alt-click to remove</div>
+</div>
+
+<div id="tl" class="hud">
+  <div class="tag">graph</div>
+  <div>nodes <b id="g-nodes">0</b> &nbsp; edges <b id="g-edges">0</b> &nbsp; depth <b id="g-depth">0</b></div>
+  <div><span class="pent-tone">●</span> pent <b id="g-np">0</b> &nbsp; <span class="hex-tone">●</span> hex <b id="g-nh">0</b></div>
+  <div>free edges <b id="g-free">0</b></div>
+  <div>E<sub>bend</sub> <b id="g-eb">0.000</b></div>
+  <div>animating <b id="g-anim">0</b> &nbsp; removing <b id="g-rem">0</b></div>
+  <div>frame <b id="g-ms">0.0</b> ms</div>
+</div>
+
+<div id="tr" class="hud">
+  <div class="tag">hovered</div>
+  <div id="h-id">—</div>
+  <div id="h-layer">layer —</div>
+  <div id="h-free">free edges —</div>
+  <div id="h-next">next θ —</div>
+  <div id="h-energy">E = —</div>
+</div>
+
+<div id="bl" class="hud">
+  <div class="tag">fov · bfs outward through graph</div>
+  <div>in-fov <b id="f-in">0</b> / <b id="f-total">0</b></div>
+  <div>max bfs depth <b id="f-depth">0</b></div>
+  <div>dim falloff <b>exp(−0.45·d)</b></div>
+</div>
+
+<div id="br" class="hud">
+  <div>drag · orbit</div>
+  <div>scroll · zoom</div>
+  <div>click face · spawn hex</div>
+  <div><b>alt</b> / <b>shift</b> / right · remove</div>
+  <div><b>D</b> / <b>Del</b> · remove hovered</div>
+  <div><b>R</b> · reset</div>
+</div>
+
+<script type="module">
+import * as THREE from 'https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js';
+
+// ═══ §A scene / camera / renderer + WebXR opt-in ═══════════════════════════
+const appEl = document.getElementById('app');
+const W = () => appEl.clientWidth, H = () => appEl.clientHeight;
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color('#050510');
+scene.fog = new THREE.FogExp2(0x050510, 0.04);
+
+const camera = new THREE.PerspectiveCamera(60, W()/H(), 0.05, 80);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(W(), H());
+renderer.xr.enabled = true;     // Quest 3 browser → can enter immersive-vr
+appEl.appendChild(renderer.domElement);
+
+addEventListener('resize', () => {
+  camera.aspect = W()/H();
+  camera.updateProjectionMatrix();
+  renderer.setSize(W(), H());
+});
+
+// VR button — shown only when WebXR + immersive-vr is supported (Quest browser).
+const vrBtn = document.getElementById('vr-btn');
+let vrSession = null;
+vrBtn.addEventListener('click', async () => {
+  if (vrSession){ vrSession.end(); return; }
+  try {
+    const session = await navigator.xr.requestSession('immersive-vr', { optionalFeatures: ['local-floor'] });
+    await renderer.xr.setSession(session);
+    vrSession = session;
+    vrBtn.textContent = 'Exit VR';
+    session.addEventListener('end', () => { vrSession = null; vrBtn.textContent = 'Enter VR'; });
+  } catch (e){ console.error('VR error', e); }
+});
+if (navigator.xr){
+  navigator.xr.isSessionSupported('immersive-vr').then(supp => {
+    if (supp) vrBtn.style.display = 'block';
+  }).catch(() => {});
+}
+
+// ═══ §B inline orbit + click + drag + right-click + mouse tracking ════════
+const orbit = { az: Math.PI*0.30, el: Math.PI*0.32, r: 9, tgt: new THREE.Vector3() };
+const home  = { az: orbit.az, el: orbit.el, r: orbit.r };
+const cv = renderer.domElement;
+const mouseNDC = new THREE.Vector2();
+let mouseValid = false;
+let drag = null;
+
+cv.addEventListener('pointerdown', e => {
+  if (e.button !== 0) return;          // right-click handled via 'contextmenu'
+  drag = { x: e.clientX, y: e.clientY, az: orbit.az, el: orbit.el, moved: false,
+           remove: e.altKey || e.shiftKey };
+  cv.setPointerCapture(e.pointerId);
+});
+cv.addEventListener('pointermove', e => {
+  mouseNDC.x =  (e.clientX / W()) * 2 - 1;
+  mouseNDC.y = -(e.clientY / H()) * 2 + 1;
+  mouseValid = true;
+  if (!drag) return;
+  const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+  if (!drag.moved && Math.hypot(dx, dy) > 4) drag.moved = true;
+  if (drag.moved){
+    orbit.az = drag.az - dx * 0.006;
+    orbit.el = Math.max(0.08, Math.min(Math.PI/2 - 0.08, drag.el - dy * 0.006));
+    appEl.classList.add('drag');
+  }
+});
+cv.addEventListener('pointerup', e => {
+  if (!drag) return;
+  const wasDrag = drag.moved;
+  const wasRemove = drag.remove;
+  drag = null;
+  appEl.classList.remove('drag');
+  if (!wasDrag) wasRemove ? handleRemoveAt() : handleClick();
+});
+cv.addEventListener('pointerleave', () => { mouseValid = false; });
+cv.addEventListener('wheel', e => {
+  e.preventDefault();
+  orbit.r = Math.max(2, Math.min(40, orbit.r * (1 + e.deltaY * 0.0015)));
+}, { passive: false });
+cv.addEventListener('contextmenu', e => {
+  e.preventDefault();
+  mouseNDC.x =  (e.clientX / W()) * 2 - 1;
+  mouseNDC.y = -(e.clientY / H()) * 2 + 1;
+  handleRemoveAt();
+});
+addEventListener('keydown', e => {
+  if (e.key === 'r' || e.key === 'R'){ reset(); return; }
+  if ((e.key === 'd' || e.key === 'D' || e.key === 'Delete' || e.key === 'Backspace') && state.hovered){
+    handleRemove(state.hovered);
+  }
+});
+
+function updateCam(){
+  if (renderer.xr.isPresenting) return;     // VR: head-tracked, don't override
+  const { az, el, r, tgt } = orbit;
+  const ce = Math.cos(el), se = Math.sin(el);
+  camera.position.set(tgt.x + r*ce*Math.sin(az), tgt.y + r*se, tgt.z + r*ce*Math.cos(az));
+  camera.lookAt(tgt);
+}
+
+// ═══ §C dense substrate ════════════════════════════════════════════════════
+const SUB_HALF = 7, SUB_SEG = 60;
+const subGeom = new THREE.PlaneGeometry(SUB_HALF*2, SUB_HALF*2, SUB_SEG, SUB_SEG);
+subGeom.rotateX(-Math.PI/2);
+const subBase = new Float32Array(subGeom.attributes.position.array);
+const sub = new THREE.Mesh(subGeom, new THREE.MeshBasicMaterial({
+  wireframe: true, color: 0x2a4858, transparent: true, opacity: 0.42, depthWrite: false,
+}));
+scene.add(sub);
+
+// ═══ §D constants ══════════════════════════════════════════════════════════
+const PENT_R    = 1.0;
+const PENT_EDGE = 2 * PENT_R * Math.sin(Math.PI/5);
+const HEX_APO   = PENT_EDGE * Math.sqrt(3) / 2;
+const DIHEDRAL_PENT_HEX = Math.acos(-Math.sqrt(5 + 2*Math.sqrt(5)) / Math.sqrt(15));
+const DIHEDRAL_HEX_HEX  = Math.acos(-Math.sqrt(5) / 3);
+const TILT_PENT_HEX     = Math.PI - DIHEDRAL_PENT_HEX;
+const TILT_HEX_HEX      = Math.PI - DIHEDRAL_HEX_HEX;
+const FOLD_DURATION_MS  = 500;            // snappier than step_builder's 700
+const REMOVE_DURATION_MS = 220;
+const DUPE_EPS  = 0.3 * PENT_EDGE;        // hex-center-coincidence threshold
+const FOV_FALLOFF = 0.45;
+const FOV_MIN_DIM = 0.30;
+
+// ═══ §E THE GRAPH (Map-based for stable IDs across removal) ═══════════════
+const G = {
+  nodes: new Map(),
+  pent: null,
+  nextId: 0,
+
+  reset(){ this.nodes.clear(); this.pent = null; this.nextId = 0; },
+
+  addNode(n){
+    n.id = this.nextId++;
+    n.bound = new Map();                  // edgeIdx → otherNodeId (graph-edges)
+    this.nodes.set(n.id, n);
+    return n;
+  },
+
+  remove(n){ this.nodes.delete(n.id); },
+
+  // CURRENT pose (mid-animation possible) — used for rendering & hover
+  cornersOf(face){
+    return (face.type === 'pent') ? face.corners : (face.current?.corners ?? face.corners0);
+  },
+  centerOf(face){
+    return (face.type === 'pent') ? face.center : (face.current?.center ?? face.center0);
+  },
+
+  // TARGET pose (post-fold, fixed at creation) — used for child placement & snap detection
+  targetCornersOf(face){
+    return (face.type === 'pent') ? face.corners : (face.target?.corners ?? face.corners0);
+  },
+  targetCenterOf(face){
+    return (face.type === 'pent') ? face.center : (face.target?.center ?? face.center0);
+  },
+
+  edgeCount(face){ return face.type === 'pent' ? 5 : 6; },
+
+  freeEdgesOf(face){
+    const total = this.edgeCount(face);
+    const free = [];
+    for (let i = 0; i < total; i++){
+      if (face.bound.has(i)) continue;
+      if (face.type === 'hex' && i === 0) continue;
+      free.push(i);
+    }
+    return free;
+  },
+
+  edgeMidpoint(face, edgeIdx){
+    const c = this.cornersOf(face);
+    const tot = c.length;
+    return c[edgeIdx].clone().add(c[(edgeIdx + 1) % tot]).multiplyScalar(0.5);
+  },
+  targetEdgeVerts(face, edgeIdx){
+    const c = this.targetCornersOf(face);
+    const tot = c.length;
+    return [c[edgeIdx], c[(edgeIdx + 1) % tot]];
+  },
+
+  edgeCountTotal(){
+    // each child-relation counted once
+    let n = 0; for (const node of this.nodes.values()) n += node.bound.size;
+    return n / 2 | 0 + n - (n / 2 | 0);   // bidirectional edges may double — see below
+  },
+
+  depth(){
+    let d = 0; for (const n of this.nodes.values()) if (n.layer > d) d = n.layer;
+    return d;
+  },
+
+  totalEnergy(){
+    let E = 0;
+    for (const n of this.nodes.values()){
+      if (n.foldCurrent !== undefined) E += n.foldCurrent * n.foldCurrent;
+    }
+    return E;
+  },
+
+  totalFreeEdges(){
+    let f = 0; for (const n of this.nodes.values()) f += this.freeEdgesOf(n).length;
+    return f;
+  },
+
+  // neighbors via parent + all bound entries (children + merged-edge-peers)
+  neighborsOf(face){
+    const out = [];
+    if (face.parent !== null && this.nodes.has(face.parent)) out.push(this.nodes.get(face.parent));
+    for (const otherId of face.bound.values()){
+      if (this.nodes.has(otherId)) out.push(this.nodes.get(otherId));
+    }
+    return out;
+  },
+
+  // "Does any OTHER node call this one its parent?" — distinguishes true
+  // child relations from post-spawn merge-peer bindings. Removing a leaf
+  // (has no actual children) is always safe; removing a face with merge
+  // peers just severs those peer links — they were geometric, not structural.
+  hasChildren(face){
+    for (const otherId of face.bound.values()){
+      const other = this.nodes.get(otherId);
+      if (other && other.parent === face.id) return true;
+    }
+    return false;
+  },
+};
+
+const state = {
+  hovered: null,
+  animating: new Set(),
+  removing: new Set(),
+  fovInCount: 0,
+  fovMaxDepth: 0,
+};
+
+// ═══ §F face geometry ═════════════════════════════════════════════════════
+function makeFlatHexOnPlane(a, b, awayFromInPlane, planeNormal){
+  const m = a.clone().add(b).multiplyScalar(0.5);
+  const u = b.clone().sub(a).normalize();
+  const L = a.distanceTo(b);
+  let v = new THREE.Vector3().crossVectors(planeNormal, u).normalize();
+  if (v.dot(m.clone().sub(awayFromInPlane)) < 0) v.negate();
+  const c = m.clone().addScaledVector(v, HEX_APO);
+  const corners = [a.clone(), b.clone()];
+  for (let i = 2; i < 6; i++){
+    const ang = 4*Math.PI/3 + i * Math.PI/3;
+    corners.push(c.clone()
+      .addScaledVector(u, L * Math.cos(ang))
+      .addScaledVector(v, L * Math.sin(ang)));
+  }
+  return { center: c, corners, u, v };
+}
+
+// One-shot rotation: returns {corners, center} for a given tilt without
+// touching any geometry buffer. Used both for the live animation and for
+// pre-computing each hex's TARGET pose so children always see a stable pose.
+function rotateHex(hex, tiltRad){
+  const a = hex.anchorA, b = hex.anchorB;
+  const axis = b.clone().sub(a).normalize();
+  const q = new THREE.Quaternion().setFromAxisAngle(axis, tiltRad);
+  const c0 = hex.corners0;
+  const corners = [c0[0].clone(), c0[1].clone()];
+  for (let i = 2; i < 6; i++){
+    corners.push(c0[i].clone().sub(a).applyQuaternion(q).add(a));
+  }
+  const center = hex.center0.clone().sub(a).applyQuaternion(q).add(a);
+  return { corners, center };
+}
+
+function applyTiltToHex(hex, tiltRad){
+  const pose = rotateHex(hex, tiltRad);
+  hex.current = pose;
+
+  const fp = hex.gFill.attributes.position;
+  fp.setXYZ(0, pose.center.x, pose.center.y, pose.center.z);
+  for (let i = 0; i < 6; i++) fp.setXYZ(1+i, pose.corners[i].x, pose.corners[i].y, pose.corners[i].z);
+  fp.needsUpdate = true;
+
+  const ep = hex.gEdges.attributes.position;
+  let k = 0;
+  for (let i = 0; i < 6; i++){
+    const A = pose.corners[i], B = pose.corners[(i+1)%6];
+    ep.setXYZ(k++, A.x, A.y, A.z);
+    ep.setXYZ(k++, B.x, B.y, B.z);
+  }
+  ep.needsUpdate = true;
+}
+
+// Pre-compute everything a not-yet-built hex would have at its target pose.
+// Used by the duplicate-detector BEFORE deciding whether to spawn at all.
+function computeHexPose(parent, parentEdgeIdx){
+  const isPent = (parent.type === 'pent');
+  const cornersP = G.targetCornersOf(parent);
+  const tot = isPent ? 5 : 6;
+  const a = cornersP[parentEdgeIdx];
+  const b = cornersP[(parentEdgeIdx + 1) % tot];
+
+  let parentCenter, parentNormal;
+  if (isPent){
+    parentCenter = parent.center;
+    parentNormal = new THREE.Vector3(0, 1, 0);
+  } else {
+    parentCenter = G.targetCenterOf(parent);
+    const e1 = cornersP[1].clone().sub(cornersP[0]);
+    const e2 = cornersP[5].clone().sub(cornersP[0]);
+    parentNormal = new THREE.Vector3().crossVectors(e1, e2).normalize();
+    if (parentNormal.y < 0) parentNormal.negate();
+  }
+
+  const hd = makeFlatHexOnPlane(a.clone(), b.clone(), parentCenter, parentNormal);
+  const testV = new THREE.Vector3().crossVectors(hd.u, hd.v);
+  const foldSign = testV.dot(parentNormal) > 0 ? 1 : -1;
+  const foldTarget = isPent ? TILT_PENT_HEX : TILT_HEX_HEX;
+
+  // rotate flat → target
+  const axis = b.clone().sub(a).normalize();
+  const q = new THREE.Quaternion().setFromAxisAngle(axis, foldTarget * foldSign);
+  const rot = [hd.corners[0].clone(), hd.corners[1].clone()];
+  for (let i = 2; i < 6; i++) rot.push(hd.corners[i].clone().sub(a).applyQuaternion(q).add(a));
+  const cR = hd.center.clone().sub(a).applyQuaternion(q).add(a);
+
+  return { flat: hd, foldSign, foldTarget, anchorA: a.clone(), anchorB: b.clone(),
+           target: { corners: rot, center: cR } };
+}
+
+// ═══ §G scene mesh builders ════════════════════════════════════════════════
+const root = new THREE.Group();
+scene.add(root);
+const faceFills = [];
+
+function disposeFace(n){
+  root.remove(n.meshFill);
+  root.remove(n.meshEdges);
+  n.gFill.dispose(); n.gEdges.dispose();
+  n.mFill.dispose(); n.mEdges.dispose();
+  const idx = faceFills.indexOf(n.meshFill);
+  if (idx >= 0) faceFills.splice(idx, 1);
+}
+
+function disposeAllFaces(){
+  for (const n of G.nodes.values()) disposeFace(n);
+  faceFills.length = 0;
+}
+
+function buildPentNode(cx, cz){
+  const corners = [];
+  for (let i = 0; i < 5; i++){
+    const a = -Math.PI/2 + i * 2*Math.PI/5;
+    corners.push(new THREE.Vector3(cx + PENT_R*Math.cos(a), 0, cz + PENT_R*Math.sin(a)));
+  }
+  const center = new THREE.Vector3(cx, 0, cz);
+
+  const positions = [cx, 0, cz];
+  for (const v of corners) positions.push(v.x, v.y, v.z);
+  const indices = [];
+  for (let i = 0; i < 5; i++) indices.push(0, 1+i, 1+(i+1)%5);
+
+  const gFill = new THREE.BufferGeometry();
+  gFill.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  gFill.setIndex(indices);
+  const mFill = new THREE.MeshBasicMaterial({
+    color: 0xff6b35, transparent: true, opacity: 0.16,
+    side: THREE.DoubleSide, depthWrite: false,
+  });
+  const meshFill = new THREE.Mesh(gFill, mFill);
+
+  const segs = [];
+  for (let i = 0; i < 5; i++){
+    const a = corners[i], b = corners[(i+1)%5];
+    segs.push(a.x, a.y, a.z, b.x, b.y, b.z);
+  }
+  const gEdges = new THREE.BufferGeometry();
+  gEdges.setAttribute('position', new THREE.Float32BufferAttribute(segs, 3));
+  const mEdges = new THREE.LineBasicMaterial({
+    color: 0xff6b35, transparent: true, opacity: 0.95,
+  });
+  const meshEdges = new THREE.LineSegments(gEdges, mEdges);
+
+  root.add(meshFill, meshEdges);
+  faceFills.push(meshFill);
+
+  const node = G.addNode({
+    type: 'pent', layer: 0, parent: null, parentEdgeIdx: null,
+    corners, center,
+    gFill, gEdges, meshFill, meshEdges, mFill, mEdges,
+    restFill: 0.16, restEdges: 0.95,
+  });
+  meshFill.userData.nodeId = node.id;
+  G.pent = node;
+  return node;
+}
+
+function buildHexNode(parent, parentEdgeIdx, pose){
+  pose = pose || computeHexPose(parent, parentEdgeIdx);
+
+  const positions = [pose.flat.center.x, pose.flat.center.y, pose.flat.center.z];
+  for (const v of pose.flat.corners) positions.push(v.x, v.y, v.z);
+  const indices = [];
+  for (let i = 0; i < 6; i++) indices.push(0, 1+i, 1+(i+1)%6);
+
+  const gFill = new THREE.BufferGeometry();
+  gFill.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  gFill.setIndex(indices);
+  const mFill = new THREE.MeshBasicMaterial({
+    color: 0x00d4ff, transparent: true, opacity: 0.06,
+    side: THREE.DoubleSide, depthWrite: false,
+  });
+  const meshFill = new THREE.Mesh(gFill, mFill);
+
+  const segs = [];
+  for (let i = 0; i < 6; i++){
+    const A = pose.flat.corners[i], B = pose.flat.corners[(i+1)%6];
+    segs.push(A.x, A.y, A.z, B.x, B.y, B.z);
+  }
+  const gEdges = new THREE.BufferGeometry();
+  gEdges.setAttribute('position', new THREE.Float32BufferAttribute(segs, 3));
+  const mEdges = new THREE.LineBasicMaterial({
+    color: 0x00d4ff, transparent: true, opacity: 0.65,
+  });
+  const meshEdges = new THREE.LineSegments(gEdges, mEdges);
+
+  root.add(meshFill, meshEdges);
+  faceFills.push(meshFill);
+
+  const node = G.addNode({
+    type: 'hex',
+    layer: parent.layer + 1,
+    parent: parent.id,
+    parentEdgeIdx,
+    anchorA: pose.anchorA,
+    anchorB: pose.anchorB,
+    corners0: pose.flat.corners.map(v => v.clone()),
+    center0: pose.flat.center.clone(),
+    foldSign: pose.foldSign,
+    foldTarget: pose.foldTarget,
+    foldCurrent: 0,
+    target: { corners: pose.target.corners.map(v => v.clone()), center: pose.target.center.clone() },
+    gFill, gEdges, meshFill, meshEdges, mFill, mEdges,
+    restFill: 0.06, restEdges: 0.65,
+  });
+  parent.bound.set(parentEdgeIdx, node.id);
+  meshFill.userData.nodeId = node.id;
+  applyTiltToHex(node, 0);
+  return node;
+}
+
+// ═══ §H hover (raycast) + free-edge markers ═══════════════════════════════
+const ray = new THREE.Raycaster();
+
+function updateHover(){
+  if (!mouseValid || drag){ setHovered(null); return; }
+  ray.setFromCamera(mouseNDC, camera);
+  // skip faces currently fading out
+  const targets = faceFills.filter(m => {
+    const n = G.nodes.get(m.userData.nodeId);
+    return n && n.removeFade === undefined;
+  });
+  const hits = ray.intersectObjects(targets);
+  setHovered(hits.length > 0 ? G.nodes.get(hits[0].object.userData.nodeId) : null);
+}
+
+function setHovered(node){
+  if (state.hovered === node) return;
+  state.hovered = node;
+  if (node) appEl.classList.add('over-face'); else appEl.classList.remove('over-face');
+  updateFreeEdgeMarkers();
+}
+
+const markerGeom = new THREE.BufferGeometry();
+markerGeom.setAttribute('position', new THREE.Float32BufferAttribute([], 3));
+const markerMat = new THREE.PointsMaterial({
+  color: 0xffd700, size: 0.30, sizeAttenuation: true,
+  transparent: true, opacity: 0.9, depthTest: false,
+});
+const markers = new THREE.Points(markerGeom, markerMat);
+markers.renderOrder = 999;
+scene.add(markers);
+
+function updateFreeEdgeMarkers(){
+  if (!state.hovered){
+    markerGeom.setAttribute('position', new THREE.Float32BufferAttribute([], 3));
+    markers.visible = false;
+    return;
+  }
+  const free = G.freeEdgesOf(state.hovered);
+  const positions = [];
+  for (const i of free){
+    const m = G.edgeMidpoint(state.hovered, i);
+    positions.push(m.x, m.y, m.z);
+  }
+  markerGeom.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  markers.visible = positions.length > 0;
+}
+
+// ═══ §I click handler (spawn with duplicate-merging) ═══════════════════════
+function handleClick(){
+  ray.setFromCamera(mouseNDC, camera);
+
+  // Face hit?
+  const faceHits = ray.intersectObjects(faceFills);
+  if (faceHits.length > 0){
+    const face = G.nodes.get(faceHits[0].object.userData.nodeId);
+    if (face && face.removeFade === undefined) spawnFromFace(face, faceHits[0].point);
+    return;
+  }
+
+  // Ground hit → seed pent (only valid pre-pent)
+  if (!G.pent){
+    const groundHit = new THREE.Vector3();
+    const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+    if (ray.ray.intersectPlane(plane, groundHit)) seedPent(groundHit.x, groundHit.z);
+  }
+}
+
+function seedPent(cx, cz){
+  buildPentNode(cx, cz);
+  orbit.tgt.set(cx, 0, cz);
+  updateGuide();
+}
+
+function findDuplicateHex(wouldBeCenter){
+  for (const n of G.nodes.values()){
+    if (n.type !== 'hex') continue;
+    if (n.removeFade !== undefined) continue;
+    const c = G.targetCenterOf(n);
+    if (wouldBeCenter.distanceTo(c) < DUPE_EPS) return n;
+  }
+  return null;
+}
+
+function findMatchingEdge(face, va, vb){
+  const corners = G.targetCornersOf(face);
+  const total = corners.length;
+  for (let i = 0; i < total; i++){
+    const ea = corners[i], eb = corners[(i+1) % total];
+    if ((va.distanceTo(ea) < DUPE_EPS && vb.distanceTo(eb) < DUPE_EPS) ||
+        (va.distanceTo(eb) < DUPE_EPS && vb.distanceTo(ea) < DUPE_EPS)){
+      return i;
+    }
+  }
+  return -1;
+}
+
+function spawnFromFace(face, hitPoint){
+  const free = G.freeEdgesOf(face);
+  if (free.length === 0) return;
+  let minD = Infinity, best = -1;
+  for (const i of free){
+    const d = G.edgeMidpoint(face, i).distanceTo(hitPoint);
+    if (d < minD){ minD = d; best = i; }
+  }
+  if (best < 0) return;
+  const parentEdgeIdx = best;
+
+  // ── Duplicate detection: if a hex already exists at the would-be center,
+  //    bind this edge to it instead of creating a clone. This is the graph
+  //    answering "you can't add a node that's already in the graph".
+  const pose = computeHexPose(face, parentEdgeIdx);
+  const dup = findDuplicateHex(pose.target.center);
+  if (dup){
+    face.bound.set(parentEdgeIdx, dup.id);
+    const [va, vb] = G.targetEdgeVerts(face, parentEdgeIdx);
+    const otherEdge = findMatchingEdge(dup, va, vb);
+    if (otherEdge >= 0) dup.bound.set(otherEdge, face.id);
+    updateFreeEdgeMarkers();
+    return;
+  }
+
+  // ── Spawn a fresh hex.
+  const hex = buildHexNode(face, parentEdgeIdx, pose);
+
+  // ── Post-spawn edge merging: scan all OTHER faces for an edge whose
+  //    endpoints (at target pose) coincide with one of this hex's outer
+  //    edges. If found, mark both sides bound — that's a graph edge that
+  //    happens because of geometry, not because of who spawned whom.
+  for (let i = 1; i < 6; i++){
+    if (hex.bound.has(i)) continue;
+    const [va, vb] = G.targetEdgeVerts(hex, i);
+    for (const other of G.nodes.values()){
+      if (other === hex || other === face) continue;
+      if (other.removeFade !== undefined) continue;
+      const oEdge = findMatchingEdge(other, va, vb);
+      if (oEdge >= 0 && !other.bound.has(oEdge)){
+        hex.bound.set(i, other.id);
+        other.bound.set(oEdge, hex.id);
+        break;
+      }
+    }
+  }
+
+  state.animating.add(hex);
+  hex.animStart = performance.now();
+  updateFreeEdgeMarkers();
+  updateGuide();
+}
+
+// ═══ §J right-click / alt-click: remove a leaf ════════════════════════════
+function handleRemoveAt(){
+  ray.setFromCamera(mouseNDC, camera);
+  const hits = ray.intersectObjects(faceFills);
+  if (hits.length === 0) return;
+  const face = G.nodes.get(hits[0].object.userData.nodeId);
+  if (!face || face.removeFade !== undefined) return;
+  handleRemove(face);
+}
+
+function handleRemove(face){
+  if (face === G.pent){ reset(); return; }
+  if (G.hasChildren(face)) return;        // has true child(ren) — would orphan them
+  startRemoval(face);                     // merge peers are fine; we sever them on finalize
+}
+
+function startRemoval(face){
+  face.removeFade = 1;
+  face.removeStart = performance.now();
+  state.removing.add(face);
+  // visible flash: tint material to red so the 220ms fade actually reads
+  face.mFill.color.setHex(0xff3050);
+  face.mEdges.color.setHex(0xff3050);
+  if (state.hovered === face){ setHovered(null); }
+}
+
+function finalizeRemoval(face){
+  if (face.parent !== null && G.nodes.has(face.parent)){
+    const parent = G.nodes.get(face.parent);
+    parent.bound.delete(face.parentEdgeIdx);
+  }
+  // remove any back-references on other nodes (graph is bidirectional after merge)
+  for (const n of G.nodes.values()){
+    for (const [eIdx, otherId] of [...n.bound]){
+      if (otherId === face.id) n.bound.delete(eIdx);
+    }
+  }
+  disposeFace(face);
+  G.remove(face);
+  if (state.hovered === face) setHovered(null);
+  updateFreeEdgeMarkers();
+  updateGuide();
+}
+
+// ═══ §K animations: concurrent fold + concurrent fade-out ══════════════════
+function updateAnimations(t){
+  for (const hex of state.animating){
+    const elapsed = t - hex.animStart;
+    if (elapsed >= FOLD_DURATION_MS){
+      hex.foldCurrent = hex.foldTarget;
+      applyTiltToHex(hex, hex.foldCurrent * hex.foldSign);
+      state.animating.delete(hex);
+    } else {
+      const f = elapsed / FOLD_DURATION_MS;
+      const eased = 0.5 - 0.5 * Math.cos(f * Math.PI);
+      hex.foldCurrent = eased * hex.foldTarget;
+      applyTiltToHex(hex, hex.foldCurrent * hex.foldSign);
+    }
+  }
+  // collect-then-finalize so we don't mutate the Set we're iterating
+  const done = [];
+  for (const face of state.removing){
+    const elapsed = t - face.removeStart;
+    if (elapsed >= REMOVE_DURATION_MS){
+      face.removeFade = 0;
+      done.push(face);
+    } else {
+      face.removeFade = 1 - (elapsed / REMOVE_DURATION_MS);
+    }
+  }
+  for (const face of done){
+    state.removing.delete(face);
+    finalizeRemoval(face);
+  }
+}
+
+function reset(){
+  for (const n of G.nodes.values()) disposeFace(n);
+  G.reset();
+  state.animating.clear();
+  state.removing.clear();
+  state.hovered = null;
+  subGeom.attributes.position.array.set(subBase);
+  subGeom.attributes.position.needsUpdate = true;
+  orbit.az = home.az; orbit.el = home.el; orbit.r = home.r;
+  orbit.tgt.set(0, 0, 0);
+  updateGuide();
+  updateFreeEdgeMarkers();
+}
+
+// ═══ §L FOV-outward BFS dim ════════════════════════════════════════════════
+//   "Foveated compute" via graph traversal: distance-0 = visible in the
+//   frustum right now, distance-d = d hops away through parent/child links.
+//   Materials get exp(−FALLOFF·d) opacity multiplier. No spatial index, just
+//   the adjacency we already have. O(N+E) per frame — N≈30 here, free.
+//
+const frustum = new THREE.Frustum();
+const projMat = new THREE.Matrix4();
+
+function updateFovDim(){
+  projMat.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
+  frustum.setFromProjectionMatrix(projMat);
+
+  // step 1: frustum cull → seed set
+  const inFov = new Set();
+  for (const n of G.nodes.values()){
+    const c = G.centerOf(n);
+    if (frustum.containsPoint(c)) inFov.add(n.id);
+  }
+
+  // step 2: BFS outward through the graph
+  const dist = new Map();
+  let frontier = [];
+  for (const id of inFov){ dist.set(id, 0); frontier.push(id); }
+  let maxDepth = inFov.size > 0 ? 0 : -1;
+  while (frontier.length){
+    const next = [];
+    for (const id of frontier){
+      const n = G.nodes.get(id); if (!n) continue;
+      const d = dist.get(id);
+      for (const nb of G.neighborsOf(n)){
+        if (!dist.has(nb.id)){
+          dist.set(nb.id, d + 1);
+          if (d + 1 > maxDepth) maxDepth = d + 1;
+          next.push(nb.id);
+        }
+      }
+    }
+    frontier = next;
+  }
+
+  // step 3: apply opacity = restOpacity · dim · removeFade
+  for (const n of G.nodes.values()){
+    const d = dist.get(n.id) ?? 99;
+    let mult = Math.max(FOV_MIN_DIM, Math.exp(-d * FOV_FALLOFF));
+    if (n === state.hovered){
+      // hover overrides FOV dim
+      n.mFill.opacity  = n.type === 'pent' ? 0.34 : 0.24;
+      n.mEdges.opacity = 1.0;
+    } else {
+      if (n.removeFade !== undefined) mult *= n.removeFade;
+      n.mFill.opacity  = n.restFill  * mult;
+      n.mEdges.opacity = n.restEdges * mult;
+    }
+  }
+
+  state.fovInCount = inFov.size;
+  state.fovMaxDepth = maxDepth < 0 ? 0 : maxDepth;
+}
+
+// ═══ §M HUD + guide ════════════════════════════════════════════════════════
+const midEl  = document.getElementById('mid');
+const midBig = document.getElementById('midbig');
+const midSub = document.getElementById('midsub');
+
+function updateGuide(){
+  if (!G.pent){
+    midEl.classList.remove('hidden');
+    midBig.textContent = 'click anywhere';
+    midSub.textContent = 'seed pent · then hover faces to grow · alt-click to remove';
+  } else if (G.nodes.size === 1){
+    midEl.classList.remove('hidden');
+    midBig.textContent = 'hover the pentagon';
+    midSub.textContent = 'gold dots = free edges · click near one';
+  } else {
+    midEl.classList.add('hidden');
+  }
+}
+
+const $ = id => document.getElementById(id);
+const eNodes = $('g-nodes'), eEdges = $('g-edges'), eDepth = $('g-depth');
+const eNp = $('g-np'), eNh = $('g-nh'), eFree = $('g-free');
+const eEb = $('g-eb'), eAnim = $('g-anim'), eRem = $('g-rem'), eMs = $('g-ms');
+const hId = $('h-id'), hLayer = $('h-layer'), hFree = $('h-free');
+const hNext = $('h-next'), hEnergy = $('h-energy');
+const fIn = $('f-in'), fTotal = $('f-total'), fDepth = $('f-depth');
+
+function updateHUD(ms){
+  let np = 0, nh = 0, eBend = 0;
+  for (const n of G.nodes.values()){
+    if (n.type === 'pent') np++;
+    else { nh++; eBend += (n.foldCurrent ?? 0) ** 2; }
+  }
+  eNodes.textContent = G.nodes.size;
+  eEdges.textContent = (() => { let s = 0; for (const n of G.nodes.values()) s += n.bound.size; return s; })();
+  eDepth.textContent = G.depth();
+  eNp.textContent = np;
+  eNh.textContent = nh;
+  eFree.textContent = G.totalFreeEdges();
+  eEb.textContent = eBend.toFixed(3);
+  eAnim.textContent = state.animating.size;
+  eRem.textContent = state.removing.size;
+  eMs.textContent = ms.toFixed(1);
+
+  fIn.textContent = state.fovInCount;
+  fTotal.textContent = G.nodes.size;
+  fDepth.textContent = state.fovMaxDepth;
+
+  if (state.hovered){
+    const n = state.hovered;
+    const free = G.freeEdgesOf(n);
+    const tc  = n.type === 'pent' ? 'pent-tone' : 'hex-tone';
+    hId.innerHTML     = `<span class="${tc}">${n.type}</span> · node <b>#${n.id}</b>`;
+    hLayer.innerHTML  = `layer <b>${n.layer}</b>`;
+    hFree.innerHTML   = `free edges <b class="gold-tone">${free.length}</b>`;
+    const nextDeg = (n.type === 'pent' ? DIHEDRAL_PENT_HEX : DIHEDRAL_HEX_HEX) * 180 / Math.PI;
+    const nextLabel = n.type === 'pent' ? 'pent–hex' : 'hex–hex';
+    hNext.innerHTML   = `next θ <b>${nextDeg.toFixed(2)}°</b> · <span class="${tc}">${nextLabel}</span>`;
+    const e = (n.foldCurrent !== undefined) ? n.foldCurrent * n.foldCurrent : 0;
+    hEnergy.innerHTML = `E = <b>${e.toFixed(3)}</b>`;
+  } else {
+    hId.textContent = '—';
+    hLayer.textContent = 'layer —';
+    hFree.textContent = 'free edges —';
+    hNext.textContent = 'next θ —';
+    hEnergy.textContent = 'E = —';
+  }
+}
+
+// ═══ §N loop (uses renderer.setAnimationLoop so VR/desktop both work) ═════
+function frame(){
+  const t0 = performance.now();
+
+  updateAnimations(t0);
+  updateCam();
+  updateHover();
+  if (state.hovered) updateFreeEdgeMarkers();
+  updateFovDim();
+
+  // pulse the markers a tiny bit for VR readability
+  markerMat.opacity = 0.8 + 0.2 * Math.sin(t0 * 0.005);
+
+  renderer.render(scene, camera);
+  const ms = performance.now() - t0;
+  updateHUD(ms);
+}
+renderer.setAnimationLoop(frame);
+
+updateCam();
+updateGuide();
+</script>
+</body>
+</html>

@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>lattice probe v3</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 100%; height: 100%;
+    background: #050510; color: #e0f0ff;
+    font-family: 'Share Tech Mono', 'Consolas', 'Menlo', monospace;
+    overflow: hidden; user-select: none;
+  }
+  #cv { position: fixed; inset: 0; cursor: crosshair; display: block; }
+  .panel {
+    position: fixed; padding: 12px 14px;
+    font-size: 11px; line-height: 1.7; letter-spacing: 0.04em;
+  }
+  #hud    { top: 16px; left: 16px; pointer-events: none; max-width: 520px; }
+  #legend { top: 16px; right: 16px; pointer-events: none; text-align: right; }
+  #picked { bottom: 16px; left: 16px; pointer-events: none; max-width: 360px; }
+  #ctl    { bottom: 16px; right: 16px; text-align: right; }
+  #hint   { bottom: 16px; left: 50%; transform: translateX(-50%);
+            pointer-events: none; color: #7090a0; }
+
+  #status {
+    position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    color: #ffd700; font-size: 14px; letter-spacing: 0.15em; text-transform: uppercase;
+    pointer-events: none; transition: opacity 0.2s;
+  }
+  #err {
+    position: fixed; top: 0; left: 0; right: 0;
+    background: #ff3050cc; color: #fff;
+    padding: 16px 20px; font-size: 12px; line-height: 1.5;
+    white-space: pre-wrap; display: none; z-index: 1000;
+  }
+
+  .lbl  { color: #7090a0; }
+  .gold { color: #ffd700; }
+  .pent { color: #ff6b35; }
+  .hex  { color: #00d4ff; }
+  b { color: #00d4ff; font-weight: normal; }
+  .active { color: #ffd700; }
+
+  .btn {
+    display: inline-block; padding: 4px 12px; margin-left: 8px;
+    border: 1px solid #2a4858; cursor: pointer; color: #7090a0;
+    user-select: none; transition: all 0.15s; font-size: 11px;
+  }
+  .btn:hover { color: #e0f0ff; border-color: #4060a0; }
+  .btn.on { color: #ffd700; border-color: #ffd700; background: #ffd70011; }
+
+  input[type=range] { width: 140px; vertical-align: middle; accent-color: #ffd700; }
+  .row { margin: 4px 0; }
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+<div id="err"></div>
+<div id="status">booting...</div>
+
+<div id="hud" class="panel">
+  <div class="lbl">lattice probe v3 &middot; unit-distance graph (shell-aware)</div>
+  <div><span class="lbl">ring</span> <b id="g-ring">&mdash;</b></div>
+  <div><span class="lbl">points</span> <b id="g-pts">&mdash;</b> &nbsp; <span class="lbl">edges</span> <b id="g-edges">&mdash;</b> &nbsp; <span class="lbl">extent N</span> <b id="g-N">&mdash;</b></div>
+  <div><span class="lbl">shell</span> <b id="g-shell">&mdash;</b> &middot; <span class="lbl">d&sup2; =</span> <b id="g-chord">&mdash;</b> &middot; <span class="lbl">d =</span> <b id="g-chordr">&mdash;</b></div>
+  <div><span class="lbl">spectrum</span> <span id="g-shells" class="lbl">&mdash;</span></div>
+  <div><span class="lbl">degree</span> min <b id="g-degmin">&mdash;</b> &middot; max <b id="g-degmax">&mdash;</b> &middot; mean <b id="g-degavg">&mdash;</b></div>
+  <div><span class="lbl">symmetry</span> <b id="g-sym">&mdash;</b></div>
+</div>
+
+<div id="legend" class="panel">
+  <div class="lbl">click vertex &middot; scroll zoom &middot; drag pan</div>
+  <div class="lbl"><span class="gold">gold</span> selected + neighbours</div>
+  <div class="lbl"><span class="pent">orange</span> vertices</div>
+  <div class="lbl"><span class="hex">cyan</span> edges</div>
+</div>
+
+<div id="picked" class="panel"></div>
+
+<div id="hint" class="panel">first paint coming up...</div>
+
+<div id="ctl" class="panel">
+  <div class="row">
+    <span class="btn on" id="b-eis">Z[i, rho] &middot; hex</span>
+    <span class="btn"    id="b-zet">Z[zeta_5] &middot; pent</span>
+  </div>
+  <div class="row"><span class="lbl">extent N</span>
+    <input id="i-N" type="range" min="1" max="3" value="2" step="1">
+  </div>
+  <div class="row"><span class="lbl">shell index</span>
+    <input id="i-S" type="range" min="0" max="7" value="1" step="1">
+  </div>
+</div>
+
+<script>
+window.onerror = function(msg, src, line, col, err){
+  var e = document.getElementById('err');
+  e.style.display = 'block';
+  e.textContent = 'JS ERROR: ' + msg + ' (line ' + line + ', col ' + col + ')';
+  if (err && err.stack) e.textContent += '\n\n' + err.stack;
+  var s = document.getElementById('status');
+  if (s) s.style.display = 'none';
+  return false;
+};
+
+(function(){
+"use strict";
+
+function $(id){ return document.getElementById(id); }
+function setStatus(msg){ var s = $('status'); if (s) s.textContent = msg; }
+function hideStatus(){ var s = $('status'); if (s) s.style.display = 'none'; }
+setStatus('booting');
+
+// ─── §A Rings ──────────────────────────────────────────────────────────────
+var RINGS = {
+  E: {
+    display: '\u2124[i, \u03C1] \u00B7 hex',
+    sym:     'D_12 (order 24)',
+    notes:   '12-fold dihedral (12th cyclotomic)',
+    gens: [
+      { tag: '1',    re: 1,                          im: 0                          },
+      { tag: 'i',    re: 0,                          im: 1                          },
+      { tag: 'rho',  re: Math.cos(Math.PI/3),        im: Math.sin(Math.PI/3)        },
+      { tag: 'irho', re: Math.cos(5 * Math.PI / 6),  im: Math.sin(5 * Math.PI / 6)  }
+    ]
+  },
+  Z: {
+    display: '\u2124[\u03B6\u2085] \u00B7 pent',
+    sym:     'D_10 (order 20) -- contains golden ratio',
+    notes:   '5-fold dihedral (5th cyclotomic, icosahedral neighbourhood)',
+    gens: [
+      { tag: '1',  re: Math.cos(0),                im: Math.sin(0)                 },
+      { tag: 'z',  re: Math.cos(2 * Math.PI / 5),  im: Math.sin(2 * Math.PI / 5)   },
+      { tag: 'z2', re: Math.cos(4 * Math.PI / 5),  im: Math.sin(4 * Math.PI / 5)   },
+      { tag: 'z3', re: Math.cos(6 * Math.PI / 5),  im: Math.sin(6 * Math.PI / 5)   }
+    ]
+  }
+};
+
+// ─── §B state ──────────────────────────────────────────────────────────────
+var state = {
+  ring:     'E',
+  N:        2,
+  shellIdx: 1,        // default to second-smallest shell (often = unit)
+  shells:   [],       // sorted unique squared-distances achievable in current ring
+  chord2:   1,        // resolved from shells[shellIdx]
+  points:   [],
+  edges:    [],
+  adj:      [],
+  picked:   -1,
+  view:     { cx: 0, cy: 0, scale: 60 }
+};
+
+// ─── §C canvas ─────────────────────────────────────────────────────────────
+setStatus('canvas');
+var cv  = $('cv');
+var ctx = cv.getContext('2d');
+function fitCanvas(){
+  var dpr = window.devicePixelRatio || 1;
+  cv.width  = window.innerWidth  * dpr;
+  cv.height = window.innerHeight * dpr;
+  cv.style.width  = window.innerWidth  + 'px';
+  cv.style.height = window.innerHeight + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+fitCanvas();
+window.addEventListener('resize', function(){ fitCanvas(); draw(); });
+
+function w2s(re, im){
+  return {
+    x: window.innerWidth  / 2 + (re - state.view.cx) * state.view.scale,
+    y: window.innerHeight / 2 - (im - state.view.cy) * state.view.scale
+  };
+}
+function s2w(x, y){
+  return {
+    re: state.view.cx + (x - window.innerWidth  / 2) / state.view.scale,
+    im: state.view.cy - (y - window.innerHeight / 2) / state.view.scale
+  };
+}
+
+// ─── §D points ─────────────────────────────────────────────────────────────
+function buildPoints(){
+  setStatus('building points');
+  var ring = RINGS[state.ring];
+  var N    = state.N;
+  var pts  = [];
+  for (var a = -N; a <= N; a++){
+    for (var b = -N; b <= N; b++){
+      for (var c = -N; c <= N; c++){
+        for (var d = -N; d <= N; d++){
+          var re = 0, im = 0;
+          var cs = [a, b, c, d];
+          for (var k = 0; k < 4; k++){
+            re += cs[k] * ring.gens[k].re;
+            im += cs[k] * ring.gens[k].im;
+          }
+          pts.push({ re: re, im: im, coeffs: cs });
+        }
+      }
+    }
+  }
+  state.points = pts;
+}
+
+// ─── §E shell discovery — the actual distance spectrum of the ring ─────────
+// Discovered by sampling distances from the centermost lattice point. By
+// translation-invariance of the ring, this captures all achievable pair-
+// distances (modulo boundary effects on the largest shells).
+function computeShells(){
+  // find most central point (closest to origin)
+  var bestIdx = 0, bestD2 = Infinity;
+  for (var i = 0; i < state.points.length; i++){
+    var p = state.points[i];
+    var d2 = p.re * p.re + p.im * p.im;
+    if (d2 < bestD2){ bestD2 = d2; bestIdx = i; }
+  }
+  var c = state.points[bestIdx];
+
+  // gather unique squared distances (rounded for floating-point stability)
+  var seen = {};
+  var shells = [];
+  for (var i = 0; i < state.points.length; i++){
+    if (i === bestIdx) continue;
+    var dx = state.points[i].re - c.re;
+    var dy = state.points[i].im - c.im;
+    var d2 = dx * dx + dy * dy;
+    if (d2 < 1e-8) continue;
+    var key = d2.toFixed(5);
+    if (!seen[key]){
+      seen[key] = true;
+      shells.push(d2);
+    }
+  }
+  shells.sort(function(a, b){ return a - b; });
+  return shells;
+}
+
+// ─── §F edges ──────────────────────────────────────────────────────────────
+function buildEdges(){
+  var pts = state.points;
+  var target = Math.sqrt(state.chord2);
+  // tolerance scaled with target — small irrational d² values need looser abs tol
+  var tol = Math.max(1e-7, state.chord2 * 1e-5);
+  var cell = target + 0.1;
+  var grid = {};
+  for (var i = 0; i < pts.length; i++){
+    var k = Math.floor(pts[i].re / cell) + ',' + Math.floor(pts[i].im / cell);
+    if (!grid[k]) grid[k] = [];
+    grid[k].push(i);
+  }
+  var edges = [];
+  var adj = [];
+  for (var i = 0; i < pts.length; i++) adj.push([]);
+  for (var i = 0; i < pts.length; i++){
+    var gx = Math.floor(pts[i].re / cell);
+    var gy = Math.floor(pts[i].im / cell);
+    for (var dx = -1; dx <= 1; dx++){
+      for (var dy = -1; dy <= 1; dy++){
+        var bucket = grid[(gx + dx) + ',' + (gy + dy)];
+        if (!bucket) continue;
+        for (var bi = 0; bi < bucket.length; bi++){
+          var j = bucket[bi];
+          if (j <= i) continue;
+          var ddx = pts[i].re - pts[j].re;
+          var ddy = pts[i].im - pts[j].im;
+          var d2  = ddx * ddx + ddy * ddy;
+          if (Math.abs(d2 - state.chord2) < tol){
+            edges.push([i, j]);
+            adj[i].push(j); adj[j].push(i);
+          }
+        }
+      }
+    }
+  }
+  state.edges = edges;
+  state.adj   = adj;
+}
+
+// ─── §G orchestration ──────────────────────────────────────────────────────
+function rebuild(){
+  setStatus('building');
+  buildPoints();
+  setStatus('finding distance spectrum');
+  state.shells = computeShells();
+  if (state.shellIdx >= state.shells.length) state.shellIdx = state.shells.length - 1;
+  if (state.shellIdx < 0) state.shellIdx = 0;
+  state.chord2 = state.shells[state.shellIdx];
+  // sync slider
+  var sl = $('i-S');
+  sl.max = Math.min(7, state.shells.length - 1);
+  sl.value = state.shellIdx;
+  setStatus('matching edges (shell ' + (state.shellIdx + 1) + ', d\u00B2 = ' + state.chord2.toFixed(3) + ')');
+  buildEdges();
+  fitView();
+  updateHUD();
+  draw();
+  hideStatus();
+  $('hint').textContent = 'click vertex \u00B7 scroll zoom \u00B7 drag pan';
+}
+
+function fitView(){
+  if (state.points.length === 0) return;
+  var mnR = Infinity, mxR = -Infinity, mnI = Infinity, mxI = -Infinity;
+  for (var i = 0; i < state.points.length; i++){
+    var p = state.points[i];
+    if (p.re < mnR) mnR = p.re;
+    if (p.re > mxR) mxR = p.re;
+    if (p.im < mnI) mnI = p.im;
+    if (p.im > mxI) mxI = p.im;
+  }
+  state.view.cx = (mnR + mxR) / 2;
+  state.view.cy = (mnI + mxI) / 2;
+  var spanX = Math.max(0.1, mxR - mnR);
+  var spanY = Math.max(0.1, mxI - mnI);
+  var margin = 80;
+  state.view.scale = Math.min(
+    (window.innerWidth  - margin * 2) / spanX,
+    (window.innerHeight - margin * 2) / spanY
+  );
+}
+
+// ─── §H draw ───────────────────────────────────────────────────────────────
+function draw(){
+  ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+  var picked = state.picked;
+
+  var hiEdge = {};
+  if (picked >= 0){
+    var nbs = state.adj[picked];
+    for (var i = 0; i < nbs.length; i++){
+      var j = nbs[i];
+      var k = picked < j ? (picked + ',' + j) : (j + ',' + picked);
+      hiEdge[k] = true;
+    }
+  }
+
+  ctx.lineWidth = 0.6;
+  ctx.strokeStyle = 'rgba(0, 212, 255, 0.35)';
+  ctx.beginPath();
+  for (var e = 0; e < state.edges.length; e++){
+    var i = state.edges[e][0], j = state.edges[e][1];
+    if (hiEdge[i + ',' + j]) continue;
+    var pa = w2s(state.points[i].re, state.points[i].im);
+    var pb = w2s(state.points[j].re, state.points[j].im);
+    ctx.moveTo(pa.x, pa.y);
+    ctx.lineTo(pb.x, pb.y);
+  }
+  ctx.stroke();
+
+  if (picked >= 0){
+    ctx.lineWidth = 1.8;
+    ctx.strokeStyle = '#ffd700';
+    ctx.beginPath();
+    for (var e = 0; e < state.edges.length; e++){
+      var i = state.edges[e][0], j = state.edges[e][1];
+      if (!hiEdge[i + ',' + j]) continue;
+      var pa = w2s(state.points[i].re, state.points[i].im);
+      var pb = w2s(state.points[j].re, state.points[j].im);
+      ctx.moveTo(pa.x, pa.y);
+      ctx.lineTo(pb.x, pb.y);
+    }
+    ctx.stroke();
+  }
+
+  var hiSet = {};
+  if (picked >= 0){
+    hiSet[picked] = true;
+    var nbs2 = state.adj[picked];
+    for (var i = 0; i < nbs2.length; i++) hiSet[nbs2[i]] = true;
+  }
+  for (var i = 0; i < state.points.length; i++){
+    var p = w2s(state.points[i].re, state.points[i].im);
+    if (i === picked){
+      ctx.fillStyle = '#ffd700';
+      ctx.beginPath(); ctx.arc(p.x, p.y, 5, 0, 6.2832); ctx.fill();
+    } else if (hiSet[i]){
+      ctx.fillStyle = '#ffd700';
+      ctx.beginPath(); ctx.arc(p.x, p.y, 3, 0, 6.2832); ctx.fill();
+    } else {
+      ctx.fillStyle = '#ff6b35';
+      ctx.beginPath(); ctx.arc(p.x, p.y, 2.2, 0, 6.2832); ctx.fill();
+    }
+  }
+}
+
+// ─── §I HUD ────────────────────────────────────────────────────────────────
+function updateHUD(){
+  var ring = RINGS[state.ring];
+  $('g-ring').textContent    = ring.display + ' \u00B7 ' + ring.notes;
+  $('g-pts').textContent     = state.points.length;
+  $('g-edges').textContent   = state.edges.length;
+  $('g-N').textContent       = state.N;
+  $('g-shell').textContent   = (state.shellIdx + 1) + ' / ' + state.shells.length;
+  $('g-chord').textContent   = state.chord2.toFixed(4);
+  $('g-chordr').textContent  = Math.sqrt(state.chord2).toFixed(4);
+  $('g-sym').textContent     = ring.sym;
+
+  // Render shell spectrum with active one highlighted in gold brackets
+  var shellHTML = state.shells.slice(0, 8).map(function(d2, i){
+    var s = d2.toFixed(3);
+    return (i === state.shellIdx)
+      ? '<span class="active">[' + s + ']</span>'
+      : '<span class="lbl">' + s + '</span>';
+  }).join(' &middot; ');
+  if (state.shells.length > 8) shellHTML += ' &middot; <span class="lbl">+' + (state.shells.length - 8) + '</span>';
+  $('g-shells').innerHTML = shellHTML;
+
+  if (state.adj.length > 0){
+    var mn = Infinity, mx = -Infinity, sum = 0;
+    for (var i = 0; i < state.adj.length; i++){
+      var dl = state.adj[i].length;
+      if (dl < mn) mn = dl;
+      if (dl > mx) mx = dl;
+      sum += dl;
+    }
+    $('g-degmin').textContent = mn;
+    $('g-degmax').textContent = mx;
+    $('g-degavg').textContent = (sum / state.adj.length).toFixed(2);
+  }
+  updatePickedPanel();
+}
+
+function fmtCoeffs(p, ring){
+  var s = '';
+  for (var k = 0; k < 4; k++){
+    var c = p.coeffs[k];
+    if (c === 0) continue;
+    var tag = ring.gens[k].tag;
+    if (s === ''){
+      s = (c < 0 ? '-' : '') + Math.abs(c) + '\u00B7' + tag;
+    } else {
+      s += (c < 0 ? ' - ' : ' + ') + Math.abs(c) + '\u00B7' + tag;
+    }
+  }
+  return s || '0';
+}
+
+function updatePickedPanel(){
+  var el = $('picked');
+  if (state.picked < 0){ el.innerHTML = ''; return; }
+  var p    = state.points[state.picked];
+  var ring = RINGS[state.ring];
+  el.innerHTML =
+    '<div class="gold"><span class="lbl">selected</span> <b>#' + state.picked + '</b></div>' +
+    '<div><span class="lbl">coords</span> ' + fmtCoeffs(p, ring) + '</div>' +
+    '<div><span class="lbl">in C</span> ' + p.re.toFixed(3) + ' + ' + p.im.toFixed(3) + 'i</div>' +
+    '<div><span class="lbl">|z|</span> ' + Math.sqrt(p.re * p.re + p.im * p.im).toFixed(3) + '</div>' +
+    '<div class="gold"><span class="lbl">degree at shell ' + (state.shellIdx + 1) + '</span> <b>' + state.adj[state.picked].length + '</b></div>';
+}
+
+// ─── §J interaction ────────────────────────────────────────────────────────
+cv.addEventListener('mousedown', function(ev){
+  var sx = ev.clientX, sy = ev.clientY;
+  var cx0 = state.view.cx, cy0 = state.view.cy;
+  var moved = false;
+  function move(e){
+    if (Math.hypot(e.clientX - sx, e.clientY - sy) > 4) moved = true;
+    if (moved){
+      state.view.cx = cx0 - (e.clientX - sx) / state.view.scale;
+      state.view.cy = cy0 + (e.clientY - sy) / state.view.scale;
+      draw();
+    }
+  }
+  function up(e){
+    window.removeEventListener('mousemove', move);
+    window.removeEventListener('mouseup', up);
+    if (!moved){
+      var w = s2w(e.clientX, e.clientY);
+      var best = -1, bestD2 = Math.pow(12 / state.view.scale, 2);
+      for (var i = 0; i < state.points.length; i++){
+        var dx = state.points[i].re - w.re;
+        var dy = state.points[i].im - w.im;
+        var d2 = dx * dx + dy * dy;
+        if (d2 < bestD2){ bestD2 = d2; best = i; }
+      }
+      state.picked = (best === state.picked) ? -1 : best;
+      updatePickedPanel();
+      draw();
+    }
+  }
+  window.addEventListener('mousemove', move);
+  window.addEventListener('mouseup', up);
+});
+
+cv.addEventListener('wheel', function(e){
+  e.preventDefault();
+  var factor = Math.exp(-e.deltaY * 0.001);
+  state.view.scale = Math.max(8, Math.min(800, state.view.scale * factor));
+  draw();
+}, { passive: false });
+
+function pickRing(which){
+  state.ring   = which;
+  state.picked = -1;
+  $('b-eis').classList.toggle('on', which === 'E');
+  $('b-zet').classList.toggle('on', which === 'Z');
+  rebuild();
+}
+$('b-eis').addEventListener('click', function(){ pickRing('E'); });
+$('b-zet').addEventListener('click', function(){ pickRing('Z'); });
+
+$('i-N').addEventListener('input', function(e){
+  state.N      = +e.target.value;
+  state.picked = -1;
+  rebuild();
+});
+$('i-S').addEventListener('input', function(e){
+  state.shellIdx = +e.target.value;
+  state.picked   = -1;
+  // Re-resolve chord and rebuild edges only (points are still valid)
+  state.chord2 = state.shells[state.shellIdx];
+  buildEdges();
+  updateHUD();
+  draw();
+});
+
+// ─── §K boot ───────────────────────────────────────────────────────────────
+setStatus('first build');
+rebuild();
+
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HOLDINGIUM v1.0 — the ownership graph · which parent lets engineering breathe</title>
+<style>
+  :root{
+    --bg:#0a0e14; --panel:#111823; --panel2:#0d141d; --line:#1a2a3a;
+    --ink:#cfe3f2; --dim:#6d8299; --dimmer:#40566b;
+    --cyan:#00d4ff; --green:#00ffd5; --pink:#ff4d6d; --gold:#ffd166; --orange:#ff9040;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--mono);}
+  body{padding:18px;max-width:1320px;margin:0 auto;line-height:1.45;}
+  a{color:var(--cyan);text-decoration:none}
+  header{border-bottom:1px solid var(--line);padding-bottom:12px;margin-bottom:14px;}
+  h1{font-size:15px;letter-spacing:.14em;margin:0;color:#eaf4fb;text-transform:uppercase;font-weight:700}
+  .sub{font-size:12px;color:var(--dim);margin-top:5px;letter-spacing:.03em}
+  .stamp{font-size:10.5px;color:var(--dimmer);letter-spacing:.16em;text-transform:uppercase;margin-top:7px}
+  .grid{display:grid;grid-template-columns:1fr 380px;gap:14px;align-items:start}
+  @media(max-width:920px){.grid{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:9px;overflow:hidden}
+  .card h2{font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim);
+    margin:0;padding:9px 12px;border-bottom:1px solid var(--line);background:var(--panel2);font-weight:600}
+  svg{display:block;width:100%;height:auto;background:transparent;touch-action:manipulation}
+  .n-label{font:600 11px var(--mono);fill:#eaf4fb;pointer-events:none}
+  .n-ex{font:10px var(--mono);fill:var(--dim);pointer-events:none}
+  .n-kind{font:9px var(--mono);fill:var(--dimmer);letter-spacing:.1em;pointer-events:none}
+  .n-score{font:700 11px var(--mono);pointer-events:none}
+  .node{cursor:pointer}
+  .node rect{transition:stroke .12s,filter .12s}
+  .edgehit{cursor:pointer;stroke:transparent;stroke-width:16;fill:none}
+  .axislab{font:10px var(--mono);fill:var(--dim)}
+  .axistick{font:9px var(--mono);fill:var(--dimmer)}
+  .ptlab{font:9.5px var(--mono);fill:#cfe3f2;pointer-events:none}
+  .controls{display:flex;flex-wrap:wrap;gap:7px;padding:10px 12px;border-bottom:1px solid var(--line)}
+  button{font:600 11px var(--mono);letter-spacing:.04em;color:var(--ink);background:#16212e;
+    border:1px solid #26384a;border-radius:6px;padding:6px 10px;cursor:pointer}
+  button:hover{border-color:var(--cyan);color:#eaf4fb}
+  button:focus-visible,.node:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+  button.armed{border-color:var(--gold);color:var(--gold);background:#20242a}
+  button.warn:hover{border-color:var(--pink);color:#ffd9df}
+  .panelbody{padding:12px}
+  .muted{color:var(--dim)}
+  .row{display:flex;justify-content:space-between;gap:10px;padding:3px 0;border-bottom:1px dotted var(--line);font-size:12px}
+  .row:last-child{border-bottom:0}
+  .k{color:var(--dim)} .v{color:#eaf4fb;font-weight:600;text-align:right}
+  .chain{margin:8px 0;font-size:11.5px}
+  .hop{display:flex;align-items:center;gap:7px;padding:3px 0}
+  .dot{width:8px;height:8px;border-radius:50%;flex:0 0 auto}
+  .pill{font-size:9.5px;padding:1px 6px;border-radius:20px;letter-spacing:.05em}
+  .prot{color:#04150f;background:var(--green)} .extr{color:#1a0509;background:var(--pink)}
+  .verdict{margin-top:10px;padding:9px 10px;border-radius:7px;font-size:12px;line-height:1.5;border:1px solid var(--line)}
+  .formula{font-size:11px;color:var(--dim);background:var(--panel2);border:1px solid var(--line);
+    border-radius:7px;padding:9px 10px;margin-top:10px;line-height:1.6}
+  .formula b{color:var(--cyan);font-weight:600}
+  .legend{display:flex;flex-wrap:wrap;gap:12px;font-size:11px;color:var(--dim);margin-top:10px;align-items:center}
+  .legend span{display:inline-flex;align-items:center;gap:5px}
+  .hint{font-size:11px;color:var(--dim);padding:8px 12px;background:var(--panel2);border-top:1px solid var(--line)}
+  .caveat{font-size:11px;color:var(--dimmer);line-height:1.6;margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
+  code{color:var(--gold);font-size:11px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Holdingium <span style="color:var(--dimmer)">v1.0</span></h1>
+  <div class="sub">Corporate ownership as a graph. Score how much room engineering has to breathe under each owner — then restructure and watch it move.</div>
+  <div class="stamp">two graphs, one screen · ownership × authority · which parent is patient, which is hungry</div>
+</header>
+
+<div class="grid">
+  <div class="card">
+    <h2>Ownership graph — click an edge to flip patient ↔ hungry</h2>
+    <div class="controls">
+      <button id="btnMove">Move selected under… <span class="muted">(then click a new owner)</span></button>
+      <button id="btnSpin" class="warn">Spin out → standalone</button>
+      <button id="btnReset">Reset</button>
+    </div>
+    <div id="graphwrap"><svg id="graph" viewBox="0 0 760 470" role="img" aria-label="Corporate ownership graph"></svg></div>
+    <div class="hint" id="hint">Click any company to inspect it. Green edges = patient owners (engineering breathes). Red edges = value-extracting owners (engineering suffocates).</div>
+  </div>
+
+  <div>
+    <div class="card">
+      <h2>Phase space — autonomy × extraction</h2>
+      <svg id="phase" viewBox="0 0 380 300" role="img" aria-label="Phase space of operating companies"></svg>
+      <div class="hint">Each dot is an operating company. Bottom-right = the optimal zone: high self-control, low extraction. That's where papa wants to work.</div>
+    </div>
+
+    <div class="card" style="margin-top:14px">
+      <h2 id="selHead">Inspector</h2>
+      <div class="panelbody" id="panel">
+        <div class="muted">Click a company in the graph to see its path to the top and its engineering breathing-room score.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="caveat">
+  <b style="color:var(--dim)">Honest boundaries.</b> This is a heuristic model with tunable weights, not a claim about any real company's internals. Ownership here is a single-parent forest (real webs can have many parents — a known simplification). Named companies are stable, well-documented examples attached to <em>archetypes</em>; the graph is fully editable, so plug in real ones and tune the edges yourself. Incomplete is fine. Fake is not.
+  <div style="margin-top:8px">score = autonomy × (1 − extraction) · a graph is a graph · built for the job hunt · v1.0</div>
+</div>
+
+<script>
+"use strict";
+/* ---------- palette ---------- */
+var C={bg:"#0a0e14",panel:"#111823",line:"#1a2a3a",ink:"#cfe3f2",dim:"#6d8299",
+       cyan:"#00d4ff",green:"#00ffd5",pink:"#ff4d6d",gold:"#ffd166",orange:"#ff9040"};
+
+/* ---------- seed universe: archetypes + real-example labels ---------- */
+/* pressure < 0 => patient/protective owner ; pressure > 0 => extractive owner */
+function seed(){
+  return {
+    nodes:[
+      // A — patient holding company (Berkshire-style)
+      {id:"H1",name:"Patient Holdco",kind:"holder",ex:"e.g. Berkshire Hathaway"},
+      {id:"A1",name:"Rail Freight Co",kind:"op",autonomy:0.86,ex:"e.g. BNSF"},
+      {id:"A2",name:"Precision Casting Co",kind:"op",autonomy:0.80,ex:"e.g. Precision Castparts"},
+      // B — foundation + trust (Bosch-style)
+      {id:"F1",name:"Charitable Foundation",kind:"holder",ex:"e.g. Bosch Stiftung · 94% capital, ~0 votes"},
+      {id:"F2",name:"Industrial Trust",kind:"holder",ex:"e.g. Bosch Industrietreuhand · holds the votes"},
+      {id:"B0",name:"Engineering GmbH",kind:"op",autonomy:0.90,ex:"e.g. Robert Bosch GmbH"},
+      {id:"B1",name:"Mobility Division",kind:"op",autonomy:0.84,ex:"drives, sensors"},
+      {id:"B2",name:"Power Tools Division",kind:"op",autonomy:0.82,ex:"hardware"},
+      // C — leveraged PE rollup (extractive)
+      {id:"P1",name:"PE Buyout Fund",kind:"holder",ex:"debt · strip · flip in 5y"},
+      {id:"P2",name:"Leveraged RollupCo",kind:"holder",ex:"debt-loaded platform"},
+      {id:"C1",name:"Acquired Machine Shop",kind:"op",autonomy:0.74,ex:"strong engineers, hungry owner"},
+      {id:"C2",name:"Acquired Controls Firm",kind:"op",autonomy:0.72,ex:"good IP, being milked"},
+      // D — quarterly-driven public conglomerate
+      {id:"Q1",name:"Public Conglomerate",kind:"holder",ex:"quarterly · activist on register"},
+      {id:"Q2",name:"Division Under Pressure",kind:"op",autonomy:0.70,ex:"cut to hit the number"},
+      // E — founder-led standalone (its own root)
+      {id:"E1",name:"Founder-Led Co",kind:"op",autonomy:0.92,ex:"founder super-voting shares · no parent"},
+      // F — state holding
+      {id:"S1",name:"State Holding",kind:"holder",ex:"sovereign owner · patient but political"},
+      {id:"S2",name:"National Champion",kind:"op",autonomy:0.76,ex:"patient capital, non-eng goals"}
+    ],
+    edges:[
+      {parent:"H1",child:"A1",pressure:-0.15},
+      {parent:"H1",child:"A2",pressure:-0.10},
+      {parent:"F1",child:"F2",pressure:-0.20},
+      {parent:"F2",child:"B0",pressure:-0.25},
+      {parent:"B0",child:"B1",pressure:-0.10},
+      {parent:"B0",child:"B2",pressure:-0.10},
+      {parent:"P1",child:"P2",pressure: 0.55},
+      {parent:"P2",child:"C1",pressure: 0.50},
+      {parent:"P2",child:"C2",pressure: 0.50},
+      {parent:"Q1",child:"Q2",pressure: 0.35},
+      {parent:"S1",child:"S2",pressure: 0.10}
+    ]
+  };
+}
+var G=seed(), selected=null, moveArm=false;
+var PROT=-0.15, EXTR=0.5; // presets when flipping an edge
+
+/* ---------- graph helpers ---------- */
+function node(id){return G.nodes.find(function(n){return n.id===id});}
+function parentEdge(id){return G.edges.find(function(e){return e.child===id});}
+function childrenOf(id){return G.edges.filter(function(e){return e.parent===id}).map(function(e){return e.child});}
+function pathEdges(id){var p=[],cur=id,e;while((e=parentEdge(cur))){p.push(e);cur=e.parent;if(p.length>20)break;}return p;}
+function isDescendant(a,b){ // is a within b's subtree?
+  var stack=childrenOf(b),seen={};
+  while(stack.length){var x=stack.pop();if(x===a)return true;if(seen[x])continue;seen[x]=1;stack=stack.concat(childrenOf(x));}
+  return false;
+}
+function clamp(v,lo,hi){return v<lo?lo:v>hi?hi:v;}
+
+/* ---------- scoring ---------- */
+function score(n){
+  if(n.kind!=="op") return null;
+  var path=pathEdges(n.id), drain=0, shield=0;
+  path.forEach(function(e){ if(e.pressure>0) drain+=e.pressure; else shield+=-e.pressure; });
+  var extraction=clamp(drain-0.4*shield,0,1);      // y-axis: net value pulled out by owners
+  var breathing=clamp(n.autonomy*(1-extraction),0,1); // headline S
+  return {autonomy:n.autonomy,extraction:extraction,S:breathing,path:path,drain:drain,shield:shield};
+}
+/* red -> gold -> green by S */
+function scoreColor(s){
+  var a,b,t;
+  if(s<0.5){a=[255,77,109];b=[255,209,102];t=s/0.5;}
+  else{a=[255,209,102];b=[0,255,213];t=(s-0.5)/0.5;}
+  return "rgb("+Math.round(a[0]+(b[0]-a[0])*t)+","+Math.round(a[1]+(b[1]-a[1])*t)+","+Math.round(a[2]+(b[2]-a[2])*t)+")";
+}
+function edgeColor(p){
+  if(p<=0){var t=clamp(-p/0.3,0,1);return "rgba(0,255,213,"+(0.35+0.5*t)+")";}
+  var t2=clamp(p/0.6,0,1);return "rgba(255,77,109,"+(0.35+0.55*t2)+")";
+}
+
+/* ---------- layered top-down layout (forest) ---------- */
+function layout(){
+  var W=760, depthOf={}, roots=G.nodes.filter(function(n){return !parentEdge(n.id);});
+  function setDepth(id,d){depthOf[id]=d;childrenOf(id).forEach(function(c){setDepth(c,d+1);});}
+  roots.forEach(function(r){setDepth(r.id,0);});
+  var maxD=0;for(var k in depthOf)maxD=Math.max(maxD,depthOf[k]);
+  // assign leaf slots via post-order per root, offset by cumulative leaves
+  var pos={}, slot=0;
+  function place(id){
+    var ch=childrenOf(id);
+    if(ch.length===0){pos[id]={col:slot};slot++;return pos[id].col;}
+    var cols=ch.map(place);
+    pos[id]={col:cols.reduce(function(a,b){return a+b;},0)/cols.length};
+    return pos[id].col;
+  }
+  roots.forEach(function(r){place(r.id);slot+=0.6;/*gap between clusters*/});
+  var totalCols=Math.max(1,slot-0.6);
+  var padX=64, padTop=34, rowH=(maxD>0)?(470-padTop-70)/maxD:0;
+  G.nodes.forEach(function(n){
+    var col=pos[n.id]?pos[n.id].col:0;
+    n._x=padX + (totalCols>1? (col/(totalCols-1))*(W-2*padX) : (W-2*padX)/2);
+    n._y=padTop + depthOf[n.id]*rowH + 10;
+  });
+}
+
+/* ---------- render graph ---------- */
+var NS="http://www.w3.org/2000/svg";
+function el(t,a){var e=document.createElementNS(NS,t);for(var k in a)e.setAttribute(k,a[k]);return e;}
+function renderGraph(){
+  layout();
+  var svg=document.getElementById("graph");svg.innerHTML="";
+  var NW=118,NH=44;
+  // edges first
+  G.edges.forEach(function(e){
+    var p=node(e.parent),c=node(e.child);
+    var x1=p._x,y1=p._y+NH/2,x2=c._x,y2=c._y-NH/2, my=(y1+y2)/2;
+    var d="M"+x1+" "+y1+" C "+x1+" "+my+" "+x2+" "+my+" "+x2+" "+y2;
+    svg.appendChild(el("path",{d:d,fill:"none",stroke:edgeColor(e.pressure),"stroke-width":e.pressure>0?2.3:1.8}));
+    var hit=el("path",{d:d,class:"edgehit"});
+    hit.addEventListener("click",function(ev){ev.stopPropagation();flipEdge(e);});
+    hit.appendChild(el("title",{}));hit.lastChild.textContent=(e.pressure>0?"hungry owner":"patient owner")+" — click to flip";
+    svg.appendChild(hit);
+  });
+  // nodes
+  G.nodes.forEach(function(n){
+    var s=score(n), col=n.kind==="op"?scoreColor(s.S):"#26384a";
+    var g=el("g",{class:"node",tabindex:"0",role:"button","aria-label":n.name});
+    var rect=el("rect",{x:n._x-NW/2,y:n._y-NH/2,width:NW,height:NH,rx:7,
+      fill:n.kind==="op"?"#0f1822":"#0c1119",
+      stroke:selected===n.id?C.gold:(n.kind==="op"?col:"#2a3b4d"),
+      "stroke-width":selected===n.id?2.4:(n.kind==="op"?1.7:1.2)});
+    if(n.kind==="op")rect.setAttribute("style","filter:drop-shadow(0 0 "+(2+8*s.S)+"px "+col+"44)");
+    g.appendChild(rect);
+    g.appendChild(txt(n._x,n._y-6,n.name,"n-label"));
+    g.appendChild(txt(n._x,n._y+7,n.ex,"n-ex",NW-12));
+    if(n.kind==="op"){
+      var st=el("text",{x:n._x+NW/2-8,y:n._y-NH/2+13,"text-anchor":"end",class:"n-score",fill:col});
+      st.textContent=s.S.toFixed(2);g.appendChild(st);
+    }else{
+      g.appendChild(txt(n._x-NW/2+8,n._y-NH/2+13,"OWNER","n-kind"));
+      var ta=el("text",{x:n._x-NW/2+8,y:n._y-NH/2+13,class:"n-kind"});
+    }
+    g.addEventListener("click",function(ev){ev.stopPropagation();onNode(n);});
+    g.addEventListener("keydown",function(ev){if(ev.key==="Enter"||ev.key===" "){ev.preventDefault();onNode(n);}});
+    svg.appendChild(g);
+  });
+  svg.addEventListener("click",function(){disarm();});
+}
+function txt(x,y,s,cls,clip){
+  var t=el("text",{x:x,y:y,"text-anchor":"middle",class:cls});
+  if(clip&&s.length>Math.floor(clip/5.4))s=s.slice(0,Math.floor(clip/5.4)-1)+"…";
+  t.textContent=s;return t;
+}
+
+/* ---------- render phase space ---------- */
+function renderPhase(){
+  var svg=document.getElementById("phase");svg.innerHTML="";
+  var L=42,R=14,T=16,B=40,W=380,H=300,pw=W-L-R,ph=H-T-B;
+  function X(a){return L+a*pw;}            // autonomy 0..1
+  function Y(e){return T+(1-e)*ph;}        // extraction 0..1 (0 at bottom)
+  // optimal zone: autonomy>0.7, extraction<0.25  => bottom-right
+  svg.appendChild(el("rect",{x:X(0.7),y:Y(0.25),width:X(1)-X(0.7),height:Y(0)-Y(0.25),
+    fill:"rgba(0,255,213,0.07)",stroke:"rgba(0,255,213,0.3)","stroke-dasharray":"3 3"}));
+  var oz=el("text",{x:X(0.985),y:Y(0.02)-6,"text-anchor":"end",class:"axistick",fill:"rgba(0,255,213,0.75)"});
+  oz.textContent="optimal zone";svg.appendChild(oz);
+  // grid + axes
+  [0,0.25,0.5,0.75,1].forEach(function(g){
+    svg.appendChild(el("line",{x1:X(g),y1:T,x2:X(g),y2:T+ph,stroke:C.line,"stroke-width":.5}));
+    svg.appendChild(el("line",{x1:L,y1:Y(g),x2:L+pw,y2:Y(g),stroke:C.line,"stroke-width":.5}));
+    var tx=el("text",{x:X(g),y:H-24,"text-anchor":"middle",class:"axistick"});tx.textContent=g;svg.appendChild(tx);
+    var ty=el("text",{x:L-6,y:Y(g)+3,"text-anchor":"end",class:"axistick"});ty.textContent=g;svg.appendChild(ty);
+  });
+  var ax=el("text",{x:L+pw/2,y:H-8,"text-anchor":"middle",class:"axislab"});ax.textContent="engineering autonomy →";svg.appendChild(ax);
+  var ay=el("text",{x:14,y:T+ph/2,"text-anchor":"middle",class:"axislab",transform:"rotate(-90 14 "+(T+ph/2)+")"});
+  ay.textContent="← owner extraction";svg.appendChild(ay);
+  // points
+  G.nodes.filter(function(n){return n.kind==="op";}).forEach(function(n){
+    var s=score(n),cx=X(s.autonomy),cy=Y(s.extraction),r=4+7*s.S,sel=selected===n.id;
+    svg.appendChild(el("circle",{cx:cx,cy:cy,r:r,fill:scoreColor(s.S),
+      "fill-opacity":sel?1:0.85,stroke:sel?C.gold:"#0a0e14","stroke-width":sel?2.2:1}));
+    if(sel||s.S>0.62||s.S<0.42){
+      var lb=el("text",{x:cx,y:cy-r-3,"text-anchor":"middle",class:"ptlab",
+        fill:sel?C.gold:"#cfe3f2"});lb.textContent=n.name.replace(/ (Co|Firm|Division|Shop|Champion)$/,"");svg.appendChild(lb);
+    }
+    var g=el("circle",{cx:cx,cy:cy,r:Math.max(r,9),fill:"transparent",style:"cursor:pointer"});
+    g.addEventListener("click",function(){onNode(n);});svg.appendChild(g);
+  });
+}
+
+/* ---------- inspector panel ---------- */
+function renderPanel(){
+  var head=document.getElementById("selHead"),body=document.getElementById("panel");
+  if(!selected){body.innerHTML='<div class="muted">Click a company in the graph to see its path to the top and its engineering breathing-room score.</div>';head.textContent="Inspector";return;}
+  var n=node(selected);head.textContent=n.name;
+  if(n.kind!=="op"){
+    body.innerHTML='<div class="row"><span class="k">type</span><span class="v">owner / capital node</span></div>'
+      +'<div class="row"><span class="k">example</span><span class="v">'+n.ex+'</span></div>'
+      +'<div class="row"><span class="k">controls</span><span class="v">'+(childrenOf(n.id).length||'—')+' node(s)</span></div>'
+      +'<div class="muted" style="margin-top:10px">This is a capital-allocation node, not an engineering node. The building happens below it. Click one of the companies it owns.</div>';
+    return;
+  }
+  var s=score(n);
+  var chain='<div class="chain"><div class="muted" style="margin-bottom:5px">path to the top</div>';
+  chain+='<div class="hop"><span class="dot" style="background:'+scoreColor(s.S)+'"></span><b>'+n.name+'</b> <span class="muted">· autonomy '+n.autonomy.toFixed(2)+'</span></div>';
+  s.path.forEach(function(e){
+    var par=node(e.parent),prot=e.pressure<=0;
+    chain+='<div class="hop"><span class="dot" style="background:'+edgeColor(e.pressure)+'"></span>'
+      +'<span class="pill '+(prot?'prot':'extr')+'">'+(prot?'patient':'hungry')+' '+(e.pressure>0?'+':'')+e.pressure.toFixed(2)+'</span>'
+      +'<span class="muted">'+par.name+'</span></div>';
+  });
+  chain+='</div>';
+
+  var v,vc;
+  if(s.S>=0.62){v="Optimal. A capable shop under a patient owner — this is where engineering breathes. Papa should aim here.";vc=C.green;}
+  else if(s.S>=0.42){v="Mixed. Real capability, but the owner is pulling on it. Workable — watch which way the edges drift.";vc=C.gold;}
+  else{v="Suffocated. Strong engineers, hungry owner. The talent is real; the structure is draining it. Great acquisition target, rough place to build.";vc=C.pink;}
+
+  body.innerHTML=
+    '<div class="row"><span class="k">example</span><span class="v">'+n.ex+'</span></div>'
+    +'<div class="row"><span class="k">autonomy (x)</span><span class="v">'+s.autonomy.toFixed(2)+'</span></div>'
+    +'<div class="row"><span class="k">extraction (y)</span><span class="v">'+s.extraction.toFixed(2)+'</span></div>'
+    +'<div class="row"><span class="k">breathing room</span><span class="v" style="color:'+scoreColor(s.S)+'">'+s.S.toFixed(2)+'</span></div>'
+    +chain
+    +'<label class="muted" style="font-size:11px;display:block;margin:6px 0 3px">intrinsic autonomy — drag to model a stronger/weaker shop</label>'
+    +'<input id="autoSlider" type="range" min="0" max="100" value="'+Math.round(n.autonomy*100)+'" style="width:100%">'
+    +'<div class="verdict" style="border-color:'+vc+'55;background:'+vc+'11">'+v+'</div>'
+    +'<div class="formula"><b>score</b> = autonomy × (1 − extraction)<br>'
+    +'extraction = clamp( Σ hungry − 0.4·Σ patient , 0, 1 )<br>'
+    +'<span style="color:var(--dimmer)">patient owners don\'t just avoid draining — they shield. The center holds and is not shown.</span></div>'
+    +'<div class="legend"><span><span class="dot" style="background:'+C.green+'"></span>patient</span>'
+    +'<span><span class="dot" style="background:'+C.pink+'"></span>hungry</span>'
+    +'<span><span class="dot" style="background:var(--gold)"></span>selected</span></div>';
+
+  var sl=document.getElementById("autoSlider");
+  sl.addEventListener("input",function(){n.autonomy=(+sl.value)/100;renderAll();/*keep selection*/document.getElementById("autoSlider").focus();});
+}
+
+/* ---------- interactions ---------- */
+function onNode(n){
+  if(moveArm && selected && n.id!==selected){ tryReparent(selected,n.id); disarm(); return; }
+  selected=n.id; disarm(); renderAll();
+}
+function flipEdge(e){ e.pressure = (e.pressure<=0)? EXTR : PROT; renderAll(); }
+function tryReparent(childId,newParentId){
+  if(newParentId===childId){flash("can't own itself");return;}
+  if(isDescendant(newParentId,childId)){flash("that would make a cycle — pick an owner outside its own subtree");return;}
+  var e=parentEdge(childId);
+  if(e){e.parent=newParentId;} else {G.edges.push({parent:newParentId,child:childId,pressure:PROT});}
+  flash("restructured: "+node(childId).name+" now owned by "+node(newParentId).name);
+  renderAll();
+}
+function spinOut(){
+  if(!selected){flash("select a company first");return;}
+  var e=parentEdge(selected);
+  if(!e){flash(node(selected).name+" is already standalone");return;}
+  G.edges=G.edges.filter(function(x){return x!==e;});
+  flash("spun out: "+node(selected).name+" is now its own root — zero extraction");
+  renderAll();
+}
+function arm(){moveArm=true;document.getElementById("btnMove").classList.add("armed");
+  document.getElementById("hint").textContent="Now click the new owner for "+(selected?node(selected).name:"the selected company")+".";}
+function disarm(){moveArm=false;var b=document.getElementById("btnMove");if(b)b.classList.remove("armed");}
+var hintTimer;
+function flash(msg){var h=document.getElementById("hint");h.textContent=msg;clearTimeout(hintTimer);
+  hintTimer=setTimeout(function(){h.textContent="Click any company to inspect it. Green edges = patient owners. Red edges = value-extracting owners.";},4200);}
+
+document.getElementById("btnMove").addEventListener("click",function(ev){ev.stopPropagation();
+  if(!selected){flash("select a company first, then click Move");return;}
+  moveArm?disarm():arm();});
+document.getElementById("btnSpin").addEventListener("click",function(ev){ev.stopPropagation();spinOut();});
+document.getElementById("btnReset").addEventListener("click",function(ev){ev.stopPropagation();
+  G=seed();selected=null;disarm();renderAll();flash("reset to the seed universe");});
+
+/* ---------- go ---------- */
+function renderAll(){renderGraph();renderPhase();renderPanel();}
+renderAll();
+</script>
+</body>
+</html>

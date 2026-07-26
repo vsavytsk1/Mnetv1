@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Möbius v8 · Gravity + fBm Shimmer + Hover</title>
+<style>
+  body { margin:0; overflow:hidden; background:#0a0c12; font-family:ui-monospace,monospace; color:#ccd1e0; }
+  canvas { display:block; cursor:grab; }
+  body.dragging canvas { cursor: grabbing; }
+  .label {
+    position:fixed; top:14px; left:14px; z-index:10;
+    background:rgba(10,12,18,0.78); padding:10px 14px; border-radius:6px;
+    border:1px solid #1a1f2e; font-size:12px; line-height:1.7;
+    pointer-events: none;
+  }
+  .label .title { color:#00d4ff; font-weight:bold; margin-bottom:6px; }
+  .label .stat span { color:#fff; }
+  .label .small { color:#8a92a8; font-size:11px; }
+  .label .msg { color:#8a92a8; font-size:11px; margin-top:8px; }
+  .label .msg.closed { color:#7fffa0; font-weight:bold; font-size:12px; }
+  .label .msg.over { color:#ff9090; }
+  .controls {
+    position:fixed; bottom:20px; left:50%; transform:translateX(-50%); z-index:10;
+    background:rgba(10,12,18,0.88); padding:12px 18px; border-radius:8px;
+    border:1px solid #1a1f2e; display:flex; align-items:center; gap:14px;
+    font-size:12px;
+  }
+  .controls button {
+    background:#1a1f2e; color:#ccd1e0; border:1px solid #2a3040;
+    padding:6px 14px; border-radius:4px; cursor:pointer; font-family:inherit; font-size:12px;
+  }
+  .controls button:hover { background:#2a3040; }
+  .controls button.primary { background:#00d4ff; color:#0a0c12; border-color:#00d4ff; }
+  .controls button.primary:hover { background:#33ddff; }
+</style>
+</head>
+<body>
+
+<div class="label">
+  <div class="title">Möbius v8 · Spooky Center + All The Math</div>
+  <div class="stat">substrate: <span>Möbius · χ=0</span></div>
+  <div class="stat">pentagons: <span id="pentN">0</span> / 12</div>
+  <div class="msg" id="msg">click strip → pentagon · drag orbit · scroll zoom</div>
+</div>
+
+<div class="controls">
+  <span>density</span>
+  <input type="range" id="density" min="20" max="240" step="4" value="120" style="width:100px; accent-color:#00d4ff;">
+  <span id="densityVal" style="color:#00d4ff; font-weight:bold; min-width:30px; text-align:right;">120</span>
+  <span style="margin-left:10px;">gravity</span>
+  <input type="range" id="gravity" min="0" max="100" step="1" value="0" style="width:100px; accent-color:#ff9090;">
+  <span id="gravityVal" style="color:#ff9090; font-weight:bold; min-width:30px; text-align:right;">0</span>
+  <span style="margin-left:10px;">shimmer</span>
+  <input type="range" id="shimmer" min="0" max="100" step="1" value="0" style="width:100px; accent-color:#7fffaa;">
+  <span id="shimmerVal" style="color:#7fffaa; font-weight:bold; min-width:30px; text-align:right;">0</span>
+  <button id="place12" class="primary">place 12</button>
+  <button id="clear">clear</button>
+  <button id="resetView">reset</button>
+</div>
+
+<script type="importmap">
+{"imports":{"three":"https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.min.js"}}
+</script>
+<script type="module">
+import * as THREE from 'three';
+
+// ===== Scene =====
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0a0c12);
+const camera = new THREE.PerspectiveCamera(50, innerWidth/innerHeight, 0.1, 100);
+const renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(innerWidth, innerHeight);
+document.body.appendChild(renderer.domElement);
+
+// ===== The ephemeral center — vibrating dot + halo + vacuum fluctuations =====
+// Central vibrating dot
+const core = new THREE.Mesh(
+  new THREE.SphereGeometry(0.045, 16, 16),
+  new THREE.MeshBasicMaterial({color: 0xb0ecff})
+);
+scene.add(core);
+
+// Halo — soft cyan glow that breathes
+const halo = new THREE.Mesh(
+  new THREE.SphereGeometry(0.22, 24, 24),
+  new THREE.MeshBasicMaterial({color: 0x00d4ff, transparent: true, opacity: 0.08})
+);
+scene.add(halo);
+
+// Vacuum fluctuations — tiny 3D "+" crosses that pop in and out around the center.
+// Each one ages from 0 → maxAge. Brightness = sin(lifeFrac·π), so it fades in, peaks, fades out.
+// On expiry, respawns at a new random position inside FLUX_RADIUS.
+const FLUX_COUNT = 14;
+const FLUX_VERTS = 6;            // 3 axes (X/Y/Z) × 2 endpoints
+const FLUX_RADIUS = 0.32;
+const fluxParticles = [];
+for (let i = 0; i < FLUX_COUNT; i++) {
+  fluxParticles.push({
+    x: 0, y: 0, z: 0,
+    age: Math.random() * 2,      // stagger so they don't all bloom together
+    maxAge: 0.8 + Math.random() * 1.4,
+    size: 0.025 + Math.random() * 0.025
+  });
+}
+const fluxGeo = new THREE.BufferGeometry();
+const fluxPositions = new Float32Array(FLUX_COUNT * FLUX_VERTS * 3);
+const fluxColors = new Float32Array(FLUX_COUNT * FLUX_VERTS * 3);
+fluxGeo.setAttribute('position', new THREE.BufferAttribute(fluxPositions, 3));
+fluxGeo.setAttribute('color', new THREE.BufferAttribute(fluxColors, 3));
+const fluxLines = new THREE.LineSegments(fluxGeo, new THREE.LineBasicMaterial({
+  vertexColors: true, transparent: true, opacity: 1.0
+}));
+scene.add(fluxLines);
+
+function updateCenter(now, dt) {
+  // Vibrating dot — sub-pixel jitter via three incommensurate sines (Lady Math's signature)
+  const t = now * 0.001;
+  core.position.x = 0.012 * Math.sin(t * 17 + 1.3);
+  core.position.y = 0.012 * Math.sin(t * 22 + 2.7);
+  core.position.z = 0.012 * Math.sin(t * 25 + 0.9);
+  const corePulse = 1 + 0.3 * Math.sin(now * 0.0015);
+  core.scale.set(corePulse, corePulse, corePulse);
+
+  // Halo breathes in opacity + scale
+  halo.material.opacity = 0.07 + 0.05 * Math.sin(now * 0.0012);
+  const haloPulse = 1 + 0.2 * Math.sin(now * 0.0012);
+  halo.scale.set(haloPulse, haloPulse, haloPulse);
+
+  // Vacuum fluctuations — advance each particle's life, respawn if expired
+  for (let i = 0; i < FLUX_COUNT; i++) {
+    const p = fluxParticles[i];
+    p.age += dt;
+    if (p.age >= p.maxAge) {
+      // Spawn at new random position inside FLUX_RADIUS sphere
+      const r = Math.random() * FLUX_RADIUS;
+      const theta = Math.random() * Math.PI * 2;
+      const phi = Math.acos(2 * Math.random() - 1);
+      p.x = r * Math.sin(phi) * Math.cos(theta);
+      p.y = r * Math.sin(phi) * Math.sin(theta);
+      p.z = r * Math.cos(phi);
+      p.age = 0;
+      p.maxAge = 0.8 + Math.random() * 1.4;
+      p.size = 0.025 + Math.random() * 0.025;
+    }
+    // Brightness curve — sin(πt) peaks at mid-life, zero at birth and death
+    const lifeFrac = p.age / p.maxAge;
+    const bright = Math.sin(lifeFrac * Math.PI);
+    const cr = bright * 0.6, cg = bright * 0.85, cb = bright;  // cyan-ish
+    const idx = i * 18;
+    const s = p.size;
+    // X-axis segment
+    fluxPositions[idx+0]=p.x-s; fluxPositions[idx+1]=p.y;   fluxPositions[idx+2]=p.z;
+    fluxPositions[idx+3]=p.x+s; fluxPositions[idx+4]=p.y;   fluxPositions[idx+5]=p.z;
+    // Y-axis segment
+    fluxPositions[idx+6]=p.x;   fluxPositions[idx+7]=p.y-s; fluxPositions[idx+8]=p.z;
+    fluxPositions[idx+9]=p.x;   fluxPositions[idx+10]=p.y+s; fluxPositions[idx+11]=p.z;
+    // Z-axis segment
+    fluxPositions[idx+12]=p.x;  fluxPositions[idx+13]=p.y;  fluxPositions[idx+14]=p.z-s;
+    fluxPositions[idx+15]=p.x;  fluxPositions[idx+16]=p.y;  fluxPositions[idx+17]=p.z+s;
+    for (let k = 0; k < 6; k++) {
+      fluxColors[idx + k*3]     = cr;
+      fluxColors[idx + k*3 + 1] = cg;
+      fluxColors[idx + k*3 + 2] = cb;
+    }
+  }
+  fluxGeo.attributes.position.needsUpdate = true;
+  fluxGeo.attributes.color.needsUpdate = true;
+}
+
+// ===== Möbius parameters =====
+const R = 3.0;
+const WIDTH = 1.25;
+let U_STEPS = 120;
+let V_STEPS = 18;
+const AMPLITUDE = 0.55;   // height of pentagon bump (along normal)
+const SIGMA = 0.45;       // bump falloff in parameter space
+
+// ===== Parameterization =====
+function paramToWorld(u, v) {
+  const cosU2 = Math.cos(u/2);
+  const sinU2 = Math.sin(u/2);
+  return [
+    (R + v * cosU2) * Math.cos(u),
+    (R + v * cosU2) * Math.sin(u),
+    v * sinU2
+  ];
+}
+
+// ===== Surface normal — numerical, force outward =====
+function getNormal(u, v) {
+  const h = 0.001;
+  const p0 = paramToWorld(u, v);
+  const p1 = paramToWorld(u + h, v);
+  const p2 = paramToWorld(u, v + h);
+  const tux = (p1[0]-p0[0])/h, tuy = (p1[1]-p0[1])/h, tuz = (p1[2]-p0[2])/h;
+  const tvx = (p2[0]-p0[0])/h, tvy = (p2[1]-p0[1])/h, tvz = (p2[2]-p0[2])/h;
+  let nx = tuy*tvz - tuz*tvy;
+  let ny = tuz*tvx - tux*tvz;
+  let nz = tux*tvy - tuy*tvx;
+  const mag = Math.hypot(nx, ny, nz);
+  if (mag < 1e-6) return [0, 0, 1];
+  nx /= mag; ny /= mag; nz /= mag;
+  // Force "outward" — flip if normal points back at origin
+  // (this is what makes both sides bend in the SAME direction)
+  const dot = nx*p0[0] + ny*p0[1] + nz*p0[2];
+  if (dot < 0) return [-nx, -ny, -nz];
+  return [nx, ny, nz];
+}
+
+// ===== State =====
+const pentagons = []; // {u, v, activation, target}
+
+function getLift(u, v) {
+  let total = 0;
+  for (const p of pentagons) {
+    if (p.activation <= 0) continue;
+    // Periodic distance in u
+    let du = u - p.u;
+    while (du > Math.PI) du -= 2*Math.PI;
+    while (du < -Math.PI) du += 2*Math.PI;
+    const dv = v - p.v;
+    const d2 = du*du + dv*dv*0.8;  // anisotropic falloff
+    total += AMPLITUDE * p.activation * Math.exp(-d2 / (SIGMA*SIGMA));
+  }
+  return total;
+}
+
+// ===== Central attractor — F = k/r² gravity pulling toward origin =====
+let GRAVITY_K = 0;  // strength, controlled by slider
+const GRAVITY_EPS = 0.4;  // softening — keeps r² from going to zero (never reaches center)
+const GRAVITY_MAX_PULL = 0.85;  // hard cap on displacement fraction — strip can get close but never collapses
+
+function applyGravity(x, y, z) {
+  if (GRAVITY_K === 0) return [x, y, z];
+  const r2 = x*x + y*y + z*z;
+  const r = Math.sqrt(r2);
+  if (r < 0.001) return [x, y, z];
+  let pullFrac = GRAVITY_K / (r2 + GRAVITY_EPS);
+  if (pullFrac > GRAVITY_MAX_PULL) pullFrac = GRAVITY_MAX_PULL;
+  const scale = 1 - pullFrac;
+  return [x * scale, y * scale, z * scale];
+}
+
+// ===== Quantum flux — fBm shimmer on every lattice point =====
+// Perlin-style hash → smooth pseudo-random gradient per integer lattice point
+function hash3(i, j, k) {
+  const s = Math.sin(i * 127.1 + j * 311.7 + k * 74.7) * 43758.5453;
+  return s - Math.floor(s);  // [0,1)
+}
+// 3D value-noise (cheaper than full Perlin, still smooth) — trilinear interpolation between 8 cube corners
+function smoothNoise3(x, y, z) {
+  const ix = Math.floor(x), iy = Math.floor(y), iz = Math.floor(z);
+  const fx = x - ix, fy = y - iy, fz = z - iz;
+  // smoothstep for fade
+  const u = fx*fx*(3-2*fx), v = fy*fy*(3-2*fy), w = fz*fz*(3-2*fz);
+  const c000 = hash3(ix, iy, iz),     c100 = hash3(ix+1, iy, iz);
+  const c010 = hash3(ix, iy+1, iz),   c110 = hash3(ix+1, iy+1, iz);
+  const c001 = hash3(ix, iy, iz+1),   c101 = hash3(ix+1, iy, iz+1);
+  const c011 = hash3(ix, iy+1, iz+1), c111 = hash3(ix+1, iy+1, iz+1);
+  const x00 = c000 + u*(c100 - c000), x10 = c010 + u*(c110 - c010);
+  const x01 = c001 + u*(c101 - c001), x11 = c011 + u*(c111 - c011);
+  const y0 = x00 + v*(x10 - x00), y1 = x01 + v*(x11 - x01);
+  return (y0 + w*(y1 - y0)) * 2 - 1;  // → [-1, 1]
+}
+// Fractional Brownian Motion = stacked octaves of noise
+function fbm(x, y, z) {
+  let sum = 0, amp = 0.5, freq = 1;
+  for (let i = 0; i < 3; i++) {
+    sum += amp * smoothNoise3(x*freq, y*freq, z*freq);
+    freq *= 2; amp *= 0.5;
+  }
+  return sum;  // ≈ [-0.875, 0.875]
+}
+
+let SHIMMER_K = 0;  // intensity, controlled by slider
+let shimmerTime = 0;  // advances per frame so noise field "flows"
+
+function applyShimmer(x, y, z, u, v) {
+  if (SHIMMER_K === 0) return [x, y, z];
+  // Use (u, v) as spatial coords for noise — neighboring lattice points get correlated noise
+  // Three independent fBm samples (one per axis), offset in time-space, so each point wobbles in 3D
+  const t = shimmerTime;
+  const dx = fbm(u * 0.8, v * 1.2, t)         * SHIMMER_K;
+  const dy = fbm(u * 0.8 + 13, v * 1.2 + 7, t) * SHIMMER_K;
+  const dz = fbm(u * 0.8 + 5, v * 1.2 + 31, t) * SHIMMER_K;
+  return [x + dx, y + dy, z + dz];
+}
+
+function vertexPos(u, v) {
+  const [x0, y0, z0] = paramToWorld(u, v);
+  const lift = getLift(u, v);
+  let x = x0, y = y0, z = z0;
+  if (lift !== 0) {
+    const [nx, ny, nz] = getNormal(u, v);
+    x += nx*lift; y += ny*lift; z += nz*lift;
+  }
+  [x, y, z] = applyGravity(x, y, z);
+  [x, y, z] = applyShimmer(x, y, z, u, v);
+  return [x, y, z];
+}
+
+// ===== Build hex lattice (rebuildable on density change) =====
+let gridPoints = [];
+let lineIndices = [];
+let positions = null;
+
+const lineGeo = new THREE.BufferGeometry();
+const lines = new THREE.LineSegments(lineGeo, new THREE.LineBasicMaterial({
+  color: 0x6a7a90, transparent: true, opacity: 0.6
+}));
+scene.add(lines);
+
+function rebuildLattice() {
+  gridPoints = [];
+  for (let i = 0; i <= U_STEPS; i++) {
+    const u = (i / U_STEPS) * Math.PI * 2;
+    for (let j = 0; j <= V_STEPS; j++) {
+      const v = (j / V_STEPS) * 2 * WIDTH - WIDTH;
+      gridPoints.push([u, v]);
+    }
+  }
+  lineIndices = [];
+  for (let i = 0; i <= U_STEPS; i++) {
+    for (let j = 0; j <= V_STEPS; j++) {
+      if (i < U_STEPS) {
+        const cur = i * (V_STEPS + 1) + j;
+        lineIndices.push(cur, cur + (V_STEPS + 1));
+      }
+      if (j < V_STEPS && ((i + j) % 2 === 0)) {
+        const cur = i * (V_STEPS + 1) + j;
+        lineIndices.push(cur, cur + 1);
+      }
+    }
+  }
+  positions = new Float32Array(gridPoints.length * 3);
+  lineGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  lineGeo.setIndex(lineIndices);
+}
+rebuildLattice();
+
+// ===== Pentagon markers (drawn in tangent plane, vertex-colored for hover) =====
+const PENT_BUFFER_SIZE = 50 * 5 * 2 * 3;
+const pentPositions = new Float32Array(PENT_BUFFER_SIZE);
+const pentColors = new Float32Array(PENT_BUFFER_SIZE);
+const pentGeo = new THREE.BufferGeometry();
+pentGeo.setAttribute('position', new THREE.BufferAttribute(pentPositions, 3));
+pentGeo.setAttribute('color', new THREE.BufferAttribute(pentColors, 3));
+const pentLines = new THREE.LineSegments(pentGeo, new THREE.LineBasicMaterial({
+  vertexColors: true, transparent: true, opacity: 0.95
+}));
+scene.add(pentLines);
+
+// Palette
+const COLOR_PENT_DEFAULT = [1.0, 0.565, 0.565];   // #ff9090 — curvature stress
+const COLOR_PENT_HOVER   = [0.498, 1.0, 0.667];   // #7fffaa — interaction state
+
+let hoveredPentIdx = -1;  // index in pentagons array of the one under the mouse, or -1
+
+function updatePentagonMarkers() {
+  let idx = 0;
+  for (let pi = 0; pi < pentagons.length; pi++) {
+    const p = pentagons[pi];
+    if (p.activation <= 0.05) continue;
+    const center = vertexPos(p.u, p.v);
+    const h = 0.001;
+    const p0 = paramToWorld(p.u, p.v);
+    const p1 = paramToWorld(p.u + h, p.v);
+    let tx = (p1[0]-p0[0])/h, ty = (p1[1]-p0[1])/h, tz = (p1[2]-p0[2])/h;
+    const tmag = Math.hypot(tx, ty, tz);
+    tx /= tmag; ty /= tmag; tz /= tmag;
+    const n = getNormal(p.u, p.v);
+    const bx = n[1]*tz - n[2]*ty;
+    const by = n[2]*tx - n[0]*tz;
+    const bz = n[0]*ty - n[1]*tx;
+    const size = 0.18 * p.activation;
+    const col = (pi === hoveredPentIdx) ? COLOR_PENT_HOVER : COLOR_PENT_DEFAULT;
+    const corners = [];
+    for (let i = 0; i < 5; i++) {
+      const a = Math.PI * 2 * i / 5 - Math.PI / 2;
+      const ca = Math.cos(a), sa = Math.sin(a);
+      corners.push([
+        center[0] + size * (ca*tx + sa*bx),
+        center[1] + size * (ca*ty + sa*by),
+        center[2] + size * (ca*tz + sa*bz)
+      ]);
+    }
+    for (let i = 0; i < 5; i++) {
+      const c1 = corners[i], c2 = corners[(i+1)%5];
+      pentPositions[idx++] = c1[0]; pentPositions[idx++] = c1[1]; pentPositions[idx++] = c1[2];
+      pentColors[idx-3] = col[0]; pentColors[idx-2] = col[1]; pentColors[idx-1] = col[2];
+      pentPositions[idx++] = c2[0]; pentPositions[idx++] = c2[1]; pentPositions[idx++] = c2[2];
+      pentColors[idx-3] = col[0]; pentColors[idx-2] = col[1]; pentColors[idx-1] = col[2];
+    }
+  }
+  pentGeo.attributes.position.needsUpdate = true;
+  pentGeo.attributes.color.needsUpdate = true;
+  pentGeo.setDrawRange(0, idx / 3);
+}
+
+function updateLatticePositions() {
+  for (let k = 0; k < gridPoints.length; k++) {
+    const [u, v] = gridPoints[k];
+    const [x, y, z] = vertexPos(u, v);
+    positions[k*3] = x; positions[k*3+1] = y; positions[k*3+2] = z;
+  }
+  lineGeo.attributes.position.needsUpdate = true;
+}
+
+function refreshAll() {
+  updateLatticePositions();
+  updatePentagonMarkers();
+  rebuildRaycastMesh();
+  updateStatus();
+}
+
+// ===== Pentagon ops =====
+function placePentagon(u, v) {
+  pentagons.push({ u, v, activation: 0, target: 1 });
+}
+function removePentagonNear(u, v, threshold = 0.22) {
+  // Tighter: must click visually close to the pentagon
+  let bestIdx = -1, bestD = Infinity;
+  for (let i = pentagons.length - 1; i >= 0; i--) {
+    const p = pentagons[i];
+    if (p.target === 0) continue;
+    let du = u - p.u;
+    while (du > Math.PI) du -= 2*Math.PI;
+    while (du < -Math.PI) du += 2*Math.PI;
+    const d = Math.hypot(du, (v - p.v) * 0.7);
+    if (d < bestD && d < threshold) { bestD = d; bestIdx = i; }
+  }
+  if (bestIdx >= 0) { pentagons[bestIdx].target = 0; return true; }
+  return false;
+}
+
+function place12() {
+  for (const p of pentagons) p.target = 0;
+  // Icosahedral-ish: 12 evenly spaced in u, alternating v
+  for (let i = 0; i < 12; i++) {
+    const u = (i / 12) * Math.PI * 2;
+    const v = (i % 2 === 0) ? 0.5 : -0.5;
+    placePentagon(u, v);
+  }
+}
+
+function clearAll() {
+  for (const p of pentagons) p.target = 0;
+}
+
+// ===== Animation tick =====
+function tickLifts(dt) {
+  let any = false;
+  const speed = 3;
+  for (let i = pentagons.length - 1; i >= 0; i--) {
+    const p = pentagons[i];
+    const diff = p.target - p.activation;
+    if (Math.abs(diff) < 0.001) {
+      if (p.target === 0) pentagons.splice(i, 1);
+      continue;
+    }
+    const step = Math.sign(diff) * Math.min(Math.abs(diff), dt * speed);
+    p.activation += step;
+    any = true;
+  }
+  return any;
+}
+
+function updateStatus() {
+  const active = pentagons.filter(p => p.target === 1).length;
+  document.getElementById('pentN').textContent = active;
+  const msg = document.getElementById('msg');
+  if (active === 12) {
+    msg.textContent = '✓ 12 pentagons on Möbius (χ=0)·curvature woven into the twist';
+    msg.className = 'msg closed';
+  } else if (active > 12) {
+    msg.textContent = `${active} pentagons — over budget · Möbius can\'t hold this`;
+    msg.className = 'msg over';
+  } else {
+    msg.textContent = `${active}/12 · click strip → toggle · drag orbit · scroll zoom`;
+    msg.className = 'msg';
+  }
+}
+
+// ===== Click detection — raycast against the LIFTED surface =====
+const meshUSteps = 80, meshVSteps = 12;
+const meshIndices = [];
+const meshVertCount = (meshUSteps + 1) * (meshVSteps + 1);
+const meshVerts = new Float32Array(meshVertCount * 3);
+for (let i = 0; i <= meshUSteps; i++) {
+  for (let j = 0; j <= meshVSteps; j++) {
+    if (i < meshUSteps && j < meshVSteps) {
+      const a = i*(meshVSteps+1)+j;
+      const b = (i+1)*(meshVSteps+1)+j;
+      const c = (i+1)*(meshVSteps+1)+j+1;
+      const d = i*(meshVSteps+1)+j+1;
+      meshIndices.push(a,b,c, a,c,d);
+    }
+  }
+}
+const mobiusMeshGeo = new THREE.BufferGeometry();
+mobiusMeshGeo.setAttribute('position', new THREE.BufferAttribute(meshVerts, 3));
+mobiusMeshGeo.setIndex(meshIndices);
+const mobiusMesh = new THREE.Mesh(
+  mobiusMeshGeo,
+  new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.0, side: THREE.DoubleSide, depthWrite: false })
+);
+scene.add(mobiusMesh);
+
+function rebuildRaycastMesh() {
+  let k = 0;
+  for (let i = 0; i <= meshUSteps; i++) {
+    const u = (i / meshUSteps) * Math.PI * 2;
+    for (let j = 0; j <= meshVSteps; j++) {
+      const v = (j / meshVSteps) * 2 * WIDTH - WIDTH;
+      const [x, y, z] = vertexPos(u, v);
+      meshVerts[k++] = x; meshVerts[k++] = y; meshVerts[k++] = z;
+    }
+  }
+  mobiusMeshGeo.attributes.position.needsUpdate = true;
+  mobiusMeshGeo.computeBoundingSphere();
+}
+
+function findUVFromHit(x, y, z) {
+  // Search the LIFTED surface (vertexPos), not the flat one — clicks match what you see
+  let bestU = 0, bestV = 0, bestD = Infinity;
+  for (let i = 0; i < 36; i++) {
+    for (let j = 0; j < 18; j++) {
+      const u = (i / 36) * Math.PI * 2;
+      const v = (j / 17) * 2 * WIDTH - WIDTH;
+      const [px, py, pz] = vertexPos(u, v);
+      const d = (x-px)**2 + (y-py)**2 + (z-pz)**2;
+      if (d < bestD) { bestD = d; bestU = u; bestV = v; }
+    }
+  }
+  for (let pass = 0; pass < 3; pass++) {
+    const range = 0.3 / (pass + 1);
+    for (let i = -5; i <= 5; i++) {
+      for (let j = -5; j <= 5; j++) {
+        const u = bestU + (i / 5) * range;
+        const v = Math.max(-WIDTH, Math.min(WIDTH, bestV + (j / 5) * range));
+        const uu = (u + 2*Math.PI) % (2*Math.PI);
+        const [px, py, pz] = vertexPos(uu, v);
+        const d = (x-px)**2 + (y-py)**2 + (z-pz)**2;
+        if (d < bestD) { bestD = d; bestU = uu; bestV = v; }
+      }
+    }
+  }
+  return [bestU, bestV];
+}
+
+const raycaster = new THREE.Raycaster();
+const mouseNDC = new THREE.Vector2();
+
+function handleClick(e) {
+  const rect = renderer.domElement.getBoundingClientRect();
+  mouseNDC.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+  mouseNDC.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+  raycaster.setFromCamera(mouseNDC, camera);
+  const hits = raycaster.intersectObject(mobiusMesh);
+  if (hits.length === 0) return;
+  const hp = hits[0].point;
+
+  // Try remove first: is there a pentagon near this click in 3D world space?
+  const REMOVE_3D = 0.45;  // world units
+  let bestIdx = -1, bestD = Infinity;
+  for (let i = 0; i < pentagons.length; i++) {
+    const p = pentagons[i];
+    if (p.target === 0) continue;
+    const [px, py, pz] = vertexPos(p.u, p.v);
+    const d = Math.hypot(hp.x - px, hp.y - py, hp.z - pz);
+    if (d < bestD && d < REMOVE_3D) { bestD = d; bestIdx = i; }
+  }
+  if (bestIdx >= 0) {
+    pentagons[bestIdx].target = 0;
+    return;
+  }
+
+  // Otherwise place: snap to nearest (u,v) on the lifted surface
+  const [u, v] = findUVFromHit(hp.x, hp.y, hp.z);
+  placePentagon(u, v);
+}
+
+// ===== Orbit camera =====
+let yaw = 0.5, pitch = 0.35, dist = 11;
+function updateCamera() {
+  camera.position.x = dist * Math.cos(pitch) * Math.sin(yaw);
+  camera.position.y = dist * Math.sin(pitch);
+  camera.position.z = dist * Math.cos(pitch) * Math.cos(yaw);
+  camera.lookAt(0, 0, 0);
+}
+updateCamera();
+
+function updateHover(e) {
+  const rect = renderer.domElement.getBoundingClientRect();
+  mouseNDC.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+  mouseNDC.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+  raycaster.setFromCamera(mouseNDC, camera);
+  const hits = raycaster.intersectObject(mobiusMesh);
+  let newHover = -1;
+  if (hits.length > 0) {
+    const hp = hits[0].point;
+    const REMOVE_3D = 0.45;
+    let bestD = Infinity;
+    for (let i = 0; i < pentagons.length; i++) {
+      const p = pentagons[i];
+      if (p.target === 0 || p.activation <= 0.05) continue;
+      const [px, py, pz] = vertexPos(p.u, p.v);
+      const d = Math.hypot(hp.x - px, hp.y - py, hp.z - pz);
+      if (d < bestD && d < REMOVE_3D) { bestD = d; newHover = i; }
+    }
+  }
+  if (newHover !== hoveredPentIdx) {
+    hoveredPentIdx = newHover;
+    renderer.domElement.style.cursor = (newHover >= 0) ? 'pointer' : 'default';
+    updatePentagonMarkers();  // repaint colors
+  }
+}
+
+let mouseDown = null, dragged = false;
+renderer.domElement.addEventListener('mousedown', e => {
+  mouseDown = { x: e.clientX, y: e.clientY };
+  dragged = false;
+  document.body.classList.add('dragging');
+});
+renderer.domElement.addEventListener('mousemove', e => {
+  if (mouseDown) {
+    const dx = e.clientX - mouseDown.x, dy = e.clientY - mouseDown.y;
+    if (!dragged && Math.hypot(dx, dy) > 5) dragged = true;
+    if (dragged) {
+      yaw -= dx * 0.006;
+      pitch += dy * 0.006;
+      pitch = Math.max(-Math.PI/2+0.05, Math.min(Math.PI/2-0.05, pitch));
+      mouseDown = { x: e.clientX, y: e.clientY };
+      updateCamera();
+    }
+  } else {
+    updateHover(e);
+  }
+});
+renderer.domElement.addEventListener('mouseup', e => {
+  document.body.classList.remove('dragging');
+  if (!dragged && mouseDown) handleClick(e);
+  mouseDown = null; dragged = false;
+});
+renderer.domElement.addEventListener('wheel', e => {
+  e.preventDefault();
+  dist = Math.max(4, Math.min(30, dist + e.deltaY * 0.01));
+  updateCamera();
+}, { passive: false });
+
+// ===== UI =====
+document.getElementById('place12').addEventListener('click', place12);
+document.getElementById('clear').addEventListener('click', clearAll);
+document.getElementById('resetView').addEventListener('click', () => {
+  yaw = 0.5; pitch = 0.35; dist = 11; updateCamera();
+});
+document.getElementById('density').addEventListener('input', e => {
+  const val = parseInt(e.target.value);
+  U_STEPS = val;
+  V_STEPS = Math.max(3, Math.round(val * 0.15));
+  document.getElementById('densityVal').textContent = val;
+  rebuildLattice();
+  refreshAll();
+});
+document.getElementById('gravity').addEventListener('input', e => {
+  const val = parseInt(e.target.value);
+  GRAVITY_K = (val / 100) * 3.5;
+  document.getElementById('gravityVal').textContent = val;
+  refreshAll();
+});
+document.getElementById('shimmer').addEventListener('input', e => {
+  const val = parseInt(e.target.value);
+  // 0 → off; 100 → noticeable quantum fog (up to ~0.18 units displacement)
+  SHIMMER_K = (val / 100) * 0.18;
+  document.getElementById('shimmerVal').textContent = val;
+});
+
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+
+// ===== Initial state: place 12 on load =====
+place12();
+refreshAll();
+
+// ===== Loop =====
+let lastTime = performance.now();
+function animate() {
+  requestAnimationFrame(animate);
+  const now = performance.now();
+  const dt = Math.min(0.1, (now - lastTime) / 1000);
+  lastTime = now;
+  let needsRefresh = tickLifts(dt);
+  if (SHIMMER_K > 0) {
+    shimmerTime += dt * 0.4;  // gentle flow
+    needsRefresh = true;
+  }
+  if (needsRefresh) refreshAll();
+  updateCenter(now, dt);
+  renderer.render(scene, camera);
+}
+animate();
+</script>
+</body>
+</html>

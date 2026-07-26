@@ -1,0 +1,1186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>HELIOS · Solar Flare Console</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    /* palette grounded in SDO/AIA false-colour channels */
+    --void:#05070d;          /* deep space */
+    --void-2:#080b14;
+    --panel:#0a0e18;
+    --panel-2:#0c1220;
+    --edge:#182234;
+    --edge-hot:#26344c;
+    --ink:#c9d6ea;           /* primary text */
+    --ink-dim:#6b7b95;       /* secondary */
+    --ink-faint:#3f4c63;
+    --amber:#f4c56a;         /* CRT readout amber */
+    --amber-dim:#9a7d3f;
+    --au171:#ffd97a;         /* 171Å gold - hot coronal */
+    --au171-deep:#e8a838;
+    --a304:#ff6a44;          /* 304Å - chromosphere / ribbons */
+    --cold:#5fb8d4;          /* cold magnetic field */
+    --cold-deep:#2f6f8f;
+    --rope:#b98cf5;          /* flux rope / filament */
+    --rope-deep:#7d4fd0;
+    --ok:#7fd6a2;
+    --warn:#ff8a5c;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%;background:var(--void);color:var(--ink);
+    font-family:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+    overflow:hidden;overscroll-behavior:none}
+  h1,h2,h3,.disp{font-family:"Space Grotesk","IBM Plex Mono",system-ui,sans-serif}
+
+  .app{display:flex;height:100%;width:100%}
+  /* ---------- viewport ---------- */
+  .stage{position:relative;flex:1 1 auto;min-width:0;background:
+     radial-gradient(120% 90% at 50% 108%, #0b1120 0%, #070a12 45%, #04060c 100%)}
+  #sky{display:block;width:100%;height:100%}
+  .stage-tag{position:absolute;left:14px;top:12px;display:flex;gap:10px;align-items:center;pointer-events:none}
+  .chip{font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+    padding:5px 9px;border:1px solid var(--edge);border-radius:2px;background:rgba(8,11,20,.72);
+    backdrop-filter:blur(3px);color:var(--ink-dim)}
+  .chip b{color:var(--amber);font-weight:600}
+  .chip.phase b{color:var(--au171)}
+  .class-badge{font-family:"Space Grotesk";font-weight:700;font-size:13px;letter-spacing:.05em}
+  .hint{position:absolute;left:14px;bottom:12px;font-size:11px;color:var(--ink-faint);
+    letter-spacing:.04em;pointer-events:none;max-width:60%}
+
+  /* ---------- console panel ---------- */
+  .console{flex:0 0 372px;max-width:372px;height:100%;overflow-y:auto;overflow-x:hidden;
+    background:linear-gradient(180deg,var(--panel) 0%,var(--panel-2) 100%);
+    border-left:1px solid var(--edge);scrollbar-width:thin;scrollbar-color:var(--edge) transparent}
+  .console::-webkit-scrollbar{width:8px}
+  .console::-webkit-scrollbar-thumb{background:var(--edge);border-radius:4px}
+
+  .brand{padding:16px 18px 12px;border-bottom:1px solid var(--edge);position:sticky;top:0;
+    background:linear-gradient(180deg,var(--panel) 70%,rgba(10,14,24,.0));z-index:5}
+  .brand .mark{display:flex;align-items:baseline;gap:9px}
+  .brand h1{margin:0;font-size:20px;font-weight:700;letter-spacing:.06em;color:var(--ink)}
+  .brand h1 span{color:var(--au171)}
+  .brand .sub{font-size:10px;letter-spacing:.34em;text-transform:uppercase;color:var(--ink-faint);margin-top:5px}
+
+  .mod{padding:15px 18px;border-bottom:1px solid var(--edge)}
+  .eyebrow{font-size:10px;letter-spacing:.24em;text-transform:uppercase;color:var(--ink-faint);
+    margin:0 0 11px;display:flex;align-items:center;gap:8px}
+  .eyebrow::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--edge),transparent)}
+
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:9px 12px}
+  .stat{display:flex;flex-direction:column;gap:2px}
+  .stat .k{font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint)}
+  .stat .v{font-size:16px;font-weight:500;color:var(--amber);font-variant-numeric:tabular-nums;line-height:1.15}
+  .stat .v .u{font-size:10px;color:var(--amber-dim);margin-left:3px;font-weight:400}
+  .stat.wide{grid-column:1/3}
+
+  canvas.instr{display:block;width:100%;border:1px solid var(--edge);border-radius:2px;background:#070a12}
+
+  /* controls */
+  .btnrow{display:flex;gap:8px;margin-bottom:12px}
+  button.ctrl{flex:1;font-family:"IBM Plex Mono",monospace;font-size:11.5px;letter-spacing:.06em;
+    padding:9px 6px;border:1px solid var(--edge-hot);background:#0d1424;color:var(--ink);
+    border-radius:2px;cursor:pointer;transition:.13s;text-transform:uppercase}
+  button.ctrl:hover{background:#131d31;border-color:#37476a}
+  button.ctrl:active{transform:translateY(1px)}
+  button.ctrl.primary{border-color:var(--au171-deep);color:var(--au171);background:#1a1608}
+  button.ctrl.primary:hover{background:#241d09}
+  button.ctrl.armed{border-color:var(--a304);color:#ffcaba;background:#210d08;
+    box-shadow:0 0 0 1px rgba(255,106,68,.25), 0 0 18px -6px var(--a304)}
+
+  .sld{margin:10px 0}
+  .sld .lab{display:flex;justify-content:space-between;font-size:10.5px;letter-spacing:.05em;
+    color:var(--ink-dim);margin-bottom:5px}
+  .sld .lab b{color:var(--amber);font-weight:500}
+  input[type=range]{-webkit-appearance:none;width:100%;height:2px;background:var(--edge-hot);border-radius:2px;outline:none;margin:6px 0}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;border-radius:50%;
+    background:var(--amber);cursor:pointer;border:2px solid #0a0e18;box-shadow:0 0 8px -2px var(--amber)}
+  input[type=range]::-moz-range-thumb{width:13px;height:13px;border-radius:50%;background:var(--amber);
+    cursor:pointer;border:2px solid #0a0e18}
+
+  .toggles{display:grid;grid-template-columns:1fr 1fr;gap:7px 10px;margin-top:4px}
+  .tg{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--ink-dim);cursor:pointer;user-select:none}
+  .tg .box{width:15px;height:15px;border:1px solid var(--edge-hot);border-radius:2px;flex:0 0 auto;
+    display:grid;place-items:center;transition:.12s}
+  .tg .box::after{content:"";width:7px;height:7px;background:var(--au171);border-radius:1px;transform:scale(0);transition:.12s}
+  .tg.on .box{border-color:var(--au171-deep)}
+  .tg.on .box::after{transform:scale(1)}
+  .tg.on{color:var(--ink)}
+
+  .notes{font-size:10.5px;line-height:1.55;color:var(--ink-dim)}
+  .notes b{color:var(--amber-dim);font-weight:500}
+  .notes p{margin:0 0 8px}
+  details summary{cursor:pointer;color:var(--ink-faint);font-size:10px;letter-spacing:.2em;text-transform:uppercase;list-style:none}
+  details summary::-webkit-details-marker{display:none}
+  details[open] summary{color:var(--ink-dim);margin-bottom:9px}
+
+  .legend{display:flex;flex-wrap:wrap;gap:8px 14px;margin-top:2px}
+  .lg{display:flex;align-items:center;gap:6px;font-size:10px;color:var(--ink-dim);letter-spacing:.02em}
+  .lg i{width:14px;height:3px;border-radius:2px;display:inline-block}
+
+  @media (max-width:880px){
+    .app{flex-direction:column;overflow-y:auto;height:100%}
+    .stage{flex:0 0 auto;height:56vh;min-height:340px}
+    .console{flex:0 0 auto;max-width:none;width:100%;height:auto;border-left:none;border-top:1px solid var(--edge)}
+    .brand{position:static}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- ===================== VIEWPORT ===================== -->
+  <div class="stage">
+    <canvas id="sky"></canvas>
+    <div class="stage-tag">
+      <div class="chip phase">phase · <b id="tPhase">quiescent</b></div>
+      <div class="chip">t+<b id="tClock">0.0</b>s</div>
+      <div class="chip">GOES <span id="tClass" class="class-badge" style="color:var(--ink-dim)">A0.0</span></div>
+    </div>
+    <div class="hint" id="hint">Magnetic stress building along the polarity inversion line — the flux rope is climbing toward loss of equilibrium.</div>
+  </div>
+
+  <!-- ===================== CONSOLE ===================== -->
+  <div class="console">
+    <div class="brand">
+      <div class="mark"><h1>HELIOS<span>·</span></h1></div>
+      <div class="sub">Eruptive Flare · Live MHD Console</div>
+    </div>
+
+    <!-- telemetry -->
+    <div class="mod">
+      <p class="eyebrow">Telemetry</p>
+      <div class="grid2">
+        <div class="stat"><span class="k">Rope height</span><span class="v"><span id="vH">0.05</span><span class="u">R⊙*</span></span></div>
+        <div class="stat"><span class="k">Rope current</span><span class="v"><span id="vI">0.12</span><span class="u">rel</span></span></div>
+        <div class="stat"><span class="k">Decay index n</span><span class="v"><span id="vN">0.10</span></span></div>
+        <div class="stat"><span class="k">Alfvén speed</span><span class="v"><span id="vVA">0</span><span class="u">rel</span></span></div>
+        <div class="stat"><span class="k">Free energy</span><span class="v"><span id="vE">0.1</span><span class="u">e32 erg</span></span></div>
+        <div class="stat"><span class="k">Peak T</span><span class="v"><span id="vT">1.0</span><span class="u">MK</span></span></div>
+        <div class="stat"><span class="k">Corona pop.</span><span class="v"><span id="vNc">0</span></span></div>
+        <div class="stat"><span class="k">Precip. rate</span><span class="v"><span id="vPr">0</span><span class="u">/s</span></span></div>
+      </div>
+    </div>
+
+    <!-- signature instrument: equilibrium manifold -->
+    <div class="mod">
+      <p class="eyebrow">Equilibrium manifold · loss of equilibrium</p>
+      <canvas id="instrEq" class="instr"></canvas>
+    </div>
+
+    <!-- light curves -->
+    <div class="mod">
+      <p class="eyebrow">X-ray flux · Neupert effect</p>
+      <canvas id="instrLC" class="instr"></canvas>
+    </div>
+
+    <!-- spectrum -->
+    <div class="mod">
+      <p class="eyebrow">Electron energy spectrum</p>
+      <canvas id="instrSP" class="instr"></canvas>
+    </div>
+
+    <!-- controls -->
+    <div class="mod">
+      <p class="eyebrow">Controls</p>
+      <div class="btnrow">
+        <button class="ctrl" id="btnPlay">Pause</button>
+        <button class="ctrl primary" id="btnTrig">Trigger flare</button>
+        <button class="ctrl" id="btnReset">Reset</button>
+      </div>
+
+      <div class="sld"><div class="lab"><span>Photospheric driving</span><b id="lDrive">1.0×</b></div>
+        <input type="range" id="sDrive" min="0" max="100" value="42"></div>
+      <div class="sld"><div class="lab"><span>Magnetic complexity</span><b id="lCplx">bipolar</b></div>
+        <input type="range" id="sCplx" min="0" max="100" value="18"></div>
+      <div class="sld"><div class="lab"><span>Resistivity η (recon. rate)</span><b id="lEta">0.10</b></div>
+        <input type="range" id="sEta" min="0" max="100" value="34"></div>
+      <div class="sld"><div class="lab"><span>Particle population</span><b id="lN">700</b></div>
+        <input type="range" id="sN" min="0" max="100" value="35"></div>
+      <div class="sld"><div class="lab"><span>Time rate</span><b id="lSpd">1.2×</b></div>
+        <input type="range" id="sSpd" min="0" max="100" value="40"></div>
+
+      <div class="toggles" style="margin-top:12px">
+        <div class="tg on" data-t="field"><span class="box"></span>Field lines</div>
+        <div class="tg on" data-t="parts"><span class="box"></span>Particles</div>
+        <div class="tg on" data-t="rope"><span class="box"></span>Flux rope</div>
+        <div class="tg on" data-t="boris"><span class="box"></span>Diffusion region</div>
+        <div class="tg on" data-t="fieldStr"><span class="box"></span>Field colouring</div>
+        <div class="tg" data-t="grid"><span class="box"></span>Vector field</div>
+      </div>
+    </div>
+
+    <!-- legend + notes -->
+    <div class="mod">
+      <div class="legend">
+        <div class="lg"><i style="background:var(--cold)"></i>closed field</div>
+        <div class="lg"><i style="background:var(--au171)"></i>strong / post-flare</div>
+        <div class="lg"><i style="background:var(--rope)"></i>flux rope</div>
+        <div class="lg"><i style="background:var(--a304)"></i>ribbons</div>
+      </div>
+    </div>
+
+    <div class="mod">
+      <details>
+        <summary>Physics model</summary>
+        <div class="notes">
+          <p><b>Field.</b> Two buried magnetic charges (the sunspot pair) plus a current-carrying flux rope and its photospheric image current. <b>B(r)</b> is summed analytically at every point.</p>
+          <p><b>Eruption.</b> Van&nbsp;Tend–Kuperus loss of equilibrium: the rope climbs the curve I<sub>eq</sub>(h) ∝ h·B<sub>bg</sub>(h) as its current is driven up. At the fold (nose) no equilibrium remains → it erupts. Decay index n = −∂lnB/∂lnh.</p>
+          <p><b>Field lines.</b> RK4 integration of dr/ds = B/|B|, retraced each frame.</p>
+          <p><b>Particles.</b> Guiding-centre transport: conserved moment μ and mirror force −μ∇<sub>∥</sub>B give bouncing and footpoint precipitation (the ribbons).</p>
+          <p><b>Acceleration.</b> A Boris pusher in a Harris-sheet reversal — the inset — shows Speiser orbits gaining energy at the magnetic null.</p>
+          <p><b>Neupert effect.</b> Soft X-ray (thermal) ≈ time-integral of hard X-ray (nonthermal), reproduced in the light-curve panel.</p>
+          <p style="color:var(--ink-faint)">*heights in rope minor-radii; energies scaled to typical M/X-class values for readability.</p>
+        </div>
+      </details>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+"use strict";
+/* ============================================================================
+   HELIOS — a solar flare, computed.
+   Everything visible is derived from an analytic magnetic field plus ODE
+   integration (RK4 field lines, guiding-centre particles, Boris pusher).
+   ==========================================================================*/
+
+/* ---------- world <-> screen ---------- */
+// world: x in [-1.5,1.5], y in [0(photosphere) .. 2.4(top)]
+const WX0=-1.5, WX1=1.5, WY0=-0.55, WY1=2.42; // include a little sub-surface
+const sky = document.getElementById('sky');
+const ctx = sky.getContext('2d', {alpha:false});
+let VW=0, VH=0, DPR=1;
+let PH=0;              // photosphere screen-y
+function resizeSky(){
+  DPR=Math.min(2, window.devicePixelRatio||1);
+  const r=sky.getBoundingClientRect();
+  VW=Math.max(320,r.width); VH=Math.max(260,r.height);
+  sky.width=Math.round(VW*DPR); sky.height=Math.round(VH*DPR);
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+  PH = wy(0);
+}
+function wx(x){ return (x-WX0)/(WX1-WX0)*VW; }
+function wy(y){ return VH - (y-WY0)/(WY1-WY0)*VH; }
+function wscale(){ return VW/(WX1-WX0); } // px per world unit (x)
+
+/* ---------- tunable constants (the physics dials) ---------- */
+const SOFT=0.0026;       // charge softening
+const ROPE_SOFT=0.010;   // rope core softening
+const kR=0.22;           // rope field strength coefficient
+const A_up=1.0;          // rope self/image upward coefficient  (F_up ∝ A I²/h)
+const B_dn=1.0;          // background strapping downward coefficient
+const MOB=2.6;           // rope mobility (overdamped dynamics)
+const N_CRIT=1.5;        // torus-instability decay index (shown, not the trigger)
+const H_NOSE_MARGIN=0.06;// erupt once past the equilibrium nose
+const I_BASE=0.12;
+const ESCALE=8.1;        // free energy: E = ESCALE * I²  (units 1e32 erg)
+const KEV=46.0;          // particle KE(sim) -> keV mapping
+
+/* ---------- state ---------- */
+const state = {
+  running:true, t:0, phase:'buildup',
+  sources:[], xf:0.0, hf:0.05, vh:0, I:I_BASE,
+  ropeActive:true, ropeEscaping:false, cmeY:0, cmeShown:0,
+  // reconnection / flare
+  R:0, hLoops:0, ribbonSep:0, ribbonBright:0, precip:0, precipSmooth:0,
+  SXR:0, HXR:0, Temp:1.0, TpeakDisp:1.0, energyReleased:0, flarePeakSXR:0,
+  flash:0, quietTimer:0,
+  // buffers
+  lc:{sxr:[], hxr:[], len:240},
+  spec:new Float32Array(26),   // energy histogram (keV, log bins)
+  particles:[], nWant:700,
+  // eq-manifold curve cache
+  eqH:[], eqI:[], eqNoseH:0, eqNoseI:0,
+  // dials
+  drive:1.0, cplx:0.18, eta:0.10, speed:1.2,
+  show:{field:true,parts:true,rope:true,boris:true,fieldStr:true,grid:false},
+};
+
+/* ---------- magnetic field ---------- */
+function buildSources(cplx){
+  // two dominant polarities, buried; optional secondary spots add complexity
+  const sep=0.55, d=0.28, q=1.0;
+  const S=[
+    {x:-sep, y:-d, q:+q},
+    {x:+sep, y:-d, q:-q},
+  ];
+  if(cplx>0.33){ // add a weaker parasitic bipole -> multipolar corona
+    const w=(cplx-0.33)/0.67;
+    S.push({x:-0.05, y:-0.20, q:-0.42*w});
+    S.push({x:+1.02, y:-0.34, q:+0.5*w});
+  }
+  state.sources=S;
+}
+function bgField(x,y,out){
+  let bx=0,by=0;
+  const S=state.sources;
+  for(let i=0;i<S.length;i++){
+    const s=S[i]; const dx=x-s.x, dy=y-s.y;
+    const r2=dx*dx+dy*dy+SOFT; const f=s.q/r2;
+    bx+=f*dx; by+=f*dy;
+  }
+  out.x=bx; out.y=by; return out;
+}
+const _b=[{x:0,y:0}][0];
+function field(x,y,out){
+  let bx=0,by=0;
+  const S=state.sources;
+  for(let i=0;i<S.length;i++){
+    const s=S[i]; const dx=x-s.x, dy=y-s.y;
+    const r2=dx*dx+dy*dy+SOFT; const f=s.q/r2;
+    bx+=f*dx; by+=f*dy;
+  }
+  if(state.ropeActive){
+    const I=state.I, xf=state.xf, hf=state.hf;
+    // real line current
+    let dx=x-xf, dy=y-hf, D=dx*dx+dy*dy+ROPE_SOFT;
+    bx+= -kR*I*dy/D; by+= kR*I*dx/D;
+    // image current (opposite sign) below photosphere -> line-tied boundary
+    dx=x-xf; dy=y+hf; D=dx*dx+dy*dy+ROPE_SOFT;
+    bx+=  kR*I*dy/D; by+= -kR*I*dx/D;
+  }
+  out.x=bx; out.y=by; return out;
+}
+const _tmp={x:0,y:0};
+function bmag(x,y){ field(x,y,_tmp); return Math.hypot(_tmp.x,_tmp.y); }
+
+// strapping field on the rope axis (background only, horizontal component)
+function bStrap(h){ bgField(state.xf,h,_tmp); return Math.abs(_tmp.x)+1e-6; }
+function decayIndex(h){
+  const dh=0.02;
+  const b1=bStrap(Math.max(0.02,h-dh)), b2=bStrap(h+dh), b=bStrap(h);
+  const dB=(b2-b1)/(2*dh);
+  return -h*dB/b;
+}
+
+/* equilibrium manifold  I_eq(h) = (B_dn/A_up) * h * B_bg(h) */
+function rebuildEqCurve(){
+  state.eqH.length=0; state.eqI.length=0;
+  let noseH=0, noseI=-1;
+  for(let h=0.02; h<=1.6; h+=0.02){
+    const Ie=(B_dn/A_up)*h*bStrap(h);
+    state.eqH.push(h); state.eqI.push(Ie);
+    if(Ie>noseI){ noseI=Ie; noseH=h; }
+  }
+  state.eqNoseH=noseH; state.eqNoseI=noseI;
+}
+
+/* ---------- rope dynamics (overdamped loss-of-equilibrium) ---------- */
+function stepRope(dt){
+  if(state.phase==='buildup'){
+    state.I += 0.026*state.drive*dt;               // flux emergence / shear
+  }
+  const h=state.hf;
+  const B=bStrap(h);
+  const Fup = A_up*state.I*state.I/Math.max(h,0.03) - B_dn*state.I*B;
+  if(state.ropeEscaping){
+    state.vh += (2.2 + 0.8*state.I)*dt;            // runaway acceleration (CME)
+  }else{
+    state.vh = Fup*MOB;                            // overdamped: v ∝ force
+  }
+  state.hf += state.vh*dt;
+  if(state.hf<0.04){ state.hf=0.04; if(state.vh<0) state.vh=0; }
+
+  if(state.phase==='buildup'){
+    if(state.hf > state.eqNoseH + H_NOSE_MARGIN || state.vh>0.9){
+      startFlare();
+    }
+  }
+  if(state.ropeEscaping && state.hf>WY1+0.15){
+    state.ropeActive=false; state.ropeEscaping=false;   // rope has left as CME
+  }
+}
+
+/* ---------- reconnection / flare bookkeeping ---------- */
+function startFlare(){
+  if(state.phase!=='buildup') return;
+  state.phase='eruption';
+  state.ropeEscaping=true;
+  state.flash=1.0;
+  state.hLoops=0.06; state.ribbonSep=0.05;
+  // seed the reconnection outflow / accelerated particle burst
+  injectNonthermal(Math.round(160+state.nWant*0.25));
+  setHint('Loss of equilibrium reached — the current sheet is reconnecting. Accelerated particles stream to the footpoints.');
+}
+function stepFlare(dt){
+  if(state.phase==='buildup'){ state.R=0; }
+  else{
+    // reconnection rate: driven by rope rise through the current sheet,
+    // modulated by resistivity η. Impulsive then decaying.
+    const drive = Math.max(0, state.vh)*bStrap(Math.max(0.05,state.hf))*state.eta*9.0;
+    const target = state.ropeEscaping? drive : 0;
+    // relax R toward target with fast rise / slow fall
+    const kUp=8.0, kDn=1.4;
+    state.R += ((target - state.R) * (target>state.R?kUp:kDn))*dt;
+    state.R = Math.max(0, state.R);
+
+    // reconnection removes current (releases free energy) & builds arcade
+    const dI = 0.9*state.R*dt;
+    const before=state.I; state.I=Math.max(I_BASE*0.6, state.I - dI);
+    state.energyReleased += ESCALE*(before*before - state.I*state.I);
+
+    // post-flare loop arcade grows; ribbons separate (real morphology)
+    state.hLoops += (0.35*state.R + 0.02)*dt;
+    state.hLoops = Math.min(state.hLoops, 0.9);
+    state.ribbonSep = Math.min(0.9, 0.12 + 0.55*state.hLoops);
+
+    // keep injecting accelerated particles while reconnection is strong
+    if(state.R>0.02){
+      const nInj=Math.min(9, Math.round(state.R*40*dt*60));
+      if(nInj>0) injectNonthermal(nInj);
+    }
+  }
+
+  // hard X-ray tracks reconnection/precipitation (nonthermal)
+  state.HXR = 0.55*state.R + 0.9*state.precipSmooth;
+  // soft X-ray: heated plasma accumulates then cools -> Neupert (∫ HXR dt)
+  const heat = 1.5*state.HXR, cool = state.SXR/6.5;
+  state.SXR += (heat-cool)*dt; state.SXR=Math.max(0,state.SXR);
+  // temperature
+  state.Temp += (4.0*state.HXR - (state.Temp-1.0)/5.0)*dt;
+  state.TpeakDisp = Math.max(state.TpeakDisp*Math.pow(0.5,dt/8), state.Temp);
+  if(state.SXR>state.flarePeakSXR) state.flarePeakSXR=state.SXR;
+
+  // ribbon brightness from precipitation
+  state.precipSmooth += (state.precip - state.precipSmooth)*Math.min(1,dt*6);
+  state.precip=0;
+  state.ribbonBright += ((Math.min(1,state.precipSmooth*0.5)+ (state.R>0?0.15:0)) - state.ribbonBright)*Math.min(1,dt*4);
+
+  state.flash *= Math.pow(0.5, dt/0.20);
+
+  // decay / reset logic
+  if(state.phase==='eruption' && !state.ropeActive){
+    state.phase='decay';
+    setHint('Filament ejected as a CME. Post-flare loops cool through the gradual phase.');
+  }
+  if(state.phase==='decay'){
+    if(state.R<0.01 && state.SXR<0.06){
+      state.quietTimer+=dt;
+      if(state.quietTimer>2.2) resetCycle();
+    } else state.quietTimer=0;
+  }
+}
+function resetCycle(){
+  state.phase='buildup'; state.quietTimer=0;
+  state.I=I_BASE; state.hf=0.05; state.vh=0;
+  state.ropeActive=true; state.ropeEscaping=false;
+  state.hLoops=0; state.ribbonSep=0; state.ribbonBright=0;
+  state.R=0; state.SXR=0; state.HXR=0; state.Temp=1.0;
+  // gentle variation for replay interest
+  buildSources(state.cplx); rebuildEqCurve();
+  seedThermal();
+  setHint('Magnetic stress rebuilding along the inversion line — the flux rope climbs again.');
+}
+function hardReset(){
+  state.t=0; state.energyReleased=0; state.flarePeakSXR=0; state.TpeakDisp=1.0;
+  state.lc.sxr.length=0; state.lc.hxr.length=0; state.spec.fill(0);
+  resetCycle();
+}
+
+/* ---------- particles: guiding-centre transport ---------- */
+function seedThermal(){
+  state.particles.length=0;
+  for(let i=0;i<state.nWant;i++) state.particles.push(makeThermal());
+}
+function makeThermal(){
+  // place in the closed corona between the footpoints
+  let x,y,B,tries=0;
+  do{
+    x=(-0.9+1.8*Math.random());
+    y=0.06+0.85*Math.random();
+    B=bmag(x,y); tries++;
+  }while(B<0.9 && tries<8);
+  const vth=0.22;
+  const vpar=vth*gauss();
+  const vperp=Math.abs(vth*gauss())+0.03;
+  const mu=0.5*vperp*vperp/Math.max(B,1e-3);
+  return {x,y,vpar,mu,ke:0.5*(vpar*vpar+vperp*vperp),hot:false};
+}
+function injectNonthermal(n){
+  const xf=state.xf, hf=Math.max(0.12,state.hf*0.5+0.15); // below the rope, at the sheet
+  for(let i=0;i<n;i++){
+    if(state.particles.length>=state.nWant+400) state.particles.shift();
+    const x=xf+(Math.random()-0.5)*0.10;
+    const y=hf+(Math.random()-0.5)*0.10;
+    const B=Math.max(bmag(x,y),1e-3);
+    // power-law energetic tail  E ~ E^-δ  (sampled by inverse transform)
+    const u=Math.random(); const E=1.0+ Math.pow(u,-1/2.2)*1.1; // sim energy
+    const pitch=Math.random(); // fraction into parallel
+    const vpar=Math.sign(gauss())*Math.sqrt(2*E*pitch);
+    const vperp=Math.sqrt(2*E*(1-pitch));
+    const mu=0.5*vperp*vperp/B;
+    state.particles.push({x,y,vpar,mu,ke:E,hot:true});
+  }
+}
+function stepParticles(dt){
+  // keep population near target
+  while(state.particles.length<state.nWant) state.particles.push(makeThermal());
+  while(state.particles.length>state.nWant+400) state.particles.shift();
+
+  const eps=0.012;
+  const recActive = state.R>0.02;
+  const rx=state.xf, ry=Math.max(0.12,state.hf*0.5+0.15);
+  const arr=state.particles;
+  for(let i=0;i<arr.length;i++){
+    const p=arr[i];
+    field(p.x,p.y,_tmp);
+    let B=Math.hypot(_tmp.x,_tmp.y); if(B<1e-4)B=1e-4;
+    const bx=_tmp.x/B, by=_tmp.y/B;
+    // parallel advance along field
+    p.x += bx*p.vpar*dt;
+    p.y += by*p.vpar*dt;
+    // mirror force  m dv∥/dt = -μ ∂B/∂s
+    const Bf=bmag(p.x+bx*eps,p.y+by*eps);
+    const Bb=bmag(p.x-bx*eps,p.y-by*eps);
+    const dBds=(Bf-Bb)/(2*eps);
+    p.vpar += -(p.mu*dBds)*dt;
+    // update KE from invariants (m=1): KE = ½v∥² + μB
+    p.ke = 0.5*p.vpar*p.vpar + p.mu*B;
+
+    // reconnection acceleration for particles crossing the diffusion region
+    if(recActive){
+      const dx=p.x-rx, dy=p.y-ry;
+      if(dx*dx+dy*dy<0.045){
+        const kick=1.0+2.4*state.R*dt*60;
+        p.vpar*=kick; p.mu*=(1+1.2*state.R*dt*60); p.hot=true;
+      }
+    }
+
+    // boundaries
+    if(p.y<=0.012){                 // precipitation -> footpoint / ribbon
+      state.precip += p.ke;         // deposit energy (thick-target heating)
+      arr[i]=makeThermal();
+      continue;
+    }
+    if(p.y>WY1 || p.x<WX0-0.05 || p.x>WX1+0.05){ // escaped (open field / CME)
+      arr[i]=makeThermal();
+      continue;
+    }
+  }
+  // build spectrum histogram (log bins, keV)
+  const spec=state.spec; spec.fill(0);
+  for(let i=0;i<arr.length;i++){
+    const keV=Math.max(0.5,arr[i].ke*KEV);
+    let b=Math.floor((Math.log10(keV)-0.0)/ (Math.log10(400)-0.0) * spec.length);
+    if(b<0)b=0; if(b>=spec.length)b=spec.length-1;
+    spec[b]++;
+  }
+}
+
+/* ---------- Boris pusher: diffusion-region micro-physics ---------- */
+// Harris-sheet reversal Bz(x)=B0 tanh((x-x0)/δ), reconnection E field Ey.
+const boris={parts:[], x0:0, box:{x:0,y:0,w:0,h:0}};
+function borisSeed(){
+  boris.parts.length=0;
+  for(let i=0;i<70;i++) boris.parts.push(borisMake());
+}
+function borisMake(){
+  const q=Math.random()<0.5?1:-1;
+  return {x:(Math.random()*2-1), y:(Math.random()*2-1)*0.9,
+    vx:gauss()*0.25, vy:gauss()*0.25, q, ke:0, age:0};
+}
+function stepBoris(dt){
+  if(!state.show.boris) return;
+  const B0=1.4, delta=0.22;
+  const Ey = 0.35 + 1.8*Math.min(0.4,state.R); // driven by reconnection rate
+  const h=Math.min(1, dt*60)*0.09; // integrator substep (dimensionless)
+  const arr=boris.parts;
+  for(let k=0;k<arr.length;k++){
+    const p=arr[k];
+    for(let s=0;s<2;s++){
+      const Bz=B0*Math.tanh(p.x/delta);
+      const qm=p.q;
+      // half electric acceleration
+      let vx=p.vx + qm*0*0.5*h;
+      let vy=p.vy + qm*Ey*0.5*h;
+      // magnetic rotation about z
+      const t=qm*Bz*0.5*h;
+      const vpx=vx+vy*t, vpy=vy-vx*t;
+      const sfac=2*t/(1+t*t);
+      vx=vx+vpy*sfac; vy=vy-vpx*sfac;
+      // half electric acceleration
+      vy=vy+qm*Ey*0.5*h;
+      p.vx=vx; p.vy=vy;
+      p.x+=vx*h; p.y+=vy*h;
+    }
+    p.ke=0.5*(p.vx*p.vx+p.vy*p.vy); p.age+=dt;
+    if(Math.abs(p.x)>1.15||Math.abs(p.y)>1.05||p.age>6){ arr[k]=borisMake(); }
+  }
+}
+
+/* ---------- helpers ---------- */
+function gauss(){ // Box-Muller
+  let u=0,v=0; while(u===0)u=Math.random(); while(v===0)v=Math.random();
+  return Math.sqrt(-2*Math.log(u))*Math.cos(6.28318530718*v);
+}
+function clamp(a,b,c){return a<b?b:(a>c?c:a);}
+function lerp(a,b,t){return a+(b-a)*t;}
+function mix(c1,c2,t){return [lerp(c1[0],c2[0],t),lerp(c1[1],c2[1],t),lerp(c1[2],c2[2],t)];}
+function rgb(c,a){return a==null?`rgb(${c[0]|0},${c[1]|0},${c[2]|0})`:`rgba(${c[0]|0},${c[1]|0},${c[2]|0},${a})`;}
+// plasma-ish colormap for particle energy
+const PLA=[[13,8,60],[84,15,110],[156,23,110],[204,55,80],[240,110,45],[250,180,60],[252,235,150]];
+function plasma(t){ t=clamp(t,0,1)*(PLA.length-1); const i=Math.floor(t); const f=t-i;
+  return i>=PLA.length-1?PLA[PLA.length-1]:mix(PLA[i],PLA[i+1],f); }
+// cold->hot field colouring
+const CB=[[27,58,95],[47,111,143],[95,184,212],[220,235,245],[255,217,122],[232,168,56]];
+function fieldColor(t){ t=clamp(t,0,1)*(CB.length-1); const i=Math.floor(t); const f=t-i;
+  return i>=CB.length-1?CB[CB.length-1]:mix(CB[i],CB[i+1],f); }
+
+/* ============================================================================
+   FIELD-LINE TRACING (RK4)
+   ==========================================================================*/
+function traceLine(x0,y0,ds,maxSteps){
+  const pts=[];
+  // bidirectional trace, joined
+  const fwd=integrate(x0,y0,ds,maxSteps);
+  const bwd=integrate(x0,y0,-ds,maxSteps);
+  for(let i=bwd.length-1;i>=1;i--) pts.push(bwd[i]);
+  for(let i=0;i<fwd.length;i++) pts.push(fwd[i]);
+  return pts;
+}
+function integrate(x0,y0,ds,maxSteps){
+  const pts=[{x:x0,y:y0}];
+  let x=x0,y=y0;
+  for(let s=0;s<maxSteps;s++){
+    const k1=dir(x,y); if(!k1) break;
+    const k2=dir(x+0.5*ds*k1.x, y+0.5*ds*k1.y); if(!k2) break;
+    const k3=dir(x+0.5*ds*k2.x, y+0.5*ds*k2.y); if(!k3) break;
+    const k4=dir(x+ds*k3.x, y+ds*k3.y); if(!k4) break;
+    x+=ds/6*(k1.x+2*k2.x+2*k3.x+k4.x);
+    y+=ds/6*(k1.y+2*k2.y+2*k3.y+k4.y);
+    pts.push({x,y});
+    if(y<=0.004 || y>WY1 || x<WX0-0.1 || x>WX1+0.1) break;
+  }
+  return pts;
+}
+const _d={x:0,y:0};
+function dir(x,y){ field(x,y,_d); const m=Math.hypot(_d.x,_d.y); if(m<1e-5)return null;
+  return {x:_d.x/m,y:_d.y/m}; }
+
+/* seeds: a fan of footpoints across the arcade */
+function computeSeeds(){
+  const seeds=[];
+  const S=state.sources;
+  // seed near each positive-ish source, spread in x
+  for(let f=0.10; f<=0.95; f+=0.052){
+    const x = lerp(-0.95, 0.95, (f-0.10)/0.85);
+    seeds.push({x, y:0.02});
+  }
+  return seeds;
+}
+
+/* ============================================================================
+   RENDER
+   ==========================================================================*/
+let starPts=null;
+function makeStars(){ starPts=[]; for(let i=0;i<90;i++){
+  starPts.push({x:Math.random(),y:Math.random()*0.72,r:Math.random()*0.9+0.2,p:Math.random()*6.28}); } }
+
+function render(){
+  const W=VW,H=VH;
+  // --- space ---
+  ctx.fillStyle='#04060c'; ctx.fillRect(0,0,W,H);
+  // subtle stars
+  if(!starPts) makeStars();
+  ctx.save();
+  for(const s of starPts){
+    const tw=0.4+0.6*Math.abs(Math.sin(state.t*0.8+s.p));
+    ctx.fillStyle=`rgba(150,170,210,${0.10+0.16*tw})`;
+    ctx.fillRect(s.x*W, s.y*H, s.r, s.r);
+  }
+  ctx.restore();
+
+  drawSun();
+  if(state.show.grid) drawVectorField();
+  if(state.show.field) drawFieldLines();
+  drawPostFlareLoops();
+  if(state.show.rope) drawFluxRope();
+  drawReconnection();
+  drawRibbons();
+  if(state.show.parts) drawParticles();
+  drawCME();
+  if(state.show.boris) drawBorisInset();
+  drawFlash();
+}
+
+function drawSun(){
+  const W=VW,H=VH, ph=PH;
+  // interior
+  const g=ctx.createLinearGradient(0,ph, 0,H);
+  g.addColorStop(0,'#ffcf6b'); g.addColorStop(0.35,'#f0932e'); g.addColorStop(1,'#7a2d0c');
+  ctx.fillStyle=g; ctx.fillRect(0,ph,W,H-ph);
+  // granulation flicker
+  ctx.save(); ctx.globalCompositeOperation='overlay';
+  const cell=26; const rows=Math.ceil((H-ph)/cell)+1; const cols=Math.ceil(W/cell)+1;
+  for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){
+    const n=Math.sin((c*12.9898+r*78.233))*43758.5453; const fr=n-Math.floor(n);
+    const fl=0.5+0.5*Math.sin(state.t*1.3+fr*6.28);
+    ctx.fillStyle=`rgba(${255},${200+30*fl|0},${120},${0.05+0.05*fl})`;
+    ctx.fillRect(c*cell, ph+r*cell, cell-2, cell-2);
+  }
+  ctx.restore();
+  // limb / chromosphere glow
+  const lg=ctx.createLinearGradient(0,ph-40,0,ph+8);
+  lg.addColorStop(0,'rgba(255,170,90,0)'); lg.addColorStop(1,'rgba(255,150,70,0.55)');
+  ctx.fillStyle=lg; ctx.fillRect(0,ph-40,W,48);
+  ctx.strokeStyle='rgba(255,190,110,0.7)'; ctx.lineWidth=1.4;
+  ctx.beginPath(); ctx.moveTo(0,ph); ctx.lineTo(W,ph); ctx.stroke();
+
+  // sunspots at source footprints
+  for(const s of state.sources){
+    if(Math.abs(s.q)<0.15) continue;
+    const x=wx(s.x); const rr=wscale()*(0.055+0.05*Math.abs(s.q));
+    // penumbra
+    const pg=ctx.createRadialGradient(x,ph,rr*0.3,x,ph,rr*1.9);
+    pg.addColorStop(0,'rgba(60,25,10,0.95)'); pg.addColorStop(1,'rgba(120,55,20,0)');
+    ctx.fillStyle=pg; ctx.beginPath(); ctx.ellipse(x,ph,rr*1.9,rr*0.8,0,0,6.2832); ctx.fill();
+    // umbra
+    ctx.fillStyle='rgba(20,8,4,0.95)'; ctx.beginPath(); ctx.ellipse(x,ph,rr,rr*0.45,0,0,6.2832); ctx.fill();
+    // polarity label
+    ctx.fillStyle='rgba(255,220,160,0.8)'; ctx.font='600 13px "IBM Plex Mono"';
+    ctx.textAlign='center'; ctx.fillText(s.q>0?'+':'−', x, ph+4);
+  }
+}
+
+function drawVectorField(){
+  ctx.save(); ctx.globalCompositeOperation='lighter';
+  const step=0.13;
+  for(let x=WX0+0.1;x<WX1;x+=step)for(let y=0.05;y<WY1-0.1;y+=step){
+    field(x,y,_tmp); const m=Math.hypot(_tmp.x,_tmp.y); if(m<0.2)continue;
+    const bx=_tmp.x/m, by=_tmp.y/m; const L=wscale()*0.05;
+    const px=wx(x), py=wy(y);
+    const c=fieldColor(Math.log10(1+m)/1.4);
+    ctx.strokeStyle=rgb(c,0.28); ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(px,py); ctx.lineTo(px+bx*L,py-by*L); ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawFieldLines(){
+  const seeds=computeSeeds();
+  const ds=0.012, maxS=220;
+  ctx.save(); ctx.globalCompositeOperation='lighter'; ctx.lineJoin='round';
+  for(const sd of seeds){
+    const pts=traceLine(sd.x,sd.y,ds,maxS);
+    if(pts.length<4) continue;
+    // colour by mean |B| along the line
+    let mid=pts[(pts.length/2)|0];
+    const bm=bmag(mid.x,mid.y);
+    const tcol=state.show.fieldStr? clamp(Math.log10(1+bm)/1.5,0,1) : 0.34;
+    const col=fieldColor(tcol);
+    // glow underlay
+    ctx.strokeStyle=rgb(col,0.10); ctx.lineWidth=4.5;
+    strokePath(pts);
+    ctx.strokeStyle=rgb(col,0.85); ctx.lineWidth=1.15;
+    strokePath(pts);
+  }
+  ctx.restore();
+}
+function strokePath(pts){
+  ctx.beginPath();
+  ctx.moveTo(wx(pts[0].x),wy(pts[0].y));
+  for(let i=1;i<pts.length;i++) ctx.lineTo(wx(pts[i].x),wy(pts[i].y));
+  ctx.stroke();
+}
+
+function drawFluxRope(){
+  if(!state.ropeActive) return;
+  const xf=state.xf, hf=state.hf;
+  ctx.save(); ctx.globalCompositeOperation='lighter';
+  // nested field lines of the rope (closed ovals) traced from a small ring
+  for(let k=0;k<5;k++){
+    const rr=0.03+k*0.028;
+    const sx=xf+rr, sy=hf;
+    const pts=integrate(sx,sy,0.01,240);
+    if(pts.length>4){
+      const a=0.7-k*0.11;
+      ctx.strokeStyle=rgb([185,140,245],0.10); ctx.lineWidth=4; strokePath(pts);
+      ctx.strokeStyle=rgb([200,160,250],a); ctx.lineWidth=1.1; strokePath(pts);
+    }
+  }
+  // glowing twisted core
+  const cx=wx(xf), cy=wy(hf); const rr=wscale()*0.05;
+  const gg=ctx.createRadialGradient(cx,cy,0,cx,cy,rr*2.2);
+  gg.addColorStop(0,'rgba(210,170,255,0.9)'); gg.addColorStop(0.4,'rgba(150,90,230,0.5)');
+  gg.addColorStop(1,'rgba(120,60,200,0)');
+  ctx.fillStyle=gg; ctx.beginPath(); ctx.arc(cx,cy,rr*2.2,0,6.2832); ctx.fill();
+  ctx.restore();
+}
+
+function drawPostFlareLoops(){
+  if(state.hLoops<0.02) return;
+  const xL=-0.55*0.55 - state.ribbonSep*0.55, xR=0.55*0.55 + state.ribbonSep*0.55;
+  const footL=-state.ribbonSep, footR=state.ribbonSep;
+  const nLoops=8; const apex=state.hLoops;
+  ctx.save(); ctx.globalCompositeOperation='lighter'; ctx.lineJoin='round';
+  const heat=clamp(state.SXR*0.7+state.R*2,0,1);
+  for(let i=0;i<nLoops;i++){
+    const f=i/(nLoops-1);
+    const spanScale=lerp(0.35,1.0,f);
+    const aH=apex*lerp(0.45,1.0,f);
+    const fl=footL*spanScale - 0.05, fr=footR*spanScale + 0.05;
+    // parametric arch
+    ctx.beginPath();
+    const N=30;
+    for(let j=0;j<=N;j++){
+      const u=j/N;
+      const x=lerp(fl,fr,u);
+      const y=Math.sin(u*Math.PI)*aH + 0.01;
+      const px=wx(x), py=wy(y);
+      if(j===0)ctx.moveTo(px,py); else ctx.lineTo(px,py);
+    }
+    const col=mix([255,150,90],[255,240,200],heat);
+    ctx.strokeStyle=rgb(col,0.12*heat+0.04); ctx.lineWidth=4; ctx.stroke();
+    ctx.strokeStyle=rgb(col,0.5*heat+0.12); ctx.lineWidth=1.2; ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawReconnection(){
+  if(state.R<0.015) return;
+  const xf=state.xf; const yTop=state.hf; const yBot=state.hLoops;
+  const cx=wx(xf); const yt=wy(Math.min(yTop,yBot+0.5)); const yb=wy(yBot);
+  const inten=clamp(state.R*2.2,0,1);
+  ctx.save(); ctx.globalCompositeOperation='lighter';
+  // current sheet
+  const grad=ctx.createLinearGradient(cx,yb,cx,yt);
+  grad.addColorStop(0,`rgba(255,240,200,${0.0})`);
+  grad.addColorStop(0.5,`rgba(255,250,230,${0.5*inten})`);
+  grad.addColorStop(1,`rgba(200,220,255,0)`);
+  ctx.strokeStyle=grad; ctx.lineWidth=2.2+3*inten;
+  ctx.beginPath(); ctx.moveTo(cx,yb); ctx.lineTo(cx,yt); ctx.stroke();
+  // X-point flash
+  const yx=wy(yBot+0.06);
+  const fl=0.6+0.4*Math.sin(state.t*40);
+  const rr=(6+18*inten)*fl;
+  const gg=ctx.createRadialGradient(cx,yx,0,cx,yx,rr);
+  gg.addColorStop(0,`rgba(255,255,245,${0.9*inten})`); gg.addColorStop(1,'rgba(255,240,200,0)');
+  ctx.fillStyle=gg; ctx.beginPath(); ctx.arc(cx,yx,rr,0,6.2832); ctx.fill();
+  ctx.restore();
+}
+
+function drawRibbons(){
+  if(state.ribbonBright<0.02 && state.phase==='buildup') return;
+  const sep=Math.max(state.ribbonSep,0.05);
+  const b=clamp(state.ribbonBright*1.4,0,1);
+  for(const sgn of [-1,1]){
+    const cx=wx(sgn*sep); const cy=PH-2;
+    const w=wscale()*0.16, h=10+10*b;
+    const gg=ctx.createRadialGradient(cx,cy,0,cx,cy,w);
+    gg.addColorStop(0,`rgba(255,240,220,${0.85*b})`);
+    gg.addColorStop(0.4,`rgba(255,120,80,${0.6*b})`);
+    gg.addColorStop(1,'rgba(255,90,60,0)');
+    ctx.save(); ctx.globalCompositeOperation='lighter';
+    ctx.fillStyle=gg; ctx.beginPath(); ctx.ellipse(cx,cy,w,h,0,0,6.2832); ctx.fill();
+    ctx.restore();
+  }
+}
+
+function drawParticles(){
+  const arr=state.particles;
+  ctx.save(); ctx.globalCompositeOperation='lighter';
+  for(let i=0;i<arr.length;i++){
+    const p=arr[i];
+    const px=wx(p.x), py=wy(p.y);
+    const en=clamp(p.ke*KEV/120,0,1);
+    const c=plasma(en*0.85+0.05);
+    const r=p.hot? 1.7:1.1;
+    const a=p.hot?0.95:0.6;
+    if(p.hot){
+      ctx.fillStyle=rgb(c,0.25); ctx.beginPath(); ctx.arc(px,py,r*2.4,0,6.2832); ctx.fill();
+    }
+    ctx.fillStyle=rgb(c,a); ctx.beginPath(); ctx.arc(px,py,r,0,6.2832); ctx.fill();
+  }
+  ctx.restore();
+}
+
+function drawCME(){
+  if(!(state.ropeEscaping||state.phase==='decay') || !state.ropeActive){
+    // fade lingering bubble handled by ropeActive
+  }
+  if(state.ropeActive && state.ropeEscaping && state.hf>0.7){
+    const cx=wx(state.xf), cy=wy(state.hf);
+    const rr=wscale()*(0.10+ (state.hf-0.7)*0.16);
+    ctx.save(); ctx.globalCompositeOperation='lighter';
+    ctx.strokeStyle='rgba(200,170,255,0.35)'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.arc(cx,cy,rr,Math.PI*0.05,Math.PI*0.95,true); ctx.stroke();
+    const gg=ctx.createRadialGradient(cx,cy,rr*0.3,cx,cy,rr*1.4);
+    gg.addColorStop(0,'rgba(180,150,255,0.14)'); gg.addColorStop(1,'rgba(180,150,255,0)');
+    ctx.fillStyle=gg; ctx.beginPath(); ctx.arc(cx,cy,rr*1.4,0,6.2832); ctx.fill();
+    ctx.restore();
+  }
+}
+
+function drawFlash(){
+  if(state.flash<0.02) return;
+  ctx.save(); ctx.globalCompositeOperation='lighter';
+  ctx.fillStyle=`rgba(255,245,225,${0.16*state.flash})`;
+  ctx.fillRect(0,0,VW,VH);
+  ctx.restore();
+}
+
+/* ----- Boris inset ----- */
+function drawBorisInset(){
+  const W=VW,H=VH;
+  const bw=Math.min(220, W*0.32), bh=bw*0.72;
+  const bx=14, by=H-bh-40;
+  boris.box={x:bx,y:by,w:bw,h:bh};
+  ctx.save();
+  // frame
+  ctx.fillStyle='rgba(6,9,16,0.82)'; ctx.strokeStyle='rgba(38,52,76,0.9)'; ctx.lineWidth=1;
+  roundRect(bx,by,bw,bh,3); ctx.fill(); ctx.stroke();
+  // reversal background (blue|red halves = Bz sign)
+  ctx.globalAlpha=0.5;
+  let g=ctx.createLinearGradient(bx,0,bx+bw,0);
+  g.addColorStop(0,'rgba(50,120,180,0.22)'); g.addColorStop(0.5,'rgba(20,25,40,0.0)');
+  g.addColorStop(1,'rgba(200,80,60,0.22)');
+  ctx.fillStyle=g; ctx.fillRect(bx+1,by+1,bw-2,bh-2);
+  ctx.globalAlpha=1;
+  // null line
+  ctx.strokeStyle='rgba(255,255,255,0.18)'; ctx.setLineDash([3,3]);
+  ctx.beginPath(); ctx.moveTo(bx+bw/2,by+16); ctx.lineTo(bx+bw/2,by+bh-6); ctx.stroke();
+  ctx.setLineDash([]);
+  // particles (map local [-1,1] -> box)
+  const mx=x=> bx+bw/2 + x*(bw/2-8);
+  const my=y=> by+bh/2 + y*(bh/2-16);
+  ctx.globalCompositeOperation='lighter';
+  for(const p of boris.parts){
+    const sp=clamp(Math.sqrt(p.ke)/1.3,0,1);
+    const c=p.q>0? [120+120*sp,180+40*sp,255] : [255,180-60*sp,120+120*sp];
+    ctx.fillStyle=rgb(c, 0.5+0.5*sp);
+    const r=1+1.6*sp;
+    ctx.beginPath(); ctx.arc(mx(p.x),my(p.y),r,0,6.2832); ctx.fill();
+  }
+  ctx.globalCompositeOperation='source-over';
+  // label
+  ctx.fillStyle='rgba(180,196,220,0.75)'; ctx.font='500 9.5px "IBM Plex Mono"'; ctx.textAlign='left';
+  ctx.fillText('DIFFUSION REGION · Boris pusher', bx+8, by+13);
+  ctx.fillStyle='rgba(120,135,160,0.7)'; ctx.font='400 8.5px "IBM Plex Mono"';
+  ctx.fillText('Speiser orbits accelerate at the null', bx+8, by+bh-6);
+  ctx.restore();
+}
+function roundRect(x,y,w,h,r){ ctx.beginPath();
+  ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+
+/* ============================================================================
+   INSTRUMENT PANELS (right console canvases)
+   ==========================================================================*/
+function mkInstr(id,h){ const c=document.getElementById(id); const g=c.getContext('2d');
+  return {c,g,h}; }
+const IEq=mkInstr('instrEq',150), ILC=mkInstr('instrLC',132), ISP=mkInstr('instrSP',118);
+function sizeInstr(o){ const r=o.c.getBoundingClientRect(); const w=Math.max(200,r.width);
+  o.W=w; o.H=o.h; o.c.style.height=o.h+'px';
+  o.c.width=Math.round(w*DPR); o.c.height=Math.round(o.h*DPR); o.g.setTransform(DPR,0,0,DPR,0,0); }
+
+function drawInstrEq(){
+  const {g,W,H}=IEq; g.clearRect(0,0,W,H); g.fillStyle='#070a12'; g.fillRect(0,0,W,H);
+  const padL=34,padR=12,padT=14,padB=22; const pw=W-padL-padR, ph=H-padT-padB;
+  // axes ranges
+  const hMax=1.5; const iMax=Math.max(state.eqNoseI*1.25, state.I*1.15, 0.6);
+  const X=h=>padL + (h/hMax)*pw;
+  const Y=i=>padT + ph - (i/iMax)*ph;
+  // grid
+  g.strokeStyle='rgba(30,42,62,0.7)'; g.lineWidth=1;
+  for(let k=0;k<=4;k++){ const yy=padT+ph*k/4; g.beginPath(); g.moveTo(padL,yy); g.lineTo(padL+pw,yy); g.stroke(); }
+  // equilibrium curve
+  g.beginPath();
+  for(let i=0;i<state.eqH.length;i++){
+    const px=X(state.eqH[i]), py=Y(state.eqI[i]);
+    if(i===0)g.moveTo(px,py); else g.lineTo(px,py);
+  }
+  g.strokeStyle='rgba(95,184,212,0.85)'; g.lineWidth=1.6; g.stroke();
+  // shade unstable (beyond nose)
+  g.save(); g.beginPath();
+  let started=false;
+  for(let i=0;i<state.eqH.length;i++){ if(state.eqH[i]>=state.eqNoseH){ const px=X(state.eqH[i]),py=Y(state.eqI[i]);
+    if(!started){g.moveTo(px,py);started=true;} else g.lineTo(px,py);} }
+  g.strokeStyle='rgba(255,138,92,0.7)'; g.setLineDash([4,3]); g.lineWidth=1.6; g.stroke(); g.setLineDash([]); g.restore();
+  // nose marker
+  g.fillStyle='rgba(255,138,92,0.9)'; const nx=X(state.eqNoseH),ny=Y(state.eqNoseI);
+  g.beginPath(); g.arc(nx,ny,2.5,0,6.2832); g.fill();
+  g.fillStyle='rgba(255,160,120,0.85)'; g.font='400 8.5px "IBM Plex Mono"'; g.textAlign='left';
+  g.fillText('fold', nx+5, ny-3);
+  // operating point
+  const opx=X(clamp(state.hf,0,hMax)), opy=Y(clamp(state.I,0,iMax));
+  const pulse = state.phase!=='buildup'?1:0.6+0.4*Math.sin(state.t*4);
+  g.fillStyle=`rgba(255,240,210,${pulse})`;
+  g.beginPath(); g.arc(opx,opy,3.4,0,6.2832); g.fill();
+  g.strokeStyle='rgba(244,197,106,0.9)'; g.lineWidth=1.4; g.beginPath(); g.arc(opx,opy,6,0,6.2832); g.stroke();
+  // labels
+  g.fillStyle='rgba(107,123,149,0.9)'; g.font='400 9px "IBM Plex Mono"';
+  g.textAlign='center'; g.fillText('rope height  h →', padL+pw/2, H-6);
+  g.save(); g.translate(11,padT+ph/2); g.rotate(-Math.PI/2); g.textAlign='center';
+  g.fillText('current  I', 0,0); g.restore();
+}
+
+function drawInstrLC(){
+  const {g,W,H}=ILC; g.clearRect(0,0,W,H); g.fillStyle='#070a12'; g.fillRect(0,0,W,H);
+  const padL=8,padR=8,padT=12,padB=16; const pw=W-padL-padR, ph=H-padT-padB;
+  const sx=state.lc.sxr, hx=state.lc.hxr; const n=state.lc.len;
+  let mx=0.001; for(const v of sx) if(v>mx)mx=v; for(const v of hx) if(v>mx)mx=v; mx*=1.15;
+  g.strokeStyle='rgba(30,42,62,0.7)'; g.lineWidth=1;
+  for(let k=0;k<=3;k++){ const yy=padT+ph*k/3; g.beginPath(); g.moveTo(padL,yy); g.lineTo(padL+pw,yy); g.stroke(); }
+  const plot=(arr,col,fill)=>{
+    if(arr.length<2)return;
+    g.beginPath();
+    for(let i=0;i<arr.length;i++){ const px=padL+ (i/(n-1))*pw; const py=padT+ph-(arr[i]/mx)*ph;
+      if(i===0)g.moveTo(px,py); else g.lineTo(px,py); }
+    if(fill){ g.lineTo(padL+((arr.length-1)/(n-1))*pw,padT+ph); g.lineTo(padL,padT+ph); g.closePath();
+      g.fillStyle=fill; g.fill(); }
+    else{ g.strokeStyle=col; g.lineWidth=1.5; g.stroke(); }
+  };
+  plot(sx,null,'rgba(255,190,90,0.16)');
+  plot(sx,'rgba(255,200,110,0.95)',null);
+  plot(hx,'rgba(185,140,245,0.95)',null);
+  // legend
+  g.font='400 9px "IBM Plex Mono"'; g.textAlign='left';
+  g.fillStyle='rgba(255,200,110,0.95)'; g.fillText('■ soft X-ray (thermal)', padL+2, 10);
+  g.fillStyle='rgba(185,140,245,0.95)'; g.fillText('■ hard X-ray', W-96, 10);
+}
+
+function drawInstrSP(){
+  const {g,W,H}=ISP; g.clearRect(0,0,W,H); g.fillStyle='#070a12'; g.fillRect(0,0,W,H);
+  const padL=8,padR=8,padT=10,padB=16; const pw=W-padL-padR, ph=H-padT-padB;
+  const spec=state.spec; const nb=spec.length;
+  let mx=1; for(const v of spec) if(v>mx)mx=v;
+  const bw=pw/nb;
+  for(let i=0;i<nb;i++){
+    const hgt=(Math.log10(1+spec[i])/Math.log10(1+mx))*ph;
+    const x=padL+i*bw; const y=padT+ph-hgt;
+    const keV=Math.pow(10, (i/nb)*(Math.log10(400)));
+    const c=plasma(clamp(Math.log10(keV)/Math.log10(400),0,1));
+    g.fillStyle=rgb(c,0.9); g.fillRect(x, y, bw-1, hgt);
+  }
+  // x ticks (log keV)
+  g.fillStyle='rgba(107,123,149,0.85)'; g.font='400 8.5px "IBM Plex Mono"'; g.textAlign='center';
+  for(const kv of [1,10,100]){ const fx=padL + (Math.log10(kv)/Math.log10(400))*pw;
+    g.fillText(kv+'', fx, H-4); }
+  g.textAlign='left'; g.fillText('keV →', padL+2, 10);
+}
+
+/* ============================================================================
+   HUD text
+   ==========================================================================*/
+const el=id=>document.getElementById(id);
+const phaseNames={buildup:'stress buildup',eruption:'impulsive · reconnecting',decay:'gradual · cooling',quiescent:'quiescent'};
+function goesClass(sxr){
+  // map soft X-ray to a GOES-like class letter
+  const v=sxr;
+  if(v<0.05) return {t:'A'+(v*20).toFixed(1),c:'#6b7b95'};
+  if(v<0.3)  return {t:'B'+(v*3.3).toFixed(1),c:'#7fd6a2'};
+  if(v<0.9)  return {t:'C'+(v*3.3).toFixed(1),c:'#ffd97a'};
+  if(v<2.2)  return {t:'M'+(v*1.6).toFixed(1),c:'#ff8a5c'};
+  return {t:'X'+(v*0.9).toFixed(1),c:'#ff5a3c'};
+}
+function updateHUD(){
+  el('tPhase').textContent=phaseNames[state.phase];
+  el('tClock').textContent=state.t.toFixed(1);
+  const gc=goesClass(state.SXR); const tc=el('tClass'); tc.textContent=gc.t; tc.style.color=gc.c;
+  el('vH').textContent=state.hf.toFixed(2);
+  el('vI').textContent=state.I.toFixed(2);
+  el('vN').textContent=decayIndex(Math.max(0.05,state.hf)).toFixed(2);
+  const va=(bStrap(Math.max(0.05,state.hf))*1.4).toFixed(2);
+  el('vVA').textContent=va;
+  el('vE').textContent=(ESCALE*state.I*state.I).toFixed(2);
+  el('vT').textContent=state.TpeakDisp.toFixed(1);
+  el('vNc').textContent=state.particles.length;
+  el('vPr').textContent=Math.round(state.precipSmooth*60);
+}
+
+function setHint(s){ el('hint').textContent=s; }
+
+/* ============================================================================
+   MAIN LOOP
+   ==========================================================================*/
+let last=performance.now(), acc=0, lcAcc=0;
+function frame(now){
+  let dtReal=(now-last)/1000; last=now; if(dtReal>0.05)dtReal=0.05;
+  if(state.running){
+    const dt=dtReal*state.speed;
+    const sub=2; const h=dt/sub;
+    for(let s=0;s<sub;s++){
+      state.t+=h;
+      stepRope(h);
+      stepFlare(h);
+      stepParticles(h);
+    }
+    stepBoris(dt);
+    // sample light curves ~30 Hz
+    lcAcc+=dtReal;
+    if(lcAcc>0.033){
+      lcAcc=0;
+      state.lc.sxr.push(state.SXR); state.lc.hxr.push(state.HXR);
+      if(state.lc.sxr.length>state.lc.len){ state.lc.sxr.shift(); state.lc.hxr.shift(); }
+    }
+  }
+  render();
+  drawInstrEq(); drawInstrLC(); drawInstrSP();
+  updateHUD();
+  requestAnimationFrame(frame);
+}
+
+/* ============================================================================
+   UI WIRING
+   ==========================================================================*/
+function bindToggle(){
+  document.querySelectorAll('.tg').forEach(t=>{
+    t.addEventListener('click',()=>{
+      const key=t.dataset.t; const on=!t.classList.contains('on');
+      t.classList.toggle('on',on); state.show[key]=on;
+    });
+  });
+}
+function num(id){ return parseFloat(el(id).value)/100; }
+function bindControls(){
+  el('btnPlay').addEventListener('click',()=>{
+    state.running=!state.running; el('btnPlay').textContent=state.running?'Pause':'Resume';
+  });
+  el('btnReset').addEventListener('click',()=>{ hardReset(); });
+  const trig=el('btnTrig');
+  trig.addEventListener('click',()=>{
+    if(state.phase==='buildup'){ startFlare(); }
+    else { hardReset(); }
+  });
+
+  el('sDrive').addEventListener('input',()=>{ state.drive=0.2+num('sDrive')*2.4;
+    el('lDrive').textContent=state.drive.toFixed(1)+'×'; });
+  el('sCplx').addEventListener('input',()=>{ state.cplx=num('sCplx');
+    el('lCplx').textContent = state.cplx<0.33?'bipolar':(state.cplx<0.66?'multipolar':'complex δ-spot');
+    buildSources(state.cplx); rebuildEqCurve(); });
+  el('sEta').addEventListener('input',()=>{ state.eta=0.02+num('sEta')*0.28;
+    el('lEta').textContent=state.eta.toFixed(2); });
+  el('sN').addEventListener('input',()=>{ state.nWant=Math.round(150+num('sN')*1550);
+    el('lN').textContent=state.nWant; });
+  el('sSpd').addEventListener('input',()=>{ state.speed=0.2+num('sSpd')*2.6;
+    el('lSpd').textContent=state.speed.toFixed(1)+'×'; });
+}
+function updateTrigLabel(){
+  el('btnTrig').textContent = state.phase==='buildup' ? 'Trigger flare' : 'New cycle';
+  el('btnTrig').classList.toggle('armed', state.phase!=='buildup');
+}
+
+/* ---------- init ---------- */
+function init(){
+  resizeSky();
+  sizeInstr(IEq); sizeInstr(ILC); sizeInstr(ISP);
+  buildSources(state.cplx); rebuildEqCurve();
+  seedThermal(); borisSeed(); makeStars();
+  bindToggle(); bindControls();
+  // sync initial dial labels
+  state.drive=0.2+num('sDrive')*2.4; el('lDrive').textContent=state.drive.toFixed(1)+'×';
+  state.eta=0.02+num('sEta')*0.28; el('lEta').textContent=state.eta.toFixed(2);
+  state.nWant=Math.round(150+num('sN')*1550); el('lN').textContent=state.nWant;
+  state.speed=0.2+num('sSpd')*2.6; el('lSpd').textContent=state.speed.toFixed(1)+'×';
+  requestAnimationFrame(frame);
+  setInterval(updateTrigLabel, 200);
+}
+window.addEventListener('resize',()=>{ resizeSky(); sizeInstr(IEq); sizeInstr(ILC); sizeInstr(ISP); starPts=null; });
+init();
+</script>
+</body>
+</html>

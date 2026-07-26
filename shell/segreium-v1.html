@@ -1,0 +1,499 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>SEGRÈIUM v1.0 — the chart of nuclides · the shadow that fits</title>
+<!--
+  SEGRÈIUM v1.0 — THE SHADOW THAT FITS
+  =================================================================
+  Named for EMILIO SEGRÈ. The chart of nuclides IS the Segrè chart. And he is
+  the man who found TECHNETIUM — Z=43, the hole in the periodic table, the first
+  artificial element, and one of only two elements below bismuth with ZERO
+  stable isotopes. He found the gap. Then he found astatine (85, also zero).
+  Then Pu-239. Nobel 1959, for the antiproton. He spent a career on the places
+  where the table has nothing in it.
+
+  =================================================================
+  VLAD'S POINT, AND HE IS RIGHT ABOUT THE COMPUTE:
+    "if you want to do the whole compute... good luck... need a cool cool
+     light-year supercomputer... the fractal intersection gets quite
+     nonsensical to compute... the whole standard model of all the permutations"
+
+  THIS IS NOT HYPERBOLE. IT IS THE STATE OF THE FIELD.
+    · the nuclear many-body problem is genuinely EXPONENTIAL. no-core shell
+      model basis dimensions grow FACTORIALLY with A.
+    · ab initio methods reach maybe A ≈ 16–20 with heroic effort and clever
+      truncation. Coupled-cluster and IMSRG push further by approximating.
+    · LATTICE QCD has done A FEW NUCLEONS. Not tin. Not lead. A few.
+    · nobody has ever computed Pb-208 from quarks. Nobody is close. The number
+      of configurations is not big — it is COMBINATORIALLY hopeless.
+
+  SO EVERY MODEL HERE IS A SHADOW, CHOSEN FOR WHAT FITS IN THE BUDGET:
+    the LIQUID DROP fits in one line of code.  it gets the valley, misses shells.
+    the SHELL MODEL fits on a page.            it gets the magic, needs the drop.
+    the FULL THING does not fit in the universe.
+  That is not a defeat. That is what modelling IS. You pick the shadow you can
+  afford and you print what it misses. Every K-block in this whole build has
+  been one sentence: HERE IS WHAT MY SHADOW MISSES.
+
+  =================================================================
+  THE OBJECT — and it is where the electron and the nucleus finally meet:
+    x = N (neutrons) · z = Z (protons) · y = binding energy per nucleon
+    Z is the CHEMISTRY. N is the BLACK BOX. The nuclide chart holds both.
+    Look down the Z axis → the periodic table's shadow.
+    Look down the N axis → the isotope shadow.
+    SAME OBJECT. DIFFERENT SHADOWS. That is the compress/decompress, one level
+    deeper than Chancourtoisium.
+
+  THE LAYERS (atelier, opt-in):
+    DROP    — Bethe–Weizsäcker B/A surface. COMPUTED, every vertex, live.
+    VALLEY  — ∂B/∂Z = 0. DERIVED, not drawn.
+    DRIP    — S_n = 0 and S_p = 0. the actual edges of existence. DERIVED.
+    MAGIC   — Z and N ∈ {2,8,20,28,50,82,126}. Mayer's planes.
+    DOUBLY  — the INTERSECTIONS. Vlad's hypothesis, as pillars.
+
+  THE FINDING (K3 — and it is the whole file):
+    THE LIQUID DROP IS PERFECTLY SMOOTH WHERE THE MAGIC LINES CROSS.
+    It has no idea they are there. It predicts NOTHING special at Pb-208.
+    And reality puts its most bound heavy nucleus EXACTLY there.
+    THE GAP IS THE SHELL STRUCTURE. THE RESIDUAL IS THE PHYSICS.
+    Same shape as every honest model in this build: the drop gives you the
+    valley and misses the shells; Madelung gives you the table and misses ~20
+    atoms; Motter-Lai gives you the cascade shape and not the percentages.
+
+  THE HONEST REFINEMENT ON VLAD'S HYPOTHESIS (K4):
+    "in their intersections is where the cool stability happens" — RIGHT about
+    the BINDING. WRONG about the stability, and the difference matters:
+      Ni-56  (28,28) doubly magic — and it DECAYS. It is the ash of type Ia
+             supernovae. Every gram of iron in your blood was Ni-56 first.
+      Sn-100 (50,50) doubly magic — and violently unstable, proton-rich.
+      Ni-78  (28,50) doubly magic — and neutron-rich, decays.
+      Pb-208 (82,126) doubly magic AND SITTING IN THE VALLEY. The only one that
+             is both. The most bound heavy nucleus there is.
+    DOUBLY MAGIC BUYS YOU A BUMP, NOT IMMUNITY. You need the intersection AND
+    the valley. The intersection is necessary and not sufficient — which is the
+    same thing Newlandsium said: pairing is the floor, magic is the bump.
+
+  three.js r128 + MiniOrbit (r128 ships no OrbitControls — maxwellium's fix).
+  chi=2 · always. Built 2026-07-17.
+-->
+<style>
+:root{ --bg:#050508; --gold:#ffd700; --cyan:#00d4ff; --pink:#ff69b4; --green:#00ffd5;
+  --purple:#cc44ff; --red:#ff3355; --amber:#ffb454; --dim:#6a6a82; --txt:#e8e0d0;
+  --rule:#20202e; --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--txt);font-family:var(--mono);overflow:hidden}
+canvas{display:block}
+#lbl{position:fixed;top:0;left:0;pointer-events:none;z-index:5}
+#top{position:fixed;top:0;left:0;right:0;z-index:12;padding:7px 11px;display:flex;gap:9px;align-items:center;
+  pointer-events:none;flex-wrap:wrap}
+#top>*{pointer-events:auto}
+#brand{background:rgba(8,8,16,.9);border:1px solid var(--rule);border-radius:8px;padding:5px 9px}
+#brand .t{color:var(--gold);font-size:12px;letter-spacing:.05em}
+#brand .s{color:var(--dim);font-size:9px;margin-top:1px}
+#verdict{flex:1;min-width:240px;max-width:480px;border-radius:8px;padding:5px 10px;
+  background:rgba(8,8,16,.9);border:1px solid var(--rule);display:flex;align-items:center;gap:9px}
+#verdict .vt{font-size:12px;font-weight:bold;letter-spacing:.05em;white-space:nowrap}
+#verdict .vs{font-size:9px;color:var(--dim);line-height:1.35}
+#verdict.good{border-color:var(--green);box-shadow:0 0 14px rgba(0,255,213,.15)}
+#verdict.good .vt{color:var(--green)}
+#verdict.warn .vt{color:var(--amber)} #verdict.warn{border-color:#3a2c10}
+.chips{display:flex;gap:4px;flex-wrap:wrap}
+.mc{background:rgba(8,8,16,.9);border:1px solid var(--rule);border-radius:6px;padding:3px 7px;min-width:50px}
+.mc .lab{font-size:7px;color:var(--dim);text-transform:uppercase;letter-spacing:.05em}
+.mc .val{font-size:12px;font-weight:bold;color:var(--gold)}
+.mc .val.cyan{color:var(--cyan)} .mc .val.green{color:var(--green)} .mc .val.red{color:var(--red)}
+#dossier{position:fixed;top:72px;right:11px;bottom:50px;width:292px;z-index:10;
+  background:rgba(8,8,16,.94);border:1px solid var(--rule);border-radius:8px;display:flex;flex-direction:column;overflow:hidden}
+#dossier .tabs{display:flex;border-bottom:1px solid var(--rule);flex:0 0 auto}
+#dossier .tab{flex:1;text-align:center;padding:6px 2px;cursor:pointer;color:#5a5440;
+  font-size:8.5px;letter-spacing:.05em;border-right:1px solid var(--rule);transition:all .12s}
+#dossier .tab:last-child{border-right:none}
+#dossier .tab.active{background:var(--gold);color:#050508;font-weight:bold}
+#dossier .tab:hover{color:var(--gold)}
+#dbody{flex:1;overflow-y:auto;padding:8px 10px;font-size:9.5px;line-height:1.6;color:var(--dim)}
+#dbody b{color:var(--cyan)} #dbody .g{color:var(--green)} #dbody .r{color:var(--red)}
+#dbody .kk{color:var(--gold)} #dbody .sec{margin-top:7px;padding-top:6px;border-top:1px solid var(--rule)}
+#dbody .rank{display:flex;justify-content:space-between;gap:6px;padding:1px 0}
+#dbody h4{color:var(--gold);font-size:9.5px;letter-spacing:.06em;margin-bottom:3px;font-weight:normal}
+#bar{position:fixed;left:50%;transform:translateX(-50%);bottom:7px;display:flex;flex-wrap:wrap;gap:4px 8px;
+  align-items:center;justify-content:center;background:rgba(8,8,16,.96);border:1px solid var(--rule);
+  border-radius:10px;padding:6px 11px;z-index:11;max-width:66vw}
+button{background:#14141f;border:1px solid #2a2a3a;border-radius:5px;color:var(--gold);
+  font:9.5px var(--mono);padding:4px 7px;cursor:pointer;transition:all .12s}
+button:hover{border-color:var(--gold)} button.on{background:#1d1a0a;border-color:var(--gold)}
+button.cyan{color:var(--cyan)} button.cyan.on{border-color:var(--cyan);background:#08222a}
+button.gn{color:var(--green)} button.gn.on{border-color:var(--green);background:#062522}
+button.rd{color:var(--red)} button.rd.on{border-color:var(--red);background:#2a0810}
+button.pu{color:var(--purple)} button.pu.on{border-color:var(--purple);background:#1e0a2a}
+.ctl{display:flex;align-items:center;gap:3px}
+.klbl{color:var(--dim);font-size:8.5px;text-transform:uppercase}
+.val2{color:var(--gold);font-size:9px;min-width:26px;text-align:right}
+input[type=range]{appearance:none;-webkit-appearance:none;width:62px;height:4px;background:#2a2a3a;border-radius:3px;outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:var(--gold);cursor:pointer}
+input[type=range]::-moz-range-thumb{width:12px;height:12px;border:none;border-radius:50%;background:var(--gold);cursor:pointer}
+.sep{width:1px;height:16px;background:#2a2a3a}
+#err{position:fixed;inset:0;display:none;align-items:center;justify-content:center;color:var(--red);font-size:13px;text-align:center;padding:30px;z-index:50}
+</style></head>
+<body>
+<div id="err">Could not load three.js from the CDN.</div>
+<canvas id="lbl"></canvas>
+
+<div id="top">
+  <div id="brand"><div class="t">SEGRÈIUM v1.0</div><div class="s">the chart of nuclides · the shadow that fits</div></div>
+  <div id="verdict" class="good"><div class="vt" id="v-t">—</div><div class="vs" id="v-s">computing…</div></div>
+  <div class="chips">
+    <div class="mc"><div class="lab">bound</div><div class="val cyan" id="m-b">—</div></div>
+    <div class="mc"><div class="lab">peak B/A</div><div class="val green" id="m-pk">—</div></div>
+    <div class="mc"><div class="lab">doubly magic</div><div class="val" id="m-dm">—</div></div>
+    <div class="mc"><div class="lab">drop @ Pb-208</div><div class="val red" id="m-pb">—</div></div>
+    <div class="mc"><div class="lab">verts</div><div class="val" id="m-v">—</div></div>
+  </div>
+</div>
+
+<div id="dossier">
+  <div class="tabs">
+    <div class="tab active" data-t="shadow" onclick="setTab('shadow')">SHADOW</div>
+    <div class="tab" data-t="cross" onclick="setTab('cross')">∩</div>
+    <div class="tab" data-t="compute" onclick="setTab('compute')">COMPUTE</div>
+    <div class="tab" data-t="k" onclick="setTab('k')">K</div>
+  </div>
+  <div id="dbody">computing…</div>
+</div>
+
+<div id="bar">
+  <button id="l-drop" class="cyan on" onclick="tog('drop')">DROP</button>
+  <button id="l-valley" class="gn on" onclick="tog('valley')">VALLEY</button>
+  <button id="l-drip" class="pu" onclick="tog('drip')">DRIP</button>
+  <button id="l-magic" class="rd on" onclick="tog('magic')">MAGIC</button>
+  <button id="l-doubly" class="on" onclick="tog('doubly')">DOUBLY ∩</button>
+  <div class="sep"></div>
+  <button onclick="look('z')">↓ Z shadow</button>
+  <button onclick="look('n')">↓ N shadow</button>
+  <button onclick="look('iso')">iso</button>
+  <div class="sep"></div>
+  <div class="ctl"><span class="klbl">height</span><input id="sH" type="range" min="10" max="200" value="90" oninput="setH(+this.value/100)"><span class="val2" id="v-h">.90</span></div>
+  <button id="b-spin" class="gn on" onclick="spin=!spin;this.classList.toggle('on',spin)">✦ spin</button>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+"use strict";
+if(!window.THREE){ document.getElementById("err").style.display="flex"; }
+
+// =========================================================================
+// THE SHADOW THAT FITS IN ONE LINE — Bethe–Weizsäcker.
+// The whole tragedy of the heavy elements is two terms:
+//   strong force = SHORT range → attraction ∝ A       (linear)
+//   Coulomb      = LONG range  → repulsion ∝ Z²/A^⅓   (quadratic)
+// Z² outruns A. There is no trick.
+// =========================================================================
+var aV=15.75, aS=17.8, aC=0.711, aA=23.7, aP=11.18;
+function BE(A,Z){
+  if(A<1||Z<0||Z>A) return -1e9;
+  var N=A-Z, d=0;
+  if(Z%2===0&&N%2===0) d= aP/Math.sqrt(A);        // the PAIRING term — Newlandsium's winner
+  else if(Z%2===1&&N%2===1) d=-aP/Math.sqrt(A);
+  return aV*A - aS*Math.pow(A,2/3) - aC*Z*(Z-1)/Math.pow(A,1/3) - aA*Math.pow(A-2*Z,2)/A + d;
+}
+function Sn(A,Z){ return BE(A,Z)-BE(A-1,Z); }     // neutron separation → drip line
+function Sp(A,Z){ return BE(A,Z)-BE(A-1,Z-1); }   // proton separation
+function bound(A,Z){ return Sn(A,Z)>0 && Sp(A,Z)>0; }
+function Zopt(A){ return A/(2 + aC*Math.pow(A,2/3)/(2*aA)); }   // ∂B/∂Z = 0 — the valley
+
+var MAGIC=[2,8,20,28,50,82,126];
+// the INTERSECTIONS. Z magic AND N magic. Vlad's hypothesis, named.
+var DOUBLY=[
+ {z:2,  n:2,   s:"He-4",  stable:true,  note:"the alpha particle. the most bound light nucleus, and the reason alpha decay exists at all."},
+ {z:8,  n:8,   s:"O-16",  stable:true,  note:"99.76% of all oxygen. you are breathing a doubly magic nucleus right now."},
+ {z:20, n:20,  s:"Ca-40", stable:true,  note:"97% of calcium. doubly magic and sitting in the valley."},
+ {z:20, n:28,  s:"Ca-48", stable:true,  note:"a huge neutron excess for Z=20 and it STILL survives — because both shells are closed. the beam of choice for making superheavies."},
+ {z:28, n:28,  s:"Ni-56", stable:false, note:"DOUBLY MAGIC AND IT DECAYS. it is the ash of type Ia supernovae — the light curve you see IS Ni-56 → Co-56 → Fe-56. every gram of iron in your blood was Ni-56 first."},
+ {z:28, n:50,  s:"Ni-78", stable:false, note:"doubly magic, wildly neutron-rich, decays in ~110 ms. a waypoint on the r-process path."},
+ {z:50, n:50,  s:"Sn-100",stable:false, note:"the heaviest doubly-magic self-conjugate nucleus (N=Z). violently proton-rich. lives ~1 second."},
+ {z:50, n:82,  s:"Sn-132",stable:false, note:"doubly magic, neutron-rich, ~40 s. another r-process waypoint."},
+ {z:82, n:126, s:"Pb-208",stable:true,  note:"★ THE KING. doubly magic AND in the valley — the ONLY one that is both. the most bound heavy nucleus that exists. every decay chain in nature ends here or nearby. this is what Vlad's intersection looks like when it also pays the valley."}
+];
+
+// ---------- the grid ----------
+var ZMAX=110, NMAX=175, HSC=0.90;
+var GRID=[], stats={};
+function computeGrid(){
+  GRID=[]; var mx=-1e9, mxZ=0, mxN=0, nb=0;
+  for(var z=1;z<=ZMAX;z++){
+    var row=[];
+    for(var n=0;n<=NMAX;n++){
+      var A=z+n, b=(A>=1)? BE(A,z)/A : -1e9, ok=(A>=2)&&bound(A,z);
+      if(ok){ nb++; if(b>mx){ mx=b; mxZ=z; mxN=n; } }
+      row.push({b:b, ok:ok});
+    }
+    GRID.push(row);
+  }
+  stats.max=mx; stats.mxZ=mxZ; stats.mxN=mxN; stats.bound=nb;
+  // K3 — the receipt: is the drop SMOOTH across a magic line?
+  // second difference of B/A in N, across N=126 at Z=82. if the drop knew about
+  // shells there would be a kink. it does not. there is not.
+  var z0=82;
+  function bb(n){ var A=z0+n; return BE(A,z0)/A; }
+  stats.kink = Math.abs(bb(125) - 2*bb(126) + bb(127));   // ≈ 0 ⇒ perfectly smooth
+  stats.pb = bb(126);
+}
+computeGrid();
+
+var LAY={drop:true, valley:true, drip:false, magic:true, doubly:true};
+var spin=true, dTab="shadow";
+var scene,camera,renderer,controls,root,rot=0, pillars=[];
+
+function MiniOrbit(cam,dom){
+  var s=this; s.tgt=new THREE.Vector3(0,0,0);
+  s.rad=cam.position.length(); s.th=Math.atan2(cam.position.x,cam.position.z);
+  s.ph=Math.acos(Math.max(-1,Math.min(1,cam.position.y/s.rad)));
+  var down=false,px=0,py=0;
+  dom.addEventListener("mousedown",function(e){down=true;px=e.clientX;py=e.clientY;});
+  window.addEventListener("mouseup",function(){down=false;});
+  window.addEventListener("mousemove",function(e){
+    if(!down) return;
+    s.th-=(e.clientX-px)*0.006; s.ph-=(e.clientY-py)*0.006;
+    s.ph=Math.max(0.05,Math.min(Math.PI-0.05,s.ph)); px=e.clientX; py=e.clientY;
+  });
+  dom.addEventListener("wheel",function(e){ e.preventDefault();
+    s.rad=Math.max(20,Math.min(400,s.rad*(1+e.deltaY*0.0012))); },{passive:false});
+  s.update=function(){
+    cam.position.set(s.tgt.x+s.rad*Math.sin(s.ph)*Math.sin(s.th),
+                     s.tgt.y+s.rad*Math.cos(s.ph), s.tgt.z+s.rad*Math.sin(s.ph)*Math.cos(s.th));
+    cam.lookAt(s.tgt);
+  };
+}
+function X(n){ return (n-NMAX/2)*0.7; }
+function Zc(z){ return (z-ZMAX/2)*0.7; }
+function Y(b){ return (b-6.5)*4.2*HSC; }
+
+function rebuild(){
+  if(!window.THREE||!scene) return;
+  if(root) scene.remove(root);
+  root=new THREE.Group(); scene.add(root); pillars=[];
+  var verts=0;
+
+  // ── the DROP surface. every vertex COMPUTED. no lookup. ──
+  if(LAY.drop){
+    var pos=[], col=[];
+    for(var z=1;z<ZMAX;z++){
+      for(var n=0;n<NMAX;n++){
+        var a=GRID[z-1][n], b=GRID[z][n], c=GRID[z][n+1], d=GRID[z-1][n+1];
+        if(!(a.ok&&b.ok&&c.ok&&d.ok)) continue;
+        var q=[[n,z-1,a],[n,z,b],[n+1,z,c], [n,z-1,a],[n+1,z,c],[n+1,z-1,d]];
+        for(var i=0;i<6;i++){
+          var P=q[i];
+          pos.push(X(P[0]), Y(P[2].b), Zc(P[1]));
+          var t=Math.max(0,Math.min(1,(P[2].b-7.0)/1.8));
+          col.push(0.05+t*0.95, 0.25+t*0.65, 0.55-t*0.2);
+          verts++;
+        }
+      }
+    }
+    var g=new THREE.BufferGeometry();
+    g.setAttribute("position", new THREE.Float32BufferAttribute(pos,3));
+    g.setAttribute("color", new THREE.Float32BufferAttribute(col,3));
+    root.add(new THREE.Mesh(g, new THREE.MeshBasicMaterial({vertexColors:true,
+      transparent:true, opacity:0.72, side:THREE.DoubleSide})));
+  }
+
+  // ── the VALLEY: ∂B/∂Z = 0. derived, not drawn. ──
+  if(LAY.valley){
+    var vp=[];
+    for(var A=4;A<=270;A+=1){
+      var zo=Zopt(A), no=A-zo;
+      if(zo<1||zo>ZMAX||no<0||no>NMAX) continue;
+      vp.push(new THREE.Vector3(X(no), Y(BE(A,Math.round(zo))/A)+0.4, Zc(zo)));
+    }
+    root.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(vp),
+      new THREE.LineBasicMaterial({color:0x00ffd5, transparent:true, opacity:0.9})));
+  }
+
+  // ── the DRIP lines: S_n = 0, S_p = 0. the edges of existence. ──
+  if(LAY.drip){
+    var dn=[], dp=[];
+    for(var z2=2;z2<=ZMAX;z2++){
+      var lastN=-1, lastP=-1;
+      for(var n2=0;n2<=NMAX;n2++){ if(bound(z2+n2,z2)) lastN=n2; }
+      for(var n3=NMAX;n3>=0;n3--){ if(bound(z2+n3,z2)) lastP=n3; }
+      if(lastN>=0) dn.push(new THREE.Vector3(X(lastN), Y(BE(z2+lastN,z2)/(z2+lastN)), Zc(z2)));
+      if(lastP>=0) dp.push(new THREE.Vector3(X(lastP), Y(BE(z2+lastP,z2)/(z2+lastP)), Zc(z2)));
+    }
+    root.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(dn),
+      new THREE.LineBasicMaterial({color:0xcc44ff,transparent:true,opacity:0.6})));
+    root.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(dp),
+      new THREE.LineBasicMaterial({color:0xcc44ff,transparent:true,opacity:0.6})));
+  }
+
+  // ── the MAGIC planes. Mayer's numbers, as walls. ──
+  if(LAY.magic){
+    for(var m=0;m<MAGIC.length;m++){
+      var M=MAGIC[m];
+      if(M<=NMAX){                                  // N magic — a wall in Z
+        var l1=[]; for(var zz=1;zz<=ZMAX;zz+=2) l1.push(new THREE.Vector3(X(M),Y(7.4),Zc(zz)));
+        root.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(l1),
+          new THREE.LineBasicMaterial({color:0xff3355,transparent:true,opacity:0.30})));
+      }
+      if(M<=ZMAX){                                  // Z magic — a wall in N
+        var l2=[]; for(var nn=0;nn<=NMAX;nn+=2) l2.push(new THREE.Vector3(X(nn),Y(7.4),Zc(M)));
+        root.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(l2),
+          new THREE.LineBasicMaterial({color:0xff3355,transparent:true,opacity:0.30})));
+      }
+    }
+  }
+
+  // ── the INTERSECTIONS. pillars. this is Vlad's hypothesis, made an object. ──
+  if(LAY.doubly){
+    var geo=new THREE.CylinderGeometry(0.5,0.5,1,10);
+    for(var d2=0;d2<DOUBLY.length;d2++){
+      var D=DOUBLY[d2];
+      if(D.z>ZMAX||D.n>NMAX) continue;
+      var A2=D.z+D.n, by=Y(BE(A2,D.z)/A2);
+      var hgt=D.stable? 9:4.5;
+      var mm=new THREE.Mesh(geo, new THREE.MeshBasicMaterial({
+        color: D.stable? 0xffd700 : 0xff8844, transparent:true, opacity: D.stable?0.75:0.35 }));
+      mm.position.set(X(D.n), by+hgt/2, Zc(D.z)); mm.scale.set(1,hgt,1);
+      root.add(mm); pillars.push({m:mm, D:D, y:by+hgt});
+    }
+  }
+  document.getElementById("m-v").textContent=verts;
+  judge();
+}
+function judge(){
+  var ve=document.getElementById("verdict");
+  ve.className="warn";
+  set("v-t","SMOOTH ✗");
+  set("v-s","the liquid drop's second difference across N=126 at Z=82 is "+stats.kink.toExponential(1)+
+    " — perfectly smooth. it has NO IDEA the magic line is there. reality puts Pb-208 exactly on it.");
+  set("m-b", stats.bound);
+  set("m-pk", stats.max.toFixed(3)+" MeV");
+  set("m-dm", DOUBLY.length);
+  set("m-pb", stats.kink.toExponential(0));
+  renderDossier();
+}
+function set(id,v){ var e=document.getElementById(id); if(e)e.textContent=v; }
+
+// ---------- labels ----------
+var lc=document.getElementById("lbl"), lx=lc.getContext("2d"), W=0,H=0,DPR=1;
+function resize(){
+  DPR=Math.min(window.devicePixelRatio||1,2); W=innerWidth; H=innerHeight;
+  lc.style.width=W+"px"; lc.style.height=H+"px";
+  lc.width=Math.round(W*DPR); lc.height=Math.round(H*DPR);
+  lx.setTransform(DPR,0,0,DPR,0,0);
+  if(renderer){ camera.aspect=W/H; camera.updateProjectionMatrix(); renderer.setSize(W,H); }
+}
+function drawLabels(){
+  lx.clearRect(0,0,W,H);
+  if(!camera||!root) return;
+  var v=new THREE.Vector3();
+  for(var i=0;i<pillars.length;i++){
+    var p=pillars[i];
+    v.set(X(p.D.n), p.y+1.4, Zc(p.D.z)).applyMatrix4(root.matrixWorld).project(camera);
+    if(v.z>1) continue;
+    var sx=(v.x*0.5+0.5)*W, sy=(-v.y*0.5+0.5)*H;
+    lx.font=(p.D.stable?"11px":"9px")+" ui-monospace,monospace";
+    lx.textAlign="center"; lx.textBaseline="bottom";
+    lx.fillStyle="rgba(5,5,8,0.8)"; lx.fillText(p.D.s, sx+1, sy+1);
+    lx.fillStyle= p.D.stable? "rgba(255,215,0,0.95)" : "rgba(255,136,68,0.75)";
+    lx.fillText(p.D.s, sx, sy);
+  }
+  // axis hints
+  lx.font="9px ui-monospace,monospace"; lx.textAlign="left"; lx.textBaseline="alphabetic";
+  lx.fillStyle="rgba(110,115,135,0.5)";
+  lx.fillText("x = N (neutrons · the black box)   ·   z = Z (protons · the chemistry)   ·   y = binding energy / nucleon", 20, H-58);
+  lx.fillStyle="rgba(0,255,213,0.6)";
+  lx.fillText("green ridge = the valley of stability (∂B/∂Z = 0, derived)", 20, H-45);
+  lx.fillStyle="rgba(255,51,85,0.6)";
+  lx.fillText("red grid = magic numbers 2·8·20·28·50·82·126 — the drop cannot see them", 20, H-32);
+}
+
+function init(){
+  if(!window.THREE) return;
+  scene=new THREE.Scene();
+  scene.fog=new THREE.FogExp2(0x050508, 0.0035);
+  camera=new THREE.PerspectiveCamera(52, innerWidth/innerHeight, 0.1, 900);
+  camera.position.set(-40,55,95);
+  renderer=new THREE.WebGLRenderer({antialias:true});
+  renderer.setSize(innerWidth,innerHeight);
+  renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  renderer.setClearColor(0x050508);
+  document.body.insertBefore(renderer.domElement, lc);
+  renderer.domElement.style.position="fixed";
+  renderer.domElement.style.top="0"; renderer.domElement.style.left="0";
+  controls=new MiniOrbit(camera, renderer.domElement);
+  resize(); rebuild(); window.addEventListener("resize",resize); animate();
+}
+function animate(){
+  requestAnimationFrame(animate);
+  if(spin&&root){ rot+=0.0018; root.rotation.y=rot; root.updateMatrixWorld(); }
+  controls.update(); renderer.render(scene,camera); drawLabels();
+}
+
+// ---------- dossier ----------
+function setTab(t){
+  dTab=t;
+  var tabs=document.querySelectorAll("#dossier .tab");
+  for(var i=0;i<tabs.length;i++) tabs[i].classList.toggle("active",tabs[i].getAttribute("data-t")===t);
+  renderDossier();
+}
+function renderDossier(){
+  var h="";
+  if(dTab==="shadow"){
+    h='<h4>THE SHADOW THAT FITS</h4><div style="font-size:8.5px">Z is the <b>chemistry</b>. N is the <b>black box</b>. the nuclide chart is the only object that holds both. <b class="g">look down the Z axis → the periodic table\'s shadow. look down the N axis → the isotope shadow. same object.</b></div>'+
+      '<div class="sec"><h4>K3 · the receipt</h4>'+
+      '<div class="rank"><span>drop 2nd-diff @ N=126, Z=82</span><b class="r">'+stats.kink.toExponential(1)+'</b></div>'+
+      '<div style="font-size:8.5px">that is the curvature of the liquid drop as it crosses the biggest magic line there is. it is <b class="r">ZERO</b>. perfectly smooth. <b>the drop has no idea the shell is there.</b><br><br>and reality puts <b class="g">Pb-208</b> — the most bound heavy nucleus that exists — exactly on that crossing.<br><br><b class="g">THE GAP IS THE SHELL STRUCTURE. THE RESIDUAL IS THE PHYSICS.</b> that is the same sentence as every honest model in this build.</div></div>'+
+      '<div class="sec"><h4>what IS computed</h4><div style="font-size:8.5px">every vertex of the surface: <b>B/A from Bethe–Weizsäcker</b>, live.<br>the valley: <b>∂B/∂Z = 0</b>, solved.<br>the drip lines: <b>S_n = 0, S_p = 0</b>, found by scan.<br>bound nuclides in the grid: <b>'+stats.bound+'</b>.<br>peak B/A: <b>'+stats.max.toFixed(3)+' MeV at Z='+stats.mxZ+', N='+stats.mxN+'</b> — the iron peak, and the reason fusion stops.</div></div>'+
+      '<div class="sec"><h4>the two terms</h4><div style="font-size:8.5px">strong force = <b>SHORT range</b> → attraction ∝ A (linear)<br>Coulomb = <b>LONG range</b> → repulsion ∝ Z²/A^⅓ (quadratic)<br><br><b class="r">Z² outruns A.</b> that is the ceiling on the whole periodic table and there is no trick, no fractal, and no clever packing that beats it.</div></div>';
+  }
+  else if(dTab==="cross"){
+    h='<h4>∩ THE INTERSECTIONS</h4><div style="font-size:8.5px">Z magic AND N magic at once. <b class="g">Vlad\'s hypothesis, as an object.</b></div><div class="sec">';
+    for(var i=0;i<DOUBLY.length;i++){
+      var D=DOUBLY[i];
+      h+='<div class="rank"><span style="color:'+(D.stable?"#ffd700":"#ff8844")+'">'+(D.stable?"★ ":"○ ")+D.s+'</span><b>Z'+D.z+' N'+D.n+'</b></div>'+
+         '<div style="font-size:8px;padding-left:8px;padding-bottom:3px;color:#6a6a82">'+D.note+'</div>';
+    }
+    h+='</div><div class="sec"><h4>K4 · the honest refinement</h4><div style="font-size:8.5px">"in their intersections is where the cool stability happens" — <b class="g">RIGHT about the BINDING. WRONG about the stability.</b> and the difference is the whole lesson:<br><br>'+
+      '<b style="color:#ff8844">Ni-56, Ni-78, Sn-100, Sn-132</b> are all doubly magic <b class="r">and they all decay.</b><br><br>'+
+      '<b class="g">DOUBLY MAGIC BUYS YOU A BUMP, NOT IMMUNITY.</b> you need the intersection <b>AND</b> the valley. <b>Pb-208 is the only one that is both</b> — and it is the king.<br><br>the intersection is <b>necessary and not sufficient</b>. which is the exact same verdict Newlandsium reached from the other side: <b>pairing is the floor, magic is the bump.</b></div></div>'+
+      '<div class="sec" style="font-size:8.5px"><span class="kk">Ni-56</span> deserves its own line. it is doubly magic, it decays, and it is the ash of every type Ia supernova. the light curve astronomers measure IS Ni-56 → Co-56 → Fe-56. <b class="g">every gram of iron in your blood was Ni-56 first.</b> a doubly magic nucleus that could not hold.</div>';
+  }
+  else if(dTab==="compute"){
+    h='<h4>YOU WERE RIGHT ABOUT THE COMPUTE</h4>'+
+      '<div style="font-size:8.5px">"good luck… need a cool cool light-year supercomputer" — <b class="g">that is not hyperbole. that is the state of the field.</b></div>'+
+      '<div class="sec"><div class="rank"><span>this surface</span><b class="g">one line of code</b></div>'+
+      '<div class="rank"><span>shell model</span><b class="g">a page</b></div>'+
+      '<div class="rank"><span>ab initio (NCSM)</span><b class="r">A ≈ 16–20, heroic</b></div>'+
+      '<div class="rank"><span>lattice QCD</span><b class="r">a few nucleons</b></div>'+
+      '<div class="rank"><span>Pb-208 from quarks</span><b class="r">nobody. not close.</b></div></div>'+
+      '<div style="font-size:8.5px">no-core shell model basis dimensions grow <b class="r">FACTORIALLY</b> with A. it is not that the number is big. it is that it is combinatorially hopeless — you cannot buy your way out with more silicon, and Moore\'s law does not touch a factorial.</div>'+
+      '<div class="sec"><h4>so what IS a model?</h4><div style="font-size:8.5px"><b class="g">a shadow you can afford.</b><br><br>you pick the projection that fits your budget, and then — this is the only part that matters — <b>you print what it misses.</b><br><br>the liquid drop misses the shells. Madelung misses ~20 atoms. Motter–Lai misses the percentages. the min-cut misses the shared risk. every K-block in this entire build has been one sentence: <b class="g">HERE IS WHAT MY SHADOW MISSES.</b><br><br>that is not a disclaimer. <b>that is the science.</b> the model that does not tell you what it misses is not a smaller model. it is a lie with a graph attached.</div></div>';
+  }
+  else {
+    h='<h4>K1 · computed vs known</h4>'+
+      '<div style="font-size:8.5px"><b class="g">COMPUTED here, live, no lookup:</b> the entire B/A surface, the valley (∂B/∂Z=0), both drip lines (S=0), the pairing term, the iron peak, the smoothness receipt.<br><br>'+
+      '<b>KNOWN, typed in:</b> the magic numbers {2,8,20,28,50,82,126} and the doubly-magic list with their stability. those are measurements, not derivations — Mayer derived the magic numbers from spin–orbit, and that derivation is in <b>Chancourtoisium</b>, not here.</div>'+
+      '<div class="sec"><h4>K2 · the drop is a 5-parameter fit</h4><div style="font-size:8.5px">a_V, a_S, a_C, a_A, a_P — <b>five free parameters</b>, fitted to measured masses. by Newlandsium\'s own rule I have to say it: <b class="r">five parameters is an elephant with a wiggling trunk.</b><br><br>the defence — and it is a real one — is that each term has a <b>MECHANISM</b> stated in advance: volume, surface, Coulomb, asymmetry, pairing. It is not a curve fitted to a shape. It is a physical argument that happens to have coefficients. <b class="g">that is the whole difference between the liquid drop and a log-periodic fit, and it is the only difference that ever matters.</b></div></div>'+
+      '<div class="sec"><h4>K5 · what this misses</h4><div style="font-size:8.5px">no shell corrections. no deformation (real nuclei are not spheres — the rare earths are rugby balls). no odd-particle effects beyond the crude δ. no fission barriers. the surface here is smooth EVERYWHERE, which is exactly the point being made and also exactly its limitation.</div></div>'+
+      '<div class="sec"><h4>Segrè</h4><div style="font-size:8.5px">the chart is his. and he found <b>technetium</b> — Z=43, the hole in the periodic table, the first artificial element, one of only two below bismuth with <b class="r">zero</b> stable isotopes. then <b>astatine</b> (85, also zero). then Pu-239. Nobel 1959 for the antiproton.<br><br><b class="g">he spent a career on the places where the table has nothing in it.</b> That is a way to live.</div></div>';
+  }
+  document.getElementById("dbody").innerHTML=h;
+}
+function tog(k){
+  LAY[k]=!LAY[k];
+  document.getElementById("l-"+k).classList.toggle("on",LAY[k]);
+  rebuild();
+}
+function look(w){
+  if(!controls) return;
+  if(w==="z"){ controls.ph=0.06; controls.th=0; }           // straight down → periodic shadow
+  else if(w==="n"){ controls.ph=Math.PI/2; controls.th=Math.PI/2; }
+  else { controls.ph=0.75; controls.th=-0.7; }
+  controls.rad=110; spin=false;
+  document.getElementById("b-spin").classList.remove("on");
+}
+function setH(v){ HSC=v; set("v-h",v.toFixed(2).slice(1)); rebuild(); }
+
+if(window.THREE) init(); else { resize(); renderDossier(); }
+</script>
+</body></html>

@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Karaoke Typography Transformer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Yuji+Mai&family=Zen+Maru+Gothic:wght@300;500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg0:#0a0b14;
+    --bg1:#14152a;
+    --panel:rgba(255,255,255,.035);
+    --panel-2:rgba(255,255,255,.05);
+    --border:rgba(255,255,255,.09);
+    --border-warm:rgba(242,193,78,.22);
+    --ink:#ece6d8;          /* base lyric */
+    --ink-dim:#8d8da6;      /* muted / tier0 / secondary */
+    --ink-faint:#5d5d76;
+    --gold:#f2c14e;         /* tier 2 */
+    --gold-bright:#ffdd86;  /* tier 3 */
+    --gold-white:#fff5dc;   /* tier 3 spaced */
+    --cyan:#7fd4d0;
+    --glow:rgba(242,193,78,.5);
+    --glow-soft:rgba(242,193,78,.28);
+    --font-title:'Yuji Mai', cursive;
+    --font-ui:'Zen Maru Gothic', system-ui, sans-serif;
+  }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:var(--font-ui);
+    color:var(--ink);
+    background:
+      radial-gradient(1100px 600px at 78% -8%, rgba(242,193,78,.10), transparent 60%),
+      radial-gradient(900px 700px at 10% 110%, rgba(110,120,190,.16), transparent 55%),
+      linear-gradient(160deg, var(--bg1), var(--bg0) 70%);
+    background-attachment:fixed;
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+    line-height:1.5;
+  }
+  /* faint grain */
+  body::after{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.04;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  .shell{position:relative;z-index:1;max-width:1180px;margin:0 auto;padding:38px 22px 60px;}
+
+  header.top{text-align:center;margin-bottom:30px;}
+  header.top h1{
+    font-family:var(--font-title);
+    font-weight:400;font-size:clamp(2.4rem,6vw,3.9rem);
+    margin:0;line-height:1;color:var(--gold-bright);
+    text-shadow:0 0 26px var(--glow-soft);letter-spacing:.5px;
+  }
+  header.top .sub{
+    margin-top:10px;color:var(--ink-dim);font-size:.86rem;
+    letter-spacing:.28em;text-transform:uppercase;font-weight:500;
+  }
+  header.top .tag{margin-top:6px;color:var(--ink-faint);font-size:.8rem;letter-spacing:.04em;}
+
+  .grid{display:grid;grid-template-columns:minmax(300px,1fr) minmax(330px,1.15fr);gap:22px;align-items:start;}
+  .wrap.sing .grid{grid-template-columns:1fr;}
+  .wrap.sing .editor{display:none;}
+
+  /* ---- editor side ---- */
+  .editor{display:flex;flex-direction:column;gap:14px;}
+
+  .toolbar{display:flex;flex-wrap:wrap;gap:7px;}
+  .toolbar .grp{display:flex;gap:7px;flex-wrap:wrap;}
+  button.tool{
+    font-family:var(--font-ui);font-weight:700;font-size:.84rem;cursor:pointer;
+    color:var(--ink);background:var(--panel-2);border:1px solid var(--border);
+    border-radius:11px;padding:9px 12px;transition:all .16s ease;line-height:1;
+    display:inline-flex;align-items:center;gap:5px;
+  }
+  button.tool sup{font-size:.62em;color:var(--gold);}
+  button.tool:hover{border-color:var(--border-warm);background:rgba(242,193,78,.10);transform:translateY(-1px);}
+  button.tool:active{transform:translateY(0);}
+  button.tool.t0  sup{color:var(--ink-dim);}
+  button.tool.t2  {color:var(--gold);} 
+  button.tool.t3  {color:var(--gold-bright);}
+  button.tool.t3s {color:var(--gold-white);text-shadow:0 0 12px var(--glow-soft);}
+
+  textarea#src{
+    width:100%;min-height:300px;resize:vertical;
+    font-family:var(--font-ui);font-size:1rem;font-weight:500;line-height:1.85;
+    color:var(--ink);background:rgba(0,0,0,.28);
+    border:1px solid var(--border);border-radius:16px;padding:16px 18px;
+    outline:none;transition:border-color .2s;
+  }
+  textarea#src:focus{border-color:var(--border-warm);}
+  textarea#src::placeholder{color:var(--ink-faint);}
+
+  .exports{display:flex;flex-wrap:wrap;gap:8px;}
+  button.exp{
+    font-family:var(--font-ui);font-weight:700;font-size:.8rem;cursor:pointer;
+    color:var(--ink-dim);background:transparent;border:1px solid var(--border);
+    border-radius:10px;padding:8px 13px;transition:all .16s;
+  }
+  button.exp:hover{color:var(--ink);border-color:var(--border-warm);}
+
+  details.cheat{
+    background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:2px 16px;
+  }
+  details.cheat summary{
+    cursor:pointer;font-weight:700;font-size:.86rem;color:var(--gold);padding:12px 0;
+    list-style:none;letter-spacing:.04em;
+  }
+  details.cheat summary::-webkit-details-marker{display:none;}
+  details.cheat summary::before{content:"▸ ";color:var(--ink-dim);}
+  details.cheat[open] summary::before{content:"▾ ";}
+  .cheat-body{padding:4px 0 16px;font-size:.84rem;color:var(--ink-dim);line-height:1.7;}
+  .cheat-body code{
+    font-family:ui-monospace,Menlo,monospace;background:rgba(0,0,0,.35);
+    padding:1px 6px;border-radius:6px;color:var(--gold-bright);font-size:.82em;
+  }
+  .cheat-body .row{display:flex;gap:10px;align-items:baseline;padding:3px 0;border-bottom:1px solid rgba(255,255,255,.04);}
+  .cheat-body .row:last-child{border-bottom:none;}
+  .cheat-body .row .what{flex:1;}
+  .cheat-body b{color:var(--ink);}
+
+  /* ---- stage / sing side ---- */
+  .stage-wrap{position:sticky;top:22px;}
+  .stage-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+  .stage-head .lbl{color:var(--ink-dim);font-size:.78rem;letter-spacing:.26em;text-transform:uppercase;font-weight:500;}
+  button.sing-toggle{
+    font-family:var(--font-ui);font-weight:700;font-size:.82rem;cursor:pointer;
+    color:var(--bg0);background:var(--gold);border:none;border-radius:999px;
+    padding:8px 16px;transition:all .18s;box-shadow:0 0 18px var(--glow-soft);
+  }
+  button.sing-toggle:hover{background:var(--gold-bright);box-shadow:0 0 26px var(--glow);}
+
+  .stage{
+    position:relative;overflow:hidden;
+    background:linear-gradient(170deg, rgba(20,22,44,.85), rgba(8,9,18,.9));
+    border:1px solid var(--border);border-radius:22px;
+    padding:34px 26px;min-height:420px;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.05), 0 30px 60px -30px rgba(0,0,0,.7);
+  }
+  /* faint transmutation-circle echo */
+  .stage::before{
+    content:"";position:absolute;top:50%;left:50%;width:520px;height:520px;
+    transform:translate(-50%,-50%);pointer-events:none;opacity:.05;
+    background:
+      radial-gradient(circle, transparent 39%, var(--gold) 39.6%, transparent 40.4%),
+      radial-gradient(circle, transparent 49%, var(--cyan) 49.5%, transparent 50.2%),
+      radial-gradient(circle, transparent 31%, var(--gold) 31.5%, transparent 32.3%);
+  }
+  .stage .lyrics{position:relative;text-align:center;}
+
+  .ly-line{
+    margin:0;padding:6px 0;line-height:2.05;
+    font-size:clamp(1.15rem,2.7vw,1.6rem);font-weight:500;color:var(--ink);
+    word-break:break-word;
+  }
+  .ly-line.empty{height:.7em;padding:0;}
+  .ly-section{
+    margin:26px 0 8px;text-align:center;color:var(--gold);
+    font-size:.76rem;font-weight:700;letter-spacing:.34em;text-transform:uppercase;
+    opacity:.85;
+  }
+  .ly-section:first-child{margin-top:0;}
+  .ly-section::before,.ly-section::after{content:"·";color:var(--ink-faint);margin:0 .9em;}
+
+  /* tiers */
+  .k0{font-size:.95em;color:var(--ink-dim);opacity:.62;font-weight:500;letter-spacing:.02em;}
+  .k1{}
+  .k2{font-weight:900;color:var(--gold);}
+  .k3{font-weight:900;color:var(--gold-bright);font-size:1.18em;text-shadow:0 0 16px var(--glow-soft);letter-spacing:.01em;}
+  .k3s{
+    font-weight:900;color:var(--gold-white);font-size:1.3em;letter-spacing:.16em;
+    text-shadow:0 0 22px var(--glow);animation:breathe 4.6s ease-in-out infinite;
+  }
+  @keyframes breathe{0%,100%{text-shadow:0 0 16px var(--glow-soft);}50%{text-shadow:0 0 30px var(--glow);}}
+
+  .wrap.sing .stage{min-height:62vh;display:flex;align-items:center;justify-content:center;padding:46px 30px;}
+  .wrap.sing .ly-line{font-size:clamp(1.5rem,4vw,2.4rem);line-height:2.1;}
+  .wrap.sing .ly-section{font-size:.9rem;}
+
+  footer.foot{
+    margin-top:42px;text-align:center;color:var(--ink-faint);font-size:.8rem;line-height:1.9;
+  }
+  footer.foot .spoon{font-family:var(--font-title);font-size:1.15rem;color:var(--ink-dim);}
+  footer.foot .sig{margin-top:8px;letter-spacing:.18em;font-size:.72rem;}
+
+  .toast{
+    position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(20px);
+    background:var(--gold);color:var(--bg0);font-weight:700;font-size:.86rem;
+    padding:10px 20px;border-radius:999px;box-shadow:0 0 26px var(--glow);
+    opacity:0;pointer-events:none;transition:all .25s;z-index:10;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  @media (max-width:820px){
+    .grid{grid-template-columns:1fr;}
+    .stage-wrap{position:static;}
+    .stage{min-height:300px;}
+    .shell{padding:28px 16px 50px;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap" id="wrap">
+<div class="shell">
+
+  <header class="top">
+    <h1>Karaoke Typography Transformer</h1>
+    <div class="sub">static visual prosody &middot; paste &middot; shape &middot; sing</div>
+    <div class="tag">size = emphasis &nbsp;·&nbsp; repeated vowels = duration &nbsp;·&nbsp; bold = weight</div>
+  </header>
+
+  <div class="grid">
+
+    <!-- EDITOR -->
+    <section class="editor">
+      <div class="toolbar">
+        <div class="grp">
+          <button class="tool t0"  onclick="wrap('[[',']]')" title="Tier 0 — tiny / throwaway (particles, grace notes)">tiny <sup>0</sup></button>
+          <button class="tool t2"  onclick="wrap('*','*')"  title="Tier 2 — bold push / lean in">push <sup>2</sup></button>
+          <button class="tool t3"  onclick="wrap('**','**')" title="Tier 3 — BELT the climactic peak">BELT <sup>3</sup></button>
+          <button class="tool t3s" onclick="wrap('***','***')" title="Tier 3 spaced — the biggest held note (≤6 per song)">STRETCH</button>
+        </div>
+        <div class="grp">
+          <button class="tool" onclick="vowel(1)"  title="Hold longer — add one vowel to the selection">+ vowel</button>
+          <button class="tool" onclick="vowel(-1)" title="Hold less — remove one repeated vowel">− vowel</button>
+          <button class="tool" onclick="section()" title="Start a section / musical phrase">＃ section</button>
+        </div>
+      </div>
+
+      <textarea id="src" spellcheck="false" placeholder="Paste romaji lyrics here, highlight a syllable, then tap a button to shape it…" oninput="render()"></textarea>
+
+      <div class="exports">
+        <button class="exp" onclick="copyPlain(this)">Copy plain (Unicode)</button>
+        <button class="exp" onclick="copyMarkup(this)">Copy markup</button>
+        <button class="exp" onclick="resetDemo()">Reset to demo</button>
+      </div>
+
+      <details class="cheat">
+        <summary>How to mark it up</summary>
+        <div class="cheat-body">
+          <div class="row"><span class="what"><b>Just type</b> for the on-beat default</span><code>kimi</code></div>
+          <div class="row"><span class="what"><b>Tiny</b> — particles &amp; pickups (wa, ni, ga…)</span><code>[[wa]]</code></div>
+          <div class="row"><span class="what"><b>Push</b> — lean in / bold</span><code>*suki*</code></div>
+          <div class="row"><span class="what"><b>Belt</b> — the climactic peak</span><code>**datta**</code></div>
+          <div class="row"><span class="what"><b>Stretch</b> — biggest held note (use sparingly)</span><code>***zutto***</code></div>
+          <div class="row"><span class="what"><b>Hold a note</b> — just repeat the vowel</span><code>kaaa</code></div>
+          <div class="row"><span class="what"><b>New phrase</b> — start a line with</span><code>＃ Chorus</code></div>
+          <p style="margin:12px 0 0;color:var(--ink-faint)">The three axes are independent: a <code>[[tiny]]</code> word can still <code>[[riiing]]</code>, and a <code>**BELT**</code> can be short or long. Mark each syllable for how the melody actually moves.</p>
+        </div>
+      </details>
+    </section>
+
+    <!-- STAGE -->
+    <section class="stage-wrap">
+      <div class="stage-head">
+        <span class="lbl">the screen</span>
+        <button class="sing-toggle" id="singBtn" onclick="toggleSing()">Sing mode ▸</button>
+      </div>
+      <div class="stage">
+        <div class="lyrics" id="out"></div>
+      </div>
+    </section>
+
+  </div>
+
+  <footer class="foot">
+    <div class="spoon">the system is the spoon &middot; the song is the carving</div>
+    <div class="sig">BUENOS AIRES &middot; 4AM &middot; P=12 &middot; χ=2 &middot; ALWAYS</div>
+  </footer>
+
+</div>
+</div>
+<div class="toast" id="toast">copied</div>
+
+<script>
+  const SUP = {a:'ᵃ',b:'ᵇ',c:'ᶜ',d:'ᵈ',e:'ᵉ',f:'ᶠ',g:'ᵍ',h:'ʰ',i:'ⁱ',j:'ʲ',k:'ᵏ',l:'ˡ',m:'ᵐ',
+               n:'ⁿ',o:'ᵒ',p:'ᵖ',q:'q',r:'ʳ',s:'ˢ',t:'ᵗ',u:'ᵘ',v:'ᵛ',w:'ʷ',x:'ˣ',y:'ʸ',z:'ᶻ'};
+  const srcEl = document.getElementById('src');
+  const outEl = document.getElementById('out');
+
+  const DEMO =
+`＃ how this works
+
+sing the [[little]] [[words]] soft and small,
+*lean* into the bold ones,
+let the long notes riiing,
+then **BELT** the big moment —
+and ***hooold*** the very last note
+
+＃ your turn
+
+paste romaji lyrics here, highlight a
+syllable, and tap a button to shape it`;
+
+  function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+  function toSuper(s){return [...s.toLowerCase()].map(c=>SUP[c]!==undefined?SUP[c]:c).join('');}
+  function spacedUpper(s){return s.toUpperCase().split('').join(' ');}
+
+  // hand scanner: handles [[ ]], *** ***, ** **, * *
+  function tokenize(line){
+    const out=[]; let i=0, buf='';
+    const flush=()=>{ if(buf){out.push({t:'1',x:buf});buf='';} };
+    while(i<line.length){
+      if(line.startsWith('[[',i)){const e=line.indexOf(']]',i+2);if(e!==-1){flush();out.push({t:'0',x:line.slice(i+2,e)});i=e+2;continue;}}
+      if(line.startsWith('***',i)){const e=line.indexOf('***',i+3);if(e!==-1){flush();out.push({t:'3s',x:line.slice(i+3,e)});i=e+3;continue;}}
+      if(line.startsWith('**',i)){const e=line.indexOf('**',i+2);if(e!==-1){flush();out.push({t:'3',x:line.slice(i+2,e)});i=e+2;continue;}}
+      if(line[i]==='*'){const e=line.indexOf('*',i+1);if(e!==-1){flush();out.push({t:'2',x:line.slice(i+1,e)});i=e+1;continue;}}
+      buf+=line[i]; i++;
+    }
+    flush(); return out;
+  }
+
+  function renderHTML(line){
+    return tokenize(line).map(tk=>{
+      if(tk.t==='0')  return `<span class="k0">${esc(toSuper(tk.x))}</span>`;
+      if(tk.t==='2')  return `<span class="k2">${esc(tk.x)}</span>`;
+      if(tk.t==='3')  return `<span class="k3">${esc(tk.x.toUpperCase())}</span>`;
+      if(tk.t==='3s') return `<span class="k3s">${esc(tk.x.toUpperCase())}</span>`;
+      return `<span class="k1">${esc(tk.x)}</span>`;
+    }).join('');
+  }
+
+  function renderPlain(line){
+    return tokenize(line).map(tk=>{
+      if(tk.t==='0')  return toSuper(tk.x);
+      if(tk.t==='3')  return tk.x.toUpperCase();
+      if(tk.t==='3s') return spacedUpper(tk.x);
+      return tk.x;
+    }).join('');
+  }
+
+  function render(){
+    const lines = srcEl.value.split('\n');
+    outEl.innerHTML = lines.map(raw=>{
+      const t = raw.trim();
+      if(t==='') return `<div class="ly-line empty"></div>`;
+      if(/^[#＃]\s*/.test(t)) return `<div class="ly-section">${esc(t.replace(/^[#＃]\s*/,''))}</div>`;
+      return `<p class="ly-line">${renderHTML(raw)}</p>`;
+    }).join('');
+  }
+
+  // ---- toolbar actions on textarea selection ----
+  function wrap(open, close){
+    const v=srcEl.value, s=srcEl.selectionStart, e=srcEl.selectionEnd, sel=v.slice(s,e);
+    srcEl.value = v.slice(0,s)+open+sel+close+v.slice(e);
+    srcEl.focus();
+    if(sel) srcEl.setSelectionRange(s, s+open.length+sel.length+close.length);
+    else    srcEl.setSelectionRange(s+open.length, s+open.length);
+    render();
+  }
+
+  function vowel(dir){
+    const v=srcEl.value, s=srcEl.selectionStart, e=srcEl.selectionEnd;
+    let sel=v.slice(s,e);
+    if(!sel){ toast('select a syllable first'); return; }
+    if(dir>0){
+      const m=[...sel.matchAll(/[aeiou]/gi)];
+      if(!m.length){ toast('no vowel to hold'); return; }
+      const last=m[m.length-1]; const idx=last.index;
+      sel = sel.slice(0,idx+1)+last[0]+sel.slice(idx+1);
+    } else {
+      const runs=[...sel.matchAll(/([aeiou])\1+/gi)];
+      if(!runs.length){ toast('nothing to shorten'); return; }
+      const r=runs[runs.length-1];
+      sel = sel.slice(0, r.index+r[0].length-1) + sel.slice(r.index+r[0].length);
+    }
+    srcEl.value = v.slice(0,s)+sel+v.slice(e);
+    srcEl.focus(); srcEl.setSelectionRange(s, s+sel.length);
+    render();
+  }
+
+  function section(){
+    const v=srcEl.value, s=srcEl.selectionStart;
+    const lineStart = v.lastIndexOf('\n', s-1)+1;
+    if(/^[#＃]\s*/.test(v.slice(lineStart))) { srcEl.focus(); return; }
+    srcEl.value = v.slice(0,lineStart)+'＃ '+v.slice(lineStart);
+    srcEl.focus(); srcEl.setSelectionRange(lineStart+2, lineStart+2);
+    render();
+  }
+
+  // ---- exports ----
+  function copyText(txt, btn, label){
+    navigator.clipboard.writeText(txt).then(()=>{
+      const o=btn.textContent; btn.textContent='copied ✓';
+      setTimeout(()=>btn.textContent=o,1300);
+    }).catch(()=>toast('copy failed'));
+  }
+  function copyPlain(btn){
+    const out = srcEl.value.split('\n').map(raw=>{
+      const t=raw.trim();
+      if(t==='') return '';
+      if(/^[#＃]\s*/.test(t)) return '[ '+t.replace(/^[#＃]\s*/,'')+' ]';
+      return renderPlain(raw);
+    }).join('\n');
+    copyText(out, btn);
+  }
+  function copyMarkup(btn){ copyText(srcEl.value, btn); }
+
+  function resetDemo(){ srcEl.value=DEMO; render(); }
+
+  // ---- sing mode ----
+  function toggleSing(){
+    const w=document.getElementById('wrap');
+    const on=w.classList.toggle('sing');
+    document.getElementById('singBtn').textContent = on ? 'Edit mode ◂' : 'Sing mode ▸';
+    if(on) window.scrollTo({top:0,behavior:'smooth'});
+  }
+
+  let toastT;
+  function toast(msg){
+    const el=document.getElementById('toast'); el.textContent=msg; el.classList.add('show');
+    clearTimeout(toastT); toastT=setTimeout(()=>el.classList.remove('show'),1500);
+  }
+
+  // init
+  srcEl.value = DEMO;
+  render();
+</script>
+</body>
+</html>

@@ -1,0 +1,528 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>NEWLANDSIUM v1.0 — thirteen patterns, one filter</title>
+<!--
+  NEWLANDSIUM v1.0 — THIRTEEN PATTERNS, ONE FILTER
+  =================================================================
+  Named for JOHN ALEXANDER REINA NEWLANDS, who in 1865 proposed the LAW OF
+  OCTAVES: arrange the elements by weight and every EIGHTH one repeats, like a
+  musical scale. He literally called them octaves.
+
+  The Chemical Society REFUSED TO PUBLISH IT. At the meeting, Professor George
+  Foster asked whether he had tried arranging the elements ALPHABETICALLY. He
+  was laughed out of the room.
+
+  He was also PARTLY RIGHT. The octaves work beautifully for Li→K, then shatter
+  completely at the transition metals — because Newlands had no idea the d-block
+  existed. Mendeleev left GAPS where Newlands forced a fit. That was the whole
+  difference. In 1887, twenty-two years later, the Royal Society gave Newlands
+  the Davy Medal.
+
+  So this file is his: a rack that runs THIRTEEN candidate patterns against real
+  stability data and kills most of them in public. His octaves are candidate #5,
+  scored honestly alongside the rest. He gets to lose fairly this time.
+
+  =================================================================
+  THE METHOD (Vlad's): "why only 1 fractal pattern? that's boring. try 7 or 12
+  and see where they INTERSECT — that's where the cool stability happens. the
+  math always runs; you can see what you can pay in compute."
+  =================================================================
+
+  THE TEST — and it is a real one, not a demo:
+    Each generator emits a SET of "special" Z values.
+    Score = mean stable-isotope count of that set ÷ baseline mean (all Z ≤ 83).
+    LIFT > 1 → the pattern predicts stability. LIFT ≈ 1 → noise. LIFT < 1 → the
+    pattern is ANTI-predictive, which is a real finding and not a failure.
+
+  THE TRAP THIS FILE IS BUILT TO CATCH (K3):
+    A set with many members scores trivially. "Even numbers" hits 41 of 83. So
+    |S| is printed next to every lift, always, and a 4-parameter log-periodic
+    fit is included ON PURPOSE as the control — von Neumann's elephant, sitting
+    in the rack, scoring, to show you what a meaningless good fit looks like.
+
+  THE SECOND TRAP (K4) — and this is the one that matters:
+    Raw lift is confounded by Z. Heavy elements have more isotopes because
+    there is more room. So a LOCAL lift is also computed: each Z against the
+    mean of its same-parity neighbours. That isolates the effect from the trend.
+    Raw lift and local lift often DISAGREE, and when they do, the local one is
+    telling the truth.
+
+  WHAT IT FINDS (spoiler, because the honest result beats the triumphant one):
+    · EVEN-Z (the PAIRING TERM) is the strongest predictor in the rack. ~4×.
+    · NUCLEAR MAGIC lifts too — but ONLY ~16% once you control for Z. The magic
+      numbers are a modest local bump riding on top of a huge pairing effect.
+      Vlad's instinct — intersections are where stability lives — is RIGHT in
+      direction. The MAGNITUDES are not what anyone expects.
+    · PRIMES score ~0.40 — ACTIVELY ANTI-PREDICTIVE. Beautifully so: after 2,
+      every prime is ODD, and odd-Z is the pairing penalty. A crank pattern that
+      fails hard, for a knowable reason. That is what a good null looks like.
+    · FIBONACCI and the GOLDEN LADDER: both below baseline. They fail.
+    · The deepest real intersection is DOUBLY MAGIC — Z magic AND N magic —
+      He-4, O-16, Ca-40, Ca-48, Sn-100, Sn-132, Pb-208. Vlad's intersection,
+      exactly, one level down: not in the elements, in the NUCLIDES.
+
+  HONESTY (K1-K5): see the K tab. Isotope counts follow the common
+  observationally-stable convention and sources differ by ±1 on several
+  elements. "Stable" is contested at the edges. Lift is a descriptive statistic,
+  NOT a significance test — no p-value is claimed and none should be inferred.
+
+  Pure Canvas 2D. No deps. chi=2 · always. Built 2026-07-17.
+-->
+<style>
+:root{ --bg:#050508; --gold:#ffd700; --cyan:#00d4ff; --pink:#ff69b4; --green:#00ffd5;
+  --purple:#cc44ff; --red:#ff3355; --amber:#ffb454; --dim:#6a6a82; --txt:#e8e0d0;
+  --rule:#20202e; --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--txt);font-family:var(--mono);overflow:hidden;
+  transition:background .45s}
+body.dead{background:#1a0a10}
+body.elephant{background:#1a1206}
+#cv{position:fixed;top:0;left:0;display:block;cursor:crosshair}
+#top{position:fixed;top:0;left:0;right:0;z-index:12;padding:7px 11px;display:flex;gap:9px;align-items:center;
+  pointer-events:none;flex-wrap:wrap}
+#top>*{pointer-events:auto}
+#brand{background:rgba(8,8,16,.9);border:1px solid var(--rule);border-radius:8px;padding:5px 9px}
+#brand .t{color:var(--gold);font-size:12px;letter-spacing:.05em}
+#brand .s{color:var(--dim);font-size:9px;margin-top:1px}
+#verdict{flex:1;min-width:230px;max-width:470px;border-radius:8px;padding:5px 10px;
+  background:rgba(8,8,16,.9);border:1px solid var(--rule);display:flex;align-items:center;gap:9px}
+#verdict .vt{font-size:12px;font-weight:bold;letter-spacing:.05em;white-space:nowrap}
+#verdict .vs{font-size:9px;color:var(--dim);line-height:1.35}
+#verdict.good{border-color:var(--green);box-shadow:0 0 14px rgba(0,255,213,.15)}
+#verdict.good .vt{color:var(--green)}
+#verdict.warn .vt{color:var(--amber)} #verdict.warn{border-color:#3a2c10}
+#verdict.bad .vt{color:var(--red)} #verdict.bad{border-color:#3a1018}
+.chips{display:flex;gap:4px;flex-wrap:wrap}
+.mc{background:rgba(8,8,16,.9);border:1px solid var(--rule);border-radius:6px;padding:3px 7px;min-width:52px}
+.mc .lab{font-size:7px;color:var(--dim);text-transform:uppercase;letter-spacing:.05em}
+.mc .val{font-size:12px;font-weight:bold;color:var(--gold)}
+.mc .val.cyan{color:var(--cyan)} .mc .val.green{color:var(--green)} .mc .val.red{color:var(--red)}
+#dossier{position:fixed;top:72px;right:11px;bottom:50px;width:292px;z-index:10;
+  background:rgba(8,8,16,.94);border:1px solid var(--rule);border-radius:8px;display:flex;flex-direction:column;overflow:hidden}
+#dossier .tabs{display:flex;border-bottom:1px solid var(--rule);flex:0 0 auto}
+#dossier .tab{flex:1;text-align:center;padding:6px 2px;cursor:pointer;color:#5a5440;
+  font-size:8.5px;letter-spacing:.05em;border-right:1px solid var(--rule);transition:all .12s}
+#dossier .tab:last-child{border-right:none}
+#dossier .tab.active{background:var(--gold);color:#050508;font-weight:bold}
+#dossier .tab:hover{color:var(--gold)}
+#dbody{flex:1;overflow-y:auto;padding:8px 10px;font-size:9.5px;line-height:1.6;color:var(--dim)}
+#dbody b{color:var(--cyan)} #dbody .g{color:var(--green)} #dbody .r{color:var(--red)}
+#dbody .kk{color:var(--gold)} #dbody .sec{margin-top:7px;padding-top:6px;border-top:1px solid var(--rule)}
+#dbody .rank{display:flex;justify-content:space-between;gap:6px;padding:1px 0}
+#dbody h4{color:var(--gold);font-size:9.5px;letter-spacing:.06em;margin-bottom:3px;font-weight:normal}
+#bar{position:fixed;left:50%;transform:translateX(-50%);bottom:7px;display:flex;flex-wrap:wrap;gap:4px 8px;
+  align-items:center;justify-content:center;background:rgba(8,8,16,.96);border:1px solid var(--rule);
+  border-radius:10px;padding:6px 11px;z-index:11;max-width:66vw}
+button{background:#14141f;border:1px solid #2a2a3a;border-radius:5px;color:var(--gold);
+  font:9.5px var(--mono);padding:4px 7px;cursor:pointer;transition:all .12s}
+button:hover{border-color:var(--gold)} button.on{background:#1d1a0a;border-color:var(--gold)}
+button.gn{color:var(--green)} button.gn.on{border-color:var(--green);background:#062522}
+button.rd{color:var(--red)} button.rd.on{border-color:var(--red);background:#2a0810}
+.ctl{display:flex;align-items:center;gap:3px}
+.klbl{color:var(--dim);font-size:8.5px;text-transform:uppercase}
+.val2{color:var(--gold);font-size:9px;min-width:26px;text-align:right}
+input[type=range]{appearance:none;-webkit-appearance:none;width:64px;height:4px;background:#2a2a3a;border-radius:3px;outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:var(--gold);cursor:pointer}
+input[type=range]::-moz-range-thumb{width:12px;height:12px;border:none;border-radius:50%;background:var(--gold);cursor:pointer}
+.sep{width:1px;height:16px;background:#2a2a3a}
+</style></head>
+<body>
+<canvas id="cv"></canvas>
+
+<div id="top">
+  <div id="brand"><div class="t">NEWLANDSIUM v1.0</div><div class="s">thirteen patterns · one filter · 1865</div></div>
+  <div id="verdict" class="good"><div class="vt" id="v-t">—</div><div class="vs" id="v-s">scoring…</div></div>
+  <div class="chips">
+    <div class="mc"><div class="lab">baseline</div><div class="val" id="m-base">—</div></div>
+    <div class="mc"><div class="lab">winner</div><div class="val green" id="m-win">—</div></div>
+    <div class="mc"><div class="lab">selected ∩</div><div class="val cyan" id="m-int">—</div></div>
+    <div class="mc"><div class="lab">∩ lift</div><div class="val" id="m-ilift">—</div></div>
+    <div class="mc"><div class="lab">combos tested</div><div class="val" id="m-combo">—</div></div>
+  </div>
+</div>
+
+<div id="dossier">
+  <div class="tabs">
+    <div class="tab active" data-t="rack" onclick="setTab('rack')">RACK</div>
+    <div class="tab" data-t="int" onclick="setTab('int')">∩</div>
+    <div class="tab" data-t="find" onclick="setTab('find')">FINDING</div>
+    <div class="tab" data-t="k" onclick="setTab('k')">K</div>
+  </div>
+  <div id="dbody">scoring…</div>
+</div>
+
+<div id="bar">
+  <button id="b-raw" class="on" onclick="setMetric('raw')">raw lift</button>
+  <button id="b-loc" onclick="setMetric('local')">local lift ⚑</button>
+  <div class="sep"></div>
+  <button onclick="selectTop(3)">top 3 ∩</button>
+  <button onclick="clearSel()">clear ∩</button>
+  <div class="sep"></div>
+  <div class="ctl"><span class="klbl">depth</span><input id="sD" type="range" min="1" max="4" value="2" oninput="setDepth(+this.value)"><span class="val2" id="v-d">2</span></div>
+  <button id="b-sweep" class="gn" onclick="sweep()">⚡ sweep all ∩</button>
+</div>
+
+<script>
+"use strict";
+var cv=document.getElementById("cv"), ctx=cv.getContext("2d");
+var W=0,H=0,DPR=1;
+function resize(){
+  DPR=Math.min(window.devicePixelRatio||1,2); W=innerWidth; H=innerHeight;
+  cv.style.width=W+"px"; cv.style.height=H+"px";
+  cv.width=Math.round(W*DPR); cv.height=Math.round(H*DPR);
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+}
+window.addEventListener("resize",resize); resize();
+var GOLD=[255,215,0],CYAN=[0,212,255],GRN=[0,255,213],PUR=[204,68,255],RED=[255,51,85],
+    AMB=[255,180,84],WHT=[235,235,245],GRY=[110,115,135];
+function css(c,a){ return "rgba("+(c[0]|0)+","+(c[1]|0)+","+(c[2]|0)+","+a+")"; }
+function mix(a,b,t){ t=t<0?0:t>1?1:t; return [a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t]; }
+
+var SYM=("H He Li Be B C N O F Ne Na Mg Al Si P S Cl Ar K Ca Sc Ti V Cr Mn Fe Co Ni Cu Zn "+
+"Ga Ge As Se Br Kr Rb Sr Y Zr Nb Mo Tc Ru Rh Pd Ag Cd In Sn Sb Te I Xe Cs Ba La Ce Pr Nd "+
+"Pm Sm Eu Gd Tb Dy Ho Er Tm Yb Lu Hf Ta W Re Os Ir Pt Au Hg Tl Pb Bi").split(" ");
+// stable isotope counts, Z = 1..83. observationally-stable convention (K5).
+var ISO=[2,2,2,1,2,2,2,3,1,3, 1,3,1,3,1,4,2,3,2,5, 1,5,1,4,1,4,1,5,2,5,
+         2,5,1,6,2,6,1,4,1,5, 1,7,0,7,1,6,2,8,1,10, 2,8,1,9,1,7,1,4,1,7,
+         0,5,2,7,1,7,1,6,1,7, 2,6,2,5,1,7,2,6,1,7, 2,4,0];
+var ZMAX=83;
+
+// =========================================================================
+// THE RACK — thirteen candidate generators. Each emits a SET of "special" Z.
+// params = free parameters. THIS IS PRINTED, ALWAYS. (K3, von Neumann)
+// =========================================================================
+function primes(n){ var o=[],i,j;
+  for(i=2;i<=n;i++){ var p=true; for(j=2;j*j<=i;j++){ if(i%j===0){p=false;break;} } if(p) o.push(i); }
+  return o; }
+function fib(n){ var o=[],a=1,b=2; while(a<=n){ o.push(a); var t=a+b; a=b; b=t; } return o; }
+function tri(n){ var o=[],k=1; while(k*(k+1)/2<=n){ o.push(k*(k+1)/2); k++; } return o; }
+function pow2(n){ var o=[],k=1; while(Math.pow(2,k)<=n){ o.push(Math.pow(2,k)); k++; } return o; }
+function phiLadder(n){ var P=(1+Math.sqrt(5))/2, o=[], k=1, seen={};
+  while(Math.round(Math.pow(P,k))<=n){ var v=Math.round(Math.pow(P,k)); if(v>1&&!seen[v]){o.push(v);seen[v]=1;} k++; } return o; }
+function evens(n){ var o=[]; for(var i=2;i<=n;i+=2) o.push(i); return o; }
+function odds(n){ var o=[]; for(var i=1;i<=n;i+=2) o.push(i); return o; }
+// Madelung/Janet period ENDS: cumulative sums of 2,2,8,8,18,18,32,32
+function janetEnds(){ var s=[2,2,8,8,18,18,32,32], o=[], a=0;
+  for(var i=0;i<s.length;i++){ a+=s[i]; if(a<=ZMAX) o.push(a); } return o; }
+// 2n² shell closures, cumulative: 2, 10, 28, 60
+function rydberg(){ var o=[],a=0; for(var n=1;n<=4;n++){ a+=2*n*n; if(a<=ZMAX) o.push(a); } return o; }
+// Newlands: every 8th, starting from Li (Z=3) — his own construction
+function octaves(){ var o=[]; for(var z=3; z<=ZMAX; z+=8) o.push(z); return o; }
+// the ELEPHANT: log-periodic, 4 free params, fitted to hit the top-iso elements
+function elephant(){
+  var o=[], A=1.32, B=2.55, C=0.42, D=1.9;   // 4 params. it will fit. that is the point.
+  for(var k=1;k<=14;k++){
+    var v=Math.round(D*Math.pow(B,k*C)+A*k);
+    if(v>=2&&v<=ZMAX&&o.indexOf(v)<0) o.push(v);
+  }
+  return o;
+}
+var GENS=[
+ {id:"even",  n:"even-Z · PAIRING",       p:0, kind:"physics", set:evens(ZMAX),
+  note:"the δ = ±a_P/√A term in Bethe–Weizsäcker. paired protons bind. this is not a pattern anyone invented — it is a term in the mass formula."},
+ {id:"magic", n:"nuclear magic (Mayer)",  p:0, kind:"physics", set:[2,8,20,28,50,82],
+  note:"closed nucleon shells. requires SPIN–ORBIT to explain 28 and up — that is what Mayer added in 1949 and what won her the Nobel."},
+ {id:"noble", n:"noble gases",            p:0, kind:"physics", set:[2,10,18,36,54,86].filter(function(z){return z<=ZMAX;}),
+  note:"closed ELECTRON shells. pure Coulomb. note they are all even — so this candidate inherits the pairing lift for free. watch the local column."},
+ {id:"janet", n:"Madelung/Janet ends",    p:0, kind:"derived", set:janetEnds(),
+  note:"cumulative 2,2,8,8,18,18,32,32 — derived from n+ℓ. predicts CHEMISTRY, and there is no reason it should predict nuclear stability. it is in the rack as an honest negative control."},
+ {id:"ryd",   n:"2n² shell closures",     p:0, kind:"derived", set:rydberg(),
+  note:"2, 10, 28, 60 — cumulative Rydberg capacity. the electron shell, not the period."},
+ {id:"oct",   n:"Newlands octaves (1865)",p:1, kind:"historic", set:octaves(),
+  note:"every 8th element from Li. HIS. it works for Li→K and shatters at the transition metals, because Newlands did not know the d-block existed. Mendeleev left gaps where Newlands forced the fit. That was the whole difference."},
+ {id:"pow2",  n:"powers of 2",            p:0, kind:"numeric", set:pow2(ZMAX),
+  note:"2,4,8,16,32,64. all even — so any lift here is the pairing term wearing a costume."},
+ {id:"prime", n:"primes",                 p:0, kind:"numeric", set:primes(ZMAX),
+  note:"the classic crank candidate. after 2, every prime is ODD — so it should be actively ANTI-predictive. it is. that is what a good null looks like."},
+ {id:"fib",   n:"Fibonacci",              p:0, kind:"numeric", set:fib(ZMAX),
+  note:"1,2,3,5,8,13,21,34,55. mostly odd. sacred-geometry's favourite. watch it fail."},
+ {id:"phi",   n:"golden ladder φᵏ",       p:0, kind:"numeric", set:phiLadder(ZMAX),
+  note:"round(φᵏ). a genuine geometric ladder — CONSTANT ratio, which IS what a fractal sequence means. it fails, and its failure is the ratio test from Mayerium, run on new data."},
+ {id:"tri",   n:"triangular n(n+1)/2",    p:0, kind:"numeric", set:tri(ZMAX),
+  note:"1,3,6,10,15,21,28,36,45,55,66,78. half even, half odd — so it should land near baseline. it does. that is what NOISE looks like."},
+ {id:"odd",   n:"odd-Z (the penalty)",    p:0, kind:"physics", set:odds(ZMAX),
+  note:"the other half of the pairing term. no odd-Z element has more than 2 stable isotopes. NOT ONE, out of 42. Mattauch's isobar rule."},
+ {id:"eleph", n:"log-periodic ⚠ 4 params",p:4, kind:"ELEPHANT", set:elephant(),
+  note:"⚠ THE CONTROL. four free parameters, tuned by hand until it looked good. von Neumann: 'with four parameters I can fit an elephant, and with five I can make him wiggle his trunk.' if this scores well, THAT IS THE POINT — it proves a good fit is worth nothing without a mechanism."}
+];
+
+// =========================================================================
+// SCORING. raw lift and LOCAL lift (K4 — the one that tells the truth).
+// =========================================================================
+function isoOf(z){ return (z>=1&&z<=ZMAX)? ISO[z-1] : null; }
+var BASE=(function(){ var s=0; for(var i=0;i<ZMAX;i++) s+=ISO[i]; return s/ZMAX; })();
+function scoreSet(S){
+  if(!S.length) return {n:0, mean:0, lift:0, local:0, dead:true};
+  var s=0, n=0;
+  for(var i=0;i<S.length;i++){ var v=isoOf(S[i]); if(v===null) continue; s+=v; n++; }
+  if(!n) return {n:0, mean:0, lift:0, local:0, dead:true};
+  var mean=s/n, lift=mean/BASE;
+  // LOCAL lift: each Z against the mean of its SAME-PARITY neighbours (z±2).
+  // this strips out the Z trend — heavy elements have more isotopes because
+  // there is more room, and that has nothing to do with your pattern.
+  var ls=0, ln=0;
+  for(var j=0;j<S.length;j++){
+    var z=S[j], a=isoOf(z-2), b=isoOf(z+2), me=isoOf(z);
+    if(me===null) continue;
+    var nb=[]; if(a!==null) nb.push(a); if(b!==null) nb.push(b);
+    if(!nb.length) continue;
+    var avg=0; for(var q=0;q<nb.length;q++) avg+=nb[q]; avg/=nb.length;
+    if(avg<=0.25) continue;                     // undefined against a zero neighbourhood
+    ls+=me/avg; ln++;
+  }
+  return {n:n, mean:mean, lift:lift, local:ln? ls/ln : 0, localN:ln, dead:false};
+}
+for(var g=0;g<GENS.length;g++) GENS[g].sc=scoreSet(GENS[g].set);
+
+var METRIC="raw", sel={}, depth=2, dTab="rack", combos=0, sweepBest=null;
+function val(G){ return METRIC==="raw"? G.sc.lift : G.sc.local; }
+function ranked(){ return GENS.slice().sort(function(a,b){ return val(b)-val(a); }); }
+function selected(){ var o=[]; for(var i=0;i<GENS.length;i++){ if(sel[GENS[i].id]) o.push(GENS[i]); } return o; }
+function intersect(list){
+  if(!list.length) return [];
+  var out=list[0].set.slice();
+  for(var i=1;i<list.length;i++){
+    out=out.filter(function(z){ return list[i].set.indexOf(z)>=0; });
+  }
+  return out;
+}
+function nCr(n,r){ if(r>n) return 0; var x=1; for(var i=0;i<r;i++) x=x*(n-i)/(i+1); return Math.round(x); }
+
+// ---------- the graceful failure the user asked for ----------
+function judge(){
+  var S=selected(), I=intersect(S), sc=scoreSet(I);
+  var body=document.body;
+  body.classList.remove("dead"); body.classList.remove("elephant");
+  var ve=document.getElementById("verdict");
+  var eleSel = S.some(function(x){ return x.id==="eleph"; });
+  if(S.length && !I.length){
+    body.classList.add("dead"); ve.className="bad";
+    set("v-t","∅ EMPTY");
+    set("v-s","no Z survives all "+S.length+" filters. that is a real answer, not a bug. hey bro — click another button.");
+  } else if(eleSel){
+    body.classList.add("elephant"); ve.className="warn";
+    set("v-t","🐘 ELEPHANT");
+    set("v-s","you have the 4-parameter fit selected. whatever it scores means nothing. that is what it is here to prove.");
+  } else if(!S.length){
+    ve.className="good"; set("v-t","RACK OPEN");
+    set("v-s","click any rows to intersect them. "+GENS.length+" candidates scored against real stable-isotope counts for Z ≤ 83.");
+  } else {
+    var lift = METRIC==="raw"? sc.lift : sc.local;
+    if(lift>1.35){ ve.className="good"; set("v-t","∩ SIGNAL "+lift.toFixed(2)+"×");
+      set("v-s",I.length+" elements survive all "+S.length+" filters: "+I.map(function(z){return SYM[z-1];}).join(" ")+". mean "+sc.mean.toFixed(2)+" stable isotopes vs "+BASE.toFixed(2)+" baseline."); }
+    else if(lift>0.9){ ve.className="warn"; set("v-t","∩ NOISE "+lift.toFixed(2)+"×");
+      set("v-s",I.length+" survive, and they are no better than average. an intersection is not automatically a finding."); }
+    else { ve.className="bad"; set("v-t","∩ ANTI "+lift.toFixed(2)+"×");
+      set("v-s",I.length+" survive and they are WORSE than baseline. the pattern predicts instability. that is still information."); }
+  }
+  set("m-base", BASE.toFixed(2));
+  var R=ranked(); set("m-win", R[0].id==="eleph"? R[1].n.split(" ")[0] : R[0].n.split(" ")[0]);
+  set("m-int", S.length? I.length : "—");
+  set("m-ilift", S.length&&I.length? (METRIC==="raw"?sc.lift:sc.local).toFixed(2)+"×" : "—");
+  set("m-combo", combos? combos : nCr(GENS.length,depth));
+  renderDossier();
+}
+function set(id,v){ var e=document.getElementById(id); if(e)e.textContent=v; }
+
+// ---------- draw: the strip chart ----------
+var rows=[];
+function draw(){
+  requestAnimationFrame(draw);
+  ctx.clearRect(0,0,W,H);
+  var L=54, R=W-310, T=92, rowH=Math.min(26,(H-T-190)/GENS.length);
+  var barTop=T+GENS.length*rowH+26, barH=Math.min(110,H-barTop-58);
+  function zx(z){ return L+((z-1)/(ZMAX-1))*(R-L); }
+  var Rk=ranked(); rows=[];
+  var S=selected(), I=intersect(S);
+  // rows
+  for(var i=0;i<Rk.length;i++){
+    var G=Rk[i], y=T+i*rowH+rowH/2, v=val(G), on=!!sel[G.id];
+    rows.push({y:y-rowH/2, h:rowH, G:G});
+    var col = G.kind==="ELEPHANT"? AMB : v>1.35? GRN : v>0.9? GRY : RED;
+    if(on){ ctx.fillStyle=css(GOLD,0.06); ctx.fillRect(L-46,y-rowH/2,R-L+46,rowH); }
+    ctx.fillStyle=css(on?GOLD:col, on?1:0.65); ctx.font="9px ui-monospace,monospace";
+    ctx.textAlign="right"; ctx.textBaseline="middle";
+    ctx.fillText(G.n.length>22?G.n.slice(0,21)+"…":G.n, L-8, y);
+    ctx.strokeStyle=css(GRY,0.07); ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(L,y); ctx.lineTo(R,y); ctx.stroke();
+    for(var j=0;j<G.set.length;j++){
+      var z=G.set[j]; if(z>ZMAX) continue;
+      var inI = I.indexOf(z)>=0 && S.length;
+      ctx.fillStyle=css(inI?GOLD:col, inI?1:(on?0.9:0.5));
+      ctx.beginPath(); ctx.arc(zx(z), y, inI?3.6:2.2, 0, 6.2832); ctx.fill();
+      if(inI){ ctx.strokeStyle=css(GOLD,0.5); ctx.lineWidth=1;
+        ctx.beginPath(); ctx.arc(zx(z),y,6,0,6.2832); ctx.stroke(); }
+    }
+    ctx.textAlign="left"; ctx.fillStyle=css(col,0.9); ctx.font="9px ui-monospace,monospace";
+    ctx.fillText(v.toFixed(2)+"×", R+8, y);
+    ctx.fillStyle=css(GRY,0.5); ctx.fillText("n="+G.sc.n, R+50, y);
+    if(G.p>0){ ctx.fillStyle=css(AMB,0.9); ctx.fillText("⚠"+G.p+"p", R+92, y); }
+  }
+  // the actual data — the thing being predicted
+  var mxI=10;
+  ctx.fillStyle=css(WHT,0.4); ctx.font="9px ui-monospace,monospace"; ctx.textAlign="right";
+  ctx.fillText("stable isotopes", L-8, barTop+barH/2);
+  for(var z2=1;z2<=ZMAX;z2++){
+    var v2=ISO[z2-1], x=zx(z2), hh=(v2/mxI)*barH;
+    var inI2 = I.indexOf(z2)>=0 && S.length;
+    var c2 = inI2? GOLD : (z2%2? [255,136,68] : GRN);
+    ctx.fillStyle=css(c2, inI2?0.95:0.42);
+    ctx.fillRect(x-1.6, barTop+barH-hh, 3.2, hh);
+    if(v2>=8||inI2){
+      ctx.save(); ctx.translate(x, barTop+barH-hh-5); ctx.rotate(-Math.PI/2);
+      ctx.fillStyle=css(c2,0.9); ctx.font="8px ui-monospace,monospace"; ctx.textAlign="left";
+      ctx.fillText(SYM[z2-1]+" "+v2, 0, 3); ctx.restore();
+    }
+  }
+  ctx.strokeStyle=css(WHT,0.18); ctx.lineWidth=1; ctx.setLineDash([3,3]);
+  ctx.beginPath(); ctx.moveTo(L, barTop+barH-(BASE/mxI)*barH); ctx.lineTo(R, barTop+barH-(BASE/mxI)*barH); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle=css(WHT,0.35); ctx.font="8px ui-monospace,monospace"; ctx.textAlign="left";
+  ctx.fillText("baseline "+BASE.toFixed(2), R+8, barTop+barH-(BASE/mxI)*barH+3);
+  ctx.textAlign="center"; ctx.fillStyle=css(GRY,0.4);
+  [1,10,20,28,50,82].forEach(function(z){ ctx.fillText(z, zx(z), barTop+barH+13); });
+  ctx.fillStyle=css(GRY,0.35); ctx.textAlign="left";
+  ctx.fillText("Z →   orange = odd-Z (pairing penalty) · green = even-Z · gold = survives your ∩", L, barTop+barH+30);
+}
+
+// ---------- dossier ----------
+function setTab(t){
+  dTab=t;
+  var tabs=document.querySelectorAll("#dossier .tab");
+  for(var i=0;i<tabs.length;i++) tabs[i].classList.toggle("active",tabs[i].getAttribute("data-t")===t);
+  renderDossier();
+}
+function renderDossier(){
+  var h="", R=ranked(), S=selected(), I=intersect(S);
+  if(dTab==="rack"){
+    h='<h4>THE RACK · ranked by '+(METRIC==="raw"?"raw":"LOCAL")+' lift</h4>'+
+      '<div style="font-size:8.5px">click a row to add it to the ∩. lift = mean stable isotopes of the set ÷ baseline ('+BASE.toFixed(2)+').</div><div class="sec">';
+    for(var i=0;i<R.length;i++){
+      var G=R[i], v=val(G);
+      var c = G.kind==="ELEPHANT"? "#ffb454" : v>1.35? "#00ffd5" : v>0.9? "#6a6a82" : "#ff3355";
+      h+='<div class="rank" style="cursor:pointer" onclick="toggle(\''+G.id+'\')">'+
+         '<span style="color:'+(sel[G.id]?"#ffd700":c)+'">'+(sel[G.id]?"▣ ":"▢ ")+G.n+'</span>'+
+         '<b style="color:'+c+'">'+v.toFixed(2)+'× <span style="color:#6a6a82">n='+G.sc.n+'</span></b></div>';
+    }
+    h+='</div><div class="sec" style="font-size:8.5px"><b class="g">n is printed next to every lift, always.</b> a set with 41 members hits by luck. a set with 6 has to earn it. (K3)</div>';
+    if(S.length===1){
+      h+='<div class="sec"><h4>'+S[0].n+'</h4><div style="font-size:8.5px">'+S[0].note+'</div>'+
+         '<div class="rank" style="margin-top:4px"><span>raw lift</span><b>'+S[0].sc.lift.toFixed(3)+'×</b></div>'+
+         '<div class="rank"><span>local lift ⚑</span><b>'+S[0].sc.local.toFixed(3)+'×</b></div>'+
+         '<div class="rank"><span>members ≤83</span><b>'+S[0].sc.n+'</b></div>'+
+         '<div class="rank"><span>free params</span><b style="color:'+(S[0].p?"#ffb454":"#00ffd5")+'">'+S[0].p+'</b></div></div>';
+    }
+  }
+  else if(dTab==="int"){
+    h='<h4>∩ THE INTERSECTION</h4>';
+    if(!S.length) h+='<div style="font-size:8.5px">select two or more from the RACK tab. the intersection is where multiple independent filters agree — Vlad\'s hypothesis, made testable.</div>';
+    else {
+      var sc=scoreSet(I);
+      h+='<div style="font-size:8.5px">'+S.map(function(x){return x.n;}).join(" ∩ ")+'</div><div class="sec">';
+      if(!I.length){
+        h+='<div class="r"><b>∅ EMPTY.</b> no Z survives all '+S.length+' filters.</div>'+
+           '<div style="font-size:8.5px">that is a real answer. two patterns that never agree are telling you they measure different things. <b class="g">hey bro — click another button.</b></div>';
+      } else {
+        h+='<div class="rank"><span>survivors</span><b>'+I.length+'</b></div>'+
+           '<div style="font-size:9px;color:#ffd700">'+I.map(function(z){return SYM[z-1]+"("+z+")·"+isoOf(z);}).join(" ")+'</div>'+
+           '<div class="rank" style="margin-top:4px"><span>mean isotopes</span><b>'+sc.mean.toFixed(2)+'</b></div>'+
+           '<div class="rank"><span>raw lift</span><b>'+sc.lift.toFixed(3)+'×</b></div>'+
+           '<div class="rank"><span>local lift ⚑</span><b>'+sc.local.toFixed(3)+'×</b></div>';
+      }
+      h+='</div>';
+    }
+    if(sweepBest){
+      h+='<div class="sec"><h4>⚡ SWEEP · best '+depth+'-way ∩</h4>'+
+        '<div style="font-size:8.5px">'+combos+' combinations tested, '+sweepBest.empty+' came back ∅.</div><div class="sec">';
+      for(var s=0;s<Math.min(6,sweepBest.top.length);s++){
+        var t=sweepBest.top[s];
+        h+='<div class="rank"><span style="font-size:8.5px">'+t.names+'</span><b>'+t.lift.toFixed(2)+'× <span style="color:#6a6a82">n='+t.n+'</span></b></div>';
+      }
+      h+='</div><div style="font-size:8.5px" class="g">the winners are almost all "X ∩ even-Z". that is the pairing term showing up inside every intersection that works. it is not the pattern. it is the floor everything else stands on.</div></div>';
+    }
+    h+='<div class="sec"><h4>the real intersection</h4><div style="font-size:8.5px">one level down from the elements, in the NUCLIDES: <b>DOUBLY MAGIC</b> — Z magic AND N magic at once.<br><br>'+
+      '<b class="g">He-4 · O-16 · Ca-40 · Ca-48 · Ni-56 · Sn-100 · Sn-132 · Pb-208</b><br><br>'+
+      'Pb-208 (Z=82, N=126) is the most bound heavy nucleus there is. <b>that is Vlad\'s hypothesis, exactly, and it is correct</b> — the intersection of two shell ladders IS where the stability lives. it just lives in the nuclide chart, not the periodic table.</div></div>';
+  }
+  else if(dTab==="find"){
+    var ev=GENS.filter(function(x){return x.id==="even";})[0];
+    var mg=GENS.filter(function(x){return x.id==="magic";})[0];
+    var pr=GENS.filter(function(x){return x.id==="prime";})[0];
+    h='<h4>WHAT THE RACK FOUND</h4>'+
+      '<div class="sec"><h4>1 · pairing wins, by a mile</h4>'+
+      '<div class="rank"><span class="g">even-Z</span><b class="g">'+ev.sc.lift.toFixed(2)+'×</b></div>'+
+      '<div class="rank"><span class="r">odd-Z</span><b class="r">'+GENS.filter(function(x){return x.id==="odd";})[0].sc.lift.toFixed(2)+'×</b></div>'+
+      '<div style="font-size:8.5px">a <b>4× spread</b> from a single bit: is Z even. that is the δ = ±a_P/√A term in the Bethe–Weizsäcker formula. <b class="g">the biggest signal in the whole rack is not a pattern anyone invented. it is a term in the mass formula.</b></div></div>'+
+
+      '<div class="sec"><h4>2 · the magic numbers are SMALLER than you think</h4>'+
+      '<div class="rank"><span>magic · raw lift</span><b>'+mg.sc.lift.toFixed(2)+'×</b></div>'+
+      '<div class="rank"><span>magic · LOCAL lift ⚑</span><b>'+mg.sc.local.toFixed(2)+'×</b></div>'+
+      '<div style="font-size:8.5px">once you control for the Z trend, <b>the magic numbers are a ~'+Math.round((mg.sc.local-1)*100)+'% local bump</b> riding on top of the huge pairing effect.<br><br>'+
+      '<b class="g">Vlad\'s instinct is right in direction and wrong in magnitude.</b> the intersections ARE where stability lives — but pairing is the floor and magic is the bump, not the other way round. that is a more interesting answer than a triumphant one.</div></div>'+
+
+      '<div class="sec"><h4>3 · primes fail, beautifully</h4>'+
+      '<div class="rank"><span class="r">primes</span><b class="r">'+pr.sc.lift.toFixed(2)+'×</b></div>'+
+      '<div style="font-size:8.5px">ACTIVELY ANTI-PREDICTIVE. and for a knowable reason: <b>after 2, every prime is odd</b>, so the prime set is almost a pure sample of the pairing PENALTY. <b class="g">that is what a good null looks like</b> — it does not just fail, it fails in a direction you can explain.</div></div>'+
+
+      '<div class="sec"><h4>4 · the geometric ladder dies again</h4>'+
+      '<div style="font-size:8.5px">φᵏ has a CONSTANT ratio — which is exactly what "fractal sequence" means. it scores <b class="r">'+GENS.filter(function(x){return x.id==="phi";})[0].sc.lift.toFixed(2)+'×</b>.<br><br>third dataset, same verdict: <b>Mayerium</b> (nuclear magic CV≈0.42), <b>Chancourtoisium</b> (electron magic CV≈0.57), and now here. <b class="g">shells, not ladders. every time.</b></div></div>'+
+
+      '<div class="sec"><h4>5 · Newlands</h4>'+
+      '<div class="rank"><span>octaves (1865)</span><b>'+GENS.filter(function(x){return x.id==="oct";})[0].sc.lift.toFixed(2)+'×</b></div>'+
+      '<div style="font-size:8.5px">he was scored fairly and he lost. but he was laughed at for the wrong reason: his octaves work perfectly for Li→K and shatter at the transition metals — because <b>the d-block did not exist yet in anyone\'s head</b>.<br><br>Mendeleev left GAPS where Newlands forced a fit. <b class="g">that was the entire difference between them.</b> The Chemical Society refused to publish him and asked if he had tried alphabetical order. Twenty-two years later the Royal Society gave him the Davy Medal.</div></div>';
+  }
+  else {
+    h='<h4>K1 · what is computed</h4><div style="font-size:8.5px">every set is GENERATED (primes sieved, Fibonacci iterated, Janet ends summed from the derived 2,2,8,8,18,18,32,32). every lift is computed against the real isotope table. nothing is typed in as a result.</div>'+
+      '<div class="sec"><h4>K3 · the elephant</h4><div style="font-size:8.5px">the log-periodic candidate has <b class="r">4 free parameters</b> and is in the rack ON PURPOSE. select it and the background turns amber. <b>"with four parameters I can fit an elephant, and with five I can make him wiggle his trunk." — von Neumann.</b><br><br>every candidate prints its <b>n</b> and its <b>free params</b>, always. a good fit with free parameters and no mechanism is worth exactly nothing, and this file will not let you forget it.</div></div>'+
+      '<div class="sec"><h4>K4 · raw vs local ⚑</h4><div style="font-size:8.5px">raw lift is CONFOUNDED by Z — heavy elements have more isotopes because there is more room. local lift scores each Z against its same-parity neighbours (z±2), stripping the trend.<br><br><b class="g">when raw and local disagree, the local one is telling the truth.</b> flip the metric and watch the ranking move.</div></div>'+
+      '<div class="sec"><h4>K5 · the data</h4><div style="font-size:8.5px">stable isotope counts, Z=1..83, observationally-stable convention. <b>"stable" is contested at the edges</b> — many nuclides are double-beta or alpha emitters with half-lives beyond 10¹⁸ yr. sources differ by ±1 on several elements. Bi-209 was caught decaying in 2003 (2×10¹⁹ yr) and is counted 0 here.</div></div>'+
+      '<div class="sec"><h4>K2 · NOT a significance test</h4><div style="font-size:8.5px"><b class="r">lift is a descriptive statistic. no p-value is claimed and none should be inferred.</b> with 13 candidates and '+nCr(13,depth)+' '+depth+'-way combinations, something WILL look good by chance. that is the look-elsewhere effect, and it is exactly why the elephant is in the rack.<br><br>the only candidates here with a MECHANISM are the physics ones. the rest are shapes.</div></div>';
+  }
+  document.getElementById("dbody").innerHTML=h;
+}
+
+// ---------- controls ----------
+function toggle(id){ if(sel[id]) delete sel[id]; else sel[id]=1; judge(); }
+function clearSel(){ sel={}; sweepBest=null; combos=0; judge(); }
+function selectTop(n){
+  sel={}; var R=ranked().filter(function(x){ return x.kind!=="ELEPHANT"; });
+  for(var i=0;i<n&&i<R.length;i++) sel[R[i].id]=1;
+  judge(); setTab("int");
+}
+function setMetric(m){
+  METRIC=m;
+  document.getElementById("b-raw").classList.toggle("on",m==="raw");
+  document.getElementById("b-loc").classList.toggle("on",m==="local");
+  judge();
+}
+function setDepth(d){ depth=d; set("v-d",d); combos=nCr(GENS.length,d); sweepBest=null; judge(); }
+function sweep(){
+  var idx=[], n=GENS.length, best=[], empty=0, tested=0;
+  function rec(start,cur){
+    if(cur.length===depth){
+      tested++;
+      var list=cur.map(function(i){return GENS[i];});
+      var I=intersect(list);
+      if(!I.length){ empty++; return; }
+      var sc=scoreSet(I);
+      var lift=METRIC==="raw"? sc.lift : sc.local;
+      best.push({lift:lift, n:I.length, names:list.map(function(x){return x.id;}).join(" ∩ ")});
+      return;
+    }
+    for(var i=start;i<n;i++){ cur.push(i); rec(i+1,cur); cur.pop(); }
+  }
+  rec(0,[]);
+  best.sort(function(a,b){ return b.lift-a.lift; });
+  combos=tested; sweepBest={top:best, empty:empty};
+  setTab("int"); judge();
+}
+cv.addEventListener("click",function(e){
+  for(var i=0;i<rows.length;i++){
+    if(e.clientY>=rows[i].y && e.clientY<=rows[i].y+rows[i].h && e.clientX<W-300){ toggle(rows[i].G.id); return; }
+  }
+});
+setDepth(2); judge();
+requestAnimationFrame(draw);
+</script>
+</body></html>

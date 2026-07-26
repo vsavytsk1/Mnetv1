@@ -1,0 +1,217 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>LENS v0.9 · KERNEL — the 1/√2 orthogonality point (proven, honest)</title>
+<style>
+:root{--bg:#050508;--gold:#ffd700;--cyan:#00d4ff;--pink:#ff69b4;--green:#00ffd5;--dim:#6a6a82;--txt:#e8e0d0;
+ --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--txt);font-family:var(--mono);overflow:hidden}
+#cv{position:fixed;inset:0;display:block}
+#hud{position:fixed;top:0;left:0;right:0;padding:10px 14px;display:flex;gap:14px;align-items:flex-start;pointer-events:none;font-size:11px;z-index:10;flex-wrap:wrap}
+#hud>div{pointer-events:auto;background:rgba(8,8,16,.80);border:1px solid #20202e;border-radius:8px;padding:8px 11px}
+#ttl{color:var(--gold);font-size:14px;letter-spacing:.05em}
+#sub{color:var(--dim);font-size:10px;margin-top:2px;max-width:600px;line-height:1.5}
+#sub b{color:var(--cyan)}#sub .g{color:var(--green)}#sub .go{color:var(--gold)}
+#metrics{position:fixed;top:96px;left:14px;display:flex;gap:6px;flex-wrap:wrap;z-index:10;max-width:300px}
+.mc{background:rgba(8,8,16,.85);border:1px solid #20202e;border-radius:6px;padding:5px 10px;min-width:86px}
+.mc .lab{font-size:8px;color:var(--dim);text-transform:uppercase;letter-spacing:.07em}
+.mc .val{font-size:15px;font-weight:bold;color:var(--gold)}
+.mc .val.cyan{color:var(--cyan)}.mc .val.green{color:var(--green)}.mc .val.pink{color:var(--pink)}
+#kpanel{position:fixed;top:96px;right:14px;z-index:10;background:rgba(8,8,16,.85);border:1px solid #20202e;border-radius:8px;padding:9px 11px}
+#kpanel .kt{font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px}
+#kpanel .kt b{color:var(--gold)}
+#gram{display:block;image-rendering:pixelated;border:1px solid #20202e;border-radius:3px}
+#klines{font-size:10px;line-height:1.7;color:var(--dim);margin-top:7px}
+#klines b{color:var(--cyan)}#klines .g{color:var(--green)}#klines .n{color:#ff5470}
+#bar{position:fixed;left:50%;transform:translateX(-50%);bottom:12px;display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;background:rgba(8,8,16,.90);border:1px solid #20202e;border-radius:10px;padding:10px 16px;z-index:10}
+.klbl{color:var(--dim);font-size:10px}
+input[type=range]{appearance:none;-webkit-appearance:none;width:120px;height:4px;background:#2a2a3a;border-radius:3px;outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;border-radius:50%;background:var(--gold);cursor:pointer}
+input[type=range]::-moz-range-thumb{width:13px;height:13px;border:none;border-radius:50%;background:var(--gold);cursor:pointer}
+.v2{color:var(--gold);font-size:11px;min-width:52px;text-align:right}
+button{background:#14141f;border:1px solid #2a2a3a;border-radius:6px;color:var(--gold);font:12px var(--mono);padding:6px 11px;cursor:pointer;transition:all .12s}
+button:hover{border-color:var(--gold)}button.on{border-color:var(--cyan);color:var(--cyan)}
+button.gt{color:var(--green);border-color:#0a3a3a}button.gt:hover{border-color:var(--green)}
+#stamp{position:fixed;bottom:12px;right:14px;color:var(--dim);font-size:9px;text-align:right;z-index:9;line-height:1.5}
+#stamp b{color:var(--gold)}
+</style></head>
+<body>
+<canvas id="cv"></canvas>
+
+<div id="hud">
+  <div>
+    <div id="ttl">agapi circles · the kernel &amp; the 1/√2 point</div>
+    <div id="sub">circle-angle Gram <b>G</b> is circulant: <b>λ₀=N(1−q²)</b>, <b>λ±₁=Nq²/2</b>, rank 3.
+      the kernel jumps (<span class="g">λ₀→0, rank 3→2</span>) at <span class="go">q=1</span> — all circles meet the gate (global lock).
+      at <span class="go">q=1/√2</span> no eigenvalue dies, but the diametric entry 1−2q²=0 → the through-gate pairs cross at <b>exactly 90°</b> (orthogonal, local).
+      honest: 0.700 → 88.85°. envelope not fractal. χ=2.</div>
+  </div>
+</div>
+
+<div id="metrics">
+  <div class="mc"><div class="lab">tongues N</div><div class="val cyan" id="m-n">12</div></div>
+  <div class="mc"><div class="lab">vesicae (q&lt;1: K_N)</div><div class="val pink" id="m-v">66</div></div>
+  <div class="mc"><div class="lab">current q</div><div class="val" id="m-q">0.700</div></div>
+  <div class="mc"><div class="lab">diametric ∠</div><div class="val" id="m-ang">88.9°</div></div>
+  <div class="mc"><div class="lab">|∠−90°| (earned)</div><div class="val" id="m-oerr">1.15</div></div>
+  <div class="mc"><div class="lab">orthogonal lock</div><div class="val" id="m-olock">no</div></div>
+</div>
+
+<div id="kpanel">
+  <div class="kt">prove by <b>kernel</b> · Gram G</div>
+  <canvas id="gram" width="132" height="132"></canvas>
+  <div id="klines">
+    <div>λ₀ = <b id="k-l0">6.12</b></div>
+    <div>λ±₁ = <b id="k-l1">2.94</b></div>
+    <div>rank <b id="k-rank">3</b> · kernel dim <b id="k-ker">9</b></div>
+    <div id="k-note" class="g">—</div>
+  </div>
+</div>
+
+<div id="bar">
+  <span class="klbl">tongues</span>
+  <input id="s-n" type="range" min="4" max="12" step="2" value="12"><span class="v2" id="v-n">12</span>
+  <span class="klbl">overlap q</span>
+  <input id="s-q" type="range" min="400" max="1300" step="1" value="700"><span class="v2" id="v-q">0.700</span>
+  <button id="b-orth" class="gt" onclick="descendTo(ISQ2)">descend → 1/√2</button>
+  <button id="b-gate" onclick="descendTo(1)">descend → 1 (gate)</button>
+  <button id="b-mark" class="on" onclick="showMarks=!showMarks;this.className=showMarks?'on':''">right-angles</button>
+  <button id="b-spin" class="on" onclick="spin=!spin;this.className=spin?'on':''">spin</button>
+</div>
+
+<div id="stamp">LENS v0.9 · KERNEL · HELENA<br>1/√2 = orthogonality (local) · q=1 = kernel lock (global)<br>proven, not assumed · χ=2 · always</div>
+
+<script>
+"use strict";
+var cv=document.getElementById("cv"),ctx=cv.getContext("2d");
+var gramCv=document.getElementById("gram"),gctx=gramCv.getContext("2d");
+var W,H;
+function resize(){W=cv.width=window.innerWidth;H=cv.height=window.innerHeight;}
+window.addEventListener("resize",resize);resize();
+
+var ISQ2=1/Math.SQRT2;                 // 0.70710678...
+var TONGUES=["EN","EL","ES","PT","RU","UK","LA","IT","FR","DE","JA","AR"];
+var N=12,q=0.70,rot=0,spin=true,showMarks=true;
+var target=null,lockCount=0,TOL=0.0015,LOCKF=30;   // earned, not assumed
+
+// --- kernel math (validated closed forms) ---
+function stepM(i,j){var a=Math.abs(i-j);return Math.min(a,N-a);}
+function Gij(i,j){var m=stepM(i,j);return 1-2*q*q*Math.pow(Math.sin(Math.PI*m/N),2);}
+function lam0(){return N*(1-q*q);}
+function lam1(){return N*q*q/2;}
+function rank(){var r=3;if(Math.abs(lam0())<1e-6)r--;if(Math.abs(lam1())<1e-6)r-=2;return Math.max(1,r);}
+function diamAngle(){return Math.acos(Math.max(-1,Math.min(1,1-2*q*q)))*180/Math.PI;}
+
+var CYc=[0,212,255],PKc=[255,105,180],GDc=[255,215,0],GRc=[0,255,213];
+function rgba(c,a){return "rgba("+c[0]+","+c[1]+","+c[2]+","+a+")";}
+
+// circle-circle intersection (for vesica points & K_N)
+function intersect(c0,c1){
+  var dx=c1.x-c0.x,dy=c1.y-c0.y,d=Math.hypot(dx,dy);
+  if(d<1e-6||d>c0.r+c1.r||d<Math.abs(c0.r-c1.r))return null;
+  var a=(c0.r*c0.r-c1.r*c1.r+d*d)/(2*d),h2=c0.r*c0.r-a*a;if(h2<0)return null;
+  var h=Math.sqrt(h2),xm=c0.x+a*dx/d,ym=c0.y+a*dy/d;
+  return [[xm+h*dy/d,ym-h*dx/d],[xm-h*dy/d,ym+h*dx/d]];
+}
+
+function drawGram(){
+  var n=N,cell=Math.floor(128/n),sz=cell*n;gramCv.width=sz;gramCv.height=sz;
+  for(var i=0;i<n;i++)for(var j=0;j<n;j++){
+    var g=1-2*q*q*Math.pow(Math.sin(Math.PI*stepM(i,j)/n),2);   // in [~ -1 .. 1]
+    var col;
+    if(g>=0)col=rgba([Math.round(CYc[0]*g),Math.round(CYc[1]*g),Math.round(CYc[2]*g)],1);
+    else{var a=Math.min(1,-g);col=rgba([Math.round(PKc[0]*a),Math.round(PKc[1]*a),Math.round(PKc[2]*a)],1);}
+    gctx.fillStyle=col;gctx.fillRect(j*cell,i*cell,cell-1,cell-1);
+  }
+}
+
+var last=performance.now();
+function frame(now){
+  var dt=now-last;last=now;
+  if(spin)rot+=0.0012;
+  if(target!==null){q+=(target-q)*0.03;
+    var err=Math.abs(q-target);
+    if(err<=TOL)lockCount++;else lockCount=0;
+    document.getElementById("s-q").value=Math.round(q*1000);
+    document.getElementById("v-q").textContent=q.toFixed(3);
+  }
+  ctx.clearRect(0,0,W,H);
+  var cx=W/2,cy=H/2,R=Math.min(W,H)*0.24,d=q*R;
+
+  // circles
+  var circles=[];
+  for(var i=0;i<N;i++){var a=(i/N)*Math.PI*2+rot;circles.push({x:cx+Math.cos(a)*d,y:cy+Math.sin(a)*d,r:R,lang:TONGUES[i%TONGUES.length]});}
+  ctx.lineWidth=1;
+  for(var i2=0;i2<N;i2++){var c=circles[i2];
+    ctx.strokeStyle=rgba(GDc,0.20);ctx.beginPath();ctx.arc(c.x,c.y,c.r,0,7);ctx.stroke();
+    var la=Math.atan2(c.y-cy,c.x-cx);ctx.fillStyle=rgba(GDc,0.6);ctx.font="12px "+getComputedStyle(document.body).fontFamily;
+    ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(c.lang,c.x+Math.cos(la)*(R+14),c.y+Math.sin(la)*(R+14));}
+
+  // all vesica crossing points (q<1 -> complete K_N)
+  var vcount=0;
+  for(var a2=0;a2<N;a2++)for(var b2=a2+1;b2<N;b2++){var pts=intersect(circles[a2],circles[b2]);if(!pts)continue;vcount++;
+    ctx.fillStyle=rgba(PKc,0.5);
+    ctx.beginPath();ctx.arc(pts[0][0],pts[0][1],1.6,0,7);ctx.fill();
+    ctx.beginPath();ctx.arc(pts[1][0],pts[1][1],1.6,0,7);ctx.fill();}
+
+  // diametric (through-gate) pairs: highlight crossing angle + right-angle marker
+  var ang=diamAngle(), orth=Math.abs(ang-90);
+  var isOrtho = orth<0.4 && lockOK();
+  if(N%2===0){
+    for(var i3=0;i3<N/2;i3++){
+      var c0=circles[i3],c1=circles[i3+N/2];
+      var pts=intersect(c0,c1);if(!pts)continue;
+      var P=pts[0];
+      // radii from both centers to crossing point
+      var col= isOrtho? GRc : (orth<8? CYc : GDc);
+      ctx.strokeStyle=rgba(col,0.55);ctx.lineWidth=1.2;
+      ctx.beginPath();ctx.moveTo(c0.x,c0.y);ctx.lineTo(P[0],P[1]);ctx.lineTo(c1.x,c1.y);ctx.stroke();
+      if(showMarks){
+        // right-angle tick at P between the two radii
+        var u0=norm(c0.x-P[0],c0.y-P[1]),u1=norm(c1.x-P[0],c1.y-P[1]),s=9;
+        ctx.strokeStyle=rgba(isOrtho?GRc:col,0.9);ctx.lineWidth=1.4;
+        ctx.beginPath();
+        ctx.moveTo(P[0]+u0[0]*s,P[1]+u0[1]*s);
+        ctx.lineTo(P[0]+u0[0]*s+u1[0]*s,P[1]+u0[1]*s+u1[1]*s);
+        ctx.lineTo(P[0]+u1[0]*s,P[1]+u1[1]*s);
+        ctx.stroke();
+      }
+      ctx.fillStyle=rgba(col,0.9);ctx.beginPath();ctx.arc(P[0],P[1],2.6,0,7);ctx.fill();
+    }
+  }
+
+  // the gate
+  var pulse=0.5+0.5*Math.sin(now*0.002);
+  ctx.strokeStyle=rgba(CYc,0.30+pulse*0.28);ctx.lineWidth=2;ctx.beginPath();ctx.arc(cx,cy,12+pulse*3,0,7);ctx.stroke();
+  ctx.fillStyle="#ffd700";ctx.beginPath();ctx.arc(cx,cy,5,0,7);ctx.fill();
+
+  // metrics
+  set("m-n",N);set("m-v",vcount);set("m-q",q.toFixed(3));
+  set("m-ang",ang.toFixed(1)+"°");
+  var oe=document.getElementById("m-oerr");oe.textContent=orth.toFixed(2);oe.style.color=orth<0.4?"#00ffd5":"#ff5470";
+  var ol=document.getElementById("m-olock");ol.textContent=isOrtho?"90° LOCK":"no";ol.style.color=isOrtho?"#00ffd5":"#ff5470";
+  // kernel panel
+  set("k-l0",lam0().toFixed(2));set("k-l1",lam1().toFixed(2));
+  var rk=rank();set("k-rank",rk);set("k-ker",N-rk);
+  var kn=document.getElementById("k-note");
+  if(Math.abs(lam0())<0.02){kn.innerHTML='<span class="g">λ₀=0 · rank drop · GATE LOCK (q=1)</span>';}
+  else if(Math.abs(1-2*q*q)<0.01){kn.innerHTML='<span class="g">diametric entry=0 · 90° orthogonal (q=1/√2)</span>';}
+  else{kn.innerHTML='rank 3 · kernel dim '+(N-3)+' <span style="color:#6a6a82">(structural)</span>';}
+  drawGram();
+  requestAnimationFrame(frame);
+}
+function lockOK(){return target===null? true : lockCount>=LOCKF || target!==ISQ2 ? lockCount>=1 : lockCount>=LOCKF;}
+function norm(x,y){var L=Math.hypot(x,y)||1;return [x/L,y/L];}
+function set(id,v){var e=document.getElementById(id);if(e)e.textContent=v;}
+
+function descendTo(t){target=t;lockCount=0;
+  document.getElementById("b-orth").className=(t===ISQ2)?"gt on":"gt";
+  document.getElementById("b-gate").className=(t===1)?"on":"";}
+document.getElementById("s-n").addEventListener("input",function(e){N=+e.target.value;set("v-n",N);});
+document.getElementById("s-q").addEventListener("input",function(e){q=(+e.target.value)/1000;target=null;
+  document.getElementById("b-orth").className="gt";document.getElementById("b-gate").className="";
+  set("v-q",q.toFixed(3));});
+
+requestAnimationFrame(frame);
+</script>
+</body></html>

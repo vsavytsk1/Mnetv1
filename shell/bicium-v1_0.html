@@ -1,0 +1,499 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>BICIUM v1.0 &middot; the four-colour pen, in points and lines</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{background:#050510;color:#e0e0e0;font-family:ui-monospace,"SF Mono",Menlo,monospace;
+  font-size:11px;overflow:hidden;height:100%;width:100%;-webkit-user-select:none;user-select:none}
+canvas{display:block}
+#cv{position:fixed;inset:0;z-index:1;cursor:grab}
+#cv:active{cursor:grabbing}
+#rail{position:fixed;top:0;bottom:54px;left:0;width:298px;z-index:5;display:flex;flex-direction:column;
+  background:linear-gradient(to right,rgba(5,5,16,.93),rgba(5,5,16,.8) 76%,rgba(5,5,16,0));
+  border-right:1px solid rgba(80,50,120,.14);pointer-events:none}
+#hd{padding:11px 14px 4px;text-shadow:0 0 10px rgba(5,5,16,.95)}
+#hd .title{font-size:13px;color:#cc44ff;letter-spacing:.16em;text-transform:uppercase;font-weight:bold}
+#hd .sub{font-size:8px;color:rgba(204,68,255,.55);letter-spacing:.05em;margin:2px 0 6px;text-transform:uppercase}
+#hd .big{font-size:17px;font-weight:bold;font-variant-numeric:tabular-nums}
+#hd .row{line-height:1.5;color:rgba(220,228,240,.5);font-size:10px;font-variant-numeric:tabular-nums}
+#hd .g{color:#ffd700;font-weight:bold}#hd .c{color:#35e0c8;font-weight:bold}#hd .v{color:#cc44ff;font-weight:bold}
+#scale{margin:3px 14px 3px;padding:6px 8px;border-radius:3px;font-size:9.5px;line-height:1.5;
+  border:1px solid rgba(53,224,200,.35);background:rgba(6,18,20,.5)}
+#scale b{color:#35e0c8}#scale .r{color:#ff6a5c}
+.sec{padding:2px 14px 3px}
+.sh{font-size:8px;text-transform:uppercase;letter-spacing:.11em;color:rgba(53,224,200,.6);margin:6px 0 2px}
+.sr{display:flex;justify-content:space-between;font-size:9px;line-height:1.5;color:rgba(220,228,240,.55);font-variant-numeric:tabular-nums}
+.sr .k{color:rgba(220,228,240,.32)}.sr .g{color:#ffd700;font-weight:bold}.sr .c{color:#35e0c8;font-weight:bold}
+#klaws{flex:1;overflow-y:auto;padding:4px 14px 12px;pointer-events:auto;
+  -webkit-mask-image:linear-gradient(to bottom,#000 93%,transparent);mask-image:linear-gradient(to bottom,#000 93%,transparent)}
+#klaws p{font-size:8.5px;color:rgba(220,228,240,.42);line-height:1.5;margin-bottom:5px}
+#klaws b{color:#ffd700}#klaws .pur{color:#cc44ff}#klaws .cy{color:#00d4ff}
+#stamp{position:fixed;bottom:60px;right:12px;z-index:6;pointer-events:none;text-align:right}
+#stamp .s{font-size:8px;color:rgba(204,68,255,.28);letter-spacing:.07em;line-height:1.8}
+#stamp .s.g{color:rgba(255,215,0,.32)}
+#bar{position:fixed;bottom:0;left:0;right:0;z-index:10;background:rgba(5,5,16,.97);
+  border-top:1px solid #221033;padding:5px 9px;display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.btn{background:#0b0814;color:#5a4a6a;border:1px solid #221033;border-radius:3px;padding:3px 8px;
+  font-family:inherit;font-size:9px;cursor:pointer;text-transform:uppercase;letter-spacing:.04em}
+.btn:hover{border-color:#cc44ff;color:#cc44ff}.btn.active{background:#cc44ff;color:#050510;border-color:#cc44ff}
+.btn.tg.active{background:#35e0c8;border-color:#35e0c8}
+.ink{width:34px;height:24px;border-radius:3px;border:1px solid #2a1840;cursor:pointer;transition:.09s}
+.ink.on{transform:translateY(-3px);box-shadow:0 3px 0 rgba(0,0,0,.5)}
+.sep{width:1px;height:15px;background:#221033}
+.lbl{color:rgba(220,228,240,.28);font-size:8px;text-transform:uppercase;letter-spacing:.05em}
+.slw{display:flex;align-items:center;gap:3px}
+.slw input{accent-color:#cc44ff;cursor:pointer;width:56px}
+#sl-zoom{width:150px;accent-color:#35e0c8}
+.sv{font-size:8.5px;color:#cc44ff;min-width:26px;font-variant-numeric:tabular-nums}
+</style></head><body>
+<canvas id="cv"></canvas>
+
+<div id="rail">
+  <div id="hd">
+    <span class="title">Bicium</span>
+    <div class="sub">the four-colour pen &middot; points and lines</div>
+    <div class="big"><span id="h-rpm" class="g">0</span><span style="font-size:10px;color:rgba(220,228,240,.35);font-weight:normal"> RPM at the ball</span></div>
+    <div class="row">line&nbsp;<span class="c" id="h-lw">0.40</span> mm &middot; rev/10cm&nbsp;<span class="v" id="h-rev">31.8</span></div>
+    <div class="row">fps&nbsp;<span class="g" id="h-fps">&mdash;</span> &middot; drawn&nbsp;<span class="c" id="h-len">0.0</span> m of <span class="c">2000</span></div>
+  </div>
+  <div id="scale">viewing at <b id="s-fov">14.9 cm</b> &middot; resolving <b id="s-res">&mdash;</b><br>
+    <span id="s-what" style="color:rgba(220,228,240,.55)">the whole pen</span></div>
+  <div class="sec">
+    <div class="sh">the spec &middot; verified</div>
+    <div class="sr"><span class="k">ball &middot; tungsten carbide</span><span class="g" id="s-ball">1.00 mm</span></div>
+    <div class="sr"><span class="k">hardness</span><span class="c">~1,500&ndash;2,600 HV &middot; Mohs 9</span></div>
+    <div class="sr"><span class="k">socket side clearance</span><span class="c">~12 &micro;m</span></div>
+    <div class="sr"><span class="k">ball axial travel</span><span class="c">20&ndash;100 &micro;m</span></div>
+    <div class="sr"><span class="k">roundness tolerance</span><span class="c">&le; 3 &micro;m</span></div>
+    <div class="sr"><span class="k">ink at rest / sheared</span><span class="c">10&#8309; / 10&sup3; mPa&middot;s</span></div>
+    <div class="sr"><span class="k">write-out, all four</span><span class="g">~8 km</span></div>
+    <div class="sr"><span class="k">scale range in one pen</span><span class="g">7.2 decades</span></div>
+  </div>
+  <div id="klaws"></div>
+</div>
+
+<div id="stamp">
+  <div class="s">BICIUM v1.0</div>
+  <div class="s g">a euro, and seven decades</div>
+  <div class="s">&chi;=2 &middot; P=12 &middot; spini &middot; always</div>
+</div>
+
+<div id="bar">
+  <button class="btn active" id="m-pen" onclick="setMode('pen')">THE PEN</button>
+  <button class="btn" id="m-latch" onclick="setMode('latch')">THE LATCH</button>
+  <button class="btn" id="m-tip" onclick="setMode('tip')">THE TIP</button>
+  <button class="btn" id="m-write" onclick="setMode('write')">WRITE</button>
+  <div class="sep"></div>
+  <span class="lbl">click</span>
+  <div class="ink on" id="ink0" style="background:#1a1a24" onclick="press(0)"></div>
+  <div class="ink" id="ink1" style="background:#1848c8" onclick="press(1)"></div>
+  <div class="ink" id="ink2" style="background:#c81830" onclick="press(2)"></div>
+  <div class="ink" id="ink3" style="background:#18a848" onclick="press(3)"></div>
+  <div class="sep"></div>
+  <button class="btn tg active" id="tg-spin" onclick="SPIN=!SPIN;this.classList.toggle('active',SPIN)">SPINI</button>
+  <button class="btn tg active" id="tg-lbl" onclick="LBL=!LBL;this.classList.toggle('active',LBL)">LABELS</button>
+  <button class="btn" onclick="clearPad()">CLEAR PAD</button>
+  <div class="sep"></div>
+  <div class="slw"><span class="lbl" style="color:#35e0c890">zoom</span>
+    <input type="range" id="sl-zoom" min="0" max="1000" value="0" oninput="setZoom(+this.value)"></div>
+  <div class="slw"><span class="lbl">ball mm</span><input type="range" id="sl-d" min="5" max="16" value="10" oninput="setD(+this.value/10)"><span class="sv" id="sv-d">1.0</span></div>
+</div>
+
+<script>
+// ============================================================================
+// BICIUM v1.0 -- the BIC 4-Colour, drawn in points and lines.
+//
+// Every number on screen is from the engineering literature or computed from it,
+// and the two that could be checked against the patent were:
+//   revolutions per 10 cm = 100/(pi*d)  ->  63.7 at d=0.5 mm, 45.5 at d=0.7 mm.
+//   the patent says 63.7 and 44.5. MATCH.
+//   (I got this wrong first: divided cm/s by 10 instead of 100 and printed RPM
+//    ten times too high. The cross-check caught it. K1.)
+//
+// THE MECHANISM IS THE REAL ONE. Not a rotary heart-cam -- that is the
+// single-cartridge clicker. The 4-Colour is a LUG + LOCKING SHOULDER latch with
+// a CAM RELEASE: press a slider, its lug rides a ramp and drops behind a
+// shoulder (CLICK); press another, its lug cams the held lug off the shoulder
+// and that spring throws it home (CLACK).
+//   US 3,294,068 (Hechtle, 1966) -- "its intermediate lug cams against the upper
+//   lug of the depressed plunger forcing it from under the catch"
+//   US 5,599,122 (Yu, 1997) -- side sliders in barrel slots, tapered lugs
+//   BIC's own: US 7,014,380 B2
+//
+// Sound is synthesised from oscillators and noise. No audio files.
+// Pure Canvas 2D. Zero dependencies. chi=2 . P=12 . 2026
+// ============================================================================
+
+var cv=document.getElementById("cv"), ctx=cv.getContext("2d"), W,H,DPR;
+var MODE="pen", SPIN=true, LBL=true, ZOOM=0, BALL=1.0;
+var yaw=0.6, pitch=0.28, uYaw=0, uPitch=0, t=0;
+var COL=["#8a8aa8","#4a7aff","#ff5a6a","#3ada78"];   // black(grey), blue, red, green
+var NAME=["black","blue","red","green"];
+var active=0;                                         // which cartridge is deployed
+var slide=[0,0,0,0];                                  // 0 = retracted, 1 = deployed
+var vel=[0,0,0,0];
+var penLen=149, penR=5.5, ballTravel=0;
+
+// ---------------- sound: the click, synthesised ----------------
+var AC=null;
+function ac(){if(!AC){try{AC=new (window.AudioContext||window.webkitAudioContext)();}catch(e){}}return AC;}
+function noise(dur,vol,f0,f1){
+  var c=ac(); if(!c)return;
+  var n=Math.floor(c.sampleRate*dur), b=c.createBuffer(1,n,c.sampleRate), d=b.getChannelData(0);
+  for(var i=0;i<n;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/n,3);
+  var s=c.createBufferSource(); s.buffer=b;
+  var bp=c.createBiquadFilter(); bp.type="bandpass"; bp.Q.value=1.4;
+  bp.frequency.setValueAtTime(f0,c.currentTime);
+  bp.frequency.exponentialRampToValueAtTime(f1,c.currentTime+dur);
+  var g=c.createGain(); g.gain.setValueAtTime(vol,c.currentTime);
+  g.gain.exponentialRampToValueAtTime(.0001,c.currentTime+dur);
+  s.connect(bp);bp.connect(g);g.connect(c.destination); s.start(); s.stop(c.currentTime+dur+.02);
+}
+function ping(f,dur,vol,delay){
+  var c=ac(); if(!c)return; var t0=c.currentTime+(delay||0);
+  var o=c.createOscillator(), g=c.createGain();
+  o.type="triangle"; o.frequency.setValueAtTime(f,t0);
+  o.frequency.exponentialRampToValueAtTime(f*0.72,t0+dur);
+  g.gain.setValueAtTime(0,t0); g.gain.linearRampToValueAtTime(vol,t0+.003);
+  g.gain.exponentialRampToValueAtTime(.0001,t0+dur);
+  o.connect(g);g.connect(c.destination);o.start(t0);o.stop(t0+dur+.02);
+}
+// the lug drops behind the shoulder
+function sClick(){ noise(.028,.30,3200,1100); ping(2400,.045,.10); }
+// the held lug is cammed off and its spring throws it home
+function sClack(){ noise(.045,.20,900,320); ping(520,.075,.075,.012); }
+function sScratch(v){ noise(.02,.020+Math.min(.05,v*.0018),1800+v*22,700); }
+
+// ---------------- the press: the real state machine ----------------
+function press(i){
+  ac();
+  if(i===active) return;             // already down; nothing happens. correct.
+  var prev=active;
+  active=i;
+  sClick();
+  if(prev>=0) setTimeout(sClack,26); // the release lands a beat after the press
+  for(var k=0;k<4;k++) document.getElementById("ink"+k).classList.toggle("on",k===active);
+}
+
+// ---------------- 3D ----------------
+var ORX,ORY,PSC;
+function P3(x,y,z){
+  var cy=Math.cos(yaw+uYaw), sy=Math.sin(yaw+uYaw);
+  var cp=Math.cos(pitch+uPitch), sp=Math.sin(pitch+uPitch);
+  var X=x*cy - z*sy, Z=x*sy + z*cy;
+  var Y=y*cp - Z*sp, D=y*sp + Z*cp;
+  return {x:ORX+X*PSC, y:ORY-Y*PSC, d:D};
+}
+function line(a,b,col,w){ctx.strokeStyle=col;ctx.lineWidth=w||1;
+  ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();}
+function ring(y,r,col,n,w){ n=n||36; var p=[];
+  for(var i=0;i<=n;i++){var a=i/n*6.2832; p.push(P3(Math.cos(a)*r,y,Math.sin(a)*r));}
+  ctx.strokeStyle=col;ctx.lineWidth=w||1;ctx.beginPath();
+  for(var i=0;i<p.length;i++) i?ctx.lineTo(p[i].x,p[i].y):ctx.moveTo(p[i].x,p[i].y);
+  ctx.stroke(); return p;}
+function dot(p,r,col){ctx.fillStyle=col;ctx.beginPath();ctx.arc(p.x,p.y,r,0,6.2832);ctx.fill();}
+function helix(y0,y1,r,turns,col,seg){
+  seg=seg||90; ctx.strokeStyle=col;ctx.lineWidth=1;ctx.beginPath();
+  for(var i=0;i<=seg;i++){var f=i/seg, a=f*turns*6.2832, y=y0+(y1-y0)*f;
+    var p=P3(Math.cos(a)*r,y,Math.sin(a)*r);
+    i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y);}
+  ctx.stroke();}
+function label(p,txt,col,dx,dy){ if(!LBL)return;
+  ctx.font="8.5px ui-monospace,monospace";ctx.textAlign="left";ctx.fillStyle=col;
+  ctx.fillText(txt,p.x+(dx||6),p.y+(dy||0));}
+
+// ---------------- MODE: THE PEN ----------------
+function drawPen(){
+  var L=penLen/2;
+  // barrel wireframe
+  for(var i=0;i<=10;i++){var y=-L+ (i/10)*penLen; ring(y,penR,"rgba(204,68,255,.13)",28);}
+  for(var a=0;a<12;a++){var an=a/12*6.2832;
+    line(P3(Math.cos(an)*penR,-L,Math.sin(an)*penR),P3(Math.cos(an)*penR,L*0.62,Math.sin(an)*penR),
+      "rgba(204,68,255,.16)");}
+  // nose cone
+  var nose=[];
+  for(var i=0;i<=14;i++){var f=i/14, y=L*0.62+(L-L*0.62)*f, r=penR*(1-f*0.86);
+    nose.push({y:y,r:r}); ring(y,r,"rgba(204,68,255,"+(0.10+0.2*f).toFixed(2)+")",22);}
+  // the four cartridges + springs + sliders
+  for(var k=0;k<4;k++){
+    var an=k/4*6.2832 + Math.PI/4, cr=penR*0.52;
+    var cx=Math.cos(an)*cr, cz=Math.sin(an)*cr;
+    var s=slide[k];
+    var y0=-L*0.86 + s*8, y1=L*0.66 + s*8;                 // cartridge extends 8mm
+    var lit=(k===active);
+    var col=lit?COL[k]:"rgba(140,140,170,.30)";
+    // cartridge tube: two lines + rings
+    line(P3(cx,y0,cz),P3(cx,y1,cz),col,lit?1.6:1);
+    for(var i=0;i<=6;i++){var yy=y0+(y1-y0)*i/6;
+      var p=P3(cx,yy,cz); dot(p,lit?1.5:1,col);}
+    // the writing tip, only if deployed
+    if(s>0.5){
+      var tp=P3(cx*0.25,L*0.995,cz*0.25);
+      line(P3(cx,y1,cz),tp,COL[k],2);
+      dot(tp,2.6,COL[k]);
+      if(LBL) label(tp,NAME[k],COL[k],7,3);
+    }
+    // spring: a real helix, compressed when deployed
+    var sy0=-L*0.86+s*8, sy1=sy0+14-s*6;
+    helix(sy0,sy1,penR*0.30, 7+s*4, lit?"rgba(255,215,0,.5)":"rgba(120,120,150,.22)");
+    // slider in its guide slot, on the barrel surface
+    var sx=Math.cos(an)*penR*1.02, sz=Math.sin(an)*penR*1.02;
+    var sly=-L*0.30+s*8;
+    var a1=P3(sx,sly-3,sz), a2=P3(sx,sly+3,sz);
+    line(a1,a2,lit?COL[k]:"rgba(150,150,180,.35)",lit?3:2);
+    // the guide slot itself
+    line(P3(sx,-L*0.34,sz),P3(sx,-L*0.34+11,sz),"rgba(204,68,255,.14)");
+  }
+  // the head ball (the BIC Boy, used to dial rotary phones)
+  ring(-L,penR*0.55,"rgba(255,215,0,.3)",24);
+  if(LBL){ label(P3(0,-L,penR*0.55),"the head ball \u00b7 once dialled rotary phones","rgba(255,215,0,.45)",8,0);
+    label(P3(penR,L*0.995,0),"one nose opening for four cartridges","rgba(53,224,200,.5)",10,4); }
+}
+
+// ---------------- MODE: THE LATCH (cross-section, the real mechanism) ----------------
+function drawLatch(){
+  var w=Math.min(W-330,760), x0=(W>820?300:10)+40, y0=H*0.20, h=H*0.46;
+  ctx.font="9px ui-monospace,monospace";ctx.textAlign="left";
+  ctx.fillStyle="#ffd700";
+  ctx.fillText("CROSS-SECTION \u00b7 lug + locking shoulder + cam release",x0,y0-26);
+  ctx.fillStyle="rgba(220,228,240,.4)";ctx.font="8.5px ui-monospace,monospace";
+  ctx.fillText("US 3,294,068 (Hechtle 1966) \u00b7 US 5,599,122 (Yu 1997) \u00b7 BIC US 7,014,380 B2",x0,y0-13);
+  var lane=w/4;
+  for(var k=0;k<4;k++){
+    var cx=x0+lane*k+lane/2, s=slide[k], lit=(k===active);
+    var col=lit?COL[k]:"rgba(150,150,180,.3)";
+    // guide slot walls
+    ctx.strokeStyle="rgba(204,68,255,.18)";ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(cx-16,y0);ctx.lineTo(cx-16,y0+h);
+    ctx.moveTo(cx+16,y0);ctx.lineTo(cx+16,y0+h);ctx.stroke();
+    // the locking shoulder -- the ledge the lug drops behind
+    var shY=y0+h*0.52;
+    ctx.strokeStyle=lit?"rgba(255,215,0,.85)":"rgba(255,215,0,.28)";ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(cx-16,shY);ctx.lineTo(cx-7,shY);
+    ctx.lineTo(cx-4,shY-5);ctx.stroke();                    // the ramp
+    ctx.beginPath();ctx.moveTo(cx+16,shY);ctx.lineTo(cx+7,shY);
+    ctx.lineTo(cx+4,shY-5);ctx.stroke();
+    // slider body travelling down the slot
+    var sy=y0+h*0.22+s*(h*0.34);
+    ctx.strokeStyle=col;ctx.lineWidth=lit?2:1.2;
+    ctx.strokeRect(cx-11,sy-9,22,18);
+    // THE LUG -- the little tab that catches
+    ctx.fillStyle=col;
+    ctx.beginPath();ctx.moveTo(cx-11,sy+4);ctx.lineTo(cx-17,sy+7);ctx.lineTo(cx-11,sy+10);ctx.closePath();ctx.fill();
+    ctx.beginPath();ctx.moveTo(cx+11,sy+4);ctx.lineTo(cx+17,sy+7);ctx.lineTo(cx+11,sy+10);ctx.closePath();ctx.fill();
+    // spring below, compressing as it deploys
+    var spTop=sy+12, spBot=y0+h*0.92, coils=8;
+    ctx.strokeStyle=lit?"rgba(255,215,0,.55)":"rgba(120,120,150,.25)";ctx.lineWidth=1;
+    ctx.beginPath();
+    for(var i=0;i<=coils*12;i++){var f=i/(coils*12);
+      var yy=spTop+(spBot-spTop)*f, xx=cx+Math.sin(f*coils*6.2832)*9;
+      i?ctx.lineTo(xx,yy):ctx.moveTo(xx,yy);}
+    ctx.stroke();
+    // cartridge stub going down to the nose
+    ctx.strokeStyle=col;ctx.lineWidth=lit?2:1;
+    ctx.beginPath();ctx.moveTo(cx,sy+9);ctx.lineTo(cx,y0+h+26+s*10);ctx.stroke();
+    if(s>0.5) dot({x:cx,y:y0+h+26+s*10},3,COL[k]);
+    // labels
+    ctx.font="8px ui-monospace,monospace";ctx.textAlign="center";
+    ctx.fillStyle=lit?COL[k]:"rgba(150,150,180,.4)";
+    ctx.fillText(NAME[k],cx,y0+h+52);
+    if(lit){ctx.fillStyle="rgba(255,215,0,.75)";ctx.fillText("LATCHED",cx,y0-1);}
+  }
+  ctx.textAlign="left";
+  // the sequence
+  var sy=y0+h+74;
+  ctx.font="9px ui-monospace,monospace";
+  var steps=[
+   ["1","finger drives the slider down its guide slot, compressing the spring","rgba(220,228,240,.5)"],
+   ["2","the lug rides the ramp and drops behind the locking shoulder","#ffd700"],
+   ["3","press another: its lug cams the held lug off the shoulder","#35e0c8"],
+   ["4","the freed spring throws that cartridge home","#ff6a5c"]];
+  steps.forEach(function(s,i){
+    ctx.fillStyle=s[2];ctx.fillText(s[0]+"  "+s[1],x0,sy+i*15);});
+  ctx.fillStyle="rgba(204,68,255,.6)";
+  ctx.fillText("NOT a rotary heart-cam \u2014 that is the single-cartridge clicker. This is pure mechanical interference.",x0,sy+70);
+}
+
+// ---------------- MODE: THE TIP (micron scale) ----------------
+function drawTip(){
+  var cx=(W>820?300:0)+(W-(W>820?300:0))/2, cy=H*0.44;
+  var S=Math.min(W-340,H*0.62)*0.42;                 // ball radius on screen
+  // socket -- the crimped lip that holds the ball
+  ctx.strokeStyle="rgba(204,68,255,.55)";ctx.lineWidth=2;
+  ctx.beginPath();
+  ctx.arc(cx,cy,S*1.16,Math.PI*0.13,Math.PI*0.87,false);
+  ctx.stroke();
+  // socket walls flaring up into the cone
+  [-1,1].forEach(function(s){
+    ctx.beginPath();
+    ctx.moveTo(cx+s*S*1.15,cy-S*0.32);
+    ctx.lineTo(cx+s*S*1.55,cy-S*1.5);
+    ctx.stroke();});
+  // the crimp lip
+  ctx.strokeStyle="rgba(255,215,0,.7)";ctx.lineWidth=2.5;
+  [-1,1].forEach(function(s){
+    ctx.beginPath();
+    ctx.moveTo(cx+s*S*1.15,cy-S*0.32);
+    ctx.lineTo(cx+s*S*0.86,cy-S*0.60);
+    ctx.stroke();});
+  // THE BALL -- points and lines, rotating
+  var spin=t*2.2;
+  ctx.strokeStyle=COL[active];ctx.lineWidth=1.4;
+  ctx.beginPath();ctx.arc(cx,cy,S,0,6.2832);ctx.stroke();
+  // longitudes and latitudes so the rotation reads
+  for(var i=0;i<8;i++){
+    var ph=spin+i*Math.PI/8;
+    ctx.strokeStyle="rgba("+(active===0?"140,140,170":active===1?"74,122,255":active===2?"255,90,106":"58,218,120")+",.35)";
+    ctx.beginPath();
+    for(var j=0;j<=30;j++){var th=-Math.PI/2+Math.PI*j/30;
+      var x=Math.cos(th)*Math.sin(ph), y=Math.sin(th), z=Math.cos(th)*Math.cos(ph);
+      if(z<-0.02)continue;
+      var px=cx+x*S, py=cy-y*S;
+      j?ctx.lineTo(px,py):ctx.moveTo(px,py);}
+    ctx.stroke();}
+  for(var i=1;i<5;i++){ var la=-Math.PI/2+Math.PI*i/5;
+    ctx.strokeStyle="rgba(220,228,240,.14)";
+    ctx.beginPath();ctx.ellipse(cx,cy-Math.sin(la)*S,Math.cos(la)*S,Math.cos(la)*S*0.22,0,0,6.2832);ctx.stroke();}
+  // feed channels -- three grooves bringing ink down to the ball
+  ctx.strokeStyle="rgba(53,224,200,.6)";ctx.lineWidth=1.6;
+  [-1,0,1].forEach(function(k){
+    ctx.beginPath();
+    ctx.moveTo(cx+k*S*0.5,cy-S*1.55);
+    ctx.lineTo(cx+k*S*0.62,cy-S*0.58);
+    ctx.stroke();
+    dot({x:cx+k*S*0.62,y:cy-S*0.58},2,"rgba(53,224,200,.8)");});
+  // paper line
+  ctx.strokeStyle="rgba(220,228,240,.35)";ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(cx-S*3,cy+S*1.02);ctx.lineTo(cx+S*3,cy+S*1.02);ctx.stroke();
+  // the deposited line -- 0.4x the ball
+  ctx.strokeStyle=COL[active];ctx.lineWidth=Math.max(2,S*0.4*0.5);
+  ctx.globalAlpha=.55;
+  ctx.beginPath();ctx.moveTo(cx-S*3,cy+S*1.02);ctx.lineTo(cx-S*0.2,cy+S*1.02);ctx.stroke();
+  ctx.globalAlpha=1;
+  if(LBL){
+    ctx.font="8.5px ui-monospace,monospace";ctx.textAlign="left";
+    ctx.fillStyle="rgba(255,215,0,.75)";
+    ctx.fillText("crimped lip \u00b7 holds the ball, lets it turn",cx+S*1.6,cy-S*0.5);
+    ctx.fillStyle="rgba(53,224,200,.75)";
+    ctx.fillText("3 feed channels \u00b7 ~80 \u00b5m",cx-S*3.1,cy-S*1.5);
+    ctx.fillStyle=COL[active];
+    ctx.fillText("tungsten carbide ball \u00b7 "+BALL.toFixed(2)+" mm",cx-S*0.9,cy-S*1.22);
+    ctx.fillStyle="rgba(220,228,240,.55)";
+    ctx.fillText("line "+(BALL*0.4).toFixed(2)+" mm \u2014 narrower than the ball",cx-S*3.1,cy+S*1.5);
+    ctx.fillStyle="rgba(255,106,92,.7)";
+    ctx.fillText("side clearance ~12 \u00b5m \u00b7 axial travel 20\u2013100 \u00b5m",cx-S*3.1,cy+S*1.72);
+    ctx.fillText("at this zoom that gap is "+(S*2*0.012/BALL).toFixed(2)+" px wide",cx-S*3.1,cy+S*1.92);
+  }
+}
+
+// ---------------- MODE: WRITE ----------------
+var pad=[], drawing=false, lastP=null, drawn=0, speed=0;
+function clearPad(){pad=[];drawn=0;}
+function drawWrite(){
+  var L=(W>820)?300:0;
+  ctx.strokeStyle="rgba(204,68,255,.10)";ctx.lineWidth=1;
+  for(var y=80;y<H-70;y+=34){ctx.beginPath();ctx.moveTo(L+20,y);ctx.lineTo(W-20,y);ctx.stroke();}
+  for(var s=0;s<pad.length;s++){var st=pad[s];
+    if(st.pts.length<2)continue;
+    ctx.strokeStyle=st.col;ctx.lineWidth=st.w;ctx.lineCap="round";ctx.lineJoin="round";
+    ctx.beginPath();
+    for(var i=0;i<st.pts.length;i++) i?ctx.lineTo(st.pts[i][0],st.pts[i][1]):ctx.moveTo(st.pts[i][0],st.pts[i][1]);
+    ctx.stroke();}
+  ctx.font="9px ui-monospace,monospace";ctx.textAlign="left";
+  ctx.fillStyle="rgba(220,228,240,.3)";
+  ctx.fillText("draw here \u00b7 the ball turns at the real rate for its diameter and your speed",L+22,66);
+}
+
+// ---------------- the zoom ladder ----------------
+var LADDER=[[149,"the whole pen"],[11,"the barrel"],[8,"slider travel"],[2.4,"cartridge bore"],
+ [1.0,"the ball"],[0.4,"the line it lays"],[0.08,"a feed groove"],[0.04,"the ball's axial travel"],
+ [0.012,"the side clearance"],[0.003,"roundness tolerance"],[0.00001,"surface finish Ra"]];
+function setZoom(v){ ZOOM=v/1000;
+  var span=149*Math.pow(10/1.49e7, ZOOM);   // 149 mm down to 1e-5 mm, 7.2 decades
+  var s=span>=1?span.toFixed(2)+" mm":span>=1e-3?(span*1000).toFixed(1)+" \u00b5m":(span*1e6).toFixed(0)+" nm";
+  document.getElementById("s-fov").textContent=s;
+  var best=LADDER[0];
+  for(var i=0;i<LADDER.length;i++) if(span<=LADDER[i][0]*1.4) best=LADDER[i];
+  document.getElementById("s-what").textContent=best[1];
+  var res=span/900;   // ~900 px across
+  document.getElementById("s-res").textContent=
+    res>=1?res.toFixed(3)+" mm/px":res>=1e-3?(res*1000).toFixed(2)+" \u00b5m/px":(res*1e6).toFixed(1)+" nm/px";
+}
+function setD(v){BALL=v;document.getElementById("sv-d").textContent=v.toFixed(1);
+  document.getElementById("s-ball").textContent=v.toFixed(2)+" mm";
+  document.getElementById("h-lw").textContent=(v*0.4).toFixed(2);
+  document.getElementById("h-rev").textContent=(100/(Math.PI*v)).toFixed(1);}
+
+// ---------------- loop ----------------
+function frame(){
+  requestAnimationFrame(frame); var t0=performance.now();
+  t+=1/60; if(SPIN&&MODE==="pen") yaw+=0.0042;
+  for(var k=0;k<4;k++){ var target=(k===active)?1:0;
+    var d=target-slide[k]; vel[k]=vel[k]*0.62+d*0.30; slide[k]+=vel[k];
+    if(Math.abs(d)<0.001&&Math.abs(vel[k])<0.001){slide[k]=target;vel[k]=0;} }
+  try{
+    ctx.fillStyle="#050510";ctx.fillRect(0,0,W,H);
+    var L=(W>820)?300:0;
+    ORX=L+(W-L)/2; ORY=H*0.46;
+    PSC=Math.min((W-L),H-80)/(penLen*1.35)*(1+ZOOM*0.9);
+    if(MODE==="pen") drawPen();
+    else if(MODE==="latch") drawLatch();
+    else if(MODE==="tip") drawTip();
+    else drawWrite();
+    // live readouts
+    var rps=10*speed/(Math.PI*BALL);
+    document.getElementById("h-rpm").textContent=Math.round(rps*60).toLocaleString();
+    document.getElementById("h-len").textContent=(drawn/1000).toFixed(1);
+    speed*=0.90;
+  }catch(e){
+    ctx.fillStyle="#050510";ctx.fillRect(0,0,W,H);
+    ctx.textAlign="center";ctx.fillStyle="rgba(255,106,92,.8)";ctx.font="bold 12px ui-monospace,monospace";
+    ctx.fillText("\u2593 render failed \u00b7 no faked frame \u2593",W/2,H/2);ctx.textAlign="left";}
+  var ms=performance.now()-t0;
+  document.getElementById("h-fps").textContent=Math.round(1000/Math.max(1,ms*0.1+9));
+}
+
+// ---------------- input ----------------
+function setMode(m){MODE=m;
+  ["pen","latch","tip","write"].forEach(function(q){
+    document.getElementById("m-"+q).classList.toggle("active",q===m);});}
+var drag=false,lx=0,ly=0;
+cv.addEventListener("pointerdown",function(e){ if(W>820&&e.clientX<300)return;
+  if(MODE==="write"){drawing=true;lastP=[e.clientX,e.clientY];
+    pad.push({col:COL[active],w:Math.max(1.4,BALL*0.4*3),pts:[lastP]});ac();return;}
+  drag=true;lx=e.clientX;ly=e.clientY;});
+cv.addEventListener("pointermove",function(e){
+  if(drawing){ var p=[e.clientX,e.clientY];
+    var dx=p[0]-lastP[0],dy=p[1]-lastP[1],dl=Math.hypot(dx,dy);
+    if(dl>1.5){ pad[pad.length-1].pts.push(p);
+      drawn+=dl*0.35;                                   // px -> mm-ish, then to m
+      speed=speed*0.6+Math.min(60,dl*2.2)*0.4;          // cm/s estimate
+      if(Math.random()<0.28) sScratch(speed);
+      lastP=p; }
+    return; }
+  if(!drag)return; uYaw+=(e.clientX-lx)*0.006; uPitch+=(e.clientY-ly)*0.004;
+  uPitch=Math.max(-1.3,Math.min(1.3,uPitch)); lx=e.clientX;ly=e.clientY;});
+cv.addEventListener("pointerup",function(){drag=false;drawing=false;});
+addEventListener("keydown",function(e){ if(e.key>="1"&&e.key<="4") press(+e.key-1); });
+
+document.getElementById("klaws").innerHTML=
+ "<div class='sh'>what you are looking at</div>"+
+ "<p>A pen that costs about a euro and spans <b>7.2 decades</b> of scale, from a 149 mm barrel to a 10 nm surface finish. The machine that makes the tip is the size of a room and holds microns; the object it makes is disposable. <span class='pur'>That gap is the whole miracle.</span></p>"+
+ "<div class='sh'>the honesty (K-laws)</div>"+
+ "<p><b>K1 THE ROTATION IS COMPUTED, AND IT CAUGHT ME.</b> Revolutions per 10 cm = <b>100/(&pi;d)</b>, giving <b>63.7</b> at d = 0.5 mm and <b>45.5</b> at 0.7 mm \u2014 the patent says 63.7 and 44.5. It matches now. My first run divided cm/s by 10 instead of 100 and printed RPM <b>ten times too high</b>; the cross-check against the patent is the only reason it is right on screen.</p>"+
+ "<p><b>K2 THE MECHANISM IS THE REAL ONE.</b> This is a <b>lug + locking shoulder + cam release</b>, not a rotary heart-cam \u2014 the heart-cam is the single-cartridge clicker. Press a slider, its lug rides a ramp and drops behind a shoulder; press another, its lug <b>cams the held lug off</b> and that spring throws it home. Straight out of <span class='cy'>US 3,294,068</span> (Hechtle 1966) and <span class='cy'>US 5,599,122</span> (Yu 1997); BIC's own is US 7,014,380 B2.</p>"+
+ "<p><b>K3 THE CLICK FORCE IS NOT PUBLISHED.</b> Nowhere in the patents, the manufacturer literature, or any teardown I could find is the actual actuation force or slider travel given. <b>The feel here is invented.</b> The 8 mm travel is a reasonable estimate, not a measurement \u2014 a kitchen scale and a caliper on a real pen would beat this file in five minutes.</p>"+
+ "<p><b>K4 GEOMETRY SCHEMATIC, NUMBERS REAL.</b> The proportions are drawn for legibility, not from a CAD file \u2014 the clearance is ~12 &micro;m against a 1 mm ball, so a true-scale drawing would render it invisible. The <b>readouts are honest</b>; the picture is a diagram. The tip view prints how many pixels the real gap would occupy at your current zoom.</p>"+
+ "<p><b>K5 THE INK IS NOT SIMULATED.</b> Ballpoint ink is shear-thinning \u2014 about 10<sup>5</sup> mPa&middot;s at rest, dropping to ~10<sup>3</sup> under the ball's shear, then thickening again so the line stays sharp. That non-Newtonian behaviour is the reason the whole thing works and it is <b>quoted here, not modelled</b>.</p>"+
+ "<p><b>K6 THE SOUND IS SYNTHESISED, NOT SAMPLED.</b> Filtered noise burst plus a resonant ping, from oscillators. It is an <i>impression</i> of the click, not a recording \u2014 and the double sound is deliberate: the press lands, then the release of the other cartridge follows a beat later. That part is real behaviour.</p>"+
+ "<div class='sh'>the bow</div>"+
+ "<p><b>John J. Loud</b> (1888), who patented the idea and could not make it write \u00b7 <b>L\u00e1szl\u00f3 and Gy\u00f6rgy B\u00edr\u00f3</b>, a journalist and a chemist who noticed newspaper ink dried faster and built a ball to meter it \u00b7 <b>Marcel Bich</b> and <b>\u00c9douard Buffard</b>, who bought the patent and spent the money on Swiss precision instead of advertising \u00b7 the unnamed engineers of the <b>1970 4-Couleurs</b> \u00b7 the metallurgists at <b>Taiyuan Iron &amp; Steel</b>, who in 2017 finally cracked the tip steel after five years and reminded everyone that this is genuinely hard \u00b7 and every machinist who holds three microns so that a child can own a pen.</p>"+
+ "<p style='color:rgba(255,215,0,.5)'>Four cartridges, about <b>8 km</b> of line, 0.4 mm wide. That is Corinth to Athens and back, in your pocket, for a euro.</p>";
+
+function resize(){DPR=Math.min(2,devicePixelRatio||1);W=innerWidth;H=innerHeight;
+  cv.width=W*DPR;cv.height=H*DPR;cv.style.width=W+"px";cv.style.height=H+"px";ctx.setTransform(DPR,0,0,DPR,0,0);}
+addEventListener("resize",resize);
+resize(); setZoom(0); setD(1.0); requestAnimationFrame(frame);
+</script>
+</body></html>

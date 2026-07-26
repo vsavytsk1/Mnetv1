@@ -1,0 +1,134 @@
+<!DOCTYPE html><html lang="es"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MANUAL DE OPERACIONES · BRASIL 2026 — agent Taraz</title>
+<style>
+  :root{--bg:#050508;--gold:#ffd700;--cyan:#00d4ff;--amber:#ffb454;--dim:#6a6a82;--txt:#e8e0d0;--safe:#00ff88;--red:#ff5470;--panel:rgba(10,10,18,.92);--edge:#20202e;--mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;}
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;background:var(--bg);color:var(--txt);font-family:var(--mono);overflow:hidden}
+  body{background:radial-gradient(1200px 800px at 70% -10%,rgba(0,60,90,.18),transparent),var(--bg)}
+  #app{height:100vh;display:flex;flex-direction:column;gap:8px;padding:10px}
+  /* header */
+  #hdr{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+  #hdr .t{color:var(--gold);font-size:15px;letter-spacing:.06em}
+  #hdr .s{color:var(--dim);font-size:10px}
+  #hdr .prog{margin-left:auto;min-width:170px}
+  #hdr .prog .lab{font-size:8px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;text-align:right}
+  #pbar{height:4px;background:#1a1a26;border-radius:3px;overflow:hidden;margin-top:2px}
+  #pbar > div{height:100%;width:8%;background:linear-gradient(90deg,var(--cyan),var(--gold));transition:width .3s}
+  /* control strip */
+  #ctrl{display:flex;align-items:center;gap:12px;background:var(--panel);border:1px solid var(--edge);border-radius:10px;padding:9px 12px;flex-wrap:wrap}
+  #dnum{color:var(--gold);font-size:20px;font-weight:bold;min-width:92px}
+  #dttl{color:var(--txt);font-size:13px}#dttl small{display:block;color:var(--dim);font-size:9.5px;margin-top:1px}
+  #slwrap{flex:1;min-width:180px;display:flex;align-items:center;gap:8px}
+  input[type=range]{-webkit-appearance:none;appearance:none;flex:1;height:4px;background:#2a2a3a;border-radius:3px;outline:none}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--gold);cursor:pointer;border:2px solid #050508}
+  input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:var(--gold);cursor:pointer;border:2px solid #050508}
+  .nav{background:#14141f;border:1px solid #2a2a3a;border-radius:6px;color:var(--cyan);font:13px var(--mono);padding:5px 11px;cursor:pointer}
+  .nav:hover{border-color:var(--cyan)}
+  #inten{display:flex;flex-direction:column;gap:2px;min-width:120px}
+  #inten .lab{font-size:8px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em}
+  #inten .bar{height:6px;background:#1a1a26;border-radius:4px;overflow:hidden}
+  #inten .bar>div{height:100%;transition:.3s}
+  #inten .v{font-size:10px;font-weight:bold}
+  /* main */
+  #main{flex:1;display:grid;grid-template-columns:290px 1fr;gap:8px;min-height:0}
+  #side{background:var(--panel);border:1px solid var(--edge);border-radius:10px;padding:11px 12px;display:flex;flex-direction:column;gap:9px;overflow:auto}
+  .kv{font-size:10px;line-height:1.35}.kv .k{color:var(--dim);text-transform:uppercase;letter-spacing:.06em;font-size:8px}
+  .kv .v{color:var(--txt);font-size:11px}
+  .phbtns{display:flex;flex-direction:column;gap:5px;margin-top:2px}
+  .ph{background:#14141f;border:1px solid #2a2a3a;border-radius:6px;color:var(--cyan);font:9.5px var(--mono);padding:7px 8px;cursor:pointer;text-align:left}
+  .ph:hover{border-color:var(--cyan)}.ph.on{border-color:var(--gold);color:var(--gold);background:rgba(255,215,0,.06)}
+  .stamp{margin-top:auto;border-top:1px solid var(--edge);padding-top:8px;color:rgba(0,212,255,.4);font-size:8.5px;line-height:1.6}
+  #panel{background:var(--panel);border:1px solid var(--edge);border-radius:10px;display:flex;flex-direction:column;min-height:0}
+  .tabs{display:flex;gap:2px;padding:8px 8px 0 8px;flex-wrap:wrap}
+  .tab{background:#12121c;border:1px solid #22222e;border-bottom:none;border-radius:7px 7px 0 0;color:var(--dim);font:11px var(--mono);padding:8px 13px;cursor:pointer}
+  .tab.on{color:var(--gold);border-color:var(--edge);background:rgba(255,215,0,.05)}
+  .tab .c{color:var(--dim);font-size:8px;margin-left:4px}
+  .pbody{flex:1;overflow:auto;padding:12px 14px}
+  .li{padding:6px 0;border-bottom:1px solid rgba(32,32,46,.6);font-size:11px;line-height:1.5}
+  .li:last-child{border-bottom:none}
+  .tm{display:inline-block;min-width:64px;color:var(--gold);font-weight:bold}
+  .onm{color:var(--cyan);font-weight:bold}
+  .al{padding:7px 9px;border-radius:6px;margin-bottom:6px;font-size:10.5px;line-height:1.5}
+  .al.warn{background:rgba(255,84,112,.09);border:1px solid rgba(255,84,112,.4);color:#ff9db0}
+  .al.ok{background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.35);color:#8affc4}
+  .al.info{background:rgba(255,180,84,.09);border:1px solid rgba(255,180,84,.4);color:var(--amber)}
+  .rest{padding:8px 10px;border:1px solid rgba(0,255,136,.28);background:rgba(0,255,136,.05);border-radius:8px;margin-bottom:7px}
+  .rest .rnm{color:var(--safe);font-weight:bold;font-size:11px}
+  .rest .rwhy{color:var(--txt);font-size:10.5px;line-height:1.5;margin-top:2px}
+  .rest .rmeta{color:var(--dim);font-size:9px;margin-top:3px}
+  .empty{color:var(--dim);font-size:11px;font-style:italic;padding:8px 0}
+  #banner{background:rgba(8,8,16,.9);border:1px solid var(--edge);border-radius:8px;padding:7px 12px;text-align:center;color:var(--dim);font-size:9.5px;letter-spacing:.05em}
+  #banner b{color:var(--gold)}
+  @media(max-width:760px){#main{grid-template-columns:1fr;overflow:auto}#side{order:2}#panel{order:1;min-height:52vh}}
+</style></head><body>
+<div id="app">
+  <div id="hdr">
+    <div><div class="t">MANUAL DE OPERACIONES · BRASIL 2026</div><div class="s">9–22 Julio · agent Taraz · dashboard v1.0 — cada paso, con descanso</div></div>
+    <div class="prog"><div class="lab">avance de la operación · <span id="pnum"></span></div><div id="pbar"><div></div></div></div>
+  </div>
+  <div id="ctrl">
+    <div id="dnum">DÍA 1</div>
+    <div id="dttl"></div>
+    <div id="slwrap"><button class="nav" id="prev">‹</button><input type="range" id="sl" min="0" max="11" value="0" step="1"><button class="nav" id="next">›</button></div>
+    <div id="inten"><span class="lab">intensidad</span><div class="bar"><div id="ibar"></div></div><span class="v" id="ival"></span></div>
+  </div>
+  <div id="main">
+    <div id="side">
+      <div class="kv"><div class="k">fase</div><div class="v" id="s-phase"></div></div>
+      <div class="kv"><div class="k">base de operaciones</div><div class="v" id="s-base"></div></div>
+      <div class="kv"><div class="k">perfil de movilidad</div><div class="v" id="s-mob"></div></div>
+      <div class="kv"><div class="k">saltar a etapa</div><div class="phbtns" id="phbtns"></div></div>
+      <div class="stamp" id="stamp"></div>
+    </div>
+    <div id="panel">
+      <div class="tabs" id="tabs"></div>
+      <div class="pbody" id="pbody"></div>
+    </div>
+  </div>
+  <div id="banner"></div>
+</div>
+<script>
+const STOPS=[{"day": "DÍA 1", "n": 1, "date": "Jueves 09 Jul", "phase": "Etapa 1 · Río Oeste (Barra)", "base": "Royalty Barra Hotel", "mob": "Uber", "title": "Despliegue y Masterplan", "intensity": "high", "agenda": [["07:10", "Aterrizaje GIG (mochila, control ligero)"], ["08:15", "Uber → Royalty Barra (~1h15 con tráfico)"], ["09:30", "Guarda-equipaje + cambio de ropa"], ["10:00", "BarraShopping — compra de supervivencia (short, malla)"], ["14:00", "Check-in oficial"], ["15:30", "Cidade das Artes — Portzamparc, losas a 10 m"], ["17:30", "Torre H / Niemeyer 360 (exterior)"], ["19:30", "Cena en el hotel (media pensión)"]], "targets": [["Cidade das Artes", "Portzamparc 2013 — plaza pública elevada sobre el nudo de autopistas."], ["Torre H / Niemeyer 360", "La curva a escala corporativa de alta densidad, en obra."]], "alerts": ["⚠ Día post-redeye: 07:10 + jornada completa = fatiga. Dosificar, no heroísmos.", "⚠ GIG → Barra ~1h15 en tráfico. Contar ese tiempo.", "🛡 Sin caminatas fuera de Av. do Pepê de noche."], "rest": [["Coffeetown (BarraShopping)", "Primer café de especialidad al aterrizar, antes de Cidade das Artes.", "dentro del mall"], ["El verdadero reset", "Cruzaste un continente de noche. El surf espera al Día 2 — cena y a dormir.", "0 culpa"]]}, {"day": "DÍA 2", "n": 2, "date": "Viernes 10 Jul", "phase": "Etapa 1 · Río Oeste (Barra)", "base": "Royalty Barra Hotel", "mob": "Uber", "title": "Brutalismo Periférico", "intensity": "med", "agenda": [["08:00", "Surf / Fitboxing — Posto 2, frente al hotel"], ["12:30", "Almuerzo costanera (Av. Olegário Maciel)"], ["14:00", "Uber → Riocentro + Museu do Pontal"], ["18:30", "Cena en el hotel (media pensión)"]], "targets": [["Riocentro", "Pabellones de grandes luces — la resolución estructural en la periferia."], ["Museu do Pontal", "Grandes vigas de hormigón + el mejor arte popular en barro y madera."]], "alerts": ["🛡 Playa (crítico): bajar solo con llave y toalla. Celular y billetera en la caja fuerte.", "⚠ Pontal abre Jue–Dom (viernes 10 va). Zona Uber de baja frecuencia — pedir el regreso 20 min antes."], "rest": [["La mañana es el descanso", "La sesión de surf/mar en Posto 2 ya es tu recuperación de hoy.", "Posto 2"], ["Av. do Pepê", "Nada agendado tras la cena — una caipirinha en el paseo, o dormir. Ambas ganan.", "a pie"]]}, {"day": "DÍA 3", "n": 3, "date": "Sábado 11 Jul", "phase": "Etapa 1 · Río Oeste (Barra)", "base": "Royalty Barra Hotel", "mob": "Uber", "title": "Ecoturismo y Contingencia", "intensity": "med", "agenda": [["09:00", "Uber → Sítio Roberto Burle Marx (R$10 efectivo)"], ["13:30", "Uber → Prainha / Grumari (playas salvajes)"], ["18:00", "Cena en el hotel (media pensión)"]], "targets": [["Sítio Burle Marx", "El jardín como plano vivo — 3.500+ especies como elementos estructurantes."]], "alerts": ["⚠ Burle Marx: reserva previa + SOLO efectivo R$10 (IPHAN). Cierra Dom/Lun (sábado va).", "⚠ Prainha/Grumari: CERO señal celular. Pactar hora fija de retorno con el chofer de ida (ej. 17:00). No depender de la app."], "rest": [["Prainha", "La playa salvaje ES el descanso — de las más bellas de Río. Toalla, efectivo, y desconectar.", "sin señal · a propósito"]]}, {"day": "DÍA 4", "n": 4, "date": "Domingo 12 Jul", "phase": "Etapa 1 → 2 · Traslado a la capital", "base": "→ Airbnb SQS 405 (Asa Sul)", "mob": "Uber + Vuelo", "title": "Extracción a Brasília", "intensity": "transit", "agenda": [["08:00", "Última mañana de playa en Barra"], ["11:00", "Check-out — equipaje en recepción, almuerzo local"], ["16:00", "Recuperar equipaje"], ["16:30", "Uber → Aeropuerto Santos Dumont (LÍMITE)"], ["20:45", "Vuelo LA 3274 → Brasília"], ["22:30", "Aterrizaje BSB → Uber → SQS 405, self check-in"]], "targets": [], "alerts": ["⚠ DÍA DE VUELO: nada de riesgo de tiempo. Check-out 11:00 / vuelo 20:45 → mochila en recepción, salida MÁX a SDU 16:30 (doméstico, 2 h de margen).", "🛡 Self check-in del Airbnb coordinado de antemano con la anfitriona."], "rest": [["El plan ya protege el descanso", "Mañana de playa + almuerzo largo y sin apuro. No lo llenes de más — es transición.", "Barra"]]}, {"day": "DÍA 5", "n": 5, "date": "Lunes 13 Jul", "phase": "Etapa 2 · Brasília", "base": "Airbnb SQS 405 (Asa Sul)", "mob": "Peatonal + Uber", "title": "La Célula Habitacional", "intensity": "med", "agenda": [["09:00", "Caminata → Supercuadra SQS 308 (cuadra modelo)"], ["11:00", "Igrejinha N.S. de Fátima + Cine Brasília (exterior)"], ["15:00", "Uber → Santuário Dom Bosco (vitrales azules)"]], "targets": [["SQS 308", "La célula habitacional de Costa — cobogós, pilotis, escala humana caminable."], ["Igrejinha de Fátima", "La primera iglesia de Brasília — azulejos de Athos Bulcão."], ["Santuário Dom Bosco", "Vitral azul de piso a techo; la araña se enciende ~16:00 por un minuto."]], "alerts": ["✔ Jugada correcta: museos cerrados los lunes → foco residencial/urbano.", "🛡 Clima seco extremo (julio ~15–20% humedad). Hidratación constante, evitar sol del mediodía."], "rest": [["Dom Bosco ~16:00", "Cuando enciende la araña, la nave entera es un momento meditativo. Ese es el descanso.", "gratis"], ["Bajo los pilotis de la SQS 308", "Sentarse en la cuadra-parque al atardecer. (Clube do Choro es sólo Vie/Sáb — hoy no.)", "Asa Sul"]]}, {"day": "DÍA 6", "n": 6, "date": "Martes 14 Jul", "phase": "Etapa 2 · Brasília", "base": "Airbnb SQS 405 (Asa Sul)", "mob": "Uber", "title": "La Escala Monumental", "intensity": "high", "agenda": [["09:00", "Uber → Eje Monumental: Congreso Nacional + Catedral"], ["12:00", "Palácio Itamaraty (reserva técnica) + Museu Nac. Honestino Guimarães"], ["17:00", "Repliegue antes de que el Eje quede desierto"]], "targets": [["Congreso Nacional", "La cúpula + la cuenca + las torres gemelas — el ícono del Plano Piloto."], ["Catedral de Brasília", "16 costillas hiperbólicas; la luz cenital ES el edificio."], ["Palácio Itamaraty", "El cálculo de Joaquim Cardozo — la escalera helicoidal exenta."], ["Museu Nac. Honestino Guimarães", "La cúpula blanca con rampa — un planeta posado sobre el Eje."]], "alerts": ["✔ Itamaraty en MARTES (abierto) — trampa del lunes evitada.", "⚠ Itamaraty exige reserva anticipada (reserva técnica) — confirmarla.", "🛡 Retirarse antes del anochecer: el Eje Monumental se vacía y se siente desolado."], "rest": [["Pontão do Lago Sul", "Tras el día monumental → atardecer junto al lago, restaurantes, capivaras, seguro e iluminado. ~15 min en Uber.", "Lago Sul · diario hasta medianoche"]]}, {"day": "DÍA 7", "n": 7, "date": "Miércoles 15 Jul", "phase": "Etapa 2 → 3 · Retorno a Río", "base": "→ Piso Anturio (Leblon)", "mob": "Uber + Vuelo", "title": "Planimetría y Retorno", "intensity": "transit", "agenda": [["11:00", "Check-out Airbnb"], ["11:30", "Mochila a un locker (shopping / aeropuerto)"], ["13:00", "Uber → Torre de TV (lectura planimétrica aérea)"], ["15:00", "Uber → Puente JK + exterior Palácio da Alvorada"], ["18:30", "Aeropuerto BSB"], ["20:35", "Vuelo LA 3780 → GIG"], ["22:20", "Aterrizaje → Uber → Leblon, self check-in nocturno"]], "targets": [["Torre de TV", "Leer el pájaro — la intersección perfecta de los ejes en un vistazo."], ["Puente JK", "Los tres arcos de acero de Chan — la ruptura ortogonal del Plano Piloto."]], "alerts": ["⚠ Mirante de la Torre de TV reportado cerrado por obras — verificar antes (exterior y feria igual valen).", "⚠ DÍA DE VUELO: mochila en locker, aeropuerto MÁX ~18:30 (doméstico 2 h).", "🛡 Llegada tardía a GIG + Uber a Leblon de noche — pre-agendar y compartir el viaje."], "rest": [["El mirante ES el descanso", "Si abre, el plan entero en una sola mirada aérea. Si no, un café antes del vuelo.", "día liviano"]]}, {"day": "DÍA 8", "n": 8, "date": "Jueves 16 Jul", "phase": "Etapa 3 · Río Sur / Centro", "base": "Piso Anturio (Leblon)", "mob": "Metrô / VLT / a pie", "title": "Compras y Centro Histórico", "intensity": "max", "agenda": [["09:00", "Metrô L4 → Botafogo · Shopping Rio Sul (valija grande + carry-on)"], ["12:30", "Metrô → Leblon · dejar las valijas"], ["13:30", "Metrô → Uruguaiana"], ["14:00", "Real Gabinete Português (cierra 17:00 — primero)"], ["14:45", "Cinelândia/Carioca: Theatro Municipal + Teatro Nelson Rodrigues"], ["16:00", "Catedral Metropolitana de São Sebastião"], ["17:00", "VLT/caminata → MAM Rio (exterior, atardecer)"], ["18:30", "Metrô → Leblon"]], "targets": [["Real Gabinete Português", "Catedral neomanuelina de libros — ~20 min, cierra 17:00."], ["Theatro Municipal", "El eco del Palais Garnier en Cinelândia."], ["Catedral de São Sebastião", "El cono truncado — brutalismo telúrico, luz por 4 franjas de vitral."], ["MAM Rio", "Los pórticos en 'V' de Reidy sosteniendo fachadas de vidrio sin apoyos."]], "alerts": ["⚠ Día de intensidad MÁXIMA (compras + valijas + circuito Centro).", "✔ Bien resuelto: dejar las valijas en Leblon 12:30 antes del Centro — no cargarlas por Uruguaiana.", "⚠ Real Gabinete cierra 17:00 → hacerlo primero (14:00 ✓). Centro se vacía de noche: volver al Metrô ~18:30. Ojo con el celular en las multitudes de Carioca."], "rest": [["Jobi", "Día MÁX — tras el MAM, no forzar. El mejor chopp de Río, a 3 cuadras de la base.", "Leblon · diario hasta 3am"], ["Pedra do Arpoador", "Si el timing acompaña, el atardecer a 10 min de Leblon. Llegar 60 min antes, cuidar bolsillos.", "Ipanema · 24h · gratis"]]}, {"day": "DÍA 9", "n": 9, "date": "Viernes 17 Jul", "phase": "Etapa 3 · Río Sur / Centro", "base": "Piso Anturio (Leblon)", "mob": "VLT / Barca / Uber", "title": "Porto Maravilha y Niterói", "intensity": "max", "agenda": [["09:00", "VLT → Praça Mauá · Museu do Amanhã + MAR (exteriores)"], ["12:30", "Caminata → Terminal de Barcas (Praça XV)"], ["13:00", "Barca → Niterói (Praça Arariboia)"], ["14:00", "Teatro Popular + Fundación Niemeyer (Caminho Niemeyer)"], ["15:30", "Uber → MAC Niterói"], ["17:00", "Alt: Reserva Cultural / Icaraí / Charitas"]], "targets": [["Museu do Amanhã", "Las espinas en voladizo de Calatrava sobre el agua."], ["MAC Niterói", "El platillo volador de Niemeyer — apunta cada ventana al skyline de Río. LA foto."], ["Caminho Niemeyer", "El mayor conjunto de Niemeyer fuera de Brasília — tours guiados gratis."]], "alerts": ["⚠ RETORNO NITERÓI 19:30 (límite duro): Barca hasta 23:30 / catamarán Charitas último ~20:00. No caminar Niterói de noche.", "⚠ MAC cerrado lunes + SOLO efectivo adentro · MAR cerrado miércoles (viernes va).", "🛡 La cuadra de la terminal de ómnibus se ve pesada — sólo con luz de día."], "rest": [["El cruce en barca", "25 min por la Bahía de Guanabara, vista del Río antiguo — descompresión pura.", "Praça XV → Arariboia"], ["Belmonte / Academia da Cachaça", "De vuelta en Leblon: feijoada + caipirinha para cerrar el día grande.", "Leblon · diario"]]}, {"day": "DÍA 10", "n": 10, "date": "Sábado 18 Jul", "phase": "Etapa 3 · Río Sur / Centro", "base": "Piso Anturio (Leblon)", "mob": "Uber + a pie", "title": "Geometría y Selva", "intensity": "med", "agenda": [["09:00", "Uber → São Conrado · Casa das Canoas + lobby Hotel Nacional"], ["13:00", "Descenso a Zona Sur"], ["14:00", "Parque Lage"], ["16:00", "Jardim Botânico"], ["18:00", "Uber corto → Leblon"]], "targets": [["Casa das Canoas", "La losa serpenteante de Niemeyer fundida con la roca in situ."], ["Parque Lage", "El palacete ecléctico contra el avance de la Mata Atlántica, al pie del Corcovado."], ["Jardim Botânico", "El trópico ordenado — palmeras imperiales y calma."]], "alerts": ["⚠ Casa das Canoas CERRADA por obras — sólo exterior (Uber por Estrada da Canoa).", "⚠ Parque Lage: edificio principal a veces en obras; el café puede estar cerrado. El patio y los senderos son lo tuyo."], "rest": [["Parque Lage + Jardim Botânico", "Este día YA es el descanso — selva, monos, el patio del palacete. Baja adrenalina, verde total.", "Zona Sur"], ["Livraria da Travessa (Leblon)", "A la tarde: librería + café + cine. Hojear, sentarse, respirar.", "Leblon · diario 10–22"]]}, {"day": "DÍA 11", "n": 11, "date": "Domingo 19 Jul", "phase": "Etapa 3 · Río Sur", "base": "Piso Anturio (Leblon)", "mob": "A pie (radio 2 cuadras)", "title": "Final del Mundial · Toque de Queda", "intensity": "rest", "agenda": [["08:00", "Playa suave Leblon / Ipanema"], ["13:00", "TOQUE DE QUEDA LOGÍSTICO: radio de 2 cuadras a pie, CERO transporte"]], "targets": [], "alerts": ["⚠ FINAL DEL MUNDIAL (19 jul 2026): riesgo de colapso urbano / celebración masiva. Sin Metrô ni Uber tras ~13:00; mantenerse hiperlocal.", "🛡 Si Brasil juega, la calle explota — bello pero caótico. Cuidar las pertenencias."], "rest": [["Café ao Leu + playa", "La mañana: café en Leblon y Posto 11/12. El plan por fin dice PARAR — tomalo.", "Leblon"], ["Ver la final en un boteco de Leblon", "A menos de 2 cuadras: Jobi o Belmonte. La energía carioca sin el riesgo del transporte.", "Jobi / Belmonte"]]}, {"day": "DÍAS 12–14", "n": 12, "date": "Lun 20 → Mié 22 Jul", "phase": "Etapa 3 · Descompresión + Extracción", "base": "Piso Anturio (Leblon)", "mob": "Peatonal · Uber al final", "title": "Descompresión y Retorno a BUE", "intensity": "low", "agenda": [["Lun–Mar", "Agenda libre — Leblon peatonal, vida local, tetris de valijas"], ["(Opcional)", "Obra do Berço (Niemeyer, Uber 10 min — recomendado) · Pedregulho de Reidy (Uber 40 min, medio día)"], ["Mié 11:00", "Check-out — valijas a LuggageHero/Bounce o late check-out"], ["Mié 16:00", "LÍMITE MÁX para salir a GIG"], ["Mié 20:05", "Vuelo JA 3815 → Buenos Aires. FIN."]], "targets": [["Obra do Berço (opc.)", "El punto-cero de Niemeyer, 1937 — el primer brise-soleil móvil de Brasil."], ["Pedregulho de Reidy (opc.)", "El grial brutalista — el bloque social serpenteante. Pero come medio día: evaluar cansancio."]], "alerts": ["⚠ VUELO FINAL (Mié 22, 20:05 internacional → 3 h de margen, MÁX a GIG 16:00).", "⚠ Check-out 11:00 vs vuelo 20:05 → guardado de valijas (Bounce/LuggageHero) obligatorio.", "🛡 Tráfico Av. Brasil / Linha Vermelha hacia GIG — dejar margen extra."], "rest": [["Esto es descompresión pura", "Leblon peatonal, atardeceres en Arpoador, Livraria da Travessa, una última feijoada.", "3 días"], ["Regla de oro", "UNA coda de Niemeyer (Obra do Berço) O la peregrinación a Reidy (Pedregulho) — no ambas. Si no queda energía: descansar. Te lo ganaste.", "balance"]]}], STAMPS=["el plan sobrevive a la auditoría — Taraz corrigió la trampa del lunes", "descansar no es debilidad: es un checkpoint del itinerario", "un giro equivocado y sin zapatos — por eso cada paso está calculado", "los pines viven en los mapas v1.4 · esto es el reloj de la operación", "safe safe safe"];
+const INT={transit:['tránsito','#1de5b0',25],rest:['descanso','#00ff88',15],low:['baja','#00ff88',32],med:['media','#00d4ff',58],high:['alta','#ffb454',82],max:['MÁXIMA','#ff5470',100]};
+const TABS=[['agenda','Agenda'],['objetivos','Objetivos'],['alertas','Alertas'],['descanso','Descanso']];
+let cur=0, tab='agenda';
+const $=id=>document.getElementById(id);
+
+function alClass(s){const c=s.trim()[0];return c==='⚠'?'warn':c==='✔'?'ok':'info';}
+function renderPanel(){
+  const d=STOPS[cur];let h='';
+  if(tab==='agenda'){h=d.agenda.map(a=>'<div class="li"><span class="tm">'+a[0]+'</span>'+a[1]+'</div>').join('');}
+  else if(tab==='objetivos'){h=d.targets.length?d.targets.map(t=>'<div class="li"><span class="onm">'+t[0]+'</span> — '+t[1]+'</div>').join(''):'<div class="empty">— sin objetivos arquitectónicos (día de tránsito / descanso)</div>';}
+  else if(tab==='alertas'){h=d.alerts.map(a=>'<div class="al '+alClass(a)+'">'+a+'</div>').join('');}
+  else{h=d.rest.map(r=>'<div class="rest"><div class="rnm">☾ '+r[0]+'</div><div class="rwhy">'+r[1]+'</div><div class="rmeta">'+(r[2]||'')+'</div></div>').join('');}
+  $('pbody').innerHTML=h;
+}
+function renderTabs(){const d=STOPS[cur];$('tabs').innerHTML=TABS.map(t=>{
+  let c={agenda:d.agenda.length,objetivos:d.targets.length,alertas:d.alerts.length,descanso:d.rest.length}[t[0]];
+  return '<div class="tab'+(tab===t[0]?' on':'')+'" data-t="'+t[0]+'">'+t[1]+'<span class="c">'+c+'</span></div>';}).join('');
+  $('tabs').querySelectorAll('.tab').forEach(el=>el.onclick=()=>{tab=el.dataset.t;renderTabs();renderPanel();});}
+function render(){
+  const d=STOPS[cur];
+  $('dnum').textContent=d.day;
+  $('dttl').innerHTML=d.title+'<small>'+d.date+'</small>';
+  $('s-phase').textContent=d.phase;$('s-base').textContent=d.base;$('s-mob').textContent=d.mob;
+  const it=INT[d.intensity];$('ibar').style.width=it[2]+'%';$('ibar').style.background=it[1];$('ival').textContent=it[0];$('ival').style.color=it[1];
+  $('sl').value=cur;
+  const pct=(cur+1)/STOPS.length*100;document.querySelector('#pbar>div').style.width=pct+'%';$('pnum').textContent=(cur+1)+' / '+STOPS.length;
+  // phase buttons
+  const phases=[];STOPS.forEach((s,i)=>{const key=s.phase.split('·')[0].trim();if(!phases.find(p=>p.key===key))phases.push({key,i,label:s.phase});});
+  $('phbtns').innerHTML=phases.map(p=>'<div class="ph'+(STOPS[cur].phase.split('·')[0].trim()===p.key?' on':'')+'" data-i="'+p.i+'">'+p.label+'</div>').join('');
+  $('phbtns').querySelectorAll('.ph').forEach(el=>el.onclick=()=>{cur=+el.dataset.i;render();});
+  renderTabs();renderPanel();
+}
+$('sl').addEventListener('input',e=>{cur=+e.target.value;render();});
+$('prev').onclick=()=>{cur=Math.max(0,cur-1);render();};
+$('next').onclick=()=>{cur=Math.min(STOPS.length-1,cur+1);render();};
+document.addEventListener('keydown',e=>{if(e.key==='ArrowLeft'){cur=Math.max(0,cur-1);render();}if(e.key==='ArrowRight'){cur=Math.min(STOPS.length-1,cur+1);render();}});
+// cycling banner
+let bi=0;function banner(){$('banner').innerHTML='<b>OPERAÇÃO BRASIL</b> · '+STAMPS[bi%STAMPS.length];bi++;}
+banner();setInterval(banner,4200);
+$('stamp').innerHTML=STAMPS.map(s=>'· '+s).join('<br>');
+render();
+</script></body></html>

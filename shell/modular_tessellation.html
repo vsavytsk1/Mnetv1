@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>modular tessellation - SL(2,Z) probe</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 100%; height: 100%;
+    background: #050510; color: #e0f0ff;
+    font-family: 'Share Tech Mono', 'Consolas', 'Menlo', monospace;
+    overflow: hidden; user-select: none;
+  }
+  #cv { position: fixed; inset: 0; cursor: crosshair; display: block; }
+  .panel {
+    position: fixed; padding: 12px 14px;
+    font-size: 11px; line-height: 1.7; letter-spacing: 0.04em;
+  }
+  #hud    { top: 16px; left: 16px; pointer-events: none; max-width: 560px; }
+  #legend { top: 16px; right: 16px; pointer-events: none; text-align: right; }
+  #picked { bottom: 16px; left: 16px; pointer-events: none; max-width: 380px; }
+  #ctl    { bottom: 16px; right: 16px; text-align: right; }
+  #hint   { bottom: 16px; left: 50%; transform: translateX(-50%);
+            pointer-events: none; color: #7090a0; }
+
+  #status {
+    position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    color: #ffd700; font-size: 14px; letter-spacing: 0.15em; text-transform: uppercase;
+    pointer-events: none;
+  }
+  #err {
+    position: fixed; top: 0; left: 0; right: 0;
+    background: #ff3050cc; color: #fff;
+    padding: 16px 20px; font-size: 12px; line-height: 1.5;
+    white-space: pre-wrap; display: none; z-index: 1000;
+  }
+
+  .lbl  { color: #7090a0; }
+  .gold { color: #ffd700; }
+  .pent { color: #ff6b35; }
+  .hex  { color: #00d4ff; }
+  b { color: #00d4ff; font-weight: normal; }
+
+  input[type=range] { width: 140px; vertical-align: middle; accent-color: #ffd700; }
+  .row { margin: 4px 0; }
+  .btn {
+    display: inline-block; padding: 4px 10px; margin-left: 6px;
+    border: 1px solid #2a4858; cursor: pointer; color: #7090a0;
+    user-select: none; transition: all 0.15s; font-size: 11px;
+  }
+  .btn:hover { color: #e0f0ff; border-color: #4060a0; }
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+<div id="err"></div>
+<div id="status">booting...</div>
+
+<div id="hud" class="panel">
+  <div class="lbl">modular tessellation &middot; SL(2,Z) on the upper half-plane</div>
+  <div><span class="lbl">generators</span> <b>T</b>: z &rarr; z + 1 &nbsp; <b>S</b>: z &rarr; -1/z</div>
+  <div><span class="lbl">fundamental domain</span> <span class="gold">gold tile</span> &middot; corners <span class="pent">&rho;</span>, <span class="pent">&rho;&sup2;</span>, <span class="hex">i</span></div>
+  <div><span class="lbl">tiles drawn</span> <b id="g-tiles">&mdash;</b> &middot; <span class="lbl">depth</span> <b id="g-depth">&mdash;</b></div>
+  <div><span class="gold">crucial</span> &mdash; the corner <span class="pent">&rho;</span> = e^(i&pi;/3) is the SAME &rho; that generates the Eisenstein integers Z[&rho;] in lattice_probe.</div>
+  <div class="lbl">hexagonal lattice world &harr; modular tessellation world meet at exactly one point.</div>
+</div>
+
+<div id="legend" class="panel">
+  <div class="lbl">click upper half &middot; mark a point</div>
+  <div class="lbl">scroll zoom &middot; drag pan</div>
+  <div class="lbl"><span class="gold">gold</span> fundamental domain &amp; marked point</div>
+  <div class="lbl"><span class="hex">cyan</span> tessellation copies</div>
+  <div class="lbl"><span class="pent">orange</span> &rho;, &rho;&sup2; &middot; <span class="hex">cyan</span> i</div>
+</div>
+
+<div id="picked" class="panel"></div>
+
+<div id="hint" class="panel">first paint coming up...</div>
+
+<div id="ctl" class="panel">
+  <div class="row"><span class="lbl">BFS depth</span>
+    <input id="i-D" type="range" min="2" max="8" value="6" step="1">
+  </div>
+  <div class="row">
+    <span class="btn" id="b-T">apply T</span>
+    <span class="btn" id="b-Ti">apply T&#8315;&sup1;</span>
+    <span class="btn" id="b-S">apply S</span>
+    <span class="btn" id="b-reset">reset point</span>
+  </div>
+</div>
+
+<script>
+window.onerror = function(msg, src, line, col, err){
+  var e = document.getElementById('err');
+  e.style.display = 'block';
+  e.textContent = 'JS ERROR: ' + msg + ' (line ' + line + ', col ' + col + ')';
+  if (err && err.stack) e.textContent += '\n\n' + err.stack;
+  var s = document.getElementById('status');
+  if (s) s.style.display = 'none';
+  return false;
+};
+
+(function(){
+"use strict";
+
+function $(id){ return document.getElementById(id); }
+function setStatus(msg){ var s = $('status'); if (s) s.textContent = msg; }
+function hideStatus(){ var s = $('status'); if (s) s.style.display = 'none'; }
+setStatus('booting');
+
+// ─── §A Mobius arithmetic ──────────────────────────────────────────────────
+// A Mobius transformation M = [[a,b],[c,d]] acts on z as (az+b)/(cz+d).
+function applyMobius(M, z){
+  var num_re = M[0][0] * z.re + M[0][1];
+  var num_im = M[0][0] * z.im;
+  var den_re = M[1][0] * z.re + M[1][1];
+  var den_im = M[1][0] * z.im;
+  var den_m2 = den_re*den_re + den_im*den_im;
+  if (den_m2 < 1e-30) return { re: 1e30, im: 1e30 };
+  return {
+    re: (num_re * den_re + num_im * den_im) / den_m2,
+    im: (num_im * den_re - num_re * den_im) / den_m2
+  };
+}
+function matmul(A, B){
+  return [
+    [A[0][0]*B[0][0] + A[0][1]*B[1][0], A[0][0]*B[0][1] + A[0][1]*B[1][1]],
+    [A[1][0]*B[0][0] + A[1][1]*B[1][0], A[1][0]*B[0][1] + A[1][1]*B[1][1]]
+  ];
+}
+
+// ─── §B SL(2,Z) generators ─────────────────────────────────────────────────
+// T = translation z -> z+1; S = inversion z -> -1/z. These generate SL(2,Z)
+// (modulo the center {+/-I}). Every element is a word in T, T^-1, S.
+var T_MAT     = [[1,  1], [0, 1]];
+var T_INV_MAT = [[1, -1], [0, 1]];
+var S_MAT     = [[0, -1], [1, 0]];
+var ID_MAT    = [[1,  0], [0, 1]];
+
+// ─── §C BFS enumeration of SL(2,Z) elements up to depth ────────────────────
+function bfsMatrices(maxDepth){
+  var seen = {};
+  var out = [];
+  var queue = [{ M: ID_MAT, depth: 0 }];
+  while (queue.length > 0){
+    var node = queue.shift();
+    var M = node.M, depth = node.depth;
+    var sig = M[0][0]+','+M[0][1]+','+M[1][0]+','+M[1][1];
+    if (seen[sig]) continue;
+    // Also dedupe against the negative matrix (same Mobius action in PSL)
+    var nsig = (-M[0][0])+','+(-M[0][1])+','+(-M[1][0])+','+(-M[1][1]);
+    if (seen[nsig]) continue;
+    seen[sig] = true;
+    out.push({ M: M, depth: depth });
+    if (depth >= maxDepth) continue;
+    queue.push({ M: matmul(M, T_MAT),     depth: depth+1 });
+    queue.push({ M: matmul(M, T_INV_MAT), depth: depth+1 });
+    queue.push({ M: matmul(M, S_MAT),     depth: depth+1 });
+  }
+  return out;
+}
+
+// ─── §D Fundamental domain boundary ────────────────────────────────────────
+// F = {z in H: |Re z| <= 1/2, |z| >= 1}.  Corners at rho, rho^2, and cusp.
+// We sample the boundary as a closed polygon (left up, top, right down, arc).
+function fundamentalDomainBoundary(yMax){
+  var pts = [];
+  var sqrt3_2 = Math.sqrt(3) / 2;
+  var N = 24;
+  // up left side
+  for (var i = 0; i <= N; i++){
+    var t = i / N;
+    pts.push({ re: -0.5, im: sqrt3_2 + (yMax - sqrt3_2) * t });
+  }
+  // top (approximation of the cusp at infinity)
+  for (var i = 1; i <= 4; i++){
+    pts.push({ re: -0.5 + i / 4, im: yMax });
+  }
+  // down right side
+  for (var i = 1; i <= N; i++){
+    var t = i / N;
+    pts.push({ re: 0.5, im: yMax - (yMax - sqrt3_2) * t });
+  }
+  // arc from rho (e^{i pi/3}) to rho^2 (e^{i 2pi/3})
+  for (var i = 1; i <= N; i++){
+    var t = i / N;
+    var theta = Math.PI/3 + (Math.PI/3) * t;
+    pts.push({ re: Math.cos(theta), im: Math.sin(theta) });
+  }
+  return pts;
+}
+
+// ─── §E State ──────────────────────────────────────────────────────────────
+var state = {
+  depth:    6,
+  matrices: [],
+  fd:       fundamentalDomainBoundary(4.0),
+  selected: null,           // user-clicked point in upper half-plane
+  view: {
+    cx: 0,                   // world center x (Re axis)
+    cy: 1.0,                 // world center y (Im axis)
+    scale: 220               // world units to pixels
+  }
+};
+
+// ─── §F Canvas ─────────────────────────────────────────────────────────────
+setStatus('canvas');
+var cv  = $('cv');
+var ctx = cv.getContext('2d');
+function fitCanvas(){
+  var dpr = window.devicePixelRatio || 1;
+  cv.width  = window.innerWidth  * dpr;
+  cv.height = window.innerHeight * dpr;
+  cv.style.width  = window.innerWidth  + 'px';
+  cv.style.height = window.innerHeight + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+fitCanvas();
+window.addEventListener('resize', function(){ fitCanvas(); draw(); });
+
+// World (Re, Im) <-> screen (x, y).  Screen y is flipped (down).
+function w2s(z){
+  return {
+    x: window.innerWidth  / 2 + (z.re - state.view.cx) * state.view.scale,
+    y: window.innerHeight / 2 - (z.im - state.view.cy) * state.view.scale
+  };
+}
+function s2w(x, y){
+  return {
+    re: state.view.cx + (x - window.innerWidth  / 2) / state.view.scale,
+    im: state.view.cy - (y - window.innerHeight / 2) / state.view.scale
+  };
+}
+
+// ─── §G Rebuild matrices when depth changes ────────────────────────────────
+function rebuild(){
+  setStatus('enumerating SL(2,Z) elements (depth ' + state.depth + ')');
+  state.matrices = bfsMatrices(state.depth);
+  setStatus('built ' + state.matrices.length + ' tiles');
+  draw();
+  updateHUD();
+  hideStatus();
+  $('hint').textContent = 'click upper half-plane \u00B7 scroll zoom \u00B7 drag pan';
+}
+
+// ─── §H Drawing ────────────────────────────────────────────────────────────
+function draw(){
+  var W = window.innerWidth, H = window.innerHeight;
+  ctx.clearRect(0, 0, W, H);
+
+  // real axis (Im = 0)
+  var yAxis = w2s({ re: 0, im: 0 }).y;
+  if (yAxis >= 0 && yAxis <= H){
+    ctx.strokeStyle = 'rgba(0, 212, 255, 0.25)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(0, yAxis);
+    ctx.lineTo(W, yAxis);
+    ctx.stroke();
+  }
+
+  // shade the lower half-plane (not part of this story)
+  if (yAxis > 0 && yAxis < H){
+    ctx.fillStyle = 'rgba(255, 48, 80, 0.04)';
+    ctx.fillRect(0, yAxis, W, H - yAxis);
+  }
+
+  // draw all transformed fundamental domains
+  for (var k = 0; k < state.matrices.length; k++){
+    var entry = state.matrices[k];
+    var M = entry.M, depth = entry.depth;
+    var poly = [];
+    var ok = true;
+    for (var i = 0; i < state.fd.length; i++){
+      var z = applyMobius(M, state.fd[i]);
+      if (z.im < 1e-4 || z.im > 1e8 || Math.abs(z.re) > 1e8){ ok = false; break; }
+      poly.push(z);
+    }
+    if (!ok || poly.length === 0) continue;
+
+    // alpha shrinks with depth so deep tiles fade
+    var alpha = depth === 0 ? 0.55 : Math.max(0.08, 0.45 - depth * 0.05);
+    var isFD = (depth === 0);
+
+    ctx.beginPath();
+    for (var i = 0; i < poly.length; i++){
+      var sp = w2s(poly[i]);
+      if (i === 0) ctx.moveTo(sp.x, sp.y);
+      else         ctx.lineTo(sp.x, sp.y);
+    }
+    ctx.closePath();
+    if (isFD){
+      ctx.fillStyle = 'rgba(255, 215, 0, 0.08)';
+      ctx.fill();
+      ctx.strokeStyle = '#ffd700';
+      ctx.lineWidth = 2;
+    } else {
+      ctx.strokeStyle = 'rgba(0, 212, 255, ' + alpha + ')';
+      ctx.lineWidth = 0.8;
+    }
+    ctx.stroke();
+  }
+
+  // special points
+  var sqrt3_2 = Math.sqrt(3) / 2;
+  drawPoint({ re:  0.5, im: sqrt3_2 }, '#ff6b35', '\u03C1 = e^(i\u03C0/3)', 5);
+  drawPoint({ re: -0.5, im: sqrt3_2 }, '#ff6b35', '\u03C1\u00B2 = e^(2i\u03C0/3)', 5);
+  drawPoint({ re:  0,   im: 1       }, '#00d4ff', 'i', 5);
+
+  // selected point and immediate orbit
+  if (state.selected){
+    drawPoint(state.selected, '#ffd700', 'z*', 6);
+    var Tz  = applyMobius(T_MAT,     state.selected);
+    var Tiz = applyMobius(T_INV_MAT, state.selected);
+    var Sz  = applyMobius(S_MAT,     state.selected);
+    if (Tz.im  > 1e-4) drawPoint(Tz,  'rgba(255,215,0,0.55)', 'Tz', 4);
+    if (Tiz.im > 1e-4) drawPoint(Tiz, 'rgba(255,215,0,0.55)', 'T\u207B\u00B9z', 4);
+    if (Sz.im  > 1e-4) drawPoint(Sz,  'rgba(255,215,0,0.55)', 'Sz', 4);
+  }
+}
+
+function drawPoint(z, color, label, r){
+  var p = w2s(z);
+  if (p.x < -50 || p.x > window.innerWidth + 50) return;
+  if (p.y < -50 || p.y > window.innerHeight + 50) return;
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.arc(p.x, p.y, r || 4, 0, 6.2832);
+  ctx.fill();
+  if (label){
+    ctx.fillStyle = '#e0f0ff';
+    ctx.font = '11px "Share Tech Mono", monospace';
+    ctx.fillText(label, p.x + 10, p.y - 6);
+  }
+}
+
+// ─── §I HUD ────────────────────────────────────────────────────────────────
+function updateHUD(){
+  $('g-tiles').textContent = state.matrices.length;
+  $('g-depth').textContent = state.depth;
+  updatePicked();
+}
+
+function updatePicked(){
+  var el = $('picked');
+  if (!state.selected){ el.innerHTML = ''; return; }
+  var z   = state.selected;
+  var Tz  = applyMobius(T_MAT,     z);
+  var Tiz = applyMobius(T_INV_MAT, z);
+  var Sz  = applyMobius(S_MAT,     z);
+  el.innerHTML =
+    '<div class="gold"><span class="lbl">selected z*</span> <b>' + z.re.toFixed(4) + ' + ' + z.im.toFixed(4) + 'i</b></div>' +
+    '<div><span class="lbl">T(z)</span> ' + Tz.re.toFixed(4) + ' + ' + Tz.im.toFixed(4) + 'i</div>' +
+    '<div><span class="lbl">T\u207B\u00B9(z)</span> ' + Tiz.re.toFixed(4) + ' + ' + Tiz.im.toFixed(4) + 'i</div>' +
+    '<div><span class="lbl">S(z)</span> ' + Sz.re.toFixed(4) + ' + ' + Sz.im.toFixed(4) + 'i</div>';
+}
+
+// ─── §J Interaction ────────────────────────────────────────────────────────
+cv.addEventListener('mousedown', function(ev){
+  var sx = ev.clientX, sy = ev.clientY;
+  var cx0 = state.view.cx, cy0 = state.view.cy;
+  var moved = false;
+  function move(e){
+    if (Math.hypot(e.clientX - sx, e.clientY - sy) > 4) moved = true;
+    if (moved){
+      state.view.cx = cx0 - (e.clientX - sx) / state.view.scale;
+      state.view.cy = cy0 + (e.clientY - sy) / state.view.scale;
+      draw();
+    }
+  }
+  function up(e){
+    window.removeEventListener('mousemove', move);
+    window.removeEventListener('mouseup', up);
+    if (!moved){
+      var w = s2w(e.clientX, e.clientY);
+      if (w.im > 0.01){
+        state.selected = w;
+        updatePicked();
+        draw();
+      }
+    }
+  }
+  window.addEventListener('mousemove', move);
+  window.addEventListener('mouseup', up);
+});
+
+cv.addEventListener('wheel', function(e){
+  e.preventDefault();
+  var factor = Math.exp(-e.deltaY * 0.001);
+  var oldScale = state.view.scale;
+  var newScale = Math.max(30, Math.min(2000, oldScale * factor));
+  // zoom centered on cursor
+  var w = s2w(e.clientX, e.clientY);
+  state.view.scale = newScale;
+  var w2 = s2w(e.clientX, e.clientY);
+  state.view.cx += w.re - w2.re;
+  state.view.cy += w.im - w2.im;
+  draw();
+}, { passive: false });
+
+$('i-D').addEventListener('input', function(e){
+  state.depth = +e.target.value;
+  rebuild();
+});
+
+function step(M){
+  if (!state.selected) return;
+  state.selected = applyMobius(M, state.selected);
+  // keep in upper half-plane
+  if (state.selected.im < 1e-4) state.selected.im = 1e-4;
+  updatePicked();
+  draw();
+}
+$('b-T').addEventListener('click',  function(){ step(T_MAT); });
+$('b-Ti').addEventListener('click', function(){ step(T_INV_MAT); });
+$('b-S').addEventListener('click',  function(){ step(S_MAT); });
+$('b-reset').addEventListener('click', function(){
+  state.selected = null;
+  updatePicked();
+  draw();
+});
+
+// ─── §K Boot ───────────────────────────────────────────────────────────────
+setStatus('first build');
+rebuild();
+
+})();
+</script>
+</body>
+</html>

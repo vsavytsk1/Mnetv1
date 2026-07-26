@@ -1,0 +1,231 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>The Grand Transmutation Circle · on the ground · v1.3 · Temple of Apollo</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<style>
+:root{--bg:#05050a;--gold:#ffd700;--purp:#cc44ff;--cyan:#00d4ff;--pink:#ff69b4;--red:#ff3355;--silver:#cfd8e6;--white:#e8ecf6;--dim:#6a6a82;
+ --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--white);font-family:var(--mono);overflow:hidden}
+#wrap{position:fixed;inset:0;perspective:1300px;overflow:hidden;background:radial-gradient(120% 80% at 50% 120%,#0b1020,#05050a 70%)}
+#plane{position:absolute;inset:-9% -5%;transform-origin:50% 60%;will-change:transform}
+#map{position:absolute;inset:0;background:#05060b;z-index:1}
+.leaflet-container{background:#05060b;font-family:var(--mono)}
+.leaflet-tile{filter:saturate(.7) brightness(.8) contrast(1.05)}
+.leaflet-control-attribution{background:rgba(5,5,8,.7)!important;color:#55556a!important;font-size:8px!important}
+.leaflet-control-attribution a{color:#7a7a94!important}
+#sigil{position:absolute;inset:0;pointer-events:none;z-index:2}
+#tmk{width:9px;height:9px;border-radius:50%;background:var(--gold);box-shadow:0 0 0 2px #05050a,0 0 12px var(--gold)}
+#hud{position:fixed;top:10px;left:12px;z-index:20;pointer-events:none;max-width:330px}
+#ttl{color:var(--gold);font-size:13px;letter-spacing:.05em;text-transform:uppercase}#ttl .p{color:var(--purp)}#ttl .v{color:var(--dim);font-size:10px}
+#hud .row{line-height:1.7;color:rgba(232,236,246,.55);font-size:11px}
+#hud .g{color:var(--gold)}.pu{color:var(--purp)}.cy{color:var(--cyan)}.pk{color:var(--pink)}.rd{color:var(--red)}
+#hud .lk{font-size:12px;font-weight:bold}
+#hud .dim{color:rgba(232,236,246,.3);font-size:10px;line-height:1.5;margin-top:4px}
+#conj{position:fixed;top:12px;right:12px;z-index:20;background:rgba(8,8,16,.8);border:1px solid #20202e;border-radius:8px;padding:8px 11px;width:168px}
+#conj .ct{font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.1em;margin-bottom:5px}
+#conj canvas{display:block;border:1px solid #16202e;border-radius:4px;background:#03030a}
+#conj .cl{font-size:10px;line-height:1.6;margin-top:6px;color:var(--dim)}
+#conj .cl b{color:var(--gold)}#conj .cl .y{color:#00ffd5;font-weight:bold}#conj .cl .n{color:#ff5470}
+#bar{position:fixed;left:50%;transform:translateX(-50%);bottom:10px;display:flex;flex-wrap:wrap;gap:7px 11px;align-items:center;
+ background:rgba(8,8,16,.93);border:1px solid #20202e;border-radius:10px;padding:9px 14px;z-index:20;max-width:97vw;justify-content:center}
+.klbl{color:var(--dim);font-size:9px;text-transform:uppercase;letter-spacing:.08em}
+input[type=range]{appearance:none;-webkit-appearance:none;width:74px;height:4px;background:#2a2a3a;border-radius:3px;outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:var(--gold);cursor:pointer}
+input[type=range]::-moz-range-thumb{width:12px;height:12px;border:none;border-radius:50%;background:var(--gold);cursor:pointer}
+input#s-time{width:140px}input#s-time::-webkit-slider-thumb{background:var(--cyan)}
+.v2{color:var(--gold);font-size:9px;min-width:26px;text-align:right}
+.sep{width:1px;height:15px;background:#20202e}
+button{background:#14141f;border:1px solid #2a2a3a;border-radius:6px;color:var(--gold);font:11px var(--mono);padding:5px 9px;cursor:pointer;transition:all .12s}
+button:hover{border-color:var(--gold)}button.gt{color:#00ffd5;border-color:#0a3a3a}
+#stamp{position:fixed;bottom:10px;right:12px;color:var(--dim);font-size:9px;text-align:right;z-index:19;line-height:1.5}#stamp b{color:var(--gold)}
+</style></head>
+<body>
+<div id="wrap"><div id="plane"><div id="map"></div><canvas id="sigil"></canvas></div></div>
+
+<div id="hud">
+  <div id="ttl">Transmutation <span class="p">Circle</span> · on the ground <span class="v">v1.3</span></div>
+  <div class="row">Temple of Apollo · <span class="g">37.9060°N 22.8790°E</span> · <span class="cy">7 km</span></div>
+  <div class="row">core <span class="pu" id="h-core">{8/3}</span> · ring <span class="g" id="h-ring">{12/5}</span> · agapi q <span class="pk" id="h-q">0.71</span></div>
+  <div class="row lk" id="h-lock">armed — scrub to the new moon</div>
+  <div class="dim">flat sigil on the real terrain · slider lays it down · locks at the conjunction · motion opt-in · χ=2</div>
+</div>
+
+<div id="conj">
+  <div class="ct">new-moon lock · ☉ ☾</div>
+  <canvas id="cj" width="146" height="88"></canvas>
+  <div class="cl">
+    <div>elongation <b id="c-el">−0.18°</b></div>
+    <div id="c-lk" class="n">not locked</div>
+  </div>
+</div>
+
+<div id="bar">
+  <span class="klbl">lay down</span><input id="s-lay" type="range" min="0" max="100" value="45" oninput="LAY=+this.value/100;lay()"><span class="v2" id="v-lay">40°</span>
+  <span class="klbl">zoom</span><input id="s-zoom" type="range" min="9" max="15" step="0.1" value="11.5" oninput="MZ=+this.value;set('v-zoom',MZ.toFixed(1));resize()"><span class="v2" id="v-zoom">11.5</span>
+  <span class="klbl">spin</span><input id="s-spin" type="range" min="0" max="100" value="0" oninput="SPIN=+this.value/9000"><span class="v2" id="v-spin">0</span>
+  <div class="sep"></div>
+  <span class="klbl">time ±new moon</span><input id="s-time" type="range" min="-30" max="30" value="-18" step="0.2" oninput="TMIN=+this.value;tgt=null"><span class="v2" id="v-time">−18m</span>
+  <button id="b-nm" class="gt" onclick="tgt=0">→ new moon</button>
+  <div class="sep"></div>
+  <span class="klbl">core</span><input id="s-cn" type="range" min="3" max="12" value="8" oninput="setCN(+this.value)"><span class="v2" id="v-cn">8</span>
+  <input id="s-ck" type="range" min="1" max="7" value="3" oninput="setCK(+this.value)"><span class="v2" id="v-ck">3</span>
+  <span class="klbl">ring</span><input id="s-rn" type="range" min="5" max="18" value="12" oninput="setRN(+this.value)"><span class="v2" id="v-rn">12</span>
+  <input id="s-rk" type="range" min="1" max="8" value="5" oninput="setRK(+this.value)"><span class="v2" id="v-rk">5</span>
+  <span class="klbl">q</span><input id="s-q" type="range" min="45" max="130" value="71" oninput="Q=+this.value/100"><span class="v2" id="v-q">.71</span>
+</div>
+
+<div id="stamp">Grand Transmutation · v1.3 · HELENA<br>flat circle · tilted terrain · Promised-Day style<br>reads the sky, never commands it · χ=2 · always</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+"use strict";
+var TEMPLE=[37.9060,22.8790], sig=document.getElementById("sigil"), ctx=sig.getContext("2d");
+var cj=document.getElementById("cj"), cjx=cj.getContext("2d");
+var W=innerWidth,H=innerHeight,DPR=1,R7=300;
+var CN=8,CK=3,RN=12,RK=5,Q=0.71,LAY=0.45,MZ=11.5,SPIN=0,TMIN=-18,tgt=null,rot=0,ACT=0;   // SPIN default 0 — motion opt-in (Path VIII); MZ = map zoom (v1.3)
+var NMOON=1784022342615;
+var GOLD=[255,215,0],PURP=[204,68,255],CYAN=[0,212,255],PINK=[255,105,180],RED=[255,51,85],SILV=[207,216,230],WHITE=[232,236,246],GRN=[0,255,213];
+function css(c,a){return "rgba("+(c[0]|0)+","+(c[1]|0)+","+(c[2]|0)+","+a+")";}
+function mix(a,b,t){t=t<0?0:t>1?1:t;return [a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t];}
+function gcd(a,b){a=Math.abs(a);b=Math.abs(b);while(b){var t=a%b;a=b;b=t;}return a;}
+function starEdges(n,k){var d=gcd(n,k),e=[],s,cur,ring;for(s=0;s<d;s++){ring=[];cur=s;do{ring.push(cur);cur=(cur+k)%n;}while(cur!==s);for(var i=0;i<ring.length;i++)e.push([ring[i],ring[(i+1)%ring.length]]);}return e;}
+var ROSE=[{f:1,r:1},{f:-5,r:0.55},{f:7,r:0.28}];
+function tip(t){var x=0,y=0;for(var j=0;j<ROSE.length;j++){x+=ROSE[j].r*Math.cos(ROSE[j].f*t);y+=ROSE[j].r*Math.sin(ROSE[j].f*t);}return [x,y];}
+function intersect(x0,y0,x1,y1,R){var dx=x1-x0,dy=y1-y0,dd=Math.hypot(dx,dy);if(dd<1e-6||dd>2*R)return null;var a=dd/2,h2=R*R-a*a;if(h2<0)return null;var h=Math.sqrt(h2),xm=x0+dx/2,ym=y0+dy/2;return [[xm+h*dy/dd,ym-h*dx/dd],[xm-h*dy/dd,ym+h*dx/dd]];}
+
+// ---- ephemeris (validated Schlyter) ----
+var D2R=Math.PI/180,R2D=180/Math.PI;
+function rev(x){return ((x%360)+360)%360;}
+function sd(x){return Math.sin(x*D2R);}function cd(x){return Math.cos(x*D2R);}function td(x){return Math.tan(x*D2R);}
+function asd(x){return Math.asin(Math.max(-1,Math.min(1,x)))*R2D;}function at2(y,x){return Math.atan2(y,x)*R2D;}
+function jd(dt){return dt.getTime()/86400000+2440587.5;}function dS(dt){return jd(dt)-2451543.5;}
+function ec(M,e){var E=M+e*R2D*sd(M)*(1+e*cd(M));for(var k=0;k<9;k++){var dE=(E-e*R2D*sd(E)-M)/(1-e*cd(E));E-=dE;if(Math.abs(dE)<1e-8)break;}return E;}
+function sunLon(d){var w=282.9404+4.70935e-5*d,e=0.016709-1.151e-9*d,M=rev(356.0470+0.9856002585*d);var E=ec(M,e);return rev(at2(Math.sqrt(1-e*e)*sd(E),cd(E)-e)+w);}
+function moonLB(d){var N=rev(125.1228-0.0529538083*d),i=5.1454,w=rev(318.0634+0.1643573223*d),a=60.2666,e=0.054900,M=rev(115.3654+13.0649929509*d);
+ var E=ec(M,e),xv=a*(cd(E)-e),yv=a*Math.sqrt(1-e*e)*sd(E),v=at2(yv,xv),r=Math.sqrt(xv*xv+yv*yv);
+ var xh=r*(cd(N)*cd(v+w)-sd(N)*sd(v+w)*cd(i)),yh=r*(sd(N)*cd(v+w)+cd(N)*sd(v+w)*cd(i)),zh=r*sd(v+w)*sd(i);
+ var lon=at2(yh,xh),lat=at2(zh,Math.sqrt(xh*xh+yh*yh));
+ var Ms=rev(356.0470+0.9856002585*d),ws=282.9404+4.70935e-5*d,Ls=rev(Ms+ws),Lm=rev(M+w+N),Dm=rev(Lm-Ls),F=rev(Lm-N);
+ lon=rev(lon-1.274*sd(M-2*Dm)+0.658*sd(2*Dm)-0.186*sd(Ms)-0.059*sd(2*M-2*Dm)-0.057*sd(M-2*Dm+Ms)+0.053*sd(M+2*Dm)+0.046*sd(2*Dm-Ms)+0.041*sd(M-Ms)-0.035*sd(Dm)-0.031*sd(M+Ms)-0.015*sd(2*F-2*Dm)+0.011*sd(M-4*Dm));
+ lat=lat-0.173*sd(F-2*Dm)-0.055*sd(M-F-2*Dm)-0.046*sd(M+F-2*Dm)+0.033*sd(F+2*Dm)+0.017*sd(2*M+F);return {lon:rev(lon),lat:lat};}
+function eclEq(lon,lat,d){var o=23.4393-3.563e-7*d;return {ra:rev(at2(sd(lon)*cd(o)-td(lat)*sd(o),cd(lon))),dec:asd(sd(lat)*cd(o)+cd(lat)*sd(o)*sd(lon))};}
+function lst(dt){var d=dS(dt),Ls=rev(rev(356.0470+0.9856002585*d)+(282.9404+4.70935e-5*d)),G0=rev(Ls+180);var UT=dt.getUTCHours()+dt.getUTCMinutes()/60+dt.getUTCSeconds()/3600;return rev(G0+UT*15.04106864+TEMPLE[1]);}
+function altaz(ra,dec,dt){var Hh=rev(lst(dt)-ra);return {alt:asd(sd(TEMPLE[0])*sd(dec)+cd(TEMPLE[0])*cd(dec)*cd(Hh)),az:rev(at2(sd(Hh),cd(Hh)*sd(TEMPLE[0])-td(dec)*cd(TEMPLE[0]))+180)};}
+
+// ---- map plane (Leaflet, tiles + temple marker only — no projection calls) ----
+function mpp(lat,z){return 156543.03392*Math.cos(lat*Math.PI/180)/Math.pow(2,z);}
+// v1.3: map zoom is a manual control (MZ). Zoom out to see the circle on the full Ancient Corinth map; true 7 km scale preserved.
+var map=null;
+try{
+  map=L.map('map',{zoomControl:false,attributionControl:true,dragging:false,scrollWheelZoom:false,doubleClickZoom:false,boxZoom:false,keyboard:false,touchZoom:false,tap:false,zoomSnap:0,fadeAnimation:false,zoomAnimation:false,inertia:false});
+  map.setView(TEMPLE,MZ);                                       // THE FIX: view set immediately, before any use
+  var TR='data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==';
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{subdomains:'abcd',maxZoom:19,detectRetina:true,errorTileUrl:TR,attribution:'© OpenStreetMap · © CARTO · rite: agent Vlad'}).addTo(map);
+  L.marker(TEMPLE,{icon:L.divIcon({className:'',html:'<div id="tmk"></div>',iconSize:[9,9],iconAnchor:[4,4]}),interactive:false}).addTo(map);
+}catch(e){/* sigil renders regardless — the map is the ground, the circle is the rite */}
+
+function resize(){
+  DPR=Math.min(window.devicePixelRatio||1,2);
+  W=Math.max(1,sig.clientWidth||Math.round(window.innerWidth*1.10));    // clientWidth = LAYOUT size, NOT transform-affected → center stays on the temple at any tilt
+  H=Math.max(1,sig.clientHeight||Math.round(window.innerHeight*1.18));
+  sig.width=Math.round(W*DPR);sig.height=Math.round(H*DPR);
+  R7=7000/mpp(TEMPLE[0],MZ);                                    // circle = true 7 km at the chosen map zoom (honest scale)
+  if(map){try{map.setView(TEMPLE,MZ,{animate:false});map.invalidateSize(false);}catch(e){}}
+}
+window.addEventListener("resize",resize);
+
+function lay(){var deg=(1-LAY)*62;document.getElementById("plane").style.transform="rotateX("+deg.toFixed(1)+"deg)";document.getElementById("v-lay").textContent=Math.round(deg)+"°";}
+
+function draw(){
+  ctx.setTransform(DPR,0,0,DPR,0,0);ctx.clearRect(0,0,W,H);
+  if(tgt!==null){TMIN+=(tgt-TMIN)*0.05;document.getElementById("s-time").value=TMIN.toFixed(1);}
+  var dt=new Date(NMOON+TMIN*60000), d=dS(dt);
+  var sl=sunLon(d), ml=moonLB(d), elong=ml.lon-sl; if(elong>180)elong-=360; if(elong<-180)elong+=360;
+  var locked=Math.abs(elong)<0.008, tgtA=Math.abs(elong)<0.05?1:0;
+  ACT+=(tgtA-ACT)*0.05;
+  var glow=1+ACT*1.1, sigCol=mix(GOLD,RED,ACT*0.85);
+  var cx=W/2, cy=H/2, R=R7;
+  ctx.globalCompositeOperation="screen";ctx.lineCap="round";ctx.lineJoin="round";
+
+  // range rings on canvas (1/3/5 km faint, 7 km boundary) — north-up, fixed
+  ctx.setLineDash([2,6]);
+  [1,3,5].forEach(function(km){var rr=km/7*R;ctx.strokeStyle=css(CYAN,0.16*glow);ctx.lineWidth=0.7;ctx.beginPath();ctx.arc(cx,cy,rr,0,6.2832);ctx.stroke();
+    ctx.setLineDash([]);ctx.fillStyle=css(CYAN,0.3);ctx.font="8px "+getComputedStyle(document.body).fontFamily;ctx.textAlign="center";ctx.fillText(km+"km",cx,cy-rr-2);ctx.setLineDash([2,6]);});
+  ctx.setLineDash([]);
+  ctx.strokeStyle=css(mix(GOLD,RED,ACT),0.55*glow);ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(cx,cy,R,0,6.2832);ctx.stroke();
+
+  function P(ang,rad){var a=(ang+rot)*D2R;return [cx+Math.cos(a)*rad, cy+Math.sin(a)*rad];}
+
+  // agapi vesica flower
+  var Rv=R/(1+Q), dd=Q*Rv, cen=[];
+  for(var i=0;i<RN;i++){cen.push([(i/RN)*360, dd]);}
+  for(var i2=0;i2<RN;i2++){ctx.strokeStyle=css(mix(GOLD,RED,ACT),0.11*glow);ctx.lineWidth=0.8;ctx.beginPath();
+    var c0=P(cen[i2][0],cen[i2][1]);
+    for(var t=0;t<=44;t++){var th=(t/44)*6.2832;var px=c0[0]+Math.cos(th)*Rv,py=c0[1]+Math.sin(th)*Rv;t?ctx.lineTo(px,py):ctx.moveTo(px,py);}ctx.stroke();}
+  var ang=Math.acos(Math.max(-1,Math.min(1,1-2*Q*Q)))*180/Math.PI, orth=Math.abs(ang-90)<0.6;
+  for(var a2=0;a2<RN;a2++)for(var b2=a2+1;b2<RN;b2++){var A=P(cen[a2][0],cen[a2][1]),B=P(cen[b2][0],cen[b2][1]);var pts=intersect(A[0],A[1],B[0],B[1],Rv);if(!pts)continue;
+    var diam=(RN%2===0)&&((b2-a2)===RN/2),pc=diam&&orth?GRN:PINK;
+    for(var pi=0;pi<2;pi++){ctx.fillStyle=css(pc,(diam?0.8:0.28)*glow);ctx.beginPath();ctx.arc(pts[pi][0],pts[pi][1],diam?2.1:1.2,0,6.2832);ctx.fill();}}
+
+  // inscribed {RN/RK}
+  var rr2=0.82*R,ip=[];for(var s2=0;s2<RN;s2++)ip.push(P((s2/RN)*360-90,rr2));
+  var e2=starEdges(RN,RK);ctx.strokeStyle=css(sigCol,0.6*glow);ctx.lineWidth=1.2;ctx.beginPath();
+  for(var q2=0;q2<e2.length;q2++){var a=ip[e2[q2][0]],b=ip[e2[q2][1]];ctx.moveTo(a[0],a[1]);ctx.lineTo(b[0],b[1]);}ctx.stroke();
+  for(var v2=0;v2<RN;v2++){ctx.fillStyle=css(sigCol,0.75*glow);ctx.beginPath();ctx.arc(ip[v2][0],ip[v2][1],1.8,0,6.2832);ctx.fill();}
+
+  // Fourier rose
+  var rs=0.30*R;ctx.strokeStyle=css(mix(CYAN,RED,ACT*0.7),0.55*glow);ctx.lineWidth=1.1;ctx.beginPath();
+  for(var t4=0;t4<=220;t4++){var qq=tip((t4/220)*6.2832);var a=(rot)*D2R,ca=Math.cos(a),sa=Math.sin(a);var x=qq[0]*rs,y=qq[1]*rs;var px=cx+x*ca-y*sa,py=cy+x*sa+y*ca;t4?ctx.lineTo(px,py):ctx.moveTo(px,py);}ctx.stroke();
+
+  // CORE {CN/CK} with 3 twisted echoes
+  var edgesC=starEdges(CN,CK);
+  for(var L2=0;L2<3;L2++){var rc=(0.30-L2*0.07)*R, tw=L2*10*(L2%2?1:-1), cp=[];
+    for(var i3=0;i3<CN;i3++)cp.push(P((i3/CN)*360-90+tw,rc));
+    ctx.strokeStyle=css(mix(PURP,mix(GOLD,RED,ACT),L2/3),(L2===0?0.75:0.4)*glow);ctx.lineWidth=L2===0?1.5:0.8;ctx.beginPath();
+    for(var q3=0;q3<edgesC.length;q3++){var a=cp[edgesC[q3][0]],b=cp[edgesC[q3][1]];ctx.moveTo(a[0],a[1]);ctx.lineTo(b[0],b[1]);}ctx.stroke();}
+
+  // Sun ☉ / Moon ☾ on the ring at real sky azimuth (fixed)
+  var seq=eclEq(sl,0,d),saa=altaz(seq.ra,seq.dec,dt),meq=eclEq(ml.lon,ml.lat,d),maa=altaz(meq.ra,meq.dec,dt);
+  function ring(az,rad){var a=(az-90)*D2R;return [cx+Math.cos(a)*rad,cy+Math.sin(a)*rad];}
+  var Sp=ring(saa.az,0.93*R),Mp=ring(maa.az,0.93*R);
+  ctx.strokeStyle=css(mix(GOLD,SILV,0.5),0.4+ACT*0.4);ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(Sp[0],Sp[1]);ctx.lineTo(Mp[0],Mp[1]);ctx.stroke();
+  ctx.fillStyle=css(GOLD,0.95);ctx.shadowColor=css(GOLD,1);ctx.shadowBlur=12+ACT*16;ctx.beginPath();ctx.arc(Sp[0],Sp[1],6,0,6.2832);ctx.fill();
+  ctx.fillStyle=css(SILV,0.95);ctx.shadowColor=css(SILV,1);ctx.shadowBlur=8;ctx.beginPath();ctx.arc(Mp[0],Mp[1],4.5,0,6.2832);ctx.fill();ctx.shadowBlur=0;
+
+  // Gate (quiet center) — flares on the lock
+  var pulse=0.5+0.5*Math.sin(performance.now()*0.002);
+  ctx.strokeStyle=css(mix(CYAN,RED,ACT),(0.3+pulse*0.3+ACT*0.4));ctx.lineWidth=2;ctx.beginPath();ctx.arc(cx,cy,10+pulse*3+ACT*7,0,6.2832);ctx.stroke();
+  ctx.fillStyle=css(mix(GOLD,WHITE,ACT*0.6),1);ctx.shadowColor=css(mix(GOLD,RED,ACT),1);ctx.shadowBlur=8+ACT*34;ctx.beginPath();ctx.arc(cx,cy,4.5+ACT*2,0,6.2832);ctx.fill();ctx.shadowBlur=0;
+  if(ACT>0.25){var ph=(performance.now()*0.0005)%1;ctx.strokeStyle=css(mix(WHITE,RED,ph),(1-ph)*0.55*ACT);ctx.lineWidth=1.8*(1-ph)+0.3;ctx.beginPath();ctx.arc(cx,cy,ph*R*1.02,0,6.2832);ctx.stroke();}
+
+  ctx.globalCompositeOperation="source-over";
+  drawConj(elong,locked);
+  set("h-core","{"+CN+"/"+CK+"}");set("h-ring","{"+RN+"/"+RK+"}");set("h-q",Q.toFixed(2));
+  var hl=document.getElementById("h-lock");
+  if(locked){hl.textContent="◈ NEW MOON — CIRCLE ACTIVE";hl.style.color="#ff5470";}
+  else if(ACT>0.15){hl.textContent="conjunction near — the circle warms";hl.style.color="#ffd700";}
+  else{hl.textContent="armed — scrub to the new moon";hl.style.color="rgba(232,236,246,.55)";}
+  document.getElementById("v-time").textContent=(TMIN>=0?"+":"")+TMIN.toFixed(0)+"m";
+}
+function drawConj(elong,locked){var w=146,h=88;cjx.clearRect(0,0,w,h);cjx.fillStyle="#03030a";cjx.fillRect(0,0,w,h);
+  var sc=15,cX=w/2,cY=h/2+3.22*sc*0.5;
+  cjx.strokeStyle=locked?"rgba(255,84,112,0.85)":"rgba(120,120,150,0.22)";cjx.lineWidth=locked?1.4:1;cjx.beginPath();cjx.moveTo(cX,6);cjx.lineTo(cX,h-6);cjx.stroke();
+  cjx.fillStyle="#ffd700";cjx.shadowColor="#ffd700";cjx.shadowBlur=9;cjx.beginPath();cjx.arc(cX,cY,6,0,6.2832);cjx.fill();cjx.shadowBlur=0;
+  var mx=cX+elong*sc*3, my=cY-3.22*sc;cjx.fillStyle="#cfd8e6";cjx.shadowColor="#cfd8e6";cjx.shadowBlur=6;cjx.beginPath();cjx.arc(mx,my,4.5,0,6.2832);cjx.fill();cjx.shadowBlur=0;
+  set("c-el",(elong>=0?"+":"")+elong.toFixed(3)+"°");
+  var lk=document.getElementById("c-lk");if(locked){lk.textContent="◈ CONJUNCTION LOCK";lk.className="y";}else{lk.textContent="Δλ="+Math.abs(elong*60).toFixed(1)+"′ · Moon 3.2°N";lk.className="n";}}
+function set(id,v){var e=document.getElementById(id);if(e)e.textContent=v;}
+
+function clampCK(){var e=document.getElementById("s-ck");e.max=CN-1;if(CK>CN-1){CK=CN-1;e.value=CK;set("v-ck",CK);}}
+function clampRK(){var e=document.getElementById("s-rk");e.max=RN-1;if(RK>RN-1){RK=RN-1;e.value=RK;set("v-rk",RK);}}
+function setCN(v){CN=v;set("v-cn",v);clampCK();}function setCK(v){CK=v;set("v-ck",v);}
+function setRN(v){RN=v;set("v-rn",v);clampRK();}function setRK(v){RK=v;set("v-rk",v);}
+document.getElementById("s-spin").addEventListener("input",function(e){set("v-spin",e.target.value);});
+
+// unconditional start — the render loop does NOT depend on Leaflet firing an event
+resize();lay();
+(function frame(){requestAnimationFrame(frame);rot+=SPIN*57.3;draw();})();
+setTimeout(resize,300);   // second pass once layout/tiles settle
+</script>
+</body></html>

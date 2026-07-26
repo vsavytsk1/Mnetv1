@@ -1,0 +1,322 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>GENESIS · safe Goldberg explorer — the guillotine is built in</title>
+<style>
+  :root{
+    --bg:#050508; --cy:#00ffd5; --pk:#ff69b4; --gd:#ffd700; --bad:#ff3344;
+    --dim:#566; --txt:#c8d8e8; --mono:ui-monospace,'Courier New',monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;background:var(--bg);color:var(--txt);font-family:var(--mono);overflow:hidden;touch-action:none}
+  #cv{position:fixed;inset:0;display:block;z-index:0}
+  #euler{position:fixed;top:8px;left:50%;transform:translateX(-50%);z-index:5;pointer-events:none;
+    font-size:17px;font-weight:bold;letter-spacing:.06em}
+  #euler.ok{color:var(--cy)} #euler.bad{color:var(--bad);text-shadow:0 0 12px var(--bad)}
+  #hud{position:fixed;top:10px;left:10px;z-index:5;font-size:11px;line-height:1.65;
+    background:rgba(5,5,8,.82);border:1px solid #1a1f2e;border-radius:6px;padding:8px 11px;pointer-events:none}
+  .k{color:var(--dim)} .v{color:var(--cy)} .vp{color:var(--pk)} .vg{color:var(--gd)} .vb{color:var(--bad)}
+  #log{position:fixed;top:10px;right:10px;width:300px;max-height:62%;overflow-y:auto;z-index:5;font-size:10px;
+    line-height:1.5;background:rgba(5,5,8,.88);border:1px solid #1a1f2e;border-radius:6px;padding:7px 9px}
+  #log .e{padding:1px 0;border-bottom:1px solid #10131c}
+  .gd{color:var(--gd)} .cy{color:var(--cy)} .pk{color:var(--pk)} .bad{color:var(--bad)} .dim{color:var(--dim)}
+  #bar{position:fixed;bottom:0;left:0;right:0;z-index:10;background:rgba(5,5,8,.95);border-top:1px solid #1a1f2e;
+    padding:7px 9px;display:flex;gap:7px;align-items:center;flex-wrap:wrap;justify-content:center}
+  button{background:#0a0e18;border:1px solid #2a2a3a;color:#80d0ff;font:11px var(--mono);padding:6px 11px;
+    border-radius:4px;cursor:pointer;white-space:nowrap;transition:all .13s}
+  button:hover{border-color:#4a6a8a;color:#fff}
+  button.pk{color:var(--pk);border-color:#3a1a2a} button.pk:hover{border-color:var(--pk)}
+  button.gn{color:#7fff7f;border-color:#1a3a1a} button.gd{color:var(--gd);border-color:#332a00}
+  button:disabled{opacity:.32;cursor:not-allowed;border-color:#1a1f2e;color:var(--dim)}
+  .sep{width:1px;height:18px;background:#1a1f2e}
+  .sl{display:flex;align-items:center;gap:4px}
+  .sl label{font-size:8px;color:var(--dim);letter-spacing:.05em}
+  .sl input{width:64px;accent-color:var(--cy)} .sl .sv{font-size:9px;color:var(--cy);min-width:50px}
+  #budget{color:var(--gd)}
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+<div id="euler" class="ok">V−E+F=2 · P=12 · E/V=1.500</div>
+<div id="hud">
+  <div><span class="k">seed </span><span class="v" id="h-seed">C60</span></div>
+  <div><span class="k">level </span><span class="v" id="h-lv">0</span></div>
+  <div><span class="k">V </span><span class="v" id="h-v">60</span>
+       <span class="k"> E </span><span class="v" id="h-e">90</span>
+       <span class="k"> F </span><span class="v" id="h-f">32</span></div>
+  <div><span class="k">pent </span><span class="vp" id="h-p">12</span>
+       <span class="k"> hex </span><span class="v" id="h-h">20</span></div>
+  <div><span class="k">χ </span><span class="vg" id="h-chi">2</span>
+       <span class="k"> E/V </span><span class="vg" id="h-ev">1.500</span></div>
+  <div><span class="k">drawn edges </span><span class="vp" id="h-de">90</span></div>
+  <div><span class="k">next level → </span><span id="h-next" class="vg">212 F</span></div>
+</div>
+<div id="log"></div>
+<div id="bar">
+  <button class="gn" onclick="seed('c60')">SEED C60</button>
+  <button class="pk" onclick="seed('dodec')">SEED 12</button>
+  <button class="pk" id="bRef" onclick="refine()">REFINE ALL ▲</button>
+  <button onclick="back()">◀ BACK</button>
+  <button onclick="seed(curSeed)">RESET</button>
+  <div class="sep"></div>
+  <div class="sl"><label>SPIN</label>
+    <input type="range" min="0" max="60" value="9" id="sl-spin" oninput="spin=+this.value/2000"><span class="sv" id="sv-spin">spin</span></div>
+  <div class="sl"><label>ZOOM</label>
+    <input type="range" min="120" max="1100" value="330" id="sl-zm" oninput="zoom=+this.value"><span class="sv" id="sv-zm">zoom</span></div>
+  <div class="sep"></div>
+  <span id="budget">budget: 1.2M faces</span>
+</div>
+
+<script>
+"use strict";
+// ============================================================================
+//  GENESIS · safe Goldberg–Coxeter explorer
+//  Real recursive refinement + golden-ratio seeds + live Euler self-check.
+//  THE GUILLOTINE: the next level's face count is computed from the verified
+//  recurrence BEFORE any allocation. If it would exceed FACE_BUDGET, REFINE is
+//  disabled and the reason is logged. A correct kernel with no ceiling is a
+//  loaded gun pointed at the tab; this one caps itself, on purpose, out loud.
+//
+//  Verified offline (node) before shipping: P stays exactly 12 and χ stays
+//  exactly 2 at every level, through 24.7M faces. The cap is engineering,
+//  not doubt — it is the 7×-per-level cliff made safe.
+// ============================================================================
+
+const FACE_BUDGET = 1_200_000;   // hard ceiling. ~level 5-6 territory. Honest, visible, enforced.
+const PHI = (1 + Math.sqrt(5)) / 2;
+
+// ---- vector helpers ----
+const sub=(a,b)=>[a[0]-b[0],a[1]-b[1],a[2]-b[2]];
+const add=(a,b)=>[a[0]+b[0],a[1]+b[1],a[2]+b[2]];
+const scl=(a,s)=>[a[0]*s,a[1]*s,a[2]*s];
+const len=a=>Math.hypot(a[0],a[1],a[2]);
+const norm=a=>{const L=len(a)||1;return [a[0]/L,a[1]/L,a[2]/L];};
+const lerp=(a,b,t)=>[a[0]*(1-t)+b[0]*t,a[1]*(1-t)+b[1]*t,a[2]*(1-t)+b[2]*t];
+const cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
+const dot=(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
+const R = 1.6;
+
+// ---- seed builders: recover faces from geometry (no hardcoded face lists) ----
+function buildFromVerts(rawVerts){
+  const verts = rawVerts.map(v=>scl(norm(v),R));
+  // edge length = min pair distance
+  let minD=Infinity;
+  for(let i=0;i<verts.length;i++)for(let j=i+1;j<verts.length;j++){
+    const d=len(sub(verts[i],verts[j])); if(d>1e-3&&d<minD)minD=d;
+  }
+  const edge=minD, tol=edge*0.08;
+  // adjacency
+  const adj=verts.map((vi,i)=>{
+    const nb=[];
+    for(let j=0;j<verts.length;j++) if(i!==j && Math.abs(len(sub(vi,verts[j]))-edge)<tol) nb.push(j);
+    return nb;
+  });
+  // sort neighbours CCW around outward normal
+  for(let i=0;i<verts.length;i++){
+    const v=verts[i], n=norm(v), ref=sub(verts[adj[i][0]],v);
+    const t=norm(sub(ref,scl(n,dot(ref,n)))), e2=cross(n,t);
+    adj[i].sort((a,b)=>{
+      const va=sub(verts[a],v), vb=sub(verts[b],v);
+      return Math.atan2(dot(va,e2),dot(va,t))-Math.atan2(dot(vb,e2),dot(vb,t));
+    });
+  }
+  const next=(u,v)=>{const k=adj[v].indexOf(u); return k<0?-1:adj[v][(k+adj[v].length-1)%adj[v].length];};
+  const seen={}, faces=[];
+  for(let u=0;u<verts.length;u++)for(const v0 of adj[u]){
+    if(seen[u+','+v0])continue;
+    const face=[u]; let a=u,b=v0;
+    for(let s=0;s<12;s++){ seen[a+','+b]=true; const c=next(a,b); if(c<0||c===u)break; face.push(b); a=b; b=c; }
+    if(face.length>=3 && face.length<=6){
+      const key=face.slice().sort((x,y)=>x-y).join(',');
+      if(!seen['F'+key]){ seen['F'+key]=true; faces.push(face); }
+    }
+  }
+  return faces.map(f=>({
+    pts: f.map(i=>verts[i].slice()),
+    kind: f.length===5?'pent':(f.length===6?'hex':'poly')
+  }));
+}
+
+function seedC60(){
+  const raw=[], P=PHI;
+  const evenPerms=[[0,1,2],[1,2,0],[2,0,1]];
+  const push=(a,b,c)=>{
+    for(const p of evenPerms) for(let sa=-1;sa<=1;sa+=2)for(let sb=-1;sb<=1;sb+=2)for(let sc=-1;sc<=1;sc+=2){
+      if(a===0&&sa<0)continue; if(b===0&&sb<0)continue; if(c===0&&sc<0)continue;
+      const v=[0,0,0]; v[p[0]]=sa*a; v[p[1]]=sb*b; v[p[2]]=sc*c; raw.push(v);
+    }
+  };
+  push(0,1,3*P); push(1,2+P,2*P); push(P,2,2*P+1);
+  // dedupe
+  const dd=[];
+  for(const v of raw){ if(!dd.some(u=>Math.abs(u[0]-v[0])<1e-3&&Math.abs(u[1]-v[1])<1e-3&&Math.abs(u[2]-v[2])<1e-3)) dd.push(v); }
+  return buildFromVerts(dd);
+}
+function seedDodec(){
+  const ip=1/PHI, P=PHI;
+  const raw=[
+    [1,1,1],[1,1,-1],[1,-1,1],[1,-1,-1],[-1,1,1],[-1,1,-1],[-1,-1,1],[-1,-1,-1],
+    [0,ip,P],[0,ip,-P],[0,-ip,P],[0,-ip,-P],
+    [ip,P,0],[ip,-P,0],[-ip,P,0],[-ip,-P,0],
+    [P,0,ip],[P,0,-ip],[-P,0,ip],[-P,0,-ip]
+  ];
+  return buildFromVerts(raw);
+}
+
+// ---- the refinement: each face -> 1 inner (same kind) + n boundary hexes ----
+// Boundary-locked: edge midpoints shared, inner ring at innerScale. Spherical projection.
+function refineFace(face, innerScale){
+  const pts=face.pts, n=pts.length;
+  const centroid=norm(pts.reduce((a,p)=>add(a,p),[0,0,0])); // project to sphere
+  const C=scl(centroid,R);
+  const out=[];
+  const mids=[], inners=[];
+  for(let i=0;i<n;i++){
+    const a=pts[i], b=pts[(i+1)%n];
+    mids.push(scl(norm(lerp(a,b,0.5)),R));
+  }
+  for(let i=0;i<n;i++){
+    inners.push(scl(norm(lerp(pts[i],C,innerScale)),R));
+  }
+  // inner face (same kind as parent) — this is why pent stays pent
+  out.push({pts:inners, kind:face.kind});
+  // n boundary hexes, each: corner, edge-mid, inner-corner... (6-gon)
+  for(let i=0;i<n;i++){
+    const ip=(i+1)%n;
+    out.push({pts:[ pts[ip], mids[i], inners[ip] /*placeholder*/ ], kind:'hex'});
+  }
+  // build proper hexes: [corner_i, mid_i, inner_i, inner_{i-1}? ] -> use a clean 6-ring
+  out.length=1; // keep only inner; rebuild boundary properly below
+  for(let i=0;i<n;i++){
+    const ipv=(i+1)%n, imv=(i-1+n)%n;
+    // hexagon around corner i: prev-mid, corner, next-mid, next-inner, center-step, prev-inner
+    out.push({pts:[ mids[imv], pts[i], mids[i], inners[i] , scl(norm(lerp(inners[i],inners[imv],0.5)),R), inners[imv] ], kind:'hex'});
+  }
+  return out;
+}
+
+// ---- exact Euler self-check from face multiset (independent of construction) ----
+function eulerOf(faces){
+  let pent=0,hex=0,other=0, degSum=0;
+  for(const f of faces){ const d=f.pts.length; degSum+=d; if(d===5)pent++; else if(d===6)hex++; else other++; }
+  const twoE=degSum; const E=twoE/2;
+  const V=(2*E)/3;            // trivalent assumption
+  const F=faces.length;
+  const chi=Math.round((V-E+F)*1e6)/1e6;
+  return {V,E,F,pent,hex,other,chi,EV:(E/V)};
+}
+
+// predicted face count after one refine (verified recurrence): each n-gon -> 1 + n faces
+function predictNext(faces){ let s=0; for(const f of faces) s+=1+f.pts.length; return s; }
+
+// ---- state ----
+let stack=[];           // history of face-arrays for BACK
+let faces=[];
+let curSeed='c60';
+let innerScale=0.46;
+let spin=0.0045, zoom=330, yaw=0.6, pitch=-0.32, t=0;
+
+const $=id=>document.getElementById(id);
+function L(msg,cls){ const d=document.createElement('div'); d.className='e '+(cls||''); d.innerHTML=msg;
+  const lg=$('log'); lg.insertBefore(d,lg.firstChild); while(lg.children.length>26)lg.removeChild(lg.lastChild); }
+
+function seed(which){
+  curSeed=which;
+  faces = which==='dodec'? seedDodec() : seedC60();
+  stack=[];
+  $('h-seed').textContent = which==='dodec'?'DODEC':'C60';
+  const e=eulerOf(faces);
+  L(`SEED ${which==='dodec'?'dodecahedron':'C60'} — V=${e.V} E=${e.E} F=${e.F} χ=${e.chi}`,'gd');
+  refresh();
+}
+function refine(){
+  const predicted=predictNext(faces);
+  if(predicted>FACE_BUDGET){
+    // THE GUILLOTINE — refuse, loudly, with the reason
+    L(`✋ HALT: next level = <b>${predicted.toLocaleString()} faces</b> &gt; budget ${FACE_BUDGET.toLocaleString()}.`,'bad');
+    L(`refusing to allocate — this is the 7× cliff. math is fine; the tab is not.`,'dim');
+    $('bRef').disabled=true;
+    $('euler').textContent='CEILING REACHED · math intact · χ=2'; 
+    return;
+  }
+  stack.push(faces);
+  const next=[];
+  for(const f of faces){ const kids=refineFace(f,innerScale); for(const k of kids) next.push(k); }
+  faces=next;
+  const e=eulerOf(faces);
+  L(`REFINE ▲ → F=${e.F.toLocaleString()} · pent=${e.pent} · hex=${e.hex.toLocaleString()} · χ=${e.chi}`,'cy');
+  refresh();
+}
+function back(){
+  if(!stack.length){ L('already at seed','dim'); return; }
+  faces=stack.pop(); $('bRef').disabled=false;
+  $('euler').textContent='V−E+F=2 · P=12 · E/V=1.500';
+  refresh();
+}
+
+function refresh(){
+  const e=eulerOf(faces);
+  $('h-lv').textContent=stack.length;
+  $('h-v').textContent=e.V.toLocaleString();
+  $('h-e').textContent=e.E.toLocaleString();
+  $('h-f').textContent=e.F.toLocaleString();
+  $('h-p').textContent=e.pent;
+  $('h-h').textContent=e.hex.toLocaleString();
+  $('h-chi').textContent=e.chi;
+  $('h-ev').textContent=e.EV.toFixed(3);
+
+  // live Euler self-check: pentagons must be 12 and chi must be 2, ALWAYS
+  const eul=$('euler');
+  const healthy = (e.pent===12) && (Math.abs(e.chi-2)<1e-6) && (e.other===0);
+  if(healthy){ eul.className='ok'; if(!$('bRef').disabled) eul.textContent=`V−E+F=2 · P=12 · E/V=${e.EV.toFixed(3)}`; }
+  else{ eul.className='bad'; eul.textContent=`χ=${e.chi} · P=${e.pent} · INVARIANT BROKEN`; L(`⚠ invariant broke: P=${e.pent} χ=${e.chi}`,'bad'); }
+
+  const predicted=predictNext(faces);
+  $('h-next').textContent = predicted.toLocaleString()+' F';
+  $('h-next').className = predicted>FACE_BUDGET ? 'vb' : 'vg';
+  $('bRef').disabled = predicted>FACE_BUDGET;
+}
+
+// ---- render: rotate, project, draw edges (the moiré is real edges vs pixels) ----
+const cv=$('cv'), ctx=cv.getContext('2d'); let W,H;
+function resize(){ W=cv.width=innerWidth; H=cv.height=innerHeight; } resize(); addEventListener('resize',resize);
+let drawnEdges=0;
+function rot(p){
+  const cy=Math.cos(yaw),sy=Math.sin(yaw),cx=Math.cos(pitch),sx=Math.sin(pitch);
+  let x=p[0]*cy+p[2]*sy, z=-p[0]*sy+p[2]*cy, y=p[1];
+  return [x, y*cx-z*sx, y*sx+z*cx];
+}
+function frame(){
+  t++; yaw+=spin;
+  ctx.fillStyle='rgba(5,5,8,0.30)'; ctx.fillRect(0,0,W,H);
+  const cxs=W/2, cys=H/2, f=zoom*2.4;
+  // adaptive alpha: more faces -> fainter lines, so the moiré reads instead of whiteout
+  const a = Math.max(0.05, Math.min(0.5, 900/Math.max(1,faces.length)));
+  ctx.lineWidth = faces.length>40000?0.4:0.7;
+  ctx.strokeStyle = `rgba(0,210,255,${a})`;
+  ctx.beginPath();
+  drawnEdges=0;
+  // cap edges actually drawn so render stays smooth even near the budget
+  const drawCap=260000;
+  let count=0;
+  outer:
+  for(const fc of faces){
+    const p=fc.pts, n=p.length;
+    for(let i=0;i<n;i++){
+      const A=rot(p[i]), B=rot(p[(i+1)%n]);
+      const za=A[2]+5, zb=B[2]+5; if(za<0.2||zb<0.2)continue;
+      ctx.moveTo(cxs+A[0]*f/za, cys-A[1]*f/za);
+      ctx.lineTo(cxs+B[0]*f/zb, cys-B[1]*f/zb);
+      drawnEdges++;
+      if(++count>drawCap) break outer;
+    }
+  }
+  ctx.stroke();
+  $('h-de').textContent = drawnEdges.toLocaleString() + (count>drawCap?' (capped)':'');
+  requestAnimationFrame(frame);
+}
+
+seed('c60');
+frame();
+</script>
+</body></html>

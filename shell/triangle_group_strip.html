@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>triangle group strip (2,3,n) - sim 1 of 3</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 100%; height: 100%;
+    background: #050510; color: #e0f0ff;
+    font-family: 'Share Tech Mono', 'Consolas', 'Menlo', monospace;
+    overflow: hidden; user-select: none;
+  }
+  #cv { position: fixed; inset: 0; cursor: crosshair; display: block; }
+  .panel {
+    position: fixed; padding: 12px 14px;
+    font-size: 11px; line-height: 1.7; letter-spacing: 0.04em;
+  }
+  #hud    { top: 16px; left: 16px; pointer-events: none; max-width: 620px; }
+  #legend { top: 16px; right: 16px; pointer-events: none; text-align: right; }
+  #ctl    { bottom: 16px; right: 16px; text-align: right; }
+  #hint   { bottom: 16px; left: 16px; pointer-events: none; color: #7090a0; max-width: 540px; }
+
+  #status {
+    position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    color: #ffd700; font-size: 14px; letter-spacing: 0.15em; text-transform: uppercase;
+    pointer-events: none;
+  }
+  #err {
+    position: fixed; top: 0; left: 0; right: 0;
+    background: #ff3050cc; color: #fff;
+    padding: 16px 20px; font-size: 12px; line-height: 1.5;
+    white-space: pre-wrap; display: none; z-index: 1000;
+  }
+
+  .lbl  { color: #7090a0; }
+  .gold { color: #ffd700; }
+  .pent { color: #ff6b35; }
+  .hex  { color: #00d4ff; }
+  b { color: #00d4ff; font-weight: normal; }
+
+  .btn {
+    display: inline-block; padding: 6px 14px; margin-left: 6px;
+    border: 1px solid #2a4858; cursor: pointer; color: #7090a0;
+    user-select: none; transition: all 0.15s; font-size: 11px;
+  }
+  .btn:hover { color: #e0f0ff; border-color: #4060a0; }
+  .btn.on    { color: #ffd700; border-color: #ffd700; background: #ffd70011; }
+
+  input[type=range] { width: 140px; vertical-align: middle; accent-color: #ffd700; }
+  .row { margin: 6px 0; }
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+<div id="err"></div>
+<div id="status">booting...</div>
+
+<div id="hud" class="panel">
+  <div class="lbl">triangle group (2,3,n) &middot; tessellation on the Poincare disc &middot; sim 1 of 3</div>
+  <div><span class="lbl">substrate</span> <b id="g-substrate">&mdash;</b></div>
+  <div><span class="lbl">geometry</span> <b id="g-geom">&mdash;</b> &middot; <span class="lbl">cell symmetry</span> <b id="g-cell">&mdash;</b></div>
+  <div><span class="lbl">triangles drawn</span> <b id="g-count">&mdash;</b> &middot; <span class="lbl">depth</span> <b id="g-depth">&mdash;</b></div>
+  <div class="gold">pentagons live in (2,3,5) &middot; hexagons live in (2,3,6) &middot; deep hyperbolic in (2,3,7+)</div>
+  <div class="lbl">the missing piece for Mobius v23 might be that pent &amp; hex are adjacent triangle groups: differ by one integer.</div>
+</div>
+
+<div id="legend" class="panel">
+  <div class="lbl">scroll zoom &middot; drag pan</div>
+  <div class="lbl"><span class="gold">gold</span> fundamental triangle</div>
+  <div class="lbl"><span class="hex">cyan</span> orientation-preserving copies</div>
+  <div class="lbl"><span class="pent">orange</span> orientation-reversing copies</div>
+  <div class="lbl"><span class="hex">cyan ring</span> the unit disc boundary (infinity)</div>
+</div>
+
+<div id="hint" class="panel">click <span class="btn on" style="cursor:default">5</span> for pentagonal &middot; <span class="btn on" style="cursor:default">6</span> for hexagonal &middot; <span class="btn on" style="cursor:default">7</span> for hyperbolic Klein-quartic regime</div>
+
+<div id="ctl" class="panel">
+  <div class="row">
+    <span class="lbl">n =</span>
+    <span class="btn"    data-n="4">4</span>
+    <span class="btn on" data-n="5">5</span>
+    <span class="btn"    data-n="6">6</span>
+    <span class="btn"    data-n="7">7</span>
+    <span class="btn"    data-n="8">8</span>
+  </div>
+  <div class="row"><span class="lbl">BFS depth</span>
+    <input id="i-D" type="range" min="3" max="9" value="6" step="1">
+  </div>
+</div>
+
+<script>
+window.onerror = function(msg, src, line, col, err){
+  var e = document.getElementById('err');
+  e.style.display = 'block';
+  e.textContent = 'JS ERROR: ' + msg + ' (line ' + line + ', col ' + col + ')';
+  if (err && err.stack) e.textContent += '\n\n' + err.stack;
+  var s = document.getElementById('status');
+  if (s) s.style.display = 'none';
+  return false;
+};
+
+(function(){
+"use strict";
+
+function $(id){ return document.getElementById(id); }
+function setStatus(msg){ var s = $('status'); if (s) s.textContent = msg; }
+function hideStatus(){ var s = $('status'); if (s) s.style.display = 'none'; }
+setStatus('booting');
+
+// ===========================================================================
+// §A Triangle group (2, 3, n)
+// ===========================================================================
+// A triangle with angles (pi/2, pi/3, pi/n) lives in:
+//   - spherical geometry if 1/2 + 1/3 + 1/n > 1  (n = 3, 4, 5)
+//   - Euclidean geometry if 1/2 + 1/3 + 1/n = 1  (n = 6)
+//   - hyperbolic geometry if 1/2 + 1/3 + 1/n < 1 (n >= 7)
+//
+// We use the Poincare disc model for all of them uniformly.  The fundamental
+// triangle is reflected across each of its 3 sides recursively; the orbit
+// tiles the appropriate space.
+//
+// Reflection across a "line" in Poincare disc = inversion in a circle that
+// meets the boundary orthogonally (or a diameter, special case).
+
+var state = {
+  n: 5,
+  depth: 6,
+  triangles: [],     // {pts: [c0,c1,c2], orient: +1/-1, depth: k}
+  geometry: 'spherical',
+  view: { cx: 0, cy: 0, scale: 350 },
+};
+
+function makeFundamentalTriangle(n){
+  // We want a triangle with vertices A (angle pi/2), B (angle pi/3), C (angle pi/n).
+  // Place A at the disc center, B on the positive x-axis, C in the upper half.
+  // For these to have the required angles, we set up:
+  //   - The side AB lies along the positive x-axis.
+  //   - The side AC makes an angle of pi/2 with AB (so AC is the positive y-axis).
+  // Then side BC is the unique geodesic from B to C such that the interior
+  // angles at B and C are pi/3 and pi/n respectively.
+  //
+  // For (p,q,r) = (2, 3, n) with the cosine identity in the appropriate geom:
+  //   cosh(a) = (cos(pi/q) cos(pi/r) + cos(pi/p)) / (sin(pi/q) sin(pi/r))    (hyperbolic)
+  //   cos(a)  = (cos(pi/q) cos(pi/r) + cos(pi/p)) / (sin(pi/q) sin(pi/r))    (spherical)
+  // where a is the length of the side OPPOSITE the angle pi/p.
+  //
+  // In our setup, side AB has length = side opposite pi/n = let's call this c.
+  // Side AC has length = side opposite pi/3 = let's call this b.
+  //
+  // For (2,3,n):
+  // cos(c) or cosh(c) = (cos(pi/3) cos(pi/n) + cos(pi/2)) / (sin(pi/3) sin(pi/n))
+  //                  = cos(pi/n) / (2 sin(pi/3) sin(pi/n))
+  //                  = cos(pi/n) / (sqrt(3) sin(pi/n))
+  //                  = cot(pi/n) / sqrt(3)
+  //
+  // For hyperbolic (n >= 7): cosh(c) = cot(pi/n)/sqrt(3).
+  // For Euclidean (n = 6):   cot(pi/6)/sqrt(3) = sqrt(3)/sqrt(3) = 1, length undefined (flat).
+  // For spherical (n = 5):   cos(c) = cot(pi/5)/sqrt(3) ~ 0.794, c ~ 0.553 rad.
+  //
+  // In the Poincare disc model of hyperbolic space, hyperbolic distance d
+  // corresponds to Euclidean distance from center r given by tanh(d/2) = r.
+  // For spherical we use stereographic projection: r = tan(d/2) (where d is the
+  // arc length on the unit sphere).
+
+  var a_pi_n = Math.PI / n;
+  var a_pi_3 = Math.PI / 3;
+  var a_pi_2 = Math.PI / 2;
+
+  var sum = 1/2 + 1/3 + 1/n;
+  var geom = sum > 1.0001 ? 'spherical' :
+             sum < 0.9999 ? 'hyperbolic' : 'euclidean';
+
+  var c_metric = Math.cos(a_pi_n) / (Math.sqrt(3) * Math.sin(a_pi_n)); // metric value
+  var b_metric;
+  // Side b opposite pi/3:
+  // cosh(b) or cos(b) = (cos(pi/2) cos(pi/n) + cos(pi/3)) / (sin(pi/2) sin(pi/n))
+  //                  = (0 + 1/2) / (1 * sin(pi/n))
+  //                  = 1/(2 sin(pi/n))
+  b_metric = 1 / (2 * Math.sin(a_pi_n));
+
+  // Convert metric (cosh or cos) to disc radius
+  function metricToDiscRadius(m){
+    if (geom === 'spherical'){
+      // m = cos(d), so d = acos(m), then r = tan(d/2)
+      var d = Math.acos(Math.max(-1, Math.min(1, m)));
+      return Math.tan(d / 2);
+    } else if (geom === 'hyperbolic'){
+      // m = cosh(d), so d = acosh(m), then r = tanh(d/2)
+      var d = Math.acosh(m);
+      return Math.tanh(d / 2);
+    } else {
+      // Euclidean: keep symbolic - we just don't render this case smoothly.
+      // Set a sensible scale.
+      return 0.4;
+    }
+  }
+
+  var rc = metricToDiscRadius(c_metric); // |AB|
+  var rb = metricToDiscRadius(b_metric); // |AC|
+
+  // A = origin, B on +x axis at distance rc, C on +y axis at distance rb
+  var A = { x: 0,  y: 0  };
+  var B = { x: rc, y: 0  };
+  var C = { x: 0,  y: rb };
+
+  return { A: A, B: B, C: C, geom: geom };
+}
+
+// ===========================================================================
+// §B Geodesics in Poincare disc model: lines through origin are diameters,
+// others are arcs of circles orthogonal to the unit boundary.
+// Inversion in such a "line" = reflection across that hyperbolic line.
+// For our triangle (2,3,n), two sides pass through origin (AB on x-axis,
+// AC on y-axis); the third side BC is an arc (or chord) connecting B and C.
+// ===========================================================================
+
+// Reflect point p across a line in the disc:
+// - Diameter: standard Euclidean reflection across that axis.
+// - Circle orthogonal to unit circle: invert through that circle.
+
+function reflectAcrossDiameter(p, angle){
+  // line through origin at angle `angle` from x-axis
+  var c = Math.cos(2 * angle), s = Math.sin(2 * angle);
+  return { x: c * p.x + s * p.y, y: s * p.x - c * p.y };
+}
+
+function findOrthogonalCircle(B, C){
+  // Find the circle through B and C orthogonal to the unit circle.
+  // A circle orthogonal to the unit circle satisfies:
+  //   |center|^2 = radius^2 + 1
+  // It passes through B and C, so distance from center to B = radius and to C = radius.
+  //
+  // Let center = (cx, cy). Then:
+  //   (B.x - cx)^2 + (B.y - cy)^2 = R^2
+  //   (C.x - cx)^2 + (C.y - cy)^2 = R^2
+  //   cx^2 + cy^2 = R^2 + 1
+  //
+  // From first two: 2(C.x - B.x) cx + 2(C.y - B.y) cy = |C|^2 - |B|^2  (1)
+  // From first and third: 2 B.x cx + 2 B.y cy = |B|^2 + 1              (2)
+  //
+  // Solve linear system for cx, cy.
+
+  var Bs = B.x*B.x + B.y*B.y;
+  var Cs = C.x*C.x + C.y*C.y;
+  var a1 = 2*(C.x - B.x), b1 = 2*(C.y - B.y), c1 = Cs - Bs;
+  var a2 = 2*B.x,         b2 = 2*B.y,         c2 = Bs + 1;
+  var det = a1 * b2 - a2 * b1;
+  if (Math.abs(det) < 1e-12){
+    return null; // collinear with origin - it's a diameter
+  }
+  var cx = (c1 * b2 - c2 * b1) / det;
+  var cy = (a1 * c2 - a2 * c1) / det;
+  var R  = Math.sqrt(Math.max(0, cx*cx + cy*cy - 1));
+  return { cx: cx, cy: cy, R: R };
+}
+
+function reflectAcrossCircle(p, circle){
+  // Inversion in circle (cx, cy, R): p' = center + R^2 * (p - center) / |p - center|^2
+  var dx = p.x - circle.cx, dy = p.y - circle.cy;
+  var d2 = dx*dx + dy*dy;
+  if (d2 < 1e-20) return { x: p.x, y: p.y };
+  var k = circle.R * circle.R / d2;
+  return { x: circle.cx + k * dx, y: circle.cy + k * dy };
+}
+
+// A "side" is a line in the disc, specified by:
+//   { type: 'diameter', angle: theta }  for diameter at angle theta
+//   { type: 'circle',   circle: {cx,cy,R} }  for an arc
+function reflectPoint(p, side){
+  if (side.type === 'diameter') return reflectAcrossDiameter(p, side.angle);
+  return reflectAcrossCircle(p, side.circle);
+}
+function reflectSide(side, mirror){
+  // Reflect a side description across another side. We need this for BFS:
+  // when we reflect a triangle, all 3 of its sides become new sides.
+  // A diameter reflected through an arc becomes another arc; etc.
+  // Simplest approach: represent every side by 3 points on it, reflect those,
+  // then reconstruct the orthogonal circle (or diameter) through them.
+  //
+  // For our purposes: we just need to reflect the 3 *vertex points* of a
+  // triangle, then re-derive the sides of the new triangle.
+  // So we won't use this function directly; we work on triangles via vertices.
+  return null;
+}
+
+function buildSidesFromTriangle(tri){
+  // tri = { A, B, C }; sides are aA (BC opposite A), aB (CA opposite B), aC (AB opposite C)
+  // For each side, check if it goes through origin (diameter) or is an arc.
+  function buildSide(P, Q){
+    // line through P and Q in the disc
+    // diameter iff the line P-Q passes through origin
+    // cross product test: P x Q ~ 0 means collinear with origin
+    var crossv = P.x * Q.y - P.y * Q.x;
+    if (Math.abs(crossv) < 1e-9){
+      // Diameter at angle atan2(P.y, P.x) (could also use Q)
+      var ang = Math.atan2(Q.y - P.y, Q.x - P.x);
+      return { type: 'diameter', angle: ang };
+    }
+    var c = findOrthogonalCircle(P, Q);
+    if (!c) return { type: 'diameter', angle: Math.atan2(Q.y - P.y, Q.x - P.x) };
+    return { type: 'circle', circle: c };
+  }
+  return {
+    aA: buildSide(tri.B, tri.C),  // opposite A
+    aB: buildSide(tri.C, tri.A),  // opposite B
+    aC: buildSide(tri.A, tri.B)   // opposite C
+  };
+}
+
+// Reflect a triangle across one of its sides. Returns a new triangle whose
+// vertices are: the two vertices ON that side stay; the third vertex
+// reflects across the side.
+function reflectTriangleAcrossSide(tri, whichSide){
+  // whichSide is 'aA' (across BC, reflects A), 'aB' (across CA, reflects B), 'aC' (across AB, reflects C)
+  var sides = buildSidesFromTriangle(tri);
+  if (whichSide === 'aA'){
+    var Anew = reflectPoint(tri.A, sides.aA);
+    return { A: Anew, B: tri.B, C: tri.C };
+  }
+  if (whichSide === 'aB'){
+    var Bnew = reflectPoint(tri.B, sides.aB);
+    return { A: tri.A, B: Bnew, C: tri.C };
+  }
+  // aC
+  var Cnew = reflectPoint(tri.C, sides.aC);
+  return { A: tri.A, B: tri.B, C: Cnew };
+}
+
+// ===========================================================================
+// §C BFS the orbit of the fundamental triangle.
+// ===========================================================================
+function triSignature(tri){
+  // Use centroid rounded to 5 decimals as a dedup signature.
+  var cx = (tri.A.x + tri.B.x + tri.C.x) / 3;
+  var cy = (tri.A.y + tri.B.y + tri.C.y) / 3;
+  return cx.toFixed(5) + ',' + cy.toFixed(5);
+}
+
+function generateTiling(n, maxDepth){
+  var fund = makeFundamentalTriangle(n);
+  state.geometry = fund.geom;
+  var first = { A: fund.A, B: fund.B, C: fund.C };
+  var out = [];
+  var seen = {};
+  var queue = [{ tri: first, depth: 0, orient: 1 }];
+  while (queue.length > 0){
+    var node = queue.shift();
+    var sig = triSignature(node.tri);
+    if (seen[sig]) continue;
+    seen[sig] = true;
+    out.push(node);
+    if (node.depth >= maxDepth) continue;
+    // Skip reflections that move triangle out of disc significantly
+    var sides = ['aA', 'aB', 'aC'];
+    for (var k = 0; k < 3; k++){
+      var nt = reflectTriangleAcrossSide(node.tri, sides[k]);
+      // Bound check: all vertices should stay in disc (|p| < ~1)
+      var maxR = Math.max(
+        Math.hypot(nt.A.x, nt.A.y),
+        Math.hypot(nt.B.x, nt.B.y),
+        Math.hypot(nt.C.x, nt.C.y)
+      );
+      if (maxR > 0.999) continue; // hit the boundary, skip
+      queue.push({ tri: nt, depth: node.depth + 1, orient: -node.orient });
+    }
+  }
+  return out;
+}
+
+// ===========================================================================
+// §D Canvas setup
+// ===========================================================================
+setStatus('canvas');
+var cv  = $('cv');
+var ctx = cv.getContext('2d');
+function fitCanvas(){
+  var dpr = window.devicePixelRatio || 1;
+  cv.width  = window.innerWidth  * dpr;
+  cv.height = window.innerHeight * dpr;
+  cv.style.width  = window.innerWidth  + 'px';
+  cv.style.height = window.innerHeight + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+fitCanvas();
+window.addEventListener('resize', function(){ fitCanvas(); draw(); });
+
+function w2s(p){
+  return {
+    x: window.innerWidth  / 2 + (p.x - state.view.cx) * state.view.scale,
+    y: window.innerHeight / 2 - (p.y - state.view.cy) * state.view.scale
+  };
+}
+function s2w(x, y){
+  return {
+    x: state.view.cx + (x - window.innerWidth  / 2) / state.view.scale,
+    y: state.view.cy - (y - window.innerHeight / 2) / state.view.scale
+  };
+}
+
+// ===========================================================================
+// §E Drawing — draw sides as arcs (orthogonal to disc) or chords (diameter case)
+// ===========================================================================
+function drawArc(P, Q){
+  // Find the geodesic from P to Q and trace it. If diameter case, straight line.
+  var crossv = P.x * Q.y - P.y * Q.x;
+  if (Math.abs(crossv) < 1e-9 || (P.x*P.x + P.y*P.y < 1e-12) || (Q.x*Q.x + Q.y*Q.y < 1e-12)){
+    var sP = w2s(P), sQ = w2s(Q);
+    ctx.moveTo(sP.x, sP.y);
+    ctx.lineTo(sQ.x, sQ.y);
+    return;
+  }
+  var c = findOrthogonalCircle(P, Q);
+  if (!c){
+    var sP2 = w2s(P), sQ2 = w2s(Q);
+    ctx.moveTo(sP2.x, sP2.y);
+    ctx.lineTo(sQ2.x, sQ2.y);
+    return;
+  }
+  // Sample the arc from P to Q on the orthogonal circle
+  var aP = Math.atan2(P.y - c.cy, P.x - c.cx);
+  var aQ = Math.atan2(Q.y - c.cy, Q.x - c.cx);
+  // Choose the short arc
+  var da = aQ - aP;
+  while (da > Math.PI)  da -= 2*Math.PI;
+  while (da < -Math.PI) da += 2*Math.PI;
+  var N = 24;
+  for (var i = 0; i <= N; i++){
+    var t = i / N;
+    var ang = aP + da * t;
+    var p = { x: c.cx + c.R * Math.cos(ang), y: c.cy + c.R * Math.sin(ang) };
+    var sp = w2s(p);
+    if (i === 0) ctx.moveTo(sp.x, sp.y);
+    else         ctx.lineTo(sp.x, sp.y);
+  }
+}
+
+function draw(){
+  var W = window.innerWidth, H = window.innerHeight;
+  ctx.clearRect(0, 0, W, H);
+
+  // Draw unit disc boundary (infinity for hyperbolic, equator for spherical)
+  var center = w2s({ x: 0, y: 0 });
+  var rPx = state.view.scale;
+  ctx.strokeStyle = 'rgba(0, 212, 255, 0.35)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.arc(center.x, center.y, rPx, 0, 6.2832);
+  ctx.stroke();
+
+  // Draw each triangle
+  for (var k = 0; k < state.triangles.length; k++){
+    var entry = state.triangles[k];
+    var tri = entry.tri;
+    var depth = entry.depth;
+    var orient = entry.orient;
+
+    var alpha;
+    if (depth === 0) alpha = 0.45;
+    else             alpha = Math.max(0.06, 0.4 - depth * 0.04);
+
+    var isFund = (depth === 0);
+    var color = isFund ? '#ffd700'
+              : orient > 0 ? 'rgba(0, 212, 255, ' + alpha + ')'
+                           : 'rgba(255, 107, 53, ' + alpha + ')';
+    ctx.lineWidth = isFund ? 2 : 0.7;
+    ctx.strokeStyle = color;
+
+    ctx.beginPath();
+    drawArc(tri.A, tri.B);
+    drawArc(tri.B, tri.C);
+    drawArc(tri.C, tri.A);
+    ctx.stroke();
+
+    if (isFund){
+      // Fill the fundamental triangle
+      ctx.fillStyle = 'rgba(255, 215, 0, 0.10)';
+      ctx.beginPath();
+      drawArc(tri.A, tri.B);
+      drawArc(tri.B, tri.C);
+      drawArc(tri.C, tri.A);
+      ctx.fill();
+    }
+  }
+}
+
+// ===========================================================================
+// §F HUD
+// ===========================================================================
+function updateHUD(){
+  var n = state.n;
+  $('g-substrate').textContent = '(2, 3, ' + n + ') triangle group';
+  $('g-geom').textContent = state.geometry;
+  var cellSym = (n === 5) ? 'pentagonal (icosahedral neighbourhood)'
+              : (n === 6) ? 'hexagonal (Euclidean)'
+              : (n === 4) ? 'square (octahedral neighbourhood)'
+              : (n === 7) ? 'heptagonal (Klein-quartic regime)'
+              : 'n-gonal (deep hyperbolic)';
+  $('g-cell').textContent = cellSym;
+  $('g-count').textContent = state.triangles.length;
+  $('g-depth').textContent = state.depth;
+}
+
+// ===========================================================================
+// §G Orchestration
+// ===========================================================================
+function rebuild(){
+  setStatus('building (2, 3, ' + state.n + ') tessellation');
+  state.triangles = generateTiling(state.n, state.depth);
+  updateHUD();
+  draw();
+  hideStatus();
+}
+
+// ===========================================================================
+// §H Interaction
+// ===========================================================================
+cv.addEventListener('mousedown', function(ev){
+  var sx = ev.clientX, sy = ev.clientY;
+  var cx0 = state.view.cx, cy0 = state.view.cy;
+  function move(e){
+    state.view.cx = cx0 - (e.clientX - sx) / state.view.scale;
+    state.view.cy = cy0 + (e.clientY - sy) / state.view.scale;
+    draw();
+  }
+  function up(){
+    window.removeEventListener('mousemove', move);
+    window.removeEventListener('mouseup', up);
+  }
+  window.addEventListener('mousemove', move);
+  window.addEventListener('mouseup', up);
+});
+
+cv.addEventListener('wheel', function(e){
+  e.preventDefault();
+  var factor = Math.exp(-e.deltaY * 0.001);
+  var w = s2w(e.clientX, e.clientY);
+  state.view.scale = Math.max(80, Math.min(4000, state.view.scale * factor));
+  var w2 = s2w(e.clientX, e.clientY);
+  state.view.cx += w.x - w2.x;
+  state.view.cy += w.y - w2.y;
+  draw();
+}, { passive: false });
+
+document.querySelectorAll('.btn[data-n]').forEach(function(b){
+  b.addEventListener('click', function(){
+    document.querySelectorAll('.btn[data-n]').forEach(function(b){ b.classList.remove('on'); });
+    b.classList.add('on');
+    state.n = +b.dataset.n;
+    rebuild();
+  });
+});
+
+$('i-D').addEventListener('input', function(e){
+  state.depth = +e.target.value;
+  rebuild();
+});
+
+// ===========================================================================
+// §I Boot
+// ===========================================================================
+setStatus('first build');
+rebuild();
+
+})();
+</script>
+</body>
+</html>

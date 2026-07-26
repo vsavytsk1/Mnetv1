@@ -1,0 +1,381 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>WILSONIUM v1.0 — the price of "one"</title>
+<!--
+  WILSONIUM v1.0 — THE PRICE OF "ONE"
+  =================================================================
+  Named for KENNETH WILSON (1936–2013). Nobel 1982, for the RENORMALIZATION
+  GROUP — which is the theorem that permits the sentence "there is one cup".
+
+  Wilson's insight: PHYSICS AT DIFFERENT SCALES DECOUPLES. You do not need the
+  quantum foam to throw a cup. Not because it is too hard — because the foam's
+  details CANNOT REACH the cup's equations. Short-distance physics enters
+  long-distance physics only through a handful of coefficients, and everything
+  else is irrelevant IN THE TECHNICAL SENSE: it dies under the flow.
+
+  That is not laziness. It is not approximation. It is a THEOREM about why the
+  world is knowable at all by animals who cannot count past a few. Wilson also
+  invented LATTICE QCD, which is rung 7 of this ladder. He built the tool AND
+  the reason the tool is allowed to work.
+
+  =================================================================
+  ## VLAD'S OBSERVATION, WHICH IS THE WHOLE FILE
+    "i look at a cup and oh i am sure there is 1 cup... and then so many TITANs
+     woke up and touched until the quantum foam... and there is nothing close to
+     one... all the cells in my body moving at a nonsensical speed hallucinate
+     something as 1... it is just a symmetry engineering constraint... if the
+     eyes were a bit different i would see the molecules of air touching the
+     lattice of the ceramic... so that is the price in compute"
+
+  He is right, and he is right in a way deeper than he said:
+  AT THE QUANTUM LEVEL, "TWO ELECTRONS" IS NOT TWO THINGS.
+  The wavefunction is ANTISYMMETRIC under exchange. You cannot label them. Swap
+  them and the state is unchanged up to a sign. Identical particles are not
+  "very similar" — they are identical in a way with NO CLASSICAL ANALOGUE.
+  "Two" is a coarse-graining of an object that has no parts.
+  And the Pauli principle — hence all of chemistry, hence him — is the price.
+
+  =================================================================
+  ## THE THREE THINGS THIS FILE MEASURES
+
+  1. THE COMPUTE EXPLODES, AND THEN STOPS BEING A NUMBER.
+     rung 5 (exact many-body QM) for a cup needs a state vector with roughly
+     4^(10²⁵) components. The observable universe has ~10⁸⁰ atoms. YOU CANNOT
+     WRITE DOWN THE INDEX. That is not "slow". There is not enough universe to
+     store the address of one entry.
+
+  2. ACCURACY IS NOT MONOTONIC IN SCALE — and this surprises everyone.
+     The most precise agreement in all of science is QED's g−2: theory and
+     experiment match to ~10 significant figures. It is NOT the most familiar
+     rung and NOT the most fundamental. It sits in the middle. Molecular
+     dynamics — vastly more everyday — is good to maybe 10%.
+     WE ARE BEST AT THE SCALE WHERE THE COUPLING IS SMALL AND THE SYSTEM IS
+     ISOLATED. Not where we live. Not where the truth is.
+
+  3. THE LADDER ENDS, AND NOT BECAUSE OF MONEY.
+     LHC probes ~10⁻¹⁹ m. Planck is ~10⁻³⁵ m. SIXTEEN ORDERS OF MAGNITUDE.
+     A collider reaching Planck energy needs a circumference measured in
+     LIGHT-YEARS — Vlad's "Kardashev 4", and he is not far off.
+     But that is the small problem. THE BIG PROBLEM IS THERE IS NO EQUATION.
+     Rung 9 is not expensive. It is EMPTY. Nobody has a theory to be expensive.
+
+  ## HONESTY (K1–K5)
+   K1  compute figures are ORDER OF MAGNITUDE, from published heroic runs and
+       routine practice as of ~2025. They move. The GAPS are so large that a
+       factor of 1000 either way changes nothing, which is the point.
+   K2  accuracy figures are the best published agreement for a REPRESENTATIVE
+       observable, not a uniform benchmark. g−2 is ~10⁻¹⁰; DFT bond lengths
+       ~1–2% but reaction barriers much worse. One number per rung is a
+       compression and it hides variance. Said, not hidden.
+   K3  the rungs are not a strict hierarchy — QED and MD are not "levels of the
+       same thing", they are different theories for different questions. The
+       ladder is a TEACHING FICTION. Wilson's actual RG is about flow in
+       coupling space, not a staircase of boxes.
+   K4  "the math is absolute" — mathematics is. PHYSICS IS NOT MATHEMATICS. It
+       is mathematics PLUS measurement, and the measurement is where all the
+       humility lives. The Standard Model has 19 free parameters that nobody
+       derives from anything. The math is absolute and INCOMPLETE.
+   K5  no claim is made here about what the Planck scale IS. Loop quantum
+       gravity, strings, causal sets, asymptotic safety — all live, none
+       confirmed, none with an experiment. The red bar is honest emptiness.
+
+  Pure Canvas 2D. No deps. Fast by construction. chi=2 · always. 2026-07-17.
+-->
+<style>
+:root{ --bg:#050508; --gold:#ffd700; --cyan:#00d4ff; --pink:#ff69b4; --green:#00ffd5;
+  --purple:#cc44ff; --red:#ff3355; --amber:#ffb454; --dim:#6a6a82; --txt:#e8e0d0;
+  --rule:#20202e; --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--txt);font-family:var(--mono);overflow:hidden}
+#cv{position:fixed;top:0;left:0;display:block;cursor:pointer}
+#top{position:fixed;top:0;left:0;right:0;z-index:12;padding:7px 11px;display:flex;gap:9px;align-items:center;
+  pointer-events:none;flex-wrap:wrap}
+#top>*{pointer-events:auto}
+#brand{background:rgba(8,8,16,.9);border:1px solid var(--rule);border-radius:8px;padding:5px 9px}
+#brand .t{color:var(--gold);font-size:12px;letter-spacing:.05em}
+#brand .s{color:var(--dim);font-size:9px;margin-top:1px}
+#one{flex:1;min-width:280px;max-width:600px;border-radius:8px;padding:5px 10px;
+  background:rgba(8,8,16,.9);border:1px solid var(--rule)}
+#one .ot{font-size:9px;color:var(--gold);letter-spacing:.1em;text-transform:uppercase}
+#one .os{font-size:11px;color:var(--txt);line-height:1.4;margin-top:2px}
+#dossier{position:fixed;top:72px;right:11px;bottom:14px;width:320px;z-index:10;
+  background:rgba(8,8,16,.94);border:1px solid var(--rule);border-radius:8px;display:flex;flex-direction:column;overflow:hidden}
+#dossier .tabs{display:flex;border-bottom:1px solid var(--rule);flex:0 0 auto}
+#dossier .tab{flex:1;text-align:center;padding:6px 2px;cursor:pointer;color:#5a5440;
+  font-size:8.5px;letter-spacing:.05em;border-right:1px solid var(--rule);transition:all .12s}
+#dossier .tab:last-child{border-right:none}
+#dossier .tab.active{background:var(--gold);color:#050508;font-weight:bold}
+#dossier .tab:hover{color:var(--gold)}
+#dbody{flex:1;overflow-y:auto;padding:9px 11px;font-size:9.5px;line-height:1.62;color:var(--dim)}
+#dbody b{color:var(--cyan)} #dbody .g{color:var(--green)} #dbody .r{color:var(--red)}
+#dbody .kk{color:var(--gold)} #dbody .sec{margin-top:8px;padding-top:6px;border-top:1px solid var(--rule)}
+#dbody .rank{display:flex;justify-content:space-between;gap:6px;padding:1px 0}
+#dbody h4{color:var(--gold);font-size:10px;letter-spacing:.06em;margin-bottom:3px;font-weight:normal}
+#bar{position:fixed;left:14px;bottom:12px;display:flex;gap:5px;align-items:center;
+  background:rgba(8,8,16,.96);border:1px solid var(--rule);border-radius:9px;padding:6px 10px;z-index:11}
+button{background:#14141f;border:1px solid #2a2a3a;border-radius:5px;color:var(--gold);
+  font:9.5px var(--mono);padding:4px 8px;cursor:pointer;transition:all .12s}
+button:hover{border-color:var(--gold)} button.on{background:#1d1a0a;border-color:var(--gold)}
+button.gn{color:var(--green)} button.gn.on{border-color:var(--green);background:#062522}
+.klbl{color:var(--dim);font-size:8.5px;text-transform:uppercase}
+</style></head>
+<body>
+<canvas id="cv"></canvas>
+<div id="top">
+  <div id="brand"><div class="t">WILSONIUM v1.0</div><div class="s">the price of "one" · Wilson, RG, 1971</div></div>
+  <div id="one"><div class="ot" id="o-t">what is ONE here?</div><div class="os" id="o-s">click a rung</div></div>
+</div>
+<div id="dossier">
+  <div class="tabs">
+    <div class="tab active" data-t="rung" onclick="setTab('rung')">RUNG</div>
+    <div class="tab" data-t="one" onclick="setTab('one')">"ONE"</div>
+    <div class="tab" data-t="wilson" onclick="setTab('wilson')">WILSON</div>
+    <div class="tab" data-t="k" onclick="setTab('k')">K</div>
+  </div>
+  <div id="dbody">…</div>
+</div>
+<div id="bar">
+  <span class="klbl">colour by</span>
+  <button id="b-comp" class="gn on" onclick="MODE='compute';sync()">compute</button>
+  <button id="b-acc" class="gn" onclick="MODE='accuracy';sync()">accuracy</button>
+  <button id="b-gap" class="gn" onclick="MODE='gap';sync()">the gap</button>
+</div>
+
+<script>
+"use strict";
+var cv=document.getElementById("cv"), ctx=cv.getContext("2d");
+var W=0,H=0,DPR=1;
+function resize(){
+  DPR=Math.min(devicePixelRatio||1,2); W=innerWidth; H=innerHeight;
+  cv.style.width=W+"px"; cv.style.height=H+"px";
+  cv.width=Math.round(W*DPR); cv.height=Math.round(H*DPR);
+  ctx.setTransform(DPR,0,0,DPR,0,0); draw();
+}
+addEventListener("resize",resize);
+var GOLD="#ffd700",CYAN="#00d4ff",GRN="#00ffd5",PUR="#cc44ff",RED="#ff3355",
+    AMB="#ffb454",WHT="#e8e0d0",GRY="#6a6a82";
+
+// =========================================================================
+// THE LADDER. log10(metres), and the price at each rung. (K1: order of
+// magnitude, from published heroic runs and routine practice ~2025.)
+// =========================================================================
+var RUNGS=[
+ { m:-1, name:"the cup", th:"rigid body · Newton",
+   dof:"6", comp:1e1, acc:1e-3, feas:"instant",
+   one:"ONE CUP. and it is real — you can throw it, and Newton will tell you where it lands, to any precision that matters.",
+   lie:"it is not rigid. it is not still. it is not one thing. none of that reaches the equation, and Wilson explains why.",
+   note:"6 degrees of freedom. three to say where, three to say which way up. that is the entire object at this scale, and it is ENOUGH." },
+ { m:-3, name:"continuum", th:"elasticity · Navier–Cauchy",
+   dof:"~10⁶ FEM elements", comp:1e6, acc:1e-2, feas:"seconds",
+   one:"a FIELD. stress and strain everywhere, no parts anywhere. 'one cup' has already dissolved into a boundary condition.",
+   lie:"no atoms. the material is a smooth jelly with fitted constants (E, ν) that come from measurement, not from theory.",
+   note:"this is where engineering lives, and it is good to ~1%. the cup is now a region of space where a tensor obeys a PDE." },
+ { m:-9, name:"molecular dynamics", th:"classical force fields",
+   dof:"cup ≈ 3×10²⁴ atoms", comp:3e24, acc:1e-1, feas:"10¹² atoms (heroic) · 10⁶ (routine)",
+   one:"~10²⁵ THINGS, and NOT ONE OF THEM IS THE CUP. the cup is a statistical fact about a heap. Vlad: 'if the eyes were a bit different i would see the molecules of air touching the lattice of the ceramic.' correct.",
+   lie:"no electrons. the force field is FITTED — little springs tuned against experiment. good to maybe 10%, and it cannot break a chemical bond.",
+   note:"a cup is 3×10²⁴ atoms. the biggest MD run ever is ~10¹². YOU ARE 10¹² SHORT, on the biggest machine on earth, for a cup." },
+ { m:-10, name:"DFT", th:"Kohn–Sham · density functional",
+   dof:"cup ≈ 10²⁵ electrons", comp:1e25, acc:2e-2, feas:"10³ atoms (routine) · 10⁵ (heroic)",
+   one:"an ELECTRON DENSITY ρ(r). one number per point. the electrons are gone as individuals — Hohenberg–Kohn says the density alone determines everything.",
+   lie:"the exchange–correlation functional is UNKNOWN. DFT is EXACT in principle and APPROXIMATED in practice. everyone uses a fitted guess (PBE, B3LYP) and B3LYP has fitted parameters in it.",
+   note:"O(N³) scaling. bond lengths to ~1%, reaction barriers much worse. and you are still 10²⁰ short of a cup." },
+ { m:-10.3, name:"exact many-body QM", th:"Schrödinger · full CI",
+   dof:"cup: 4^(10²⁵) amplitudes", comp:1e300, acc:1e-12, feas:"~20 electrons. benzene was a landmark.",
+   one:"THERE ARE NO INDIVIDUAL ELECTRONS. the wavefunction is ANTISYMMETRIC — swap any two and it changes sign. YOU CANNOT LABEL THEM. 'two electrons' is not two things. it is a coarse-graining of an object with no parts.",
+   lie:"nothing. it is exact. and that is exactly why you cannot have it.",
+   note:"★ THE WALL. a cup's state vector has ~4^(10²⁵) components. the observable universe has ~10⁸⁰ atoms. YOU CANNOT WRITE DOWN THE INDEX — there is not enough universe to store the ADDRESS of one entry. this is not 'slow'." },
+ { m:-12, name:"QED", th:"quantum electrodynamics",
+   dof:"12,672 diagrams at 5 loops", comp:1e5, acc:1e-10, feas:"done. Kinoshita, decades.",
+   one:"a FIELD EXCITATION. the electron is a ripple. and the vacuum is not empty — it is full of virtual pairs that shift the ripple's magnetism by 0.1%.",
+   lie:"the perturbation series is ASYMPTOTIC. it DIVERGES (Dyson, 1952). we truncate it at the right place and it works, and nobody is entirely comfortable.",
+   note:"★ THE PEAK. g−2: theory and experiment agree to ~10 SIGNIFICANT FIGURES. the most precise agreement in the history of science — and it is neither the most familiar rung nor the deepest one." },
+ { m:-15, name:"lattice QCD", th:"the strong force · Wilson's own tool",
+   dof:"~10⁹ lattice sites", comp:1e9, acc:1e-2, feas:"a few nucleons. exascale.",
+   one:"a proton is NOT three quarks. it is a boiling mess of gluons and sea quarks, and the three valence quarks carry ~1% of its mass. THE OTHER 99% IS THE BINDING ENERGY OF A FIELD WITH NO PARTICLES IN IT.",
+   lie:"cannot do a nucleus. helium-4 from quarks is heroic. lead-208 is not on any roadmap.",
+   note:"YOU ARE MOSTLY E=mc² OF A GLUON FIELD. the Higgs gives you ~1%. Wilson invented this method — rung 7 is his tool and rung 0 is his theorem." },
+ { m:-18, name:"the Standard Model", th:"U(1)×SU(2)×SU(3)",
+   dof:"19 free parameters", comp:1e3, acc:1e-8, feas:"measured, not derived",
+   one:"an irreducible representation. 'one electron' means a specific way the field transforms. counting is representation theory now.",
+   lie:"NINETEEN NUMBERS NOBODY DERIVES FROM ANYTHING. the electron mass is measured. why three generations: unknown. why this group: unknown.",
+   note:"the most successful theory ever written, and it is a fill-in-the-blanks form with nineteen blanks." },
+ { m:-35, name:"Planck", th:"— NONE —",
+   dof:"—", comp:-1, acc:-1, feas:"NO THEORY. NOT EXPENSIVE. EMPTY.",
+   one:"UNDEFINED. no space, no time, no distinguishable events. 'one' has no referent. Vlad: 'nothing close to one at the Planck length.' correct — and 'two systems being equal' has no meaning either.",
+   lie:"—",
+   note:"★ THE END. LHC probes ~10⁻¹⁹ m. this is 10⁻³⁵. SIXTEEN ORDERS OF MAGNITUDE. a collider reaching Planck energy needs a circumference in LIGHT-YEARS — Vlad's Kardashev civilisation, and he is not wrong. BUT THAT IS THE SMALL PROBLEM. the big one: THERE IS NO EQUATION TO BE EXPENSIVE." }
+];
+var SEL=1, MODE="compute", dTab="rung", hov=-1, rows=[];
+
+function lg(v){ return Math.log10(Math.max(1e-12,v)); }
+function colFor(r){
+  if(MODE==="compute"){
+    if(r.comp<0) return RED;
+    var t=Math.min(1,lg(r.comp)/26);
+    return t>0.8? RED : t>0.4? AMB : GRN;
+  }
+  if(MODE==="accuracy"){
+    if(r.acc<0) return RED;
+    var a=-Math.log10(r.acc);            // 10⁻¹⁰ → 10
+    return a>=8? GRN : a>=4? CYAN : a>=2? AMB : RED;
+  }
+  // gap
+  if(r.comp<0) return RED;
+  var need=r.comp, have= r.m<=-12? r.comp : (r.m<=-9? 1e12 : 1e6);
+  return need/have>1e6? RED : need/have>1e2? AMB : GRN;
+}
+
+function draw(){
+  ctx.fillStyle="#050508"; ctx.fillRect(0,0,W,H);
+  var L=150, R=W-345, T=92, B=H-70;
+  if(R-L<180) return;
+  var m0=-1, m1=-35;
+  function my(m){ return T+((m-m0)/(m1-m0))*(B-T); }
+  // the scale spine
+  ctx.strokeStyle="rgba(255,215,0,0.14)"; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.moveTo(L,T); ctx.lineTo(L,B); ctx.stroke();
+  ctx.font="8px ui-monospace,monospace"; ctx.textAlign="right"; ctx.textBaseline="middle";
+  for(var m=0;m>=-35;m-=5){
+    var y=my(m);
+    ctx.strokeStyle="rgba(235,235,245,0.07)";
+    ctx.beginPath(); ctx.moveTo(L,y); ctx.lineTo(R,y); ctx.stroke();
+    ctx.fillStyle="rgba(110,115,135,0.5)"; ctx.fillText("10"+sup(m)+" m", L-8, y);
+  }
+  rows=[];
+  for(var i=0;i<RUNGS.length;i++){
+    var r=RUNGS[i], y=my(r.m), sel=(i===SEL), hv=(i===hov);
+    var c=colFor(r);
+    rows.push({y:y-13, h:26, i:i});
+    if(sel){ ctx.fillStyle="rgba(255,215,0,0.05)"; ctx.fillRect(L,y-13,R-L,26); }
+    // the compute bar — log scale
+    var bw=0;
+    if(MODE==="compute" && r.comp>0) bw=Math.min(1,lg(r.comp)/26)*(R-L-190);
+    else if(MODE==="accuracy" && r.acc>0) bw=Math.min(1,(-Math.log10(r.acc))/11)*(R-L-190);
+    else if(MODE==="gap" && r.comp>0){
+      var have= r.m<=-12? r.comp : (r.m<=-9? 1e12 : 1e6);
+      bw=Math.min(1,Math.max(0,lg(r.comp/have))/26)*(R-L-190);
+    }
+    if(r.comp<0){                       // the empty rung
+      ctx.fillStyle="rgba(255,51,85,0.10)"; ctx.fillRect(L+150,y-8,R-L-190,16);
+      ctx.strokeStyle="rgba(255,51,85,0.6)"; ctx.setLineDash([4,3]); ctx.lineWidth=1;
+      ctx.strokeRect(L+150,y-8,R-L-190,16); ctx.setLineDash([]);
+      ctx.fillStyle=RED; ctx.font="9px ui-monospace,monospace"; ctx.textAlign="center";
+      ctx.fillText("NO EQUATION", L+150+(R-L-190)/2, y+3);
+    } else {
+      ctx.fillStyle=c; ctx.globalAlpha=sel?0.85:(hv?0.6:0.34);
+      ctx.fillRect(L+150,y-7,Math.max(2,bw),14); ctx.globalAlpha=1;
+    }
+    // dot + label
+    ctx.fillStyle=c; ctx.beginPath(); ctx.arc(L,y,sel?6:3.6,0,6.2832); ctx.fill();
+    if(sel){ ctx.strokeStyle=c; ctx.lineWidth=1; ctx.beginPath(); ctx.arc(L,y,10,0,6.2832); ctx.stroke(); }
+    ctx.textAlign="left"; ctx.textBaseline="middle";
+    ctx.fillStyle= sel? WHT : (hv? WHT : "rgba(232,224,208,0.55)");
+    ctx.font=(sel?"11px":"10px")+" ui-monospace,monospace";
+    ctx.fillText(r.name, L+14, y-4);
+    ctx.fillStyle="rgba(110,115,135,0.65)"; ctx.font="8px ui-monospace,monospace";
+    ctx.fillText(r.th, L+14, y+7);
+    // right-hand number
+    ctx.textAlign="right"; ctx.font="9px ui-monospace,monospace"; ctx.fillStyle=c;
+    var txt = MODE==="compute"? (r.comp<0?"—":"10"+sup(Math.round(lg(r.comp))))
+            : MODE==="accuracy"? (r.acc<0?"no data":"10"+sup(Math.round(Math.log10(r.acc))))
+            : (r.comp<0?"∞":(function(){ var hv2=r.m<=-12?r.comp:(r.m<=-9?1e12:1e6);
+                var g=Math.round(lg(r.comp/hv2)); return g<=0?"✓ fits":"10"+sup(g)+" short"; })());
+    ctx.fillText(txt, R-4, y);
+  }
+  // the gap band
+  var gy0=my(-18), gy1=my(-35);
+  ctx.fillStyle="rgba(255,51,85,0.04)"; ctx.fillRect(L,gy0,R-L,gy1-gy0);
+  ctx.strokeStyle="rgba(255,51,85,0.18)"; ctx.setLineDash([2,4]); ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(L,my(-19)); ctx.lineTo(R,my(-19)); ctx.stroke(); ctx.setLineDash([]);
+  ctx.fillStyle="rgba(255,51,85,0.7)"; ctx.font="9px ui-monospace,monospace"; ctx.textAlign="left";
+  ctx.fillText("← LHC reaches here (10⁻¹⁹ m)", L+14, my(-19)-6);
+  ctx.save(); ctx.translate(R-14, (gy0+gy1)/2); ctx.rotate(Math.PI/2);
+  ctx.fillStyle="rgba(255,51,85,0.35)"; ctx.font="10px ui-monospace,monospace"; ctx.textAlign="center";
+  ctx.fillText("16 ORDERS OF MAGNITUDE · NO DATA · NO THEORY", 0, 0); ctx.restore();
+  // footer
+  ctx.textAlign="left"; ctx.font="9px ui-monospace,monospace";
+  ctx.fillStyle="rgba(110,115,135,0.5)";
+  ctx.fillText(MODE==="compute"? "bar = log₁₀ of the degrees of freedom you must track. click a rung."
+    : MODE==="accuracy"? "bar = significant figures of agreement with experiment. NOT monotonic."
+    : "bar = log₁₀ (what you NEED ÷ what the best machine on earth CAN DO).", L, B+26);
+}
+function sup(n){
+  var s=String(n), o="", mm={"-":"⁻","0":"⁰","1":"¹","2":"²","3":"³","4":"⁴","5":"⁵","6":"⁶","7":"⁷","8":"⁸","9":"⁹"};
+  for(var i=0;i<s.length;i++) o+=mm[s[i]]||s[i];
+  return o;
+}
+function sync(){
+  ["compute","accuracy","gap"].forEach(function(m){
+    var el=document.getElementById("b-"+(m==="compute"?"comp":m==="accuracy"?"acc":"gap"));
+    if(el) el.classList.toggle("on", MODE===m);
+  });
+  draw(); render();
+}
+function render(){
+  var r=RUNGS[SEL];
+  document.getElementById("o-t").textContent='what is "ONE" at 10'+sup(Math.round(r.m))+" m?";
+  document.getElementById("o-s").textContent=r.one;
+  var h="";
+  if(dTab==="rung"){
+    h='<h4>'+r.name+' · 10'+sup(Math.round(r.m))+' m</h4>'+
+      '<div style="font-size:9px">'+r.th+'</div>'+
+      '<div class="sec"><div class="rank"><span>degrees of freedom</span><b>'+r.dof+'</b></div>'+
+      '<div class="rank"><span>feasible today</span><b style="color:'+(r.comp<0?"#ff3355":"#00ffd5")+'">'+r.feas+'</b></div>'+
+      '<div class="rank"><span>agreement w/ data</span><b>'+(r.acc<0?'<span class="r">none</span>':"~10"+sup(Math.round(Math.log10(r.acc))))+'</b></div></div>'+
+      '<div class="sec"><h4>the note</h4><div style="font-size:9px">'+r.note+'</div></div>'+
+      (r.lie!=="—"? '<div class="sec"><h4 class="r">what it lies about</h4><div style="font-size:9px">'+r.lie+'</div></div>':'')+
+      '<div class="sec" style="font-size:8.5px"><span class="kk">and it still works.</span> that is Wilson. the lie at each rung <b class="g">cannot reach</b> the rung above it. not "is small" — <b>cannot reach</b>. that is the RG.</div>';
+  }
+  else if(dTab==="one"){
+    h='<h4>THE THREAD · what "one" becomes</h4>';
+    for(var i=0;i<RUNGS.length;i++){
+      var x=RUNGS[i];
+      h+='<div class="sec" style="cursor:pointer" onclick="SEL='+i+';sync()">'+
+         '<div class="rank"><span style="color:'+(SEL===i?"#ffd700":"#6a6a82")+'">'+x.name+'</span>'+
+         '<b style="color:#6a6a82">10'+sup(Math.round(x.m))+' m</b></div>'+
+         '<div style="font-size:8.5px;color:'+(SEL===i?"#e8e0d0":"#4a4a5a")+'">'+x.one.split(".")[0]+'.</div></div>';
+    }
+    h+='<div class="sec"><h4 class="kk">★ the deep one</h4><div style="font-size:9px">at rung 5 it stops being hard and starts being <b class="r">meaningless</b>.<br><br>'+
+      'the wavefunction of two electrons is <b>ANTISYMMETRIC</b>: ψ(1,2) = −ψ(2,1). swap them and you get the same state back with a minus sign. <b class="g">you cannot label them. there is no "electron A".</b><br><br>'+
+      '"two electrons" is not two things. it is a <b>coarse-graining of an object that has no parts</b>. identical particles are not "very similar" — they are identical in a way with <b class="g">no classical analogue whatsoever</b>.<br><br>'+
+      'and the price of that antisymmetry is the <b class="kk">Pauli principle</b> — hence electron shells, hence chemistry, hence the periodic table, hence Chancourtoisium, <b class="g">hence you.</b><br><br>'+
+      'you exist because "two" does not mean what you think it means.</div></div>';
+  }
+  else if(dTab==="wilson"){
+    h='<h4>KENNETH WILSON · 1936–2013</h4>'+
+      '<div style="font-size:9px">Nobel 1982, for the <b class="kk">renormalization group</b> — which is the theorem that <b class="g">permits the sentence "there is one cup".</b></div>'+
+      '<div class="sec"><h4>the insight</h4><div style="font-size:9px"><b class="g">PHYSICS AT DIFFERENT SCALES DECOUPLES.</b><br><br>'+
+      'short-distance physics enters long-distance physics <b>only through a handful of coefficients</b>. everything else is <b class="kk">IRRELEVANT — in the technical sense.</b> it dies under the flow.<br><br>'+
+      'you do not need the foam to throw a cup. <b class="r">not because it is too hard.</b> because the foam\'s details <b class="g">CANNOT REACH</b> the cup\'s equations. there is a proof.</div></div>'+
+      '<div class="sec"><h4>why that is enormous</h4><div style="font-size:9px">it is the reason the world is <b>knowable at all</b> by animals who cannot count past a few.<br><br>if scales did NOT decouple, you would need the Planck length to boil an egg, and there would be no science, no engineering, and no you.<br><br><b class="g">Vlad: "it is just a symmetry engineering constraint."</b> — that is the RG, in his own words, arrived at from a cup.</div></div>'+
+      '<div class="sec"><h4>and he built rung 7</h4><div style="font-size:9px">Wilson also invented <b class="kk">LATTICE QCD</b>. he built the tool AND the theorem that says the tool is allowed to work.<br><br>the ladder is his, top to bottom.</div></div>'+
+      '<div class="sec"><h4 class="kk">the sentence</h4><div style="font-size:9px">every K-block in this whole build has been one sentence: <b class="g">HERE IS WHAT MY SHADOW MISSES.</b><br><br>Wilson is why that sentence is <b>allowed to be short.</b> the missing part does not propagate. you can afford the shadow BECAUSE the rest is irrelevant — provably, not hopefully.</div></div>';
+  }
+  else {
+    h='<h4>K1 · the numbers</h4><div style="font-size:9px">compute figures are <b>ORDER OF MAGNITUDE</b>, from published heroic runs and routine practice ~2025. they move. <b class="g">the gaps are so large that a factor of 1000 either way changes nothing</b> — which is itself the point.</div>'+
+      '<div class="sec"><h4>K2 · one number per rung is a compression</h4><div style="font-size:9px">accuracy = best published agreement for a <b>representative</b> observable, not a uniform benchmark. g−2 is ~10⁻¹⁰; DFT bond lengths ~1% but reaction barriers far worse. <b class="r">one number hides the variance.</b> said, not hidden.</div></div>'+
+      '<div class="sec"><h4 class="r">K3 · the ladder is a teaching fiction</h4><div style="font-size:9px">the rungs are NOT a strict hierarchy. QED and MD are not "levels of the same thing" — they are different theories for different questions.<br><br><b class="r">Wilson\'s actual RG is about FLOW IN COUPLING SPACE, not a staircase of boxes.</b> this picture is a shadow of his idea, which is exactly the kind of thing this file is about, and I am not going to pretend otherwise.</div></div>'+
+      '<div class="sec"><h4 class="kk">K4 · "the math is absolute"</h4><div style="font-size:9px">mathematics is. <b class="r">PHYSICS IS NOT MATHEMATICS.</b> it is mathematics PLUS measurement, and the measurement is where all the humility lives.<br><br>the Standard Model has <b>19 free parameters nobody derives from anything.</b> the math is absolute AND incomplete. both. always.</div></div>'+
+      '<div class="sec"><h4>K5 · the red bar</h4><div style="font-size:9px">no claim is made about what the Planck scale <b>is</b>. loop quantum gravity, strings, causal sets, asymptotic safety — <b>all live, none confirmed, none with an experiment.</b><br><br>the red bar is <b class="g">honest emptiness.</b> not a mystery to be solved by compute. a place where nobody has written the equation yet.</div></div>';
+  }
+  document.getElementById("dbody").innerHTML=h;
+}
+function setTab(t){
+  dTab=t;
+  var tabs=document.querySelectorAll("#dossier .tab");
+  for(var i=0;i<tabs.length;i++) tabs[i].classList.toggle("active",tabs[i].getAttribute("data-t")===t);
+  render();
+}
+cv.addEventListener("mousemove",function(e){
+  var h=-1;
+  for(var i=0;i<rows.length;i++) if(e.clientY>=rows[i].y&&e.clientY<=rows[i].y+rows[i].h) h=rows[i].i;
+  if(h!==hov){ hov=h; draw(); }
+});
+cv.addEventListener("click",function(e){
+  for(var i=0;i<rows.length;i++) if(e.clientY>=rows[i].y&&e.clientY<=rows[i].y+rows[i].h){ SEL=rows[i].i; sync(); return; }
+});
+resize(); sync();
+</script>
+</body></html>

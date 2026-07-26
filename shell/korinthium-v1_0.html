@@ -1,0 +1,216 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>KORINTHIUM v1.0 &middot; the topography of Ancient Corinth &middot; contours, monuments, provenance</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{background:#050510;color:#e0e0e0;font-family:ui-monospace,"SF Mono",Menlo,monospace;
+  font-size:11px;overflow:hidden;height:100%;width:100%}
+#map{position:fixed;inset:0;z-index:1;background:#050510}
+.leaflet-container{background:#050510}
+#rail{position:fixed;top:0;bottom:0;left:0;width:314px;z-index:900;display:flex;flex-direction:column;
+  background:rgba(5,5,16,0.95);border-right:1px solid rgba(80,50,120,0.22)}
+#hd{padding:11px 14px 6px}
+#hd .title{font-size:13px;color:#cc44ff;letter-spacing:.16em;text-transform:uppercase;font-weight:bold}
+#hd .sub{font-size:8px;color:rgba(204,68,255,.55);letter-spacing:.05em;margin:2px 0 6px;text-transform:uppercase}
+#hd .row{line-height:1.55;color:rgba(220,228,240,.5);font-size:10px;font-variant-numeric:tabular-nums}
+#hd .g{color:#ffd700;font-weight:bold}#hd .c{color:#35e0c8;font-weight:bold}#hd .v{color:#cc44ff;font-weight:bold}
+#hd .hr{height:1px;background:rgba(204,68,255,.14);margin:5px 0}
+.sec{padding:2px 14px 4px}
+.sh{font-size:8px;text-transform:uppercase;letter-spacing:.11em;color:rgba(53,224,200,.65);margin:7px 0 3px}
+.site{display:flex;align-items:center;gap:6px;padding:2.5px 0;font-size:9.5px;color:rgba(220,228,240,.62);cursor:pointer;border-radius:2px}
+.site:hover{color:#ffd700;background:rgba(255,215,0,.05)}
+.site .dot{width:8px;height:8px;border-radius:50%;flex:none}
+.site .nm{flex:1}
+.site .cf{font-size:7px;letter-spacing:.05em;padding:1px 3px;border-radius:2px}
+.cf.ok{background:rgba(127,255,159,.13);color:#7fff9f}
+.cf.ap{background:rgba(255,180,90,.13);color:#ffb45a}
+.cf.no{background:rgba(255,106,92,.14);color:#ff6a5c}
+.btnrow{display:flex;gap:4px;flex-wrap:wrap;margin:4px 0}
+.btn{background:#0b0814;color:#5a4a6a;border:1px solid #221033;border-radius:3px;padding:3px 7px;
+  font-family:inherit;font-size:8.5px;cursor:pointer;text-transform:uppercase;letter-spacing:.04em}
+.btn:hover{border-color:#cc44ff;color:#cc44ff}
+.btn.active{background:#cc44ff;color:#050510;border-color:#cc44ff}
+#klaws{flex:1;overflow-y:auto;padding:4px 14px 14px;
+  -webkit-mask-image:linear-gradient(to bottom,#000 94%,transparent);mask-image:linear-gradient(to bottom,#000 94%,transparent)}
+#klaws p{font-size:8.5px;color:rgba(220,228,240,.42);line-height:1.5;margin-bottom:5px}
+#klaws b{color:#ffd700}#klaws .pur{color:#cc44ff}#klaws .cy{color:#00d4ff}
+#klaws a{color:#35e0c8;text-decoration:none;border-bottom:1px dotted rgba(53,224,200,.4)}
+#klaws a:hover{color:#7fff9f}
+#stamp{position:fixed;bottom:8px;right:12px;z-index:900;pointer-events:none;text-align:right}
+#stamp .s{font-size:8px;color:rgba(204,68,255,.3);letter-spacing:.07em;line-height:1.8;text-shadow:0 0 6px #050510}
+#stamp .s.g{color:rgba(255,215,0,.34)}
+.leaflet-popup-content-wrapper{background:#0b0814;color:#e0e0e0;border:1px solid #33143a;border-radius:4px}
+.leaflet-popup-tip{background:#0b0814;border:1px solid #33143a}
+.leaflet-popup-content{font-family:ui-monospace,monospace;font-size:10px;line-height:1.5;margin:9px 12px}
+.pop-t{color:#ffd700;font-weight:bold;font-size:11px;letter-spacing:.04em}
+.pop-gr{color:#cc44ff;font-size:10px}
+.pop-d{color:rgba(220,228,240,.55);margin-top:4px}
+.pop-c{color:#35e0c8;font-size:9px;margin-top:4px;font-variant-numeric:tabular-nums}
+.leaflet-control-attribution{background:rgba(5,5,16,.8)!important;color:rgba(220,228,240,.4)!important;font-size:8px!important}
+.leaflet-control-attribution a{color:rgba(53,224,200,.6)!important}
+</style></head><body>
+<div id="map"></div>
+
+<div id="rail">
+  <div id="hd">
+    <span class="title">Korinthium</span>
+    <div class="sub">the ground under Ancient Corinth</div>
+    <div class="row">contours&nbsp;<span class="c">OpenTopoMap</span> &middot; live tiles</div>
+    <div class="row">sites plotted&nbsp;<span class="v" id="h-n">0</span> &middot; verified&nbsp;<span class="g" id="h-v">0</span></div>
+    <div class="hr"></div>
+    <div class="row" id="h-sel"><span style="color:rgba(220,228,240,.3)">click a site &rarr;</span></div>
+  </div>
+
+  <div class="sec">
+    <div class="sh">base layer</div>
+    <div class="btnrow">
+      <button class="btn active" id="b-topo" onclick="setBase('topo')">TOPO &middot; contours</button>
+      <button class="btn" id="b-sat" onclick="setBase('sat')">SATELLITE</button>
+      <button class="btn" id="b-osm" onclick="setBase('osm')">STREET</button>
+    </div>
+    <div class="sh">the sites</div>
+    <div id="list"></div>
+  </div>
+
+  <div id="klaws"></div>
+</div>
+
+<div id="stamp">
+  <div class="s">KORINTHIUM v1.0</div>
+  <div class="s g">the roads have not moved since 1829</div>
+  <div class="s">&chi;=2 &middot; P=12 &middot; always</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+// ============================================================================
+// KORINTHIUM v1.0 -- the topography of Ancient Corinth.
+//
+// Contour lines are REAL: OpenTopoMap renders SRTM-derived contours live, so
+// what you see under the monuments is the actual shape of the ground.
+//
+// COORDINATES CARRY THEIR PROVENANCE (K1). Every marker is flagged:
+//   PUBLISHED -- a stated lat/lon from a citable gazetteer (ToposText, Wikidata,
+//                Wikipedia), reproduced exactly.
+//   APPROX    -- placed by me from description. Good enough to walk to,
+//                NOT a survey. Says so on the marker and in the popup.
+//   NO DATA   -- the ASCSA's own GIS page lists it as "no data yet".
+//
+// The real archaeological layers -- ancient topo lines at 5 m intervals, Greek
+// and Roman monument polygons, the city walls, every excavation trench with its
+// notebook page -- are published free by the American School of Classical
+// Studies at Athens under CC BY-SA 4.0. Links are in the rail. This file is the
+// doorway, not the archive.
+//
+// chi=2 . P=12 . Ancient Korinthos . 2026
+// ============================================================================
+
+var SITES=[
+ {n:"Temple of Apollo", gr:"\u03bd\u03b1\u1f78\u03c2 \u1f08\u03c0\u03cc\u03bb\u03bb\u03c9\u03bd\u03bf\u03c2", lat:37.905970, lon:22.879040, cf:"ok",
+  src:"ToposText 379229SApT, confidence High",
+  d:"Doric, mid-6th century BC, replacing a destroyed 7th-century predecessor. Six columns at each end, fifteen along each side; seven still standing. Archaic tells: great length relative to width, monolithic columns, squat flaring capitals."},
+ {n:"Ancient Corinth \u00b7 city centre", gr:"\u039a\u03cc\u03c1\u03b9\u03bd\u03b8\u03bf\u03c2", lat:37.905400, lon:22.880200, cf:"ok",
+  src:"ToposText 379229PKor, confidence High",
+  d:"Bronze Age to Medieval. Destroyed by Rome 146 BC, refounded 44 BC. Paul preached here 51/52 AD. Herulian invasion 267 AD began the decline. Excavated by the American School continuously since 1896."},
+ {n:"Temple of Aphrodite \u00b7 Acrocorinth summit", gr:"\u1f08\u03c6\u03c1\u03bf\u03b4\u03af\u03c4\u03b7", lat:37.89389, lon:22.87972, cf:"ok",
+  src:"Wikidata Q57559776 (37\u00b053'38\"N 22\u00b052'47\"E)",
+  d:"On the summit of the rock above the city. Destroyed. The mountain itself is the one thing the ASCSA GIS page still lists as having no data."},
+ {n:"Temple of Poseidon \u00b7 Isthmia", gr:"\u1f38\u03c3\u03b8\u03bc\u03af\u03b1", lat:37.91583, lon:22.99306, cf:"ok",
+  src:"Wikipedia, Temple of Isthmia",
+  d:"Founded 690\u2013650 BC, destroyed 470 BC and rebuilt. 40.05 \u00d7 14.018 m. Home of the Isthmian Games \u2014 one of the four Panhellenic festivals. Sources give <b>~16 km east</b> of the city; straight-line from Apollo on these published coordinates is <b>10.1 km</b> (haversine). The difference is almost certainly road versus crow — but the file shows you both rather than picking the flattering one."},
+ {n:"Corinth \u00b7 modern city", gr:"\u039a\u03cc\u03c1\u03b9\u03bd\u03b8\u03bf\u03c2", lat:37.93861, lon:22.92722, cf:"ok",
+  src:"Wikipedia (37\u00b056'19\"N 22\u00b055'38\"E)",
+  d:"Established 1858 after the old town was destroyed by earthquake. Population 30,816 (2021). Highest elevation 10 m \u2014 it is a coastal plain town, which is exactly why the ancient city sat up on the terrace instead."},
+ {n:"Peirene Fountain", gr:"\u03a0\u03b5\u03b9\u03c1\u03ae\u03bd\u03b7", lat:37.90558, lon:22.87990, cf:"ap",
+  src:"placed from site description \u2014 NOT surveyed",
+  d:"The city's great spring, running since antiquity. ASCSA re-surveyed it in 2006 and has published an orthophoto at <b>5 mm per pixel</b> plus a survey of the underground tunnel system. Go get that file \u2014 it is the finest data on this page."},
+ {n:"Archaeological Museum", gr:"\u039c\u03bf\u03c5\u03c3\u03b5\u1fd6\u03bf", lat:37.90630, lon:22.87840, cf:"ap",
+  src:"placed from site description \u2014 NOT surveyed",
+  d:"The mosaic with the geometric mandala and the goddess at its centre is in here. Triangles, nested circles, rotational symmetry \u2014 laid by hand roughly two thousand years before anyone could write down why symmetry matters."},
+ {n:"Acrocorinth \u00b7 fortress gates", gr:"\u1f08\u03ba\u03c1\u03bf\u03ba\u03cc\u03c1\u03b9\u03bd\u03b8\u03bf\u03c2", lat:37.89060, lon:22.87050, cf:"no",
+  src:"ASCSA GIS page: \u201cAcrocorinth (no data yet)\u201d",
+  d:"The acropolis. Greek, Roman, Byzantine, Frankish, Venetian and Ottoman fortifications stacked on one rock. The American School's own data page lists it as <b>not yet surveyed</b> \u2014 so this marker is a rough placement of the gate approach, and the mountain is officially the blank on the map."},
+ {n:"Lechaion \u00b7 west port", gr:"\u039b\u03ad\u03c7\u03b1\u03b9\u03bf\u03bd", lat:37.92800, lon:22.86800, cf:"ap",
+  src:"placed from site description \u2014 NOT surveyed",
+  d:"The harbour on the Corinthian Gulf, facing Italy and the west. Corinth's wealth came from owning both seas at once."},
+ {n:"Kenchreai \u00b7 east port", gr:"\u039a\u03b5\u03b3\u03c7\u03c1\u03b5\u03b1\u03af", lat:37.88700, lon:22.98700, cf:"ap",
+  src:"placed from site description \u2014 NOT surveyed",
+  d:"The harbour on the Saronic Gulf, facing Asia. Goods crossed the isthmus between the two rather than sailing around the Peloponnese."},
+ {n:"Corinth Canal", gr:"\u0394\u03b9\u1ff6\u03c1\u03c5\u03be", lat:37.93300, lon:22.98300, cf:"ap",
+  src:"placed from description \u2014 NOT surveyed",
+  d:"Cut 1881\u20131893. Nero began one in 67 AD and abandoned it. Before both, ships were physically dragged across the isthmus on the <b>Diolkos</b>, a paved stone trackway \u2014 arguably the world's first railway."}
+];
+var COL={ok:"#7fff9f", ap:"#ffb45a", no:"#ff6a5c"};
+var LBL={ok:"PUBLISHED", ap:"APPROX", no:"NO DATA"};
+
+// ---- map ----
+var map=L.map("map",{center:[37.9055,22.8800],zoom:14,zoomControl:true,attributionControl:true});
+var bases={
+  topo:L.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",{maxZoom:17,
+    attribution:'map data &copy; OpenStreetMap contributors, SRTM &middot; style &copy; OpenTopoMap (CC-BY-SA)'}),
+  sat:L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",{maxZoom:19,
+    attribution:'imagery &copy; Esri, Maxar, Earthstar Geographics'}),
+  osm:L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,
+    attribution:'&copy; OpenStreetMap contributors'})
+};
+var curBase="topo"; bases.topo.addTo(map);
+function setBase(k){ map.removeLayer(bases[curBase]); curBase=k; bases[k].addTo(map);
+  ["topo","sat","osm"].forEach(function(q){document.getElementById("b-"+q).classList.toggle("active",q===k);}); }
+
+// ---- markers ----
+var marks=[];
+SITES.forEach(function(S,i){
+  var m=L.circleMarker([S.lat,S.lon],{radius:7,color:COL[S.cf],weight:2,
+    fillColor:COL[S.cf],fillOpacity:.28}).addTo(map);
+  m.bindPopup("<div class='pop-t'>"+S.n+"</div>"+
+    (S.gr?"<div class='pop-gr'>"+S.gr+"</div>":"")+
+    "<div class='pop-d'>"+S.d+"</div>"+
+    "<div class='pop-c'>"+S.lat.toFixed(6)+", "+S.lon.toFixed(6)+"<br>"+
+    "<span style='color:"+COL[S.cf]+"'>"+LBL[S.cf]+"</span> &middot; "+S.src+"</div>");
+  m.on("click",function(){ document.getElementById("h-sel").innerHTML=
+    "<span class='g'>"+S.n+"</span> <span style='color:"+COL[S.cf]+"'>"+LBL[S.cf]+"</span>"; });
+  marks.push(m);
+});
+
+// the walk: Apollo -> Acrocorinth summit, measured on the sphere
+var apollo=SITES[0], acro=SITES[2];
+L.polyline([[apollo.lat,apollo.lon],[acro.lat,acro.lon]],
+  {color:"#cc44ff",weight:1,dashArray:"4,6",opacity:.5}).addTo(map);
+function haversine(a,b,c,d){var R=6371000,p=Math.PI/180;
+  var dl=(c-a)*p, dn=(d-b)*p, x=Math.sin(dl/2)*Math.sin(dl/2)+
+    Math.cos(a*p)*Math.cos(c*p)*Math.sin(dn/2)*Math.sin(dn/2);
+  return 2*R*Math.asin(Math.sqrt(x));}
+var climb=haversine(apollo.lat,apollo.lon,acro.lat,acro.lon);
+
+// ---- rail list ----
+var lst=document.getElementById("list"), nv=0;
+SITES.forEach(function(S,i){
+  if(S.cf==="ok")nv++;
+  var d=document.createElement("div"); d.className="site";
+  d.innerHTML="<span class='dot' style='background:"+COL[S.cf]+"'></span>"+
+    "<span class='nm'>"+S.n+"</span><span class='cf "+S.cf+"'>"+LBL[S.cf]+"</span>";
+  d.onclick=function(){ map.setView([S.lat,S.lon],17); marks[i].openPopup(); };
+  lst.appendChild(d);
+});
+document.getElementById("h-n").textContent=SITES.length;
+document.getElementById("h-v").textContent=nv;
+
+// ---- the rail text ----
+document.getElementById("klaws").innerHTML=
+ "<div class='sh'>the ground itself</div>"+
+ "<p>The contour lines under these markers are <b>real</b> \u2014 OpenTopoMap renders them live from SRTM elevation. Switch to TOPO and look at why the city is where it is: a <b>terrace</b>, high enough to be defensible and watered by Peirene, with the rock of Acrocorinth behind it and two seas within a morning's walk on either side. <span class='pur'>The topography is the entire explanation for Corinth.</span></p>"+
+ "<p>Apollo's temple to the Aphrodite temple on the summit is <b>"+(climb/1000).toFixed(2)+" km</b> in a straight line, computed by haversine on the sphere, not measured off the screen. The dashed violet line is that path. It goes almost straight up.</p>"+
+ "<p><b>K0 A DISAGREEMENT IS REPORTED, NOT SMOOTHED.</b> The Isthmia entry cites ~16 km while the coordinates give 10.1 km straight-line. Probably road distance versus great circle. <b>Probably is not verified</b>, so both numbers are on the marker and neither is quietly dropped.</p><div class='sh'>the honesty (K-laws)</div>"+
+ "<p><b>K1 EVERY COORDINATE CARRIES ITS PROVENANCE.</b> <span style='color:#7fff9f'>PUBLISHED</span> means a stated lat/lon reproduced from a citable gazetteer, named in the popup. <span style='color:#ffb45a'>APPROX</span> means I placed it from a description \u2014 close enough to walk to, <b>not a survey</b>, and it says so on its own marker. <span style='color:#ff6a5c'>NO DATA</span> means the excavators themselves have not published it.</p>"+
+ "<p><b>K2 THE BLANK ON THE MAP IS REAL.</b> The ASCSA's GIS page lists <b>Acrocorinth \u2014 \u201cno data yet\u201d</b>, along with the Asklepieion and the Gymnasium. That mountain is genuinely the unsurveyed part. It is also the one out the window.</p>"+
+ "<p><b>K3 THIS FILE IS A DOORWAY, NOT AN ARCHIVE.</b> The serious layers are far better than anything here and they are <b>free</b>. Ancient topo lines at <b>5 m intervals</b>, Greek and Roman monument features with names and dates, the city walls with honest marking of where they have actually been surveyed, and <b>every excavation trench with its excavator, date, notebook and page number</b>. Corinth data by James Herbst, <b>CC BY-SA 4.0</b>.</p>"+
+ "<p><b>K4 THE TILES ARE SOMEONE ELSE'S GIFT.</b> OpenTopoMap, OpenStreetMap and Esri serve these for free. Do not hammer them, and keep the attribution in the corner where it is.</p>"+
+ "<div class='sh'>go get the real data</div>"+
+ "<p>&rarr; <a href='https://www.ascsa.edu.gr/excavations/ancient-corinth/digital-corinth/maps-gis-data-and-archaeological-data-for-corinth-and-greece' target='_blank'>ASCSA \u00b7 Maps, GIS and archaeological data</a><br>"+
+ "&rarr; <a href='https://metis.ascsa.edu.gr' target='_blank'>Metis \u00b7 the unified Corinth archive</a><br>"+
+ "&rarr; <a href='https://corinth.ascsa.net/research?v=default' target='_blank'>Corinth Excavations \u00b7 records since 1896</a></p>"+
+ "<p style='color:rgba(255,215,0,.5)'>Two files worth the download on their own: the <b>Morosini map of 1687</b>, drawn south-up on six linen sheets and dated Christmas Day, months after his army's shot destroyed the Parthenon \u2014 and <b>Peytier's survey of 1829</b>, which shows that the lines of many roads in the village <b>have not changed since</b>. You are walking them.</p>";
+</script>
+</body></html>

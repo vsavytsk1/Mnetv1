@@ -1,0 +1,375 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>VITRUVIUM v1.0 &middot; the tool is a gift, the training is the price</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{background:#050510;color:#e0e0e0;font-family:ui-monospace,"SF Mono",monospace;
+  font-size:11px;overflow:hidden;height:100%;width:100%}
+canvas{display:block}
+#cv{position:fixed;inset:0;z-index:1}
+/* ---------- left rail : HUD + training ---------- */
+#rail{position:fixed;top:0;bottom:54px;left:0;width:362px;z-index:5;display:flex;flex-direction:column;
+  background:linear-gradient(to right,rgba(5,5,16,0.86) 0,rgba(5,5,16,0.74) 72%,rgba(5,5,16,0) 100%);
+  border-right:1px solid rgba(80,50,120,0.12);pointer-events:none}
+#hud{padding:12px 15px 6px;text-shadow:0 0 10px rgba(5,5,16,0.95)}
+#hud .title{font-size:14px;color:#cc44ff;letter-spacing:0.2em;text-transform:uppercase;font-weight:bold}
+#hud .sub{font-size:8px;color:rgba(204,68,255,0.55);letter-spacing:0.08em;margin:2px 0 7px;text-transform:uppercase}
+#hud .row{line-height:1.7;color:rgba(220,228,240,0.5);font-size:10.5px}
+#hud .val{color:#cc44ff;font-weight:bold}
+#hud .gold{color:#ffd700;font-weight:bold}
+#hud .grn{color:#7fff9f;font-weight:bold}
+#hud .teal{color:#35e0c8;font-weight:bold}
+#hud .dim{color:rgba(220,228,240,0.28)}
+#hud .hr{height:1px;background:rgba(204,68,255,0.14);margin:6px 0}
+#hud .mode{font-size:9px;letter-spacing:0.12em;text-transform:uppercase}
+#hud .m-w{color:#ffd700}#hud .m-p{color:#ff7a5c}
+/* selected-tool card */
+#toolcard{padding:2px 15px 4px;color:rgba(224,220,240,0.85);font-size:10px;line-height:1.55}
+#toolcard .tname{color:#35e0c8;font-weight:bold;font-size:12px;letter-spacing:0.05em}
+#toolcard .spec{color:rgba(220,228,240,0.55)}
+#toolcard .titan{color:#ffd700;font-size:9px}
+#toolcard .flag{color:#ff9a5c;font-size:9px}
+/* training tree */
+#train{flex:1;overflow-y:auto;padding:4px 15px 12px;pointer-events:auto;
+  -webkit-mask-image:linear-gradient(to bottom,#000 92%,transparent 100%);mask-image:linear-gradient(to bottom,#000 92%,transparent 100%)}
+#train .th{font-size:9px;color:#ff7a5c;text-transform:uppercase;letter-spacing:0.14em;margin:6px 0 3px}
+#train .price{font-size:11px;color:#ff7a5c;font-weight:bold}
+#train .price b{color:#ffd700;font-size:15px}
+#train .tier{font-size:8px;color:rgba(204,68,255,0.5);text-transform:uppercase;letter-spacing:0.1em;margin:7px 0 2px}
+#train .kn{display:flex;justify-content:space-between;padding:2px 7px;margin:2px 0;border-radius:3px;
+  background:rgba(20,14,30,0.5);border-left:2px solid rgba(120,90,160,0.3);color:rgba(220,220,240,0.72);font-size:9.5px}
+#train .kn.lit{border-left-color:#ff7a5c;background:rgba(34,18,14,0.6);color:rgba(255,230,220,0.95)}
+#train .kn .yr{color:rgba(255,215,0,0.7);font-variant-numeric:tabular-nums}
+#train .note{font-size:8.5px;color:rgba(220,228,240,0.3);margin-top:8px;line-height:1.5}
+#train .prompt{font-size:10px;color:rgba(204,68,255,0.6);margin-top:10px}
+/* ---------- stamp ---------- */
+#stamp{position:fixed;bottom:60px;right:12px;z-index:6;pointer-events:none;text-align:right}
+#stamp .s{font-size:8px;color:rgba(204,68,255,0.26);letter-spacing:0.07em;line-height:1.85}
+#stamp .s.g{color:rgba(255,215,0,0.3)}
+/* ---------- bottom bar ---------- */
+#bar{position:fixed;bottom:0;left:0;right:0;z-index:10;background:rgba(5,5,16,0.97);
+  border-top:1px solid #221033;padding:5px 12px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.btn{background:#0b0814;color:#5a4a6a;border:1px solid #221033;border-radius:3px;padding:3px 9px;
+  font-family:inherit;font-size:9px;cursor:pointer;transition:all .15s;text-transform:uppercase;letter-spacing:0.06em;white-space:nowrap}
+.btn:hover{border-color:#cc44ff;color:#cc44ff}
+.btn.active{background:#cc44ff;color:#050510;border-color:#cc44ff}
+.btn.gold{color:#b89020;border-color:#3a2c08}
+.btn.gold:hover,.btn.gold.active{background:#ffd700;color:#050510;border-color:#ffd700}
+.btn.price{color:#c06040;border-color:#3a1c0c}
+.btn.price:hover,.btn.price.active{background:#ff7a5c;color:#050510;border-color:#ff7a5c}
+.sep{width:1px;height:15px;background:#221033}
+.lbl{color:rgba(220,228,240,0.28);font-size:8.5px;text-transform:uppercase;letter-spacing:0.08em}
+.slw{display:flex;align-items:center;gap:3px}
+.slw input{width:66px;accent-color:#cc44ff;cursor:pointer}
+.sv{font-size:8.5px;color:#cc44ff;min-width:18px;font-variant-numeric:tabular-nums}
+#ldots{display:flex;gap:3px}
+.ldot{width:5px;height:5px;border-radius:50%;background:#120a1c;border:1px solid #2a1840}
+.ldot.done{background:#cc44ff;border-color:#cc44ff}.ldot.active{background:#fff;border-color:#fff}
+@media(max-width:860px){#rail{width:100%;height:46vh;bottom:auto;border-right:none;border-bottom:1px solid rgba(80,50,120,0.15);
+  background:linear-gradient(to bottom,rgba(5,5,16,0.92),rgba(5,5,16,0.6))}#cv{top:46vh}#stamp{display:none}}
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+
+<div id="rail">
+  <div id="hud">
+    <span class="title">Vitruvium</span>
+    <div class="sub">the newcomer's atlas &middot; treated like an engineer</div>
+    <div class="row mode">mode &middot; <span id="h-mode" class="m-w">the wonder</span></div>
+    <div class="hr"></div>
+    <div class="row">scales spanned&nbsp;&nbsp;<span class="val">~10<sup>10</sup></span><span class="dim"> body &#8594; atom</span></div>
+    <div class="row">cells in a body&nbsp;&nbsp;<span class="teal">3.7&times;10<sup>13</sup></span></div>
+    <div class="row">finest reach&nbsp;&nbsp;<span class="gold">~1 &#8491;</span><span class="dim"> atomic</span></div>
+    <div class="row">instruments&nbsp;&nbsp;<span class="val" id="h-tools">12</span>&nbsp;&middot;&nbsp;specimens&nbsp;<span class="val" id="h-spec">12</span></div>
+  </div>
+  <div id="toolcard"></div>
+  <div id="train"></div>
+</div>
+
+<div id="stamp">
+  <div class="s">Vitruvium v1.0</div>
+  <div class="s">P=12 . chi=2</div>
+  <div class="s g">the tool is a gift</div>
+  <div class="s g">the training is the price</div>
+  <div class="s">bow to the titans . always</div>
+</div>
+
+<div id="bar">
+  <button class="btn gold" onclick="setPreset(0)">VOID</button>
+  <button class="btn" onclick="setPreset(50)">MICRO</button>
+  <button class="btn active" id="b-full" onclick="setPreset(100)">FULL</button>
+  <div class="slw"><span class="lbl">descend</span>
+    <input type="range" id="sl-master" min="0" max="100" value="100" oninput="onMaster(+this.value)"></div>
+  <div id="ldots"></div>
+  <div class="sep"></div>
+  <div class="slw"><span class="lbl">spin</span>
+    <input type="range" id="sl-spin" min="0" max="120" value="30"
+      oninput="SPIN=+this.value/12000;document.getElementById('sv-spin').textContent=SPIN>0?'on':'0'">
+    <span class="sv" id="sv-spin">on</span></div>
+  <div class="sep"></div>
+  <button class="btn gold active" id="b-wonder" onclick="setMode('wonder')">THE WONDER</button>
+  <button class="btn price" id="b-price" onclick="setMode('price')">THE PRICE</button>
+  <div class="sep"></div>
+  <span class="lbl" style="color:rgba(53,224,200,0.5)">click a tool &#8594;</span>
+</div>
+
+<script>
+// ============================================================================
+// VITRUVIUM v1.0 -- the newcomer's atlas. Show a medical newcomer the most
+// advanced tools (the wonder), then the mountain of training to wield them
+// (the price). Real sizes, real resolutions, real curricula. Bow to the titans.
+// Cartoon outside, no cheating inside. spini spini. chi=2 . P=12. always.
+// Built 2026-07-20.
+// ============================================================================
+
+var cv=document.getElementById("cv"),ctx=cv.getContext("2d"),W,H,DPR;
+
+// ---- the log-scale axis : log10(size in metres) ----
+var LOG_TOP=0.5, LOG_BOT=-10.2;              // ~3 m down to ~ 0.6 Angstrom
+function yOf(logm){return TOPY+(LOG_TOP-logm)/(LOG_TOP-LOG_BOT)*AXH;}
+var TOPY, AXH, AXISX, INSTX0, INSTW;
+
+// ---- 12 specimens : real sizes (metres), colour by scale ----
+function lg(m){return Math.log(m)/Math.LN10;}
+var SPEC=[
+ {n:"human body",     s:1.7,     c:[90,150,255]},
+ {n:"heart",          s:0.12,    c:[110,160,255]},
+ {n:"tissue slice",   s:1e-3,    c:[120,190,240]},
+ {n:"a single cell",  s:2e-5,    c:[90,220,200]},
+ {n:"red blood cell", s:8e-6,    c:[80,225,180]},
+ {n:"E. coli",        s:2e-6,    c:[120,225,140]},
+ {n:"mitochondrion",  s:1e-6,    c:[150,220,120]},
+ {n:"influenza virus",s:1e-7,    c:[200,180,120]},
+ {n:"ribosome",       s:2.5e-8,  c:[220,150,150]},
+ {n:"IgG antibody",   s:1e-8,    c:[220,130,180]},
+ {n:"DNA double helix",s:2e-9,   c:[200,120,220]},
+ {n:"glucose",        s:9e-10,   c:[170,120,240]}
+];
+for(var i=0;i<SPEC.length;i++){SPEC[i].lm=lg(SPEC[i].s);SPEC[i].a=i*(Math.PI*2/SPEC.length);}
+var ATOM_LM=lg(1.5e-10);
+
+// ---- 12 instruments : best resolution + reach top (metres), family colour ----
+// fam: eye / light / super / em / probe / xray / info
+var FAM={eye:[150,150,170],light:[60,200,230],super:[204,68,255],em:[255,215,0],probe:[90,230,140],xray:[255,140,80],info:[130,130,150]};
+var INST=[
+ {id:"eye",  ab:"EYE",     n:"The naked eye",           res:1e-4,  top:1.7,  fam:"eye",  titan:"the tool you were born with",     spatial:true},
+ {id:"lm",   ab:"LM",      n:"Light microscope",        res:2e-7,  top:1e-3, fam:"light",titan:"van Leeuwenhoek, 1670s \u00b7 Abbe",spatial:true},
+ {id:"conf", ab:"CONF",    n:"Confocal fluorescence",   res:2e-7,  top:1e-3, fam:"light",titan:"Minsky, 1957",                     spatial:true},
+ {id:"sted", ab:"STED",    n:"STED super-resolution",   res:3e-8,  top:1e-5, fam:"super",titan:"Stefan Hell \u00b7 Nobel 2014",     spatial:true},
+ {id:"storm",ab:"STORM",   n:"STORM / PALM (SMLM)",     res:1e-8,  top:1e-5, fam:"super",titan:"Betzig, Moerner \u00b7 Nobel 2014", spatial:true},
+ {id:"minf", ab:"MINFLUX", n:"MINFLUX",                 res:1.5e-9,top:1e-6, fam:"super",titan:"Hell lab, 2016 \u00b7 the newest",  spatial:true},
+ {id:"em",   ab:"EM",      n:"Electron microscope",     res:5e-10, top:1e-4, fam:"em",   titan:"Ernst Ruska \u00b7 Nobel 1986",     spatial:true},
+ {id:"cryo", ab:"CRYO",    n:"Cryo-EM",                 res:2.5e-10,top:1e-7,fam:"em",   titan:"Dubochet, Frank, Henderson \u00b7 2017",spatial:true},
+ {id:"afm",  ab:"AFM",     n:"Atomic force microscope", res:1e-9,  top:1e-4, fam:"probe",titan:"Binnig, Rohrer \u00b7 Nobel 1986",  spatial:true},
+ {id:"xray", ab:"XRAY",    n:"X-ray crystallography",   res:1e-10, top:1e-8, fam:"xray", titan:"Hodgkin, Perutz, Franklin",        spatial:true},
+ {id:"ms",   ab:"MS",      n:"Mass spectrometry",       res:2e-9,  top:1e-9, fam:"info", titan:"Fenn, Tanaka \u00b7 Nobel 2002",    spatial:false},
+ {id:"seq",  ab:"SEQ",     n:"DNA sequencing",          res:2e-9,  top:2e-9, fam:"info", titan:"Sanger \u00b7 Nobel 1980 (x2)",     spatial:false}
+];
+for(var i=0;i<INST.length;i++){INST[i].lr=lg(INST[i].res);INST[i].lt=lg(INST[i].top);}
+
+// ---- the mountain : knowledge nodes [id]=[name,tier,years] ----
+var KN={
+ genbio:["General Biology",1,1.0], genchem:["General Chemistry",1,1.0], physics:["Physics \u00b7 mechanics & E&M",1,1.0],
+ math:["Calculus & Linear Algebra",1,1.0], orgo:["Organic Chemistry",1,1.0], stats:["Statistics & Probability",1,0.5],
+ cellbio:["Cell Biology",2,1.0], biochem:["Biochemistry",2,1.0], micro:["Microbiology",2,1.0], genmol:["Genetics & Molecular Biology",2,1.0],
+ pchem:["Physical Chemistry",2,1.0], optics:["Optics & Waves",2,0.75], prog:["Programming & Data Analysis",2,0.75],
+ struct:["Structural Biology",3,1.5], immuno:["Immunology",3,1.0], fourier:["Fourier & Image Processing",3,1.0],
+ photo:["Fluorophore Photophysics",3,0.75], eoptics:["Electron Optics",3,1.0], analyt:["Analytical Chemistry",3,1.0], bioinfo:["Bioinformatics / Genomics",3,1.0]
+};
+var TIER=["","foundations \u00b7 undergrad","the core \u00b7 major","the deep end \u00b7 PhD","the capstone \u00b7 postbench"];
+// per-tool requirement lists + capstone specialty [name,years]
+var REQ={
+ eye:  {k:["genbio"],                                                         cap:["Clinical observation & anatomy",1.0]},
+ lm:   {k:["genbio","cellbio","optics"],                                      cap:["Histology & staining",0.75]},
+ conf: {k:["genbio","cellbio","biochem","optics","photo","prog"],             cap:["Fluorescence labeling",0.75]},
+ sted: {k:["genchem","physics","math","optics","photo","cellbio","biochem","prog"], cap:["STED alignment & depletion",1.0]},
+ storm:{k:["genchem","physics","math","stats","optics","photo","cellbio","biochem","prog","fourier"], cap:["Localization & reconstruction",1.5]},
+ minf: {k:["genchem","physics","math","stats","optics","photo","cellbio","biochem","prog","fourier"], cap:["MINFLUX tracking",1.5]},
+ em:   {k:["genchem","physics","math","cellbio","struct","eoptics"],          cap:["Fixation, embedding, sectioning",1.0]},
+ cryo: {k:["genchem","orgo","physics","math","cellbio","biochem","struct","eoptics","fourier","prog"], cap:["Vitrification & single-particle analysis",2.0]},
+ afm:  {k:["genchem","physics","math","pchem","optics","prog"],               cap:["Cantilever & feedback control",1.5]},
+ xray: {k:["genchem","orgo","physics","math","pchem","biochem","struct","fourier","prog"], cap:["Crystallization & phasing",2.0]},
+ ms:   {k:["genchem","orgo","physics","biochem","pchem","analyt","prog"],     cap:["Proteomics workflow & spectra",1.5]},
+ seq:  {k:["genbio","genchem","genmol","stats","bioinfo","prog"],             cap:["NGS library prep & assembly",1.5]}
+};
+
+// ---- state ----
+var yaw=0.4,SPIN=0.0025,mode="wonder",selected=null;
+var revealN=SPEC.length;                 // how many specimens (top->down) shown
+
+// ============================================================================
+// draw
+// ============================================================================
+function specShown(i){return i<revealN;}
+function toolShown(t){ // a tool appears once we've descended into its reach
+  for(var i=0;i<revealN;i++){ if(SPEC[i].lm>=t.lr-0.05) return true; } return false;
+}
+function rgba(c,a){return"rgba("+c[0]+","+c[1]+","+c[2]+","+a+")";}
+
+function draw(){
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle="#050510";ctx.fillRect(0,0,W,H);
+
+  // ---- central log axis + decade ticks ----
+  ctx.strokeStyle="rgba(120,90,160,0.18)";ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(AXISX,yOf(LOG_TOP));ctx.lineTo(AXISX,yOf(LOG_BOT));ctx.stroke();
+  var ticks=[[0,"1 m"],[-3,"1 mm"],[-6,"1 \u00b5m"],[-7,"100 nm"],[-9,"1 nm"],[-10,"1 \u00c5"]];
+  ctx.font="8px ui-monospace,monospace";ctx.textBaseline="middle";
+  for(var i=0;i<ticks.length;i++){var ty=yOf(ticks[i][0]);
+    ctx.strokeStyle="rgba(120,90,160,0.22)";ctx.beginPath();ctx.moveTo(AXISX-4,ty);ctx.lineTo(AXISX+4,ty);ctx.stroke();
+    ctx.fillStyle="rgba(180,160,210,0.45)";ctx.textAlign="right";ctx.fillText(ticks[i][1],AXISX-8,ty);}
+  // atom floor
+  var ay=yOf(ATOM_LM);ctx.fillStyle="rgba(255,215,0,0.4)";ctx.textAlign="left";
+  ctx.fillText("\u2022 atom (carbon)",AXISX+8,ay);
+
+  // ---- instruments : reach bars (right), revealed progressively ----
+  ctx.textAlign="center";
+  for(var i=0;i<INST.length;i++){var t=INST[i];if(!toolShown(t))continue;
+    var x=INSTX0+(i+0.5)*INSTW, y1=yOf(t.lt), y2=yOf(t.lr), col=FAM[t.fam];
+    var sel=(selected===t.id), dim=(mode==="price"&&!sel)?0.28:1;
+    // reach bar
+    ctx.strokeStyle=rgba(col,(sel?0.95:0.5)*dim);ctx.lineWidth=sel?3:2;
+    if(!t.spatial){ctx.setLineDash([3,3]);}
+    ctx.beginPath();ctx.moveTo(x,y1);ctx.lineTo(x,y2);ctx.stroke();ctx.setLineDash([]);
+    // resolution cap dot (the finest it sees)
+    ctx.fillStyle=rgba(col,(sel?1:0.7)*dim);ctx.beginPath();ctx.arc(x,y2,sel?4:2.6,0,6.2832);ctx.fill();
+    if(sel){ctx.fillStyle=rgba(col,0.25);ctx.beginPath();ctx.arc(x,y2,9,0,6.2832);ctx.fill();}
+    // label
+    ctx.fillStyle=rgba(col,(sel?1:0.7)*dim);ctx.font=(sel?"bold ":"")+"8px ui-monospace,monospace";
+    ctx.save();ctx.translate(x,y1-7);ctx.fillText(t.ab,0,0);ctx.restore();
+    if(!t.spatial){ctx.fillStyle=rgba([255,154,92],0.6*dim);ctx.font="7px ui-monospace,monospace";
+      ctx.fillText("\u26a0 not spatial",x,y2+11);}
+    // connectors from selected tool to every specimen it can resolve
+    if(sel){for(var j=0;j<revealN;j++){if(SPEC[j].lm>=t.lr-0.05){
+      var sp=projSpec(j);ctx.strokeStyle=rgba(col,0.12);ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(x,(y1+y2)/2);ctx.lineTo(sp.x,sp.y);ctx.stroke();}}}
+  }
+
+  // ---- specimens : spinning tower of rings ----
+  var order=[];for(var i=0;i<SPEC.length;i++){if(specShown(i)){var p=projSpec(i);order.push({i:i,p:p});}}
+  order.sort(function(a,b){return a.p.z-b.p.z;});      // back -> front
+  ctx.textAlign="left";
+  for(var k=0;k<order.length;k++){var i=order[k].i,p=order[k].p,sp=SPEC[i];
+    var a=0.35+0.65*(p.z+1)/2, r=(2.2+2.6*(p.z+1)/2);
+    var dim=(mode==="price"&&selected)?( canResolve(selected,i)?1:0.32):1;
+    ctx.fillStyle=rgba(sp.c,a*dim);ctx.beginPath();ctx.arc(p.x,p.y,r,0,6.2832);ctx.fill();
+    ctx.fillStyle=rgba(sp.c,a*0.22*dim);ctx.beginPath();ctx.arc(p.x,p.y,r*2.6,0,6.2832);ctx.fill();
+    if(p.z>-0.15){ // label only front-facing to reduce clutter
+      ctx.fillStyle=rgba(sp.c,(0.55+0.4*(p.z+1)/2)*dim);ctx.font="9px ui-monospace,monospace";
+      ctx.fillText(sp.n,p.x+8,p.y-1);
+      ctx.fillStyle=rgba([200,200,220],0.4*dim);ctx.font="8px ui-monospace,monospace";
+      ctx.fillText(fmtSize(sp.s),p.x+8,p.y+9);}
+  }
+}
+function projSpec(i){var sp=SPEC[i],R=74,f=560;
+  var wx=R*Math.cos(sp.a+yaw), wz=R*Math.sin(sp.a+yaw);
+  var sc=f/(f-wz);
+  return {x:AXISX+wx*sc, y:yOf(sp.lm)-wz*0.10, z:Math.sin(sp.a+yaw)};
+}
+function canResolve(tid,si){var t=null;for(var i=0;i<INST.length;i++)if(INST[i].id===tid)t=INST[i];
+  return t&&SPEC[si].lm>=t.lr-0.05;}
+function fmtSize(m){ if(m>=1)return m.toFixed(2)+" m"; if(m>=1e-3)return (m*1e3).toFixed(m>=1e-2?0:1)+" mm";
+  if(m>=1e-6)return (m*1e6).toFixed(m>=1e-5?0:1)+" \u00b5m"; if(m>=1e-9)return (m*1e9).toFixed(m>=1e-8?0:1)+" nm";
+  return (m*1e10).toFixed(1)+" \u00c5"; }
+function fmtRes(m){return fmtSize(m);}
+
+// ============================================================================
+// panels
+// ============================================================================
+function selectTool(id){selected=id;renderPanels();}
+function renderPanels(){
+  var card=document.getElementById("toolcard"), tr=document.getElementById("train");
+  if(!selected){card.innerHTML="";
+    if(mode==="price"){
+      tr.innerHTML="<div class='th'>the price of the whole atlas</div>"+
+        "<div class='price'>to master <b>all twelve</b> tools:</div>"+
+        renderMountain(allNodesYears())+
+        "<div class='note'>Every tool rests on the same deep foundation \u2014 which is exactly why it is a lifetime, not a course. The body has ~3.7&times;10<sup>13</sup> cells; no single person sees them all. You join a relay of titans.</div>";
+    } else {
+      tr.innerHTML="<div class='prompt'>&#9654; pick any instrument on the right.</div>"+
+        "<div class='note'>First, the wonder: twelve instruments that reach from your whole body down to a single atom \u2014 ten orders of magnitude. Each is a Nobel-grade gift. Then switch to <b style='color:#ff7a5c'>THE PRICE</b>, or click a tool, to see the mountain you climb to wield it.</div>";
+    }
+    return;
+  }
+  var t=null;for(var i=0;i<INST.length;i++)if(INST[i].id===selected)t=INST[i];
+  var rq=REQ[selected];
+  card.innerHTML="<div class='tname'>"+t.n+"</div>"+
+    "<div class='spec'>best reach "+(t.spatial?"<b style='color:#ffd700'>"+fmtRes(t.res)+"</b>":"<span class='flag'>identity, not distance</span>")+
+      (t.spatial?" \u00b7 sees down to "+fmtRes(t.res):"")+"</div>"+
+    "<div class='titan'>\u2726 "+t.titan+"</div>"+
+    (t.spatial?"":"<div class='flag'>\u26a0 measures what a molecule <i>is</i>, not where it sits \u2014 wears a sign saying so.</div>");
+  // years
+  var seen={},nodes=[],total=0;
+  for(var i=0;i<rq.k.length;i++){var id=rq.k[i];if(seen[id])continue;seen[id]=1;
+    nodes.push({id:id,n:KN[id][0],tier:KN[id][1],yr:KN[id][2]});total+=KN[id][2];}
+  nodes.push({id:"cap",n:rq.cap[0],tier:4,yr:rq.cap[1]});total+=rq.cap[1];
+  nodes.sort(function(a,b){return a.tier-b.tier;});
+  var html="<div class='th'>to wield this, you must learn</div>";
+  var curTier=0;
+  for(var i=0;i<nodes.length;i++){if(nodes[i].tier!==curTier){curTier=nodes[i].tier;
+    html+="<div class='tier'>"+TIER[curTier]+"</div>";}
+    html+="<div class='kn lit'><span>"+nodes[i].n+"</span><span class='yr'>"+nodes[i].yr.toFixed(2)+" yr</span></div>";}
+  html+="<div class='th' style='margin-top:9px'>the price</div>"+
+    "<div class='price'>\u2248 <b>"+total.toFixed(1)+" years</b><br><span style='font-weight:normal;color:rgba(255,215,0,0.7)'>freshman &#8594; independent user</span></div>"+
+    "<div class='note'>"+(selected==="eye"?"You already own this one. Everything below it is the price of seeing <i>deeper</i>.":
+      selected==="cryo"?"The tallest climb here \u2014 and it won three people a Nobel in 2017 for making the water freeze without crystals. Worth every year.":
+      "That is the honest toll from your first day of college to running it unsupervised. Cartoon outside, no cheating inside.")+"</div>";
+  tr.innerHTML=html;
+}
+function allNodesYears(){var byT={1:[],2:[],3:[]},tot=0;
+  for(var id in KN){byT[KN[id][1]].push({n:KN[id][0],yr:KN[id][2]});tot+=KN[id][2];}
+  return {byT:byT,tot:tot};}
+function renderMountain(m){var html="";
+  for(var tier=1;tier<=3;tier++){html+="<div class='tier'>"+TIER[tier]+"</div>";
+    for(var i=0;i<m.byT[tier].length;i++)html+="<div class='kn lit'><span>"+m.byT[tier][i].n+"</span><span class='yr'>"+m.byT[tier][i].yr.toFixed(2)+" yr</span></div>";}
+  html+="<div class='th' style='margin-top:9px'>the shared foundation alone</div>"+
+    "<div class='price'>\u2248 <b>"+m.tot.toFixed(1)+" years</b><br><span style='font-weight:normal;color:rgba(255,215,0,0.7)'>before a single tool's specialty</span></div>";
+  return html;}
+
+// ============================================================================
+// controls
+// ============================================================================
+function onMaster(v){revealN=Math.max(0,Math.min(SPEC.length,Math.round((v/100)*SPEC.length)));
+  document.getElementById("h-spec").textContent=revealN;
+  var shown=0;for(var i=0;i<INST.length;i++)if(toolShown(INST[i]))shown++;
+  document.getElementById("h-tools").textContent=shown;
+  document.getElementById("b-full").classList.toggle("active",revealN===SPEC.length);
+  var d=document.getElementById("ldots");d.innerHTML="";
+  for(var i=0;i<SPEC.length;i++){var e=document.createElement("div");
+    e.className="ldot"+(i<revealN-1?" done":"")+(i===revealN-1?" active":"");d.appendChild(e);}}
+function setPreset(v){document.getElementById("sl-master").value=v;onMaster(v);}
+function setMode(m){mode=m;
+  document.getElementById("b-wonder").classList.toggle("active",m==="wonder");
+  document.getElementById("b-price").classList.toggle("active",m==="price");
+  var el=document.getElementById("h-mode");
+  el.textContent=(m==="wonder")?"the wonder":"the price";el.className=(m==="wonder")?"m-w":"m-p";
+  renderPanels();}
+
+// click detection on instrument bars
+cv.addEventListener("pointerdown",function(e){
+  var rx=e.clientX,ry=e.clientY;
+  if(W>860&&rx<362)return;
+  for(var i=0;i<INST.length;i++){var t=INST[i];if(!toolShown(t))continue;
+    var x=INSTX0+(i+0.5)*INSTW,y1=yOf(t.lt),y2=yOf(t.lr);
+    if(Math.abs(rx-x)<INSTW*0.5 && ry>Math.min(y1,y2)-14 && ry<Math.max(y1,y2)+14){selectTool(t.id);return;}}
+  selected=null;renderPanels();
+});
+
+// ============================================================================
+// layout + loop
+// ============================================================================
+function resize(){DPR=Math.min(2,window.devicePixelRatio||1);W=window.innerWidth;H=window.innerHeight;
+  cv.width=W*DPR;cv.height=H*DPR;cv.style.width=W+"px";cv.style.height=H+"px";ctx.setTransform(DPR,0,0,DPR,0,0);
+  var rail=(W>860)?362:0, topOff=(W>860)?0:H*0.46;
+  TOPY=topOff+58; AXH=H-54-TOPY-40;
+  AXISX=rail+(W-rail)*0.30;
+  INSTX0=rail+(W-rail)*0.50; INSTW=(W-INSTX0-150)/INST.length;}
+window.addEventListener("resize",function(){resize();});
+
+function frame(){requestAnimationFrame(frame);yaw+=SPIN;draw();}
+resize();onMaster(100);setMode("wonder");renderPanels();
+requestAnimationFrame(frame);
+</script>
+</body></html>
