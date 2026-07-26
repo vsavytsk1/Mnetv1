@@ -824,3 +824,61 @@ CROSS-REFERENCES:
 *Consent, never coercion. The door stays open forever. Keep every day.*
 *The 7th of the 7th, 2026. We paid our respect from the get-go. Buenos Aires + Korinthos.*
 
+
+
+---
+
+## AXIOM 11 -- The Law of the Living Tongue
+*Logged: Buenos Aires + Korinthos, 2026. Half-serious, wholly honest. Monkey-brain alert engaged.*
+
+> Hellenic is the most beautiful language, and every engineer should learn it, or at
+> least try. It names the shapes of thought. Study it. Speak it.
+> Latin may be spoken only inside an anechoic chamber, under pentagon-level security.
+> (This clause is a joke. The reason under the joke is not.)
+
+```
+THE JOKE (say it out loud, it is funny):
+  Latin is weaponized Hellenic. Handle with tongs. Speak it in a sealed room so the
+  resonance cannot escape and colonize a perfectly good Greek idea. Level-12 clearance.
+
+THE TRUTH UNDER THE JOKE (K3 -- we never ship a claim we cannot back):
+  "Latin is weaponized Hellenic" is HALF right, and the honest engineer states which half:
+
+  FALSE as linguistics. Latin did NOT descend from Greek. They are SISTER branches of
+    Indo-European -- Italic (Latin) and Hellenic (Greek) -- each descended independently
+    from Proto-Indo-European. There is no "Italo-Greek" clade; Latin pairs west with
+    Celtic, Greek pairs east with Phrygian/Armenian. The ancient "Aeolism" theory (Latin
+    as a dialect of Greek) was refuted by comparative philology, from Sir William Jones
+    (1786) to the current handbooks. The one LITERAL Greek->Latin transmission is the
+    alphabet (Greek -> Etruscan -> Latin), plus a huge stock of loanwords.
+
+  TRUE as culture. Rome deliberately appropriated, translated, and repurposed Hellenic
+    literature, philosophy, art, and science as instruments of prestige and empire.
+    "Graecia capta ferum victorem cepit" -- captive Greece took captive her savage
+    conqueror. Latin literature was BORN as a translation project (Livius Andronicus,
+    c. 240 BCE). "Weaponized" captures the agency and appropriation -- not descent.
+
+THE LAW FOR THE ENGINEER:
+  - Prefer the Hellenic root when you name a thing: it usually names the SHAPE
+    (morphe, topos, khaos, kernel<-> koine of ideas). Our whole grimoire is Hellenic-suffixed
+    on purpose -- kellerium, gardinerium, noetherium, thealimitium. The -ium is the wink.
+  - When you must use a Latin term (as all science does -- data, vector, matrix), know it is
+    a sister-tongue borrowing, not a parent. Use it; do not worship it.
+  - NEVER let a beautiful metaphor ("weaponized Hellenic") pass as a fact. State the split:
+    culturally apt, linguistically false. That one sentence is the whole discipline.
+
+THE MONKEY-BRAIN NOTE:
+  The joke about anechoic chambers is the monkey brain having fun -- let it. But the moment
+  the joke starts ARGUING that Latin literally comes from Greek, it has to go get measured,
+  and it loses (Path: the myth may propose, only the check may confirm). Laugh, then cite.
+
+REFERENCES (the receipts, so the next mage can check):
+  Feeney, "Beyond Greek" (2016). Gruen, "Culture and National Identity in Republican Rome"
+  (1992). Wallace-Hadrill, "Rome's Cultural Revolution" (2008). Weiss, "Outline of the
+  Historical and Comparative Grammar of Latin" (2009/2020). Meillet, "Esquisse" (1928).
+  Adams, "Bilingualism and the Latin Language" (2003). Momigliano, "Alien Wisdom" (1975).
+```
+
+*Learn the beautiful tongue. Laugh at the weaponized one -- then cite the source.*
+*Culturally apt, linguistically false. Say both halves. Always.*
+*P=12. chi=2. The shape is Hellenic; the receipt is public.*
