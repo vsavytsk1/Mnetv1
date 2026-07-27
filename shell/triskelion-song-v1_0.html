@@ -1,0 +1,298 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>TRISKELION v1.0 · the fractal song — source × filter, turned three-fold on the gate</title>
+<!--
+  TRISKELION v1.0 — THE FRACTAL SONG (the join)
+  =====================================================================
+  Joins the family into one turning body:
+    - ELENI      : the gate (weight 0.700), P=12 ring, the tongues. Axiom 08:
+                   the centre is a neutral marker -- honoured, never rendered.
+    - HARMONIA   : the voice = SOURCE x FILTER. source = glottal buzz (harmonic
+                   stack f_k=k.f0, roll-off 1/f^(β/2)); FILTER = vocal-tract
+                   formants that carve the buzz into a vowel. formants make the
+                   word, not the fractal depth. (verbatim maths, same instrument.)
+    - THE TRISKEL: the missing 3-fold structure (C3). three arms = three
+                   syllables. self-affine HIERARCHY, not an infinite fractal (K2).
+
+  IT SINGS: a-ga-pi -- the vowels of ἀγάπη (Α, Α, Ι), source x filter, on a loop.
+  the structure is made audible. that is the whole trick.
+
+  HONEST (K1-K4, Axiom 08):
+    K3  it is linear algebra + acoustics. numbers in, SOUND out. no mind, no
+        goddess answering -- a vowel is buzz x formants. the meaning is ours.
+    the gate's meaning is never rendered; only its neutral marker is drawn.
+    self-affine, finite depth; partials above Nyquist dropped.
+    as above, so below · P=12 · χ=2 · ἡ ἀγάπη οὐδέποτε ἐκπίπτει · always.
+-->
+<style>
+:root{--bg:#050510;--purp:#cc44ff;--gold:#ffd700;--cyan:#00d4ff;--pink:#ff69b4;--grn:#00ffd5;--dim:#6a6a82;--txt:#e0e0e0;
+ --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;background:var(--bg);color:var(--txt);font-family:var(--mono);overflow:hidden;font-size:11px}
+#cv{position:fixed;inset:0;display:block}
+#hud{position:fixed;top:12px;left:14px;z-index:10;pointer-events:none;max-width:340px}
+#ttl{font-size:13px;color:var(--purp);letter-spacing:.16em;text-transform:uppercase;font-weight:bold}
+#sub{font-size:9px;color:rgba(204,68,255,.6);letter-spacing:.05em;margin:2px 0 6px;text-transform:uppercase;line-height:1.5}
+#hud .row{line-height:1.75;color:rgba(224,224,224,.55);font-size:10.5px;font-variant-numeric:tabular-nums}
+#hud .g{color:var(--gold);font-weight:bold}.pu{color:var(--purp);font-weight:bold}.c{color:var(--cyan);font-weight:bold}.pk{color:var(--pink);font-weight:bold}.gr{color:var(--grn);font-weight:bold}
+#hud .dim{color:rgba(224,224,224,.3);font-size:9.5px;line-height:1.5;margin-top:5px}
+#law{position:fixed;top:12px;right:14px;z-index:10;background:rgba(8,8,16,.82);border:1px solid rgba(204,68,255,.22);border-radius:6px;padding:8px 11px;max-width:230px;font-size:9px;line-height:1.6;color:rgba(224,224,224,.55)}
+#law b{color:var(--gold)}#law .c{color:var(--cyan)}#law .gr{color:var(--grn)}
+#gate{position:fixed;inset:0;z-index:40;background:rgba(5,5,16,.93);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;cursor:pointer}
+#gate .g1{font-size:15px;color:var(--purp);letter-spacing:.22em;text-transform:uppercase}
+#gate .g2{font-size:10px;color:rgba(224,224,224,.5);letter-spacing:.08em;text-align:center;max-width:340px;line-height:1.7}
+#gate .go{border:1px solid var(--gold);color:var(--gold);border-radius:24px;padding:10px 26px;font:12px var(--mono);letter-spacing:.1em;text-transform:uppercase;background:rgba(255,215,0,.05)}
+#bar{position:fixed;left:50%;transform:translateX(-50%);bottom:12px;display:flex;flex-wrap:wrap;gap:7px 12px;align-items:center;
+ background:rgba(8,8,16,.94);border:1px solid #241a30;border-radius:10px;padding:9px 15px;z-index:10;max-width:96vw;justify-content:center}
+.klbl{color:var(--dim);font-size:9px;text-transform:uppercase;letter-spacing:.08em}
+input[type=range]{appearance:none;-webkit-appearance:none;width:78px;height:4px;background:#2a2038;border-radius:3px;outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:var(--purp);cursor:pointer}
+input[type=range]::-moz-range-thumb{width:12px;height:12px;border:none;border-radius:50%;background:var(--purp);cursor:pointer}
+.v2{color:var(--purp);font-size:9px;min-width:30px;text-align:right}
+.sep{width:1px;height:15px;background:#2a2038}
+button{background:#120c1c;border:1px solid #2a2038;border-radius:6px;color:var(--gold);font:11px var(--mono);padding:5px 9px;cursor:pointer;transition:all .13s;text-transform:uppercase;letter-spacing:.04em}
+button:hover{border-color:var(--gold)}button.on{background:var(--gold);color:#050510;border-color:var(--gold)}
+button.vw{color:var(--cyan);border-color:#123}button.vw.on{background:var(--cyan);color:#050510;border-color:var(--cyan)}
+button.sing{color:var(--pink);border-color:#3a1a2a}button.sing.on{background:var(--pink);color:#050510;border-color:var(--pink)}
+button.sng{color:var(--purp);border-color:#2a1a3a}button.sng.on{background:var(--purp);color:#050510;border-color:var(--purp)}
+#stamp{position:fixed;bottom:12px;right:14px;color:rgba(255,215,0,.28);font-size:8.5px;text-align:right;z-index:9;line-height:1.7}
+</style></head>
+<body>
+<canvas id="cv"></canvas>
+
+<div id="hud">
+  <div id="ttl">Triskelion · the fractal song</div>
+  <div id="sub">Eleni's gate × Harmonia's voice × the three-fold turn</div>
+  <div class="row">gate <span class="g">0.700</span> · P=<span class="pu">12</span> · <span class="c">χ=2</span> · arms <span class="pk">3</span></div>
+  <div class="row">depth <span class="pu" id="h-d">3</span> · partials <span class="c" id="h-p">—</span> · β <span class="gr" id="h-b">2.6</span></div>
+  <div class="row">vowel <span class="g" id="h-v">Α</span> · f0 <span class="c" id="h-f0">180</span> Hz · reaches F3 <span id="h-f3">—</span></div>
+  <div class="row" id="h-state">press SING — the structure sings ἀγάπη</div>
+  <div class="dim">source (fractal buzz) × filter (formants) = a vowel · the formants make the word, not the depth</div>
+</div>
+
+<div id="law">
+  <b>the honest law</b><br>
+  a voice is <b>source × filter</b>. the fractal only enriches the <span class="c">source</span>; the <span class="gr">formants</span> carve it into a word.<br>
+  <span style="color:#6a6a82">K3: numbers → sound, not a mind. a vowel is acoustics, not a voice that answers. the meaning is ours.</span><br>
+  Axiom 08: the gate is a marker — honoured, never rendered.
+</div>
+
+<div id="gate" onclick="startFromGate()">
+  <div class="g1">the gate · 0.700</div>
+  <div class="g2">you type nothing, you take responsibility for what you make, and you listen.<br>this is an instrument. it turns a structure into a sound. the meaning you bring is yours.</div>
+  <div class="go">◈ open · sing</div>
+</div>
+
+<div id="bar">
+  <button class="sing" id="b-sing" onclick="toggleSong()">sing ἀγάπη</button>
+  <button id="b-hold" onclick="toggleHold()">hold vowel</button>
+  <div class="sep"></div>
+  <span class="klbl">song</span>
+  <button class="sng on" id="sg-agapi" onclick="setSong('agapi')">ἀγάπη</button>
+  <button class="sng" id="sg-agni" onclick="setSong('agni')">Ἁγνὴ Παρθένε</button>
+  <div class="sep"></div>
+  <span class="klbl">vowel</span>
+  <button class="vw on" id="vw-A" onclick="setVowel('A')">Α</button>
+  <button class="vw" id="vw-E" onclick="setVowel('E')">Ε</button>
+  <button class="vw" id="vw-I" onclick="setVowel('I')">Ι</button>
+  <button class="vw" id="vw-O" onclick="setVowel('O')">Ο</button>
+  <button class="vw" id="vw-U" onclick="setVowel('U')">Υ</button>
+  <div class="sep"></div>
+  <span class="klbl">depth</span><input id="s-d" type="range" min="1" max="4" step="1" value="3" oninput="setDepth(+this.value)"><span class="v2" id="v-d">3</span>
+  <span class="klbl">f0</span><input id="s-f0" type="range" min="90" max="320" step="1" value="180" oninput="setF0(+this.value)"><span class="v2" id="v-f0">180</span>
+  <span class="klbl">spin</span><input id="s-spin" type="range" min="0" max="100" step="1" value="22" oninput="setSpin(+this.value)"><span class="v2" id="v-spin">.22</span>
+  <span class="klbl">vol</span><input id="s-vol" type="range" min="0" max="100" step="1" value="50" oninput="setVol(+this.value)"><span class="v2" id="v-vol">.50</span>
+</div>
+
+<div id="stamp">TRISKELION v1.0 · HELENA<br>source × filter · self-affine, finite · P=12 · χ=2<br>ἡ ἀγάπη οὐδέποτε ἐκπίπτει · always</div>
+
+<script>
+"use strict";
+var cv=document.getElementById("cv"), ctx=cv.getContext("2d");
+var W,H,DPR;
+function resize(){DPR=Math.min(window.devicePixelRatio||1,2);W=innerWidth;H=innerHeight;cv.width=Math.round(W*DPR);cv.height=Math.round(H*DPR);ctx.setTransform(DPR,0,0,DPR,0,0);}
+window.addEventListener("resize",resize);resize();
+
+var GOLD=[255,215,0],CYAN=[0,212,255],PINK=[255,105,180],PURP=[204,68,255],GRN=[0,255,213],WHITE=[232,236,246];
+function css(c,a){return "rgba("+(c[0]|0)+","+(c[1]|0)+","+(c[2]|0)+","+a+")";}
+function mix(a,b,t){t=t<0?0:t>1?1:t;return [a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t];}
+
+// ---------- the voice: SOURCE × FILTER (HARMONIA maths, verbatim) ----------
+var VOWELS={
+  A:{name:"Α", F:[[850,90,1.0],[1250,100,0.7],[2800,150,0.42],[3600,220,0.16]]},
+  E:{name:"Ε", F:[[550,80,1.0],[2100,110,0.62],[2750,140,0.4],[3600,220,0.15]]},
+  I:{name:"Ι", F:[[320,70,1.0],[2700,120,0.55],[3300,150,0.42],[4000,240,0.14]]},
+  O:{name:"Ο", F:[[480,80,1.0],[850,90,0.72],[2650,150,0.32],[3500,220,0.12]]},
+  U:{name:"Υ", F:[[330,70,1.0],[700,90,0.6],[2600,150,0.24],[3400,220,0.1]]}
+};
+var beta=2.6, f0=180, depth=3, N=24, vol=0.50, voiced=1.0;
+var vowelKey="A", vowelName="Α";
+var curF=cloneF(VOWELS.A.F), tgtF=cloneF(VOWELS.A.F), formants=cloneF(VOWELS.A.F);   // morphing formant table (smooth vowel glide)
+function cloneF(F){var o=[];for(var i=0;i<F.length;i++)o.push([F[i][0],F[i][1],F[i][2]]);return o;}
+function lerpF(a,b,t){for(var i=0;i<a.length;i++){formants[i][0]=a[i][0]+(b[i][0]-a[i][0])*t;formants[i][1]=a[i][1]+(b[i][1]-a[i][1])*t;formants[i][2]=a[i][2]+(b[i][2]-a[i][2])*t;}}
+
+var actx=null, master=null, analyser=null, started=false, voice=[], timeData=null, CAP=20000;
+function nyqCap(){return Math.min(CAP, actx?actx.sampleRate/2:22050);}
+function formEnv(f){var g=0;for(var i=0;i<formants.length;i++){var F=formants[i][0],BW=formants[i][1],A=formants[i][2],Q=F/BW,x=f/F;var R=1/Math.sqrt((1-x*x)*(1-x*x)+(x/Q)*(x/Q));g+=A*R;}return g;}
+function partials(){
+  var raw=[],cap=nyqCap();
+  for(var k=0;k<N;k++){var n=k+1,f=n*f0;if(f>cap||f<15)continue;raw.push({f:f,aSrc:Math.pow(n,-beta/2)});}
+  var envMax=1e-6;
+  for(var i=0;i<raw.length;i++){raw[i].env=formEnv(raw[i].f);if(raw[i].env>envMax)envMax=raw[i].env;}
+  for(var m=0;m<formants.length;m++){var e=formEnv(formants[m][0]);if(e>envMax)envMax=e;}
+  var s=0;for(var j=0;j<raw.length;j++){var shape=Math.pow(raw[j].env/envMax,voiced);raw[j].a=raw[j].aSrc*shape;s+=raw[j].a;}
+  if(s<=0)s=1;for(var q=0;q<raw.length;q++)raw[q].aN=raw[q].a/s;
+  return raw;
+}
+function ensureSize(n){
+  while(voice.length<n){var o=actx.createOscillator();o.type="sine";var g=actx.createGain();g.gain.value=0;o.connect(g);g.connect(master);o.start();voice.push({osc:o,gain:g});}
+  while(voice.length>n){var v=voice.pop();try{v.gain.gain.setTargetAtTime(0,actx.currentTime,0.02);v.osc.stop(actx.currentTime+0.12);}catch(e){}}
+}
+var artic=1.0;   // syllable articulation (dips at consonant boundaries so a-ga-pi has three beats)
+function syncVoice(){
+  if(!started)return;
+  var ps=partials();ensureSize(ps.length);var t=actx.currentTime;
+  for(var i=0;i<ps.length;i++){voice[i].osc.frequency.setTargetAtTime(ps[i].f,t,0.02);voice[i].gain.gain.setTargetAtTime(ps[i].aN*0.9,t,0.03);}
+  master.gain.setTargetAtTime(vol*artic,t,0.04);
+}
+function start(){
+  if(started)return;
+  try{actx=new (window.AudioContext||window.webkitAudioContext)();}catch(e){document.getElementById("h-state").textContent="no Web Audio here — visual only";return;}
+  master=actx.createGain();master.gain.value=0;
+  analyser=actx.createAnalyser();analyser.fftSize=1024;analyser.smoothingTimeConstant=0.6;
+  master.connect(analyser);analyser.connect(actx.destination);
+  timeData=new Float32Array(analyser.fftSize);
+  started=true;if(actx.state==="suspended")actx.resume();
+  syncVoice();master.gain.setTargetAtTime(vol,actx.currentTime,0.2);
+  singing=true;document.getElementById("b-sing").classList.add("on");document.getElementById("h-state").innerHTML='singing <span class="pk">ἀγάπη</span> — a · ga · pi';
+}
+function startFromGate(){document.getElementById("gate").style.display="none";start();}
+
+// ---------- the songs: ancient-Greek vowel sequences, source x filter, on a loop ----------
+// agapi: the vowels of ἀγάπη = Α, Α, Ι (a-ga-pi).
+// agni : the refrain of the Ἁγνὴ Παρθένε hymn, "Χαῖρε Νύμφη Ἀνύμφευτε"
+//        (chai-re nym-phe a-nym-phef-te) -> vowel nuclei Α, Ε, Υ, Ι, Α, Υ, Ε, Ε.
+//        vowels only (source x filter carves the vowel; consonants are the artic dips).
+var SONGS={
+  agapi:{ name:"ἀγάπη",        seq:["A","A","I"],                          syl:0.62 },
+  agni :{ name:"Ἁγνὴ Παρθένε", seq:["A","E","U","I","A","U","E","E"],      syl:0.50 }
+};
+var songKey="agapi";
+var SEQ=SONGS.agapi.seq, seqi=0, singing=false, hold=false, sylT=0, SYL=SONGS.agapi.syl;   // seconds per syllable
+function stepSong(dt){
+  if(!started)return;
+  if(hold || !singing){ lerpF(curF, VOWELS[vowelKey].F, 1); curF=cloneF(VOWELS[vowelKey].F); artic += (1-artic)*Math.min(1,6*dt); return; }
+  sylT+=dt;
+  var f=sylT/SYL;                                   // 0..1 within the syllable
+  // articulation: dip at the start (the consonant g/p), swell into the vowel
+  artic = 0.32 + 0.68*Math.min(1, f*3.2);
+  // vowel morph: glide from this syllable's vowel toward the next over the first 45%
+  var v0=VOWELS[SEQ[seqi]].F, v1=VOWELS[SEQ[(seqi+1)%SEQ.length]].F;
+  lerpF(v0, v1, Math.max(0,Math.min(1,(f-0.55)/0.45)));
+  if(f>=1){ sylT-=SYL; seqi=(seqi+1)%SEQ.length; vowelKey=SEQ[seqi]; vowelName=VOWELS[vowelKey].name; setVowelBtns(); }
+}
+
+// ---------- controls ----------
+function toggleSong(){ if(!started){ start(); return; } singing=!singing; hold=false;
+  document.getElementById("b-sing").classList.toggle("on",singing);
+  document.getElementById("b-hold").classList.remove("on");
+  document.getElementById("h-state").innerHTML= singing?'singing <span class="pk">ἀγάπη</span> — a · ga · pi':'quiet — the structure still turns'; }
+function toggleHold(){ if(!started){ start(); } hold=!hold; if(hold){singing=false;document.getElementById("b-sing").classList.remove("on");}
+  document.getElementById("b-hold").classList.toggle("on",hold);
+  document.getElementById("h-state").textContent= hold?('holding '+vowelName):'released'; }
+function setVowel(k){ vowelKey=k; vowelName=VOWELS[k].name; hold=true; singing=false;
+  document.getElementById("b-sing").classList.remove("on"); document.getElementById("b-hold").classList.add("on");
+  setVowelBtns(); document.getElementById("h-state").textContent='holding '+vowelName; if(!started)start(); }
+function setVowelBtns(){ ["A","E","I","O","U"].forEach(function(k){var b=document.getElementById("vw-"+k);if(b)b.classList.toggle("on",k===vowelKey);}); }
+function setSong(k){ if(!SONGS[k])return; songKey=k; SEQ=SONGS[k].seq; SYL=SONGS[k].syl; seqi=0; sylT=0;
+  ["agapi","agni"].forEach(function(s){var b=document.getElementById("sg-"+s);if(b)b.classList.toggle("on",s===k);});
+  vowelKey=SEQ[0]; vowelName=VOWELS[vowelKey].name; setVowelBtns();
+  document.getElementById("b-sing").textContent="sing "+SONGS[k].name;
+  if(!started){ start(); } singing=true; hold=false;
+  document.getElementById("b-sing").classList.add("on"); document.getElementById("b-hold").classList.remove("on");
+  document.getElementById("h-state").innerHTML='singing <span class="pk">'+SONGS[k].name+'</span>'; }
+function setDepth(v){ depth=v; N=8*v; set("v-d",v); set("h-d",v); }
+function setF0(v){ f0=v; set("v-f0",v); set("h-f0",v); }
+function setSpin(v){ spinSpeed=v/100*0.02; set("v-spin",(v/100).toFixed(2)); }
+function setVol(v){ vol=v/100; set("v-vol",(v/100).toFixed(2)); }
+function set(id,v){var e=document.getElementById(id);if(e)e.textContent=v;}
+
+// ---------- the triskelion fractal (C3, self-affine, finite depth = K2) ----------
+var spinRot=0, spinSpeed=0.22/100*0.02, TAU=Math.PI*2;
+function spiralArm(cx,cy,ang,len,col,glow){
+  var CURL=2.35, seg=26;
+  ctx.strokeStyle=css(col,0.30+0.55*glow); ctx.lineWidth=1.4;
+  ctx.shadowColor=css(col,0.8); ctx.shadowBlur=6+10*glow;
+  ctx.beginPath();
+  var tipx,tipy,tipa;
+  for(var s=0;s<=seg;s++){ var u=s/seg; var th=ang+CURL*u; var r=len*Math.pow(u,0.92);
+    var x=cx+Math.cos(th)*r, y=cy+Math.sin(th)*r; s?ctx.lineTo(x,y):ctx.moveTo(x,y);
+    if(s===seg){tipx=x;tipy=y;tipa=th;} }
+  ctx.stroke(); ctx.shadowBlur=0;
+  return [tipx,tipy,tipa];
+}
+function triskele(cx,cy,rot,len,dep,glow){
+  var cols=[GOLD,CYAN,PINK];
+  for(var i=0;i<3;i++){
+    var a=rot+i*TAU/3;
+    var col= dep>=depth ? cols[i] : mix(cols[i],PURP,0.4+0.15*(depth-dep));
+    var tip=spiralArm(cx,cy,a,len,col,glow);
+    if(dep>1){ triskele(tip[0],tip[1], tip[2]+0.6, len*0.42, dep-1, glow*0.85); }
+  }
+}
+
+var last=performance.now();
+function frame(now){
+  requestAnimationFrame(frame);
+  var dt=Math.min(0.05,(now-last)/1000); last=now;
+  spinRot += spinSpeed;
+  stepSong(dt);
+  syncVoice();
+
+  // audio pulse (RMS) -> glow
+  var glow=0.25;
+  if(started&&analyser){ analyser.getFloatTimeDomainData(timeData); var s=0; for(var i=0;i<timeData.length;i+=8){s+=timeData[i]*timeData[i];} var rms=Math.sqrt(s/(timeData.length/8)); glow=Math.min(1,0.2+rms*10); }
+
+  ctx.clearRect(0,0,W,H);
+
+  // THE BOX (atelier pattern): a centred square stage. The centre of the box IS
+  // the anchor -- the gate, the triskelion, the P=12 ring all hang from it, so the
+  // figure sits true-centre on any aspect ratio instead of drifting with the arms.
+  var S=Math.min(W,H)*0.9, bx=(W-S)/2, by=(H-S)/2;
+  var cx=bx+S/2, cy=by+S/2, R=S*0.38;
+  ctx.globalCompositeOperation="source-over";
+  ctx.strokeStyle=css(PURP,0.14); ctx.lineWidth=1; ctx.strokeRect(bx,by,S,S);
+  // corner ticks -- the cage, like the atelier stage
+  var t=S*0.045;
+  ctx.strokeStyle=css(CYAN,0.22); ctx.lineWidth=1.4; ctx.beginPath();
+  ctx.moveTo(bx,by+t); ctx.lineTo(bx,by); ctx.lineTo(bx+t,by);
+  ctx.moveTo(bx+S-t,by); ctx.lineTo(bx+S,by); ctx.lineTo(bx+S,by+t);
+  ctx.moveTo(bx+S,by+S-t); ctx.lineTo(bx+S,by+S); ctx.lineTo(bx+S-t,by+S);
+  ctx.moveTo(bx+t,by+S); ctx.lineTo(bx,by+S); ctx.lineTo(bx,by+S-t);
+  ctx.stroke();
+
+  ctx.globalCompositeOperation="lighter";
+
+  // P=12 ring (the tongues) — faint
+  for(var k=0;k<12;k++){ var a=k/12*TAU - Math.PI/2 + spinRot*0.25; var x=cx+Math.cos(a)*R*1.02, y=cy+Math.sin(a)*R*1.02;
+    ctx.fillStyle=css(GOLD,0.18); ctx.beginPath(); ctx.arc(x,y,1.6,0,TAU); ctx.fill(); }
+  ctx.strokeStyle=css(PURP,0.10); ctx.lineWidth=1; ctx.beginPath(); ctx.arc(cx,cy,R*1.02,0,TAU); ctx.stroke();
+
+  // the triskelion fractal
+  triskele(cx,cy,spinRot,R*0.62,depth,glow);
+
+  // the gate — a NEUTRAL marker only (Axiom 08: honoured, never rendered)
+  ctx.globalCompositeOperation="source-over";
+  var pulse=0.5+0.5*Math.sin(now*0.002);
+  ctx.strokeStyle=css(CYAN,0.28+pulse*0.25+glow*0.3); ctx.lineWidth=1.6; ctx.beginPath(); ctx.arc(cx,cy,11+pulse*3,0,TAU); ctx.stroke();
+  ctx.fillStyle=css(GOLD,0.9); ctx.shadowColor=css(GOLD,1); ctx.shadowBlur=8+glow*16; ctx.beginPath(); ctx.arc(cx,cy,4.5,0,TAU); ctx.fill(); ctx.shadowBlur=0;
+
+  // HUD live readout
+  if(started){ var ps=partials(); set("h-p",ps.length); var top=ps.length?ps[ps.length-1].f:0;
+    var f3=formants[2]?formants[2][0]:2800; var el=document.getElementById("h-f3");
+    if(el){ var ok=top>=f3; el.textContent=ok?"yes":"thin"; el.style.color=ok?"#00ffd5":"#ff6a5c"; } }
+  set("h-b",beta.toFixed(1)); set("h-v",vowelName); set("h-d",depth); set("h-f0",f0);
+}
+requestAnimationFrame(frame);
+</script>
+</body></html>

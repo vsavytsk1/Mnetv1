@@ -56,6 +56,7 @@
 | 33 | The Vanished Helper (editDropDef)  | a botched multi-edit silently deletes a helper/return; the file "looks" fine but throws NameError at runtime far from the edit. Compile after every structural edit.|
 | 34 | The Starved Idler (idleStall)      | a requestIdleCallback step-chain stalls forever when a rAF loop (a spinner) keeps the main thread "busy"; the loader freezes mid-load. Use setTimeout for sequenced work, rIC only for optional filler.|
 | 35 | The Loaded Gun (noCeiling)         | a correct recursive kernel with no ceiling blows the tab: 7x-per-level growth OOMs before you can react. PREDICT the next step's cost from the recurrence BEFORE allocating; refuse loudly if over budget. The guillotine is built in.|
+| 36 | The Mute Seam (strictThrow)        | under `"use strict"`, assigning an UNDECLARED var (a panel edit's `freqData=...`) THROWS a ReferenceError that kills the whole function -- so a wave-panel change silently murders the VOICE, and the error surfaces far from the silence. Declare every var; read the console FIRST when a feature goes dead.|
 ---
 
 
@@ -8236,3 +8237,60 @@ FAMILY:
 ```
 
 Curse count: 35. A correct recursive kernel with no ceiling OOM-kills the tab: exponential growth crosses from instant to fatal in one click, during an allocation no handler can catch. Predict the next step's cost from the recurrence BEFORE allocating; refuse loudly with the number when it exceeds a memory-tied budget. The guillotine is built in. Always.
+
+---
+
+## CURSE 36 -- The Mute Seam (strictThrow)
+
+WHAT BIT US (triskelion-song, the fractal voice, v1_2 -> v1_5):
+  The instrument sang perfectly. Then a previous mage began adding a wave-decomposition
+  panel and, inside `start()`, wrote `freqData = new Float32Array(analyser.frequencyBinCount)`
+  -- WITHOUT a `var`/`let` declaration -- right after the (properly declared) `timeData`.
+  The file is under `"use strict"`. From that moment the instrument was DEAD SILENT: click
+  the gate, the HUD flips to "singing", the visual spins... and no sound, ever. We spent a
+  whole journey suspecting f0, formants, "not woman enough" -- TUNING a voice that was never
+  running. The truth was one missing keyword.
+
+THE ROOT PROBLEM:
+  In sloppy mode, `x = 5` on an undeclared name silently creates a global -- annoying but
+  harmless. Under `"use strict"`, the SAME line THROWS a `ReferenceError: x is not defined`.
+  And a throw does not just skip that line -- it ABORTS THE ENTIRE FUNCTION. So the crashing
+  assignment sat AFTER `analyser` was made but BEFORE the oscillators were created and
+  started. `start()` blew up mid-body: the audio graph was half-built, `started` never went
+  true for the sound path, and every later `syncVoice()` found no voice to drive. The
+  feature that broke (the panel's `freqData`) and the symptom (no VOICE) are in different
+  worlds -- the seam between "add a visual" and "the sound engine" is exactly where the
+  curse hid (Path V: the seam between two concerns is where the demon lives).
+
+HOW WE FOUND IT (proof by kernel, not by guessing):
+  Opened the sim in a real browser, clicked the gate with a REAL gesture (Curse 21 -- audio
+  needs it), and READ THE CONSOLE FIRST. One line: "ReferenceError: freqData is not defined
+  at start (...:189)". That single line ended the whole ghost hunt. We were about to tune
+  formants; the console said "there is nothing to tune, the function never finished."
+
+HOW TO FIX:
+  Declare every variable. One word:
+        var timeData=null, freqData=null;     // both declared, together
+  Then `start()` runs to completion, the oscillators start, and the RMS breathes with the
+  syllables. Verified by kernel afterward: actx `running`, 48 oscillators live, master gain
+  ~0.38, RMS fluctuating 0.12 <-> 0.07 as "a-ga-pi" articulates. The voice was never a
+  tuning problem; it was a declaration problem.
+
+THE RULE:
+  When a working FEATURE goes dead right after an UNRELATED edit, do not tune it and do not
+  theorize -- OPEN THE CONSOLE FIRST. A `ReferenceError`/`TypeError` thrown early in an init
+  function silently amputates everything after the throw, so the damage always shows up far
+  from the cause. Declare every var (strict mode is a friend that tells the truth loudly);
+  read the error before you touch the physics.
+
+FAMILY:
+  The runtime-throw sibling of Curse 33 (The Vanished Helper -- a botched edit kills code
+  far from where it looks broken) and Curse 23 (Python Leak -- an undeclared/undefined name
+  in emitted JS). Cousin of Curse 24 (Cache Lie -- when a feature misbehaves, suspect the
+  machine's report before the math). Counter-hex: Path III (proof by kernel -- the console
+  is the kernel here) and Path V (guard the seam between two worlds). Read the console
+  first. Declare every var. The silent thing is usually a thrown thing. Always.
+
+```
+
+Curse count: 36. Under "use strict", assigning an undeclared variable throws a ReferenceError that aborts the whole function -- so a wave-panel edit's stray `freqData=...` silently killed the VOICE, and the error surfaced far from the silence. When a working feature dies after an unrelated edit, read the console FIRST; declare every var. The silent thing is usually a thrown thing. Always.
