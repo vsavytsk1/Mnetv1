@@ -4,13 +4,13 @@
 repos. Generated from what git actually tracks on each repo (the truth of what
 Pages serves), by `builder/gen_io_index.py`. Nothing hidden; the door is open.*
 
-**TOTAL: 420 public pages across 8 repos.**
+**TOTAL: 422 public pages across 8 repos.**
 
 *P=12 . chi=2 . the receipts are public . always.*
 
 ---
 
-## Mnetv1  (349 pages)
+## Mnetv1  (350 pages)
 
 - [about.html](https://vsavytsk1.github.io/Mnetv1/about.html)
 - [builder/Obsidius/obsidius_v1.html](https://vsavytsk1.github.io/Mnetv1/builder/Obsidius/obsidius_v1.html)
@@ -263,6 +263,7 @@ Pages serves), by `builder/gen_io_index.py`. Nothing hidden; the door is open.*
 - [shell/parasitarium.html](https://vsavytsk1.github.io/Mnetv1/shell/parasitarium.html)
 - [shell/parasitarium_v1.1.html](https://vsavytsk1.github.io/Mnetv1/shell/parasitarium_v1.1.html)
 - [shell/parasitarium_v1.2.html](https://vsavytsk1.github.io/Mnetv1/shell/parasitarium_v1.2.html)
+- [shell/pcbium-v2_9_5.html](https://vsavytsk1.github.io/Mnetv1/shell/pcbium-v2_9_5.html)
 - [shell/phaistium_v0_1.html](https://vsavytsk1.github.io/Mnetv1/shell/phaistium_v0_1.html)
 - [shell/plane_growth.html](https://vsavytsk1.github.io/Mnetv1/shell/plane_growth.html)
 - [shell/portal.html](https://vsavytsk1.github.io/Mnetv1/shell/portal.html)
@@ -364,7 +365,7 @@ Pages serves), by `builder/gen_io_index.py`. Nothing hidden; the door is open.*
 
 ---
 
-## SpiderEngineering  (33 pages)
+## SpiderEngineering  (34 pages)
 
 - [Eleni/circle/circle_gate.html](https://vsavytsk1.github.io/SpiderEngineering/Eleni/circle/circle_gate.html)
 - [Eleni/lens/v0_1_stress.html](https://vsavytsk1.github.io/SpiderEngineering/Eleni/lens/v0_1_stress.html)
@@ -399,6 +400,7 @@ Pages serves), by `builder/gen_io_index.py`. Nothing hidden; the door is open.*
 - [aracnium/sim/aracnium_v1_4_heave.html](https://vsavytsk1.github.io/SpiderEngineering/aracnium/sim/aracnium_v1_4_heave.html)
 - [aracnium/sim/feynmanium_v1.html](https://vsavytsk1.github.io/SpiderEngineering/aracnium/sim/feynmanium_v1.html)
 - [index.html](https://vsavytsk1.github.io/SpiderEngineering/index.html)
+- [pcbium/sim/pcbium_v2_9_5.html](https://vsavytsk1.github.io/SpiderEngineering/pcbium/sim/pcbium_v2_9_5.html)
 
 ---
 
@@ -451,16 +453,16 @@ Pages serves), by `builder/gen_io_index.py`. Nothing hidden; the door is open.*
 
 ## EldenGirl  (3 pages)
 
-- [docs/index.html](https://vsavytsk1.github.io/EldenGirl/docs/index.html)
-- [docs/spini-sim.html](https://vsavytsk1.github.io/EldenGirl/docs/spini-sim.html)
-- [docs/training-ground.html](https://vsavytsk1.github.io/EldenGirl/docs/training-ground.html)
+- [docs/index.html](https://vsavytsk1.github.io/EldenGirl/index.html)
+- [docs/spini-sim.html](https://vsavytsk1.github.io/EldenGirl/spini-sim.html)
+- [docs/training-ground.html](https://vsavytsk1.github.io/EldenGirl/training-ground.html)
 
 ---
 
 ## VALE  (2 pages)
 
-- [docs/ecosystem.html](https://vsavytsk1.github.io/VALE/docs/ecosystem.html)
-- [docs/index.html](https://vsavytsk1.github.io/VALE/docs/index.html)
+- [docs/ecosystem.html](https://vsavytsk1.github.io/VALE/ecosystem.html)
+- [docs/index.html](https://vsavytsk1.github.io/VALE/index.html)
 
 ---
 

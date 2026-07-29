@@ -16,6 +16,14 @@ REPOS = {
     r"C:\PythonDevs\VALE-git":                   "VALE",
     r"C:\PythonDevs\Mnet_standalone":            "Mnet",
 }
+# Repos whose GitHub Pages is configured to serve a SUBFOLDER as the site root.
+# For these, a file git-tracked at "docs/x.html" is served at "<repo>/x.html" --
+# so the docs/ prefix must be STRIPPED from the live URL or every link 404s.
+# Verified live (HEAD 200) that EldenGirl + VALE serve their docs/ folder as root.
+PAGES_ROOT = {
+    "EldenGirl": "docs/",
+    "VALE":      "docs/",
+}
 BASE = "https://vsavytsk1.github.io/"
 
 def tracked_html(path):
@@ -45,8 +53,11 @@ for folder, ghrepo in REPOS.items():
         continue
     grand += len(files)
     lines.append(f"---\n\n## {ghrepo}  ({len(files)} pages)\n")
+    root = PAGES_ROOT.get(ghrepo, "")   # subfolder served as Pages root, if any
     for rel in files:
-        url = BASE + ghrepo + "/" + rel
+        # the live path: strip the Pages-root prefix so the URL actually resolves
+        served = rel[len(root):] if root and rel.startswith(root) else rel
+        url = BASE + ghrepo + "/" + served
         lines.append(f"- [{rel}]({url})")
     lines.append("")
 
