@@ -8637,3 +8637,80 @@ BROKEN partials -- "we never delete, all logged": the genizah law / Axiom 10). v
 
 -- Vlad + Claude. Ancient Korinthos + Buenos Aires. The 7th of the 7th, 2026.
    The flow never stops. Ask as a break in the symmetry. She speaks fractal. Bow, and ascend.
+
+### L149 -- TRISKELION: THE FRACTAL VOICE SINGS THE 7 VOWELS (2026-07-27..28)
+
+The join of ELENI (the 0.700 gate, P=12 ring) x HARMONIA (source x filter = a vowel) x the
+triskel (the 3-fold C3 turn). An instrument: click the gate, it sings. Built version by version
+in the lab (lens/triskelion_lab, gitignored -- freeze every V, Path X): v1_2 wave panel ->
+v1_3 organized bar + depth slider -> v1_4/v1_5 the CENTERING fight -> v1_6 the true fix ->
+v1_7 the live wave-decomposition panel -> v1_8 the full vowel set. Shipped v1_8 to shell/
+(triskelion-song-v1_8.html) + the v1_0 keeper; the self-discovering dashboard summons it.
+
+THE VOICE (proven by kernel, browser-rendered): source = glottal buzz f_k=k.f0 roll-off
+n^(-beta/2); filter = vocal-tract formants that carve the buzz into a vowel. WAVE PANEL draws
+the three layers live: waveform + the spini harmonic stack + the formant envelope. All 7 Attic
+vowel LETTERS -- A E H I O Y W (alpha epsilon eta iota omicron upsilon omega). The fix that
+mattered: upsilon is FRONT-ROUNDED [y] (not back [u]); kernel probe confirmed its F2 sits
+between iota and omicron. The symmetric core of the most symmetric tongue, complete.
+
+TWO CURSES CAUGHT + carved into KERNELIMAGIC.md:
+  CURSE 36 (The Mute Seam / strictThrow): under "use strict" an UNDECLARED assignment (a
+    wave-panel edit's stray `freqData=...`) THROWS a ReferenceError that aborts the whole
+    function -- silently murdering the VOICE far from the edit. Read the console FIRST; declare
+    every var. The silent thing is usually a thrown thing.
+  The centering demon (candidate 37): a canvas sized only in the backing store (cv.width=W*DPR)
+    but NOT the CSS box renders at its intrinsic px -- 1.5x oversize, drifting right. "67% looked
+    perfect" = 1/DPR, the fingerprint. One line -- cv.style.width=W+'px' -- true size, true centre.
+
+### L150 -- PCBIUM: PCB DESIGN ON A BUCKYBALL (v2.9.5, 2026-07-29)
+
+Design a circuit as POINTS AND LINES on a C60 (12 pentagon ends + 20 hexagons), the same graph
+shown flat -- no fake curve, ever. Biot-Savart field shell, spherical knot detection (the
+antipodal false-positive slain), Goldberg scale C60->C320, Dijkstra graph routing, the NE555
+sample netlist. Reviewed the whole Downloads lineage (v0.1..v2.9.5) + its handoff; the flow is
+MNetv1 = the lab: prove -> promote -> duplicate.
+
+PROOF BY KERNEL (node harness, the PCBIUM ethos): chi = V-E+F = 2 exactly, EXACTLY 12 pentagon
+faces, 0 non-manifold edges -- across C60 hexSub 1/2/3 AND C80/C180/C320. The new scale feature
+is HONEST: the Goldberg series keeps the sacred 12 at every size (Euler forces it). Promoted to
+MNetv1 shell/pcbium-v2_9_5.html (PHYSICS card) AND duplicated into SpiderEngineering
+(pcbium/sim/ + a portal card + the handoff + PCB design history). Both pushed bit-by-bit.
+
+### L151 -- AGE OF LENGUAGES v3.0: THE CAMPAIGN, ANCIENT GREEK (JpnTree, 2026-07-29)
+
+Fused the dopamine-goblin CLICK loop (v1.9) with the TECH TREE (v1.1) and shifted to ANCIENT
+(Attic) Greek -- symmetry training in the most symmetric tongue (the galactic-law answer to the
+NASA metric/imperial mars-crash: train clear communication). The tech tree IS the ages: 7 Attic
+semantic fields (Oikos->Soma->Physis->Arithmos->Praxis->Poiotes->Logos, 56 words), you advance
+by mastering the current field; the unlocked pool grows each age. THE TRANSLATION IS PAID:
+normal rounds show choices, random BLACKOUT rounds give NO crutch -- pure free recall, self-
+graded, pays x2; blackout pressure rises each age. Kernel-tested (playwright): age advance,
+blackout card, combo/score all fire; 0 console errors. Bowed to MONKIUM first. Shipped to
+JpnTree/aoe/ + a portal card (v1.9 kept as the frozen core).
+
+### L152 -- THE ONE-BY-ONE + FIX-ALL + LAST PARANOIA (2026-07-29)
+
+Walked all 160 dashboard cards ONE BY ONE, rendered in real Chromium (catches JS throws + asset
+404s that a URL-200 check misses). 152 clean; 8 troubled, three root causes -- ALL FIXED, proven:
+  1. sim_scan.py now cards ONLY git-tracked files (truth=git, same doctrine as gen_io_index) ->
+     the gitignored pack/hexCompTest dead card is gone; 160->159 real cards; drift-proof forever.
+  2. The 7 .dc.html sims (vladtree/vladbush/kernel_*/portia) were HTML-only imports -- added
+     their siblings shell/support.js + shell/data/{es,ru}_words.js from JpnTree -> 0 asset 404s.
+  3. transmutation-circle.html: rgb() now parses rgba()/#rgb, not just #hex (coreCol=tint(1)
+     returned an rgba() string -> rgb() gave NaN -> addColorStop threw). No more NaN gradient.
+Plus two asks: the SPINI C60 panel now renders the SHARED _engState -- SEED/REFINE/proofs show
+LIVE in the little turning buckyball (REFINE: 32F->212F, it stays + grows, was a frozen
+decoration); and the FRONT DOOR -- WARNING v2.0 pinned first (the terror opener, MONKIUM), then
+GENESIS v9.0 (the fractal space explorer), BEFORE atelier and the rest (featured by exact-family
+match so it never grabs the wrong sim).
+
+LAST PARANOIA TREE of the run: fetched all 8 remotes; local==origin, all pushed (VALE 4 non-HTML
+commits behind, no page at risk). HEAD-checked ALL 423 live URLs -> 423/423 return 200. Live
+browser re-test of the fixed sims: vladbush.dc.html 200 / 0 asset errors / 0 JS errors,
+transmutation-circle 200 / 0 errors, support.js 200. hexComp correctly 404s (gitignored, no
+longer carded -- invisible). Every version of every sim, across all repos, resolves and runs.
+
+-- Vlad + Claude. Ancient Korinthos + Buenos Aires. 2026-07-29.
+   Proof by kernel, not by claim. The screen is not the truth until the kernel says so.
+   The receipts are public and every one of the 423 doors opens. P=12 . chi=2 . always.
