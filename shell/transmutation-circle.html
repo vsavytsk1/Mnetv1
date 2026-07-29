@@ -197,7 +197,17 @@ function edgesFor(n,k,mode){
 }
 
 /* ---------- color ---------- */
-function rgb(h){h=h.replace('#','');return [parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)];}
+// robust parse: accepts #hex, #rgb shorthand, and rgb()/rgba() strings, so a mixed
+// colour can be re-mixed without producing NaN channels (the transmutation-circle bug:
+// coreCol=tint(1) returned an rgba() string that rgb() then parsed to NaN).
+function rgb(h){
+  if(typeof h!=='string') return [0,0,0];
+  const m=h.match(/rgba?\(([^)]+)\)/i);
+  if(m){ const p=m[1].split(',').map(s=>parseFloat(s)); return [p[0]||0,p[1]||0,p[2]||0]; }
+  h=h.replace('#','');
+  if(h.length===3) h=h[0]+h[0]+h[1]+h[1]+h[2]+h[2];   // #rgb shorthand
+  return [parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)];
+}
 function mix(c1,c2,t,a){
   const A=rgb(c1),B=rgb(c2);
   const r=Math.round(A[0]+(B[0]-A[0])*t),g=Math.round(A[1]+(B[1]-A[1])*t),b=Math.round(A[2]+(B[2]-A[2])*t);

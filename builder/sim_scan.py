@@ -13,11 +13,25 @@ Run standalone to PREVIEW what the master control will summon:
 Rule: newest version per family wins; the render comes from the builder; if the
 scan is wrong, we fix the scan and rebuild all at once. spini. P=12. chi=2.
 """
-import re, sys, json, html
+import re, sys, json, html, subprocess
 from pathlib import Path
 
 ROOT  = Path(__file__).parent.parent
 BASE  = "https://vsavytsk1.github.io/Mnetv1/"
+
+# TRUTH = GIT. GitHub Pages serves what git tracks, not what sits on disk. A card
+# for a gitignored/untracked file is a guaranteed 404 (caught in the 2026-07-29
+# one-by-one test: pack/hexCompTest was on disk but .gitignored -> dead card).
+# Same doctrine as gen_io_index.py. If git is unavailable, fall back to disk.
+def _git_tracked_html():
+    try:
+        out = subprocess.check_output(["git", "ls-files", "*.html"], cwd=ROOT,
+              stderr=subprocess.DEVNULL).decode("utf-8", "ignore")
+        return set(l.strip() for l in out.splitlines() if l.strip().endswith(".html"))
+    except Exception:
+        return None   # git not available -> caller falls back to disk-only
+
+TRACKED = _git_tracked_html()
 
 # Folders that hold PUBLIC, summonable sims (the showcase). _private is a cave wall.
 SCAN_DIRS = ["shell", "tree", "pack", "research"]
@@ -154,6 +168,8 @@ def discover():
             if name in SKIP_NAMES:                  continue
             if any(s in name for s in SKIP_SUBSTR): continue
             rel  = p.relative_to(ROOT).as_posix()
+            # TRUTH = GIT: only card what Pages will actually serve (skip gitignored/untracked)
+            if TRACKED is not None and rel not in TRACKED: continue
             key  = js_key(rel)
             if key in seen:                         continue
             seen.add(key)

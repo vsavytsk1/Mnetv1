@@ -75,13 +75,10 @@ def esc(t):
 def caps_html(caps):
     return "".join(f'<span class="cap {c}">{c.upper()}</span>' for c in caps)
 
-CARDS_HTML = ""
-for tag in sorted(GROUPS):
-    grp = sorted(GROUPS[tag], key=lambda x: x["key"])
-    CARDS_HTML += f'\n  <div class="cat-header">{esc(tag)} <span class="cat-count">{len(grp)}</span></div>'
-    for s in grp:
-        CARDS_HTML += f"""
-  <div class="mod-card" id="card-{s['key']}" data-tag="{esc(s['tag'])}" onclick="summon('{s['key']}')"
+def card_html(s, featured=False):
+    cls = "mod-card feat-card" if featured else "mod-card"
+    return f"""
+  <div class="{cls}" id="card-{s['key']}" data-tag="{esc(s['tag'])}" onclick="summon('{s['key']}')"
     style="border-color:{s['border']};--card-color:{s['color']}">
     <div class="card-dot"></div>
     <div class="card-tag" style="color:{s['color']}">{esc(s['tag'])}</div>
@@ -90,6 +87,39 @@ for tag in sorted(GROUPS):
     <div class="card-arrow" style="color:{s['color']}">SUMMON &#9654;</div>
     <div class="card-caps">{caps_html(s.get('caps', []))}</div>
   </div>"""
+
+# THE FRONT DOOR (MONKIUM order): the warning sim opens (terror -> the price), then
+# GENESIS -- the main fractal space explorer -- second, BEFORE anything else. Pinned by
+# family; the scanner still picks the latest version of each, so this never drifts.
+FEATURED_FAMILIES = [
+    ("warning",  "THE WARNING",   "the front door -- the explosion, the fractal cascade, the price of compute. enter here."),
+    ("genesis",  "GENESIS",       "the main fractal space explorer -- seed a Platonic solid, refine, fly the buckyball."),
+]
+FEATURED = []
+_feat_keys = set()
+for fam_kw, _lbl, _blurb in FEATURED_FAMILIES:
+    # prefer an EXACT family match (warning -> the real WarningSim, not
+    # ref_spookywarning_-_the_gate), then a family-startswith, then any substring.
+    hit = (next((s for s in CARDS if s["family"] == fam_kw), None)
+           or next((s for s in CARDS if s["family"].startswith(fam_kw)), None)
+           or next((s for s in CARDS if fam_kw in s["family"] or fam_kw in s["key"]), None))
+    if hit and hit["key"] not in _feat_keys:
+        FEATURED.append((hit, _blurb)); _feat_keys.add(hit["key"])
+
+CARDS_HTML = ""
+if FEATURED:
+    CARDS_HTML += '\n  <div class="cat-header feat-header">FRONT DOOR <span class="cat-count">enter here</span></div>'
+    for s, blurb in FEATURED:
+        s2 = dict(s); s2["desc"] = blurb   # a custom front-door blurb
+        CARDS_HTML += card_html(s2, featured=True)
+for tag in sorted(GROUPS):
+    grp = sorted(GROUPS[tag], key=lambda x: x["key"])
+    CARDS_HTML += f'\n  <div class="cat-header">{esc(tag)} <span class="cat-count">{len(grp)}</span></div>'
+    for s in grp:
+        # skip the featured ones here so they aren't shown twice
+        if s["key"] in _feat_keys:
+            continue
+        CARDS_HTML += card_html(s)
 
 # The key -> url map for summon(), also auto-built from the same scan (no drift).
 LINKS_JS = "".join(f"  {s['key']}:'{s['url']}',\n" for s in SIMS)
@@ -186,6 +216,16 @@ body{{background:var(--bg);color:var(--text);
 .cat-header:first-child{{margin-top:0}}
 .cat-count{{color:#1a2a3a;font-size:9px;background:#0a0a14;border-radius:8px;
   padding:1px 7px}}
+/* the FRONT DOOR: warning sim + genesis, pinned first, bigger and glowing */
+.cat-header.feat-header{{color:var(--gold)}}
+.cat-header.feat-header .cat-count{{color:var(--gold);background:#1a1408}}
+.feat-card{{grid-column:span 1;padding:16px 18px 22px;
+  background:linear-gradient(160deg,#0c0c16,var(--panel));
+  border-width:1px;box-shadow:0 0 22px -10px var(--card-color,#00d4ff)}}
+.feat-card .card-name{{font-size:14px}}
+.feat-card .card-desc{{color:#4a5a6a;font-size:9.5px}}
+.feat-card::after{{content:'FRONT DOOR';position:absolute;top:8px;left:10px;
+  font-size:6.5px;letter-spacing:0.2em;color:var(--card-color,#ffd700);opacity:0.5}}
 .mod-card{{
   background:var(--panel);border:1px solid #0e0e1e;border-radius:4px;
   padding:12px 14px 18px;cursor:pointer;transition:all 0.2s;position:relative;
@@ -472,7 +512,17 @@ setInterval(function(){{
 }},1000);
 
 // ── MINI C60 CANVAS ──────────────────────────────────────────
-var _miniState=null, _miniCam={{rx:0.3,ry:0,spin:0.004}};
+// The spini C60 panel renders the SHARED _engState -- so SEED / REFINE / the proofs
+// all show up live in the little turning buckyball (it STAYS and RESPONDS, never a
+// frozen decoration decoupled from the kernel). _miniJpts is the cached face-point
+// list; syncMini() rebuilds it whenever the geometry changes. spini spini.
+var _miniCam={{rx:0.3,ry:0,spin:0.004}}, _miniJpts=null;
+function syncMini(){{
+  if(typeof _engState==='undefined' || !_engState) return;
+  _miniJpts=_engState.faces.map(function(f){{
+    return f.pts.map(function(p){{return[p[0],p[1],p[2]];}});
+  }});
+}}
 (function miniInit(){{
   var wrap=document.getElementById('mini-canvas-wrap');
   var cv=document.getElementById('cv-mini');
@@ -482,16 +532,14 @@ var _miniState=null, _miniCam={{rx:0.3,ry:0,spin:0.004}};
   }}
   resize();
   new ResizeObserver(resize).observe(wrap);
-  _miniState=GK.buildC60();
-  var jpts=_miniState.faces.map(function(f){{
-    return f.pts.map(function(p){{return[p[0],p[1],p[2]];}});
-  }});
+  if(typeof _engState==='undefined' || !_engState) _engState=GK.buildC60();
+  syncMini();
   var ctx=cv.getContext('2d');
   (function loop(){{
     requestAnimationFrame(loop);
     _miniCam.ry+=_miniCam.spin;
     var W=cv.width,H=cv.height;
-    if(!W||!H) return;
+    if(!W||!H||!_miniJpts) return;
     ctx.fillStyle='rgba(3,3,8,0.18)';ctx.fillRect(0,0,W,H);
     var cy2=Math.cos(_miniCam.ry),sy2=Math.sin(_miniCam.ry);
     var cx2=Math.cos(_miniCam.rx),sx2=Math.sin(_miniCam.rx);
@@ -503,9 +551,10 @@ var _miniState=null, _miniCam={{rx:0.3,ry:0,spin:0.004}};
       var s=zoom/(z2+4);
       return{{x:W/2+x1*s,y:H/2+y1*s,z:z2}};
     }}
-    _miniState.faces.forEach(function(f,fi){{
-      var pts=jpts[fi],n=pts.length;
-      var isPent=f.type==='pent';
+    var F=_engState.faces;
+    for(var fi=0;fi<F.length;fi++){{
+      var f=F[fi],pts=_miniJpts[fi]; if(!pts) continue;
+      var n=pts.length, isPent=f.type==='pent';
       for(var i=0;i<n;i++){{
         var a=proj(pts[i]),b=proj(pts[(i+1)%n]);
         if(a.z<-3||b.z<-3) continue;
@@ -516,7 +565,7 @@ var _miniState=null, _miniCam={{rx:0.3,ry:0,spin:0.004}};
         ctx.lineWidth=isPent?1.2:0.4;
         ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();
       }}
-    }});
+    }}
   }})();
 }})();
 
@@ -591,10 +640,13 @@ document.addEventListener('click',function(e){{
 }});
 
 // ── KERNEL OPS ───────────────────────────────────────────────
-var _engState=null;
+// NOTE: _engState may already be the C60 built by miniInit above (shared). Only seed
+// a default if nothing exists yet, so the spini panel and the ops share one geometry.
+if(typeof _engState==='undefined') var _engState=null;
 function engSeed(type){{
   _engState=type==='dodec'?GK.buildDodecahedron():GK.buildC60();
   var inv=GK.invariants(_engState);
+  syncMini();   // the spini panel follows the seed live
   logAdd('SEED',type.toUpperCase()+' · '+inv.faces+'F · P='+inv.pents+' · χ='+(inv.vertices-inv.edges+inv.faces));
 }}
 function engRefine(){{
@@ -602,6 +654,7 @@ function engRefine(){{
   var t0=performance.now();
   _engState=GK.refineAll(_engState);
   var inv=GK.invariants(_engState);
+  syncMini();   // REFINE now shows in the little turning buckyball -- it STAYS + grows
   logAdd('REFINE',inv.faces+'F · '+Math.round(performance.now()-t0)+'ms');
 }}
 function engSAR(){{
