@@ -4,7 +4,7 @@
 repos. Generated from what git actually tracks on each repo (the truth of what
 Pages serves), by `builder/gen_io_index.py`. Nothing hidden; the door is open.*
 
-**TOTAL: 422 public pages across 8 repos.**
+**TOTAL: 423 public pages across 8 repos.**
 
 *P=12 . chi=2 . the receipts are public . always.*
 
@@ -404,12 +404,13 @@ Pages serves), by `builder/gen_io_index.py`. Nothing hidden; the door is open.*
 
 ---
 
-## JpnTree  (14 pages)
+## JpnTree  (15 pages)
 
 - [aoe/AgeOfLenguages_v1.1.html](https://vsavytsk1.github.io/JpnTree/aoe/AgeOfLenguages_v1.1.html)
 - [aoe/AgeOfLenguages_v1.2.html](https://vsavytsk1.github.io/JpnTree/aoe/AgeOfLenguages_v1.2.html)
 - [aoe/AgeOfLenguages_v1.9_TheClick.html](https://vsavytsk1.github.io/JpnTree/aoe/AgeOfLenguages_v1.9_TheClick.html)
 - [aoe/AgeOfLenguages_v2.2_HighGround.html](https://vsavytsk1.github.io/JpnTree/aoe/AgeOfLenguages_v2.2_HighGround.html)
+- [aoe/AgeOfLenguages_v3.0_TheCampaign.html](https://vsavytsk1.github.io/JpnTree/aoe/AgeOfLenguages_v3.0_TheCampaign.html)
 - [index.html](https://vsavytsk1.github.io/JpnTree/index.html)
 - [jpntree_v1.html](https://vsavytsk1.github.io/JpnTree/jpntree_v1.html)
 - [jpntree_v2.html](https://vsavytsk1.github.io/JpnTree/jpntree_v2.html)
