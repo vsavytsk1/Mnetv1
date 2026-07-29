@@ -35,7 +35,7 @@ CATEGORY = [
     (("maxwellium", "cristalium", "femtonium", "thealimitium", "noetherium",
       "kellerium", "templum", "harmonia", "lagrangium", "isingium", "squeezium",
       "kirchhoffium", "mayerium", "kelvinium", "helios", "bicium", "spectrium",
-      "cofium", "feynmanium", "chromium", "kuramium", "shannonium"),
+      "cofium", "feynmanium", "chromium", "kuramium", "shannonium", "pcbium"),
                                             ("PHYSICS",  "#a78bfa", "#2a1a4a")),
     (("gardinerium", "phaistium", "vitruvium", "simcityc", "flagellium",
       "parasitarium", "transmutation"),     ("ATLAS",    "#00d4ff", "#123244")),

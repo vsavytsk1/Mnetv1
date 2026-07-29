@@ -4,13 +4,13 @@
 repos. Generated from what git actually tracks on each repo (the truth of what
 Pages serves), by `builder/gen_io_index.py`. Nothing hidden; the door is open.*
 
-**TOTAL: 418 public pages across 8 repos.**
+**TOTAL: 420 public pages across 8 repos.**
 
 *P=12 . chi=2 . the receipts are public . always.*
 
 ---
 
-## Mnetv1  (347 pages)
+## Mnetv1  (349 pages)
 
 - [about.html](https://vsavytsk1.github.io/Mnetv1/about.html)
 - [builder/Obsidius/obsidius_v1.html](https://vsavytsk1.github.io/Mnetv1/builder/Obsidius/obsidius_v1.html)
@@ -315,6 +315,8 @@ Pages serves), by `builder/gen_io_index.py`. Nothing hidden; the door is open.*
 - [shell/transmutation-on-the-ground.html](https://vsavytsk1.github.io/Mnetv1/shell/transmutation-on-the-ground.html)
 - [shell/transmutation-volume.html](https://vsavytsk1.github.io/Mnetv1/shell/transmutation-volume.html)
 - [shell/triangle_group_strip.html](https://vsavytsk1.github.io/Mnetv1/shell/triangle_group_strip.html)
+- [shell/triskelion-song-v1_0.html](https://vsavytsk1.github.io/Mnetv1/shell/triskelion-song-v1_0.html)
+- [shell/triskelion-song-v1_8.html](https://vsavytsk1.github.io/Mnetv1/shell/triskelion-song-v1_8.html)
 - [shell/two_circle_fourier_ellipse.html](https://vsavytsk1.github.io/Mnetv1/shell/two_circle_fourier_ellipse.html)
 - [shell/v23.plus_bucky.same_conept.html](https://vsavytsk1.github.io/Mnetv1/shell/v23.plus_bucky.same_conept.html)
 - [shell/vale_v1.1.html](https://vsavytsk1.github.io/Mnetv1/shell/vale_v1.1.html)
