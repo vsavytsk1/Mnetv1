@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BYTE ORACLE · files as space-filling curves</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#050508; --panel:rgba(8,9,15,.92); --edge:#1a1f2e; --edge2:#2a2618;
+  --cyan:#00d4ff; --gold:#ffd700; --pink:#ff69b4; --green:#7fff7f; --dim:rgba(220,228,240,.5);
+  --ink:#e6ddc7;
+}
+html,body{height:100%}
+body{background:
+    radial-gradient(1200px 700px at 70% -10%, rgba(0,90,120,.10), transparent 60%),
+    radial-gradient(900px 600px at 0% 120%, rgba(120,70,20,.12), transparent 55%),
+    var(--bg);
+  color:#dfe6f0;font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:12px;
+  overflow:hidden;display:flex;flex-direction:column;height:100vh}
+.app{flex:1;display:flex;flex-direction:column;min-height:0}
+header{padding:14px 20px 10px;flex:0 0 auto}
+.brand{font-family:'Orbitron',sans-serif;font-weight:900;font-size:20px;letter-spacing:.34em;
+  background:linear-gradient(90deg,var(--gold),#e6c878 40%,var(--cyan));-webkit-background-clip:text;background-clip:text;color:transparent}
+.tag{color:var(--pink);opacity:.72;font-size:10px;letter-spacing:.08em;margin-top:3px}
+main{flex:1;display:flex;gap:16px;padding:4px 20px 0;min-height:0}
+.stage{flex:1;display:flex;align-items:center;justify-content:center;position:relative;min-width:0}
+#hero{width:min(56vh,540px);height:min(56vh,540px);image-rendering:pixelated;
+  border:1px solid var(--edge2);border-radius:6px;background:#04060c;
+  box-shadow:0 0 0 1px rgba(0,0,0,.6),0 18px 60px rgba(0,0,0,.55),0 0 60px rgba(193,132,31,.06);
+  opacity:0;transition:opacity .35s ease, transform .35s ease;transform:scale(.985);cursor:crosshair}
+#hero.show{opacity:1;transform:scale(1)}
+.stage::after{content:"";position:absolute;inset:0;pointer-events:none;
+  background:repeating-linear-gradient(0deg,rgba(255,255,255,.012) 0 1px,transparent 1px 3px);
+  mix-blend-mode:overlay;border-radius:6px}
+#empty{position:absolute;text-align:center;color:var(--dim);line-height:1.9;letter-spacing:.06em;pointer-events:none}
+#empty span{color:rgba(217,164,65,.55);font-size:10px}
+#hoverchip{position:absolute;top:8px;left:8px;background:rgba(4,6,12,.9);border:1px solid var(--edge);
+  border-radius:4px;padding:5px 8px;font-size:10px;line-height:1.5;color:var(--dim);pointer-events:none;
+  opacity:0;transition:opacity .12s;white-space:nowrap}
+#hoverchip b{color:var(--gold)} #hoverchip .c{color:var(--cyan)} #hoverchip .g{color:var(--green)}
+.rail{flex:0 0 258px;display:flex;flex-direction:column;gap:9px;padding-top:2px;overflow:hidden}
+.fname{font-size:13px;color:var(--cyan);letter-spacing:.02em;word-break:break-all;line-height:1.3}
+.meta{color:var(--dim);font-size:10.5px;line-height:1.7}
+.meta b{color:var(--gold)}
+.sig{border:1px solid var(--edge2);border-left:2px solid var(--gold);border-radius:4px;padding:8px 10px;background:rgba(20,18,10,.4)}
+.sig .lab{color:var(--gold);font-size:11.5px;letter-spacing:.03em;margin-bottom:3px}
+.sig.cyan{border-left-color:var(--cyan)} .sig.cyan .lab{color:var(--cyan)}
+.sig.pink{border-left-color:var(--pink)} .sig.pink .lab{color:var(--pink)}
+.sig.green{border-left-color:var(--green)} .sig.green .lab{color:var(--green)}
+.sig.dim{border-left-color:#444} .sig.dim .lab{color:#8a93a3}
+.sig .note{color:rgba(220,228,240,.55);font-size:9.5px;line-height:1.5}
+.sig .bytes{margin-top:5px;font-size:9.5px;color:rgba(0,212,255,.65);letter-spacing:.05em}
+.entwrap{margin-top:1px}
+.entrow{display:flex;justify-content:space-between;color:var(--dim);font-size:10px;margin-bottom:4px}
+.entrow b{color:var(--pink)}
+.entbar{height:7px;background:#12141c;border:1px solid var(--edge);border-radius:4px;overflow:hidden}
+.entbar i{display:block;height:100%;width:0;transition:width .5s ease;
+  background:linear-gradient(90deg,#3a7,#7fff7f 30%,#ffd700 65%,#ff69b4)}
+.entlbl{color:var(--dim);font-size:9.5px;margin-top:4px;letter-spacing:.02em}
+#hist{width:100%;height:52px;background:#04060c;border:1px solid var(--edge);border-radius:4px;display:block}
+.cap{color:rgba(220,228,240,.42);font-size:9px;line-height:1.55}
+.cap b{color:var(--gold)}
+.bar{flex:0 0 auto;display:flex;align-items:center;gap:5px;flex-wrap:wrap;
+  background:var(--panel);border-top:1px solid var(--edge);padding:8px 20px;margin-top:10px}
+.lbl{color:rgba(220,228,240,.4);text-transform:uppercase;letter-spacing:.12em;font-size:9px;margin:0 2px}
+.sep{width:1px;height:18px;background:var(--edge);margin:0 5px}
+.pb,.cb,.act{background:#0d0d16;color:#6a6a7a;border:1px solid #26263a;border-radius:3px;
+  padding:5px 12px;font-family:inherit;font-size:11px;cursor:pointer;transition:all .13s;white-space:nowrap}
+.pb:hover,.cb:hover,.act:hover{background:#15151f;border-color:#4a4a66;color:#c9c9dc}
+.pb.on{background:var(--gold);color:#050510;border-color:var(--gold)}
+.cb.on{background:var(--cyan);color:#050510;border-color:var(--cyan)}
+.act{color:var(--pink);border-color:#3a1a2e;margin-left:auto}
+.act:hover{background:#20101a;border-color:var(--pink);color:var(--pink)}
+.strip{flex:0 0 auto;display:flex;gap:8px;align-items:center;padding:9px 20px;overflow-x:auto;
+  border-top:1px solid #10131c;min-height:0}
+.strip:empty{display:none}
+.thumb{flex:0 0 auto;width:60px;cursor:pointer;text-align:center;position:relative}
+.thumb canvas{width:60px;height:60px;image-rendering:pixelated;border:1px solid var(--edge);border-radius:3px;display:block;transition:border-color .13s}
+.thumb.sel canvas{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold)}
+.thumb:hover canvas{border-color:#4a6a8a}
+.thumb .tn{font-size:8px;color:var(--dim);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.thumb .twin{position:absolute;top:-4px;right:-4px;background:var(--pink);color:#050510;font-size:8px;
+  font-weight:bold;border-radius:3px;padding:0 3px;line-height:13px}
+.drop{position:fixed;inset:0;z-index:50;display:none;align-items:center;justify-content:center;
+  background:rgba(5,5,10,.82);backdrop-filter:blur(2px)}
+.drop.on{display:flex}
+.drop div{border:2px dashed var(--gold);border-radius:12px;padding:40px 60px;color:var(--gold);
+  font-size:16px;letter-spacing:.1em;font-family:'Orbitron',sans-serif}
+::-webkit-scrollbar{height:7px;width:7px}::-webkit-scrollbar-thumb{background:#26263a;border-radius:4px}
+@media (max-width:820px){ main{flex-direction:column} .rail{flex:0 0 auto;flex-direction:row;flex-wrap:wrap;gap:8px} .rail>*{flex:1 1 46%} #hist{flex-basis:100%} }
+@media (prefers-reduced-motion:reduce){#hero{transition:none}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="brand">BYTE ORACLE</div>
+    <div class="tag">files as space-filling curves — thread the bytes along a Hilbert curve and the file shows you its shape</div>
+  </header>
+
+  <main>
+    <section class="stage">
+      <canvas id="hero" width="560" height="560"></canvas>
+      <div id="hoverchip"></div>
+      <div id="empty">drop a file anywhere<br><span>.xlsx · .exe · .png · .zip · anything with bytes</span></div>
+    </section>
+
+    <aside class="rail">
+      <div class="fname" id="fname">— sample loaded —</div>
+      <div class="meta" id="meta"></div>
+      <div class="sig dim" id="sig"><div class="lab">…</div><div class="note"></div></div>
+      <div class="entwrap">
+        <div class="entrow"><span>entropy</span><b id="entval">—</b></div>
+        <div class="entbar"><i id="entfill"></i></div>
+        <div class="entlbl" id="entlbl"></div>
+      </div>
+      <canvas id="hist" width="256" height="52"></canvas>
+      <div class="cap" id="entcap"></div>
+    </aside>
+  </main>
+
+  <div class="bar">
+    <span class="lbl">ink</span>
+    <button class="pb on" data-pal="earth">earth</button>
+    <button class="pb" data-pal="class">class</button>
+    <button class="pb" data-pal="gray">gray</button>
+    <button class="pb" data-pal="hue">hue</button>
+    <span class="sep"></span>
+    <span class="lbl">curve</span>
+    <button class="cb on" data-curve="hilbert">hilbert</button>
+    <button class="cb" data-curve="morton">z-order</button>
+    <button class="cb" data-curve="scan">scan</button>
+    <button class="act" id="load">load file…</button>
+  </div>
+
+  <div class="strip" id="strip"></div>
+  <input type="file" id="file" multiple hidden>
+</div>
+<div class="drop" id="drop"><div>release to read the bytes</div></div>
+
+<script>
+"use strict";
+const REDUCE = matchMedia('(prefers-reduced-motion:reduce)').matches;
+const CAP = 4*1024*1024;          // read at most 4 MB per file (browser-friendly)
+const HERO = 560;                 // hero backing-store px
+
+// ---------------------------------------------------------------- curve math
+function rot(n,p,rx,ry){ if(ry===0){ if(rx===1){p.x=n-1-p.x;p.y=n-1-p.y;} const t=p.x;p.x=p.y;p.y=t; } }
+function hilbD2XY(o,d){ const n=1<<o; let p={x:0,y:0},t=d; for(let s=1;s<n;s<<=1){ const rx=1&(t>>1),ry=1&(t^rx); rot(s,p,rx,ry); p.x+=s*rx;p.y+=s*ry; t>>=2; } return [p.x,p.y]; }
+function hilbXY2D(o,x,y){ const n=1<<o; let d=0,p={x,y}; for(let s=n>>1;s>0;s>>=1){ const rx=(p.x&s)>0?1:0,ry=(p.y&s)>0?1:0; d+=s*s*((3*rx)^ry); rot(n,p,rx,ry);} return d; }
+function morDec(d){let x=0,y=0;for(let i=0;i<16;i++){x|=((d>>(2*i))&1)<<i;y|=((d>>(2*i+1))&1)<<i;}return[x,y];}
+function morEnc(x,y){let d=0;for(let i=0;i<16;i++){d|=((x>>i)&1)<<(2*i);d|=((y>>i)&1)<<(2*i+1);}return d;}
+function mapCurve(curve,o,i,g){ if(curve==='hilbert')return hilbD2XY(o,i); if(curve==='morton')return morDec(i); return [i%g,(i/g)|0]; }
+function unmapCurve(curve,o,x,y,g){ if(curve==='hilbert')return hilbXY2D(o,x,y); if(curve==='morton')return morEnc(x,y); return y*g+x; }
+function orderFor(count){ let o=Math.ceil(Math.log2(count||1)/2); if(!isFinite(o)||o<6)o=6; if(o>10)o=10; return o; }
+
+// ---------------------------------------------------------------- palettes
+const EARTH=[[0,[18,10,4]],[.14,[58,36,16]],[.30,[107,61,22]],[.46,[156,90,30]],[.62,[193,132,31]],[.78,[217,164,65]],[.90,[230,200,120]],[1,[242,230,194]]];
+function ramp(st,t){ for(let i=1;i<st.length;i++){ if(t<=st[i][0]){ const [a,c0]=st[i-1],[b,c1]=st[i],f=(t-a)/((b-a)||1); return [c0[0]+(c1[0]-c0[0])*f,c0[1]+(c1[1]-c0[1])*f,c0[2]+(c1[2]-c0[2])*f]; } } return st[st.length-1][1]; }
+function hsl2rgb(h,s,l){ h/=360; const q=l<.5?l*(1+s):l+s-l*s,p=2*l-q,f=t=>{t=(t+1)%1; if(t<1/6)return p+(q-p)*6*t; if(t<.5)return q; if(t<2/3)return p+(q-p)*(2/3-t)*6; return p;}; return [f(h+1/3)*255,f(h)*255,f(h-1/3)*255]; }
+function colorOf(v,pal){
+  if(pal==='earth') return ramp(EARTH,v/255);
+  if(pal==='gray') return [v,v,v];
+  if(pal==='hue') return hsl2rgb(v/255*285,.85,.55);
+  if(v===0) return [22,22,30];
+  if(v===255) return [236,236,242];
+  if(v>=32&&v<=126){ const s=.55+.45*((v-32)/94); return [70*s,220*s,120*s]; }
+  if(v>=128){ const s=.5+.5*((v-128)/127); return [255*s,90*s,90*s]; }
+  const s=.4+.6*(v/31); return [74*s,158*s,255*s];
+}
+
+// ---------------------------------------------------------------- analysis
+function entropy(b){ const h=new Uint32Array(256); for(let i=0;i<b.length;i++)h[b[i]]++; let H=0; const n=b.length||1; for(let i=0;i<256;i++)if(h[i]){const p=h[i]/n;H-=p*Math.log2(p);} return {H,h}; }
+function entNote(H){ if(H<4)return'highly structured'; if(H<6)return'structured / text-like'; if(H<7.5)return'mixed binary'; if(H<7.9)return'dense — likely media'; return'near-random — compressed or encrypted'; }
+const SIGS=[
+ {m:[0x50,0x4B],label:'PK · ZIP / Office',note:'Zip container — also .xlsx .docx .pptx .jar. "PK" = Phil Katz.',k:'gold'},
+ {m:[0x4D,0x5A],label:'MZ · Windows PE',note:'DOS/Windows executable. "MZ" = Mark Zbikowski.',k:'cyan'},
+ {m:[0x25,0x50,0x44,0x46],label:'%PDF · document',note:'Portable Document Format.',k:'pink'},
+ {m:[0x89,0x50,0x4E,0x47],label:'PNG image',note:'Lossless raster image.',k:'green'},
+ {m:[0xFF,0xD8,0xFF],label:'JPEG image',note:'Compressed photo — expect high entropy.',k:'green'},
+ {m:[0x47,0x49,0x46,0x38],label:'GIF image',note:'Graphics Interchange Format.',k:'green'},
+ {m:[0x7F,0x45,0x4C,0x46],label:'ELF · Unix binary',note:'Linux/Unix executable.',k:'cyan'},
+ {m:[0xCF,0xFA,0xED,0xFE],label:'Mach-O · macOS',note:'macOS executable.',k:'cyan'},
+ {m:[0x1F,0x8B],label:'GZIP stream',note:'Compressed — expect ~8 bits/byte of static.',k:'gold'},
+ {m:[0x52,0x61,0x72,0x21],label:'RAR archive',note:'Compressed archive.',k:'gold'},
+ {m:[0x37,0x7A,0xBC,0xAF],label:'7-Zip archive',note:'Compressed archive.',k:'gold'},
+ {m:[0x42,0x4D],label:'BMP image',note:'Uncompressed bitmap — often low entropy.',k:'green'},
+ {m:[0x49,0x44,0x33],label:'MP3 · ID3 audio',note:'Audio with an ID3 tag.',k:'green'},
+ {m:[0x52,0x49,0x46,0x46],label:'RIFF · WAV/AVI/WebP',note:'RIFF media container.',k:'green'},
+ {m:[0xEF,0xBB,0xBF],label:'UTF-8 text (BOM)',note:'Text with a byte-order mark.',k:'pink'},
+ {m:[0x3C,0x3F,0x78,0x6D,0x6C],label:'XML text',note:'<?xml … markup — an .xlsx is this, zipped.',k:'pink'},
+ {m:[0x3C,0x21,0x44,0x4F,0x43],label:'HTML document',note:'<!DOC… markup.',k:'pink'},
+ {m:[0x3C,0x68,0x74,0x6D,0x6C],label:'HTML document',note:'<html… markup.',k:'pink'},
+];
+function detectSig(b){
+  for(const s of SIGS){ let ok=true; for(let i=0;i<s.m.length;i++)if(b[i]!==s.m[i]){ok=false;break;} if(ok)return s; }
+  let pr=0,n=Math.min(b.length,512);
+  for(let i=0;i<n;i++){const v=b[i]; if((v>=32&&v<127)||v===9||v===10||v===13)pr++;}
+  if(n>0&&pr/n>.95)return {label:'Plain text',note:'All-printable in the first bytes — reads as ASCII/UTF-8.',k:'green'};
+  return {label:'Raw binary',note:'No known signature in the opening bytes.',k:'dim'};
+}
+function hex(v){return v.toString(16).toUpperCase().padStart(2,'0');}
+function firstHex(b,n){let o=[];for(let i=0;i<Math.min(b.length,n);i++)o.push(hex(b[i]));return o.join(' ');}
+function fnv(b){let h=0x811c9dc5>>>0;for(let i=0;i<b.length;i++){h^=b[i];h=Math.imul(h,0x01000193)>>>0;}return h>>>0;}
+function fmtSize(n){ if(n<1024)return n+' B'; if(n<1048576)return (n/1024).toFixed(1)+' KB'; if(n<1073741824)return (n/1048576).toFixed(2)+' MB'; return (n/1073741824).toFixed(2)+' GB'; }
+
+// ---------------------------------------------------------------- state + render
+const state={files:[],cur:-1,pal:'earth',curve:'hilbert',order:6,grid:64,count:0};
+const hero=document.getElementById('hero'), hctx=hero.getContext('2d');
+hctx.imageSmoothingEnabled=false;
+const off=document.createElement('canvas');
+
+function renderInto(cvs,rec,pal,curve){
+  const count=rec.bytes.length, o=orderFor(count), g=1<<o, total=g*g;
+  cvs.width=g; cvs.height=g;
+  const ctx=cvs.getContext('2d'), img=ctx.createImageData(g,g), d=img.data;
+  for(let p=0;p<total;p++){ const q=p*4; d[q]=8;d[q+1]=10;d[q+2]=14;d[q+3]=255; }   // bg
+  const draw=Math.min(count,total);
+  for(let i=0;i<draw;i++){
+    const bi = count>total ? ((i*count/total)|0) : i;
+    const c=colorOf(rec.bytes[bi],pal);
+    const [x,y]=mapCurve(curve,o,i,g);
+    const q=(y*g+x)*4; d[q]=c[0];d[q+1]=c[1];d[q+2]=c[2];d[q+3]=255;
+  }
+  ctx.putImageData(img,0,0);
+  return {o,g,count};
+}
+function renderHero(){
+  if(state.cur<0)return;
+  const rec=state.files[state.cur];
+  const r=renderInto(off,rec,state.pal,state.curve);
+  state.order=r.o; state.grid=r.g; state.count=r.count;
+  hctx.imageSmoothingEnabled=false;
+  hctx.clearRect(0,0,HERO,HERO);
+  hctx.drawImage(off,0,0,HERO,HERO);
+  hero.classList.remove('show'); void hero.offsetWidth; hero.classList.add('show');
+}
+
+function drawHist(h){
+  const c=document.getElementById('hist'),x=c.getContext('2d');
+  c.width=256; c.height=52; x.clearRect(0,0,256,52);
+  let mx=1; for(let i=0;i<256;i++)mx=Math.max(mx,h[i]);
+  for(let i=0;i<256;i++){
+    const bh=Math.round(50*Math.log(1+h[i])/Math.log(1+mx));
+    const col=colorOf(i,state.pal==='class'?'class':'earth');
+    x.fillStyle=`rgb(${col[0]|0},${col[1]|0},${col[2]|0})`;
+    x.fillRect(i,52-bh,1,bh);
+  }
+}
+
+function showFile(idx){
+  state.cur=idx; const rec=state.files[idx];
+  document.getElementById('empty').style.display='none';
+  renderHero();
+  const {H,h}=entropy(rec.bytes);
+  const sig=detectSig(rec.bytes);
+  document.getElementById('fname').textContent=rec.name;
+  document.getElementById('meta').innerHTML=
+    `size <b>${fmtSize(rec.size)}</b> · grid <b>${state.grid}×${state.grid}</b> · `+
+    (rec.truncated?`showing first <b>${fmtSize(rec.read)}</b>`:`<b>${rec.read.toLocaleString()}</b> bytes, all shown`);
+  const sigEl=document.getElementById('sig');
+  sigEl.className='sig '+sig.k;
+  sigEl.innerHTML=`<div class="lab">${sig.label}</div><div class="note">${sig.note}</div><div class="bytes">${firstHex(rec.bytes,10)}</div>`;
+  document.getElementById('entval').textContent=H.toFixed(2)+' bits/byte';
+  document.getElementById('entfill').style.width=(H/8*100)+'%';
+  document.getElementById('entlbl').textContent=entNote(H);
+  document.getElementById('entcap').innerHTML = H>7.6
+    ? 'Near <b>8 bits/byte</b> = already compressed. It looks like static because there\'s no redundancy left to see — same reason a zipped .xlsx renders as noise.'
+    : 'Flat bands = repetition (nulls, padding, text). Sharp texture changes are where one section of the file ends and another begins.';
+  drawHist(h);
+  markStrip();
+}
+
+// ---------------------------------------------------------------- filmstrip
+function renderStrip(){
+  const strip=document.getElementById('strip'); strip.innerHTML='';
+  // twin groups (same size + same hash of read bytes)
+  const seen={}; state.files.forEach(f=>{const k=f.size+':'+f.hash; seen[k]=(seen[k]||0)+1;});
+  state.files.forEach((f,i)=>{
+    const wrap=document.createElement('div'); wrap.className='thumb'; wrap.dataset.i=i;
+    const c=document.createElement('canvas'); renderInto(c,f,state.pal,state.curve);
+    const nm=document.createElement('div'); nm.className='tn'; nm.textContent=f.name;
+    wrap.appendChild(c); wrap.appendChild(nm);
+    if((seen[f.size+':'+f.hash]||0)>1){ const t=document.createElement('div'); t.className='twin'; t.textContent='≡'; t.title='looks identical to another file'; wrap.appendChild(t); }
+    wrap.onclick=()=>showFile(i);
+    strip.appendChild(wrap);
+  });
+  markStrip();
+}
+function markStrip(){ document.querySelectorAll('.thumb').forEach(t=>t.classList.toggle('sel',+t.dataset.i===state.cur)); }
+function repaintStrip(){ document.querySelectorAll('.thumb').forEach(t=>{ const f=state.files[+t.dataset.i]; renderInto(t.querySelector('canvas'),f,state.pal,state.curve); }); }
+
+// ---------------------------------------------------------------- input
+function addFiles(list){
+  [...list].forEach(file=>{
+    const fr=new FileReader();
+    fr.onload=()=>{
+      const bytes=new Uint8Array(fr.result);
+      state.files.push({name:file.name,size:file.size,read:bytes.length,truncated:file.size>CAP,bytes,hash:fnv(bytes)});
+      renderStrip(); showFile(state.files.length-1);
+    };
+    fr.readAsArrayBuffer(file.slice(0,CAP));
+  });
+}
+document.getElementById('load').onclick=()=>document.getElementById('file').click();
+document.getElementById('file').onchange=e=>addFiles(e.target.files);
+const drop=document.getElementById('drop');
+['dragenter','dragover'].forEach(ev=>document.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('on');}));
+['dragleave','drop'].forEach(ev=>document.addEventListener(ev,e=>{ e.preventDefault(); if(ev==='drop'||e.relatedTarget===null||e.clientX<=0){drop.classList.remove('on');} }));
+document.addEventListener('drop',e=>{ e.preventDefault(); drop.classList.remove('on'); if(e.dataTransfer.files.length)addFiles(e.dataTransfer.files); });
+
+// hover readout
+const chip=document.getElementById('hoverchip');
+hero.addEventListener('mousemove',e=>{
+  if(state.cur<0)return;
+  const r=hero.getBoundingClientRect();
+  const g=state.grid, count=state.count, total=g*g;
+  const px=Math.min(g-1,Math.max(0,((e.clientX-r.left)/r.width*g)|0));
+  const py=Math.min(g-1,Math.max(0,((e.clientY-r.top)/r.height*g)|0));
+  const dist=unmapCurve(state.curve,state.order,px,py,g);
+  const bi = count>total ? ((dist*count/total)|0) : dist;
+  const rec=state.files[state.cur];
+  if(dist>=total||bi>=count){ chip.style.opacity=0; return; }
+  const v=rec.bytes[bi];
+  const ch=(v>=32&&v<127)?String.fromCharCode(v):'·';
+  chip.innerHTML=`offset <b>0x${bi.toString(16).toUpperCase()}</b> <span class="c">(${bi.toLocaleString()})</span><br>byte <b>0x${hex(v)}</b> <span class="g">= ${v}</span> '${ch}'`;
+  chip.style.opacity=1;
+});
+hero.addEventListener('mouseleave',()=>chip.style.opacity=0);
+
+// controls
+document.querySelectorAll('.pb').forEach(b=>b.onclick=()=>{ document.querySelectorAll('.pb').forEach(x=>x.classList.remove('on')); b.classList.add('on'); state.pal=b.dataset.pal; renderHero(); repaintStrip(); if(state.cur>=0){const{h}=entropy(state.files[state.cur].bytes);drawHist(h);} });
+document.querySelectorAll('.cb').forEach(b=>b.onclick=()=>{ document.querySelectorAll('.cb').forEach(x=>x.classList.remove('on')); b.classList.add('on'); state.curve=b.dataset.curve; renderHero(); repaintStrip(); });
+
+// ---------------------------------------------------------------- demo seeds
+function seedSamples(){
+  // 1: plain text — warm/structured
+  const txt=[]; const line="the quick brown fox jumps over 13 lazy dogs. ";
+  for(let i=0;i<20000;i++)txt.push(line.charCodeAt(i%line.length));
+  // 2: pure random — uniform static (high entropy)
+  const rnd=new Uint8Array(20000); crypto.getRandomValues(rnd);
+  // 3: mixed — nulls, then text, then random, then a "header" — bands show locality
+  const mix=new Uint8Array(24000);
+  for(let i=0;i<24000;i++){
+    if(i<4000)mix[i]=0;                                   // padding
+    else if(i<10000)mix[i]=32+((i*7)%95);                 // text-ish
+    else if(i<16000)mix[i]=(Math.random()*256)|0;         // noise
+    else mix[i]=(i%2)?0xFF:0x00;                          // stripes
+  }
+  const mk=(name,arr)=>({name,size:arr.length,read:arr.length,truncated:false,bytes:arr instanceof Uint8Array?arr:Uint8Array.from(arr),hash:fnv(arr instanceof Uint8Array?arr:Uint8Array.from(arr))});
+  state.files.push(mk('sample · text.txt',txt));
+  state.files.push(mk('sample · random.bin',rnd));
+  state.files.push(mk('sample · mixed.dat',mix));
+  renderStrip(); showFile(2);
+}
+seedSamples();
+</script>
+</body>
+</html>

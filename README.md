@@ -22,7 +22,7 @@ The dashboard is BUILT, not hand-listed: `builder/build_eng_v2.py` scans the sim
 disk and generates every card, so it can never drift from what actually ships.
 
 **Want every single link, no matter how small?** See [`IO_PAGES.md`](IO_PAGES.md) --
-the complete public index of all 283 `.html` pages across every repo.
+the complete public index of all 426 `.html` pages across every repo.
 
 ---
 
@@ -68,6 +68,40 @@ the way a hand-typed table does). Open **ENG v2.0** and browse ~90 cards.*
 | GKERN v2.0 | [GKernV2.0.html](https://vsavytsk1.github.io/Mnetv1/pack/GKernV2.0.html) | Goldberg kernel portable. 4 regimes. 1M bench. |
 | SPOOKY PRIMES | [SpookyPrimes](https://vsavytsk1.github.io/SpookyPrimes/) | 12 open physics questions. The origin. |
 | LICENSE | [index.html](https://vsavytsk1.github.io/Mnetv1/shell/spooky_warning/index.html) | Galactic Law. MIT. The Vale Filter Gate. |
+
+---
+
+## Generate your own genesis wallpaper (the centerpiece)
+
+The browser shows the kernel *alive*. To hang it on your wall, `builder/genesis_wallpaper_v1_5.py`
+renders the **original genesis v8.1 `refineFace` operator** -- crescent defect and all, *that
+defect is the picture* -- straight to a huge JPG (up to 8K). Same geometry, no fake curve.
+
+```
+pip install numpy pillow
+# exact renderer (the browser canvas, ported line-for-line):  pip install matplotlib
+# optional GPU (RTX 30xx -> cuda12x):                          pip install cupy-cuda12x
+
+python builder/genesis_wallpaper_v1_5.py
+```
+
+Everything you'd tune is in the **CONFIG block** at the top of the file:
+
+| knob | what it does | novice start |
+|------|--------------|--------------|
+| `SEED` | the buckyball family -- `dodec` / `c60` / `c80` / `c180` / `c320` (all carry **exactly 12 pentagons**) | `"c60"` |
+| `OPS` | order of refinement, top to bottom: `"all"` = refine all, `"hex"` = refine 6-gons, `"pent"` = 5-gons | `["all"]*1 + ["hex"]*8` (~8.2M faces) |
+| `INNER_SCALE` / `MID_SCALE` | the crescent: `MID > INNER` = the rosette gap; `<` = layered overlap; `=` = flat | `0.10 / 0.10` |
+| `MOBIUS_T` | 0 = sphere, 1 = full twist (with `MOBIUS_PROJECT=True` this makes the **spiked** star, not a strip) | `0.0` to start |
+| `RENDERER` | `"exact"` = the canvas ported faithfully (needs matplotlib); `"additive"` = the glowing wallpaper instrument, scales past 100M faces | `"exact"` |
+| `WIDTH`/`HEIGHT` | output size -- `5120x2880` (5K) or `7680x4320` (8K, ~1.5 GB more RAM) | `5120x2880` |
+
+**Novice:** keep the defaults, run it, get a 5K genesis rosette. **Advanced:** push `OPS` to
+`["all"]*5 + ["hex"]*3` (~57M faces, CPU-only), switch `RENDERER="additive"`, and let it glow --
+predict the face count from the recurrence before you launch (the ceiling is honest: no cap here,
+so *you* are the guard). Every seed x every knob = a unique fractal. The 12 pentagons never move.
+
+*P=12 . chi=2 . the crescent defect is kept on purpose . it is the picture.*
 
 ---
 

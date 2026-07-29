@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BYTE SPHERE · a file on a closed surface · P=12 · chi=2</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#050508; --panel:rgba(8,9,15,.92); --edge:#1a1f2e; --edge2:#2a2618;
+  --cyan:#00d4ff; --gold:#ffd700; --pink:#ff69b4; --green:#7fff7f; --dim:rgba(220,228,240,.5);
+}
+html,body{height:100%}
+body{background:
+    radial-gradient(1100px 700px at 72% -8%, rgba(0,90,120,.10), transparent 60%),
+    radial-gradient(900px 600px at 0% 118%, rgba(120,70,20,.13), transparent 55%),
+    var(--bg);
+  color:#dfe6f0;font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:12px;overflow:hidden;height:100vh}
+canvas#cv{display:block;position:fixed;inset:0;touch-action:none;cursor:grab}
+canvas#cv.drag{cursor:grabbing}
+#hud{position:fixed;top:14px;left:16px;z-index:10;pointer-events:none;max-width:320px}
+.brand{font-family:'Orbitron',sans-serif;font-weight:900;font-size:18px;letter-spacing:.28em;
+  background:linear-gradient(90deg,var(--gold),#e6c878 45%,var(--cyan));-webkit-background-clip:text;background-clip:text;color:transparent}
+.tag{color:var(--pink);opacity:.72;font-size:9.5px;letter-spacing:.06em;margin:3px 0 9px}
+.inv{color:var(--dim);font-size:10.5px;line-height:1.75}
+.inv b{color:var(--gold)} .inv .c{color:var(--cyan)} .inv .p{color:var(--pink)} .inv .g{color:var(--green)}
+#fname{color:var(--cyan);font-size:12.5px;word-break:break-all;line-height:1.3;margin-bottom:5px;max-width:300px}
+#legend{position:fixed;top:16px;right:16px;z-index:10;background:rgba(6,7,13,.86);border:1px solid var(--edge);
+  border-radius:5px;padding:9px 11px;font-size:10px;color:var(--dim);line-height:1.7;max-width:210px}
+#legend b{color:var(--gold)} #legend .p{color:var(--pink)}
+#bar{position:fixed;left:0;right:0;bottom:0;z-index:12;background:var(--panel);border-top:1px solid var(--edge);
+  padding:8px 16px;display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.lbl{color:rgba(220,228,240,.4);text-transform:uppercase;letter-spacing:.11em;font-size:9px;margin:0 2px}
+.sep{width:1px;height:18px;background:var(--edge);margin:0 5px}
+.btn{background:#0d0d16;color:#6a6a7a;border:1px solid #26263a;border-radius:3px;padding:5px 11px;
+  font-family:inherit;font-size:11px;cursor:pointer;transition:all .13s;white-space:nowrap}
+.btn:hover{background:#15151f;border-color:#4a4a66;color:#c9c9dc}
+.btn.on{background:var(--gold);color:#050510;border-color:var(--gold)}
+.btn.cyan.on{background:var(--cyan);color:#050510;border-color:var(--cyan)}
+.btn.pink.on{background:var(--pink);color:#050510;border-color:var(--pink)}
+.btn.act{color:var(--pink);border-color:#3a1a2e;margin-left:auto}
+.btn.act:hover{background:#20101a;border-color:var(--pink);color:var(--pink)}
+#help{position:fixed;right:16px;bottom:52px;z-index:9;color:rgba(220,228,240,.38);font-size:9.5px;text-align:right;line-height:1.65;pointer-events:none}
+#help b{color:rgba(0,212,255,.7)}
+.drop{position:fixed;inset:0;z-index:50;display:none;align-items:center;justify-content:center;background:rgba(5,5,10,.82)}
+.drop.on{display:flex}
+.drop div{border:2px dashed var(--gold);border-radius:12px;padding:38px 58px;color:var(--gold);font-size:15px;letter-spacing:.1em;font-family:'Orbitron',sans-serif}
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+
+<div id="hud">
+  <div class="brand">BYTE SPHERE</div>
+  <div class="tag">a file wrapped on a closed surface — no edges, no corners, chi=2</div>
+  <div id="fname">— sample loaded —</div>
+  <div class="inv" id="inv"></div>
+</div>
+
+<div id="legend">
+  <b>the curve</b> threads the file's bytes along an S2-style spherical Hilbert order over the geodesic buckyball.<br><br>
+  <span class="p">◆ pink dots = the 12 pentagons</span> — Euler forces exactly 12, and they are the defects where the curve's locality must break.
+</div>
+
+<div id="help">
+  <b>drag</b> orbit · <b>wheel</b> zoom · <b>I</b> inside view · <b>S</b> spin<br>
+  <b>[ ]</b> subdivide − + · <b>drop a file</b> to wrap it
+</div>
+
+<div id="bar">
+  <span class="lbl">ink</span>
+  <button class="btn on" data-pal="earth">earth</button>
+  <button class="btn" data-pal="class">class</button>
+  <button class="btn" data-pal="gray">gray</button>
+  <span class="sep"></span>
+  <span class="lbl">subdiv</span>
+  <button class="btn" id="sub-">−</button>
+  <button class="btn" id="sub+">+</button>
+  <span class="sep"></span>
+  <button class="btn cyan" id="inside">inside view</button>
+  <button class="btn pink" id="spin">spin</button>
+  <button class="btn" id="pents">show P=12</button>
+  <button class="btn act" id="load">load file…</button>
+</div>
+<input type="file" id="file" hidden>
+<div class="drop" id="drop"><div>release to wrap the bytes</div></div>
+
+<script>
+"use strict";
+// ------------------------------------------------------------------ helpers
+function norm(p){const l=Math.hypot(p[0],p[1],p[2])||1;return [p[0]/l,p[1]/l,p[2]/l];}
+function sub(a,b){return [a[0]-b[0],a[1]-b[1],a[2]-b[2]];}
+function cross(a,b){return [a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];}
+function dot(a,b){return a[0]*b[0]+a[1]*b[1]+a[2]*b[2];}
+
+// ------------------------------------------------------------------ geometry (icosphere)
+const PHI=(1+Math.sqrt(5))/2;
+const BUDGET=90000;               // Curse 35: never allocate past this without refusing loudly
+function baseIco(){
+  const V=[[-1,PHI,0],[1,PHI,0],[-1,-PHI,0],[1,-PHI,0],[0,-1,PHI],[0,1,PHI],[0,-1,-PHI],[0,1,-PHI],[PHI,0,-1],[PHI,0,1],[-PHI,0,-1],[-PHI,0,1]].map(norm);
+  let F=[[0,11,5],[0,5,1],[0,1,7],[0,7,10],[0,10,11],[1,5,9],[5,11,4],[11,10,2],[10,7,6],[7,1,8],[3,9,4],[3,4,2],[3,2,6],[3,6,8],[3,8,9],[4,9,5],[2,4,11],[6,2,10],[8,6,7],[9,8,1]];
+  return {V,F};
+}
+function subdivide(V,F){
+  const mid={}, nF=[];
+  const m=(a,b)=>{const k=a<b?a+'_'+b:b+'_'+a; if(mid[k]!==undefined)return mid[k];
+    V.push(norm([(V[a][0]+V[b][0])/2,(V[a][1]+V[b][1])/2,(V[a][2]+V[b][2])/2])); return mid[k]=V.length-1;};
+  for(const[a,b,c]of F){const ab=m(a,b),bc=m(b,c),ca=m(c,a);nF.push([a,ab,ca],[ab,b,bc],[ca,bc,c],[ab,bc,ca]);}
+  return nF;
+}
+// orient a face outward + precompute centroid; returns {idx:[a,b,c], cen:[x,y,z]}
+function faceData(V,f){
+  let n=cross(sub(V[f[1]],V[f[0]]),sub(V[f[2]],V[f[0]]));
+  const cen=norm([(V[f[0]][0]+V[f[1]][0]+V[f[2]][0])/3,(V[f[0]][1]+V[f[1]][1]+V[f[2]][1])/3,(V[f[0]][2]+V[f[1]][2]+V[f[2]][2])/3]);
+  let idx=f.slice();
+  if(dot(n,cen)<0){idx=[f[0],f[2],f[1]];}       // outward winding
+  return {idx,cen};
+}
+
+// ------------------------------------------------------------------ S2-style spherical Hilbert order
+function rot(n,p,rx,ry){if(ry===0){if(rx===1){p.x=n-1-p.x;p.y=n-1-p.y;}const tt=p.x;p.x=p.y;p.y=tt;}}
+function hilbXY2D(o,x,y){const n=1<<o;let d=0,p={x,y};for(let s=n>>1;s>0;s>>=1){const rx=(p.x&s)>0?1:0,ry=(p.y&s)>0?1:0;d+=s*s*((3*rx)^ry);rot(n,p,rx,ry);}return d;}
+function curveKey(c){
+  const ax=Math.abs(c[0]),ay=Math.abs(c[1]),az=Math.abs(c[2]);
+  let face,u,w;
+  if(ax>=ay&&ax>=az){face=c[0]>0?0:1;u=-c[2]/ax;w=c[1]/ax;}
+  else if(ay>=az){face=c[1]>0?2:3;u=c[0]/ay;w=-c[2]/ay;}
+  else{face=c[2]>0?4:5;u=c[0]/az;w=c[1]/az;}
+  const O=7,n=1<<O;
+  const gx=Math.min(n-1,Math.max(0,Math.floor((u*0.5+0.5)*n)));
+  const gy=Math.min(n-1,Math.max(0,Math.floor((w*0.5+0.5)*n)));
+  return face*(n*n)+hilbXY2D(O,gx,gy);
+}
+
+// ------------------------------------------------------------------ palettes (shared with Byte Oracle)
+const EARTH=[[0,[18,10,4]],[.14,[58,36,16]],[.30,[107,61,22]],[.46,[156,90,30]],[.62,[193,132,31]],[.78,[217,164,65]],[.90,[230,200,120]],[1,[242,230,194]]];
+function ramp(st,t){for(let i=1;i<st.length;i++){if(t<=st[i][0]){const[a,c0]=st[i-1],[b,c1]=st[i],f=(t-a)/((b-a)||1);return[c0[0]+(c1[0]-c0[0])*f,c0[1]+(c1[1]-c0[1])*f,c0[2]+(c1[2]-c0[2])*f];}}return st[st.length-1][1];}
+function colorOf(v,pal){
+  if(pal==='earth')return ramp(EARTH,v/255);
+  if(pal==='gray')return [v,v,v];
+  if(v===0)return [22,22,30]; if(v===255)return [236,236,242];
+  if(v>=32&&v<=126){const s=.55+.45*((v-32)/94);return[70*s,220*s,120*s];}
+  if(v>=128){const s=.5+.5*((v-128)/127);return[255*s,90*s,90*s];}
+  const s=.4+.6*(v/31);return[74*s,158*s,255*s];
+}
+function entropy(b){const h=new Uint32Array(256);for(let i=0;i<b.length;i++)h[b[i]]++;let H=0;const n=b.length||1;for(let i=0;i<256;i++)if(h[i]){const p=h[i]/n;H-=p*Math.log2(p);}return H;}
+
+// ------------------------------------------------------------------ state
+const cv=document.getElementById('cv'), ctx=cv.getContext('2d');
+let W,H,DPR;
+const S={
+  level:4, V:[], faces:[], colors:[], orig12:[],
+  bytes:null, name:'', size:0, truncated:false, read:0,
+  pal:'earth', inside:false, spin:false, showPents:true,
+  yaw:0.6, pitch:-0.35, dist:2.7, focalIn:0.9,
+  dragging:false, lx:0, ly:0
+};
+
+function resize(){DPR=Math.min(devicePixelRatio||1,2);W=innerWidth;H=innerHeight;cv.width=W*DPR;cv.height=H*DPR;cv.style.width=W+'px';cv.style.height=H+'px';ctx.setTransform(DPR,0,0,DPR,0,0);draw();}
+addEventListener('resize',resize);
+
+// build geometry to S.level, order faces along the curve, keep the original 12 verts
+function buildGeometry(){
+  const {V,F}=baseIco();
+  S.orig12=V.slice(0,12).map(v=>v.slice());   // pentagon centers, forever
+  let faces=F;
+  for(let l=0;l<S.level;l++) faces=subdivide(V,faces);
+  const fd=faces.map(f=>faceData(V,f));
+  fd.sort((a,b)=>curveKey(a.cen)-curveKey(b.cen));   // the spherical curve order
+  S.V=V; S.faces=fd;
+  recolor();
+}
+// map the file's bytes onto faces along the curve order
+function recolor(){
+  const n=S.faces.length, b=S.bytes, count=b?b.length:0;
+  S.colors=new Array(n);
+  for(let i=0;i<n;i++){
+    let v=128;
+    if(count>0){ const bi = count>n ? ((i*count/n)|0) : (i<count? i : -1); v = bi>=0 ? b[bi] : 10; }
+    const c=colorOf(v,S.pal);
+    S.colors[i]=`rgb(${c[0]|0},${c[1]|0},${c[2]|0})`;
+  }
+  updateHUD();
+}
+function invCounts(){const L=S.level;return {F:20*4**L,E:30*4**L,V:10*4**L+2,chi:2,P:12};}
+function updateHUD(){
+  const c=invCounts();
+  document.getElementById('fname').textContent=S.name||'no file';
+  const H_=S.bytes?entropy(S.bytes):0;
+  document.getElementById('inv').innerHTML=
+    `bytes <b>${S.size.toLocaleString()}</b>${S.truncated?` <span class="p">(first ${(S.read/1048576).toFixed(1)}MB shown)</span>`:''}<br>`+
+    `faces <span class="c">${c.F.toLocaleString()}</span> · subdiv <b>L${S.level}</b> · one face ≈ ${Math.max(1,(S.bytes?(S.bytes.length/c.F):0)|0)} B<br>`+
+    `V <b>${c.V.toLocaleString()}</b> · E <b>${c.E.toLocaleString()}</b> · F <b>${c.F.toLocaleString()}</b><br>`+
+    `<span class="g">chi = V−E+F = ${c.chi}</span> · <span class="p">P = ${c.P}</span> · entropy <b>${H_.toFixed(2)}</b>`;
+}
+
+// ------------------------------------------------------------------ render
+function rotatePt(p,yaw,pitch){
+  let x=p[0],y=p[1],z=p[2];
+  let x1=x*Math.cos(yaw)+z*Math.sin(yaw), z1=-x*Math.sin(yaw)+z*Math.cos(yaw);
+  let y2=y*Math.cos(pitch)-z1*Math.sin(pitch), z2=y*Math.sin(pitch)+z1*Math.cos(pitch);
+  return [x1,y2,z2];
+}
+function draw(){
+  ctx.clearRect(0,0,W,H);
+  const cx=W/2, cy=H/2;
+  if(!S.faces.length)return;
+  if(S.inside) drawInside(cx,cy); else drawOutside(cx,cy);
+  if(S.showPents) drawPents(cx,cy);
+}
+function drawOutside(cx,cy){
+  const R=Math.min(W,H)*0.42, D=S.dist, fl=2.2;
+  // rotate all vertices once
+  const RV=S.V.map(p=>rotatePt(p,S.yaw,S.pitch));
+  const order=[];
+  for(let i=0;i<S.faces.length;i++){
+    const f=S.faces[i].idx, a=RV[f[0]],b=RV[f[1]],c=RV[f[2]];
+    // backface cull: outward normal must face camera (+Z)
+    const n=cross(sub(b,a),sub(c,a));
+    if(n[2]<=0) continue;
+    const zc=(a[2]+b[2]+c[2])/3;
+    order.push([i,zc,a,b,c]);
+  }
+  order.sort((p,q)=>p[1]-q[1]);   // far (small z) first
+  for(const [i,zc,a,b,c] of order){
+    const sa=proj(a,D,fl,R,cx,cy), sb=proj(b,D,fl,R,cx,cy), sc=proj(c,D,fl,R,cx,cy);
+    ctx.beginPath();ctx.moveTo(sa[0],sa[1]);ctx.lineTo(sb[0],sb[1]);ctx.lineTo(sc[0],sc[1]);ctx.closePath();
+    ctx.fillStyle=S.colors[i];ctx.fill();
+  }
+}
+function proj(p,D,fl,R,cx,cy){const s=fl/(D-p[2]);return [cx+p[0]*s*R, cy-p[1]*s*R];}
+
+function drawInside(cx,cy){
+  // pinhole camera at the sphere's center, looking along (yaw,pitch)
+  const f=[Math.sin(S.yaw)*Math.cos(S.pitch), Math.sin(S.pitch), Math.cos(S.yaw)*Math.cos(S.pitch)];
+  const wUp=[0,1,0];
+  const r=norm(cross(f,wUp));
+  const u=cross(r,f);
+  const fl=S.focalIn*Math.min(W,H)*0.5;
+  const items=[];
+  for(let i=0;i<S.faces.length;i++){
+    const f3=S.faces[i].idx;
+    const P=[S.V[f3[0]],S.V[f3[1]],S.V[f3[2]]];
+    let ok=true, pts=[], depth=0;
+    for(const d of P){
+      const cz=dot(d,f); if(cz<=0.08){ok=false;break;}
+      const px=dot(d,r)/cz, py=dot(d,u)/cz;
+      pts.push([cx+px*fl, cy-py*fl]); depth+=cz;
+    }
+    if(!ok)continue;
+    items.push([i,depth/3,pts]);
+  }
+  items.sort((p,q)=>p[1]-q[1]);   // draw more-forward faces last
+  for(const [i,dep,pts] of items){
+    ctx.beginPath();ctx.moveTo(pts[0][0],pts[0][1]);ctx.lineTo(pts[1][0],pts[1][1]);ctx.lineTo(pts[2][0],pts[2][1]);ctx.closePath();
+    ctx.fillStyle=S.colors[i];ctx.fill();
+  }
+}
+function drawPents(cx,cy){
+  const R=Math.min(W,H)*0.42, D=S.dist, fl=2.2;
+  for(const v of S.orig12){
+    if(S.inside){
+      const f=[Math.sin(S.yaw)*Math.cos(S.pitch),Math.sin(S.pitch),Math.cos(S.yaw)*Math.cos(S.pitch)];
+      const wUp=[0,1,0],r=norm(cross(f,wUp)),u=cross(r,f),flI=S.focalIn*Math.min(W,H)*0.5;
+      const cz=dot(v,f); if(cz<=0.08)continue;
+      const sx=cx+dot(v,r)/cz*flI, sy=cy-dot(v,u)/cz*flI;
+      dot12(sx,sy,10);
+    } else {
+      const rv=rotatePt(v,S.yaw,S.pitch);
+      if(rv[2]<=0)continue;                         // behind sphere
+      const s=fl/(D-rv[2]), sx=cx+rv[0]*s*R, sy=cy-rv[1]*s*R;
+      dot12(sx,sy,6.5);
+    }
+  }
+}
+function dot12(x,y,rad){
+  ctx.beginPath();ctx.arc(x,y,rad,0,7);
+  ctx.fillStyle='rgba(255,105,180,0.95)';ctx.fill();
+  ctx.lineWidth=1.5;ctx.strokeStyle='rgba(255,255,255,0.85)';ctx.stroke();
+}
+
+// ------------------------------------------------------------------ interaction
+let raf=null;
+function loop(){ if(S.spin){S.yaw+=0.004;} draw(); if(S.spin||S.dragging){raf=requestAnimationFrame(loop);} else raf=null; }
+function kick(){ if(!raf)raf=requestAnimationFrame(loop); }
+
+cv.addEventListener('pointerdown',e=>{S.dragging=true;cv.classList.add('drag');S.lx=e.clientX;S.ly=e.clientY;cv.setPointerCapture(e.pointerId);kick();});
+cv.addEventListener('pointermove',e=>{ if(!S.dragging)return;
+  const dx=e.clientX-S.lx, dy=e.clientY-S.ly; S.lx=e.clientX; S.ly=e.clientY;
+  S.yaw+=dx*0.006; S.pitch+=dy*0.006;
+  S.pitch=Math.max(-1.45,Math.min(1.45,S.pitch));
+  draw();
+});
+cv.addEventListener('pointerup',e=>{S.dragging=false;cv.classList.remove('drag');});
+cv.addEventListener('wheel',e=>{e.preventDefault();
+  if(S.inside){ S.focalIn=Math.max(0.35,Math.min(2.2,S.focalIn*(e.deltaY>0?0.92:1.08))); }
+  else { S.dist=Math.max(1.35,Math.min(6,S.dist*(e.deltaY>0?1.07:0.93))); }
+  draw();
+},{passive:false});
+
+// ------------------------------------------------------------------ controls
+document.querySelectorAll('[data-pal]').forEach(b=>b.onclick=()=>{document.querySelectorAll('[data-pal]').forEach(x=>x.classList.remove('on'));b.classList.add('on');S.pal=b.dataset.pal;recolor();draw();});
+function setLevel(dl){
+  const nextF=20*4**(S.level+dl);
+  if(dl>0 && nextF>BUDGET){ flash(`HALT — L${S.level+1} = ${nextF.toLocaleString()} faces > budget ${BUDGET.toLocaleString()}. The guillotine is built in.`); return; }
+  S.level=Math.max(0,Math.min(6,S.level+dl)); buildGeometry(); draw();
+}
+document.getElementById('sub+').onclick=()=>setLevel(1);
+document.getElementById('sub-').onclick=()=>setLevel(-1);
+const insideBtn=document.getElementById('inside');
+insideBtn.onclick=()=>{S.inside=!S.inside;insideBtn.classList.toggle('on',S.inside);draw();};
+const spinBtn=document.getElementById('spin');
+spinBtn.onclick=()=>{S.spin=!S.spin;spinBtn.classList.toggle('on',S.spin);if(S.spin)kick();};   // Curse 13: opt-in
+const pentBtn=document.getElementById('pents');
+pentBtn.classList.add('on');
+pentBtn.onclick=()=>{S.showPents=!S.showPents;pentBtn.classList.toggle('on',S.showPents);draw();};
+document.addEventListener('keydown',e=>{
+  const k=e.key.toLowerCase();
+  if(k==='i')insideBtn.click(); else if(k==='s')spinBtn.click();
+  else if(k===']')setLevel(1); else if(k==='[')setLevel(-1);
+});
+function flash(msg){const l=document.getElementById('inv');const old=l.innerHTML;l.innerHTML=`<span style="color:#ff5a5a">${msg}</span>`;setTimeout(()=>updateHUD(),2600);}
+
+// ------------------------------------------------------------------ file input
+const CAP=4*1024*1024;
+function loadBytes(file){
+  const fr=new FileReader();
+  fr.onload=()=>{
+    S.bytes=new Uint8Array(fr.result); S.name=file.name; S.size=file.size;
+    S.read=S.bytes.length; S.truncated=file.size>CAP;
+    // auto-pick a subdivision level whose face count is near the byte count
+    let L=Math.ceil(Math.log(Math.max(20,S.bytes.length)/20)/Math.log(4));
+    S.level=Math.max(1,Math.min(6,L)); if(20*4**S.level>BUDGET)S.level=5;
+    buildGeometry(); draw();
+  };
+  fr.readAsArrayBuffer(file.slice(0,CAP));
+}
+document.getElementById('load').onclick=()=>document.getElementById('file').click();
+document.getElementById('file').onchange=e=>{if(e.target.files[0])loadBytes(e.target.files[0]);};
+const drop=document.getElementById('drop');
+['dragenter','dragover'].forEach(ev=>addEventListener(ev,e=>{e.preventDefault();drop.classList.add('on');}));
+['dragleave','drop'].forEach(ev=>addEventListener(ev,e=>{e.preventDefault();if(ev==='drop'||e.relatedTarget===null)drop.classList.remove('on');}));
+addEventListener('drop',e=>{e.preventDefault();drop.classList.remove('on');if(e.dataTransfer.files[0])loadBytes(e.dataTransfer.files[0]);});
+
+// ------------------------------------------------------------------ demo seed (mixed: bands show locality on the shell)
+(function seed(){
+  const n=24000, a=new Uint8Array(n);
+  for(let i=0;i<n;i++){
+    if(i<4000)a[i]=0; else if(i<10000)a[i]=32+((i*7)%95);
+    else if(i<16000)a[i]=(Math.random()*256)|0; else a[i]=(i%2)?0xFF:0x00;
+  }
+  S.bytes=a;S.name='sample · mixed.dat';S.size=n;S.read=n;S.truncated=false;S.level=4;
+  buildGeometry();
+})();
+resize();
+</script>
+</body>
+</html>

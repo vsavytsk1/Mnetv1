@@ -8714,3 +8714,34 @@ longer carded -- invisible). Every version of every sim, across all repos, resol
 -- Vlad + Claude. Ancient Korinthos + Buenos Aires. 2026-07-29.
    Proof by kernel, not by claim. The screen is not the truth until the kernel says so.
    The receipts are public and every one of the 423 doors opens. P=12 . chi=2 . always.
+
+### L153 -- MYCELIUM + THE BYTE SIMS + THE WALLPAPER CENTREPIECE (2026-07-29)
+
+MYCELIUM v1.0 (shell/mycelium_v1.0.html): music as a mushroom in the forest of the mind.
+Principia mAlgebra made literal -- a song is [m][n] in time; each moment plants a SPORE at its
+dominant of 12 log bands (P=12 ring), stitched to the last by a THREAD -> a graph that grows as
+it plays, scrubbable both ways. HONEST inputs (K3): no DRM links; a file, a direct-audio URL, or
+the live mic/tab -> real Web Audio buffer -> FFT -> graph. Kernel-proven: a 440Hz tone grew 20
+spores / 19 threads in 1.6s, 0 errors. Ceiling 1400 (Curse 35). Card in ATELIER.
+
+TWO BYTE SIMS (from Downloads, kernel-checked, 0 errors, self-contained):
+  BYTE ORACLE (shell/byte_oracle.html): a FILE as a space-filling curve -- thread the bytes
+    along Hilbert / z-order / scan, and the file shows its shape; entropy readout, section seams.
+  BYTE SPHERE (shell/byte_sphere.html): the same file wrapped on the CLOSED buckyball surface --
+    a spherical Hilbert order over the geodesic, the 12 pentagons the defects where locality must
+    break. HUD computes chi = V-E+F = 2 live (2562-7680+5120=2) and P=12. No fake curve.
+  Both carded in PHYSICS. The "points and lines, no curve" ethos (PCBIUM's cousin) turned on files.
+
+THE CENTREPIECE, into the README: builder/genesis_wallpaper_v1_5.py -- renders the ORIGINAL
+genesis v8.1 refineFace operator (crescent defect kept: it IS the picture) to an 8K JPG. Two
+renderers in one file (exact = the canvas ported line-for-line via matplotlib; additive = the
+glowing instrument, scales past 100M faces). New README section "Generate your own genesis
+wallpaper" -- the install lines, the CONFIG knob table (SEED / OPS / INNER+MID crescent / MOBIUS
+/ RENDERER / size), novice vs advanced. No maxFaces cap -> the mage is the guard (predict from
+the recurrence, Curse 35). Every seed x every knob = a unique fractal; the 12 pentagons never move.
+
+Rebuilt dashboard (byte + mycelium cards), IO_PAGES = 426, README page-count corrected 283->426.
+
+-- Vlad + Claude. Ancient Korinthos + Buenos Aires. 2026-07-29.
+   A song is a mushroom. A file is a curve on a closed surface. The operator is a wallpaper.
+   Same generator, different skins. P=12 . chi=2 . the defect is the picture . always.

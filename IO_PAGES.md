@@ -4,13 +4,13 @@
 repos. Generated from what git actually tracks on each repo (the truth of what
 Pages serves), by `builder/gen_io_index.py`. Nothing hidden; the door is open.*
 
-**TOTAL: 424 public pages across 8 repos.**
+**TOTAL: 426 public pages across 8 repos.**
 
 *P=12 . chi=2 . the receipts are public . always.*
 
 ---
 
-## Mnetv1  (351 pages)
+## Mnetv1  (353 pages)
 
 - [about.html](https://vsavytsk1.github.io/Mnetv1/about.html)
 - [builder/Obsidius/obsidius_v1.html](https://vsavytsk1.github.io/Mnetv1/builder/Obsidius/obsidius_v1.html)
@@ -91,6 +91,8 @@ Pages serves), by `builder/gen_io_index.py`. Nothing hidden; the door is open.*
 - [shell/bicium-v1_0.html](https://vsavytsk1.github.io/Mnetv1/shell/bicium-v1_0.html)
 - [shell/bicium-v1_1.html](https://vsavytsk1.github.io/Mnetv1/shell/bicium-v1_1.html)
 - [shell/brainium_v0_4.html](https://vsavytsk1.github.io/Mnetv1/shell/brainium_v0_4.html)
+- [shell/byte_oracle.html](https://vsavytsk1.github.io/Mnetv1/shell/byte_oracle.html)
+- [shell/byte_sphere.html](https://vsavytsk1.github.io/Mnetv1/shell/byte_sphere.html)
 - [shell/chromium_v1.0.html](https://vsavytsk1.github.io/Mnetv1/shell/chromium_v1.0.html)
 - [shell/cofium_v1.0.html](https://vsavytsk1.github.io/Mnetv1/shell/cofium_v1.0.html)
 - [shell/cristalium-v1_0.html](https://vsavytsk1.github.io/Mnetv1/shell/cristalium-v1_0.html)
