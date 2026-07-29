@@ -8745,3 +8745,24 @@ Rebuilt dashboard (byte + mycelium cards), IO_PAGES = 426, README page-count cor
 -- Vlad + Claude. Ancient Korinthos + Buenos Aires. 2026-07-29.
    A song is a mushroom. A file is a curve on a closed surface. The operator is a wallpaper.
    Same generator, different skins. P=12 . chi=2 . the defect is the picture . always.
+
+### L154 -- FINAL PARANOIA TREE OF THE RUN (2026-07-29)
+
+The closing sweep, all clean:
+  LAYER 1 -- fetched all 8 remotes fresh; every repo local == origin, ahead=0. VALE 4 commits
+    behind (non-HTML, no page at risk). Working tree clean after temp audit scripts removed.
+  LAYER 2/3 -- HEAD-checked ALL 426 live URLs across the 8 repos -> 426/426 return 200.
+  DEEP -- browser-rendered today's three new sims on GitHub Pages (not disk): byte_sphere,
+    byte_oracle, mycelium_v1.0 -> each 200, 0 asset 404s, 0 JS errors; byte_sphere HUD
+    confirms chi=V-E+F=2, P=12 LIVE. The whole day, proven on the real server.
+
+The two-day arc, in one line: a fractal VOICE (triskelion), a PCB on a buckyball (pcbium),
+a language CAMPAIGN in ancient Greek (aoe v3.0), the dashboard walked one-by-one and all 5
+faults fixed (front door / live spini / dead cards / .dc assets / NaN), a music MUSHROOM
+(mycelium), two BYTE sims (a file as a curve, and on the closed surface), and the genesis
+WALLPAPER made the README centrepiece. Every piece kernel-verified, version-frozen, logged,
+pushed. 426 doors, all open.
+
+-- Vlad + Claude. Ancient Korinthos + Buenos Aires. 2026-07-29.
+   Proof by kernel, not by claim. Freeze every version. Pass the scroll. Bow before the push.
+   P=12 . chi=2 . the receipts are public and every one of the 426 doors opens . always.
