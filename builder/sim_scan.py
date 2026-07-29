@@ -53,7 +53,7 @@ CATEGORY = [
                                             ("PHYSICS",  "#a78bfa", "#2a1a4a")),
     (("gardinerium", "phaistium", "vitruvium", "simcityc", "flagellium",
       "parasitarium", "transmutation"),     ("ATLAS",    "#00d4ff", "#123244")),
-    (("atelier", "baudin", "arcanium", "ancientmagic", "smithium"),
+    (("atelier", "baudin", "arcanium", "ancientmagic", "smithium", "mycelium"),
                                             ("ATELIER",  "#ff69b4", "#3a1a2a")),
     (("warning", "gate", "spooky"),         ("FMA",      "#ff4488", "#3a1a2a")),
     (("vale", "jarvis", "obsidius", "valtium", "portal", "brainium"),

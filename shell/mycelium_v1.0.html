@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MYCELIUM v1.0 · every song is a mushroom · music stitched in graph-time</title>
+<!--
+  MYCELIUM v1.0 -- MUSIC AS A MUSHROOM IN THE FOREST OF THE MIND
+  =====================================================================
+  Principia mAlgebra: "a language is the interaction in time of [m][n]; the mind
+  iterates in graph space, taking the previous graph-space compression minima."
+  A SONG is the same object. Here we make it literal, and honest:
+
+    - the audio is decoded by the browser's Web Audio API (a real buffer, real FFT)
+    - each beat/frame we read the spectrum and PLANT a node (a spore) whose
+      position = its dominant band (the [n], the compression minimum of that moment)
+    - consecutive moments are STITCHED by an edge (the [m], the interaction in time)
+    - the graph GROWS as the song plays -> a mushroom's mycelium in graph-time
+    - you can SCRUB the seek bar back and forward: the mind stitches music both ways
+
+  HONEST (K3, Path IV): this is FFT + a graph, not a mind hearing. YouTube/Spotify
+  *links* cannot be decoded here (DRM/CORS) -- so we take what is real: a local file,
+  a direct-audio URL that allows CORS, or the live mic / tab audio. numbers -> a graph.
+  P=12 . chi=2 . no fake curve, ever . the meaning you bring is yours.
+-->
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  :root{
+    --bg:#05070c; --panel:rgba(8,12,20,.92); --edge:#16202e;
+    --cyan:#00d4ff; --gold:#ffd700; --pink:#ff69b4; --green:#7fff7f;
+    --purple:#a78bfa; --orange:#ff9040; --dim:rgba(200,214,230,.55); --txt:#dfe7f2;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  }
+  html,body{height:100%}
+  body{background:radial-gradient(120% 100% at 50% 0%,#0a1220 0%,var(--bg) 60%);
+    color:var(--txt);font-family:var(--mono);font-size:11px;overflow:hidden}
+  #cv{position:fixed;inset:0;display:block}
+  /* HUD */
+  #hud{position:fixed;top:12px;left:14px;z-index:10;pointer-events:none;max-width:340px}
+  #hud .ttl{font-size:14px;color:var(--green);letter-spacing:.14em;text-transform:uppercase;font-weight:bold}
+  #hud .sub{font-size:9px;color:rgba(127,255,127,.6);letter-spacing:.06em;margin:2px 0 7px;line-height:1.5}
+  #hud .row{line-height:1.7;color:var(--dim);font-variant-numeric:tabular-nums;font-size:10.5px}
+  #hud .g{color:var(--gold)}#hud .c{color:var(--cyan)}#hud .p{color:var(--pink)}#hud .gr{color:var(--green)}
+  #hud .dim{color:rgba(200,214,230,.32);font-size:9px;line-height:1.5;margin-top:6px}
+  /* law card */
+  #law{position:fixed;top:12px;right:14px;z-index:10;background:var(--panel);
+    border:1px solid rgba(127,255,127,.2);border-radius:7px;padding:9px 12px;max-width:240px;
+    font-size:9px;line-height:1.6;color:var(--dim)}
+  #law b{color:var(--green)}#law .c{color:var(--cyan)}#law .g{color:var(--gold)}
+  /* gate */
+  #gate{position:fixed;inset:0;z-index:40;background:rgba(5,7,12,.94);display:flex;
+    flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:20px;text-align:center}
+  #gate .g1{font-size:17px;color:var(--green);letter-spacing:.2em;text-transform:uppercase}
+  #gate .g2{font-size:11px;color:var(--dim);max-width:440px;line-height:1.75}
+  #gate .drop{border:1.5px dashed rgba(127,255,127,.4);border-radius:14px;padding:26px 34px;
+    color:var(--green);font-size:13px;letter-spacing:.05em;transition:all .15s;cursor:pointer;background:rgba(127,255,127,.03)}
+  #gate .drop.over{border-color:var(--gold);background:rgba(255,215,0,.06);color:var(--gold)}
+  #gate .or{color:rgba(200,214,230,.3);font-size:9px;letter-spacing:.2em}
+  #gate .ins{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;align-items:center}
+  #gate .urlbox{display:flex;gap:6px}
+  #gate input{background:rgba(5,10,18,.9);border:1px solid var(--edge);border-radius:6px;
+    color:var(--txt);font-family:inherit;font-size:11px;padding:8px 11px;width:260px;outline:none}
+  #gate input:focus{border-color:var(--cyan)}
+  .mbtn{background:#0c141f;border:1px solid var(--edge);border-radius:6px;color:var(--cyan);
+    font-family:inherit;font-size:11px;padding:8px 15px;cursor:pointer;transition:all .13s;letter-spacing:.04em}
+  .mbtn:hover{border-color:var(--cyan);background:#101a28}
+  .mbtn.mic{color:var(--pink);border-color:#3a1a2a}.mbtn.mic:hover{border-color:var(--pink)}
+  .mbtn.go{color:var(--gold);border-color:#3a3212}.mbtn.go:hover{border-color:var(--gold)}
+  /* bottom transport bar */
+  #bar{position:fixed;left:50%;transform:translateX(-50%);bottom:12px;z-index:10;
+    display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center;
+    background:var(--panel);border:1px solid var(--edge);border-radius:11px;padding:9px 15px;max-width:96vw}
+  #bar .now{font-size:10px;color:var(--cyan);max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #seek{width:min(42vw,360px);accent-color:var(--green);cursor:pointer;height:4px}
+  #bar .t{font-size:9px;color:var(--dim);font-variant-numeric:tabular-nums;min-width:74px;text-align:center}
+  .tbtn{background:#0c141f;border:1px solid var(--edge);border-radius:6px;color:var(--txt);
+    font-family:inherit;font-size:11px;padding:5px 11px;cursor:pointer;transition:all .13s}
+  .tbtn:hover{border-color:var(--green);color:var(--green)}
+  .tbtn.on{background:var(--green);color:#05070c;border-color:var(--green)}
+  .klbl{color:var(--dim);font-size:8px;text-transform:uppercase;letter-spacing:.1em}
+  #bar input[type=range].mini{width:70px;accent-color:var(--purple);height:3px}
+  #stamp{position:fixed;bottom:12px;right:14px;z-index:9;color:rgba(127,255,127,.28);
+    font-size:8px;text-align:right;line-height:1.7}
+  #err{position:fixed;bottom:64px;left:50%;transform:translateX(-50%);z-index:30;
+    background:rgba(40,10,10,.95);border:1px solid #7a2a2a;border-radius:7px;padding:8px 14px;
+    color:#ff9a9a;font-size:10px;max-width:80vw;display:none}
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+
+<div id="hud">
+  <div class="ttl">Mycelium</div>
+  <div class="sub">every song is a mushroom · music stitched in graph-time</div>
+  <div class="row">spores <span class="gr" id="h-n">0</span> · threads <span class="c" id="h-e">0</span> · P=<span class="g">12</span> bands</div>
+  <div class="row">now <span class="c" id="h-band">—</span> Hz · energy <span class="p" id="h-rms">0.00</span></div>
+  <div class="row" id="h-state">drop a song at the gate — it grows as it plays</div>
+  <div class="dim">[m][n] in time · the mind iterates in graph space, taking the previous
+    compression minima · a song is a mushroom · numbers → a graph, not a mind (K3)</div>
+</div>
+
+<div id="law">
+  <b>the honest law</b><br>
+  a song here is <b>FFT + a graph</b>: each moment plants a <span class="gr">spore</span>
+  at its dominant band, stitched to the last by a <span class="c">thread</span> in time.<br>
+  <span style="color:rgba(200,214,230,.32)">links from DRM services can't be decoded in a browser — so we take the real:
+  a file, a direct-audio URL, or the live mic/tab. no fake curve.</span>
+</div>
+
+<div id="gate">
+  <div class="g1">◈ plant a song</div>
+  <div class="g2">Music is a mushroom in the forest of the mind. Feed it a sound and it grows a
+    graph in time — a mycelium you can scrub back and forward. The meaning you bring is yours.</div>
+  <div class="drop" id="drop">▸ drop an audio file here · or click to choose<br><span style="font-size:9px;opacity:.6">mp3 · ogg · wav · flac · m4a</span></div>
+  <div class="or">— OR —</div>
+  <div class="ins">
+    <div class="urlbox">
+      <input id="url" type="text" placeholder="paste a direct audio URL (.mp3/.ogg, CORS-ok)" spellcheck="false">
+      <button class="mbtn go" onclick="loadURL()">grow ▸</button>
+    </div>
+    <button class="mbtn mic" onclick="startMic()">🎙 live mic / tab audio</button>
+  </div>
+  <input id="file" type="file" accept="audio/*" style="display:none">
+</div>
+
+<div id="err"></div>
+
+<div id="bar" style="display:none">
+  <button class="tbtn" id="playBtn" onclick="togglePlay()">▶</button>
+  <span class="now" id="nowName">—</span>
+  <input id="seek" type="range" min="0" max="1000" value="0" step="1" oninput="onSeek(this.value)">
+  <span class="t" id="tLabel">0:00 / 0:00</span>
+  <div class="klbl">grow</div>
+  <button class="tbtn on" id="growBtn" onclick="toggleGrow()">on</button>
+  <div class="klbl">decay</div>
+  <input class="mini" id="decay" type="range" min="0" max="100" value="18" oninput="setDecay(this.value)">
+  <button class="tbtn" onclick="clearGraph()">clear</button>
+  <button class="tbtn" onclick="location.reload()">new song</button>
+</div>
+
+<div id="stamp">MYCELIUM v1.0 · MachineNet<br>[m][n] in graph-time · P=12 · χ=2<br>a song is a mushroom · always</div>
+
+<script>
+"use strict";
+// ── canvas (atelier resize: BOTH backing store AND css box, or it drifts) ──
+var cv=document.getElementById("cv"), ctx=cv.getContext("2d"), W=0,H=0,DPR=1;
+function resize(){
+  DPR=Math.min(window.devicePixelRatio||1,2);
+  W=window.innerWidth; H=window.innerHeight;
+  cv.width=Math.round(W*DPR); cv.height=Math.round(H*DPR);
+  cv.style.width=W+"px"; cv.style.height=H+"px";
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+}
+window.addEventListener("resize",resize); resize();
+
+// ── palette (12 bands -> 12 hues around the ring, P=12) ──
+var NB=12;                                   // P=12 log-spaced frequency bands
+function bandColor(i,a){ var h=(i/NB)*300; return "hsla("+h+",80%,62%,"+a+")"; }
+
+// ── the graph: spores (nodes) + threads (edges), grown in time ──
+var spores=[], threads=[], lastSpore=null, decay=0.18;
+function fieldC(){ return {cx:W/2, cy:H*0.46, R:Math.min(W*0.40,(H-150)*0.42)}; }
+
+// map a (band, energy) -> a position on the mushroom ring, jittered by time so the
+// mycelium spreads like hyphae rather than stacking on one point.
+function planSpore(band, energy, t){
+  var f=fieldC();
+  var ang = (band/NB)*Math.PI*2 - Math.PI/2 + Math.sin(t*0.7)*0.25;
+  var rad = f.R*(0.30 + energy*0.66);
+  return {
+    x: f.cx + Math.cos(ang)*rad + (Math.random()-0.5)*10,
+    y: f.cy + Math.sin(ang)*rad + (Math.random()-0.5)*10,
+    band: band, e: energy, born: performance.now(), life: 1
+  };
+}
+function addSpore(band, energy, t){
+  var s=planSpore(band, energy, t);
+  spores.push(s);
+  if(lastSpore){ threads.push({a:lastSpore, b:s, born:performance.now(), life:1}); }
+  lastSpore=s;
+  if(spores.length>1400){ spores.shift(); }          // ceiling: never blow the tab (Curse 35)
+  if(threads.length>1400){ threads.shift(); }
+}
+function clearGraph(){ spores=[]; threads=[]; lastSpore=null; }
+function setDecay(v){ decay=+v/100; }
+
+// ── audio engine (real Web Audio: file / URL / mic) ──
+var actx=null, analyser=null, freqData=null, srcNode=null, buffer=null, gainNode=null;
+var isBuffer=false, startedAt=0, pauseOffset=0, playing=false, duration=0, seeking=false;
+var grow=true;
+function ensureCtx(){
+  if(!actx){ actx=new (window.AudioContext||window.webkitAudioContext)();
+    analyser=actx.createAnalyser(); analyser.fftSize=2048; analyser.smoothingTimeConstant=0.7;
+    freqData=new Float32Array(analyser.frequencyBinCount);
+    gainNode=actx.createGain(); gainNode.connect(analyser); analyser.connect(actx.destination);
+  }
+  if(actx.state==="suspended") actx.resume();
+}
+function showErr(m){ var e=document.getElementById("err"); e.textContent=m; e.style.display="block";
+  setTimeout(function(){ e.style.display="none"; }, 5200); }
+
+// --- file / url -> decoded AudioBuffer (scrubbable) ---
+function loadArrayBuffer(ab, name){
+  ensureCtx();
+  actx.decodeAudioData(ab).then(function(buf){
+    buffer=buf; duration=buf.duration; isBuffer=true;
+    document.getElementById("gate").style.display="none";
+    document.getElementById("bar").style.display="flex";
+    document.getElementById("nowName").textContent=name||"audio";
+    setState('grown from a '+(name?('file: '+name):'buffer')+' — press ▶');
+    playBuffer(0);
+  }).catch(function(e){ showErr("could not decode that audio ("+String(e.message||e).slice(0,60)+")"); });
+}
+function loadFile(f){ if(!f) return; var r=new FileReader();
+  r.onload=function(){ loadArrayBuffer(r.result, f.name); };
+  r.onerror=function(){ showErr("could not read the file"); };
+  r.readAsArrayBuffer(f); }
+function loadURL(){
+  var u=document.getElementById("url").value.trim(); if(!u) return;
+  setState("fetching "+u.slice(0,40)+" …");
+  fetch(u).then(function(r){ if(!r.ok) throw new Error("HTTP "+r.status); return r.arrayBuffer(); })
+    .then(function(ab){ loadArrayBuffer(ab, u.split("/").pop().split("?")[0]||"url audio"); })
+    .catch(function(e){ showErr("URL blocked or not audio ("+String(e.message||e).slice(0,50)+") — try a file or the mic."); });
+}
+function playBuffer(offset){
+  if(!buffer) return;
+  if(srcNode){ try{srcNode.stop();}catch(e){} }
+  srcNode=actx.createBufferSource(); srcNode.buffer=buffer; srcNode.connect(gainNode);
+  srcNode.onended=function(){ if(playing && !seeking){ playing=false; document.getElementById("playBtn").textContent="▶"; } };
+  srcNode.start(0, Math.max(0,Math.min(offset,duration-0.02)));
+  startedAt=actx.currentTime - offset; pauseOffset=offset; playing=true;
+  document.getElementById("playBtn").textContent="⏸";
+}
+function curTime(){ if(!isBuffer) return 0; return playing? (actx.currentTime-startedAt) : pauseOffset; }
+function togglePlay(){
+  if(!isBuffer){ // mic mode: just toggle grow
+    grow=!grow; document.getElementById("playBtn").textContent=grow?"⏸":"▶"; return; }
+  if(playing){ pauseOffset=curTime(); try{srcNode.stop();}catch(e){} playing=false;
+    document.getElementById("playBtn").textContent="▶"; }
+  else { ensureCtx(); playBuffer(pauseOffset); }
+}
+function onSeek(v){
+  if(!isBuffer||!duration) return;
+  var t=(v/1000)*duration; seeking=true;
+  // scrub BOTH ways: the mind stitches music forward and back (rebuild is honest -- we
+  // don't fake past spores, we let the graph regrow from here)
+  playBuffer(t); seeking=false;
+}
+function toggleGrow(){ grow=!grow; document.getElementById("growBtn").classList.toggle("on",grow);
+  document.getElementById("growBtn").textContent=grow?"on":"off"; }
+
+// --- mic / tab audio (live) ---
+function startMic(){
+  ensureCtx();
+  navigator.mediaDevices.getUserMedia({audio:true}).then(function(stream){
+    isBuffer=false; duration=0;
+    srcNode=actx.createMediaStreamSource(stream); srcNode.connect(analyser); // mic: analyse, don't echo
+    document.getElementById("gate").style.display="none";
+    document.getElementById("bar").style.display="flex";
+    document.getElementById("nowName").textContent="live mic / tab audio";
+    document.getElementById("seek").style.display="none";
+    document.getElementById("tLabel").textContent="LIVE";
+    playing=true; grow=true; setState("live — play a song into the mic / share tab audio");
+  }).catch(function(e){ showErr("mic/tab capture denied ("+String(e.message||e).slice(0,50)+")"); });
+}
+function setState(m){ document.getElementById("h-state").textContent=m; }
+
+// ── gate wiring: drag/drop + click + url enter ──
+var drop=document.getElementById("drop"), fileIn=document.getElementById("file");
+drop.onclick=function(){ fileIn.click(); };
+fileIn.onchange=function(){ loadFile(fileIn.files[0]); };
+["dragenter","dragover"].forEach(function(ev){ drop.addEventListener(ev,function(e){ e.preventDefault(); drop.classList.add("over"); }); });
+["dragleave","drop"].forEach(function(ev){ drop.addEventListener(ev,function(e){ e.preventDefault(); drop.classList.remove("over"); }); });
+drop.addEventListener("drop",function(e){ var f=e.dataTransfer.files[0]; if(f) loadFile(f); });
+document.getElementById("url").addEventListener("keydown",function(e){ if(e.key==="Enter") loadURL(); });
+window.addEventListener("dragover",function(e){ e.preventDefault(); });
+window.addEventListener("drop",function(e){ e.preventDefault(); });
+
+// ── the spectrum -> band energies (12 log bands, the P=12 ring) ──
+var bandE=new Float32Array(NB), rms=0, domBand=0;
+function readSpectrum(){
+  if(!analyser) return;
+  analyser.getFloatFrequencyData(freqData);                 // dB, -Inf..0
+  var n=freqData.length, sr=actx.sampleRate, nyq=sr/2;
+  var fMin=40, fMax=Math.min(16000,nyq);
+  var e=0, best=-1e9, bi=0;
+  for(var b=0;b<NB;b++){
+    var f0=fMin*Math.pow(fMax/fMin, b/NB), f1=fMin*Math.pow(fMax/fMin,(b+1)/NB);
+    var i0=Math.max(0,Math.floor(f0/nyq*n)), i1=Math.min(n-1,Math.ceil(f1/nyq*n));
+    var s=0,c=0; for(var i=i0;i<=i1;i++){ var v=freqData[i]; if(isFinite(v)){ s+=Math.pow(10,v/20); c++; } }
+    var amp=c? s/c : 0; bandE[b]=amp; e+=amp;
+    if(amp>best){ best=amp; bi=b; }
+  }
+  var mx=1e-6; for(var k=0;k<NB;k++){ if(bandE[k]>mx) mx=bandE[k]; }
+  for(var k2=0;k2<NB;k2++){ bandE[k2]/=mx; }               // normalise 0..1
+  rms=Math.min(1, e*12); domBand=bi;
+}
+
+// ── the render loop: read audio, grow the graph, draw the mushroom ──
+var lastPlant=0;
+function frame(now){
+  requestAnimationFrame(frame);
+  ctx.clearRect(0,0,W,H);
+  var f=fieldC();
+
+  // vignette anchor (atelier)
+  var vg=ctx.createRadialGradient(f.cx,f.cy,0,f.cx,f.cy,f.R*1.7);
+  vg.addColorStop(0,"rgba(14,26,20,0.5)"); vg.addColorStop(1,"rgba(5,7,12,0)");
+  ctx.fillStyle=vg; ctx.fillRect(0,0,W,H);
+
+  // the P=12 band ring (the compression axes)
+  ctx.globalCompositeOperation="source-over";
+  for(var b=0;b<NB;b++){
+    var a=(b/NB)*Math.PI*2 - Math.PI/2;
+    var lit=analyser?bandE[b]:0.12;
+    var x=f.cx+Math.cos(a)*f.R*1.06, y=f.cy+Math.sin(a)*f.R*1.06;
+    ctx.fillStyle=bandColor(b,0.25+lit*0.6);
+    ctx.beginPath(); ctx.arc(x,y,2+lit*4,0,Math.PI*2); ctx.fill();
+  }
+  ctx.strokeStyle="rgba(127,255,127,0.08)"; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.arc(f.cx,f.cy,f.R*1.06,0,Math.PI*2); ctx.stroke();
+
+  // read + plant (a spore every ~80ms while growing and there is energy)
+  if(analyser){
+    readSpectrum();
+    if(grow && playing && rms>0.02 && now-lastPlant>80){ addSpore(domBand, rms, now/1000); lastPlant=now; }
+  }
+
+  // draw threads (the [m], interaction in time) then spores (the [n], the moments)
+  ctx.globalCompositeOperation="lighter";
+  var dt=decay*0.010;
+  for(var i=threads.length-1;i>=0;i--){
+    var th=threads[i]; th.life-=dt; if(th.life<=0){ threads.splice(i,1); continue; }
+    ctx.strokeStyle=bandColor(th.b.band, 0.10+th.life*0.35); ctx.lineWidth=0.6+th.life*1.2;
+    ctx.beginPath(); ctx.moveTo(th.a.x,th.a.y); ctx.lineTo(th.b.x,th.b.y); ctx.stroke();
+  }
+  for(var j=spores.length-1;j>=0;j--){
+    var s=spores[j]; s.life-=dt*0.7; if(s.life<=0){ spores.splice(j,1); continue; }
+    ctx.fillStyle=bandColor(s.band, 0.2+s.life*0.7);
+    ctx.beginPath(); ctx.arc(s.x,s.y, 1.2+s.e*3.4*s.life, 0,Math.PI*2); ctx.fill();
+  }
+
+  // the living tip: the last spore glows (the present moment)
+  if(lastSpore && playing){
+    ctx.fillStyle="rgba(255,255,255,0.9)"; ctx.shadowColor=bandColor(lastSpore.band,1); ctx.shadowBlur=12;
+    ctx.beginPath(); ctx.arc(lastSpore.x,lastSpore.y,2.4,0,Math.PI*2); ctx.fill(); ctx.shadowBlur=0;
+  }
+
+  // HUD + transport
+  ctx.globalCompositeOperation="source-over";
+  set("h-n",spores.length); set("h-e",threads.length);
+  if(analyser){
+    var sr=actx.sampleRate, fMin=40, fMax=Math.min(16000,sr/2);
+    var fc=Math.round(fMin*Math.pow(fMax/fMin,(domBand+0.5)/NB));
+    set("h-band",fc); set("h-rms",rms.toFixed(2));
+  }
+  if(isBuffer && duration){
+    var t=curTime(); if(t>duration)t=duration;
+    if(!seeking) document.getElementById("seek").value=Math.round(t/duration*1000);
+    document.getElementById("tLabel").textContent=fmt(t)+" / "+fmt(duration);
+  }
+}
+function fmt(s){ s=Math.max(0,s|0); return Math.floor(s/60)+":"+String(s%60).padStart(2,"0"); }
+function set(id,v){ var e=document.getElementById(id); if(e) e.textContent=v; }
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

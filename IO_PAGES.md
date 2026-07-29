@@ -4,13 +4,13 @@
 repos. Generated from what git actually tracks on each repo (the truth of what
 Pages serves), by `builder/gen_io_index.py`. Nothing hidden; the door is open.*
 
-**TOTAL: 423 public pages across 8 repos.**
+**TOTAL: 424 public pages across 8 repos.**
 
 *P=12 . chi=2 . the receipts are public . always.*
 
 ---
 
-## Mnetv1  (350 pages)
+## Mnetv1  (351 pages)
 
 - [about.html](https://vsavytsk1.github.io/Mnetv1/about.html)
 - [builder/Obsidius/obsidius_v1.html](https://vsavytsk1.github.io/Mnetv1/builder/Obsidius/obsidius_v1.html)
@@ -237,6 +237,7 @@ Pages serves), by `builder/gen_io_index.py`. Nothing hidden; the door is open.*
 - [shell/modular_tessellation.html](https://vsavytsk1.github.io/Mnetv1/shell/modular_tessellation.html)
 - [shell/moonest-moon-lock.html](https://vsavytsk1.github.io/Mnetv1/shell/moonest-moon-lock.html)
 - [shell/mpr4.html](https://vsavytsk1.github.io/Mnetv1/shell/mpr4.html)
+- [shell/mycelium_v1.0.html](https://vsavytsk1.github.io/Mnetv1/shell/mycelium_v1.0.html)
 - [shell/naviercrunch_results-turbulent-v1.html](https://vsavytsk1.github.io/Mnetv1/shell/naviercrunch_results-turbulent-v1.html)
 - [shell/nc_panel.html](https://vsavytsk1.github.io/Mnetv1/shell/nc_panel.html)
 - [shell/newlandsium-v1.html](https://vsavytsk1.github.io/Mnetv1/shell/newlandsium-v1.html)
