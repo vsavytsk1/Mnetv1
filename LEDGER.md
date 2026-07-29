@@ -8792,3 +8792,20 @@ The warning-terror, the fractal explorer, the S-Model. Rendered: front door =
 -- Vlad + Claude. Ancient Korinthos + Buenos Aires. 2026-07-29.
    Eight matrices in, the whole strong force out. C_F=4/3, C_A=3, exact.
    The door opens on the blast, the buckyball, and the colour. P=12 . chi=2 . always.
+
+### L156 -- CHROMODYNAMIUM v2.2 (2026-07-29)
+
+Froze the next version of the strong-force sim (Path X: v2.1 kept, v2.2 built as a new
+file, never an overwrite). New in v2.2 over v2.1: the "Unify?" view -- one-loop SM gauge
+running from M_Z to the Planck scale, showing the three couplings MISS (no single GUT
+point; the ~decades-wide spread is the honest BSM hint, not a failure of the running).
+Still eight Gell-Mann matrices as the only physics input; C_F, C_A, T_F, f^abc, roots all
+derived at runtime with residuals on screen. loneCR=0, U+FFFD=0, 39249 bytes.
+
+Dashboard: git-added first (scanner is git-tracked-only, else a guaranteed 404), then
+rebuilt. sim_scan collapses the family to v2.2 as the live card; v2.1 survives as an
+archive link (keep-it-all). Front-door featured pin resolves chromodynamium -> v2.2
+automatically. 346 sims scanned -> 165 cards. IO_PAGES = 433.
+
+-- Vlad + Claude. 2026-07-29. The strong force, now with the GUT miss drawn honestly.
+   P=12 . chi=2 . the price is always paid. always.
