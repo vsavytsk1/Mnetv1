@@ -4,13 +4,13 @@
 repos. Generated from what git actually tracks on each repo (the truth of what
 Pages serves), by `builder/gen_io_index.py`. Nothing hidden; the door is open.*
 
-**TOTAL: 426 public pages across 8 repos.**
+**TOTAL: 432 public pages across 8 repos.**
 
 *P=12 . chi=2 . the receipts are public . always.*
 
 ---
 
-## Mnetv1  (353 pages)
+## Mnetv1  (359 pages)
 
 - [about.html](https://vsavytsk1.github.io/Mnetv1/about.html)
 - [builder/Obsidius/obsidius_v1.html](https://vsavytsk1.github.io/Mnetv1/builder/Obsidius/obsidius_v1.html)
@@ -41,6 +41,8 @@ Pages serves), by `builder/gen_io_index.py`. Nothing hidden; the door is open.*
 - [shell/agon_v1.0.html](https://vsavytsk1.github.io/Mnetv1/shell/agon_v1.0.html)
 - [shell/akrokorinthium_v1_0.html](https://vsavytsk1.github.io/Mnetv1/shell/akrokorinthium_v1_0.html)
 - [shell/allonet_v1.2.html](https://vsavytsk1.github.io/Mnetv1/shell/allonet_v1.2.html)
+- [shell/alphium.html](https://vsavytsk1.github.io/Mnetv1/shell/alphium.html)
+- [shell/alphium_v1_1.html](https://vsavytsk1.github.io/Mnetv1/shell/alphium_v1_1.html)
 - [shell/ancientmagic_v1.0.html](https://vsavytsk1.github.io/Mnetv1/shell/ancientmagic_v1.0.html)
 - [shell/anthoforium_v2.html](https://vsavytsk1.github.io/Mnetv1/shell/anthoforium_v2.html)
 - [shell/apollonium_v1.0.html](https://vsavytsk1.github.io/Mnetv1/shell/apollonium_v1.0.html)
@@ -94,6 +96,8 @@ Pages serves), by `builder/gen_io_index.py`. Nothing hidden; the door is open.*
 - [shell/byte_oracle.html](https://vsavytsk1.github.io/Mnetv1/shell/byte_oracle.html)
 - [shell/byte_sphere.html](https://vsavytsk1.github.io/Mnetv1/shell/byte_sphere.html)
 - [shell/chromium_v1.0.html](https://vsavytsk1.github.io/Mnetv1/shell/chromium_v1.0.html)
+- [shell/chromium_v2_0.html](https://vsavytsk1.github.io/Mnetv1/shell/chromium_v2_0.html)
+- [shell/chromodynamium_v2_1.html](https://vsavytsk1.github.io/Mnetv1/shell/chromodynamium_v2_1.html)
 - [shell/cofium_v1.0.html](https://vsavytsk1.github.io/Mnetv1/shell/cofium_v1.0.html)
 - [shell/cristalium-v1_0.html](https://vsavytsk1.github.io/Mnetv1/shell/cristalium-v1_0.html)
 - [shell/cristalium-v1_1.html](https://vsavytsk1.github.io/Mnetv1/shell/cristalium-v1_1.html)
@@ -197,6 +201,7 @@ Pages serves), by `builder/gen_io_index.py`. Nothing hidden; the door is open.*
 - [shell/kuramium.html](https://vsavytsk1.github.io/Mnetv1/shell/kuramium.html)
 - [shell/kuramium_v1.0.html](https://vsavytsk1.github.io/Mnetv1/shell/kuramium_v1.0.html)
 - [shell/lagrangium-v1_0.html](https://vsavytsk1.github.io/Mnetv1/shell/lagrangium-v1_0.html)
+- [shell/lagrangium_v0_1.html](https://vsavytsk1.github.io/Mnetv1/shell/lagrangium_v0_1.html)
 - [shell/lamanium.html](https://vsavytsk1.github.io/Mnetv1/shell/lamanium.html)
 - [shell/lamanium_v1.0.html](https://vsavytsk1.github.io/Mnetv1/shell/lamanium_v1.0.html)
 - [shell/lattice_probe.html](https://vsavytsk1.github.io/Mnetv1/shell/lattice_probe.html)
@@ -269,6 +274,7 @@ Pages serves), by `builder/gen_io_index.py`. Nothing hidden; the door is open.*
 - [shell/pcbium-v2_9_5.html](https://vsavytsk1.github.io/Mnetv1/shell/pcbium-v2_9_5.html)
 - [shell/phaistium_v0_1.html](https://vsavytsk1.github.io/Mnetv1/shell/phaistium_v0_1.html)
 - [shell/plane_growth.html](https://vsavytsk1.github.io/Mnetv1/shell/plane_growth.html)
+- [shell/plateaum_v0_1.html](https://vsavytsk1.github.io/Mnetv1/shell/plateaum_v0_1.html)
 - [shell/portal.html](https://vsavytsk1.github.io/Mnetv1/shell/portal.html)
 - [shell/portia_-_north_star.dc.html](https://vsavytsk1.github.io/Mnetv1/shell/portia_-_north_star.dc.html)
 - [shell/ref_spookywarning_-_the_gate.html](https://vsavytsk1.github.io/Mnetv1/shell/ref_spookywarning_-_the_gate.html)

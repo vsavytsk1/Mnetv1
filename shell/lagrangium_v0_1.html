@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LAGRANGIUM · the monster, sorted · v0.1</title>
+<style>
+  * { box-sizing:border-box; }
+  html,body { margin:0; padding:0; background:#050510; color:#c8d0e0;
+    font-family: ui-monospace,"SF Mono",Menlo,Consolas,monospace; overflow:hidden; }
+  canvas { display:block; cursor:crosshair; }
+  .hud { position:fixed; left:14px; top:12px; font-size:12px; line-height:1.55;
+    pointer-events:none; text-shadow:0 0 8px #050510; z-index:5; max-width:430px; }
+  .title { color:#00d4ff; font-size:15px; letter-spacing:.5px; }
+  .sub { color:#ff69b4; font-size:10.5px; line-height:1.4; }
+  b { color:#ffd700; font-weight:600; }
+  .c{color:#00d4ff}.g{color:#7fff7f}.p{color:#ff69b4}.gd{color:#8892a8}.o{color:#ff8c42}
+  .bar { position:fixed; left:0; right:0; bottom:0; padding:9px 12px; display:flex;
+    flex-wrap:wrap; gap:7px; align-items:center; background:rgba(5,8,16,.94);
+    border-top:1px solid rgba(0,212,255,.22); z-index:10; }
+  .btn { background:#0b1220; color:#c8d0e0; border:1px solid rgba(0,212,255,.3);
+    padding:6px 12px; border-radius:5px; cursor:pointer; font:inherit; font-size:12px; }
+  .btn:hover { border-color:#00d4ff; color:#fff; }
+  .btn.on { background:#00d4ff; color:#041018; border-color:#00d4ff; font-weight:600; }
+  .lbl { color:#66708a; font-size:10px; letter-spacing:1.2px; text-transform:uppercase;
+    margin-left:8px; }
+  .sep { width:1px; height:20px; background:rgba(0,212,255,.2); margin:0 4px; }
+  .panel { position:fixed; right:12px; top:12px; width:400px;
+    max-height:calc(100vh - 92px); overflow-y:auto; background:rgba(6,10,20,.965);
+    border:1px solid rgba(0,212,255,.28); border-radius:8px; padding:13px 15px;
+    font-size:11px; line-height:1.62; z-index:8; display:none; }
+  .panel.show { display:block; }
+  .panel h3 { margin:0 0 8px; color:#00d4ff; font-size:12px; letter-spacing:.4px;
+    text-transform:uppercase; }
+  .panel h4 { margin:14px 0 5px; color:#ffd700; font-size:11px; }
+  .note { border-left:2px solid rgba(127,255,127,.4); padding-left:9px; margin:6px 0;
+    color:#9aa6bd; }
+  .warn { border-left:2px solid rgba(255,105,180,.5); padding-left:9px; margin:8px 0;
+    color:#c9a8bd; }
+  .eq { font-size:12.5px; color:#e6ecf7; background:rgba(0,212,255,.05);
+    border:1px solid rgba(0,212,255,.15); border-radius:5px; padding:8px 10px;
+    margin:6px 0; line-height:1.9; }
+  .foot { position:fixed; left:14px; bottom:52px; font-size:10px; color:#4a5470;
+    line-height:1.5; pointer-events:none; z-index:5; }
+  ::-webkit-scrollbar{width:8px}::-webkit-scrollbar-track{background:#080c16}
+  ::-webkit-scrollbar-thumb{background:#1e2a44;border-radius:4px}
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+
+<div class="hud">
+  <div class="title">LAGRANGIUM &middot; the monster, sorted &middot; v0.1</div>
+  <div class="sub">the Standard Model Lagrangian is not horrendous because the physics is.<br>
+  it is horrendous for three bookkeeping reasons. undo them &rarr; four lines.</div>
+  <div id="info" style="margin-top:9px"></div>
+</div>
+
+<div class="foot">
+  <b>click</b> a sector &middot; <b>1/2/3</b> views &middot; <b>S</b> spin &middot; <b>N</b> notes
+</div>
+
+<div class="panel" id="panel">
+  <h3>Why it looks like that</h3>
+
+  <h4>The compact form &mdash; all of it</h4>
+  <div class="eq">
+    &#8466; = &minus;&frac14; F<sub>&mu;&nu;</sub>F<sup>&mu;&nu;</sup><br>
+    &nbsp;&nbsp;&nbsp;+ i &psi;&#772; D&#824;&#824; &psi;<br>
+    &nbsp;&nbsp;&nbsp;+ &psi;&#772;<sub>i</sub> y<sub>ij</sub> &psi;<sub>j</sub> &phi; + h.c.<br>
+    &nbsp;&nbsp;&nbsp;+ |D<sub>&mu;</sub>&phi;|<sup>2</sup> &minus; V(&phi;)
+  </div>
+  <div class="note">Every single term in the wall of algebra is inside one of those
+    four lines. Nothing else is added. The expansion adds no physics.</div>
+
+  <h4>The three reasons it explodes</h4>
+  <div class="note"><b>1. Written after symmetry breaking.</b> In the compact form,
+    W/Z masses and every Higgs coupling live inside |D<sub>&mu;</sub>&phi;|&sup2;.
+    Break the symmetry and expand, and each becomes its own explicit term &mdash;
+    that is most of sector&nbsp;2.</div>
+  <div class="note"><b>2. Written in R<sub>&xi;</sub> gauge.</b> Fixing the gauge
+    this way conjures <b>Faddeev&ndash;Popov ghosts</b> (sector 5: X<sup>+</sup>,
+    X<sup>&minus;</sup>, X<sup>0</sup>, Y, and G&#772; in sector 1) and leaves the
+    <b>Goldstones</b> &phi;<sup>+</sup>, &phi;<sup>&minus;</sup>, &phi;<sup>0</sup>
+    visible throughout sector 2.</div>
+  <div class="note"><b>3. Every index written out.</b> &mu;, &nu;, a, b, c, &lambda;,
+    &kappa;, i, j &mdash; expanded by hand instead of left implicit in
+    F<sub>&mu;&nu;</sub> and D&#824;&#824;.</div>
+
+  <h4>The price (sector 5, and the &phi; terms)</h4>
+  <div class="warn">The ghosts are <b>not particles</b>. Nobody will ever detect an
+    X<sup>+</sup>. They exist to cancel the unphysical polarizations that gauge fixing
+    lets into the loops. The Goldstones are likewise eaten by W<sup>&plusmn;</sup> and Z.
+    <br><br>
+    In <b>unitary gauge</b> all of it vanishes and the Lagrangian shrinks dramatically
+    &mdash; but then loop calculations become brutal. So you pay, in terms on the page,
+    for a form you can actually compute with.
+    <br><br>
+    <span class="gd">The price is always paid. Here it is paid in ink.</span></div>
+
+  <h4>What is actually free</h4>
+  <div class="note">The SM has <b>19 free parameters</b> (no neutrino masses):
+    9 fermion masses &middot; 3 CKM angles + 1 phase &middot; 3 gauge couplings &middot;
+    &theta;<sub>QCD</sub> &middot; Higgs mass + vev.<br>
+    Add Dirac neutrino masses &rarr; <b>26</b>. Majorana &rarr; 28.
+    <br><br>Every other symbol on that wall is <i>forced</i> by gauge symmetry once
+    those are fixed. The bulk is not freedom &mdash; it is consequence.</div>
+
+  <h4>Sector 4 &rarr; PLATEAUM</h4>
+  <div class="note">The Yukawa sector is where the fermion masses and mixings enter.
+    In the noncommutative-geometry picture, the Dirac operator space over
+    A_F = C &oplus; H &oplus; M&#8323;(C) has <b>dim 16</b>, matching the Yukawa
+    parameter count per generation &mdash; the plateau drawn in PLATEAUM v0.1,
+    verified there against phase5_structure.py.</div>
+
+  <h4>Honest boundary</h4>
+  <div class="warn">This sim <b>classifies and explains</b> an existing Lagrangian.
+    It derives nothing, predicts nothing, and claims nothing new. Sector membership
+    follows the standard textbook decomposition of the R<sub>&xi;</sub>-gauge SM
+    after EWSB. Term <i>counts</i> are deliberately not displayed: they depend on how
+    you bracket the expansion, and a fabricated count would be exactly the kind of
+    fake receipt this cave does not print.</div>
+</div>
+
+<div class="bar">
+  <span class="lbl">view</span>
+  <button class="btn on" id="b_wheel">Wheel</button>
+  <button class="btn" id="b_collapse">Collapse</button>
+  <button class="btn" id="b_price">The price</button>
+  <span class="sep"></span>
+  <button class="btn" id="b_spin">Spin</button>
+  <button class="btn" id="b_notes">Notes</button>
+  <span class="sep"></span>
+  <button class="btn" id="b_reset">Reset</button>
+</div>
+
+<script>
+"use strict";
+
+// ===================== THE FIVE SECTORS =====================
+// Colours match the numbered blocks in the classic expanded (R_xi gauge) form.
+var SECT = [
+  { n:1, name:"QCD",              col:"#ff8c42",
+    what:"gluon kinetic + gluon self-interaction + quark-gluon coupling + QCD ghosts",
+    fields:"g\u1d43\u1d64  q\u1d62  G\u0304\u1d43",
+    line:"\u2212\u00bc F\u00b2   and   i\u03c8\u0304D\u0338\u03c8",
+    why:"Gluons carry colour, so they couple to each other. That is the f\u1d43\u1d47\u1d9c terms \u2014 3- and 4-gluon vertices. QED has no analogue.",
+    ghost:false },
+  { n:2, name:"Electroweak + Higgs", col:"#00d4ff",
+    what:"W/Z/photon kinetic + masses, Higgs potential, gauge self-couplings, Goldstones",
+    fields:"W\u207a W\u207b  Z\u2070  A  H  \u03c6\u207a \u03c6\u207b \u03c6\u2070",
+    line:"\u2212\u00bc F\u00b2   and   |D\u03bc\u03c6|\u00b2 \u2212 V(\u03c6)",
+    why:"The largest block, because it is written AFTER symmetry breaking. Every mass and Higgs coupling that hides inside |D\u03bc\u03c6|\u00b2 is spelled out here term by term.",
+    ghost:false },
+  { n:3, name:"Fermions + currents", col:"#7fff7f",
+    what:"lepton/quark kinetic terms and their couplings to A, Z, W",
+    fields:"e  \u03bd  u\u2c7c  d\u2c7c   +  CKM  C\u03bb\u03ba",
+    line:"i\u03c8\u0304 D\u0338 \u03c8",
+    why:"One compact line. It expands into every neutral and charged current \u2014 the (1+\u03b3\u2075) factors are parity violation written out longhand.",
+    ghost:false },
+  { n:4, name:"Yukawa",            col:"#ffd700",
+    what:"fermion masses and mixing, generated by coupling to the Higgs",
+    fields:"m\u2091 m\u1d64 m\ud835\udc51 / M   \u00d7  H, \u03c6",
+    line:"\u03c8\u0304\u1d62 y\u1d62\u2c7c \u03c8\u2c7c \u03c6 + h.c.",
+    why:"Where the arbitrary numbers live. Masses are not predicted \u2014 they are inputs. This sector is the one PLATEAUM draws: dim 16 per generation.",
+    ghost:false },
+  { n:5, name:"Ghosts",            col:"#ff69b4",
+    what:"Faddeev\u2013Popov ghosts \u2014 gauge-fixing bookkeeping, not particles",
+    fields:"X\u207a  X\u207b  X\u2070  Y",
+    line:"(none \u2014 an artefact of gauge fixing)",
+    why:"These do not exist. They are subtracted degrees of freedom that cancel unphysical gauge-boson polarizations inside loops. In unitary gauge this entire sector disappears.",
+    ghost:true }
+];
+
+// ===================== CANVAS =====================
+var cv=document.getElementById("cv"), ctx=cv.getContext("2d");
+var W=0,H=0,DPR=1,panX=0,panY=0,zoom=1;
+var view="wheel", spin=false, rot=0, sel=-1, hover=-1;
+
+function resize(){
+  DPR=Math.max(1,Math.min(2,window.devicePixelRatio||1));
+  W=window.innerWidth; H=window.innerHeight;
+  cv.width=Math.floor(W*DPR); cv.height=Math.floor(H*DPR);
+  cv.style.width=W+"px"; cv.style.height=H+"px";
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+}
+window.addEventListener("resize",resize);
+
+function hexA(h,a){
+  var r=parseInt(h.slice(1,3),16),g=parseInt(h.slice(3,5),16),b=parseInt(h.slice(5,7),16);
+  return "rgba("+r+","+g+","+b+","+a+")";
+}
+function cxy(){ return { x:W/2+panX, y:H/2+panY+16 }; }
+function radius(){ return Math.min(W,H)*0.30*zoom; }
+
+// ===================== WHEEL VIEW =====================
+// Five arcs around a hub holding the four compact lines.
+function arcOf(i){
+  var span=(Math.PI*2)/SECT.length;
+  var a0=rot - Math.PI/2 + i*span + 0.030;
+  return { a0:a0, a1:a0+span-0.060, mid:a0+(span-0.060)/2 };
+}
+
+function drawWheel(){
+  var C=cxy(), R=radius(), i;
+  var rIn=R*0.50, rOut=R*1.00;
+
+  // hub: the four compact lines
+  ctx.save();
+  ctx.strokeStyle="rgba(0,212,255,.30)"; ctx.lineWidth=1.2;
+  ctx.beginPath(); ctx.arc(C.x,C.y,rIn-13,0,Math.PI*2); ctx.stroke();
+  ctx.restore();
+
+  var lines=["\u2212\u00bc F\u03bc\u03bd F\u1d5d\u1d5b",
+             "i \u03c8\u0304 D\u0338 \u03c8",
+             "\u03c8\u0304\u1d62 y\u1d62\u2c7c \u03c8\u2c7c \u03c6 + h.c.",
+             "|D\u03bc\u03c6|\u00b2 \u2212 V(\u03c6)"];
+  ctx.textAlign="center";
+  ctx.fillStyle="#5a6480"; ctx.font="9.5px ui-monospace";
+  ctx.fillText("THE WHOLE THING", C.x, C.y-rIn*0.66);
+  for(i=0;i<lines.length;i++){
+    ctx.fillStyle = i===2 ? "#ffd700" : "#c8d0e0";
+    ctx.font = (i===2?"bold ":"")+"12px ui-monospace";
+    ctx.fillText(lines[i], C.x, C.y - 22 + i*20);
+  }
+  ctx.fillStyle="#5a6480"; ctx.font="9px ui-monospace";
+  ctx.fillText("four lines", C.x, C.y+rIn*0.62);
+
+  // sector arcs
+  for(i=0;i<SECT.length;i++){
+    var s=SECT[i], a=arcOf(i);
+    var isS=(sel===i), isH=(hover===i);
+    var ro = rOut + (isS?16:(isH?8:0));
+
+    ctx.beginPath();
+    ctx.arc(C.x,C.y,ro,a.a0,a.a1);
+    ctx.arc(C.x,C.y,rIn,a.a1,a.a0,true);
+    ctx.closePath();
+    ctx.fillStyle=hexA(s.col, isS?0.26:(isH?0.18:0.10));
+    ctx.fill();
+    ctx.strokeStyle=hexA(s.col, isS?0.95:0.55);
+    ctx.lineWidth=isS?2:1.2;
+    if(s.ghost){ ctx.setLineDash([5,4]); }
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // label along the mid-angle
+    var lr=(rIn+ro)/2;
+    var lx=C.x+Math.cos(a.mid)*lr, ly=C.y+Math.sin(a.mid)*lr;
+    ctx.save();
+    ctx.translate(lx,ly);
+    var ang=a.mid;
+    if(ang> Math.PI/2 && ang< Math.PI*1.5) ang+=Math.PI;
+    ctx.rotate(ang);
+    ctx.textAlign="center";
+    ctx.fillStyle=s.col; ctx.font="bold 13px ui-monospace";
+    ctx.fillText(s.n+" \u00b7 "+s.name, 0, -5);
+    ctx.fillStyle=hexA(s.col,0.72); ctx.font="10px ui-monospace";
+    ctx.fillText(s.fields, 0, 12);
+    if(s.ghost){
+      ctx.fillStyle="rgba(255,105,180,.85)"; ctx.font="italic 9px ui-monospace";
+      ctx.fillText("not particles", 0, 26);
+    }
+    ctx.restore();
+  }
+  ctx.textAlign="left";
+
+  // detail card
+  if(sel>=0) drawCard(SECT[sel]);
+}
+
+function drawCard(s){
+  var bw=Math.min(520,W-40), bx=W/2-bw/2, by=H-236;
+  if(by < 150) by = 150;
+  ctx.fillStyle="rgba(6,10,20,.95)";
+  ctx.fillRect(bx,by,bw,150);
+  ctx.strokeStyle=hexA(s.col,.6); ctx.lineWidth=1.4;
+  ctx.strokeRect(bx,by,bw,150);
+
+  ctx.textAlign="left";
+  ctx.fillStyle=s.col; ctx.font="bold 13px ui-monospace";
+  ctx.fillText("SECTOR "+s.n+"  \u00b7  "+s.name, bx+15, by+24);
+  ctx.fillStyle="#c8d0e0"; ctx.font="11px ui-monospace";
+  wrap(s.what, bx+15, by+44, bw-30, 15);
+  ctx.fillStyle="#7fff7f"; ctx.font="11px ui-monospace";
+  ctx.fillText("expands from:  "+s.line, bx+15, by+80);
+  ctx.fillStyle="#8892a8"; ctx.font="10.5px ui-monospace";
+  wrap(s.why, bx+15, by+100, bw-30, 14);
+}
+
+function wrap(txt,x,y,maxw,lh){
+  var words=txt.split(" "), line="", yy=y;
+  for(var i=0;i<words.length;i++){
+    var t=line+words[i]+" ";
+    if(ctx.measureText(t).width>maxw && line!==""){
+      ctx.fillText(line,x,yy); line=words[i]+" "; yy+=lh;
+    } else line=t;
+  }
+  ctx.fillText(line,x,yy);
+}
+
+// ===================== COLLAPSE VIEW =====================
+function drawCollapse(){
+  var i,j;
+  var midY=H*0.46+panY, lx=W*0.24+panX, rx=W*0.74+panX;
+
+  ctx.textAlign="center";
+  ctx.fillStyle="#8892a8"; ctx.font="11px ui-monospace";
+  ctx.fillText("what you were shown", lx, midY-170);
+  ctx.fillStyle="#7fff7f";
+  ctx.fillText("what it actually is", rx, midY-170);
+
+  // left: the wall (abstract term blocks, per sector)
+  var rows=[[0,7],[1,26],[2,11],[3,9],[4,10]];
+  var yy=midY-140;
+  for(i=0;i<rows.length;i++){
+    var s=SECT[rows[i][0]], n=rows[i][1];
+    for(j=0;j<n;j++){
+      var bx=lx-118+(j%13)*18, by=yy+Math.floor(j/13)*11;
+      ctx.fillStyle=hexA(s.col, s.ghost?0.35:0.62);
+      ctx.fillRect(bx,by,14,7);
+    }
+    yy += Math.ceil(n/13)*11 + 13;
+  }
+  ctx.fillStyle="#4a5470"; ctx.font="9.5px ui-monospace";
+  ctx.fillText("(schematic \u2014 block counts are illustrative, not measured)", lx, yy+14);
+
+  // right: four lines
+  var lines=[
+    { t:"\u2212\u00bc F\u03bc\u03bd F\u1d5d\u1d5b", c:"#ff8c42", d:"gauge fields: gluons, W, Z, photon" },
+    { t:"i \u03c8\u0304 D\u0338 \u03c8", c:"#7fff7f", d:"matter, and how it feels those fields" },
+    { t:"\u03c8\u0304\u1d62 y\u1d62\u2c7c \u03c8\u2c7c \u03c6 + h.c.", c:"#ffd700", d:"mass and mixing (the arbitrary part)" },
+    { t:"|D\u03bc\u03c6|\u00b2 \u2212 V(\u03c6)", c:"#00d4ff", d:"the Higgs, and symmetry breaking" }
+  ];
+  for(i=0;i<lines.length;i++){
+    var y2=midY-118+i*62;
+    ctx.fillStyle=hexA(lines[i].c,0.07);
+    ctx.fillRect(rx-176,y2-22,352,48);
+    ctx.strokeStyle=hexA(lines[i].c,0.4); ctx.lineWidth=1;
+    ctx.strokeRect(rx-176,y2-22,352,48);
+    ctx.fillStyle=lines[i].c; ctx.font="bold 15px ui-monospace";
+    ctx.fillText(lines[i].t, rx, y2+2);
+    ctx.fillStyle="#7c8aa5"; ctx.font="10px ui-monospace";
+    ctx.fillText(lines[i].d, rx, y2+19);
+  }
+
+  // arrow
+  ctx.strokeStyle="rgba(0,212,255,.35)"; ctx.lineWidth=1.4;
+  ctx.beginPath(); ctx.moveTo(lx+150,midY-20); ctx.lineTo(rx-196,midY-20); ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(rx-196,midY-20); ctx.lineTo(rx-206,midY-25); ctx.lineTo(rx-206,midY-15);
+  ctx.closePath(); ctx.fillStyle="rgba(0,212,255,.5)"; ctx.fill();
+  ctx.fillStyle="#00d4ff"; ctx.font="10px ui-monospace";
+  ctx.fillText("undo: EWSB expansion, gauge fixing, index expansion",
+               (lx+rx)/2-24, midY-30);
+  ctx.textAlign="left";
+}
+
+// ===================== PRICE VIEW =====================
+function drawPrice(){
+  var i;
+  var cxp=W/2+panX, top=H*0.22+panY;
+  ctx.textAlign="center";
+  ctx.fillStyle="#ffd700"; ctx.font="bold 14px ui-monospace";
+  ctx.fillText("WHAT IS PHYSICS, AND WHAT IS THE PRICE OF WRITING IT DOWN", cxp, top-34);
+  ctx.fillStyle="#5a6480"; ctx.font="10.5px ui-monospace";
+  ctx.fillText("R\u03be gauge buys you calculable loops. it is paid for in fields that do not exist.",
+               cxp, top-15);
+
+  var groups=[
+    { t:"PHYSICAL \u2014 you can detect these", c:"#7fff7f",
+      items:["8 gluons  g\u1d43","W\u207a  W\u207b  Z\u2070","photon  A","Higgs  H",
+             "6 quarks  u d c s t b","6 leptons  e \u03bc \u03c4 + \u03bd"] },
+    { t:"EATEN \u2014 became the W/Z longitudinal modes", c:"#ffd700",
+      items:["\u03c6\u207a","\u03c6\u207b","\u03c6\u2070"] },
+    { t:"NOT REAL \u2014 gauge-fixing bookkeeping", c:"#ff69b4",
+      items:["X\u207a","X\u207b","X\u2070","Y","G\u0304\u1d43  (QCD ghosts)"] }
+  ];
+  var colW=Math.min(300,(W-90)/3), sx=cxp-(colW*3+40)/2;
+  for(i=0;i<groups.length;i++){
+    var gp=groups[i], x=sx+i*(colW+20);
+    ctx.fillStyle=hexA(gp.c,0.06);
+    ctx.fillRect(x,top,colW,58+gp.items.length*22);
+    ctx.strokeStyle=hexA(gp.c,0.45); ctx.lineWidth=1.2;
+    if(i===2) ctx.setLineDash([5,4]);
+    ctx.strokeRect(x,top,colW,58+gp.items.length*22);
+    ctx.setLineDash([]);
+    ctx.fillStyle=gp.c; ctx.font="bold 10.5px ui-monospace";
+    ctx.fillText(gp.t, x+colW/2, top+24);
+    ctx.font="12px ui-monospace"; ctx.fillStyle="#c8d0e0";
+    for(var j=0;j<gp.items.length;j++)
+      ctx.fillText(gp.items[j], x+colW/2, top+52+j*22);
+  }
+
+  var by=top+58+6*22+46;
+  ctx.fillStyle="#ff69b4"; ctx.font="11.5px ui-monospace";
+  ctx.fillText("in unitary gauge, the pink and gold columns vanish entirely \u2014 and the wall shrinks.",
+               cxp, by);
+  ctx.fillStyle="#8892a8"; ctx.font="11px ui-monospace";
+  ctx.fillText("but then every loop integral becomes far harder. that is the trade, and it is the whole reason", cxp, by+20);
+  ctx.fillText("the version on the mug looks the way it does.", cxp, by+37);
+  ctx.fillStyle="#5a6480"; ctx.font="10px ui-monospace";
+  ctx.fillText("the price is always paid. here, in ink.", cxp, by+62);
+  ctx.textAlign="left";
+}
+
+// ===================== INFO =====================
+function updateInfo(){
+  var el=document.getElementById("info"), h="";
+  h+='<b>4</b> compact lines &nbsp; <b>5</b> sectors &nbsp; ';
+  h+='<b>19</b> free parameters <span class="gd">(26 with &nu; masses)</span><br>';
+  if(view==="wheel"){
+    h += (sel>=0)
+      ? '<span class="c">sector '+SECT[sel].n+'</span> \u00b7 '+SECT[sel].name
+      : '<span class="gd">click a sector \u00b7 dashed ring = not real</span>';
+  } else if(view==="collapse"){
+    h+='<span class="gd">the expansion adds no physics</span>';
+  } else {
+    h+='<span class="gd">physical / eaten / bookkeeping</span>';
+  }
+  el.innerHTML=h;
+}
+
+// ===================== RENDER =====================
+function render(){
+  requestAnimationFrame(render);
+  if(W<2||H<2){ resize(); return; }
+  ctx.fillStyle="#050510"; ctx.fillRect(0,0,W,H);
+  if(view==="wheel") drawWheel();
+  else if(view==="collapse") drawCollapse();
+  else drawPrice();
+  updateInfo();
+  if(spin && view==="wheel") rot += 0.0022;
+}
+
+// ===================== INTERACTION =====================
+// Curse 13: motion is opt-in. Nothing spins unless asked.
+var down=false,moved=false,lx=0,ly=0,dx0=0,dy0=0;
+function sectorAt(mx,my){
+  if(view!=="wheel") return -1;
+  var C=cxy(),R=radius(),d=Math.hypot(mx-C.x,my-C.y);
+  if(d<R*0.50||d>R*1.16) return -1;
+  var a=Math.atan2(my-C.y,mx-C.x);
+  for(var i=0;i<SECT.length;i++){
+    var s=arcOf(i);
+    for(var k=-2;k<=2;k++){
+      var aa=a+k*Math.PI*2;
+      if(aa>=s.a0&&aa<=s.a1) return i;
+    }
+  }
+  return -1;
+}
+cv.addEventListener("pointerdown",function(e){
+  down=true;moved=false;lx=dx0=e.clientX;ly=dy0=e.clientY;
+  try{cv.setPointerCapture(e.pointerId);}catch(err){}
+});
+cv.addEventListener("pointermove",function(e){
+  if(!down){
+    var hv=sectorAt(e.clientX,e.clientY);
+    if(hv!==hover){ hover=hv; cv.style.cursor=hv>=0?"pointer":"crosshair"; }
+    return;
+  }
+  var ddx=e.clientX-lx,ddy=e.clientY-ly; lx=e.clientX; ly=e.clientY;
+  if(Math.abs(e.clientX-dx0)+Math.abs(e.clientY-dy0)>4) moved=true;
+  if(moved){ panX+=ddx; panY+=ddy; }
+});
+cv.addEventListener("pointerup",function(e){
+  down=false;
+  if(moved) return;
+  var i=sectorAt(e.clientX,e.clientY);
+  sel = (i===sel) ? -1 : i;
+});
+cv.addEventListener("wheel",function(e){
+  e.preventDefault();
+  var oz=zoom;
+  zoom=Math.max(0.5,Math.min(3.2,zoom*(e.deltaY<0?1.1:1/1.1)));
+  var k=zoom/oz;
+  panX=(e.clientX-W/2)*(1-k)+panX*k;
+  panY=(e.clientY-H/2)*(1-k)+panY*k;
+},{passive:false});
+
+function resetView(){ panX=0;panY=0;zoom=1;rot=0; }
+function bind(id,fn){ document.getElementById(id).addEventListener("click",fn); }
+function setView(v){
+  view=v; sel=-1; hover=-1; resetView();
+  document.getElementById("b_wheel").classList.toggle("on",v==="wheel");
+  document.getElementById("b_collapse").classList.toggle("on",v==="collapse");
+  document.getElementById("b_price").classList.toggle("on",v==="price");
+}
+bind("b_wheel",function(){ setView("wheel"); });
+bind("b_collapse",function(){ setView("collapse"); });
+bind("b_price",function(){ setView("price"); });
+bind("b_spin",function(){ spin=!spin; this.classList.toggle("on",spin); });
+bind("b_reset",resetView);
+bind("b_notes",function(){
+  var p=document.getElementById("panel");
+  p.classList.toggle("show");
+  this.classList.toggle("on",p.classList.contains("show"));
+});
+window.addEventListener("keydown",function(e){
+  var k=e.key.toLowerCase();
+  if(k==="1") setView("wheel");
+  else if(k==="2") setView("collapse");
+  else if(k==="3") setView("price");
+  else if(k==="s") document.getElementById("b_spin").click();
+  else if(k==="n") document.getElementById("b_notes").click();
+  else if(k==="0") resetView();
+});
+
+resize();
+render();
+</script>
+</body>
+</html>

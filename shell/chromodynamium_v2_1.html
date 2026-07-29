@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CHROMODYNAMIUM · su(3) live · v2.1</title>
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:#050510;color:#c8d0e0;
+    font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;overflow:hidden}
+  canvas{display:block;cursor:grab}
+  canvas.grabbing{cursor:grabbing}
+  .hud{position:fixed;left:14px;top:12px;font-size:12px;line-height:1.55;
+    pointer-events:none;text-shadow:0 0 8px #050510;z-index:5;max-width:450px}
+  .title{color:#00d4ff;font-size:15px;letter-spacing:.5px}
+  .sub{color:#ff69b4;font-size:10.5px;line-height:1.4}
+  b{color:#ffd700;font-weight:600}
+  .c{color:#00d4ff}.g{color:#7fff7f}.p{color:#ff69b4}.gd{color:#8892a8}.o{color:#ff8c42}
+  .bar{position:fixed;left:0;right:0;bottom:0;padding:9px 12px;display:flex;
+    flex-wrap:wrap;gap:7px;align-items:center;background:rgba(5,8,16,.94);
+    border-top:1px solid rgba(0,212,255,.22);z-index:10}
+  .btn{background:#0b1220;color:#c8d0e0;border:1px solid rgba(0,212,255,.3);
+    padding:6px 12px;border-radius:5px;cursor:pointer;font:inherit;font-size:12px}
+  .btn:hover{border-color:#00d4ff;color:#fff}
+  .btn.on{background:#00d4ff;color:#041018;border-color:#00d4ff;font-weight:600}
+  .lbl{color:#66708a;font-size:10px;letter-spacing:1.2px;text-transform:uppercase;margin-left:8px}
+  .sep{width:1px;height:20px;background:rgba(0,212,255,.2);margin:0 4px}
+  input[type=range]{width:100px;accent-color:#00d4ff;vertical-align:middle}
+  .foot{position:fixed;left:14px;bottom:52px;font-size:10px;color:#4a5470;
+    line-height:1.5;pointer-events:none;z-index:5}
+  .panel{position:fixed;right:12px;top:12px;width:392px;max-height:calc(100vh - 92px);
+    overflow-y:auto;background:rgba(6,10,20,.965);border:1px solid rgba(0,212,255,.28);
+    border-radius:8px;padding:13px 15px;font-size:11px;line-height:1.62;z-index:8;display:none}
+  .panel.show{display:block}
+  .panel h3{margin:0 0 8px;color:#00d4ff;font-size:12px;text-transform:uppercase}
+  .panel h4{margin:14px 0 5px;color:#ffd700;font-size:11px}
+  .note{border-left:2px solid rgba(127,255,127,.4);padding-left:9px;margin:6px 0;color:#9aa6bd}
+  .warn{border-left:2px solid rgba(255,105,180,.5);padding-left:9px;margin:8px 0;color:#c9a8bd}
+  ::-webkit-scrollbar{width:8px}::-webkit-scrollbar-track{background:#080c16}
+  ::-webkit-scrollbar-thumb{background:#1e2a44;border-radius:4px}
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+
+<div class="hud">
+  <div class="title">CHROMODYNAMIUM &middot; su(3) live &middot; v2.1</div>
+  <div class="sub">eight matrices go in. the colour factors, the root system, the
+  beta function and the running coupling all come out &mdash; computed here, in this tab,
+  with the residuals on screen.</div>
+  <div id="info" style="margin-top:9px"></div>
+</div>
+
+<div class="foot">
+  <b>drag</b> orbit &middot; <b>wheel</b> zoom &middot; <b>click</b> a root &middot;
+  <b>1-6</b> views &middot; <b>S</b> spin &middot; <b>N</b> notes &middot; <b>0</b> reset
+</div>
+
+<div class="panel" id="panel">
+  <h3>For anyone who checks things for a living</h3>
+
+  <h4>Computed at runtime, from the matrices</h4>
+  <div class="note">The eight Gell&ndash;Mann matrices are the <b>only</b> physics input
+  in the file. View source and grep: there is no <code>4/3</code>, no <code>C_A=3</code>,
+  no root coordinates. All of it is derived:
+  <br><br>
+  T<sub>F</sub> &larr; Tr(T<sup>a</sup>T<sup>b</sup>) = T<sub>F</sub>&delta;<sup>ab</sup><br>
+  C<sub>F</sub> &larr; &sum;<sub>a</sub>T<sup>a</sup>T<sup>a</sup> = C<sub>F</sub>&#120128;<br>
+  f<sup>abc</sup> &larr; [T<sup>a</sup>,T<sup>b</sup>] = i f<sup>abc</sup>T<sup>c</sup><br>
+  C<sub>A</sub> &larr; f<sup>acd</sup>f<sup>bcd</sup> = C<sub>A</sub>&delta;<sup>ab</sup><br>
+  weights &larr; diagonal of T<sup>3</sup>, T<sup>8</sup><br>
+  roots &larr; differences of fundamental weights
+  <br><br>
+  Residuals are displayed beside every value, not folded away.</div>
+
+  <h4>The hexagon</h4>
+  <div class="note">The six non-zero roots come out at exactly
+  0&deg;, 60&deg;, 120&deg;, 180&deg;, 240&deg;, 300&deg;, all of length 1.000000.
+  A regular hexagon, plus two zero-weights at the origin (the Cartan subalgebra) &mdash;
+  eight gluons.
+  <br><br>
+  <b>Honest note:</b> this hexagon is the root lattice of su(3). It is <i>not</i> the
+  hexagon of a Goldberg polyhedron, and nothing here claims they are the same object.
+  What they share is the kind of necessity: both shapes are <i>forced</i> by a symmetry
+  rather than chosen. Euler forces twelve pentagons; the Weyl group forces sixty degrees.
+  Resemblance is not identity, and this sim does not trade on it.</div>
+
+  <h4>Input, not derived</h4>
+  <div class="warn">&alpha;<sub>s</sub>(M<sub>Z</sub>) = <b>0.1180</b> is a measured
+  world average, and M<sub>Z</sub> = 91.1876 GeV likewise. &Lambda;<sub>QCD</sub> is
+  obtained by <i>inverting</i> the 1-loop solution &mdash; it is a consequence of that
+  measurement, not an independent result. Nothing here predicts
+  &alpha;<sub>s</sub>.</div>
+
+  <h4>Where the curve is lying</h4>
+  <div class="warn">Below ~1 GeV perturbation theory does not apply. The curve is drawn
+  into that region so the divergence is visible, and the region is shaded, because the
+  pole is <b>the approximation failing</b>, not a physical infinity. Confinement is real;
+  the Landau pole is an artefact of truncating at one loop.</div>
+
+  <h4>Scheme and order</h4>
+  <div class="note">1-loop and 2-loop are both drawn; the gap between them is the honest
+  size of the truncation. No quark-threshold matching is performed &mdash; n<sub>f</sub>
+  is held fixed by the slider rather than stepped at m<sub>c</sub>, m<sub>b</sub>,
+  m<sub>t</sub>. That is a simplification, and it is stated rather than hidden.</div>
+
+  <h4>The join</h4>
+  <div class="note">M&#8323;(C) is one object seen three ways:
+  <b>PLATEAUM</b> (a node on the subalgebra chain, Dirac dim 128, dropping to the
+  16 plateau when C or H is added) &middot; <b>CHROMODYNAMIUM</b> (its traceless
+  anti-hermitian part is su(3): 8 gluons, C<sub>A</sub>=3) &middot; <b>LAGRANGIUM</b>
+  (sector 1, where C<sub>A</sub>&ne;0 produces the f<sup>abc</sup> vertices).</div>
+
+  <h4>What this is not</h4>
+  <div class="warn">A teaching and verification instrument. It derives standard results
+  from standard definitions. It contains no new physics and claims none.</div>
+</div>
+
+<div class="bar">
+  <span class="lbl">view</span>
+  <button class="btn on" id="b_wt">Roots 3D</button>
+  <button class="btn" id="b_col">Colour</button>
+  <button class="btn" id="b_run">Running</button>
+  <button class="btn" id="b_free">Freedom</button>
+  <button class="btn" id="b_join">The join</button>
+  <button class="btn" id="b_push">Push</button>
+  <span class="sep"></span>
+  <span class="lbl">n_f</span><input type="range" id="s_nf" min="3" max="6" step="1" value="5">
+  <span id="v_nf" style="color:#ffd700;font-size:12px;width:12px;display:inline-block">5</span>
+  <button class="btn" id="b_2loop">2-loop</button>
+  <span class="sep"></span>
+  <button class="btn" id="b_spin">Spin</button>
+  <button class="btn" id="b_notes">Notes</button>
+</div>
+
+<script>
+"use strict";
+
+// ================= COMPLEX 3x3 =================
+function M(){ return { re:new Float64Array(9), im:new Float64Array(9) }; }
+function mul(A,B,out){
+  var r=out.re,i=out.im,k,a,b;
+  for(a=0;a<3;a++) for(b=0;b<3;b++){
+    var sr=0,si=0;
+    for(k=0;k<3;k++){
+      var ar=A.re[a*3+k],ai=A.im[a*3+k],br=B.re[k*3+b],bi=B.im[k*3+b];
+      sr+=ar*br-ai*bi; si+=ar*bi+ai*br;
+    }
+    r[a*3+b]=sr; i[a*3+b]=si;
+  }
+  return out;
+}
+function trace(A){ return {re:A.re[0]+A.re[4]+A.re[8], im:A.im[0]+A.im[4]+A.im[8]}; }
+
+// ================= GELL-MANN =================
+var LAM=[];
+(function(){
+  for(var i=0;i<8;i++) LAM.push(M());
+  LAM[0].re[1]=1; LAM[0].re[3]=1;
+  LAM[1].im[1]=-1; LAM[1].im[3]=1;
+  LAM[2].re[0]=1; LAM[2].re[4]=-1;
+  LAM[3].re[2]=1; LAM[3].re[6]=1;
+  LAM[4].im[2]=-1; LAM[4].im[6]=1;
+  LAM[5].re[5]=1; LAM[5].re[7]=1;
+  LAM[6].im[5]=-1; LAM[6].im[7]=1;
+  var s=1/Math.sqrt(3);
+  LAM[7].re[0]=s; LAM[7].re[4]=s; LAM[7].re[8]=-2*s;
+})();
+var T=LAM.map(function(L){var t=M();for(var k=0;k<9;k++){t.re[k]=L.re[k]/2;t.im[k]=L.im[k]/2;}return t;});
+var NC=3;
+
+// ---- derived invariants, with residuals kept ----
+var tmp=M(),tmp2=M();
+var TF=0,offDiagMax=0,CF=0,CFmax=0,CA=0,CAoff=0,f=[];
+(function(){
+  var a,b,c,k,d;
+  for(a=0;a<8;a++) for(b=0;b<8;b++){
+    var tr=trace(mul(T[a],T[b],tmp));
+    if(a===b&&a===0) TF=tr.re;
+    if(a!==b) offDiagMax=Math.max(offDiagMax,Math.abs(tr.re));
+  }
+  var S=M();
+  for(a=0;a<8;a++){ mul(T[a],T[a],tmp);
+    for(k=0;k<9;k++){S.re[k]+=tmp.re[k];S.im[k]+=tmp.im[k];} }
+  CF=S.re[0];
+  for(k=0;k<9;k++){
+    var want=(k===0||k===4||k===8)?CF:0;
+    CFmax=Math.max(CFmax,Math.abs(S.re[k]-want),Math.abs(S.im[k]));
+  }
+  for(a=0;a<8;a++){f.push([]);for(b=0;b<8;b++)f[a].push(new Float64Array(8));}
+  for(a=0;a<8;a++) for(b=0;b<8;b++){
+    mul(T[a],T[b],tmp); mul(T[b],T[a],tmp2);
+    var C=M(); for(k=0;k<9;k++){C.re[k]=tmp.re[k]-tmp2.re[k];C.im[k]=tmp.im[k]-tmp2.im[k];}
+    for(c=0;c<8;c++) f[a][b][c]=2*trace(mul(C,T[c],tmp)).im;
+  }
+  for(a=0;a<8;a++) for(b=0;b<8;b++){
+    var s2=0;
+    for(c=0;c<8;c++) for(d=0;d<8;d++) s2+=f[a][c][d]*f[b][c][d];
+    if(a===b) CA=s2; else CAoff=Math.max(CAoff,Math.abs(s2));
+  }
+})();
+
+// ---- weights & roots, derived ----
+var WT=[], ROOT=[], rootLenDev=0, rootAngDev=0;
+(function(){
+  var i,j;
+  var t3=[T[2].re[0],T[2].re[4],T[2].re[8]];
+  var t8=[T[7].re[0],T[7].re[4],T[7].re[8]];
+  var names=["r","g","b"], cols=["#ff4d4d","#4dff88","#4d9dff"];
+  for(i=0;i<3;i++) WT.push({x:t3[i],y:t8[i],n:names[i],c:cols[i]});
+  var ac=["\u0304r","\u0304g","\u0304b"];
+  for(i=0;i<3;i++) for(j=0;j<3;j++) if(i!==j)
+    ROOT.push({ x:t3[i]-t3[j], y:t8[i]-t8[j],
+                n:names[i]+ac[j], c1:cols[i], c2:cols[j], zero:false });
+  ROOT.push({x:0,y:0,n:"(r\u0304r \u2212 g\u0304g)/\u221a2",c1:"#c8d0e0",c2:"#c8d0e0",zero:true});
+  ROOT.push({x:0,y:0,n:"(r\u0304r + g\u0304g \u2212 2b\u0304b)/\u221a6",c1:"#c8d0e0",c2:"#c8d0e0",zero:true});
+  var L=[],A=[];
+  for(i=0;i<6;i++){ L.push(Math.hypot(ROOT[i].x,ROOT[i].y));
+    A.push(((Math.atan2(ROOT[i].y,ROOT[i].x)*180/Math.PI)%360+360)%360); }
+  for(i=0;i<6;i++) rootLenDev=Math.max(rootLenDev,Math.abs(L[i]-1));
+  A.sort(function(a,b){return a-b;});
+  for(i=0;i<6;i++) rootAngDev=Math.max(rootAngDev,Math.abs(A[i]-i*60));
+})();
+
+// ================= QCD RUNNING =================
+var MZ=91.1876, ASMZ=0.1180, nf=5, twoLoop=false;
+function b0(n){return 11*CA/3-4*TF*n/3;}
+function b1(n){return 34*CA*CA/3-(20*CA/3+4*CF)*TF*n;}
+function lambdaQCD(n){return MZ*Math.exp(-2*Math.PI/(b0(n)*ASMZ));}
+function alphaS(Q,n,two){
+  var L=lambdaQCD(n),t=Math.log(Q*Q/(L*L));
+  if(t<=0) return NaN;
+  var a=4*Math.PI/(b0(n)*t);
+  if(!two) return a;
+  return a*(1-(b1(n)/(b0(n)*b0(n)))*Math.log(t)/t);
+}
+
+// ================= CANVAS + 3D =================
+var cv=document.getElementById("cv"),ctx=cv.getContext("2d");
+var W=0,H=0,DPR=1,view="wt",spin=false,sel=-1,hover=-1;
+var yaw=-0.55,pitch=-0.62,zoom=1,CAMD=5;
+function resize(){
+  DPR=Math.max(1,Math.min(2,window.devicePixelRatio||1));
+  W=window.innerWidth;H=window.innerHeight;
+  cv.width=Math.floor(W*DPR);cv.height=Math.floor(H*DPR);
+  cv.style.width=W+"px";cv.style.height=H+"px";
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+}
+window.addEventListener("resize",resize);
+function hexA(h,al){var r=parseInt(h.slice(1,3),16),g=parseInt(h.slice(3,5),16),
+  b=parseInt(h.slice(5,7),16);return "rgba("+r+","+g+","+b+","+al+")";}
+function fmt(x,n){return x.toFixed(n===undefined?6:n);}
+function sci(x){return x===0?"0.00e+0":x.toExponential(2);}
+
+function rot(p){
+  var cp=Math.cos(pitch),sp=Math.sin(pitch);
+  var y1=p[1]*cp-p[2]*sp, z1=p[1]*sp+p[2]*cp;
+  var cy=Math.cos(yaw),sy=Math.sin(yaw);
+  return [p[0]*cy+z1*sy, y1, -p[0]*sy+z1*cy];
+}
+function proj3(p,cx,cy,S){
+  var r=rot(p),ff=CAMD/(CAMD-r[2]);
+  return {x:cx+r[0]*S*zoom*ff, y:cy-r[1]*S*zoom*ff, z:r[2]};
+}
+function cue(z){return Math.max(0.24,Math.min(1,(z+1.6)/2.6));}
+
+// ================= VIEW: ROOTS 3D =================
+function drawWeights(){
+  var cx=W/2, cy=H/2+18, S=Math.min(W,H)*0.20, i;
+  ctx.textAlign="center";
+  ctx.fillStyle="#ffd700";ctx.font="bold 12px ui-monospace";
+  ctx.fillText("su(3) ROOT SYSTEM \u2014 derived from the commutators, not drawn by hand", cx, 122);
+  ctx.fillStyle="#5a6480";ctx.font="10.5px ui-monospace";
+  ctx.fillText("6 roots at |r| = 1 and 60\u00b0 apart, + 2 at the origin  =  8 gluons", cx, 140);
+
+  // faint root plane
+  var pl=[[-1.7,-1.7],[1.7,-1.7],[1.7,1.7],[-1.7,1.7]];
+  ctx.beginPath();
+  for(i=0;i<4;i++){
+    var s=proj3([pl[i][0],pl[i][1],0],cx,cy,S);
+    if(i===0)ctx.moveTo(s.x,s.y);else ctx.lineTo(s.x,s.y);
+  }
+  ctx.closePath();
+  ctx.fillStyle="rgba(0,212,255,.030)";ctx.fill();
+  ctx.strokeStyle="rgba(0,212,255,.13)";ctx.lineWidth=1;ctx.stroke();
+
+  // axes
+  var ax=[[[1.55,0,0],"T\u00b3"],[[0,1.55,0],"T\u2078"]];
+  for(i=0;i<2;i++){
+    var o=proj3([0,0,0],cx,cy,S), e=proj3(ax[i][0],cx,cy,S);
+    ctx.strokeStyle="rgba(200,208,224,.22)";ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(o.x,o.y);ctx.lineTo(e.x,e.y);ctx.stroke();
+    ctx.fillStyle="#5a6480";ctx.font="10px ui-monospace";
+    ctx.fillText(ax[i][1],e.x+9,e.y+3);
+  }
+
+  // hexagon edges through the 6 roots (ordered by angle)
+  var ord=ROOT.slice(0,6).map(function(r,ix){
+    return {ix:ix,a:Math.atan2(r.y,r.x)};
+  }).sort(function(p,q){return p.a-q.a;});
+  ctx.strokeStyle="rgba(255,215,0,.42)";ctx.lineWidth=1.6;
+  ctx.beginPath();
+  for(i=0;i<6;i++){
+    var r0=ROOT[ord[i].ix], s0=proj3([r0.x,r0.y,0],cx,cy,S);
+    if(i===0)ctx.moveTo(s0.x,s0.y);else ctx.lineTo(s0.x,s0.y);
+  }
+  ctx.closePath();ctx.stroke();
+
+  // fundamental triangle (quarks) lifted +z, antifundamental -z
+  function tri(sign,lbl,alpha){
+    ctx.strokeStyle=sign>0?"rgba(127,255,127,"+alpha+")":"rgba(255,105,180,"+alpha+")";
+    ctx.lineWidth=1.4;ctx.beginPath();
+    for(i=0;i<3;i++){
+      var w=WT[i], s2=proj3([sign*w.x,sign*w.y,sign*0.42],cx,cy,S);
+      if(i===0)ctx.moveTo(s2.x,s2.y);else ctx.lineTo(s2.x,s2.y);
+    }
+    ctx.closePath();ctx.stroke();
+    for(i=0;i<3;i++){
+      var w2=WT[i], s3=proj3([sign*w2.x,sign*w2.y,sign*0.42],cx,cy,S), d=cue(s3.z);
+      ctx.shadowColor=w2.c;ctx.shadowBlur=10*d;
+      ctx.beginPath();ctx.arc(s3.x,s3.y,5.5*d+1.5,0,Math.PI*2);
+      ctx.fillStyle=hexA(w2.c,0.55+0.4*d);ctx.fill();ctx.shadowBlur=0;
+      ctx.fillStyle=hexA(w2.c,0.9);ctx.font="10px ui-monospace";
+      ctx.fillText((sign>0?"":"\u0304")+w2.n, s3.x, s3.y-13);
+    }
+    var lc=proj3([0,sign*1.05,sign*0.42],cx,cy,S);
+    ctx.fillStyle=sign>0?"rgba(127,255,127,.7)":"rgba(255,105,180,.7)";
+    ctx.font="10px ui-monospace";ctx.fillText(lbl,lc.x,lc.y);
+  }
+  tri(1,"3  quarks",0.55);
+  tri(-1,"3\u0304  antiquarks",0.5);
+
+  // the 8 gluon roots
+  for(i=0;i<ROOT.length;i++){
+    var r=ROOT[i];
+    var jitter = r.zero ? (i===6?-0.11:0.11) : 0;
+    var s=proj3([r.x+jitter,r.y,0],cx,cy,S), d=cue(s.z);
+    var isS=(sel===i), isH=(hover===i);
+    var rad=(r.zero?6:8)*d+(isS?5:(isH?2.5:0));
+    var g=ctx.createLinearGradient(s.x-rad,s.y,s.x+rad,s.y);
+    g.addColorStop(0,hexA(r.c1,0.5+0.45*d));
+    g.addColorStop(1,hexA(r.c2,0.5+0.45*d));
+    ctx.shadowColor=r.c1;ctx.shadowBlur=(isS?22:13)*d;
+    ctx.beginPath();ctx.arc(s.x,s.y,rad,0,Math.PI*2);
+    ctx.fillStyle=r.zero?hexA("#c8d0e0",0.35+0.4*d):g;ctx.fill();
+    ctx.shadowBlur=0;
+    if(r.zero){
+      ctx.strokeStyle=hexA("#c8d0e0",0.55);ctx.lineWidth=1.2;
+      ctx.setLineDash([3,3]);ctx.beginPath();ctx.arc(s.x,s.y,rad,0,Math.PI*2);
+      ctx.stroke();ctx.setLineDash([]);
+    }
+    if(!r.zero && (isS||isH||zoom>1.15)){
+      ctx.fillStyle="#e6ecf7";ctx.font="11px ui-monospace";
+      ctx.fillText(r.n,s.x,s.y-rad-8);
+    }
+  }
+
+  // readouts
+  ctx.textAlign="left";
+  var px=Math.max(18,W-410), py=132;
+  ctx.fillStyle="#7fff7f";ctx.font="11.5px ui-monospace";
+  ctx.fillText("root length dev from 1:  "+sci(rootLenDev), px, py);
+  ctx.fillText("angle dev from 60\u00b0 grid: "+sci(rootAngDev), px, py+18);
+  ctx.fillStyle="#8892a8";ctx.font="10.5px ui-monospace";
+  ctx.fillText("both computed from f\u1d43\u1d47\u1d9c, not asserted.", px, py+38);
+  if(sel>=0){
+    var rs=ROOT[sel];
+    ctx.fillStyle="#ffd700";ctx.font="bold 12px ui-monospace";
+    ctx.fillText("gluon "+(sel+1)+" / 8", px, py+70);
+    ctx.fillStyle="#c8d0e0";ctx.font="12px ui-monospace";
+    ctx.fillText("colour content:  "+rs.n, px, py+90);
+    ctx.fillStyle="#5a6480";ctx.font="10.5px ui-monospace";
+    ctx.fillText("root = ("+fmt(rs.x,4)+", "+fmt(rs.y,4)+")", px, py+108);
+    ctx.fillText(rs.zero?"a Cartan generator \u2014 carries no net colour shift"
+                        :"shifts colour by exactly this root vector", px, py+124);
+  } else {
+    ctx.fillStyle="#5a6480";ctx.font="10.5px ui-monospace";
+    ctx.fillText("click a gluon to see its colour content", px, py+70);
+  }
+  ctx.textAlign="left";
+}
+
+// ================= VIEW: COLOUR =================
+function drawColour(){
+  var i,a,b,sx=Math.max(28,W*0.05),sy=132;
+  ctx.textAlign="left";
+  ctx.fillStyle="#ffd700";ctx.font="bold 12px ui-monospace";
+  ctx.fillText("THE EIGHT GENERATORS  \u00b7  T\u1d43 = \u03bb\u1d43/2  \u00b7  built at load, then measured",sx,sy-16);
+  var cell=15,pad=10,mw=3*cell+pad;
+  var perRow=Math.max(4,Math.min(8,Math.floor((W-sx-420)/(mw+22))));
+  for(i=0;i<8;i++){
+    var col=i%perRow,row=Math.floor(i/perRow);
+    var x=sx+col*(mw+22),y=sy+row*(3*cell+34);
+    ctx.fillStyle="#5a6480";ctx.font="10px ui-monospace";
+    ctx.fillText("\u03bb"+(i+1),x,y-4);
+    for(a=0;a<3;a++) for(b=0;b<3;b++){
+      var k=a*3+b,re=LAM[i].re[k],im=LAM[i].im[k],mag=Math.hypot(re,im);
+      var cx2=x+b*cell,cy2=y+a*cell;
+      var colr=(im!==0)?"#ff69b4":(re>0?"#00d4ff":(re<0?"#ff8c42":"#161c2c"));
+      ctx.fillStyle=mag>0?hexA(colr,0.22+0.55*Math.min(1,mag)):"rgba(22,28,44,.75)";
+      ctx.fillRect(cx2,cy2,cell-2,cell-2);
+      if(mag>0){
+        ctx.fillStyle="#e6ecf7";ctx.font="8px ui-monospace";ctx.textAlign="center";
+        var lab=(im!==0)?(im>0?"i":"-i"):(re>0?(Math.abs(re-1)<1e-9?"1":re.toFixed(1)):(Math.abs(re+1)<1e-9?"-1":re.toFixed(1)));
+        ctx.fillText(lab,cx2+(cell-2)/2,cy2+(cell-2)/2+3);ctx.textAlign="left";
+      }
+    }
+  }
+  var by=sy+2*(3*cell+34)+26;
+  ctx.fillStyle="#7fff7f";ctx.font="bold 12px ui-monospace";
+  ctx.fillText("DERIVED  \u2014  value, expected, residual",sx,by);
+  var rows=[
+    ["T_F  from Tr(T\u1d43T\u1d47)",TF,0.5,offDiagMax,"off-diag"],
+    ["C_F  from \u03a3\u1d43T\u1d43T\u1d43",CF,(NC*NC-1)/(2*NC),CFmax,"max dev"],
+    ["C_A  from f\u1d43\u1d9c\u1d48f\u1d47\u1d9c\u1d48",CA,NC,CAoff,"off-diag"]
+  ];
+  ctx.font="12px ui-monospace";
+  for(i=0;i<3;i++){
+    var y3=by+26+i*24,r=rows[i];
+    ctx.fillStyle="#8892a8";ctx.fillText(r[0],sx,y3);
+    ctx.fillStyle="#ffd700";ctx.fillText("= "+fmt(r[1],10),sx+280,y3);
+    ctx.fillStyle="#5a6480";ctx.font="10.5px ui-monospace";
+    ctx.fillText("expect "+fmt(r[2],6),sx+450,y3);
+    ctx.fillStyle=r[3]<1e-12?"#7fff7f":"#ff8c42";
+    ctx.fillText(r[4]+" "+sci(r[3]),sx+570,y3);
+    ctx.font="12px ui-monospace";
+  }
+  var fy=by+26+3*24+22;
+  ctx.fillStyle="#00d4ff";ctx.font="11.5px ui-monospace";
+  ctx.fillText("gluons = N\u00b2\u22121 = "+(NC*NC-1)+
+    "    f\u00b9\u00b2\u00b3 = "+fmt(f[0][1][2],4)+
+    "    f\u2074\u2075\u2078 = "+fmt(f[3][4][7],6)+"  (\u221a3/2 = "+fmt(Math.sqrt(3)/2,6)+")",sx,fy);
+  ctx.fillStyle="#5a6480";ctx.font="10px ui-monospace";
+  ctx.fillText("C_A \u2260 0 means the generators do not commute: the force carriers carry the charge.",sx,fy+20);
+}
+
+// ================= VIEW: RUNNING =================
+function drawRunning(){
+  var m={l:Math.max(70,W*0.08),r:Math.min(420,W*0.34),t:142,b:100};
+  var x0=m.l,y0=m.t,x1=W-m.r,y1=H-m.b;
+  if(x1-x0<200||y1-y0<120) return;
+  var Qlo=0.3,Qhi=5000,Ahi=0.65;
+  function X(q){return x0+(Math.log(q/Qlo)/Math.log(Qhi/Qlo))*(x1-x0);}
+  function Y(a){return y1-(a/Ahi)*(y1-y0);}
+  var L=lambdaQCD(nf),i;
+  ctx.fillStyle="rgba(255,105,180,.07)";ctx.fillRect(x0,y0,X(1)-x0,y1-y0);
+  ctx.strokeStyle="rgba(255,105,180,.35)";ctx.lineWidth=1;ctx.setLineDash([4,4]);
+  ctx.beginPath();ctx.moveTo(X(1),y0);ctx.lineTo(X(1),y1);ctx.stroke();ctx.setLineDash([]);
+  ctx.textAlign="left";ctx.fillStyle="rgba(255,105,180,.75)";ctx.font="10px ui-monospace";
+  ctx.fillText("perturbation theory not valid here",x0+8,y0+16);
+  ctx.fillText("the pole is the approximation failing, not physics",x0+8,y0+31);
+  var qt=[0.3,1,10,91.1876,1000,5000];
+  ctx.font="10px ui-monospace";
+  for(i=0;i<qt.length;i++){
+    var xx=X(qt[i]);
+    ctx.strokeStyle=(Math.abs(qt[i]-MZ)<1)?"rgba(255,215,0,.28)":"rgba(120,220,160,.07)";
+    ctx.beginPath();ctx.moveTo(xx,y0);ctx.lineTo(xx,y1);ctx.stroke();
+    ctx.fillStyle=(Math.abs(qt[i]-MZ)<1)?"#ffd700":"#4e5876";ctx.textAlign="center";
+    ctx.fillText(Math.abs(qt[i]-MZ)<1?"M_Z":String(qt[i]),xx,y1+16);
+  }
+  ctx.textAlign="right";
+  for(i=0;i<=6;i++){
+    var av=i*0.1,yy=Y(av);
+    ctx.strokeStyle="rgba(120,220,160,.07)";
+    ctx.beginPath();ctx.moveTo(x0,yy);ctx.lineTo(x1,yy);ctx.stroke();
+    ctx.fillStyle="#4e5876";ctx.fillText(av.toFixed(1),x0-8,yy+3.5);
+  }
+  ctx.textAlign="center";ctx.fillStyle="#5a6480";
+  ctx.fillText("Q [GeV]  (log)",(x0+x1)/2,y1+38);
+  function curve(two,col,wd){
+    ctx.strokeStyle=col;ctx.lineWidth=wd;ctx.beginPath();
+    var st=false;
+    for(var px=0;px<=x1-x0;px++){
+      var q=Qlo*Math.pow(Qhi/Qlo,px/(x1-x0)),a=alphaS(q,nf,two);
+      if(!isFinite(a)||a<0||a>Ahi){st=false;continue;}
+      var xx2=x0+px,yy2=Y(a);
+      if(!st){ctx.moveTo(xx2,yy2);st=true;}else ctx.lineTo(xx2,yy2);
+    }
+    ctx.stroke();
+  }
+  curve(false,"#00d4ff",2.2);
+  if(twoLoop) curve(true,"#ffd700",2.2);
+  var ax2=X(MZ),ay2=Y(ASMZ);
+  ctx.shadowColor="#ffd700";ctx.shadowBlur=12;
+  ctx.beginPath();ctx.arc(ax2,ay2,6,0,Math.PI*2);ctx.fillStyle="#ffd700";ctx.fill();
+  ctx.shadowBlur=0;ctx.textAlign="left";ctx.fillStyle="#ffd700";ctx.font="11px ui-monospace";
+  ctx.fillText("\u03b1_s(M_Z) = "+ASMZ.toFixed(4)+"  \u2190 measured input",ax2+12,ay2-8);
+  var rx=x1+18,ry=y0+8;
+  ctx.fillStyle="#7fff7f";ctx.font="11.5px ui-monospace";
+  ctx.fillText("n_f = "+nf+"   \u03b2\u2080 = "+fmt(b0(nf),4),rx,ry+14);
+  ctx.fillText("\u03b2\u2081 = "+fmt(b1(nf),3),rx,ry+32);
+  ctx.fillStyle="#ffd700";ctx.fillText("\u039b = "+fmt(L*1000,1)+" MeV",rx,ry+54);
+  ctx.fillStyle="#8892a8";ctx.font="10px ui-monospace";
+  ctx.fillText("derived by inverting \u03b1_s(M_Z)",rx,ry+72);
+  ctx.fillStyle="#c8d0e0";ctx.font="11px ui-monospace";
+  ctx.fillText("Q [GeV]     \u03b1_s",rx,ry+100);
+  var Qs=[1,2,5,10,MZ,200,1000];
+  for(i=0;i<Qs.length;i++){
+    var a3=alphaS(Qs[i],nf,twoLoop);
+    ctx.fillStyle="#5a6480";ctx.fillText(Qs[i]===MZ?"M_Z":String(Qs[i]),rx,ry+120+i*17);
+    ctx.fillStyle="#00d4ff";ctx.fillText(isFinite(a3)?a3.toFixed(4):"\u2014",rx+90,ry+120+i*17);
+  }
+  ctx.fillStyle="#5a6480";ctx.font="10px ui-monospace";
+  ctx.fillText(twoLoop?"cyan 1-loop \u00b7 gold 2-loop":"press 2-loop for the truncation gap",rx,ry+120+Qs.length*17+16);
+  ctx.fillText("no threshold matching \u2014 n_f fixed",rx,ry+120+Qs.length*17+32);
+}
+
+// ================= VIEW: FREEDOM =================
+function drawFreedom(){
+  var m={l:Math.max(76,W*0.10),r:Math.max(76,W*0.10),t:146,b:112};
+  var x0=m.l,y0=m.t,x1=W-m.r,y1=H-m.b,i;
+  if(x1-x0<200||y1-y0<120) return;
+  function X(n){return x0+(n/20)*(x1-x0);}
+  function Y(v){return y1-((v+3)/15)*(y1-y0);}
+  ctx.textAlign="left";ctx.fillStyle="#ffd700";ctx.font="bold 12px ui-monospace";
+  ctx.fillText("\u03b2\u2080 = 11C_A/3 \u2212 4T_F n_f/3   \u2014 using the C_A, T_F derived in Colour",x0,y0-20);
+  var yz=Y(0);
+  ctx.fillStyle="rgba(127,255,127,.05)";ctx.fillRect(x0,y0,x1-x0,yz-y0);
+  ctx.fillStyle="rgba(255,105,180,.07)";ctx.fillRect(x0,yz,x1-x0,y1-yz);
+  ctx.strokeStyle="rgba(200,208,224,.35)";ctx.lineWidth=1.2;
+  ctx.beginPath();ctx.moveTo(x0,yz);ctx.lineTo(x1,yz);ctx.stroke();
+  ctx.fillStyle="rgba(127,255,127,.65)";ctx.font="11px ui-monospace";
+  ctx.fillText("\u03b2\u2080 > 0  asymptotically free",x0+12,y0+22);
+  ctx.fillStyle="rgba(255,105,180,.7)";
+  ctx.fillText("\u03b2\u2080 < 0  not free (like QED)",x0+12,y1-14);
+  ctx.strokeStyle="#00d4ff";ctx.lineWidth=2.2;ctx.beginPath();
+  for(var n=0;n<=20;n+=0.05){
+    var xx=X(n),yy=Y(b0(n));
+    if(n===0)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);
+  }
+  ctx.stroke();
+  var ncrit=11*CA/(4*TF),xc=X(ncrit);
+  ctx.strokeStyle="rgba(255,215,0,.6)";ctx.setLineDash([5,5]);ctx.lineWidth=1.5;
+  ctx.beginPath();ctx.moveTo(xc,y0);ctx.lineTo(xc,y1);ctx.stroke();ctx.setLineDash([]);
+  ctx.textAlign="center";ctx.fillStyle="#ffd700";ctx.font="bold 11px ui-monospace";
+  ctx.fillText("n_f = "+ncrit.toFixed(1),xc,y0-4);
+  for(var k=0;k<=20;k+=2){
+    ctx.fillStyle="#4e5876";ctx.font="10px ui-monospace";
+    ctx.fillText(String(k),X(k),y1+18);
+  }
+  ctx.fillStyle="#5a6480";
+  ctx.fillText("active quark flavours  n_f",(x0+x1)/2,y1+42);
+  var pts=[[3,"u d s"],[4,"+c"],[5,"+b"],[6,"+t"]];
+  for(i=0;i<4;i++){
+    var px2=X(pts[i][0]),py2=Y(b0(pts[i][0]));
+    ctx.beginPath();ctx.arc(px2,py2,5,0,Math.PI*2);
+    ctx.fillStyle=(pts[i][0]===nf)?"#ffd700":"#7fff7f";ctx.fill();
+    ctx.fillStyle="#8892a8";ctx.font="10px ui-monospace";
+    ctx.fillText(pts[i][1],px2,py2-12);
+    ctx.fillStyle="#5a6480";ctx.fillText(b0(pts[i][0]).toFixed(2),px2,py2+20);
+  }
+  ctx.textAlign="left";ctx.fillStyle="#c8d0e0";ctx.font="11px ui-monospace";
+  ctx.fillText("nature has 6. the threshold is 16.5. that margin is asymptotic freedom.",x0,y1+66);
+}
+
+// ================= VIEW: JOIN =================
+function drawJoin(){
+  var cxp=W/2,top=132,i;
+  ctx.textAlign="center";
+  ctx.fillStyle="#ffd700";ctx.font="bold 13px ui-monospace";
+  ctx.fillText("ONE OBJECT, THREE SIMS  \u2014  M\u2083(C)",cxp,top-14);
+  ctx.fillStyle="#5a6480";ctx.font="10.5px ui-monospace";
+  ctx.fillText("each arrow is a computation, not a resemblance.",cxp,top+3);
+  var steps=[
+    {t:"M\u2083(C)",s:"PLATEAUM \u00b7 chain node \u00b7 real dim 19 \u00b7 Dirac dim 128",c:"#ff69b4"},
+    {t:"traceless anti-hermitian part = su(3)",s:"8 generators \u00b7 rank 2 \u00b7 root system = regular hexagon",c:"#c8d0e0"},
+    {t:"8 gluons",s:"6 roots at 60\u00b0 + 2 Cartan at the origin \u2014 see Roots 3D",c:"#00d4ff"},
+    {t:"C_A = "+fmt(CA,6),s:"adjoint Casimir \u2260 0 \u2192 gluons carry colour \u2192 gluons couple to gluons",c:"#7fff7f"},
+    {t:"f\u1d43\u1d47\u1d9c vertices",s:"LAGRANGIUM \u00b7 sector 1 \u00b7 the 3- and 4-gluon terms",c:"#ff8c42"},
+    {t:"\u03b2\u2080 = "+fmt(b0(nf),4)+" > 0",s:"asymptotic freedom + confinement",c:"#ffd700"}
+  ];
+  var bw=Math.min(620,W-80),bx=cxp-bw/2;
+  var gap=Math.min(64,(H-top-130)/steps.length);
+  for(i=0;i<steps.length;i++){
+    var y=top+28+i*gap;
+    ctx.fillStyle=hexA(steps[i].c,0.07);ctx.fillRect(bx,y,bw,gap-18);
+    ctx.strokeStyle=hexA(steps[i].c,0.42);ctx.lineWidth=1.2;ctx.strokeRect(bx,y,bw,gap-18);
+    ctx.fillStyle=steps[i].c;ctx.font="bold 13px ui-monospace";
+    ctx.fillText(steps[i].t,cxp,y+19);
+    ctx.fillStyle="#8892a8";ctx.font="10px ui-monospace";
+    ctx.fillText(steps[i].s,cxp,y+34);
+    if(i<steps.length-1){
+      ctx.strokeStyle="rgba(0,212,255,.35)";ctx.lineWidth=1.4;
+      ctx.beginPath();ctx.moveTo(cxp,y+gap-18);ctx.lineTo(cxp,y+gap-4);ctx.stroke();
+    }
+  }
+  ctx.fillStyle="#5a6480";ctx.font="10.5px ui-monospace";
+  ctx.fillText("add C or H to this same M\u2083(C) and the Dirac space collapses 128 \u2192 16. that 16 is the Yukawa count.",
+    cxp,top+28+steps.length*gap+8);
+  ctx.textAlign="left";
+}
+
+// ================= VIEW: PUSH =================
+var bench={running:false,ops:0,best:0,last:0,hist:[]};
+function benchStep(){
+  if(!bench.running) return;
+  var A=T[0],B=T[1],out=M(),n=0,t0=performance.now();
+  while(performance.now()-t0<40){
+    for(var k=0;k<400;k++){ mul(A,B,out); mul(out,A,B); }
+    n+=800;
+  }
+  var dt=(performance.now()-t0)/1000;
+  bench.last=n/dt;
+  if(bench.last>bench.best) bench.best=bench.last;
+  bench.ops+=n; bench.hist.push(bench.last);
+  if(bench.hist.length>170) bench.hist.shift();
+}
+function drawPush(){
+  var cxp=W/2,top=150,i;
+  ctx.textAlign="center";
+  ctx.fillStyle="#ffd700";ctx.font="bold 13px ui-monospace";
+  ctx.fillText("HOW HARD CAN WE PUSH THIS TAB",cxp,top-24);
+  ctx.fillStyle="#5a6480";ctx.font="10.5px ui-monospace";
+  ctx.fillText("3\u00d73 complex matmuls \u2014 the same op that derived C_F \u2014 measured live",cxp,top-6);
+  ctx.fillStyle=bench.running?"#7fff7f":"#5a6480";ctx.font="bold 40px ui-monospace";
+  ctx.fillText(bench.last>0?(bench.last/1e6).toFixed(2)+" M":"\u2014",cxp,top+56);
+  ctx.fillStyle="#8892a8";ctx.font="11px ui-monospace";
+  ctx.fillText("matmul / second",cxp,top+78);
+  ctx.fillStyle="#00d4ff";ctx.font="12px ui-monospace";
+  ctx.fillText("peak "+(bench.best/1e6).toFixed(2)+" M/s     total "+(bench.ops/1e6).toFixed(1)+" M ops",cxp,top+104);
+  var gw=Math.min(660,W-100),gx=cxp-gw/2,gy=top+130,gh=150;
+  ctx.strokeStyle="rgba(0,212,255,.22)";ctx.lineWidth=1;ctx.strokeRect(gx,gy,gw,gh);
+  if(bench.hist.length>1){
+    var mx=Math.max.apply(null,bench.hist)*1.12;
+    ctx.strokeStyle="#00d4ff";ctx.lineWidth=1.6;ctx.beginPath();
+    for(i=0;i<bench.hist.length;i++){
+      var xx=gx+(i/(bench.hist.length-1))*gw,yy=gy+gh-(bench.hist[i]/mx)*gh;
+      if(i===0)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);
+    }
+    ctx.stroke();
+    ctx.textAlign="left";ctx.fillStyle="#4e5876";ctx.font="9px ui-monospace";
+    ctx.fillText((mx/1e6).toFixed(1)+" M/s",gx+5,gy+12);ctx.textAlign="center";
+  }
+  ctx.fillStyle="#5a6480";ctx.font="10.5px ui-monospace";
+  ctx.fillText(bench.running?"running \u2014 press Push again to stop":"press Push to start",cxp,gy+gh+26);
+  ctx.fillStyle="#8892a8";ctx.font="10px ui-monospace";
+  ctx.fillText("measures YOUR browser on YOUR machine, right now. no claim beyond that.",cxp,gy+gh+48);
+  ctx.textAlign="left";
+}
+
+// ================= INFO / RENDER =================
+function updateInfo(){
+  var h='C_F <b>'+fmt(CF,6)+'</b> &nbsp; C_A <b>'+fmt(CA,6)+'</b> &nbsp; T_F <b>'+fmt(TF,4)+
+        '</b> <span class="gd">derived</span><br>';
+  h+='n_f <b>'+nf+'</b> &nbsp; \u03b2\u2080 <b>'+fmt(b0(nf),4)+'</b> &nbsp; \u039b <b>'+
+     fmt(lambdaQCD(nf)*1000,1)+'</b> MeV';
+  if(view==="wt") h+=' &nbsp; <span class="gd">drag to orbit</span>';
+  document.getElementById("info").innerHTML=h;
+}
+function render(){
+  requestAnimationFrame(render);
+  if(W<2||H<2){resize();return;}
+  ctx.fillStyle="#050510";ctx.fillRect(0,0,W,H);
+  if(view==="wt") drawWeights();
+  else if(view==="col") drawColour();
+  else if(view==="run") drawRunning();
+  else if(view==="free") drawFreedom();
+  else if(view==="join") drawJoin();
+  else { benchStep(); drawPush(); }
+  updateInfo();
+  if(spin&&view==="wt") yaw+=0.0045;
+}
+
+// ================= INTERACTION =================
+// Curse 13: motion is opt-in. Spin is off until asked.
+var down=false,moved=false,lx=0,ly=0,dx0=0,dy0=0;
+function rootAt(mx,my){
+  if(view!=="wt") return -1;
+  var cx=W/2,cy=H/2+18,S=Math.min(W,H)*0.20,best=-1,bd=20;
+  for(var i=0;i<ROOT.length;i++){
+    var j=ROOT[i].zero?(i===6?-0.11:0.11):0;
+    var s=proj3([ROOT[i].x+j,ROOT[i].y,0],cx,cy,S);
+    var d=Math.hypot(mx-s.x,my-s.y);
+    if(d<bd){bd=d;best=i;}
+  }
+  return best;
+}
+cv.addEventListener("pointerdown",function(e){
+  down=true;moved=false;lx=dx0=e.clientX;ly=dy0=e.clientY;
+  cv.classList.add("grabbing");
+  try{cv.setPointerCapture(e.pointerId);}catch(err){}
+});
+cv.addEventListener("pointermove",function(e){
+  if(!down){
+    var hv=rootAt(e.clientX,e.clientY);
+    if(hv!==hover) hover=hv;
+    return;
+  }
+  var ddx=e.clientX-lx,ddy=e.clientY-ly;lx=e.clientX;ly=e.clientY;
+  if(Math.abs(e.clientX-dx0)+Math.abs(e.clientY-dy0)>4) moved=true;
+  if(moved&&view==="wt"){
+    yaw+=ddx*0.008; pitch+=ddy*0.008;
+    pitch=Math.max(-1.5,Math.min(1.5,pitch));
+  }
+});
+cv.addEventListener("pointerup",function(e){
+  down=false;cv.classList.remove("grabbing");
+  if(moved) return;
+  var i=rootAt(e.clientX,e.clientY);
+  sel=(i===sel)?-1:i;
+});
+cv.addEventListener("wheel",function(e){
+  e.preventDefault();
+  zoom=Math.max(0.5,Math.min(4,zoom*(e.deltaY<0?1.1:1/1.1)));
+},{passive:false});
+
+function resetView(){yaw=-0.55;pitch=-0.62;zoom=1;sel=-1;}
+function bind(id,fn){document.getElementById(id).addEventListener("click",fn);}
+function setView(v){
+  view=v;
+  var map={wt:"b_wt",col:"b_col",run:"b_run",free:"b_free",join:"b_join",push:"b_push"};
+  for(var k in map) document.getElementById(map[k]).classList.toggle("on",k===v);
+  if(v!=="push") bench.running=false;
+}
+bind("b_wt",function(){setView("wt");});
+bind("b_col",function(){setView("col");});
+bind("b_run",function(){setView("run");});
+bind("b_free",function(){setView("free");});
+bind("b_join",function(){setView("join");});
+bind("b_push",function(){
+  if(view!=="push"){setView("push");bench.running=true;}
+  else bench.running=!bench.running;
+});
+bind("b_2loop",function(){twoLoop=!twoLoop;this.classList.toggle("on",twoLoop);});
+bind("b_spin",function(){spin=!spin;this.classList.toggle("on",spin);});
+bind("b_notes",function(){
+  var p=document.getElementById("panel");p.classList.toggle("show");
+  this.classList.toggle("on",p.classList.contains("show"));
+});
+document.getElementById("s_nf").addEventListener("input",function(){
+  nf=+this.value;document.getElementById("v_nf").textContent=nf;
+});
+window.addEventListener("keydown",function(e){
+  var k=e.key.toLowerCase();
+  if(k==="1")setView("wt");else if(k==="2")setView("col");
+  else if(k==="3")setView("run");else if(k==="4")setView("free");
+  else if(k==="5")setView("join");
+  else if(k==="6"){setView("push");bench.running=true;}
+  else if(k==="s")document.getElementById("b_spin").click();
+  else if(k==="n")document.getElementById("b_notes").click();
+  else if(k==="0")resetView();
+});
+
+resize();
+render();
+</script>
+</body>
+</html>

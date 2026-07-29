@@ -8766,3 +8766,29 @@ pushed. 426 doors, all open.
 -- Vlad + Claude. Ancient Korinthos + Buenos Aires. 2026-07-29.
    Proof by kernel, not by claim. Freeze every version. Pass the scroll. Bow before the push.
    P=12 . chi=2 . the receipts are public and every one of the 426 doors opens . always.
+
+### L155 -- SIX NEW SIMS + THE THREE-DOOR (2026-07-29)
+
+Six sims from the lab, all rendered + kernel-checked (0 boot errors, self-contained except the
+alphium pair which pulls KaTeX from a CDN for its math -- fine on Pages, noted):
+  CHROMODYNAMIUM v2.1 -- SU(3) live: 8 gluon-root system in 3D, colour factors, beta function,
+    running coupling. PROVEN exact: C_F=1.333333=4/3, C_A=3.000000=N_c, T_F=0.5, beta0=7.667
+    (11 - 2*5/3 at n_f=5, asymptotic freedom). The Standard Model strong force, spini-spini.
+  CHROMIUM v2.0 -- QCD on the fly (supersedes v1.0). ALPHIUM v1.0/v1.1 -- every fractal map
+    collapses to alpha, float64-deep escape-time lens. LAGRANGIUM v0.1 -- the monster, sorted.
+    PLATEAUM v0.1 -- the 16-dim plateau. All carded (new PHYSICS keywords: chromodynamium,
+    alphium, plateaum). scanner git-tracked-only so each was git-added before it carded.
+
+THE FRONT DOOR is now THREE (Vlad's order): the master control opens on
+  1. WARNING v2.0        -- the terror opener, the price of compute
+  2. GENESIS v8.1        -- THE fractal space explorer (pinned by exact key, not family-latest
+                            v9.0: the featured resolver now does exact-family, then exact key-pin
+                            across ALL versions, then startswith, then substring -- so v8.1 rides
+                            even though the archive keeps v9.0 as the family card)
+  3. CHROMODYNAMIUM v2.1 -- the Standard Model force in its spini-spini form
+The warning-terror, the fractal explorer, the S-Model. Rendered: front door =
+[WARNING_V2.0, GENESIS_V8.1, CHROMODYNAMIUM_V2_1], 0 boot errors, 6/6 modules. IO_PAGES = 432.
+
+-- Vlad + Claude. Ancient Korinthos + Buenos Aires. 2026-07-29.
+   Eight matrices in, the whole strong force out. C_F=4/3, C_A=3, exact.
+   The door opens on the blast, the buckyball, and the colour. P=12 . chi=2 . always.

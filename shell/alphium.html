@@ -1,0 +1,709 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>ALPHIUM v1.0 — every fractal map collapses to α · escape-time lens</title>
+<!--
+  ALPHIUM v1.0  —  THE GLYPH FOUNDRY
+  ==================================
+  Left of the "=" we write the WHOLE map, typeset honest.
+  Right of the "=" we write one letter: α.
+  Because that is what a render is — the entire orbit-fate of an
+  infinite iteration, folded down into a single seen thing. The α
+  is not decoration; it is a live window cut into the render itself.
+  What you see inside the glyph IS the map on the left, iterated.
+
+  THE MAPS (all real, all cited below):
+    Mandelbrot   z_{n+1} = z_n^2 + c            (Mandelbrot 1980; Douady–Hubbard)
+    Julia/Fatou  z_{n+1} = z_n^2 + c, c fixed   (Julia 1918; Fatou 1917)
+    Multibrot    z_{n+1} = z_n^d + c            (degree-d generalisation)
+    Burning Ship z_{n+1} = (|Re z|+i|Im z|)^2+c (Michelitsch–Rössler 1992)
+    Tricorn      z_{n+1} = conj(z_n)^2 + c      (Crowe–Hasson–Rippon–Strain 1989)
+    Celtic       z_{n+1} = |Re(z^2)| + i Im(z^2) + c
+    Phoenix      z_{n+1} = z_n^2 + c + p z_{n-1}(Ushiki 1988)
+    Newton       z_{n+1} = z_n − (z^3−1)/(3z^2) (Cayley 1879 problem; basins of attraction)
+
+  THE HONEST JOKE: infinity is rented, not owned. We iterate to a
+  finite N and call it ∞. Every fractal image is this small lie held
+  very steady. Slide ITER up and you buy back a little more of it —
+  until your browser hits ITS limit, long before the map hits its.
+
+  SHELL: Canvas 2D, float64 (deep zoom the GPU can't reach in one
+  shader pass). Progressive coarse→fine render, time-budgeted so the
+  UI never blocks. Zero build. One optional CDN — KaTeX — only to
+  typeset the left-hand side; if it can't load, the formula falls
+  back to plain text and everything else still runs offline.
+  prefers-reduced-motion honoured. Drag = pan · wheel/pinch = zoom.
+  P=12 · χ=2 · always.  Built 2026-07-29.
+-->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css" crossorigin="anonymous">
+<style>
+  :root{
+    --bg:#050510; --gold:#ffd700; --cyan:#00d4ff; --pink:#ff69b4; --green:#00ffd5;
+    --espresso:#c7894a; --steel:#7fa8c0; --purple:#cc44ff; --dim:#6a6a82; --txt:#e8e0d0;
+    --panel:rgba(8,8,18,0.82); --line:#1d2230;
+    --glow:#cc44ff;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;background:var(--bg);color:var(--txt);font-family:var(--mono);overflow:hidden}
+  #cv{position:fixed;inset:0;display:block;touch-action:none;cursor:grab}
+  #cv:active{cursor:grabbing}
+
+  /* ---------- HERO: the equation bar ---------- */
+  #eqbar{position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:20;
+    display:flex;align-items:center;gap:14px;max-width:min(94vw,760px);
+    background:var(--panel);border:1px solid var(--line);border-radius:12px;
+    padding:9px 16px 9px 18px;backdrop-filter:blur(4px);box-shadow:0 8px 34px rgba(0,0,0,0.5)}
+  #lhs{color:var(--txt);font-size:16px;line-height:1;white-space:nowrap;overflow:hidden}
+  #lhs .katex{font-size:1.18em}
+  #lhs.plain{font-family:var(--mono);color:var(--steel);font-size:13px;letter-spacing:0.02em}
+  #eq{color:var(--dim);font-size:24px;font-weight:400;margin:0 -2px 0 2px;user-select:none}
+  #alpha-wrap{position:relative;flex:0 0 auto;display:flex;align-items:center;justify-content:center}
+  #alpha{width:78px;height:78px;display:block;
+    filter:drop-shadow(0 0 7px var(--glow)) drop-shadow(0 0 17px var(--glow))}
+  #alpha-wrap::after{content:"the render";position:absolute;bottom:-13px;left:50%;
+    transform:translateX(-50%);font-size:7.5px;letter-spacing:0.18em;color:var(--dim);
+    text-transform:uppercase;white-space:nowrap}
+  @media (prefers-reduced-motion: no-preference){
+    #alpha{animation:apulse 4.2s ease-in-out infinite}
+    @keyframes apulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
+  }
+
+  /* ---------- HUD ---------- */
+  #hud{position:fixed;top:12px;left:12px;z-index:10;pointer-events:none;max-width:262px}
+  #hud > div{pointer-events:auto;background:var(--panel);border:1px solid var(--line);
+    border-radius:9px;padding:8px 11px;backdrop-filter:blur(3px)}
+  #ttl{color:var(--gold);font-size:13px;letter-spacing:0.06em}
+  #sub{color:var(--dim);font-size:9.5px;margin-top:3px;line-height:1.5}
+  #sub .l{color:var(--cyan)} #sub .r{color:var(--purple)}
+  #note{color:var(--espresso);font-size:9px;margin-top:6px;line-height:1.5}
+  #note b{color:var(--gold)}
+  #read{margin-top:8px}
+  #read table{border-collapse:collapse;width:100%}
+  #read td{padding:1.5px 0;font-size:10.5px}
+  #read td.k{color:var(--dim)} #read td.v{text-align:right;font-weight:bold;color:var(--cyan)}
+  #read td.v.g{color:var(--gold)} #read td.v.p{color:var(--pink)}
+
+  /* ---------- bottom control bar ---------- */
+  #bar{position:fixed;left:50%;transform:translateX(-50%);bottom:12px;z-index:20;
+    display:flex;flex-wrap:wrap;gap:7px;align-items:center;justify-content:center;
+    background:var(--panel);border:1px solid var(--line);border-radius:11px;
+    padding:8px 12px;max-width:97vw;backdrop-filter:blur(4px)}
+  .grp{display:flex;flex-wrap:wrap;gap:5px;align-items:center}
+  button{background:#12121d;border:1px solid #2a2a3a;border-radius:6px;color:var(--gold);
+    font:11px var(--mono);padding:5px 9px;cursor:pointer;transition:all .12s;letter-spacing:0.02em}
+  button:hover{border-color:var(--gold)}
+  .tbtn{color:var(--steel);border-color:#243040}
+  .tbtn:hover{border-color:var(--cyan);color:var(--cyan)}
+  .tbtn.on{background:var(--cyan);color:#04121a;border-color:var(--cyan);font-weight:bold}
+  .pbtn{width:22px;height:22px;padding:0;border-radius:5px;border:1px solid #2a2a3a}
+  .pbtn.on{outline:2px solid var(--gold);outline-offset:1px}
+  .togg{color:var(--dim)} .togg.on{background:var(--purple);color:#0a0416;border-color:var(--purple);font-weight:bold}
+  .sep{width:1px;height:22px;background:#2a2a3a;margin:0 2px}
+  .ctl{display:flex;align-items:center;gap:5px;color:var(--dim);font-size:10px}
+  .ctl.off{opacity:0.32;pointer-events:none}
+  .klbl{color:var(--dim);font-size:9.5px;text-transform:uppercase;letter-spacing:0.06em}
+  .val{color:var(--gold);font-size:10px;min-width:30px;text-align:right}
+  input[type=range]{appearance:none;-webkit-appearance:none;width:82px;height:4px;
+    background:#262b3a;border-radius:3px;outline:none}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;
+    border-radius:50%;background:var(--cyan);cursor:pointer}
+  input[type=range]::-moz-range-thumb{width:12px;height:12px;border:0;border-radius:50%;
+    background:var(--cyan);cursor:pointer}
+  .rP::-webkit-slider-thumb{background:var(--pink)} .rP::-moz-range-thumb{background:var(--pink)}
+
+  /* ---------- stamp + hint ---------- */
+  #stamp{position:fixed;bottom:66px;right:13px;z-index:10;pointer-events:none;text-align:right}
+  #stamp .s{font-size:8px;color:rgba(255,215,0,0.24);letter-spacing:0.07em;line-height:1.85}
+  #hint{position:fixed;bottom:66px;left:13px;z-index:10;pointer-events:none;
+    font-size:9px;color:var(--dim);letter-spacing:0.03em;line-height:1.7;max-width:230px}
+  #hint b{color:var(--steel)}
+  #uiToggle{position:fixed;top:12px;right:12px;z-index:40;font:11px var(--mono);
+    padding:6px 10px;background:var(--panel);border:1px solid #2a2a3a;color:var(--steel);
+    border-radius:7px;cursor:pointer;backdrop-filter:blur(3px)}
+  #uiToggle:hover{border-color:var(--cyan);color:var(--cyan)}
+  body.hideui #hud,body.hideui #bar,body.hideui #stamp,body.hideui #hint{display:none}
+  body.hideui #eqbar{top:16px}
+</style>
+</head>
+<body>
+<canvas id="cv" width="1440" height="900"></canvas>
+
+<div id="eqbar">
+  <div id="lhs" class="plain">z(n+1) = z(n)² + c</div>
+  <div id="eq">=</div>
+  <div id="alpha-wrap"><canvas id="alpha" width="156" height="156"></canvas></div>
+</div>
+
+<div id="hud">
+  <div>
+    <div id="ttl">ALPHIUM v1.0</div>
+    <div id="sub"><span class="l">left of =</span> · the full generating map &nbsp;|&nbsp; <span class="r">right of =</span> · α, the render itself</div>
+    <div id="note"><b id="mapname">Mandelbrot set</b> — <span id="mapnote">the parameter plane of z² + c</span></div>
+    <div id="read"><table>
+      <tr><td class="k">center</td><td class="v" id="r-center">−0.60, 0.00</td></tr>
+      <tr><td class="k">magnify</td><td class="v g" id="r-zoom">1.0×</td></tr>
+      <tr><td class="k">iterations (finite ∞)</td><td class="v" id="r-iter">220</td></tr>
+      <tr><td class="k">render</td><td class="v p" id="r-render">—</td></tr>
+    </table></div>
+  </div>
+</div>
+
+<button id="uiToggle" title="hide interface (H)">hide UI</button>
+
+<div id="hint"><b>drag</b> to pan &nbsp;·&nbsp; <b>wheel / pinch</b> to zoom<br><b>double-click</b> to dive &nbsp;·&nbsp; <b>H</b> hides the interface</div>
+
+<div id="stamp">
+  <div class="s">ALPHIUM v1.0 · glyph foundry</div>
+  <div class="s">P=12 · χ=2</div>
+  <div class="s">∞ is rented · always</div>
+</div>
+
+<div id="bar">
+  <div class="grp" id="types"></div>
+  <div class="sep"></div>
+  <div class="grp" id="pals"></div>
+  <div class="sep"></div>
+  <div class="ctl" id="ctl-iter"><span class="klbl">iter</span>
+    <input type="range" id="s-iter" min="60" max="1500" step="10" value="220">
+    <span class="val" id="v-iter">220</span></div>
+  <div class="ctl" id="ctl-pow"><span class="klbl">d</span>
+    <input type="range" id="s-pow" class="rP" min="2" max="8" step="0.1" value="3">
+    <span class="val" id="v-pow">3.0</span></div>
+  <div class="ctl" id="ctl-cre"><span class="klbl">c re</span>
+    <input type="range" id="s-cre" class="rP" min="-1" max="1" step="0.001" value="-0.800">
+    <span class="val" id="v-cre">−0.800</span></div>
+  <div class="ctl" id="ctl-cim"><span class="klbl">c im</span>
+    <input type="range" id="s-cim" class="rP" min="-1" max="1" step="0.001" value="0.156">
+    <span class="val" id="v-cim">0.156</span></div>
+  <div class="ctl"><span class="klbl">bands</span>
+    <input type="range" id="s-col" min="4" max="80" step="1" value="22">
+    <span class="val" id="v-col">22</span></div>
+  <div class="sep"></div>
+  <div class="grp">
+    <button class="togg on" id="t-smooth">smooth</button>
+    <button class="togg" id="t-cycle">cycle</button>
+    <button class="togg" id="t-orbit">orbit c</button>
+    <button id="b-reset">reset</button>
+    <button id="b-save">save α·png</button>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js" crossorigin="anonymous"></script>
+<script>
+"use strict";
+(function(){
+// ===================== constants =====================
+const TYPE = {MANDELBROT:0, JULIA:1, MULTIBROT:2, BURNING:3, TRICORN:4, CELTIC:5, PHOENIX:6, NEWTON:7};
+
+// per-map metadata: name, note, KaTeX (LHS), plain fallback, default view, which params it uses
+const FR = [
+  {t:TYPE.MANDELBROT, key:"mandel", label:"Mandelbrot", name:"Mandelbrot set",
+   note:"the parameter plane of z² + c",
+   tex:"z_{n+1} = z_n^{2} + c", plain:"z(n+1) = z(n)² + c",
+   center:[-0.60,0.0], zoom:3.0, usesPow:false, usesC:false},
+  {t:TYPE.JULIA, key:"julia", label:"Julia", name:"Julia set",
+   note:"z² + c with c held constant — the filled Julia set",
+   tex:"z_{n+1} = z_n^{2} + c,\\ \\ c=\\text{const}", plain:"z(n+1) = z(n)² + c,  c = const",
+   center:[0.0,0.0], zoom:3.2, usesPow:false, usesC:true},
+  {t:TYPE.MULTIBROT, key:"multi", label:"Multibrot", name:"Multibrot set",
+   note:"degree-d generalisation z^d + c",
+   tex:"z_{n+1} = z_n^{@d@} + c", plain:"z(n+1) = z(n)^d + c",
+   center:[0.0,0.0], zoom:3.0, usesPow:true, usesC:false},
+  {t:TYPE.BURNING, key:"ship", label:"Burning Ship", name:"Burning Ship",
+   note:"the absolute-value fold of z² + c",
+   tex:"z_{n+1} = \\big(\\lvert\\Re z_n\\rvert + i\\,\\lvert\\Im z_n\\rvert\\big)^{2} + c",
+   plain:"z(n+1) = (|Re z| + i|Im z|)² + c",
+   center:[-0.5,-0.5], zoom:3.4, usesPow:false, usesC:false},
+  {t:TYPE.TRICORN, key:"tricorn", label:"Tricorn", name:"Tricorn (Mandelbar)",
+   note:"conjugate square — antiholomorphic z̄² + c",
+   tex:"z_{n+1} = \\overline{z_n}^{\\,2} + c", plain:"z(n+1) = conj(z(n))² + c",
+   center:[0.0,0.0], zoom:3.2, usesPow:false, usesC:false},
+  {t:TYPE.CELTIC, key:"celtic", label:"Celtic", name:"Celtic Mandelbrot",
+   note:"fold the real part of z² only",
+   tex:"z_{n+1} = \\big\\lvert\\Re(z_n^{2})\\big\\rvert + i\\,\\Im(z_n^{2}) + c",
+   plain:"z(n+1) = |Re(z²)| + i·Im(z²) + c",
+   center:[-0.5,0.0], zoom:3.0, usesPow:false, usesC:false},
+  {t:TYPE.PHOENIX, key:"phoenix", label:"Phoenix", name:"Phoenix set",
+   note:"a second-order memory term p·z(n−1), p = −0.5",
+   tex:"z_{n+1} = z_n^{2} + c + p\\,z_{n-1}", plain:"z(n+1) = z(n)² + c + p·z(n−1)",
+   center:[0.0,0.0], zoom:3.2, usesPow:false, usesC:true},
+  {t:TYPE.NEWTON, key:"newton", label:"Newton", name:"Newton fractal",
+   note:"basins of z³ − 1 = 0 — which root does each seed fall to?",
+   tex:"z_{n+1} = z_n - \\dfrac{z_n^{3}-1}{3\\,z_n^{2}}", plain:"z(n+1) = z(n) − (z³−1)/(3z²)",
+   center:[0.0,0.0], zoom:3.0, usesPow:false, usesC:false}
+];
+
+// palettes as evenly-spaced hex stops (last ≈ first for smooth wrap)
+const PALS = {
+  mnet:   ['#050510','#0a7fae','#00d4ff','#7a5cff','#cc44ff','#ff69b4','#ffd700','#0a0a1a','#050510'],
+  fire:   ['#000008','#2a0000','#7a0a00','#e02200','#ff7a00','#ffc23a','#fff3c0','#3a1500','#000008'],
+  ice:    ['#00030f','#00204a','#005fa8','#00a0e0','#4fd4ff','#b8f0ff','#ffffff','#0a1830','#00030f'],
+  gold:   ['#050400','#241800','#5a3c0a','#a5730f','#ffd700','#fff3c0','#5a3c0a','#241800','#050400'],
+  plasma: ['#0d0221','#3a0a6b','#7b1fa2','#c31f8f','#f72585','#ff6d00','#ffd60a','#1a0630','#0d0221'],
+  spectra:['#22007a','#3a0ca3','#4361ee','#4cc9f0','#06d6a0','#ffd166','#ef476f','#7a0a5a','#22007a']
+};
+const PAL_ORDER = ['mnet','fire','ice','gold','plasma','spectra'];
+const GLOW = {mnet:'#cc44ff', fire:'#ff7a00', ice:'#33ccff', gold:'#ffd700', plasma:'#f72585', spectra:'#4cc9f0'};
+
+function hexRGB(h){ h=h.replace('#',''); return [parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)]; }
+// build stop table {pos, r,g,b}
+const PAL_STOPS = {};
+for(const k in PALS){
+  const arr = PALS[k]; const n = arr.length; const stops = [];
+  for(let i=0;i<n;i++){ const c=hexRGB(arr[i]); stops.push([i/(n-1), c[0], c[1], c[2]]); }
+  PAL_STOPS[k]=stops;
+}
+
+// ===================== state =====================
+const state = {
+  type: TYPE.MANDELBROT,
+  center: {x:-0.60, y:0.0},
+  zoom: 3.0,               // vertical extent of view, in world units
+  iter: 220,
+  power: 3.0,              // multibrot degree
+  jRe: -0.80, jIm: 0.156,  // julia / phoenix parameter c
+  bands: 22,               // colour cycles across the escape gradient
+  palette: 'mnet',
+  smooth: true,
+  cycle: false,
+  orbit: false,
+  colorOffset: 0.0
+};
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// derived colour scale from "bands": smaller bands slider => wider bands
+function colorScale(){ return state.bands / 900; }
+
+// ===================== canvas =====================
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d', {alpha:false});
+let W=0, H=0;
+let img=null;                 // full-res ImageData
+let iterBuf=null, rootBuf=null, escBuf=null; // cached per-pixel results for cheap recolour
+function resize(){
+  W = cv.width = innerWidth;
+  H = cv.height = innerHeight;
+  img = ctx.createImageData(W,H);
+  iterBuf = new Float32Array(W*H);
+  rootBuf = new Uint8Array(W*H);
+  escBuf  = new Uint8Array(W*H);
+  invalidate();
+}
+
+// pixel -> world (math y is up)
+function pxToWorldX(px){ return state.center.x + (px - W/2)/H * state.zoom; }
+function pxToWorldY(py){ return state.center.y - (py - H/2)/H * state.zoom; }
+
+// ===================== palette lookup =====================
+const _pal = [0,0,0];
+function palette(t){
+  t = t - Math.floor(t);
+  const s = PAL_STOPS[state.palette];
+  let i=0; const last=s.length-1;
+  while(i<last && t > s[i+1][0]) i++;
+  const a=s[i], b=s[Math.min(i+1,last)];
+  const span=(b[0]-a[0])||1; const f=(t-a[0])/span;
+  _pal[0]=a[1]+(b[1]-a[1])*f;
+  _pal[1]=a[2]+(b[2]-a[2])*f;
+  _pal[2]=a[3]+(b[3]-a[3])*f;
+  return _pal;
+}
+const INT=[5,5,16];
+function updateInterior(){ const s=PAL_STOPS[state.palette][0]; INT[0]=s[1]; INT[1]=s[2]; INT[2]=s[3]; }
+
+// ===================== the map: iterate one seed =====================
+// writes results into module scratch: _esc (0 interior / 1 escaped / 2 converged), _sm, _root
+let _esc=0, _sm=0, _root=0;
+const BAIL=256, LBAIL=Math.log(256);
+function computePixel(wx, wy){
+  const type=state.type, N=state.iter|0;
+  let zx, zy, cx, cy;
+  if(type===TYPE.JULIA || type===TYPE.PHOENIX){ zx=wx; zy=wy; cx=state.jRe; cy=state.jIm; }
+  else if(type===TYPE.NEWTON){ zx=wx; zy=wy; cx=0; cy=0; }
+  else { zx=0; zy=0; cx=wx; cy=wy; }
+
+  if(type===TYPE.NEWTON){
+    const eps=1e-6;
+    for(let k=0;k<N;k++){
+      const x2=zx*zx-zy*zy, y2=2*zx*zy;           // z^2
+      const x3=x2*zx-y2*zy, y3=x2*zy+y2*zx;       // z^3
+      const fx=x3-1, fy=y3;                        // f = z^3 - 1
+      const dfx=3*x2, dfy=3*y2;                    // f' = 3 z^2
+      const den=dfx*dfx+dfy*dfy;
+      if(den<1e-30){ _esc=0; return; }
+      const qx=(fx*dfx+fy*dfy)/den;               // f / f'
+      const qy=(fy*dfx-fx*dfy)/den;
+      zx-=qx; zy-=qy;
+      if(fx*fx+fy*fy<eps){
+        const ang=Math.atan2(zy,zx);
+        _root = (ang>1.047)?1 : (ang<-1.047)?2 : 0;   // roots at 0, ±120°
+        _esc=2; _sm=k; return;
+      }
+    }
+    _esc=0; return;
+  }
+
+  const p=state.power; let px=0, py=0;
+  for(let k=0;k<N;k++){
+    let nx, ny;
+    switch(type){
+      case TYPE.MULTIBROT:{
+        const r=Math.sqrt(zx*zx+zy*zy), th=Math.atan2(zy,zx);
+        const rp=Math.pow(r,p), a=p*th;
+        nx=rp*Math.cos(a)+cx; ny=rp*Math.sin(a)+cy; break;
+      }
+      case TYPE.BURNING:{
+        const ax=Math.abs(zx), ay=Math.abs(zy);
+        nx=ax*ax-ay*ay+cx; ny=2*ax*ay+cy; break;
+      }
+      case TYPE.TRICORN:{
+        nx=zx*zx-zy*zy+cx; ny=-2*zx*zy+cy; break;   // conjugate square
+      }
+      case TYPE.CELTIC:{
+        nx=Math.abs(zx*zx-zy*zy)+cx; ny=2*zx*zy+cy; break;
+      }
+      case TYPE.PHOENIX:{
+        const pr=-0.5;
+        nx=(zx*zx-zy*zy)+cx+pr*px;
+        ny=(2*zx*zy)+cy+pr*py;
+        px=zx; py=zy; break;
+      }
+      default:{ nx=zx*zx-zy*zy+cx; ny=2*zx*zy+cy; }  // Mandelbrot / Julia
+    }
+    zx=nx; zy=ny;
+    const m2=zx*zx+zy*zy;
+    if(m2>BAIL*BAIL){
+      if(state.smooth){
+        const logZ=0.5*Math.log(m2);
+        const deg=(type===TYPE.MULTIBROT)?p:2;
+        _sm = k + 1 - Math.log(logZ/LBAIL)/Math.log(deg);
+      } else _sm = k;
+      _esc=1; _root=0; return;
+    }
+  }
+  _esc=0; return;
+}
+
+// map cached result -> RGB into a Uint8ClampedArray at offset o
+function writeColor(data, o, esc, sm, root){
+  let r,g,b;
+  if(esc===0){ r=INT[0]; g=INT[1]; b=INT[2]; }
+  else if(esc===2){                                   // Newton basin
+    const base=palette(root/3 + state.colorOffset);
+    const shade=0.22+0.78*Math.exp(-sm*0.055);
+    r=base[0]*shade; g=base[1]*shade; b=base[2]*shade;
+  } else {                                             // escaped
+    const c=palette(sm*colorScale() + state.colorOffset);
+    r=c[0]; g=c[1]; b=c[2];
+  }
+  data[o]=r; data[o+1]=g; data[o+2]=b; data[o+3]=255;
+}
+
+// ===================== progressive renderer =====================
+const PASSES=[16,8,4,2,1];
+let passIdx=0, cursor=0, renderComplete=false, renderStart=0, renderMs=0;
+function invalidate(){ passIdx=0; cursor=0; renderComplete=false; renderStart=performance.now(); }
+
+function renderChunk(budgetMs){
+  if(renderComplete) return;
+  const data=img.data;
+  const t0=performance.now();
+  while(true){
+    const s=PASSES[passIdx];
+    const cols=Math.ceil(W/s);
+    const rows=Math.ceil(H/s);
+    const total=cols*rows;
+    // render a batch of cells then check the time budget
+    let count=0;
+    for(; cursor<total; cursor++){
+      const gx=(cursor%cols)*s;
+      const gy=((cursor/cols)|0)*s;
+      const sxpx=gx + (Math.min(s, W-gx))*0.5;
+      const sypx=gy + (Math.min(s, H-gy))*0.5;
+      computePixel(pxToWorldX(sxpx), pxToWorldY(sypx));
+      const esc=_esc, sm=_sm, root=_root;
+      const xe=Math.min(gx+s,W), ye=Math.min(gy+s,H);
+      for(let yy=gy; yy<ye; yy++){
+        let o=(yy*W+gx)*4;
+        let idx=yy*W+gx;
+        for(let xx=gx; xx<xe; xx++, o+=4, idx++){
+          escBuf[idx]=esc; iterBuf[idx]=sm; rootBuf[idx]=root;
+          writeColor(data,o,esc,sm,root);
+        }
+      }
+      if((++count & 511)===0 && performance.now()-t0>budgetMs){ cursor++; ctx.putImageData(img,0,0); drawAlpha(); return; }
+    }
+    // finished this pass
+    if(passIdx>=PASSES.length-1){ renderComplete=true; renderMs=performance.now()-renderStart; ctx.putImageData(img,0,0); drawAlpha(); return; }
+    passIdx++; cursor=0;
+    if(performance.now()-t0>budgetMs){ ctx.putImageData(img,0,0); drawAlpha(); return; }
+  }
+}
+
+// cheap recolour from cached buffers (colour cycle / palette / bands change) — no re-iteration
+function recolor(){
+  const data=img.data; const n=W*H;
+  for(let idx=0, o=0; idx<n; idx++, o+=4){
+    writeColor(data,o,escBuf[idx],iterBuf[idx],rootBuf[idx]);
+  }
+  ctx.putImageData(img,0,0); drawAlpha();
+}
+
+// ===================== orbit (live Julia morph) — fast low-res path =====================
+const obuf=document.createElement('canvas'); const octx=obuf.getContext('2d');
+let orbitT=0;
+function renderOrbitFrame(){
+  const scale=0.34;
+  const ow=Math.max(4,Math.round(W*scale)), oh=Math.max(4,Math.round(H*scale));
+  if(obuf.width!==ow||obuf.height!==oh){ obuf.width=ow; obuf.height=oh; }
+  const oimg=octx.createImageData(ow,oh);
+  const data=oimg.data;
+  const savedIter=state.iter, savedSmooth=state.smooth;
+  state.iter=Math.min(savedIter, 90);            // cap for real-time
+  for(let gy=0, o=0; gy<oh; gy++){
+    const py=(gy/(oh-1))*H;
+    const wy=pxToWorldY(py);
+    for(let gx=0; gx<ow; gx++, o+=4){
+      const px=(gx/(ow-1))*W;
+      computePixel(pxToWorldX(px), wy);
+      writeColor(data,o,_esc,_sm,_root);
+    }
+  }
+  state.iter=savedIter; state.smooth=savedSmooth;
+  octx.putImageData(oimg,0,0);
+  ctx.imageSmoothingEnabled=true;
+  ctx.drawImage(obuf,0,0,ow,oh,0,0,W,H);
+  drawAlpha();
+  renderComplete=false; // so we do a crisp pass once orbit stops
+}
+
+// ===================== α : a live window cut into the render =====================
+const alphaCv=document.getElementById('alpha');
+const actx=alphaCv.getContext('2d');
+function drawAlpha(){
+  const w=alphaCv.width, h=alphaCv.height;
+  actx.clearRect(0,0,w,h);
+  actx.imageSmoothingEnabled=true;
+  actx.drawImage(cv, 0,0,W,H, 0,0,w,h);          // the whole current render, squished into the box
+  actx.globalCompositeOperation='destination-in';// keep only where the glyph is
+  actx.fillStyle='#fff';
+  actx.textAlign='center'; actx.textBaseline='middle';
+  actx.font='900 '+Math.round(h*0.94)+'px Georgia,"Times New Roman",serif';
+  actx.fillText('\u03B1', w/2, h*0.55);
+  actx.globalCompositeOperation='source-over';
+  actx.lineWidth=Math.max(1,h*0.010);
+  actx.strokeStyle='rgba(255,255,255,0.22)';
+  actx.strokeText('\u03B1', w/2, h*0.55);
+}
+
+// ===================== the LHS formula (KaTeX with plain fallback) =====================
+const lhsEl=document.getElementById('lhs');
+function renderFormula(){
+  const f=FR[state.type];
+  let tex=f.tex;
+  if(state.type===TYPE.MULTIBROT) tex=tex.replace('@d@', state.power.toFixed(1));
+  if(window.katex){
+    try{
+      lhsEl.classList.remove('plain');
+      katex.render(tex, lhsEl, {throwOnError:false, displayMode:false});
+      return;
+    }catch(e){/* fall through */}
+  }
+  lhsEl.classList.add('plain');
+  let plain=f.plain;
+  if(state.type===TYPE.MULTIBROT) plain='z(n+1) = z(n)^'+state.power.toFixed(1)+' + c';
+  lhsEl.textContent=plain;
+}
+
+// ===================== readouts =====================
+const el=id=>document.getElementById(id);
+function fmt(n){ const s=n>=0?'':'−'; return s+Math.abs(n).toFixed(Math.abs(n)<10?4:2); }
+function updateReadouts(){
+  const f=FR[state.type];
+  el('mapname').textContent=f.name;
+  el('mapnote').textContent=f.note;
+  el('r-center').textContent=fmt(state.center.x)+', '+fmt(state.center.y);
+  const mag=3.0/state.zoom;
+  el('r-zoom').textContent=(mag>=1000?(mag/1000).toFixed(mag>=1e6?0:1)+(mag>=1e6?'M':'k'):mag.toFixed(mag<10?2:0))+'×';
+  el('r-iter').textContent=state.iter;
+  el('r-render').textContent = state.orbit ? 'live · orbit' : (renderComplete ? renderMs.toFixed(0)+' ms' : 'refining…');
+}
+
+// ===================== UI build =====================
+function applyGlow(){ const g=GLOW[state.palette]; document.documentElement.style.setProperty('--glow', g); }
+
+// type buttons
+const typesEl=el('types');
+FR.forEach(f=>{
+  const b=document.createElement('button');
+  b.className='tbtn'+(f.t===state.type?' on':'');
+  b.textContent=f.label; b.dataset.t=f.t;
+  b.onclick=()=>selectType(f.t);
+  typesEl.appendChild(b);
+});
+// palette swatch buttons
+const palsEl=el('pals');
+PAL_ORDER.forEach(k=>{
+  const b=document.createElement('button');
+  b.className='pbtn'+(k===state.palette?' on':'');
+  b.title=k; b.dataset.p=k;
+  const stops=PALS[k];
+  b.style.background='linear-gradient(135deg,'+stops[2]+','+stops[4]+','+stops[6]+')';
+  b.onclick=()=>selectPalette(k);
+  palsEl.appendChild(b);
+});
+
+function selectType(t){
+  state.type=t;
+  const f=FR[t];
+  state.center.x=f.center[0]; state.center.y=f.center[1]; state.zoom=f.zoom;
+  document.querySelectorAll('#types .tbtn').forEach(b=>b.classList.toggle('on', +b.dataset.t===t));
+  // enable/disable param controls
+  el('ctl-pow').classList.toggle('off', !f.usesPow);
+  el('ctl-cre').classList.toggle('off', !f.usesC);
+  el('ctl-cim').classList.toggle('off', !f.usesC);
+  // orbit only makes sense on Julia
+  if(state.orbit && t!==TYPE.JULIA){ state.orbit=false; el('t-orbit').classList.remove('on'); }
+  renderFormula(); invalidate(); updateReadouts();
+}
+function selectPalette(k){
+  state.palette=k;
+  document.querySelectorAll('#pals .pbtn').forEach(b=>b.classList.toggle('on', b.dataset.p===k));
+  applyGlow(); updateInterior();
+  if(renderComplete && !state.orbit) recolor(); else if(!state.orbit) invalidate();
+}
+
+// sliders
+el('s-iter').oninput=e=>{ state.iter=+e.target.value; el('v-iter').textContent=state.iter; invalidate(); };
+el('s-pow').oninput=e=>{ state.power=+e.target.value; el('v-pow').textContent=state.power.toFixed(1);
+  if(state.type===TYPE.MULTIBROT){ renderFormula(); invalidate(); } };
+el('s-cre').oninput=e=>{ state.jRe=+e.target.value; el('v-cre').textContent=fmt(state.jRe);
+  if(FR[state.type].usesC && !state.orbit) invalidate(); };
+el('s-cim').oninput=e=>{ state.jIm=+e.target.value; el('v-cim').textContent=fmt(state.jIm);
+  if(FR[state.type].usesC && !state.orbit) invalidate(); };
+el('s-col').oninput=e=>{ state.bands=+e.target.value; el('v-col').textContent=state.bands;
+  if(renderComplete && !state.orbit) recolor(); else if(!state.orbit) invalidate(); };
+
+// toggles
+el('t-smooth').onclick=function(){ state.smooth=!state.smooth; this.classList.toggle('on',state.smooth); invalidate(); };
+el('t-cycle').onclick=function(){ state.cycle=!state.cycle; this.classList.toggle('on',state.cycle); };
+el('t-orbit').onclick=function(){
+  state.orbit=!state.orbit; this.classList.toggle('on',state.orbit);
+  if(state.orbit){
+    if(state.type!==TYPE.JULIA) selectType(TYPE.JULIA);
+    orbitT=0;
+  } else { invalidate(); }
+};
+el('b-reset').onclick=()=>{
+  state.iter=220; state.power=3.0; state.jRe=-0.80; state.jIm=0.156; state.bands=22;
+  state.colorOffset=0; state.smooth=true; state.cycle=false; state.orbit=false;
+  el('s-iter').value=220; el('v-iter').textContent='220';
+  el('s-pow').value=3; el('v-pow').textContent='3.0';
+  el('s-cre').value=-0.80; el('v-cre').textContent='−0.800';
+  el('s-cim').value=0.156; el('v-cim').textContent='0.156';
+  el('s-col').value=22; el('v-col').textContent='22';
+  el('t-smooth').classList.add('on'); el('t-cycle').classList.remove('on'); el('t-orbit').classList.remove('on');
+  selectType(TYPE.MANDELBROT);
+};
+el('b-save').onclick=()=>{
+  // export the α glyph, generously padded, on the deep background
+  const S=1024, pad=0.16;
+  const c=document.createElement('canvas'); c.width=S; c.height=S;
+  const g=c.getContext('2d');
+  g.fillStyle=getComputedStyle(document.documentElement).getPropertyValue('--bg').trim()||'#050510';
+  g.fillRect(0,0,S,S);
+  g.imageSmoothingEnabled=true;
+  g.drawImage(cv, 0,0,W,H, 0,0,S,S);
+  g.globalCompositeOperation='destination-in';
+  g.fillStyle='#fff'; g.textAlign='center'; g.textBaseline='middle';
+  g.font='900 '+Math.round(S*(1-pad))+'px Georgia,serif';
+  g.fillText('\u03B1', S/2, S*0.55);
+  g.globalCompositeOperation='source-over';
+  const a=document.createElement('a'); a.download='alphium_'+FR[state.type].key+'.png'; a.href=c.toDataURL('image/png'); a.click();
+};
+
+// hide UI
+el('uiToggle').onclick=()=>document.body.classList.toggle('hideui');
+
+// ===================== pointer / wheel / pinch =====================
+const pointers=new Map();
+let dragging=false, lastX=0, lastY=0, pinchDist=0;
+cv.addEventListener('pointerdown', e=>{
+  cv.setPointerCapture(e.pointerId);
+  pointers.set(e.pointerId, {x:e.clientX, y:e.clientY});
+  if(pointers.size===1){ dragging=true; lastX=e.clientX; lastY=e.clientY; }
+  else if(pointers.size===2){ dragging=false; const p=[...pointers.values()]; pinchDist=Math.hypot(p[0].x-p[1].x, p[0].y-p[1].y); }
+});
+cv.addEventListener('pointermove', e=>{
+  if(!pointers.has(e.pointerId)) return;
+  pointers.set(e.pointerId, {x:e.clientX, y:e.clientY});
+  if(pointers.size===2){
+    const p=[...pointers.values()];
+    const d=Math.hypot(p[0].x-p[1].x, p[0].y-p[1].y);
+    const mx=(p[0].x+p[1].x)/2, my=(p[0].y+p[1].y)/2;
+    if(pinchDist>0){ zoomAt(mx,my, pinchDist/d); }
+    pinchDist=d; return;
+  }
+  if(dragging){
+    const dx=e.clientX-lastX, dy=e.clientY-lastY;
+    lastX=e.clientX; lastY=e.clientY;
+    state.center.x -= dx*state.zoom/H;
+    state.center.y += dy*state.zoom/H;
+    if(!state.orbit) invalidate();
+  }
+});
+function endPointer(e){ pointers.delete(e.pointerId); if(pointers.size<2) pinchDist=0; if(pointers.size===0) dragging=false; }
+cv.addEventListener('pointerup', endPointer);
+cv.addEventListener('pointercancel', endPointer);
+
+function zoomAt(mx,my,factor){
+  const wx=pxToWorldX(mx), wy=pxToWorldY(my);
+  state.zoom*=factor;
+  state.zoom=Math.max(1e-13, Math.min(8, state.zoom));
+  state.center.x = wx - (mx - W/2)/H*state.zoom;
+  state.center.y = wy + (my - H/2)/H*state.zoom;
+  if(!state.orbit) invalidate();
+}
+cv.addEventListener('wheel', e=>{ e.preventDefault(); zoomAt(e.clientX, e.clientY, e.deltaY<0?0.8:1.25); }, {passive:false});
+cv.addEventListener('dblclick', e=>{ e.preventDefault(); zoomAt(e.clientX, e.clientY, 0.5); });
+
+window.addEventListener('keydown', e=>{
+  if(e.key==='h'||e.key==='H') document.body.classList.toggle('hideui');
+  else if(e.key==='r'||e.key==='R') el('b-reset').click();
+  else if(e.key===' '){ e.preventDefault(); el('t-orbit').click(); }
+});
+window.addEventListener('resize', resize);
+
+// ===================== main loop =====================
+let lastT=performance.now();
+function loop(now){
+  requestAnimationFrame(loop);
+  const dt=Math.min(0.05,(now-lastT)/1000); lastT=now;
+
+  if(state.orbit && !reduceMotion){
+    orbitT+=dt;
+    const rad=0.7885, ang=orbitT*0.22;         // the classic Julia-zoo circle
+    state.jRe=rad*Math.cos(ang); state.jIm=rad*Math.sin(ang);
+    el('v-cre').textContent=fmt(state.jRe); el('v-cim').textContent=fmt(state.jIm);
+    el('s-cre').value=state.jRe; el('s-cim').value=state.jIm;
+    renderOrbitFrame();
+  } else if(state.cycle && !reduceMotion){
+    state.colorOffset += dt*0.05;
+    if(renderComplete) recolor(); else renderChunk(14);
+  } else if(!renderComplete){
+    renderChunk(14);
+  }
+  updateReadouts();
+}
+
+// ===================== init =====================
+resize();
+applyGlow();
+updateInterior();
+renderFormula();
+selectType(TYPE.MANDELBROT);   // sets view + control enable states + first invalidate
+requestAnimationFrame(loop);
+})();
+</script>
+</body></html>

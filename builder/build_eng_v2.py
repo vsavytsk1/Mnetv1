@@ -88,19 +88,28 @@ def card_html(s, featured=False):
     <div class="card-caps">{caps_html(s.get('caps', []))}</div>
   </div>"""
 
-# THE FRONT DOOR (MONKIUM order): the warning sim opens (terror -> the price), then
-# GENESIS -- the main fractal space explorer -- second, BEFORE anything else. Pinned by
-# family; the scanner still picks the latest version of each, so this never drifts.
+# THE FRONT DOOR (MONKIUM order): three pinned cards, in this order --
+#   1. THE WARNING       -- the terror opener, the price of compute
+#   2. GENESIS v8.1      -- the fractal space explorer (the buckyball you fly INTO)
+#   3. CHROMODYNAMIUM    -- the Standard Model force (SU(3)) in its spini-spini form
+# Each entry: (match, label, blurb). `match` can be an exact key-pin (searched across
+# ALL versions in SIMS, e.g. a specific "genesis_v8" not the family-latest v9.0) or a
+# family keyword (resolved to the latest card). Explicit pins win so it never drifts.
 FEATURED_FAMILIES = [
-    ("warning",  "THE WARNING",   "the front door -- the explosion, the fractal cascade, the price of compute. enter here."),
-    ("genesis",  "GENESIS",       "the main fractal space explorer -- seed a Platonic solid, refine, fly the buckyball."),
+    ("warning",         "THE WARNING",    "the front door -- the explosion, the fractal cascade, the price of compute. enter here."),
+    ("genesis_v8_1",    "GENESIS v8.1",   "the fractal space explorer -- seed a Platonic solid, refine the Goldberg buckyball, fly INSIDE. M1-M6 kernel live."),
+    ("chromodynamium",  "CHROMODYNAMIUM", "the Standard Model's strong force, spini-spini: SU(3), the 8 gluon roots, colour factors C_F=4/3 C_A=3, the running coupling -- all computed live."),
 ]
 FEATURED = []
 _feat_keys = set()
 for fam_kw, _lbl, _blurb in FEATURED_FAMILIES:
-    # prefer an EXACT family match (warning -> the real WarningSim, not
-    # ref_spookywarning_-_the_gate), then a family-startswith, then any substring.
+    # Resolve in order of precision so a keyword never grabs the wrong sim:
+    #   1) EXACT family match on a card (warning -> the real WarningSim, not
+    #      ref_spookywarning_-_the_gate); 2) exact key-substring across ALL versions
+    #      in SIMS (lets us pin genesis_v8_1 even though the family-latest is v9.0);
+    #   3) family startswith; 4) any substring.
     hit = (next((s for s in CARDS if s["family"] == fam_kw), None)
+           or next((s for s in SIMS if fam_kw in s["key"]), None)
            or next((s for s in CARDS if s["family"].startswith(fam_kw)), None)
            or next((s for s in CARDS if fam_kw in s["family"] or fam_kw in s["key"]), None))
     if hit and hit["key"] not in _feat_keys:
