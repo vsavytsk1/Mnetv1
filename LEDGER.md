@@ -8897,3 +8897,34 @@ IO_PAGES = 436. 67KB, loneCR=0, U+FFFD=0. AEQUALIUM_TOWER.md 12KB loneCR=0 U+FFF
 -- Vlad + Claude. 2026-07-30. The staircase is quantised; the "=" is a promise the compute keeps
    only to a shell. Every nonsensical latexium now has its honest code block on file.
    P=12 . chi=2 . the price is always paid . always.
+
+### L160 -- THE SEVEN-DOOR: AEQUALIUM + PCBIUM CORE, SPIDER + HELENI PINNED (2026-07-30)
+
+The front door grew from three to SEVEN pinned cards -- the two new core focuses plus two
+cross-repo pins:
+  1. WARNING v2.0        2. GENESIS v8.1        3. CHROMODYNAMIUM v2.2
+  4. AEQUALIUM v1.2      -- the equals sign earned; Fourier in the C60. CORE FOCUS.
+  5. PCBIUM v2.9.5       -- the PCB design space on the buckyball. CORE FOCUS.
+  6. ARACNIUM v1.4 THE HEAVE -- the spider, latest. EXTERNAL: the locomotion digital twin
+                             lives in the SpiderEngineering repo; card summons its github.io
+                             URL into the overlay iframe.
+  7. HELENI -- STATUS    -- EXTERNAL .md. a new readme HELENI_STATUS.md reconciling every
+                             heleni across MNetv1 + SpiderEngineering (Eleni circle v0.6 = 60
+                             tongues 71.8%% gate 0.700; HELENA engine v008 = 71 tongues 105032
+                             bit-nodes mean 0.5434 measured; lens v1.9; the version tags disagree
+                             and the missing stone v2_0 is flagged, not hidden -- Path IV).
+
+Builder work: FEATURED_EXTERNAL list added (explicit key/name/tag/color/url/blurb/caps for
+cross-repo cards, appended to LINKS map). summon() now detects a .md URL and opens a NEW TAB
+instead of the iframe (a raw .md renders as text in a frame -- Curse 7/10). New .cap.doc chip.
+All 4 external URLs live-checked HTTP 200 BEFORE pinning (a card must never 404); SpiderEngineering
+Pages confirmed enabled. Local browser test: 7 feat-cards in order, 0 console errors, 6/6 kernel,
+aracnium summons into overlay with the SpiderEngineering src, heleni logs "OPEN ... (new tab)".
+
+HELENI_STATUS.md: 6KB, grounded entirely in the generated build cards (CIRCLE.md + HELENA.md),
+numbers copied not asserted. loneCR=0 U+FFFD=0. Dashboard 321KB. IO_PAGES = 436 (the .md at root
+is a doc, not a sim card in the scan). eng_v2.0 rebuilt from the same scan -- no drift.
+
+-- Vlad + Claude. 2026-07-30. Two core focuses lit, the spider and the circle pinned to the door.
+   The equals sign, the board, the spider, and the tongues -- all one click from the front.
+   P=12 . chi=2 . the center holds and is not shown . always.

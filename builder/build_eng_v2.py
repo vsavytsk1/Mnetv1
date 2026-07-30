@@ -88,17 +88,40 @@ def card_html(s, featured=False):
     <div class="card-caps">{caps_html(s.get('caps', []))}</div>
   </div>"""
 
-# THE FRONT DOOR (MONKIUM order): three pinned cards, in this order --
+# THE FRONT DOOR (MONKIUM order): SEVEN pinned cards, in this order --
 #   1. THE WARNING       -- the terror opener, the price of compute
 #   2. GENESIS v8.1      -- the fractal space explorer (the buckyball you fly INTO)
 #   3. CHROMODYNAMIUM    -- the Standard Model force (SU(3)) in its spini-spini form
-# Each entry: (match, label, blurb). `match` can be an exact key-pin (searched across
-# ALL versions in SIMS, e.g. a specific "genesis_v8" not the family-latest v9.0) or a
+#   4. AEQUALIUM         -- the equals sign earned; Fourier in the C60 (a core focus)
+#   5. PCBIUM            -- the PCB design space on the buckyball (a core focus)
+#   6. ARACNIUM v1.4     -- the spider, latest (EXTERNAL: SpiderEngineering repo)
+#   7. HELENI STATUS     -- the Eleni/HELENA readme (EXTERNAL .md, opens in a new tab)
+# Cards 1-5 resolve against the local scan; 6-7 are explicit cross-repo pins in
+# FEATURED_EXTERNAL (URLs live-checked 200 before pinning -- a card must never 404).
+# Each local entry: (match, label, blurb). `match` can be an exact key-pin (searched
+# across ALL versions in SIMS, e.g. genesis_v8_1 not the family-latest v9.0) or a
 # family keyword (resolved to the latest card). Explicit pins win so it never drifts.
 FEATURED_FAMILIES = [
     ("warning",         "THE WARNING",    "the front door -- the explosion, the fractal cascade, the price of compute. enter here."),
     ("genesis_v8_1",    "GENESIS v8.1",   "the fractal space explorer -- seed a Platonic solid, refine the Goldberg buckyball, fly INSIDE. M1-M6 kernel live."),
     ("chromodynamium",  "CHROMODYNAMIUM", "the Standard Model's strong force, spini-spini: SU(3), the 8 gluon roots, colour factors C_F=4/3 C_A=3, the running coupling -- all computed live."),
+    ("aequalium",       "AEQUALIUM",      "the equals sign, EARNED: a pure-Fourier curve trapped in the C60. grow the fullerene shell (C60->C420->C2940), buy harmonics, watch the residual fall. the Standard Modelium tower reads how many DIGITS of certainty each real physics '=' can buy. a core focus."),
+    ("pcbium",          "PCBIUM",         "the PCB design space -- CAD navigation on the buckyball, nanite routing, the board grown from the kernel. a core focus."),
+]
+# External cards live in OTHER repos on the same github.io host, so they are NOT in
+# the local scan. Each is an explicit (key, name, tag, color, border, url, blurb, caps).
+# We verified all four URLs return 200 before pinning them (a card must never 404).
+FEATURED_EXTERNAL = [
+    dict(key="ext_aracnium_v1_4_heave", name="ARACNIUM v1.4 -- THE HEAVE", tag="SPIDER",
+         color="#88ff88", border="#1a3a1a",
+         url="https://vsavytsk1.github.io/SpiderEngineering/aracnium/sim/aracnium_v1_4_heave.html",
+         caps=["frm", "pc", "kbd"],
+         desc="the spider, latest: a swarm of full-math robot spiders -- CPG gait, 2-link IK to planted feet, honest F=ma + Coulomb friction -- heave a real tungsten cube. the locomotion digital twin, live from the SpiderEngineering repo. a core focus."),
+    dict(key="ext_heleni_status", name="HELENI -- STATUS", tag="ELENI",
+         color="#ff9ecb", border="#3a1a2a",
+         url="https://vsavytsk1.github.io/Mnetv1/HELENI_STATUS.md",
+         caps=["doc"],
+         desc="the current status of Eleni / HELENA -- the Genesis-LLM circle built from 1 Corinthians 13 in the tongues of humanity, gate weight 0.700, the center held and never shown. a detailed readme reconciling every heleni across MNetv1 + SpiderEngineering."),
 ]
 FEATURED = []
 _feat_keys = set()
@@ -116,11 +139,13 @@ for fam_kw, _lbl, _blurb in FEATURED_FAMILIES:
         FEATURED.append((hit, _blurb)); _feat_keys.add(hit["key"])
 
 CARDS_HTML = ""
-if FEATURED:
+if FEATURED or FEATURED_EXTERNAL:
     CARDS_HTML += '\n  <div class="cat-header feat-header">FRONT DOOR <span class="cat-count">enter here</span></div>'
     for s, blurb in FEATURED:
         s2 = dict(s); s2["desc"] = blurb   # a custom front-door blurb
         CARDS_HTML += card_html(s2, featured=True)
+    for s in FEATURED_EXTERNAL:            # cross-repo pins (explicit url, live-checked)
+        CARDS_HTML += card_html(s, featured=True)
 for tag in sorted(GROUPS):
     grp = sorted(GROUPS[tag], key=lambda x: x["key"])
     CARDS_HTML += f'\n  <div class="cat-header">{esc(tag)} <span class="cat-count">{len(grp)}</span></div>'
@@ -131,7 +156,9 @@ for tag in sorted(GROUPS):
         CARDS_HTML += card_html(s)
 
 # The key -> url map for summon(), also auto-built from the same scan (no drift).
+# External featured pins are appended so summon() can resolve them too.
 LINKS_JS = "".join(f"  {s['key']}:'{s['url']}',\n" for s in SIMS)
+LINKS_JS += "".join(f"  {s['key']}:'{s['url']}',\n" for s in FEATURED_EXTERNAL)
 
 # The "select your sims" dropdown -- one toggle row per dashboard card, category-grouped,
 # ALL ON by default. Auto-populated from the same scan so it can never drift.
@@ -272,6 +299,7 @@ body{{background:var(--bg);color:var(--text);
 .cap.gpu{{color:#ff69b4;border-color:rgba(255,105,180,0.2)}}
 .cap.kbd{{color:#ffd700;border-color:rgba(255,215,0,0.2)}}
 .cap.priv{{color:#888;border-color:rgba(136,136,136,0.2)}}
+.cap.doc{{color:#ff9ecb;border-color:rgba(255,158,203,0.25)}}
 /* dimmed card when toggled off in the selector */
 .mod-card.mod-off{{opacity:0.16;filter:grayscale(0.8);pointer-events:none}}
 /* the SELECT YOUR SIMS dropdown */
@@ -582,11 +610,19 @@ function syncMini(){{
 var LINKS={{
 {LINKS_JS}}};
 function summon(key){{
+  var url=LINKS[key];
+  if(!url){{ logAdd('MISS',key.toUpperCase()); return; }}
+  // a .md is not a sim -- it renders as raw text in an iframe. Open it in a new tab
+  // (Curse 7/10: full-canvas/doc content misbehaves in the overlay iframe).
+  if(/\.md($|\?)/.test(url)){{
+    window.open(url,'_blank','noopener');
+    logAdd('OPEN',key.toUpperCase()+' (new tab)');
+    return;
+  }}
   var ov=document.getElementById('overlay');
   var fr=document.getElementById('overlay-frame');
   var title=document.getElementById('overlay-title');
   var urlEl=document.getElementById('overlay-url');
-  var url=LINKS[key];
   fr.src=url;
   title.textContent=key.toUpperCase();
   urlEl.textContent=url.replace('https://vsavytsk1.github.io/Mnetv1/','');
