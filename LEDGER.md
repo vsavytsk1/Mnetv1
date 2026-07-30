@@ -9164,3 +9164,26 @@ build the machine before which every substrate claim must pay.
 
 Kernel-verified all 8 views: 0 console errors, GK injected, 0 leaks; byte scan
 loneCR=0 U+FFFD=0 BOM=0. Featured -> v2.4.6. v2.4.5 frozen beside (Path X).
+
+### L170 -- AEQUALIUM v2.4.7 THE FLOOR: let the monkey brain see the collapse (2026-07-31)
+The inner/mid fractal sliders were LINEAR 0.05..0.90 -- they could not reach the
+edge where the geometry dissolves into float64 byte-nonsense. Now they are
+LOG-SCALE: notch s(1..150) -> scale = 10^((s-151)/10), so a single drag runs from
+~0.79 (right) all the way down to 1e-15 (left, the last honest double before the
+inner ring collapses onto the centroid). Default stays 0.10; display switches to
+scientific ('1e-15') below 0.01; the log line flags "(COLLAPSING)" in warn colour
+when the audit reports not-closed. NO tower/Fourier math changed -- only the reach
+of the two geometry-shape levers. This is a TEST, not a claim: at lowest resistance
+to information flow the net self-organizes to maximum complexity; push far enough
+and it collapses -- and if it collapses, the math is absolute and you push the
+slider back. That boundary IS the experiment.
+KERNEL-VERIFIED the collapse (at C960): inner 0.10 -> minTriArea 2.16e-5, SURFACE
+VERIFIED; push to 1e-4 -> COLLAPSING, surface FAIL; 1e-10 and below -> minTriArea
+EXACTLY 0, inner ring quantizes onto the centroid (V 960->236, 320 non-manifold),
+SURFACE WITHHELD/not-closed. CRUCIALLY: MAP stays VERIFIED through the collapse --
+the topology from integer IDs (the 12 pentagons, the combinatorial soul) is
+ABSOLUTE; only the float64 embedding dies. Push back to 0.10 -> full clean
+re-embed, SURFACE VERIFIED, chi=2. No crash (reshape re-audits and warns). All 8
+views: 0 console errors, GK injected, 0 leaks; byte scan loneCR=0 U+FFFD=0 BOM=0.
+Featured -> v2.4.7. v2.4.6 frozen beside (Path X). The math is absolute; the byte
+representation is what breaks -- the slider sets the net itself.
