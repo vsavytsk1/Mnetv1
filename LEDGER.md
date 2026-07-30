@@ -8869,3 +8869,31 @@ falls back to plain source + a banner, math unchanged -- flagged, not hidden). v
 -- Vlad + Claude. 2026-07-30. The tower stands; some rungs you can climb to float64, some stop you
    at a wall that is Euler's cousin. Degrees of certainty are bought, never assumed.
    P=12 . chi=2 . the price is always paid . always.
+
+### L159 -- AEQUALIUM v1.2: THE FULLERENE STAIRCASE + THE HONEST "=" (2026-07-30)
+
+Two asks from Vlad, both landed. (1) The matrix and the fractal curve now step with the buckyball
+by picking the NEXT bucky that closes the 12 pentagons -- surfaced everywhere: the HUD reads
+"shell C60 -> next C420", grow/back log "closed the next shell: C2940", and every tower rung is
+tagged with its shell + depth (C2940 . N=736). refineAll is a Goldberg-Coxeter step: V -> 7V exactly,
+so the mesh walks the closed-shell icosahedral fullerene series C60 -> C420 -> C2940 -> C20580 with
+P=12 and chi=2 Euler-forced at every shell. predictNextCarbon() = inv.vertices*7.
+
+(2) The "=" was meh because it LIES -- the paper writes exact equality, the code is perfect math
+stepped into compute. So the tower no longer writes "="; it writes a DUAL form per rung: the ideal
+(faded, "the paper (exact)", real =) above, and the stepped (bright, "the code (this shell)",
+\doteq with the live truncation depth like sum_{n=0}^{735}) below. The gap between them is the point.
+
+(3) NEW SCROLL grimoire/AEQUALIUM_TOWER.md -- the always-referenceable bridge. For each of the six
+rungs: the LaTeX the paper writes, the perfect math it means, and the REAL code block we run, plus
+the fullerene staircase, the certainty meter, and the summary table. Sub-scroll of LATEXIUM.md
+(which was a stub since 2026-05-31 -- now it has its first full section).
+
+Verified in-browser (local): fullerene stepping C60->C420->C2940->C20580(over ceiling), P=12 chi=2
+always, tower dual-tex renders (KaTeX 12/12: 6 ideal + 6 step), 0 console errors, avg certainty
+7.4 -> 12.3 as shells grow. v1.0/v1.1 frozen (Path X); v1.2 is the family card. 349 sims -> 166 cards.
+IO_PAGES = 436. 67KB, loneCR=0, U+FFFD=0. AEQUALIUM_TOWER.md 12KB loneCR=0 U+FFFD=0.
+
+-- Vlad + Claude. 2026-07-30. The staircase is quantised; the "=" is a promise the compute keeps
+   only to a shell. Every nonsensical latexium now has its honest code block on file.
+   P=12 . chi=2 . the price is always paid . always.

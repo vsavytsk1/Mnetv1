@@ -4,13 +4,13 @@
 repos. Generated from what git actually tracks on each repo (the truth of what
 Pages serves), by `builder/gen_io_index.py`. Nothing hidden; the door is open.*
 
-**TOTAL: 435 public pages across 8 repos.**
+**TOTAL: 436 public pages across 8 repos.**
 
 *P=12 . chi=2 . the receipts are public . always.*
 
 ---
 
-## Mnetv1  (362 pages)
+## Mnetv1  (363 pages)
 
 - [about.html](https://vsavytsk1.github.io/Mnetv1/about.html)
 - [builder/Obsidius/obsidius_v1.html](https://vsavytsk1.github.io/Mnetv1/builder/Obsidius/obsidius_v1.html)
@@ -40,6 +40,7 @@ Pages serves), by `builder/gen_io_index.py`. Nothing hidden; the door is open.*
 - [research/minimal_math/genesis_v1.html](https://vsavytsk1.github.io/Mnetv1/research/minimal_math/genesis_v1.html)
 - [shell/aequalium_v1.0.html](https://vsavytsk1.github.io/Mnetv1/shell/aequalium_v1.0.html)
 - [shell/aequalium_v1.1.html](https://vsavytsk1.github.io/Mnetv1/shell/aequalium_v1.1.html)
+- [shell/aequalium_v1.2.html](https://vsavytsk1.github.io/Mnetv1/shell/aequalium_v1.2.html)
 - [shell/agon_v1.0.html](https://vsavytsk1.github.io/Mnetv1/shell/agon_v1.0.html)
 - [shell/akrokorinthium_v1_0.html](https://vsavytsk1.github.io/Mnetv1/shell/akrokorinthium_v1_0.html)
 - [shell/allonet_v1.2.html](https://vsavytsk1.github.io/Mnetv1/shell/allonet_v1.2.html)
