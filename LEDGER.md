@@ -9106,3 +9106,23 @@ v2.4.3 calc kernels (LATEXIUM.md is a stub; AEQUALIUM_TOWER.md is pre-audit -- T
 carries the shipped math), everything tagged VERIFIED/METAPHOR/EXTERNAL. Kernel-
 verified all 8 views @1440x900: 0 console errors, GK injected, 0 leaks. Byte scan
 loneCR=0 U+FFFD=0 BOM=0. Featured card -> v2.4.4. v2.4.3 frozen beside it (Path X).
+
+### L168 -- AEQUALIUM v2.4.5: THE UI FIXES (2026-07-30)
+Three kernel-seen UI bugs fixed; the MATH IS UNTOUCHED (we pay what we see in
+compute -- this only makes the payment legible). (1) TOWER no longer hides behind
+the command bar: the bar WRAPS to 1-3 rows by width (measured 61px at 1440w, not
+the CSS-assumed 46px), so resize() now MEASURES it into a BARH global and sets
+#tower.style.bottom=BARH -- the tower always ends exactly above the bar. (2) LIVE
+CALC legend was drawn at H-56, under the 61px bar -> now H-BARH-14, and every
+plotted view's bottom margin is BARH-aware (PB=BARH+24). (3) CONVERGE price curve
+keyed on tHash, but the C60-silhouette target RE-DERIVES its tHash on every grow,
+so only the newest point matched (a lone dot); now it groups by TARGET family (one
+point per face-count, latest residual, ascending) and the log axis anchors to the
+real min face-count. Verified by kernel: 4-point descent 32->1922 faces (r
+0.159->0.081->0.043->0.037); all 8 views 0 console errors, GK injected, 0 leaks;
+byte scan loneCR=0 U+FFFD=0 BOM=0. Featured -> v2.4.5. v2.4.4 frozen (Path X).
+FLAG (Path IV): builder/build_aequalium.py is STALE v1.0-era (docstring still
+carries the FALSIFIED "Kepler above Laplace limit e=0.6627"); Fable's v2.x are
+hand-authored, not builder-output. The builder has diverged from the shipped
+audited truth -- NOT silently rebuilt (would ship falsified physics). A future
+task: retire/mark it v1-archival, or regen from grimoire/Thea.md's audited core.
