@@ -9126,3 +9126,41 @@ carries the FALSIFIED "Kepler above Laplace limit e=0.6627"); Fable's v2.x are
 hand-authored, not builder-output. The builder has diverged from the shipped
 audited truth -- NOT silently rebuilt (would ship falsified physics). A future
 task: retire/mark it v1-archival, or regen from grimoire/Thea.md's audited core.
+
+### L169 -- AEQUALIUM v2.4.6 THE PRE-FREEZE PATCH + scrolls (Sol-mage audit) (2026-07-30)
+The Sol-mage ran v2.4.5 as a release candidate (full executable audit: syntax,
+4 WELD generations, fault lab + one adversarial fault, full K-sweep, all six tower
+calcs recomputed) and judged it WORTHY TO FREEZE as the final V2 scroll. A gift
+audit (Path IV -- audits are gifts). We applied section 5 (safe pre-freeze fixes)
+and updated the scrolls; the structural section 7 (the 9 organs) is the V3 map.
+
+v2.4.6 (copied from v2.4.5, NO physics/math changed):
+1. C60 CERTIFIED AT BOOT -- refreshVer()+refreshCerts() before first render; the
+   seed now shows MAP VERIFIED / SURFACE VERIFIED, not the stale "coord-audit only
+   / MAP -- / SURFACE --" the audit caught.
+2. SKIPPED != PASS -- the C15360 SURFACE badge reads "PARTIAL -- selfX test skipped
+   >12k tris" instead of "VERIFIED*" (a skipped self-intersection sweep is not a
+   pass); the weld log line matched.
+3. STALE LANGUAGE SWEPT -- boot log "pretty+symmetric=true" -> imagery-not-evidence;
+   slider "topology re-formed" -> "re-audited"; NOTES "demonstrated fact" ->
+   "external claim (audit separately)" to match openProof() (CASCADIUM is external).
+DEFERRED TO V3 (structural, flagged in the header, not faked): immutable event
+history for BACK/FORWARD; fail-CLOSED certificate/3 (hash full module bytes, strict
+transactional replay, install only on all-pass); embedding oracle for coincident /
+non-incident-contact faults; K_active < K_capacity (the interior Fourier optimum
+lives BETWEEN shells). See grimoire/SOLMAGE_V2_TO_V3_AUDIT.md.
+
+Scrolls: grimoire/AEQUALIUM_TOWER.md replaced with the AUDITED version (Kepler wall
+falsified & kept visible Path X, R-ratio = ILLUSTRATIVE MODEL with ambiguity floor,
+status tags, WELD vs legacy lineage honest). grimoire/SOLMAGE_V2_TO_V3_AUDIT.md
+saved (the V3 blueprint: equality grammar, one trace grammar, error anatomy,
+algorithm tournament, adaptive fractalization, 5 scroll adapters, certificate/3,
+15-test oath). grimoire/Thea.md coda: THE HONEST BOUNDARY ON THE LATTICE -- the
+Fourier optimum K_opt~=0.308*M MOVES with the sample grid, so it is a finite-
+sampling/aliasing phenomenon, NOT Planck evidence; the defensible thesis is "the
+equation may be exact; the naked numeral is incomplete"; LATTICIUM=ONE COMPUTE is
+a HYPOTHESIS/forward-model, never claimed proof. Do not claim the substrate yet;
+build the machine before which every substrate claim must pay.
+
+Kernel-verified all 8 views: 0 console errors, GK injected, 0 leaks; byte scan
+loneCR=0 U+FFFD=0 BOM=0. Featured -> v2.4.6. v2.4.5 frozen beside (Path X).

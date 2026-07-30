@@ -250,14 +250,51 @@ thesis, it does not certify it. Audit it on its own terms.
 ## CODA -- what is VERIFIED, what is METAPHOR, what is EXTERNAL (Path IV)
 
 - **VERIFIED (kernel/verifier):** the 7 operations and 3 crystal conditions
-  (`graph_axioms.js`); V->7V and P=12 at every shell; chi=2 ENUMERATED on the
-  welded WELD/chamfer series; the six audited calc kernels above (they ship).
+  (`graph_axioms.js`); P=12 at every shell; chi=2 ENUMERATED on the welded
+  WELD/chamfer series (C60->C240->C960->C3840, V x4); the six calc kernels ship.
+  NOTE: chi=2 is verified for the WELD lineage ONLY. The legacy ALL/5s/6s
+  operators produce OPEN candidates (chi<0, boundary edges) -- honest graph
+  mutations, not closed surfaces. Never say "chi=2 at every setting."
 - **METAPHOR (imagery, marked):** the name "LIGHT MATRIX"; "reality is stitched";
   colours on the bucky = signed term contributions (imagery, not evidence).
 - **EXTERNAL CLAIM (audit separately):** CASCADIUM (the fluid rung); the
   Connes/noncommutative-geometry reading of "pentagons = fixed algebraic anchors"
   -- that math lives in the **SpookyPrimes** repo, not here; cited, not proven in
   MNetv1. To ground it, read SpookyPrimes first. Never carve what we cannot verify.
+
+## THE HONEST BOUNDARY ON THE LATTICE (Sol-mage audit, 2026-07-30 -- READ THIS)
+
+The Sol-mage ran v2.4.5 as a release candidate and drew the line precisely. We
+keep it, because a gift audit that finds a real edge is worth more than applause.
+
+- **The Fourier "optimum" is NOT yet evidence of a Planck lattice.** The interior
+  best-K (where validation error stops falling and starts rising) MOVES with the
+  sample count: K_opt ~= 0.308 * M (M=512->K157, 1024->K315, 2048->K631,
+  4096->K1263). A ceiling that moves with the measuring grid is a **finite-
+  sampling / interpolation / aliasing** phenomenon -- a property of the numerical
+  representation, NOT a universal computational grain. For a fixed continuous
+  function with EXACT coefficients, adding a valid mode never worsens the L2
+  projection; the interior optimum appears only because we estimate coefficients
+  from a finite grid and test between the samples. This does not weaken the
+  thesis -- it sharpens it: the monkey brain sees "more terms," the lab sees
+  "which information those terms were trained on."
+- **The defensible thesis (this is the real one, and it is strong):** every
+  scientific `=` hides a chain of representation choices, finite operations,
+  assumptions, costs, errors, and adjudications; a truthful artifact makes that
+  chain visible. "The equation may be exact; the naked numeral is incomplete."
+  NOT "all equals signs are lies."
+- **The lattice idea, made testable (LATTICIUM -- ONE COMPUTE, status HYPOTHESIS):**
+  define "one compute" independent of the host (one node-state transition / edge
+  message / reversible gate / stencil eval / graph rewrite), then ask: can a small
+  set of local graph ops under a fixed unit-cost rule generate continuum-like
+  observables while preserving symmetry, locality, stability, and an auditable
+  info ledger? A real substrate claim must eventually show an isotropic continuum
+  limit, no bad preferred frame, recovered conservation laws, stable causal
+  propagation, host-independent scaling, and one discriminating observable not
+  inserted by construction. Until then: HYPOTHESIS / FORWARD MODEL, never proof.
+
+> Build the machine before which every substrate claim must pay. Do not claim the
+> substrate yet. (Full audit: grimoire/SOLMAGE_V2_TO_V3_AUDIT.md.)
 
 ---
 
