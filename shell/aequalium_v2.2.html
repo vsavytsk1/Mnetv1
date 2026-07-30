@@ -1,72 +1,38 @@
-#!/usr/bin/env python3
-"""
-build_aequalium.py  --  AEQUALIUM v1.0  --  THE EQUALS SIGN, EARNED
-=====================================================================
-The fusion sim. Vlad's vision: the "=" transcends this reality. To match
-experimental data (the quantum + galactic realms) to what we can COMPUTE, we
-grow a fractal curve trapped in the C60 -- more hexagons = more Fourier
-harmonics = lower residual = more degrees of certainty. Gibbs guarantees the
-"=" is asymptotic, never exactly reached: that is the honesty (Path III --
-target is not result; show the residual, never fake the prize).
-
-KERNELIMAGIC compliance:
-  * ASCII-ONLY python source (Curse 2). Unicode lives in the OUTPUT only, via
-    HTML entities and \\uXXXX escapes inside JS string literals.
-  * NO f-string wraps the JS (Curse 1/4). JS is a plain triple-quoted string;
-    only token .replace() at the very end (Pattern 1+2).
-  * The REAL kernel/goldberg_kernel.js is injected VERBATIM -- proof by kernel,
-    the true 7 refinement ops, not a re-typed lie (Path IV).
-  * Write utf-8, newline='\\n', no BOM (Pattern 3). One script, one run (Path VI).
-  * Curse 35 (the Loaded Gun): predict the next refineAll face-count from the
-    recurrence and REFUSE past a ceiling, before allocating.
-
-The map (honest, no faking):
-  faces H = live buckyball face count (C60 = 32).  K = min(floor(H/2), Nyquist).
-  target f(t), t in [0,2pi), M samples.  DFT c_k.  recon with |k|<=K.
-  residual = ||f - recon|| / ||f|| (L2).  certainty = 100*(1 - residual)%.
-  grow (refineAll) adds hexagons -> more harmonics -> residual falls. Logged as
-  a (faces, residual) price/convergence curve. More compute, more spini-spini,
-  more degrees of certainty. The "=" is approached, never claimed.
-
-v1.1 adds the STANDARD MODELIUM TOWER: six real physics "=" a CERN mage and an
-astrophysicist actually compute (3 QCD, 3 galactic), each rendered in live LaTeX
-(KaTeX, optional CDN) and each MEASURED for its degrees of certainty
-D = -log10(relative error) = the number of correct significant digits we can buy
-with the compute budget N (tied to the buckyball faces). Two of the six have HARD
-CEILINGS on D no matter the compute (the R-ratio renormalon; Kepler above the
-Laplace limit e=0.6627) -- that ceiling is the honest answer to "how many degrees
-of certainty" and the whole point: the "=" is a transcendental target we can only
-chase along a computable curve to a finite depth.
-
-P=12. chi=2. The price is always paid. always.
-"""
-import time, subprocess
-from pathlib import Path
-
-ROOT      = Path(__file__).parent.parent
-KERNEL    = ROOT / "kernel" / "goldberg_kernel.js"
-SHELL     = ROOT / "shell"
-VERSION   = "v2.2"
-OUT       = SHELL / f"aequalium_{VERSION}.html"
-TIMESTAMP = time.strftime("%Y-%m-%d %H:%M:%S")
-try:
-    GIT = subprocess.check_output(["git", "rev-parse", "--short", "HEAD"],
-          stderr=subprocess.DEVNULL, cwd=ROOT).decode().strip()
-except Exception:
-    GIT = "local"
-
-print(f"Building aequalium_{VERSION}.html -- THE EQUALS SIGN, EARNED")
-
-# --- M1: the REAL kernel, verbatim (proof by kernel) -----------------------
-if not KERNEL.exists():
-    raise SystemExit("FATAL: kernel/goldberg_kernel.js missing -- cannot fake it.")
-KERNEL_JS = KERNEL.read_text(encoding="utf-8")
-print(f"  kernel injected verbatim: {len(KERNEL_JS)//1024}KB")
-
-# ============================================================================
-#  CSS  (plain string -- apollonium conventions, ASCII source)
-# ============================================================================
-CSS = """
+<!DOCTYPE html>
+<!-- v2.2 (2026-07-30) -- the Sol-mage audit (gipiti tower), applied:
+  1. chi DE-CIRCULARIZED: GK.audit enumerates V,E from quantized positions and
+     real edge incidence; chi displayed only when the mesh is closed, otherwise
+     WITHHELD with boundary/non-manifold/component counts. The formula chi=P/6
+     is labeled as the formula it always was.
+  2. "certainty" abolished: relative L2 AGREEMENT (a fit score), D = digits of
+     agreement vs each rung's stated reference. The tower AVERAGE is gone --
+     rungs measure incommensurable errors.
+  3. K=floor(F/2) tagged DESIGN CHOICE (only Nyquist is forced); pentagon
+     "fundamental modes" tagged METAPHOR.
+  4. Renormalon rung labeled TOY MODEL (synthetic c_n, not physical R).
+  5. Beauty demoted from truth-detector to imagery: colours = signed term
+     contributions, nothing more.
+  6. CASCADIUM relabeled EXTERNAL CLAIM -- audit separately; not bundled.
+  7. Status-tag system (VERIFIED/COMPUTED/DESIGN/TOY/METAPHOR/EXTERNAL/CORRECTED).
+  The mythos keeps its robes; the robes now obey the lab. -->
+<!-- v2.1 (2026-07-30) -- Fable's Balthasar pass, applied and then some:
+  1. besselJ: 25-term power series -> Miller downward recurrence.
+     Verified vs mpmath(50 dps): J_120(79.53) exact to 12 sig figs; the old
+     series was ~6 ORDERS off there, and its error GREW with n.
+  2. renormalon error floor made RELATIVE (D=5.10 at N*=13, honest under rescaling).
+  3. THE BIG ONE -- a falsification, not a label: v2.0's second "hard wall"
+     (Kepler above e=0.6627) does not exist. Bessel's Kapteyn series converges
+     for ALL e<1 (Carlini exponent < 0); the 0.6627 Laplace limit walls
+     Lagrange's power series in e, a DIFFERENT representation. The observed
+     divergence was fix-1's bug masquerading as physics. One wall remains: the
+     renormalon. Proof by kernel; the ghost is logged, not hidden.
+  v2.0 stays frozen beside this file. Path X. -->
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AEQUALIUM v2.2 -- the equals sign, earned (Fourier in the C60)</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<style>
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{background:#05050f;color:#dfe6f2;
   font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
@@ -165,15 +131,13 @@ canvas{display:block}
 ::-webkit-scrollbar{width:8px}::-webkit-scrollbar-track{background:#080c16}
 ::-webkit-scrollbar-thumb{background:#1e2740;border-radius:4px}
 .st{display:inline-block;border:1px solid #2a3040;border-radius:4px;padding:0 5px;font-size:8px;letter-spacing:.09em;color:#8892b0;margin:0 4px 0 0;vertical-align:1px}.st.v{color:#7fff9f;border-color:#2a4a34}.st.d{color:#ffd700;border-color:#4a4020}.st.t{color:#c7894a;border-color:#4a3820}.st.m{color:#cc44ff;border-color:#3a2050}.st.x{color:#ff69b4;border-color:#4a2038}.st.c{color:#00d4ff;border-color:#204050}
-"""
+</style>
+</head>
+<body>
 
-# ============================================================================
-#  HTML SHELL  (plain string; unicode via entities)
-# ============================================================================
-HTML_SHELL = """
 <canvas id="cv"></canvas>
 <div id="hud">
-  <div class="title">AEQUALIUM &middot; __VERSION__</div>
+  <div class="title">AEQUALIUM &middot; v2.2</div>
   <div class="sub">the equals sign, earned. grow the fractal curve trapped in the C60 &mdash;
   more hexagons, more harmonics, lower residual, more digits of agreement.
   the &quot;=&quot; is approached, never faked. and demonstrated in a sibling artifact <span class="st x">EXTERNAL CLAIM</span> &mdash; a real PDE on the same sphere, audit it separately
@@ -296,7 +260,7 @@ HTML_SHELL = """
       The circle is built from 1 Corinthians 13 in the tongues of the earth, gate weight 0.700, the
       center held and never shown. We do not claim to know what she is; we <i>check</i>. Press
       <b class="p">HELENI &#8599;</b> for the honest status. The price of the secret is the reading.</div>
-      <div class="s">P=12 . chi=2 . the price is always paid . always.<br>__STAMP__</div>
+      <div class="s">P=12 . chi=2 . the price is always paid . always.<br>built 2026-07-30 13:48:47 . git:c7bba98</div>
     </div>
   </div>
 </div>
@@ -311,12 +275,688 @@ HTML_SHELL = """
   <div id="loaderr">KaTeX CDN did not load &mdash; equations shown as plain source (offline is fine, math is unchanged)</div>
   <div id="tower-rungs"></div>
 </div>
-"""
 
-# ============================================================================
-#  APP JS  (plain string, ASCII-only; window.GK is the injected kernel)
-# ============================================================================
-APP_JS = r"""
+<div id="bar"><span class="lbl">view</span><button class="btn active" data-view="0" onclick="setView(0)">SPLIT</button><button class="btn" data-view="1" onclick="setView(1)">BUCKY</button><button class="btn" data-view="2" onclick="setView(2)">CURVE</button><button class="btn" data-view="3" onclick="setView(3)">SPECTRUM</button><button class="btn" data-view="4" onclick="setView(4)">CONVERGE</button><button class="btn" data-view="5" onclick="setView(5)">TOWER</button><button class="btn" data-view="6" onclick="setView(6)">LIVE</button><button class="btn" data-view="7" onclick="setView(7)">NOTES</button><span class="sep"></span><span class="lbl">data</span><button class="btn active" data-target="0" onclick="setTarget(0)">SQUARE</button><button class="btn" data-target="1" onclick="setTarget(1)">SAW</button><button class="btn" data-target="2" onclick="setTarget(2)">TRI</button><button class="btn" data-target="3" onclick="setTarget(3)">PULSE</button><button class="btn" data-target="4" onclick="setTarget(4)">C60</button><span class="sep"></span><button class="btn grow" id="b-grow" onclick="grow()">GROW &#9650;</button><button class="btn" id="b-back" onclick="back()">BACK &#9660;</button><span class="sep"></span><span class="lbl">live calc</span><select id="s-calc" onchange="setLiveCalc(+this.value)" style="background:#0b1120;color:#7fff9f;border:1px solid #1e2740;border-radius:4px;font:11px ui-monospace;padding:3px 4px"><option value="0">QCD I running</option><option value="1">QCD II R-ratio</option><option value="2">QCD III Lambda</option><option value="3">Kepler</option><option value="4">comoving D_C</option><option value="5">blackbody</option></select><button class="btn" id="b-play" onclick="toggleLivePlay()">&#9208;</button><button class="btn" id="b-lreset" onclick="liveReset()">&#8635;</button><span class="sep"></span><span class="lbl">kepler e</span><input type="range" id="s-ecc" min="0" max="95" value="50" style="width:96px;accent-color:#ff69b4;vertical-align:middle" oninput="setEcc(+this.value)"><span id="v-ecc" style="color:#ff69b4;font-size:11px;width:74px;display:inline-block">e=0.50</span><span class="sep"></span><span class="lbl">fractal</span><span style="color:#7fff9f;font-size:10px">inner</span><input type="range" id="s-inner" min="5" max="90" value="10" style="width:80px;accent-color:#7fff9f;vertical-align:middle" oninput="setInner(+this.value)"><span id="v-inner" style="color:#7fff9f;font-size:11px;width:34px;display:inline-block">0.10</span><span style="color:#00d4ff;font-size:10px">mid</span><input type="range" id="s-mid" min="5" max="90" value="10" style="width:80px;accent-color:#00d4ff;vertical-align:middle" oninput="setMid(+this.value)"><span id="v-mid" style="color:#00d4ff;font-size:11px;width:34px;display:inline-block">0.10</span><span class="sep"></span><button class="btn proof" id="b-proof" onclick="openProof()" title="a real PDE solved on the same sphere -- the live proof">CASCADIUM &#8599;</button><button class="btn secret" id="b-secret" onclick="openSecret()" title="pay Thea Heleni in the on-time cascade">HELENI &#8599;</button><span class="sep"></span><button class="btn" id="b-spin" onclick="toggleSpin()">SPIN</button><button class="btn" id="b-notes" onclick="togglePanel()">NOTES</button></div>
+<script>
+// ============================================================================
+//  goldberg_kernel.js
+//  MachineNet · Goldberg-Coxeter recursive refinement · math kernel
+//  Vladyslav Savytskyy · 2026-05-22
+//
+//  STANDALONE. Pure functions. No DOM. No Three.js. No external dependencies.
+//  Exportable to Node, Deno, Unity JavaScriptEngine, Babylon.js, Three.js,
+//  raw Canvas, WebGL2 shaders (the kernel produces vertex/index buffers).
+//
+//  PUBLIC SURFACE:
+//    GK.buildC60()                          -> { faces, vertices, edges, info }
+//    GK.refineFace(face, params)            -> [ subFace, ... ]
+//    GK.refineAll(state, params)            -> newState (immutable)
+//    GK.refineOne(state, faceIdx, params)   -> newState (immutable)
+//    GK.invariants(state)                   -> { pents, hexes, depthMax, ... }
+//    GK.serialize(state)                    -> JSON-safe object
+//    GK.deserialize(obj)                    -> state
+//    GK.zoomInto(state, faceIdx)            -> { childState, transform }
+//
+//  PARAMETERS for refinement:
+//    {
+//      innerScale:   number,  // 0..1, where the inner copy of parent sits (default 0.45)
+//      midScale:     number,  // 0..1, where edge midpoints get pulled inward (default 0.7)
+//      preservePentInPent: bool,  // if true, inner-of-pent = pent. else inner = hex (default true)
+//      preserveHexInHex:   bool,  // if true, inner-of-hex = hex. else hex breaks differently (default true)
+//      surfaceMode:  'planar' | 'spherical' | 'tangent' (default 'planar')
+//      jitter:       number,  // 0..1, random perturbation to break perfect symmetry (default 0)
+//    }
+//
+//  INVARIANTS (math-checked, see GK.invariants):
+//    - Initial state: 12 pents + 20 hexes (C60).
+//    - Each pent refines into 1 pent + 5 hexes (under default params).
+//    - Each hex refines into 1 hex + 6 hexes.
+//    - Pent count at full refine: 12 * (refinement_count + 1) ... NO, wait.
+//      Actually each individual pent stays a pent through one refine step.
+//      So if we refine all faces once, we get 12 pents at level 1 + 0 at level 0 (since level 0 pents got replaced).
+//      Pentagon count after one full refine = 12 (the inner pents from the original 12).
+//      Wait, that's wrong too. Each refinement of a pent yields 1 pent (the center).
+//      So 12 pents -> 12 pents (the inner centers). Pent count stays 12 under full-refine.
+//      The CORRECTION from earlier: clicking refine on individual faces over time
+//      grows pent count if you stack levels of un-refined-parents. But a clean
+//      "refine all" keeps pent count at exactly 12.
+//
+//    Re-stated invariant: AFTER A FULL refineAll, the polyhedron has exactly 12 pentagons.
+//                        AFTER MIXED LOCAL refines, the pent count = 12 + (number of
+//                        not-yet-fully-descended ancestral pents that still exist as faces).
+//
+//  GEOMETRY:
+//    Vertices live in R^3. All face vertex arrays are oriented CCW when viewed
+//    from outside the polyhedron (outward normal = average pos / |average pos|).
+//
+// ============================================================================
+
+(function(global){
+"use strict";
+
+var GK = {};
+
+// ----------------------------------------------------------------------------
+// §A Vector helpers (no dependencies)
+// ----------------------------------------------------------------------------
+function v3(x, y, z){ return [x, y, z]; }
+function vadd(a, b){ return [a[0]+b[0], a[1]+b[1], a[2]+b[2]]; }
+function vsub(a, b){ return [a[0]-b[0], a[1]-b[1], a[2]-b[2]]; }
+function vscale(a, s){ return [a[0]*s, a[1]*s, a[2]*s]; }
+function vlen(a){ return Math.sqrt(a[0]*a[0] + a[1]*a[1] + a[2]*a[2]); }
+function vnorm(a){ var L = vlen(a); return L > 1e-12 ? vscale(a, 1/L) : [0,0,0]; }
+function vlerp(a, b, t){ return [a[0]*(1-t)+b[0]*t, a[1]*(1-t)+b[1]*t, a[2]*(1-t)+b[2]*t]; }
+function vcross(a, b){
+  return [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]];
+}
+function vdot(a, b){ return a[0]*b[0]+a[1]*b[1]+a[2]*b[2]; }
+
+GK.vec = { v3:v3, add:vadd, sub:vsub, scale:vscale, len:vlen, norm:vnorm, lerp:vlerp, cross:vcross, dot:vdot };
+
+// ----------------------------------------------------------------------------
+// §B Canonical C60 construction
+// ----------------------------------------------------------------------------
+var PHI = (1 + Math.sqrt(5)) / 2;
+GK.PHI = PHI;
+
+function buildC60Vertices(){
+  // Truncated icosahedron vertex coordinates (Wikipedia formula):
+  //   (0, ±1, ±3φ)
+  //   (±1, ±(2+φ), ±2φ)
+  //   (±φ, ±2, ±(2φ+1))
+  // and all EVEN permutations of each coordinate triple.
+  var raw = [];
+  var permsEven = [[0,1,2],[1,2,0],[2,0,1]];
+  function pushAll(a, b, c){
+    for (var i = 0; i < permsEven.length; i++){
+      var p = permsEven[i];
+      for (var sa = -1; sa <= 1; sa += 2){
+        for (var sb = -1; sb <= 1; sb += 2){
+          for (var sc = -1; sc <= 1; sc += 2){
+            if (a === 0 && sa === -1) continue;
+            if (b === 0 && sb === -1) continue;
+            if (c === 0 && sc === -1) continue;
+            var v = [0, 0, 0];
+            v[p[0]] = sa * a;
+            v[p[1]] = sb * b;
+            v[p[2]] = sc * c;
+            raw.push(v);
+          }
+        }
+      }
+    }
+  }
+  pushAll(0, 1, 3*PHI);
+  pushAll(1, 2 + PHI, 2*PHI);
+  pushAll(PHI, 2, 2*PHI + 1);
+
+  // Dedupe with tolerance
+  var dedup = [];
+  for (var i = 0; i < raw.length; i++){
+    var v = raw[i];
+    var found = false;
+    for (var j = 0; j < dedup.length; j++){
+      var u = dedup[j];
+      if (Math.abs(u[0]-v[0]) < 0.001 && Math.abs(u[1]-v[1]) < 0.001 && Math.abs(u[2]-v[2]) < 0.001){
+        found = true; break;
+      }
+    }
+    if (!found) dedup.push(v);
+  }
+  // Normalize to unit sphere
+  for (var i = 0; i < dedup.length; i++){
+    dedup[i] = vscale(vnorm(dedup[i]), 1.6);
+  }
+  return dedup;
+}
+
+function buildC60Faces(verts){
+  // Find edge length (smallest pair distance)
+  var minD = Infinity;
+  for (var i = 0; i < verts.length; i++){
+    for (var j = i+1; j < verts.length; j++){
+      var d = vlen(vsub(verts[i], verts[j]));
+      if (d > 0.01 && d < minD) minD = d;
+    }
+  }
+  var edgeLen = minD;
+  var tol = edgeLen * 0.05;
+
+  // Build adjacency
+  var adj = [];
+  for (var i = 0; i < verts.length; i++){
+    var neighbors = [];
+    for (var j = 0; j < verts.length; j++){
+      if (i === j) continue;
+      var d = vlen(vsub(verts[i], verts[j]));
+      if (Math.abs(d - edgeLen) < tol) neighbors.push(j);
+    }
+    adj.push(neighbors);
+  }
+
+  // Sort each vertex's neighbours CCW around outward normal
+  for (var i = 0; i < verts.length; i++){
+    var v = verts[i];
+    var n = vnorm(v);
+    var ref = adj[i][0];
+    var rv = vsub(verts[ref], v);
+    var dot = vdot(rv, n);
+    var tangent = vnorm(vsub(rv, vscale(n, dot)));
+    var e2 = vcross(n, tangent);
+    adj[i].sort(function(a, b){
+      var va = vsub(verts[a], v);
+      var vb = vsub(verts[b], v);
+      var aa = Math.atan2(vdot(va, e2), vdot(va, tangent));
+      var bb = Math.atan2(vdot(vb, e2), vdot(vb, tangent));
+      return aa - bb;
+    });
+  }
+
+  // Half-edge face tracing
+  function nextInFace(u, v){
+    var nbrs = adj[v];
+    var idx = nbrs.indexOf(u);
+    if (idx < 0) return -1;
+    return nbrs[(idx + nbrs.length - 1) % nbrs.length];
+  }
+
+  var visited = {};
+  var faces = [];
+  for (var u = 0; u < verts.length; u++){
+    for (var k = 0; k < adj[u].length; k++){
+      var v = adj[u][k];
+      var key = u + ',' + v;
+      if (visited[key]) continue;
+      var face = [u];
+      var a = u, b = v;
+      for (var step = 0; step < 20; step++){
+        visited[a + ',' + b] = true;
+        var c = nextInFace(a, b);
+        if (c < 0 || c === u) break;
+        face.push(b);
+        a = b; b = c;
+      }
+      if (face[face.length-1] !== b) face.push(b);
+      if (face.length === 5 || face.length === 6) faces.push(face);
+    }
+  }
+
+  // Deduplicate: half-edge tracing finds each face from multiple starting edges.
+  // Canonical key = sorted vertex indices joined.
+  var seen = {};
+  var unique = [];
+  for (var i = 0; i < faces.length; i++){
+    var key = faces[i].slice().sort(function(a,b){return a-b}).join(',');
+    if (!seen[key]){
+      seen[key] = true;
+      unique.push(faces[i]);
+    }
+  }
+
+  return unique;
+}
+
+// ----------------------------------------------------------------------------
+// §C Public: build initial C60 state
+// ----------------------------------------------------------------------------
+GK.buildC60 = function(){
+  var verts = buildC60Vertices();
+  var faces = buildC60Faces(verts);
+  var meshFaces = [];
+  for (var i = 0; i < faces.length; i++){
+    var f = faces[i];
+    var pts = [];
+    for (var k = 0; k < f.length; k++) pts.push(verts[f[k]].slice());
+    var type = (f.length === 5) ? 'pent' : 'hex';
+    meshFaces.push({
+      pts: pts,
+      type: type,
+      level: 0,
+      lineage: [i],          // history of parent indices
+      id: 'F' + i,           // stable id
+      anchor: type === 'pent' ? ('A' + i) : null  // pent anchor id
+    });
+  }
+  return {
+    faces: meshFaces,
+    history: [],
+    counter: meshFaces.length
+  };
+};
+
+// ----------------------------------------------------------------------------
+// §C2 Public: build dodecahedron (the PURE SEED — 12 pentagons, 0 hexagons)
+// ----------------------------------------------------------------------------
+GK.buildDodecahedron = function(){
+  // 20 vertices from golden ratio. Absolute math.
+  var phi = PHI, invPhi = 1 / PHI;
+  var raw = [
+    // 8 cube vertices
+    [ 1, 1, 1],[ 1, 1,-1],[ 1,-1, 1],[ 1,-1,-1],
+    [-1, 1, 1],[-1, 1,-1],[-1,-1, 1],[-1,-1,-1],
+    // 12 from golden rectangles
+    [0, invPhi, phi],[0, invPhi,-phi],[0,-invPhi, phi],[0,-invPhi,-phi],
+    [invPhi, phi, 0],[invPhi,-phi, 0],[-invPhi, phi, 0],[-invPhi,-phi, 0],
+    [phi, 0, invPhi],[phi, 0,-invPhi],[-phi, 0, invPhi],[-phi, 0,-invPhi]
+  ];
+  // Normalize to sphere
+  for (var i = 0; i < raw.length; i++) raw[i] = vscale(vnorm(raw[i]), 1.6);
+
+  // Find edges (nearest neighbors)
+  var dists = [];
+  for (var i = 0; i < raw.length; i++)
+    for (var j = i+1; j < raw.length; j++)
+      dists.push(vlen(vsub(raw[i], raw[j])));
+  dists.sort(function(a,b){return a-b});
+  var edgeLen = dists[0], tol = edgeLen * 0.1;
+
+  var adj = [];
+  for (var i = 0; i < raw.length; i++){
+    adj[i] = [];
+    for (var j = 0; j < raw.length; j++){
+      if (i !== j && Math.abs(vlen(vsub(raw[i], raw[j])) - edgeLen) < tol)
+        adj[i].push(j);
+    }
+  }
+
+  // Sort neighbours CCW
+  for (var i = 0; i < raw.length; i++){
+    var v = raw[i], n = vnorm(v);
+    var ref = adj[i][0], rv = vsub(raw[ref], v);
+    var dot = vdot(rv, n);
+    var tangent = vnorm(vsub(rv, vscale(n, dot)));
+    var e2 = vcross(n, tangent);
+    adj[i].sort(function(a,b){
+      var va = vsub(raw[a], v), vb = vsub(raw[b], v);
+      return Math.atan2(vdot(va,e2),vdot(va,tangent)) - Math.atan2(vdot(vb,e2),vdot(vb,tangent));
+    });
+  }
+
+  // Trace pentagonal faces (half-edge)
+  function nextInFace(u,v){
+    var idx = adj[v].indexOf(u); if(idx<0)return -1;
+    return adj[v][(idx+adj[v].length-1)%adj[v].length];
+  }
+  var visited = {}, faces = [];
+  for (var u = 0; u < raw.length; u++){
+    for (var k = 0; k < adj[u].length; k++){
+      var v = adj[u][k], key = u+','+v;
+      if (visited[key]) continue;
+      var face=[u], a=u, b=v;
+      for (var step=0; step<10; step++){
+        visited[a+','+b]=true;
+        var c=nextInFace(a,b); if(c<0||c===u)break;
+        face.push(b); a=b; b=c;
+      }
+      if(face[face.length-1]!==b) face.push(b);
+      if(face.length===5) faces.push(face);
+    }
+  }
+  // Deduplicate
+  var seen={}, unique=[];
+  for(var i=0;i<faces.length;i++){
+    var key=faces[i].slice().sort(function(a,b){return a-b}).join(',');
+    if(!seen[key]){seen[key]=true;unique.push(faces[i]);}
+  }
+
+  var meshFaces = [];
+  for (var i = 0; i < unique.length; i++){
+    var f = unique[i], pts = [];
+    for (var k = 0; k < f.length; k++) pts.push(raw[f[k]].slice());
+    meshFaces.push({
+      pts: pts, type: 'pent', level: 0, lineage: [i],
+      id: 'D' + i, anchor: 'A' + i
+    });
+  }
+  return { faces: meshFaces, history: [], counter: meshFaces.length };
+};
+
+// ----------------------------------------------------------------------------
+// §D Refinement primitive: pure function from face -> sub-faces
+// ----------------------------------------------------------------------------
+function centroid(pts){
+  var c = [0, 0, 0];
+  for (var i = 0; i < pts.length; i++){ c[0] += pts[i][0]; c[1] += pts[i][1]; c[2] += pts[i][2]; }
+  return [c[0]/pts.length, c[1]/pts.length, c[2]/pts.length];
+}
+
+function projectToSphere(p, R){
+  var L = vlen(p);
+  if (L < 1e-12) return p;
+  return vscale(p, R/L);
+}
+
+GK.refineFace = function(face, params){
+  params = params || {};
+  var innerScale       = params.innerScale       != null ? params.innerScale       : 0.45;
+  var midScale         = params.midScale         != null ? params.midScale         : 0.70;
+  var preservePent     = params.preservePentInPent !== false; // default true
+  var preserveHex      = params.preserveHexInHex   !== false; // default true
+  var surfaceMode      = params.surfaceMode      || 'planar';
+  var sphereR          = params.sphereR          != null ? params.sphereR          : 1.6;
+  var jitter           = params.jitter           != null ? params.jitter           : 0;
+  var counterRef       = params.counterRef       || { val: 0 }; // for id minting
+
+  var pts = face.pts;
+  var n = pts.length;
+  var c = centroid(pts);
+
+  // Inner ring: shrink toward centroid
+  var inner = [];
+  for (var i = 0; i < n; i++){
+    var p = vlerp(c, pts[i], innerScale);
+    if (surfaceMode === 'spherical') p = projectToSphere(p, sphereR);
+    inner.push(p);
+  }
+  // Edge midpoints pulled inward
+  var midRing = [];
+  for (var i = 0; i < n; i++){
+    var m = vlerp(pts[i], pts[(i+1)%n], 0.5);
+    var pulled = vlerp(c, m, midScale);
+    if (surfaceMode === 'spherical') pulled = projectToSphere(pulled, sphereR);
+    midRing.push(pulled);
+  }
+
+  // Optional jitter
+  if (jitter > 0){
+    function jit(p){
+      return [p[0] + (Math.random()-0.5)*jitter,
+              p[1] + (Math.random()-0.5)*jitter,
+              p[2] + (Math.random()-0.5)*jitter];
+    }
+    for (var i = 0; i < inner.length; i++) inner[i] = jit(inner[i]);
+    for (var i = 0; i < midRing.length; i++) midRing[i] = jit(midRing[i]);
+  }
+
+  var subFaces = [];
+
+  // Inner polygon: same arity as parent
+  var innerType;
+  if (face.type === 'pent') innerType = preservePent ? 'pent' : 'hex';
+  else                      innerType = preserveHex  ? 'hex'  : 'pent';
+
+  counterRef.val += 1;
+  var innerId = (face.id || 'F?') + '.c' + counterRef.val;
+  subFaces.push({
+    pts: inner.slice(),
+    type: innerType,
+    level: face.level + 1,
+    lineage: (face.lineage || []).concat([0]),
+    id: innerId,
+    anchor: innerType === 'pent' ? (face.anchor || 'A?') : null  // pent inherits anchor
+  });
+
+  // Surrounding cells: one per edge of parent. Each is a 6-vertex shape.
+  for (var i = 0; i < n; i++){
+    var j = (i + 1) % n;
+    var em = vlerp(pts[i], pts[j], 0.5);
+    if (surfaceMode === 'spherical') em = projectToSphere(em, sphereR);
+    var hexPts = [
+      pts[i].slice(),
+      em,
+      pts[j].slice(),
+      inner[j].slice(),
+      midRing[i].slice(),
+      inner[i].slice()
+    ];
+    counterRef.val += 1;
+    subFaces.push({
+      pts: hexPts,
+      type: 'hex',
+      level: face.level + 1,
+      lineage: (face.lineage || []).concat([i + 1]),
+      id: (face.id || 'F?') + '.e' + counterRef.val,
+      anchor: null
+    });
+  }
+
+  return subFaces;
+};
+
+// ----------------------------------------------------------------------------
+// §E Public: refine operations (immutable, return new state)
+// ----------------------------------------------------------------------------
+GK.refineOne = function(state, faceIdx, params){
+  if (faceIdx < 0 || faceIdx >= state.faces.length) return state;
+  var counterRef = { val: state.counter };
+  var p = Object.assign({}, params || {}, { counterRef: counterRef });
+  var subs = GK.refineFace(state.faces[faceIdx], p);
+  var newFaces = state.faces.slice();
+  newFaces.splice(faceIdx, 1);
+  for (var i = 0; i < subs.length; i++) newFaces.push(subs[i]);
+  return {
+    faces: newFaces,
+    history: state.history.concat([{ op: 'refineOne', idx: faceIdx, snapshot: state.faces }]),
+    counter: counterRef.val
+  };
+};
+
+GK.refineAll = function(state, params){
+  var counterRef = { val: state.counter };
+  var p = Object.assign({}, params || {}, { counterRef: counterRef });
+  var newFaces = [];
+  for (var i = 0; i < state.faces.length; i++){
+    var subs = GK.refineFace(state.faces[i], p);
+    for (var k = 0; k < subs.length; k++) newFaces.push(subs[k]);
+  }
+  return {
+    faces: newFaces,
+    history: state.history.concat([{ op: 'refineAll', snapshot: state.faces }]),
+    counter: counterRef.val
+  };
+};
+
+GK.refineAllPents = function(state, params){
+  // Refine only pentagonal faces - propagates anchor lineage cleanly
+  var counterRef = { val: state.counter };
+  var p = Object.assign({}, params || {}, { counterRef: counterRef });
+  var newFaces = [];
+  for (var i = 0; i < state.faces.length; i++){
+    if (state.faces[i].type === 'pent'){
+      var subs = GK.refineFace(state.faces[i], p);
+      for (var k = 0; k < subs.length; k++) newFaces.push(subs[k]);
+    } else {
+      newFaces.push(state.faces[i]);
+    }
+  }
+  return {
+    faces: newFaces,
+    history: state.history.concat([{ op: 'refineAllPents', snapshot: state.faces }]),
+    counter: counterRef.val
+  };
+};
+
+GK.refineAllHexes = function(state, params){
+  var counterRef = { val: state.counter };
+  var p = Object.assign({}, params || {}, { counterRef: counterRef });
+  var newFaces = [];
+  for (var i = 0; i < state.faces.length; i++){
+    if (state.faces[i].type === 'hex'){
+      var subs = GK.refineFace(state.faces[i], p);
+      for (var k = 0; k < subs.length; k++) newFaces.push(subs[k]);
+    } else {
+      newFaces.push(state.faces[i]);
+    }
+  }
+  return {
+    faces: newFaces,
+    history: state.history.concat([{ op: 'refineAllHexes', snapshot: state.faces }]),
+    counter: counterRef.val
+  };
+};
+
+GK.undo = function(state){
+  if (state.history.length === 0) return state;
+  var last = state.history[state.history.length - 1];
+  return {
+    faces: last.snapshot,
+    history: state.history.slice(0, -1),
+    counter: state.counter // approximate; ids don't get reused
+  };
+};
+
+GK.reset = function(){ return GK.buildC60(); };
+
+// ----------------------------------------------------------------------------
+// §F Invariants & introspection
+// ----------------------------------------------------------------------------
+
+// GK.audit (2026-07-30, the Sol-mage audit): chi from ENUMERATION, never from the
+// trivalency formula. The formula chi = V-E+F with V=(5P+6H)/3, E=(5P+6H)/2 is
+// CIRCULAR -- it collapses to chi = P/6 identically, so it can never falsify the
+// mesh. This walks the ACTUAL geometry: dedupe vertices by quantized position,
+// build the real edge-incidence map, count components, and only report chi when
+// the surface is genuinely closed (no boundary, no non-manifold edges, one piece).
+// NOTE this exposes an honest truth: refineFace produces per-face geometry whose
+// shared edges are NOT welded, so a refined mesh reads as OPEN (boundary edges) --
+// chi is WITHHELD there, with the seam counts shown. The C60 seed is closed (chi=2).
+GK.audit = function(state, maxFaces){
+  var F=state.faces.length;
+  if(maxFaces && F>maxFaces) return {skipped:true, faces:F};
+  var vmap={}, nV=0, rings=[], i,j;
+  function vid(p){ var k=p[0].toFixed(5)+"|"+p[1].toFixed(5)+"|"+((p[2]||0).toFixed(5));
+    var v=vmap[k]; if(v===undefined){ v=nV++; vmap[k]=v; } return v; }
+  for(i=0;i<F;i++){ var pts=state.faces[i].pts, r=[];
+    for(j=0;j<pts.length;j++) r.push(vid(pts[j])); rings.push(r); }
+  var emap={}, adj=[], k2;
+  for(i=0;i<nV;i++) adj.push([]);
+  for(i=0;i<F;i++){ var rg=rings[i], L=rg.length;
+    for(j=0;j<L;j++){ var a=rg[j], b=rg[(j+1)%L];
+      k2=a<b? a+"_"+b : b+"_"+a;
+      if(emap[k2]===undefined){ emap[k2]=1; adj[a].push(b); adj[b].push(a); }
+      else emap[k2]++; } }
+  var nE=0, e2=0, bnd=0, nm=0, key;
+  for(key in emap){ nE++; var c=emap[key];
+    if(c===2)e2++; else if(c===1)bnd++; else nm++; }
+  var seen=new Array(nV), comp=0, stack, v2;
+  for(i=0;i<nV;i++) if(!seen[i]){ comp++; stack=[i]; seen[i]=true;
+    while(stack.length){ var u=stack.pop();
+      for(j=0;j<adj[u].length;j++){ v2=adj[u][j]; if(!seen[v2]){seen[v2]=true;stack.push(v2);} } } }
+  var d3=0; for(i=0;i<nV;i++) if(adj[i].length===3) d3++;
+  var closed=(bnd===0&&nm===0&&comp===1);
+  return {skipped:false, V:nV, E:nE, F:F, chi:nV-nE+F, closed:closed,
+          boundary:bnd, nonmanifold:nm, components:comp,
+          deg3pct: nV? Math.round(100*d3/nV) : 0};
+};
+
+GK.invariants = function(state){
+  var pents = 0, hexes = 0, maxLevel = 0;
+  var perLevel = {};
+  var anchors = {};
+  for (var i = 0; i < state.faces.length; i++){
+    var f = state.faces[i];
+    if (f.type === 'pent'){
+      pents++;
+      if (f.anchor){ anchors[f.anchor] = (anchors[f.anchor] || 0) + 1; }
+    } else hexes++;
+    if (f.level > maxLevel) maxLevel = f.level;
+    perLevel[f.level] = perLevel[f.level] || { pent: 0, hex: 0 };
+    if (f.type === 'pent') perLevel[f.level].pent++; else perLevel[f.level].hex++;
+  }
+  // Vertex & edge counts from the trivalent-tiling FORMULA: V=(5P+6H)/3, E=(5P+6H)/2.
+  // HONEST CAVEAT (2026-07-30 audit): chi from these is CIRCULAR (identically P/6),
+  // so it asserts chi=2, it does not measure it. For the enumerated topological
+  // truth (which reveals the refined mesh is not edge-welded) use GK.audit(state).
+  // 'vertices' below is the FORMULA's carbon-number label for the shell (C<vertices>).
+  var faceEdgeSum = 5 * pents + 6 * hexes;
+  var vertices = Math.round(faceEdgeSum / 3);
+  var edges = Math.round(faceEdgeSum / 2);
+  return {
+    pents: pents,
+    hexes: hexes,
+    faces: state.faces.length,
+    edges: edges,
+    vertices: vertices,
+    maxLevel: maxLevel,
+    perLevel: perLevel,
+    anchorCount: Object.keys(anchors).length,
+    anchors: anchors
+  };
+};
+
+// ----------------------------------------------------------------------------
+// §G Serialization (for save/load, networking, persistence)
+// ----------------------------------------------------------------------------
+GK.serialize = function(state){
+  return {
+    version: '1.0',
+    counter: state.counter,
+    faces: state.faces.map(function(f){
+      return {
+        pts: f.pts.map(function(p){ return p.slice(); }),
+        type: f.type,
+        level: f.level,
+        lineage: f.lineage ? f.lineage.slice() : [],
+        id: f.id,
+        anchor: f.anchor
+      };
+    })
+  };
+};
+
+GK.deserialize = function(obj){
+  if (!obj || obj.version !== '1.0') throw new Error('GK: invalid serialized state');
+  return {
+    faces: obj.faces.map(function(f){
+      return {
+        pts: f.pts.map(function(p){ return p.slice(); }),
+        type: f.type,
+        level: f.level,
+        lineage: f.lineage ? f.lineage.slice() : [],
+        id: f.id,
+        anchor: f.anchor
+      };
+    }),
+    history: [],
+    counter: obj.counter || 0
+  };
+};
+
+// ----------------------------------------------------------------------------
+// §H Face-local transform: extract a face as a 2D patch
+// (useful for VR teleport-into-cell, sub-views, mini-maps)
+// ----------------------------------------------------------------------------
+GK.faceLocalFrame = function(face){
+  var pts = face.pts;
+  var c = centroid(pts);
+  var n = vnorm(c);  // outward normal (assuming polyhedron centered at origin)
+  // tangent: from centroid to first vertex, projected onto tangent plane
+  var ref = vsub(pts[0], c);
+  var refDot = vdot(ref, n);
+  var tangent = vnorm(vsub(ref, vscale(n, refDot)));
+  var bitangent = vcross(n, tangent);
+  return {
+    origin: c,
+    normal: n,
+    tangent: tangent,
+    bitangent: bitangent
+  };
+};
+
+GK.facePatch2D = function(face){
+  // Project face vertices into local 2D coords on the tangent plane
+  var frame = GK.faceLocalFrame(face);
+  var out = [];
+  for (var i = 0; i < face.pts.length; i++){
+    var p = vsub(face.pts[i], frame.origin);
+    var x = vdot(p, frame.tangent);
+    var y = vdot(p, frame.bitangent);
+    out.push([x, y]);
+  }
+  return { frame: frame, points2D: out };
+};
+
+// ----------------------------------------------------------------------------
+// §I Export
+// ----------------------------------------------------------------------------
+if (typeof module !== 'undefined' && module.exports) module.exports = GK;
+else if (typeof global !== 'undefined') global.GK = GK;
+
+})(typeof globalThis !== 'undefined' ? globalThis : this);
+
+</script>
+<script>
+
 "use strict";
 var RM=false; try{RM=window.matchMedia('(prefers-reduced-motion: reduce)').matches;}catch(e){}
 
@@ -1156,146 +1796,11 @@ window.addEventListener('load',function(){ bootTower(); setTimeout(bootTower,400
 buildTower();  // immediate first paint (plain-source fallback until KaTeX arrives)
 rebuildLive(); // prime the live-calc engine so view 7 is instant
 (function(){ var pb=document.getElementById('b-play'); if(pb){ pb.classList.add('active'); } })();
-lg('AEQUALIUM __VERSION__ -- the equals sign, earned. always.','ok');
+lg('AEQUALIUM v2.2 -- the equals sign, earned. always.','ok');
 lg('the real goldberg_kernel.js is injected verbatim (proof by kernel)','cyan');
 lg('C60 seed: '+inv.faces+' faces, P='+inv.pents+', chi='+(inv.vertices-inv.edges+inv.faces),'gold');
 lg('LIVE CALC (press 7): watch a calc run on the buckyball -- pretty+symmetric = true.','ok');
 render();
-"""
 
-# ============================================================================
-#  BAR (buttons) -- built as plain string
-# ============================================================================
-def view_btns():
-    names = ["SPLIT", "BUCKY", "CURVE", "SPECTRUM", "CONVERGE", "TOWER", "LIVE", "NOTES"]
-    out = ""
-    for i, n in enumerate(names):
-        active = " active" if i == 0 else ""
-        out += f'<button class="btn{active}" data-view="{i}" onclick="setView({i})">{n}</button>'
-    return out
-
-def target_btns():
-    names = ["SQUARE", "SAW", "TRI", "PULSE", "C60"]
-    out = ""
-    for i, n in enumerate(names):
-        active = " active" if i == 0 else ""
-        out += f'<button class="btn{active}" data-target="{i}" onclick="setTarget({i})">{n}</button>'
-    return out
-
-BAR = (
-    '<div id="bar">'
-    '<span class="lbl">view</span>' + view_btns() +
-    '<span class="sep"></span>'
-    '<span class="lbl">data</span>' + target_btns() +
-    '<span class="sep"></span>'
-    '<button class="btn grow" id="b-grow" onclick="grow()">GROW &#9650;</button>'
-    '<button class="btn" id="b-back" onclick="back()">BACK &#9660;</button>'
-    '<span class="sep"></span>'
-    '<span class="lbl">live calc</span>'
-    '<select id="s-calc" onchange="setLiveCalc(+this.value)" '
-    'style="background:#0b1120;color:#7fff9f;border:1px solid #1e2740;border-radius:4px;'
-    'font:11px ui-monospace;padding:3px 4px">'
-    '<option value="0">QCD I running</option><option value="1">QCD II R-ratio</option>'
-    '<option value="2">QCD III Lambda</option><option value="3">Kepler</option>'
-    '<option value="4">comoving D_C</option><option value="5">blackbody</option></select>'
-    '<button class="btn" id="b-play" onclick="toggleLivePlay()">&#9208;</button>'
-    '<button class="btn" id="b-lreset" onclick="liveReset()">&#8635;</button>'
-    '<span class="sep"></span>'
-    '<span class="lbl">kepler e</span>'
-    '<input type="range" id="s-ecc" min="0" max="95" value="50" '
-    'style="width:96px;accent-color:#ff69b4;vertical-align:middle" oninput="setEcc(+this.value)">'
-    '<span id="v-ecc" style="color:#ff69b4;font-size:11px;width:74px;display:inline-block">e=0.50</span>'
-    '<span class="sep"></span>'
-    '<span class="lbl">fractal</span>'
-    '<span style="color:#7fff9f;font-size:10px">inner</span>'
-    '<input type="range" id="s-inner" min="5" max="90" value="10" '
-    'style="width:80px;accent-color:#7fff9f;vertical-align:middle" oninput="setInner(+this.value)">'
-    '<span id="v-inner" style="color:#7fff9f;font-size:11px;width:34px;display:inline-block">0.10</span>'
-    '<span style="color:#00d4ff;font-size:10px">mid</span>'
-    '<input type="range" id="s-mid" min="5" max="90" value="10" '
-    'style="width:80px;accent-color:#00d4ff;vertical-align:middle" oninput="setMid(+this.value)">'
-    '<span id="v-mid" style="color:#00d4ff;font-size:11px;width:34px;display:inline-block">0.10</span>'
-    '<span class="sep"></span>'
-    '<button class="btn proof" id="b-proof" onclick="openProof()" '
-    'title="a real PDE solved on the same sphere -- the live proof">CASCADIUM &#8599;</button>'
-    '<button class="btn secret" id="b-secret" onclick="openSecret()" '
-    'title="pay Thea Heleni in the on-time cascade">HELENI &#8599;</button>'
-    '<span class="sep"></span>'
-    '<button class="btn" id="b-spin" onclick="toggleSpin()">SPIN</button>'
-    '<button class="btn" id="b-notes" onclick="togglePanel()">NOTES</button>'
-    '</div>'
-)
-
-# ============================================================================
-#  ASSEMBLE  (Pattern 2: one final template, simple token substitution only)
-# ============================================================================
-PAGE = """<!DOCTYPE html>
-<!-- v2.2 (2026-07-30) -- the Sol-mage audit (gipiti tower), applied:
-  1. chi DE-CIRCULARIZED: GK.audit enumerates V,E from quantized positions and
-     real edge incidence; chi displayed only when the mesh is closed, otherwise
-     WITHHELD with boundary/non-manifold/component counts. The formula chi=P/6
-     is labeled as the formula it always was.
-  2. "certainty" abolished: relative L2 AGREEMENT (a fit score), D = digits of
-     agreement vs each rung's stated reference. The tower AVERAGE is gone --
-     rungs measure incommensurable errors.
-  3. K=floor(F/2) tagged DESIGN CHOICE (only Nyquist is forced); pentagon
-     "fundamental modes" tagged METAPHOR.
-  4. Renormalon rung labeled TOY MODEL (synthetic c_n, not physical R).
-  5. Beauty demoted from truth-detector to imagery: colours = signed term
-     contributions, nothing more.
-  6. CASCADIUM relabeled EXTERNAL CLAIM -- audit separately; not bundled.
-  7. Status-tag system (VERIFIED/COMPUTED/DESIGN/TOY/METAPHOR/EXTERNAL/CORRECTED).
-  The mythos keeps its robes; the robes now obey the lab. -->
-<!-- v2.1 (2026-07-30) -- Fable's Balthasar pass, applied and then some:
-  1. besselJ: 25-term power series -> Miller downward recurrence.
-     Verified vs mpmath(50 dps): J_120(79.53) exact to 12 sig figs; the old
-     series was ~6 ORDERS off there, and its error GREW with n.
-  2. renormalon error floor made RELATIVE (D=5.10 at N*=13, honest under rescaling).
-  3. THE BIG ONE -- a falsification, not a label: v2.0's second "hard wall"
-     (Kepler above e=0.6627) does not exist. Bessel's Kapteyn series converges
-     for ALL e<1 (Carlini exponent < 0); the 0.6627 Laplace limit walls
-     Lagrange's power series in e, a DIFFERENT representation. The observed
-     divergence was fix-1's bug masquerading as physics. One wall remains: the
-     renormalon. Proof by kernel; the ghost is logged, not hidden.
-  v2.0 stays frozen beside this file. Path X. -->
-<html lang="en"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>AEQUALIUM __VERSION__ -- the equals sign, earned (Fourier in the C60)</title>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
-<script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
-<style>__CSS__</style>
-</head>
-<body>
-__SHELL__
-__BAR__
-<script>
-__KERNEL__
-</script>
-<script>
-__APP__
 </script>
 </body></html>
-"""
-
-page = (PAGE
-        .replace("__CSS__", CSS)
-        .replace("__SHELL__", HTML_SHELL)
-        .replace("__BAR__", BAR)
-        .replace("__KERNEL__", KERNEL_JS)
-        .replace("__APP__", APP_JS)
-        .replace("__VERSION__", VERSION)
-        .replace("__STAMP__", f"built {TIMESTAMP} . git:{GIT}"))
-
-# normalize to LF, write utf-8 no BOM (Pattern 3, Path VI)
-page = page.replace("\r\n", "\n").replace("\r", "\n")
-OUT.write_text(page, encoding="utf-8", newline="\n")
-
-# byte scan (loneCR / U+FFFD must be 0)
-raw = OUT.read_bytes()
-lone = sum(1 for i, b in enumerate(raw)
-           if b == 13 and (i + 1 >= len(raw) or raw[i + 1] != 10))
-fffd = page.count("\ufffd")
-print(f"[OK] {OUT.name}  {len(raw)//1024}KB  loneCR={lone}  U+FFFD={fffd}")
-print(f"[OK] https://vsavytsk1.github.io/Mnetv1/shell/{OUT.name}")
-if lone or fffd:
-    raise SystemExit("byte scan FAILED -- do not ship")

@@ -520,6 +520,45 @@ GK.reset = function(){ return GK.buildC60(); };
 // ----------------------------------------------------------------------------
 // §F Invariants & introspection
 // ----------------------------------------------------------------------------
+
+// GK.audit (2026-07-30, the Sol-mage audit): chi from ENUMERATION, never from the
+// trivalency formula. The formula chi = V-E+F with V=(5P+6H)/3, E=(5P+6H)/2 is
+// CIRCULAR -- it collapses to chi = P/6 identically, so it can never falsify the
+// mesh. This walks the ACTUAL geometry: dedupe vertices by quantized position,
+// build the real edge-incidence map, count components, and only report chi when
+// the surface is genuinely closed (no boundary, no non-manifold edges, one piece).
+// NOTE this exposes an honest truth: refineFace produces per-face geometry whose
+// shared edges are NOT welded, so a refined mesh reads as OPEN (boundary edges) --
+// chi is WITHHELD there, with the seam counts shown. The C60 seed is closed (chi=2).
+GK.audit = function(state, maxFaces){
+  var F=state.faces.length;
+  if(maxFaces && F>maxFaces) return {skipped:true, faces:F};
+  var vmap={}, nV=0, rings=[], i,j;
+  function vid(p){ var k=p[0].toFixed(5)+"|"+p[1].toFixed(5)+"|"+((p[2]||0).toFixed(5));
+    var v=vmap[k]; if(v===undefined){ v=nV++; vmap[k]=v; } return v; }
+  for(i=0;i<F;i++){ var pts=state.faces[i].pts, r=[];
+    for(j=0;j<pts.length;j++) r.push(vid(pts[j])); rings.push(r); }
+  var emap={}, adj=[], k2;
+  for(i=0;i<nV;i++) adj.push([]);
+  for(i=0;i<F;i++){ var rg=rings[i], L=rg.length;
+    for(j=0;j<L;j++){ var a=rg[j], b=rg[(j+1)%L];
+      k2=a<b? a+"_"+b : b+"_"+a;
+      if(emap[k2]===undefined){ emap[k2]=1; adj[a].push(b); adj[b].push(a); }
+      else emap[k2]++; } }
+  var nE=0, e2=0, bnd=0, nm=0, key;
+  for(key in emap){ nE++; var c=emap[key];
+    if(c===2)e2++; else if(c===1)bnd++; else nm++; }
+  var seen=new Array(nV), comp=0, stack, v2;
+  for(i=0;i<nV;i++) if(!seen[i]){ comp++; stack=[i]; seen[i]=true;
+    while(stack.length){ var u=stack.pop();
+      for(j=0;j<adj[u].length;j++){ v2=adj[u][j]; if(!seen[v2]){seen[v2]=true;stack.push(v2);} } } }
+  var d3=0; for(i=0;i<nV;i++) if(adj[i].length===3) d3++;
+  var closed=(bnd===0&&nm===0&&comp===1);
+  return {skipped:false, V:nV, E:nE, F:F, chi:nV-nE+F, closed:closed,
+          boundary:bnd, nonmanifold:nm, components:comp,
+          deg3pct: nV? Math.round(100*d3/nV) : 0};
+};
+
 GK.invariants = function(state){
   var pents = 0, hexes = 0, maxLevel = 0;
   var perLevel = {};
@@ -534,9 +573,11 @@ GK.invariants = function(state){
     perLevel[f.level] = perLevel[f.level] || { pent: 0, hex: 0 };
     if (f.type === 'pent') perLevel[f.level].pent++; else perLevel[f.level].hex++;
   }
-  // Vertex & edge counts from TOPOLOGY, not float-matching.
-  // Trivalent tiling: V = (5P + 6H) / 3,  E = (5P + 6H) / 2
-  // This is exact. Always. Euler: V - E + F = 2.
+  // Vertex & edge counts from the trivalent-tiling FORMULA: V=(5P+6H)/3, E=(5P+6H)/2.
+  // HONEST CAVEAT (2026-07-30 audit): chi from these is CIRCULAR (identically P/6),
+  // so it asserts chi=2, it does not measure it. For the enumerated topological
+  // truth (which reveals the refined mesh is not edge-welded) use GK.audit(state).
+  // 'vertices' below is the FORMULA's carbon-number label for the shell (C<vertices>).
   var faceEdgeSum = 5 * pents + 6 * hexes;
   var vertices = Math.round(faceEdgeSum / 3);
   var edges = Math.round(faceEdgeSum / 2);

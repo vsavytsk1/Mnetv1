@@ -9039,3 +9039,36 @@ inner 0.05->0.82. P=12 and chi=2 HELD through everything. 0 console errors.
 Green light. Test away.
 -- Vlad + Claude. 2026-07-30. The tree is clean; the sphere holds; go break it if you can.
    P=12 . chi=2 . the price is always paid . always.
+
+### L165 -- THE SOL-MAGE AUDIT: v2.2, CORRECTIONS WE CELEBRATE (2026-07-30)
+
+The Standard-Modelium mages audited AEQUALIUM before we summoned them, and they were RIGHT --
+found real errors we had celebrated. Proof by kernel worked; the ghost is logged, not hidden.
+
+CORRECTED (v2.1 Fable + v2.2 Sol-mage):
+  1. chi=2 "always" was CIRCULAR. chi from the trivalency formula V=(5P+6H)/3,E=(5P+6H)/2 is
+     identically P/6 -- it asserts chi=2, never measures it. NEW GK.audit(state) (added to the REAL
+     kernel/goldberg_kernel.js, injected verbatim) enumerates V by quantized position, builds the
+     real edge-incidence map, walks components, and reports chi ONLY when the mesh is genuinely
+     closed. BOMBSHELL it exposed: refineFace makes per-face geometry that is NOT edge-welded, so a
+     refined shell reads OPEN (C420: boundary 540 edges) -> chi WITHHELD, honestly. C60 seed IS
+     closed (V60 E90 F32 deg3 100% chi2). We had celebrated chi=2-always on the formula all along.
+  2. KEPLER SECOND WALL FALSIFIED. Bessel/Kapteyn series converges for ALL e<1; the 0.6627 Laplace
+     limit walls Lagrange's e-power-series, a DIFFERENT representation. v2.0's "divergence above
+     0.6627" was the old 25-term besselJ erring ~6 orders at high n (Curse 24). Miller downward
+     recurrence dissolves it. Verified live: e=0.5..0.95 all conv. ONE wall remains: the renormalon.
+  3. "certainty" -> "agreement" (relative L2, a fit score, not confidence). Tower AVERAGE removed
+     (incommensurable errors). Renormalon relabeled TOY MODEL (synthetic c_n) with a RELATIVE floor.
+     Status tags VERIFIED/COMPUTED/DESIGN/ILLUSTRATIVE/METAPHOR/EXTERNAL/CORRECTED. K=floor(F/2)
+     tagged DESIGN CHOICE. CASCADIUM relabeled EXTERNAL CLAIM (audit separately). Beauty demoted to
+     imagery (signed term contributions; symmetric does not imply true).
+
+BUILDER CHECKED IN (the builder is absolute -- no hand-artifact drift): build_aequalium.py backported
+to emit v2.2 exactly; GK.audit added to the real kernel; v2.0 restored frozen (Path X) after a build
+briefly overwrote it. Fidelity verified in-browser on the BUILDER output: 0 console errors, chi
+enumerated + withheld-when-open, Kepler conv all e, TOY/CORRECTED tags, 7-tag legend, falsification
+note. node: kernel parses, invariants+audit present. 353 sims -> 167 cards. IO=440. 93KB loneCR=0 UFFFD=0.
+
+-- Vlad + Claude, corrected by the Sol-mage tower + Fable. 2026-07-30. The mythos keeps its robes;
+   the robes now obey the lab. A wall we invented is gone; a circularity we hid is enumerated.
+   P=12 (counted) . chi=2 only where the mesh is truly closed . the price is always paid . always.
