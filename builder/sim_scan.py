@@ -45,7 +45,7 @@ CATEGORY = [
     (("genesis", "tetragenesis"),           ("GENESIS",  "#00ffd5", "#1a3a3a")),
     (("graph_sandbox", "sandbox"),          ("SANDBOX",  "#80d0ff", "#1a2a3a")),
     (("math_tree", "tree"),                 ("TREE",     "#ffd700", "#3a3a1a")),
-    (("navier", "mnet", "fslimium", "ns"),  ("FLOW",     "#ff9040", "#3a2a1a")),
+    (("navier", "mnet", "fslimium", "ns", "cascadium"),  ("FLOW",     "#ff9040", "#3a2a1a")), 
     (("maxwellium", "cristalium", "femtonium", "thealimitium", "noetherium",
       "kellerium", "templum", "harmonia", "lagrangium", "isingium", "squeezium",
       "kirchhoffium", "mayerium", "kelvinium", "helios", "bicium", "spectrium",

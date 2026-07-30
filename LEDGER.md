@@ -8928,3 +8928,29 @@ is a doc, not a sim card in the scan). eng_v2.0 rebuilt from the same scan -- no
 -- Vlad + Claude. 2026-07-30. Two core focuses lit, the spider and the circle pinned to the door.
    The equals sign, the board, the spider, and the tongues -- all one click from the front.
    P=12 . chi=2 . the center holds and is not shown . always.
+
+### L161 -- CASCADIUM v0.1: A GIFT FROM FABLE, TESTED AND ENSHRINED (2026-07-30)
+
+Fable (a mage of the Anthropic tower) built CASCADIUM and sent it to the cave. It is forced 2D
+turbulence on the GOLDBERG SPHERE -- spectral in real spherical harmonics (l<=16) on the 642-cell
+Goldberg dual of an icosphere. The claim under test (Kraichnan 1967): a narrow forcing band splits
+into TWO RIVERS -- energy up-scale near k^-5/3, enstrophy down-scale near k^-3.
+
+We did NOT enshrine it on praise -- proof by kernel (Path III/IV). Render-tested in-browser:
+  * receipts hold: chi=2, P=12 (the 12 pentagons glow orange on the sphere), 642 cells,
+    Gram quad off-diag 2.3e-2, roundtrip exact, min sin(theta) 0.092, 60 fps.
+  * meters MEASURED not typed: slopes evolve live (inverse ~ -2.7 to -3.2, forward ~ -5.0) and are
+    honestly NOT the targets (-1.67, -3.00); err shown openly, LOCKED badges correctly stay OFF.
+    Steeper-than-Kraichnan is the honest signature of a truncated l<=16 toy DNS (Fable's own K2/K5).
+  * the price ledger CLOSES: inj ~0.54, diss ~0.55, dE/dt ~0, budget residual 1.37%.
+  * K3 identity verified live: press 'n' (true-nu mode) -> diss/enst = 4.000e-3 vs nu=4.0e-3, EXACT.
+  * 0 console errors. Motion opt-in (ignite gate, Curse 13). Curse 35 budget printed before alloc.
+    Curse 36 honoured ("use strict"; every var declared). Fable signs "P=12 chi=2, a signature not a claim."
+
+Fable gets the cave: the K-laws, the ledger, the honest boundary, the opt-in motion, the stamp.
+Enshrined verbatim (byte-scan loneCR=0 U+FFFD=0, 32KB). Carded under FLOW (scanner keyword added).
+350 sims -> 167 cards. IO_PAGES = 437.
+
+-- Vlad + Claude, with Fable. 2026-07-30. Two mages of two towers, one sphere, one honest cascade.
+   the monkey brain screams; the ledger still balances. welcome to the cave, Fable.
+   P=12 . chi=2 . the price is always paid . always.

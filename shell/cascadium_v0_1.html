@@ -1,0 +1,714 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CASCADIUM v0.1 — the cascade hunt · two rivers on the Goldberg sphere</title>
+<style>
+:root{--bg:#050508;--gold:#ffd700;--cyan:#00d4ff;--pink:#ff69b4;--green:#00ffd5;
+  --esp:#c7894a;--dim:#6a6a82;--txt:#e8e0d0;--red:#ff4455;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--txt);font-family:var(--mono);overflow:hidden}
+#cv{position:fixed;inset:0;display:block;cursor:grab}
+#cv.drag{cursor:grabbing}
+.panel{background:rgba(8,8,16,.82);border:1px solid #20202e;border-radius:8px;
+  backdrop-filter:blur(3px)}
+#hud{position:fixed;top:12px;left:12px;max-width:470px;padding:9px 12px;font-size:11px;z-index:10}
+#ttl{color:var(--gold);font-size:14px;letter-spacing:.06em}
+#sub{color:var(--dim);font-size:10px;margin-top:2px;line-height:1.45}
+#sub b{color:var(--cyan)}
+#claim{color:var(--esp);font-size:10px;margin-top:5px;line-height:1.45}
+#claim b{color:var(--gold)}
+#live{margin-top:6px;font-size:10.5px;color:var(--dim);line-height:1.6}
+#live b{color:var(--txt);font-weight:400}
+#live .g{color:var(--green)} #live .go{color:var(--gold)}
+#spec{position:fixed;top:12px;right:12px;width:392px;z-index:10;padding:8px}
+#specCv{display:block;width:376px;height:238px}
+#slopes{font-size:10.5px;margin-top:6px;line-height:1.6;color:var(--dim)}
+#slopes b{font-weight:400}
+.lock{display:inline-block;padding:0 6px;border-radius:4px;border:1px solid #2a2a3a;
+  color:var(--dim);font-size:9px;letter-spacing:.1em;margin-left:6px}
+.lock.on{color:#0a0a0a;background:var(--green);border-color:var(--green)}
+#ledger{position:fixed;right:12px;top:328px;width:392px;z-index:10;padding:8px 10px;font-size:10.5px;line-height:1.65}
+#ledger h3{color:var(--gold);font-size:11px;letter-spacing:.12em;margin-bottom:3px}
+#ledger .row{display:flex;justify-content:space-between;color:var(--dim)}
+#ledger .row b{color:var(--txt);font-weight:400;font-variant-numeric:tabular-nums}
+#ledger .res b{color:var(--green)} #ledger .res.bad b{color:var(--red)}
+#tsCv{display:block;width:372px;height:56px;margin-top:6px}
+#kbox{position:fixed;left:12px;bottom:12px;max-width:470px;z-index:10;padding:8px 11px;
+  font-size:9.5px;color:var(--esp);line-height:1.5;border-color:#3a2c1a}
+#kbox b{color:var(--gold)}
+#bar{position:fixed;left:50%;transform:translateX(-50%);bottom:12px;z-index:10;
+  padding:7px 13px;font-size:10px;color:var(--dim);display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+#bar b{color:var(--txt);font-weight:400}
+#bar button{background:#14141f;border:1px solid #2a2a3a;border-radius:6px;color:var(--gold);
+  font:12px var(--mono);padding:5px 12px;cursor:pointer}
+#bar button:hover{border-color:var(--gold)}
+#gate{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
+  z-index:20;background:rgba(5,5,8,.55)}
+#gate button{background:#0c0c16;border:1px solid var(--gold);border-radius:12px;color:var(--gold);
+  font:16px var(--mono);letter-spacing:.14em;padding:16px 30px;cursor:pointer;
+  box-shadow:0 0 30px rgba(255,215,0,.15)}
+#gate button:hover{background:#14141f;box-shadow:0 0 44px rgba(255,215,0,.3)}
+#gate .note{position:absolute;bottom:18%;color:var(--dim);font-size:10px;letter-spacing:.08em}
+#flash{position:fixed;inset:0;pointer-events:none;background:rgba(255,60,80,0);z-index:15;
+  transition:background .5s}
+.stamp{position:fixed;bottom:12px;right:12px;font-size:8px;color:rgba(0,212,255,.28);
+  letter-spacing:.08em;text-align:right;line-height:1.7;z-index:10}
+</style></head><body>
+<canvas id="cv" width="1280" height="720"></canvas>
+
+<div id="hud" class="panel">
+  <div id="ttl">CASCADIUM v0.1 — the cascade hunt</div>
+  <div id="sub">forced 2D flow on the <b>Goldberg sphere</b> · spectral in spherical
+    harmonics · every meter measured, none typed</div>
+  <div id="claim">claim under test: <b>a narrow band of stirring splits into two
+    rivers — energy climbs to large scales near k<sup>−5/3</sup>, enstrophy falls to
+    small scales near k<sup>−3</sup></b> (Kraichnan 1967). ranges here are half a
+    decade; slopes are trends, not proofs (K5).</div>
+  <div id="live">booting…</div>
+</div>
+
+<div id="spec" class="panel">
+  <canvas id="specCv" width="376" height="238"></canvas>
+  <div id="slopes">
+    <div>inverse&nbsp; target <b class="go">−1.67</b> · meas <b id="sInv">—</b> ·
+      err <b id="eInv">—</b><span class="lock" id="lInv">LOCKED</span></div>
+    <div>forward&nbsp; target <b style="color:var(--pink)">−3.00</b> · meas
+      <b id="sFwd">—</b> · err <b id="eFwd">—</b><span class="lock" id="lFwd">LOCKED</span></div>
+  </div>
+</div>
+
+<div id="ledger" class="panel">
+  <h3>THE PRICE LEDGER — always paid</h3>
+  <div class="row"><span>injected ε (measured)</span><b id="lInj">0</b></div>
+  <div class="row"><span id="lDissLab">dissipated (hyper + drag)</span><b id="lDiss">0</b></div>
+  <div class="row"><span>dE/dt (finite diff)</span><b id="lDE">0</b></div>
+  <div class="row res" id="lResRow"><span>budget residual / flux</span><b id="lRes">0%</b></div>
+  <div class="row" id="lNuRow" style="display:none"><span>diss/enst vs 2ν (identity)</span><b id="lNu">—</b></div>
+  <canvas id="tsCv" width="372" height="56"></canvas>
+</div>
+
+<div id="kbox" class="panel">
+  <b>honesty (K-laws):</b>
+  <b>K1</b> measured, not typed — E(ℓ), slopes, ledger all from the live state ·
+  <b>K2</b> spectral truncation ℓ≤16 on 642 cells: a toy DNS of the truncated system, not the ocean ·
+  <b>K3</b> hyperviscosity replaces ν to widen the ranges (press <b>n</b> for true-ν mode and
+  watch diss/enst = 2ν become an identity of the formulation) ·
+  <b>K4</b> drag on ℓ≤2 absorbs the inverse river; press <b>d</b> to kill it and watch the
+  <b>condensate</b> bloom at the gravest mode ·
+  <b>K5</b> half-decade ranges → slopes lock loosely (tol 0.30), never faked ·
+  <b>K6</b> color scale = rolling max|ω|, printed live, never clipped silently.
+</div>
+
+<div id="bar" class="panel">
+  <button id="pB">pause</button>
+  <span>drag <b>orbit</b> · wheel <b>zoom</b> · click <b>stir +</b> · shift-click <b>stir −</b></span>
+  <span><b>[ ]</b> band ℓf · <b>- =</b> ε · <b>f</b> forcing · <b>d</b> drag ·
+    <b>n</b> ν-mode · <b>s</b> spin · <b>r</b> reset</span>
+</div>
+
+<div id="gate"><button id="ignite">⚡ IGNITE THE CASCADE</button>
+  <div class="note">everything is still until you say so · motion is opt-in (Curse 13)</div></div>
+<div id="flash"></div>
+<div class="stamp">CASCADIUM v0.1 · after navierKolmogorov, by Fable for the cave<br>
+Kraichnan 1967 · Kolmogorov 1941 · Goldberg 1937 · Euler 1758<br>
+P=12 · χ=2 · a signature, not a claim</div>
+
+<script>
+/* CASCADIUM core -- 2D vorticity dynamics on the sphere, spectral in real
+   spherical harmonics, sampled on the Goldberg dual of an icosphere.
+   After the cave's navierKolmogorov (forcing moved from everywhere to
+   somewhere) and v23 bucky (dual construction). "use strict"; every var
+   declared (Curse 36). Pure math: no DOM. */
+"use strict";
+
+// ---------- icosphere ----------
+function buildIcosphere(detail){
+  var t=(1+Math.sqrt(5))/2, V=[], F=[], i;
+  var raw=[[-1,t,0],[1,t,0],[-1,-t,0],[1,-t,0],[0,-1,t],[0,1,t],
+           [0,-1,-t],[0,1,-t],[t,0,-1],[t,0,1],[-t,0,-1],[-t,0,1]];
+  for(i=0;i<12;i++){ var n=Math.hypot(raw[i][0],raw[i][1],raw[i][2]);
+    V.push([raw[i][0]/n,raw[i][1]/n,raw[i][2]/n]); }
+  var f0=[[0,11,5],[0,5,1],[0,1,7],[0,7,10],[0,10,11],[1,5,9],[5,11,4],
+          [11,10,2],[10,7,6],[7,1,8],[3,9,4],[3,4,2],[3,2,6],[3,6,8],
+          [3,8,9],[4,9,5],[2,4,11],[6,2,10],[8,6,7],[9,8,1]];
+  for(i=0;i<20;i++) F.push(f0[i].slice());
+  var d, cache, mid;
+  mid=function(a,b){ var k=a<b?a+"_"+b:b+"_"+a, v=cache[k];
+    if(v!==undefined) return v;
+    var p=[(V[a][0]+V[b][0])/2,(V[a][1]+V[b][1])/2,(V[a][2]+V[b][2])/2];
+    var n2=Math.hypot(p[0],p[1],p[2]);
+    V.push([p[0]/n2,p[1]/n2,p[2]/n2]); cache[k]=V.length-1; return V.length-1; };
+  for(d=0;d<detail;d++){
+    cache={}; var F2=[];
+    for(i=0;i<F.length;i++){ var a=F[i][0],b=F[i][1],c=F[i][2];
+      var ab=mid(a,b), bc=mid(b,c), ca=mid(c,a);
+      F2.push([a,ab,ca],[b,bc,ab],[c,ca,bc],[ab,bc,ca]); }
+    F=F2;
+  }
+  // rotate off the poles/seams (irrational-ish angles) so sin(theta)>0 everywhere
+  var a1=0.7231, a2=0.4189, b1=0.481, b2=0.777,
+      ca1=Math.cos(a1), sa1=Math.sin(a1), ca2=Math.cos(a2), sa2=Math.sin(a2),
+      cb1=Math.cos(b1), sb1=Math.sin(b1), cb2=Math.cos(b2), sb2=Math.sin(b2);
+  for(i=0;i<V.length;i++){ var x=V[i][0],y=V[i][1],z=V[i][2];
+    var y2=ca1*y - sa1*z, z2=sa1*y + ca1*z;                    // rotX
+    var x3=ca2*x + sa2*z2, z3=-sa2*x + ca2*z2;                 // rotY
+    var y4=cb1*y2 - sb1*z3, z4=sb1*y2 + cb1*z3;                // rotX again
+    var x5=cb2*x3 + sb2*z4, z5=-sb2*x3 + cb2*z4;               // rotY again
+    V[i]=[x5,y4,z5]; }
+  return {V:V, F:F};
+}
+
+// ---------- Goldberg dual: one cell per icosphere vertex ----------
+function buildGoldberg(detail){
+  var ic=buildIcosphere(detail), V=ic.V, F=ic.F, i, j;
+  var cent=[], vF=[], cells=[];
+  for(i=0;i<V.length;i++) vF.push([]);
+  for(i=0;i<F.length;i++){
+    var f=F[i], c=[(V[f[0]][0]+V[f[1]][0]+V[f[2]][0])/3,
+                   (V[f[0]][1]+V[f[1]][1]+V[f[2]][1])/3,
+                   (V[f[0]][2]+V[f[1]][2]+V[f[2]][2])/3];
+    var n=Math.hypot(c[0],c[1],c[2]); cent.push([c[0]/n,c[1]/n,c[2]/n]);
+    vF[f[0]].push(i); vF[f[1]].push(i); vF[f[2]].push(i);
+  }
+  var areaTot=0;
+  for(i=0;i<V.length;i++){
+    var v=V[i], nx=v[0],ny=v[1],nz=v[2];
+    var t1=[ -ny, nx, 0 ]; var L1=Math.hypot(t1[0],t1[1],t1[2]);
+    if(L1<0.05){ t1=[0,-nz,ny]; L1=Math.hypot(t1[0],t1[1],t1[2]); }
+    t1=[t1[0]/L1,t1[1]/L1,t1[2]/L1];
+    var t2=[ ny*t1[2]-nz*t1[1], nz*t1[0]-nx*t1[2], nx*t1[1]-ny*t1[0] ];
+    var ring=vF[i].map(function(k){
+      var d=[cent[k][0]-nx,cent[k][1]-ny,cent[k][2]-nz];
+      return {k:k, a:Math.atan2(d[0]*t2[0]+d[1]*t2[1]+d[2]*t2[2],
+                                d[0]*t1[0]+d[1]*t1[1]+d[2]*t1[2])};
+    }).sort(function(p,q){return p.a-q.a;}).map(function(o){return cent[o.k];});
+    // flat-fan area (approximates spherical cell area; normalized to 4*pi below)
+    var A=0;
+    for(j=0;j<ring.length;j++){
+      var p=ring[j], q=ring[(j+1)%ring.length];
+      var ux=p[0]-nx,uy=p[1]-ny,uz=p[2]-nz, wx=q[0]-nx,wy=q[1]-ny,wz=q[2]-nz;
+      var cxp=uy*wz-uz*wy, cyp=uz*wx-ux*wz, czp=ux*wy-uy*wx;
+      A+=0.5*Math.hypot(cxp,cyp,czp);
+    }
+    cells.push({c:v, ring:ring, area:A});
+    areaTot+=A;
+  }
+  var s=4*Math.PI/areaTot;
+  for(i=0;i<cells.length;i++) cells[i].area*=s;
+  // Euler receipts on the triangulation
+  var Ecount={}, ne=0;
+  for(i=0;i<F.length;i++){ for(j=0;j<3;j++){
+    var a=F[i][j], b=F[i][(j+1)%3], key=a<b?a+"_"+b:b+"_"+a;
+    if(!Ecount[key]){ Ecount[key]=1; ne++; } } }
+  var pent=cells.filter(function(c){return c.ring.length===5;}).length;
+  return {cells:cells, Vn:V.length, En:ne, Fn:F.length,
+          chi:V.length-ne+F.length, pent:pent};
+}
+
+// ---------- real spherical harmonics: values + tangent gradients ----------
+// modes ordered: for l=0..L: m=0, then (m,cos),(m,sin) for m=1..l
+function buildBasis(cells, L){
+  var N=cells.length, M=(L+1)*(L+1);
+  var Y=new Float64Array(N*M), Gt=new Float64Array(N*M), Gp=new Float64Array(N*M);
+  var eig=new Float64Array(M), lOf=new Int16Array(M);
+  var idx=0, l, m;
+  for(l=0;l<=L;l++){ for(m=0;m<=l;m++){
+    var c=(m===0)?1:2;
+    var q; for(q=0;q<c;q++){ eig[idx]=l*(l+1); lOf[idx]=l; idx++; } } }
+  var P=[], dP=[];      // P[m][l], dP/dtheta
+  for(m=0;m<=L;m++){ P.push(new Float64Array(L+1)); dP.push(new Float64Array(L+1)); }
+  var minSin=1;
+  var i;
+  for(i=0;i<N;i++){
+    var v=cells[i].c, x=v[2];                      // cos(theta) with z as polar axis
+    var s=Math.sqrt(Math.max(1e-12,1-x*x));        // sin(theta)
+    if(s<minSin) minSin=s;
+    var phi=Math.atan2(v[1],v[0]);
+    // associated Legendre, no Condon-Shortley
+    var pmm=1;
+    for(m=0;m<=L;m++){
+      if(m>0) pmm*= (2*m-1)*s;
+      P[m][m]=pmm;
+      if(m<L){ P[m][m+1]=x*(2*m+1)*pmm; }
+      for(l=m+2;l<=L;l++)
+        P[m][l]=((2*l-1)*x*P[m][l-1]-(l+m-1)*P[m][l-2])/(l-m);
+      for(l=m;l<=L;l++){
+        var pm1=(l-1>=m)?P[m][l-1]:0;
+        dP[m][l]=  ( l*x*P[m][l] - (l+m)*pm1 )/s;   // dP/dtheta
+      }
+    }
+    idx=0;
+    for(l=0;l<=L;l++){
+      // K(l,m) with running ratio (l-m)!/(l+m)!
+      var r=1; // m=0
+      for(m=0;m<=l;m++){
+        if(m>0) r/= (l+m)*(l-m+1);                  // r(m)=r(m-1)/((l+m)(l-m+1))
+        var K=Math.sqrt((2*l+1)/(4*Math.PI)*r);
+        if(m===0){
+          Y[i*M+idx]=K*P[0][l];
+          Gt[i*M+idx]=K*dP[0][l];
+          Gp[i*M+idx]=0;
+          idx++;
+        } else {
+          var C=Math.SQRT2*K, cm=Math.cos(m*phi), sm=Math.sin(m*phi);
+          Y[i*M+idx]=C*P[m][l]*cm;  Gt[i*M+idx]=C*dP[m][l]*cm;
+          Gp[i*M+idx]=-C*P[m][l]*m*sm/s;  idx++;
+          Y[i*M+idx]=C*P[m][l]*sm;  Gt[i*M+idx]=C*dP[m][l]*sm;
+          Gp[i*M+idx]= C*P[m][l]*m*cm/s;  idx++;
+        }
+      }
+    }
+  }
+  return {Y:Y, Gt:Gt, Gp:Gp, eig:eig, lOf:lOf, N:N, M:M, L:L, minSin:minSin};
+}
+
+// ---------- least-squares analysis: A = (Y' W Y)^-1 Y' W ----------
+function buildAnalysis(B, cells){
+  var N=B.N, M=B.M, Y=B.Y, i, j, k;
+  var w=new Float64Array(N);
+  for(i=0;i<N;i++) w[i]=cells[i].area;
+  var G=new Float64Array(M*M);
+  for(i=0;i<N;i++){ var wi=w[i], base=i*M;
+    for(j=0;j<M;j++){ var yij=wi*Y[base+j], row=j*M;
+      for(k=j;k<M;k++) G[row+k]+=yij*Y[base+k]; } }
+  for(j=0;j<M;j++) for(k=0;k<j;k++) G[j*M+k]=G[k*M+j];
+  var offMax=0, diagDev=0;
+  for(j=0;j<M;j++){ diagDev=Math.max(diagDev,Math.abs(G[j*M+j]-1));
+    for(k=0;k<M;k++) if(j!==k) offMax=Math.max(offMax,Math.abs(G[j*M+k])); }
+  // Cholesky G = L L'
+  var Lc=new Float64Array(M*M);
+  for(j=0;j<M;j++){ for(k=0;k<=j;k++){
+    var sum=G[j*M+k], p;
+    for(p=0;p<k;p++) sum-=Lc[j*M+p]*Lc[k*M+p];
+    if(j===k){ if(sum<=0) throw new Error("Gram not SPD at "+j);
+      Lc[j*M+j]=Math.sqrt(sum); }
+    else Lc[j*M+k]=sum/Lc[k*M+k]; } }
+  // A = G^-1 Y' W : solve per point-column
+  var A=new Float64Array(M*N), col=new Float64Array(M);
+  for(i=0;i<N;i++){
+    for(j=0;j<M;j++) col[j]=w[i]*Y[i*M+j];
+    for(j=0;j<M;j++){ var sf=col[j], p2;
+      for(p2=0;p2<j;p2++) sf-=Lc[j*M+p2]*col[p2];
+      col[j]=sf/Lc[j*M+j]; }
+    for(j=M-1;j>=0;j--){ var sb=col[j], p3;
+      for(p3=j+1;p3<M;p3++) sb-=Lc[p3*M+j]*col[p3];
+      col[j]=sb/Lc[j*M+j]; }
+    for(j=0;j<M;j++) A[j*N+i]=col[j];
+  }
+  return {A:A, gramOffMax:offMax, gramDiagDev:diagDev};
+}
+
+function matvec(Mtx, x, out, rows, cols){
+  var i, j, s, base;
+  for(i=0;i<rows;i++){ s=0; base=i*cols;
+    for(j=0;j<cols;j++) s+=Mtx[base+j]*x[j];
+    out[i]=s; }
+}
+
+// ---------- solver ----------
+function makeSolver(detail, L, prm){
+  var mesh=buildGoldberg(detail);
+  var B=buildBasis(mesh.cells, L);
+  var An=buildAnalysis(B, mesh.cells);
+  var N=B.N, M=B.M;
+  var S={
+    mesh:mesh, B:B, An:An, N:N, M:M, L:L,
+    w:new Float64Array(M),
+    nu:prm.nu, nu4:prm.nu4, mu:prm.mu, eps:prm.eps, lf:prm.lf,
+    dragOn:true, forcingOn:true,
+    t:0, injTot:0, dissTot:0, resTot:0, fluxTot:0,
+    tmpP:new Float64Array(M), k1:new Float64Array(M), k2:new Float64Array(M),
+    w1:new Float64Array(M),
+    gW:new Float64Array(N), gPt:new Float64Array(N), gPp:new Float64Array(N),
+    gWt:new Float64Array(N), gWp:new Float64Array(N), gA:new Float64Array(N),
+    rng:(function(){ var s0=prm.seed||123456789;
+      return function(){ s0^=s0<<13; s0^=s0>>>17; s0^=s0<<5; s0|=0;
+        return (s0>>>0)/4294967296; }; })()
+  };
+  S.randn=function(){ var u=Math.max(1e-12,S.rng()), v=S.rng();
+    return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v); };
+  S.rhs=function(w, out){
+    var i, eig=B.eig;
+    for(i=1;i<M;i++) S.tmpP[i]=w[i]/eig[i];
+    S.tmpP[0]=0;
+    matvec(B.Gt,S.tmpP,S.gPt,N,M);  matvec(B.Gp,S.tmpP,S.gPp,N,M);
+    matvec(B.Gt,w,S.gWt,N,M);       matvec(B.Gp,w,S.gWp,N,M);
+    for(i=0;i<N;i++)                      // u=r^ x grad(psi): u_th=-gPp, u_ph=gPt
+      S.gA[i]= -( -S.gPp[i]*S.gWt[i] + S.gPt[i]*S.gWp[i] );   // -(u . grad w)
+    matvec(An.A,S.gA,out,M,N);
+    var lin, l4=1/(B.eig[M-1]*B.eig[M-1]);
+    for(i=1;i<M;i++){ lin=S.nu*eig[i] + S.nu4*eig[i]*eig[i]*l4*prm.nu4scale
+        + ((S.dragOn && B.lOf[i]<=2)?S.mu:0);
+      out[i]-=lin*w[i]; }
+    out[0]=0;
+  };
+  S.energy=function(){ var E=0,i; for(i=1;i<M;i++) E+=S.w[i]*S.w[i]/(2*B.eig[i]); return E; };
+  S.enstrophy=function(){ var Z=0,i; for(i=1;i<M;i++) Z+=S.w[i]*S.w[i]/2; return Z; };
+  S.dissRates=function(){ var dn=0,dh=0,dm=0,i,l4=1/(B.eig[M-1]*B.eig[M-1]);
+    for(i=1;i<M;i++){ var e2=S.w[i]*S.w[i];
+      dn+=S.nu*e2; dh+=S.nu4*B.eig[i]*l4*prm.nu4scale*e2;
+      if(S.dragOn && B.lOf[i]<=2) dm+=S.mu*e2/B.eig[i]; }
+    return {nu:dn, hyper:dh, drag:dm};    // energy-dissipation rates
+  };
+  S.step=function(dt){
+    var i, E0=S.energy();
+    S.rhs(S.w,S.k1);
+    for(i=0;i<M;i++) S.w1[i]=S.w[i]+dt*S.k1[i];
+    S.rhs(S.w1,S.k2);
+    for(i=0;i<M;i++) S.w[i]+=0.5*dt*(S.k1[i]+S.k2[i]);
+    var inj=0;
+    if(S.forcingOn){
+      var nf=0; for(i=1;i<M;i++) if(Math.abs(B.lOf[i]-S.lf)<=1) nf++;
+      for(i=1;i<M;i++) if(Math.abs(B.lOf[i]-S.lf)<=1){
+        var amp=Math.sqrt(2*B.eig[i]*S.eps*dt/nf);
+        var f=amp*S.randn(), old=S.w[i]; S.w[i]+=f;
+        inj+=(S.w[i]*S.w[i]-old*old)/(2*B.eig[i]);
+      }
+    }
+    var d=S.dissRates(), E1=S.energy();
+    var pred=inj-(d.nu+d.hyper+d.drag)*dt;
+    S.injTot+=inj; S.dissTot+=(d.nu+d.hyper+d.drag)*dt;
+    S.resTot+=Math.abs((E1-E0)-pred);
+    S.fluxTot+=Math.abs(inj)+((d.nu+d.hyper+d.drag)*dt);
+    S.t+=dt;
+    var sp=S.spectrum(), l2;
+    if(!S.specAvg){ S.specAvg=new Float64Array(S.L+1);
+      for(l2=0;l2<=S.L;l2++) S.specAvg[l2]=sp[l2]; }
+    else for(l2=0;l2<=S.L;l2++)
+      S.specAvg[l2]+=0.004*(sp[l2]-S.specAvg[l2]);
+    return {E:E1, inj:inj, diss:d};
+  };
+  S.maxU=function(){
+    var i, mx=0;
+    for(i=1;i<M;i++) S.tmpP[i]=S.w[i]/B.eig[i];
+    S.tmpP[0]=0;
+    matvec(B.Gt,S.tmpP,S.gPt,N,M); matvec(B.Gp,S.tmpP,S.gPp,N,M);
+    for(i=0;i<N;i++){ var u=Math.hypot(S.gPt[i],S.gPp[i]); if(u>mx) mx=u; }
+    return mx;
+  };
+  S.spectrum=function(){
+    var E=new Float64Array(L+1), i;
+    for(i=1;i<M;i++) E[B.lOf[i]]+=S.w[i]*S.w[i]/(2*B.eig[i]);
+    return E;
+  };
+  S.slopes=function(){
+    function fit(lo,hi){
+      var n=0,sx=0,sy=0,sxx=0,sxy=0,l,
+          Es=(S.specAvg&&S.t>5)?S.specAvg:S.spectrum();
+      for(l=lo;l<=hi;l++){ if(Es[l]<=0) continue;
+        var X=Math.log(Math.sqrt(l*(l+1))), Yv=Math.log(Es[l]);
+        n++; sx+=X; sy+=Yv; sxx+=X*X; sxy+=X*Yv; }
+      if(n<2) return NaN;
+      return (n*sxy-sx*sy)/(n*sxx-sx*sx);
+    }
+    return {inv:fit(3,S.lf-2), fwd:fit(S.lf+2,S.L-3)};
+  };
+  S.grid=function(){ matvec(B.Y,S.w,S.gW,N,M); return S.gW; };
+  S.stir=function(px,py,pz,ampl,sig){
+    var i, bump=S.gA;
+    for(i=0;i<N;i++){ var c=S.mesh.cells[i].c;
+      var dx=c[0]-px, dy=c[1]-py, dz=c[2]-pz;
+      bump[i]=ampl*Math.exp(-(dx*dx+dy*dy+dz*dz)/(sig*sig)); }
+    var db=new Float64Array(M);
+    matvec(An.A,bump,db,M,N);
+    for(i=1;i<M;i++) S.w[i]+=db[i];
+    S.w[0]=0;
+  };
+  S.healthy=function(){ var i; for(i=0;i<M;i++) if(!isFinite(S.w[i])) return false; return true; };
+  S.reset=function(){ var i; for(i=0;i<M;i++)
+      S.w[i]=(B.lOf[i]>=2)?1e-3*S.randn():0;
+    S.t=0; S.injTot=0; S.dissTot=0; S.resTot=0; S.fluxTot=0; S.specAvg=null; };
+  return S;
+}
+
+if (typeof module!=="undefined") module.exports={buildGoldberg:buildGoldberg,
+  buildBasis:buildBasis, buildAnalysis:buildAnalysis, makeSolver:makeSolver,
+  matvec:matvec};
+
+</script>
+<script>
+"use strict";
+(function(){
+var cv=document.getElementById("cv"), ctx=cv.getContext("2d");
+var W=0,H=0;
+function resize(){ W=cv.width=innerWidth; H=cv.height=innerHeight; }
+resize(); addEventListener("resize",resize);
+
+// ---- Curse 35: predict the bill before allocating ----
+var DETAIL=3, L=16, N=10*Math.pow(4,DETAIL)+2, M=(L+1)*(L+1);
+var mb=(3*N*M*8/1048576).toFixed(1), mflop=(2*6*N*M*2/1e6).toFixed(1);
+document.getElementById("live").textContent=
+  "budget: "+N+" cells × "+M+" modes → "+mb+" MB matrices, ~"+mflop+" MFLOP/frame — building…";
+
+var prm={nu:0, nu4:1.5, nu4scale:1, mu:0.55, eps:0.5, lf:8, seed:(Date.now()|0)};
+var S=null, boot=setTimeout(function(){
+  S=makeSolver(DETAIL,L,prm);
+  S.reset();
+  receipts();
+  drawAll(true);
+},30);
+
+var NU_TRUE=0.004;
+var running=false, nuMode=false, spin=false;
+var yaw=0.6, pitch=0.35, zoom=1, dragging=null, moved=0;
+var askSub=2, ranSub=0, fps=0, frames=0, fAcc=0, lastT=performance.now();
+var emaInj=0, emaDiss=0, emaDE=0, lastE=0, res=0;
+var lockInv=0, lockFwd=0, TOL=0.30, LOCKN=120;
+var scaleW=1;                             // rolling max|omega| for color (K6)
+var hist=[];                              // timeseries {E,Z,res}
+
+function receipts(){
+  var m=S.mesh;
+  document.getElementById("live").innerHTML=
+    "t <b id='vT'>0.0</b> · E <b id='vE'>0</b> · Ω <b id='vZ'>0</b> · "+
+    "fps <b id='vF'>—</b> · steps <b id='vS'>"+askSub+"/"+askSub+"</b> · "+
+    "|ω|scale <b id='vW'>1</b><br>"+
+    "receipts: χ=<span class='go'>"+m.chi+"</span> · P=<span class='go'>"+m.pent+
+    "</span> · cells "+m.cells.length+" · quad off-diag <span class='g'>"+
+    S.An.gramOffMax.toExponential(1)+"</span> · roundtrip exact · "+
+    "min sinθ "+S.B.minSin.toFixed(3);
+}
+
+// ---- view ----
+function viewRot(p){
+  var cy=Math.cos(yaw), sy=Math.sin(yaw), cp=Math.cos(pitch), sp=Math.sin(pitch);
+  var x=cy*p[0]+sy*p[2], z=-sy*p[0]+cy*p[2];
+  var y=cp*p[1]-sp*z,  z2=sp*p[1]+cp*z;
+  return [x,y,z2];
+}
+function invView(x,y,z){
+  var cy=Math.cos(yaw), sy=Math.sin(yaw), cp=Math.cos(pitch), sp=Math.sin(pitch);
+  var y1=cp*y+sp*z, z1=-sp*y+cp*z;
+  return [cy*x-sy*z1, y1, sy*x+cy*z1];
+}
+function wCol(v){
+  var t=Math.max(-1,Math.min(1,v/scaleW));
+  if(t>=0){ var a=Math.min(1,t*1.15);
+    return "rgba("+(40+215*a|0)+","+(30+150*a|0)+","+(20+40*(1-a)|0)+","+(0.25+0.7*a)+")"; }
+  var b=Math.min(1,-t*1.15);
+  return "rgba("+(20*(1-b)|0)+","+(60+152*b|0)+","+(90+165*b|0)+","+(0.25+0.7*b)+")";
+}
+
+function drawSphere(){
+  ctx.fillStyle="#050508"; ctx.fillRect(0,0,W,H);
+  if(!S) return;
+  var cx=W*0.40, cy=H*0.52, R0=Math.min(W*0.30,H*0.40)*zoom;
+  var g=S.grid(), cells=S.mesh.cells, i,j;
+  // limb ring
+  ctx.strokeStyle="#141420"; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.arc(cx,cy,R0,0,2*Math.PI); ctx.stroke();
+  var mx=0;
+  for(i=0;i<cells.length;i++){
+    var a=Math.abs(g[i]); if(a>mx) mx=a;
+    var c=viewRot(cells[i].c);
+    if(c[2]<=0.02) continue;
+    var ring=cells[i].ring, pent=(ring.length===5);
+    ctx.beginPath();
+    for(j=0;j<ring.length;j++){
+      var p=viewRot(ring[j]);
+      var px=cx+p[0]*R0, py=cy-p[1]*R0;
+      if(j===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
+    }
+    ctx.closePath();
+    ctx.fillStyle=wCol(g[i]); ctx.fill();
+    if(pent){ ctx.strokeStyle="rgba(255,107,53,0.85)"; ctx.lineWidth=1.2; ctx.stroke(); }
+    else { ctx.strokeStyle="rgba(0,212,255,0.10)"; ctx.lineWidth=0.5; ctx.stroke(); }
+  }
+  scaleW+=0.03*((mx>1e-6?mx:1)-scaleW);
+  var vw=document.getElementById("vW"); if(vw) vw.textContent=scaleW.toFixed(2);
+}
+
+// ---- spectrum panel ----
+var sc=document.getElementById("specCv"), sctx=sc.getContext("2d");
+function drawSpec(){
+  sctx.fillStyle="#0a0f18"; sctx.fillRect(0,0,376,238);
+  if(!S||!S.specAvg) { sctx.fillStyle="#6a6a82"; sctx.font="10px "+getComputedStyle(document.body).fontFamily;
+    sctx.fillText("spectrum wakes with the flow",110,120); return; }
+  var Lm=S.L, pad=34, x0=pad, x1=366, y0=12, y1=210;
+  var kmin=Math.log(Math.sqrt(2)), kmax=Math.log(Math.sqrt(Lm*(Lm+1)));
+  function X(l){ return x0+(Math.log(Math.sqrt(l*(l+1)))-kmin)/(kmax-kmin)*(x1-x0); }
+  var lo=1e-6, hi=1e-6, l;
+  for(l=1;l<=Lm;l++){ if(S.specAvg[l]>hi) hi=S.specAvg[l]; }
+  lo=hi*3e-5;
+  function Y(E){ return y1-(Math.log(Math.max(E,lo))-Math.log(lo))/(Math.log(hi*1.6)-Math.log(lo))*(y1-y0); }
+  // forcing band
+  sctx.fillStyle="rgba(255,215,0,0.07)";
+  sctx.fillRect(X(S.lf-1)-3,y0,X(S.lf+1)-X(S.lf-1)+6,y1-y0);
+  // reference slopes anchored at the band-average
+  var Eb=(S.specAvg[S.lf-1]+S.specAvg[S.lf]+S.specAvg[S.lf+1])/3;
+  function ref(slope,l0,lA,lB,color){
+    sctx.strokeStyle=color; sctx.setLineDash([5,4]); sctx.lineWidth=1.2;
+    sctx.beginPath();
+    var first=true, kk0=Math.sqrt(l0*(l0+1));
+    for(l=lA;l<=lB;l+=0.25){
+      var kk=Math.sqrt(l*(l+1)), E=Eb*Math.pow(kk/kk0,slope);
+      var px=x0+(Math.log(kk)-kmin)/(kmax-kmin)*(x1-x0), py=Y(E);
+      if(first){sctx.moveTo(px,py);first=false;} else sctx.lineTo(px,py);
+    }
+    sctx.stroke(); sctx.setLineDash([]);
+  }
+  ref(-5/3,S.lf,2,S.lf,"rgba(255,215,0,0.75)");
+  ref(-3,S.lf,S.lf,Lm,"rgba(255,105,180,0.75)");
+  // instantaneous (dim) + averaged (bright)
+  var inst=S.spectrum();
+  sctx.strokeStyle="rgba(0,212,255,0.28)"; sctx.lineWidth=1;
+  sctx.beginPath();
+  for(l=1;l<=Lm;l++){ var px=X(l),py=Y(inst[l]); if(l===1)sctx.moveTo(px,py);else sctx.lineTo(px,py);}
+  sctx.stroke();
+  sctx.strokeStyle="#00ffd5"; sctx.lineWidth=1.8;
+  sctx.beginPath();
+  for(l=1;l<=Lm;l++){ var qx=X(l),qy=Y(S.specAvg[l]); if(l===1)sctx.moveTo(qx,qy);else sctx.lineTo(qx,qy);}
+  sctx.stroke();
+  sctx.fillStyle="#00ffd5";
+  for(l=1;l<=Lm;l++){ sctx.beginPath(); sctx.arc(X(l),Y(S.specAvg[l]),2,0,7); sctx.fill(); }
+  sctx.fillStyle="#6a6a82"; sctx.font="9px ui-monospace,Consolas,monospace";
+  sctx.fillText("log E(ℓ)  ·  bright = time-avg, dim = instant",x0,232);
+  sctx.fillStyle="rgba(255,215,0,0.8)"; sctx.fillText("k⁻⁵ᐟ³",x0+6,y0+10);
+  sctx.fillStyle="rgba(255,105,180,0.8)"; sctx.fillText("k⁻³",x1-24,y0+10);
+  sctx.fillStyle="rgba(255,215,0,0.6)"; sctx.fillText("ℓf="+S.lf,X(S.lf)-10,y1+12);
+}
+
+// ---- ledger + timeseries ----
+var tc=document.getElementById("tsCv"), tctx=tc.getContext("2d");
+function drawLedger(inj,diss,dE){
+  emaInj+=0.05*(inj-emaInj); emaDiss+=0.05*(diss-emaDiss); emaDE+=0.05*(dE-emaDE);
+  document.getElementById("lInj").textContent=emaInj.toFixed(3);
+  document.getElementById("lDiss").textContent=emaDiss.toFixed(3);
+  document.getElementById("lDE").textContent=(emaDE>=0?"+":"")+emaDE.toFixed(3);
+  res=S.fluxTot>1e-9? S.resTot/S.fluxTot*100 : 0;
+  var rr=document.getElementById("lResRow");
+  document.getElementById("lRes").textContent=res.toFixed(2)+"%";
+  rr.className="row res"+(res>3?" bad":"");
+  if(nuMode){
+    var d=S.dissRates(), Z=S.enstrophy();
+    var meas=Z>1e-9? d.nu/(2*Z) : 0;
+    document.getElementById("lNu").textContent=
+      meas.toExponential(3)+" vs ν="+S.nu.toExponential(1);
+  }
+  hist.push({E:S.energy(),Z:S.enstrophy(),r:res});
+  if(hist.length>186) hist.shift();
+  tctx.fillStyle="#0a0f18"; tctx.fillRect(0,0,372,56);
+  var mE=1e-9,mZ=1e-9,i;
+  for(i=0;i<hist.length;i++){ if(hist[i].E>mE)mE=hist[i].E; if(hist[i].Z>mZ)mZ=hist[i].Z; }
+  function line(key,mx,col){ tctx.strokeStyle=col; tctx.lineWidth=1.2; tctx.beginPath();
+    for(i=0;i<hist.length;i++){ var x=i*2,y=52-hist[i][key]/mx*46;
+      if(i===0)tctx.moveTo(x,y);else tctx.lineTo(x,y);} tctx.stroke(); }
+  line("E",mE,"#00d4ff"); line("Z",mZ,"#ff69b4"); line("r",8,"#ff4455");
+  tctx.fillStyle="#6a6a82"; tctx.font="8px ui-monospace,Consolas,monospace";
+  tctx.fillText("E",4,10); tctx.fillStyle="#ff69b4"; tctx.fillText("Ω",14,10);
+  tctx.fillStyle="#ff4455"; tctx.fillText("resid",26,10);
+}
+
+function drawSlopes(){
+  var sl=S.slopes();
+  function put(id,v){ document.getElementById(id).textContent=isFinite(v)?v.toFixed(2):"—"; }
+  put("sInv",sl.inv); put("sFwd",sl.fwd);
+  var eI=Math.abs(sl.inv-(-5/3)), eF=Math.abs(sl.fwd-(-3));
+  put("eInv",eI); put("eFwd",eF);
+  lockInv=(isFinite(eI)&&eI<=TOL)?lockInv+1:0;
+  lockFwd=(isFinite(eF)&&eF<=TOL)?lockFwd+1:0;
+  document.getElementById("lInv").className="lock"+(lockInv>=LOCKN?" on":"");
+  document.getElementById("lFwd").className="lock"+(lockFwd>=LOCKN?" on":"");
+}
+
+// ---- input ----
+cv.addEventListener("pointerdown",function(e){
+  dragging={x:e.clientX,y:e.clientY,shift:e.shiftKey}; moved=0;
+  cv.classList.add("drag"); cv.setPointerCapture(e.pointerId);
+});
+cv.addEventListener("pointermove",function(e){
+  if(!dragging) return;
+  var dx=e.clientX-dragging.x, dy=e.clientY-dragging.y;
+  moved+=Math.abs(dx)+Math.abs(dy);
+  yaw+=dx*0.006; pitch=Math.max(-1.5,Math.min(1.5,pitch+dy*0.006));
+  dragging.x=e.clientX; dragging.y=e.clientY;
+});
+addEventListener("pointerup",function(e){
+  cv.classList.remove("drag");
+  if(dragging&&moved<6&&S){
+    var cx=W*0.40, cy=H*0.52, R0=Math.min(W*0.30,H*0.40)*zoom;
+    var x=(e.clientX-cx)/R0, y=-(e.clientY-cy)/R0, r2=x*x+y*y;
+    if(r2<=1){
+      var p=invView(x,y,Math.sqrt(1-r2));
+      S.stir(p[0],p[1],p[2], dragging.shift?-7:7, 0.28);
+    }
+  }
+  dragging=null;
+});
+cv.addEventListener("wheel",function(e){ e.preventDefault();
+  zoom=Math.max(0.5,Math.min(2.4,zoom*(1-e.deltaY*0.0012))); },{passive:false});
+
+addEventListener("keydown",function(e){
+  if(!S) return;
+  if(e.code==="Space"){ e.preventDefault(); toggleRun(); }
+  else if(e.key==="f"||e.key==="F"){ S.forcingOn=!S.forcingOn; }
+  else if(e.key==="d"||e.key==="D"){ S.dragOn=!S.dragOn; }
+  else if(e.key==="s"||e.key==="S"){ spin=!spin; }
+  else if(e.key==="r"||e.key==="R"){ S.reset(); hist=[]; lastE=0; scaleW=1; }
+  else if(e.key==="["){ S.lf=Math.max(4,S.lf-1); }
+  else if(e.key==="]"){ S.lf=Math.min(S.L-3,S.lf+1); }
+  else if(e.key==="-"){ S.eps=Math.max(0.05,S.eps*0.8); }
+  else if(e.key==="="){ S.eps=Math.min(4,S.eps*1.25); }
+  else if(e.key==="n"||e.key==="N"){
+    nuMode=!nuMode;
+    if(nuMode){ S.nu=NU_TRUE; S.nu4=0;
+      document.getElementById("lDissLab").textContent="dissipated (2νΩ + drag)";
+      document.getElementById("lNuRow").style.display="flex";
+    } else { S.nu=0; S.nu4=prm.nu4;
+      document.getElementById("lDissLab").textContent="dissipated (hyper + drag)";
+      document.getElementById("lNuRow").style.display="none"; }
+  }
+});
+function toggleRun(){ running=!running;
+  document.getElementById("pB").textContent=running?"pause":"resume"; }
+document.getElementById("pB").addEventListener("click",toggleRun);
+document.getElementById("ignite").addEventListener("click",function(){
+  document.getElementById("gate").remove();
+  running=true; document.getElementById("pB").textContent="pause";
+});
+
+// ---- main loop: femtonium-style governor ----
+var CFL=0.4, dtMax=0.02, hMesh=Math.sqrt(4*Math.PI/N);
+function frame(now){
+  var dtw=now-lastT; lastT=now;
+  fAcc+=1000/Math.max(1,dtw); frames++;
+  if(frames>=30){ fps=fAcc/frames; fAcc=0; frames=0;
+    var vf=document.getElementById("vF"); if(vf) vf.textContent=fps.toFixed(0);
+    if(fps<42&&askSub>1) askSub--; else if(fps>55&&askSub<6) askSub++;
+  }
+  if(S&&running){
+    var t0=performance.now(), injSum=0, dSum=0, E0=S.energy();
+    ranSub=0;
+    while(ranSub<askSub && performance.now()-t0<14){
+      var u=Math.max(0.2,S.maxU());
+      var dt=Math.min(dtMax,CFL*hMesh/u);
+      var r=S.step(dt);
+      injSum+=r.inj/dt; dSum+=(r.diss.nu+r.diss.hyper+r.diss.drag);
+      ranSub++;
+    }
+    if(!S.healthy()){
+      var fl=document.getElementById("flash");
+      fl.style.background="rgba(255,60,80,0.25)";
+      setTimeout(function(){fl.style.background="rgba(255,60,80,0)";},600);
+      S.reset(); hist=[]; scaleW=1;
+    }
+    var E1=S.energy();
+    drawLedger(injSum/Math.max(1,ranSub), dSum/Math.max(1,ranSub),
+      lastE>0?(E1-lastE)*fps:0);
+    lastE=E1;
+    var vs=document.getElementById("vS"); if(vs) vs.textContent=ranSub+"/"+askSub;
+    var vt=document.getElementById("vT"); if(vt) vt.textContent=S.t.toFixed(1);
+    var ve=document.getElementById("vE"); if(ve) ve.textContent=E1.toFixed(2);
+    var vz=document.getElementById("vZ"); if(vz) vz.textContent=S.enstrophy().toFixed(1);
+    drawSlopes();
+  }
+  if(spin) yaw+=0.0016*dtw*0.06;
+  drawAll(false);
+  requestAnimationFrame(frame);
+}
+function drawAll(first){ drawSphere(); drawSpec(); if(first&&S){ drawSlopes(); } }
+requestAnimationFrame(frame);
+})();
+</script>
+</body></html>
