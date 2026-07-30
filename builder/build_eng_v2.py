@@ -105,7 +105,7 @@ FEATURED_FAMILIES = [
     ("warning",         "THE WARNING",    "the front door -- the explosion, the fractal cascade, the price of compute. enter here."),
     ("genesis_v8_1",    "GENESIS v8.1",   "the fractal space explorer -- seed a Platonic solid, refine the Goldberg buckyball, fly INSIDE. M1-M6 kernel live."),
     ("chromodynamium",  "CHROMODYNAMIUM", "the Standard Model's strong force, spini-spini: SU(3), the 8 gluon roots, colour factors C_F=4/3 C_A=3, the running coupling -- all computed live."),
-    ("aequalium",       "AEQUALIUM",      "the equals sign, EARNED: a pure-Fourier curve trapped in the C60. grow the fullerene shell (C60->C420->C2940), buy harmonics, watch the residual fall. the Standard Modelium tower reads how many DIGITS of certainty each real physics '=' can buy. a core focus."),
+    ("aequalium",       "AEQUALIUM",      "the equals sign, EARNED: a pure-Fourier curve trapped in the C60. grow / WELD the fullerene shell (C60->C240->C960 closed, chi=2 ENUMERATED not formula), buy harmonics, watch the residual fall. the Standard Modelium tower reads how many DIGITS of agreement each real physics '=' can buy, with a portable SHA-256 certificate + an independent verifier. a core focus."),
     ("pcbium",          "PCBIUM",         "the PCB design space -- CAD navigation on the buckyball, nanite routing, the board grown from the kernel. a core focus."),
 ]
 # External cards live in OTHER repos on the same github.io host, so they are NOT in

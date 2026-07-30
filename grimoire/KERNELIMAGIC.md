@@ -57,6 +57,7 @@
 | 34 | The Starved Idler (idleStall)      | a requestIdleCallback step-chain stalls forever when a rAF loop (a spinner) keeps the main thread "busy"; the loader freezes mid-load. Use setTimeout for sequenced work, rIC only for optional filler.|
 | 35 | The Loaded Gun (noCeiling)         | a correct recursive kernel with no ceiling blows the tab: 7x-per-level growth OOMs before you can react. PREDICT the next step's cost from the recurrence BEFORE allocating; refuse loudly if over budget. The guillotine is built in.|
 | 36 | The Mute Seam (strictThrow)        | under `"use strict"`, assigning an UNDECLARED var (a panel edit's `freqData=...`) THROWS a ReferenceError that kills the whole function -- so a wave-panel change silently murders the VOICE, and the error surfaces far from the silence. Declare every var; read the console FIRST when a feature goes dead.|
+| 37 | The Leaked Glyph (escapeInText)    | a `\uXXXX` written as a glyph shortcut lands in an HTML TEXT node (not JS) -> the browser renders the literal backslash-u text, not the character. Bytes are clean (no U+FFFD), so a byte scan passes while the eye sees `\u2014`. Heal text nodes only (mask `<script>`/`<style>`), or emit HTML entities; verify by scanning the live DOM innerText, not the source.|
 ---
 
 
@@ -8294,3 +8295,54 @@ FAMILY:
 ```
 
 Curse count: 36. Under "use strict", assigning an undeclared variable throws a ReferenceError that aborts the whole function -- so a wave-panel edit's stray `freqData=...` silently killed the VOICE, and the error surfaced far from the silence. When a working feature dies after an unrelated edit, read the console FIRST; declare every var. The silent thing is usually a thrown thing. Always.
+---
+
+## CURSE 37 -- The Leaked Glyph (escapeInText)
+
+WHAT BIT US (AEQUALIUM, freezing Fable's v2.3 -> v2.4.3):
+  Fable's HTML rendered "\u2014 a real PDE on the same sphere" on the FRONT-DOOR HUD
+  subtitle -- the literal six characters backslash-u-2-0-1-4, not an em-dash. The MAGI
+  RECEIPTS cards showed "\u03c7 withheld", "Kepler\u2019s", "\u00b1 \u03b4*", "\u2248 1.3e48".
+  The author reached for a \uXXXX escape as a glyph shorthand but placed it in an HTML TEXT
+  node, where JavaScript escape syntax has no meaning -- so the browser printed it verbatim.
+  Ironically v2.4.3's own changelog said "the escape leak fixed"; it fixed ONE panel and
+  missed the subtitle + the receipt cards.
+
+THE ROOT PROBLEM:
+  \uXXXX is a JAVASCRIPT string escape. It becomes a character only inside a JS string
+  literal. Written between > and < in markup it is just text. The bytes on disk are valid
+  UTF-8 -- NO U+FFFD, NO lone CR, NO BOM -- so every byte scan we trust (Curse 2/25) PASSES
+  while the eye plainly sees \u2014. The corruption is not in the bytes; it is in the CONTEXT.
+  This is the inverse of Curse 25 (Rune Rot): there a malformed escape rots the bytes; here a
+  well-formed escape sits in the wrong world and rots the meaning.
+
+HOW WE FOUND IT (proof by kernel):
+  A source scan >[^<]*\uXXXX flags candidates but false-positives on JS inside <script>
+  (a textContent= line, a note: string, a fmt() helper) -- those are LEGIT, never touch them.
+  The real proof was the live DOM: scan document.body.innerText for /\uXXXX/. 14 leaks in
+  v2.4.3, zero after the fix. The source grep lies both ways; the DOM tells the truth.
+
+HOW TO FIX:
+  Heal TEXT NODES ONLY. Mask every <script>...</script> and <style>...</style> block first,
+  decode \uXXXX -> the real character inside >...< runs only, then restore the masked blocks
+  verbatim. Never type the glyph in Python source (Curse 2) -- DECODE it numerically:
+  chr(int(hex,16)). Write UTF-8, newline LF, no BOM. Or emit an HTML entity (&mdash;, &chi;)
+  instead of a JS escape. See builder/freeze_aequalium_fable.py -- the one-shot healer that
+  shipped this lineage.
+
+THE RULE:
+  A byte scan proves the bytes, not the MEANING. \uXXXX renders as a glyph ONLY inside a JS
+  string; in HTML text it prints literally though every byte is valid. VERIFY BY THE LIVE DOM
+  (innerText), never by the source grep alone; and when you heal, protect <script>/<style> so
+  you fix the leak without murdering real JS escapes (Path V: the seam between two languages
+  is where the demon lives). The eye is the kernel here.
+
+FAMILY:
+  The context-twin of Curse 25 (Rune Rot). Sibling of Curse 6 (File:// Lie) and Curse 26
+  (False Convergence) -- all three are "the source is not the truth; verify the live render."
+  Counter-hex: Path III (proof by kernel) and Path V (guard the language seam).
+
+Curse count: 37. A \uXXXX is a JavaScript escape; in an HTML text node it renders as literal
+backslash-u text while every byte stays valid UTF-8 -- so a byte scan passes and only the eye
+(and the live DOM innerText) catches it. Heal text nodes only, mask script/style, decode
+numerically, or emit an HTML entity. Verify by the live DOM, not the source grep. Always.

@@ -9072,3 +9072,19 @@ note. node: kernel parses, invariants+audit present. 353 sims -> 167 cards. IO=4
 -- Vlad + Claude, corrected by the Sol-mage tower + Fable. 2026-07-30. The mythos keeps its robes;
    the robes now obey the lab. A wall we invented is gone; a circularity we hid is enumerated.
    P=12 (counted) . chi=2 only where the mesh is truly closed . the price is always paid . always.
+### L166 -- AEQUALIUM v2.3 -> v2.4.3: FABLE'S WELD + THE CERTIFICATE (2026-07-30)
+Froze Fable's five-version lineage into shell/ (Path X): v2.3 THE WELDING (half-edge
+kernel GK.buildIndexed/verifyClosed, chamferWeldAll closed growth C60->C240->C960);
+v2.4 THE CERTIFICATE (exact indexed topology, split FULLERENE MAP vs EMBEDDED SURFACE
+verdicts, SHA-256 aequalium-certificate/2, BREAK THE SHELL, + independent DOM-free
+verifier verify_aequalium_certificate.mjs); v2.4.1 order-of-ops per genesis canon
+(refineAll once then hexes only, 12 pentagons freeze as anchors); v2.4.2 THE
+PERMUTATION DECK (WELD/ALL/5s/6s operators, opSeq lineage replayed); v2.4.3 THE LIVING
+INSTRUMENT (live spectrum, the outer clock, FACE_CEIL 4000->12000). Featured card ->
+v2.4.3, blurb re-audited (agreement not certainty; chi=2 ENUMERATED not formula).
+Proof by kernel: ran the independent verifier vs the exported cert -- welded C3840
+shell VERIFIED GENUINELY CLOSED, chi=2 ENUMERATED, P=12, deg3 100%, no self-X, vol
+16.94. THE EDGE-WELD QUESTION IS ANSWERED. New curse: 37 The Leaked Glyph -- \uXXXX in
+an HTML text node renders literally though every byte is valid UTF-8; healed 14 leaks
+per file (text nodes only, script/style masked), verified by the live DOM. Byte scan:
+loneCR=0 U+FFFD=0 BOM=0 all six files. 0 console errors, GK injected on every version.
