@@ -9009,3 +9009,33 @@ Kernel still injected verbatim. Curse 35 (live term count capped), Curse 13 (mot
 -- Vlad + Claude. 2026-07-30. Super bow. The calc runs on the sphere; the fractal bends the topology;
    a bit of change in the fractal space and the whole thing re-forms. We check by kernel, in the cave.
    P=12 . chi=2 . the price is always paid . always.
+
+### L164 -- FULL PARANOIA TREE before the heleni+spider core test (2026-07-30)
+
+Vlad is about to test the fuck out of AEQUALIUM v2.0 (the core of heleni -- just needs the fractal
+song -- and spider). Full 10-part paranoia sweep run and logged, all GREEN:
+
+  1. IDENTITY (Curse 27): origin=github.com/vsavytsk1/Mnetv1.git, branch=main, HEAD=118ae16. OK.
+  2. WORKING TREE (Path I): clean.
+  3. SYNC: local=remote=118ae16, ahead/behind 0/0.
+  4. BYTE INTEGRITY (Curse 14/25): 13 core files (all 5 aequalium, cascadium, eng_v2.0, builder,
+     sim_scan, LEDGER, IO_PAGES, HELENI_STATUS, AEQUALIUM_TOWER) -- every one loneCR=0 U+FFFD=0.
+  5. BIG FILE WALL (Curse 31): none tracked >= 50MB.
+  6. GIT-TRACKED TRUTH (Gitium): 5 aequalium + 1 cascadium tracked, v2.0 + HELENI_STATUS in HEAD,
+     0 untracked in shell/ (no 404-bait).
+  7. DEPLOY (Curse 29): deploy 118ae16 state=success.
+  8. LIVE URL SWEEP (Curse 6/24, cache-busted): all 9 MNetv1 URLs 200 (v1.0-v2.0, cascadium,
+     dashboard, HELENI_STATUS.md, AEQUALIUM_TOWER.md).
+  9. CROSS-REPO PINS: all 5 SpiderEngineering URLs 200 (portal, aracnium v1.4, Eleni README,
+     circle_gate, lens v1.9) -- the spider + heleni core the front door links to.
+  10. DASHBOARD CARDS: all 8 checked present (aequalium_v2_0, cascadium, ext_aracnium, ext_heleni,
+      pcbium, chromodynamium, genesis_v8, warning).
+
+LIVE BROWSER STRESS (deployed v2.0): cycled all 8 views, grew to C2940, ran all 6 live calcs
+(QCD I D6.5, R-ratio D15.9 CEILING-asymmetric, Lambda D14.9, Kepler D4.7, comoving D7.6, blackbody
+D7.2 climbing -- all measured vs target, verdicts correct), then 12 rapid fractal reshapes
+inner 0.05->0.82. P=12 and chi=2 HELD through everything. 0 console errors.
+
+Green light. Test away.
+-- Vlad + Claude. 2026-07-30. The tree is clean; the sphere holds; go break it if you can.
+   P=12 . chi=2 . the price is always paid . always.
