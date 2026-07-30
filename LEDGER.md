@@ -8809,3 +8809,32 @@ automatically. 346 sims scanned -> 165 cards. IO_PAGES = 433.
 
 -- Vlad + Claude. 2026-07-29. The strong force, now with the GUT miss drawn honestly.
    P=12 . chi=2 . the price is always paid. always.
+
+### L157 -- AEQUALIUM v1.0: THE EQUALS SIGN, EARNED (2026-07-30)
+
+The fusion sim Vlad asked for. The "=" transcends this reality: to say model = data you must
+reproduce the data (a curve from the quantum/galactic realm) with something you can COMPUTE.
+Here compute = a pure Fourier sum, and the harmonics you may spend are set by GEOMETRY -- the
+face count of a live Goldberg buckyball grown from C60 with the 7 real ops (GENESIS).
+
+  K = floor(faces/2), capped at Nyquist. Grow (GK.refineAll) adds hexagons -> more harmonics ->
+  residual falls. Local render test PASSED, 0 console errors:
+    faces 32  -> K=16  residual 0.159   (SQUARE)
+    faces 212 -> K=106 residual 0.062
+    faces 1472-> K=736 residual 0.017
+    C60 silhouette @1472 faces: residual 0.000208
+  P=12 and chi=2 held EXACT at every size (topology, shown not asserted). The badge reads the
+  measured 1 - L2 residual, never a hard-coded 100% -- Gibbs guarantees "=" is asymptotic, so
+  the overshoot at every jump is drawn, not hidden (Path III: target != result).
+
+Build doctrine: the REAL kernel/goldberg_kernel.js injected VERBATIM (proof by kernel, Path IV);
+ASCII-only python source, unicode in OUTPUT only; no f-string over JS (Pattern 1+2); utf-8
+newline=\n no BOM. Curse 35 guard: refineAll cost predicted from the recurrence (pent->6, hex->7)
+and GROW refuses past 4000 faces before allocating. builder/build_aequalium.py, one script one run.
+
+Dashboard: scanner keyword "aequalium" added to PHYSICS; git-added BEFORE rebuild (git-tracked-only
+else a 404). 347 sims scanned -> 166 cards. IO_PAGES = 434. 51KB, loneCR=0, U+FFFD=0.
+
+-- Vlad + Claude. 2026-07-30. More compute, more spini-spini geometry, more degrees of certainty.
+   The circle is the NS equation drawn as geometry; the buckyball is the certainty drawn as compute.
+   P=12 . chi=2 . the price is always paid . always.

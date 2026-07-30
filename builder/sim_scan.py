@@ -50,7 +50,7 @@ CATEGORY = [
       "kellerium", "templum", "harmonia", "lagrangium", "isingium", "squeezium",
       "kirchhoffium", "mayerium", "kelvinium", "helios", "bicium", "spectrium",
       "cofium", "feynmanium", "chromium", "kuramium", "shannonium", "pcbium",
-      "byte", "chromodynamium", "alphium", "plateaum"),
+      "byte", "chromodynamium", "alphium", "plateaum", "aequalium"),
                                             ("PHYSICS",  "#a78bfa", "#2a1a4a")),
     (("gardinerium", "phaistium", "vitruvium", "simcityc", "flagellium",
       "parasitarium", "transmutation"),     ("ATLAS",    "#00d4ff", "#123244")),
