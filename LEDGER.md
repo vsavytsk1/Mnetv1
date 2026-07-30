@@ -9088,3 +9088,21 @@ shell VERIFIED GENUINELY CLOSED, chi=2 ENUMERATED, P=12, deg3 100%, no self-X, v
 an HTML text node renders literally though every byte is valid UTF-8; healed 14 leaks
 per file (text nodes only, script/style masked), verified by the live DOM. Byte scan:
 loneCR=0 U+FFFD=0 BOM=0 all six files. 0 console errors, GK injected on every version.
+
+### L167 -- AEQUALIUM v2.4.4: THE VISUAL PASS + grimoire/Thea.md (2026-07-30)
+The full-panel UI test, apollonium law "the render is the hero" -- NO new physics,
+NO changed math. Kept every v2.4.3 panel; elevated the visuals: (1) atmospheric
+radial depth-glow + soft vignette behind every view (drawBackdrop), so the bucky
+and curves sit in space not on a flat rect; (2) glowing curves -- shadow-blur halos
+on the reconstruction (cyan), the closed silhouette, the spectrum bars, and the
+convergence descent (green); the gold target stays crisp (compute glows, truth is
+steady); (3) framed plots -- CURVE/SPECTRUM/CONVERGE get a faint gridded frame +
+baseline (drawPlotFrame); (4) breathing room -- plotted views pushed below the HUD
+block so text never overlaps the curve; (5) the boot LOG is now OPT-IN (starts
+hidden, L toggles, click dismisses) for an apollonium-clean first frame. Also
+opened grimoire/Thea.md -- the MATH CORE scroll, first word LIGHT MATRIX (the random
+7-operation computation as the bucky fractalizes its hexes), grounded in the AUDITED
+v2.4.3 calc kernels (LATEXIUM.md is a stub; AEQUALIUM_TOWER.md is pre-audit -- Thea
+carries the shipped math), everything tagged VERIFIED/METAPHOR/EXTERNAL. Kernel-
+verified all 8 views @1440x900: 0 console errors, GK injected, 0 leaks. Byte scan
+loneCR=0 U+FFFD=0 BOM=0. Featured card -> v2.4.4. v2.4.3 frozen beside it (Path X).
