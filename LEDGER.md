@@ -8838,3 +8838,34 @@ else a 404). 347 sims scanned -> 166 cards. IO_PAGES = 434. 51KB, loneCR=0, U+FF
 -- Vlad + Claude. 2026-07-30. More compute, more spini-spini geometry, more degrees of certainty.
    The circle is the NS equation drawn as geometry; the buckyball is the certainty drawn as compute.
    P=12 . chi=2 . the price is always paid . always.
+
+### L158 -- AEQUALIUM v1.1: THE STANDARD MODELIUM TOWER (2026-07-30)
+
+v1.1 answers Vlad's question -- "how many degrees of certainty can this sim get?" -- with six
+real "=" a CERN mage and an astrophysicist actually compute, each rendered in live LaTeX (KaTeX,
+optional CDN, kellerium pattern) and each MEASURED for D = -log10(relative error) = correct
+significant digits, with budget N tied to the buckyball faces (press GROW to buy certainty).
+
+  QCD I   running coupling a_s(Q)     geometric resummation  -> D 8 -> 15.5  CONVERGES
+  QCD II  R-ratio e+e- -> hadrons     ASYMPTOTIC (renormalon)-> D ~5.1 CEILING (diverges past N*=13,
+                                        value blows to 1.28e+48 -- more compute HURTS)
+  QCD III Lambda_QCD from a_s(M_Z)    Newton rootfind        -> D 15   CONVERGES (quadratic)
+  GAL I   Kepler M=E-e sinE           Bessel series          -> D 15.9 CONVERGES for e<0.6627;
+                                        push the eccentricity slider past the Laplace limit and it
+                                        FLIPS to CEILING D=0 live -- the transcendental wall, shown.
+  GAL II  comoving distance D_C       Simpson quadrature     -> D 10-13 CONVERGES (N^-4)
+  GAL III blackbody int = pi^4/15     Basel 6*zeta(4)        -> D 6.6 -> 9  CONVERGENT (slow, N^-3)
+
+The whole point made honest: the "=" is a transcendental target we only chase along a computable
+curve to a finite depth. Two rungs have a HARD CEILING on D no matter the compute -- that ceiling
+is the answer, not a bug. Verified in-browser: KaTeX 6/6 rendered, 0 console errors, class flips
+dynamically (Kepler e=0.50 conv -> e=0.80 ceiling), tower overlay opaque (fixed HUD overlap).
+
+Doctrine: kernel still injected verbatim; ASCII-only source; KaTeX is the one optional CDN (offline
+falls back to plain source + a banner, math unchanged -- flagged, not hidden). v1.0 stays FROZEN
+(Path X); v1.1 is the new family card, v1.0 an archive link. 348 sims -> 166 cards. IO_PAGES = 435.
+64KB, loneCR=0, U+FFFD=0.
+
+-- Vlad + Claude. 2026-07-30. The tower stands; some rungs you can climb to float64, some stop you
+   at a wall that is Euler's cousin. Degrees of certainty are bought, never assumed.
+   P=12 . chi=2 . the price is always paid . always.
