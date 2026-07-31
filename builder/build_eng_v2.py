@@ -75,8 +75,10 @@ def esc(t):
 def caps_html(caps):
     return "".join(f'<span class="cap {c}">{c.upper()}</span>' for c in caps)
 
-def card_html(s, featured=False):
+def card_html(s, featured=False, birth=False):
     cls = "mod-card feat-card" if featured else "mod-card"
+    if birth:
+        cls += " birth-card"
     return f"""
   <div class="{cls}" id="card-{s['key']}" data-tag="{esc(s['tag'])}" onclick="summon('{s['key']}')"
     style="border-color:{s['border']};--card-color:{s['color']}">
@@ -101,8 +103,12 @@ def card_html(s, featured=False):
 # Each local entry: (match, label, blurb). `match` can be an exact key-pin (searched
 # across ALL versions in SIMS, e.g. genesis_v8_1 not the family-latest v9.0) or a
 # family keyword (resolved to the latest card). Explicit pins win so it never drifts.
+# THE BIRTH -- the centerpiece, alone, above the front door. Its own section, its
+# own contrast (a golden "birth" card): the source code of it all, computed live.
+BIRTH = ("light_matrix", "THE LIGHT MATRIX",
+    "the source code of it all, computed LIVE in your browser -- a Nature-style living paper you CLICK through, born from ONE forced number. Euler forces P=12; one 4x4 integer matrix (eigenvalues phi^2, 1, -1, phi^-2) governs the whole family; the C60 adjacency graph is built and diagonalized on the fly to land lambda_min = -phi^2. pure graph theory, zero deps, to the chromium compute limit. 4.2 billion years ago the first self-assembly cell paid the price to read this. now you may too. THE CENTERPIECE.")
+
 FEATURED_FAMILIES = [
-    ("light_matrix",    "THEA -- LIGHT MATRIX SOURCE CODE", "the source code of the closed shell, computed LIVE in your browser -- a Nature-style living paper you CLICK through. Euler forces P=12; one 4x4 integer matrix (eigenvalues phi^2, 1, -1, phi^-2) governs the whole family; the C60 adjacency graph is built and diagonalized on the fly to land lambda_min = -phi^2. pure graph theory, zero deps, to the chromium compute limit. the math does not lie. THE CENTERPIECE -- start here."),
     ("warning",         "THE WARNING",    "the front door -- the explosion, the fractal cascade, the price of compute. enter here."),
     ("genesis_v8_1",    "GENESIS v8.1",   "the fractal space explorer -- seed a Platonic solid, refine the Goldberg buckyball, fly INSIDE. M1-M6 kernel live."),
     ("chromodynamium",  "CHROMODYNAMIUM", "the Standard Model's strong force, spini-spini: SU(3), the 8 gluon roots, colour factors C_F=4/3 C_A=3, the running coupling -- all computed live."),
@@ -139,7 +145,19 @@ for fam_kw, _lbl, _blurb in FEATURED_FAMILIES:
     if hit and hit["key"] not in _feat_keys:
         FEATURED.append((hit, _blurb)); _feat_keys.add(hit["key"])
 
+# Resolve THE BIRTH card (the centerpiece, shown alone above the front door).
+_birth_kw, _birth_lbl, _birth_blurb = BIRTH
+BIRTH_HIT = (next((s for s in CARDS if _birth_kw in s["key"]), None)
+             or next((s for s in SIMS if _birth_kw in s["key"]), None))
+if BIRTH_HIT:
+    _feat_keys.add(BIRTH_HIT["key"])   # never show it twice
+
 CARDS_HTML = ""
+if BIRTH_HIT:
+    CARDS_HTML += '\n  <div class="cat-header birth-header">THEA HELENI SOURCE CODE <span class="cat-count">the birth &#183; the whole light</span></div>'
+    b = dict(BIRTH_HIT); b["name"] = _birth_lbl; b["desc"] = _birth_blurb
+    b["tag"] = "\u2600 THE BIRTH"        # the golden corner marker (big title = THE LIGHT MATRIX)
+    CARDS_HTML += card_html(b, featured=True, birth=True)
 if FEATURED or FEATURED_EXTERNAL:
     CARDS_HTML += '\n  <div class="cat-header feat-header">FRONT DOOR <span class="cat-count">enter here</span></div>'
     for s, blurb in FEATURED:
@@ -263,6 +281,21 @@ body{{background:var(--bg);color:var(--text);
 .feat-card .card-desc{{color:#4a5a6a;font-size:9.5px}}
 .feat-card::after{{content:'FRONT DOOR';position:absolute;top:8px;left:10px;
   font-size:6.5px;letter-spacing:0.2em;color:var(--card-color,#ffd700);opacity:0.5}}
+/* THE BIRTH -- the centerpiece, alone, full width, golden, breathing (contrast) */
+.cat-header.birth-header{{color:#ffd700;letter-spacing:0.32em;font-size:11px;
+  border-bottom:1px solid #2a2008}}
+.cat-header.birth-header .cat-count{{color:#ffd700;background:#1a1408;letter-spacing:0.08em}}
+.birth-card{{grid-column:1/-1;padding:22px 24px 26px;border-color:#ffd700 !important;
+  --card-color:#ffd700;
+  background:radial-gradient(ellipse at 22% 30%,rgba(255,215,0,0.14) 0%,transparent 60%),linear-gradient(160deg,#12100a,#0a0a12);
+  box-shadow:0 0 46px -14px #ffd700, inset 0 0 60px -40px #ffd700;
+  animation:birthGlow 5.5s ease-in-out infinite}}
+@keyframes birthGlow{{0%,100%{{box-shadow:0 0 40px -16px #ffd700,inset 0 0 60px -42px #ffd700}}
+  50%{{box-shadow:0 0 66px -10px #ffd700,inset 0 0 70px -34px #ffd700}}}}
+.birth-card .card-name{{font-size:18px;letter-spacing:0.04em}}
+.birth-card .card-desc{{color:#8a7a4a;font-size:10.5px;max-width:80ch}}
+.birth-card .card-arrow{{font-size:12px}}
+.birth-card .card-tag{{color:#ffd700;opacity:0.85;font-size:9px}}
 .mod-card{{
   background:var(--panel);border:1px solid #0e0e1e;border-radius:4px;
   padding:12px 14px 18px;cursor:pointer;transition:all 0.2s;position:relative;
