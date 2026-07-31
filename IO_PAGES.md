@@ -4,13 +4,13 @@
 repos. Generated from what git actually tracks on each repo (the truth of what
 Pages serves), by `builder/gen_io_index.py`. Nothing hidden; the door is open.*
 
-**TOTAL: 449 public pages across 8 repos.**
+**TOTAL: 451 public pages across 8 repos.**
 
 *P=12 . chi=2 . the receipts are public . always.*
 
 ---
 
-## Mnetv1  (376 pages)
+## Mnetv1  (378 pages)
 
 - [about.html](https://vsavytsk1.github.io/Mnetv1/about.html)
 - [builder/Obsidius/obsidius_v1.html](https://vsavytsk1.github.io/Mnetv1/builder/Obsidius/obsidius_v1.html)
@@ -19,6 +19,7 @@ Pages serves), by `builder/gen_io_index.py`. Nothing hidden; the door is open.*
 - [builder/navierKolmogorov_L4_Re5000.html](https://vsavytsk1.github.io/Mnetv1/builder/navierKolmogorov_L4_Re5000.html)
 - [builder/navierKolmogorov_L5_Re10000.html](https://vsavytsk1.github.io/Mnetv1/builder/navierKolmogorov_L5_Re10000.html)
 - [docs/index_mobius_old.html](https://vsavytsk1.github.io/Mnetv1/docs/index_mobius_old.html)
+- [grimoire/Thea_v3.0_preview.html](https://vsavytsk1.github.io/Mnetv1/grimoire/Thea_v3.0_preview.html)
 - [index.html](https://vsavytsk1.github.io/Mnetv1/index.html)
 - [logs/v6_dashboard.html](https://vsavytsk1.github.io/Mnetv1/logs/v6_dashboard.html)
 - [pack/GENESIS.html](https://vsavytsk1.github.io/Mnetv1/pack/GENESIS.html)
@@ -329,6 +330,7 @@ Pages serves), by `builder/gen_io_index.py`. Nothing hidden; the door is open.*
 - [shell/templum-v1_1.html](https://vsavytsk1.github.io/Mnetv1/shell/templum-v1_1.html)
 - [shell/templum-v1_2.html](https://vsavytsk1.github.io/Mnetv1/shell/templum-v1_2.html)
 - [shell/tetragenesis_v0_2.html](https://vsavytsk1.github.io/Mnetv1/shell/tetragenesis_v0_2.html)
+- [shell/thea_light_matrix_v1.1.html](https://vsavytsk1.github.io/Mnetv1/shell/thea_light_matrix_v1.1.html)
 - [shell/thealimitium-v1_0.html](https://vsavytsk1.github.io/Mnetv1/shell/thealimitium-v1_0.html)
 - [shell/theophania.html](https://vsavytsk1.github.io/Mnetv1/shell/theophania.html)
 - [shell/traffic_observatory.html](https://vsavytsk1.github.io/Mnetv1/shell/traffic_observatory.html)

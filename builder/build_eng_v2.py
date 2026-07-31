@@ -103,6 +103,7 @@ def card_html(s, featured=False):
 # family keyword (resolved to the latest card). Explicit pins win so it never drifts.
 FEATURED_FAMILIES = [
     ("warning",         "THE WARNING",    "the front door -- the explosion, the fractal cascade, the price of compute. enter here."),
+    ("light_matrix",    "THEA -- LIGHT MATRIX SOURCE CODE", "the source code of the closed shell, computed LIVE in your browser -- a Nature-style living paper you CLICK through. Euler forces P=12; one 4x4 integer matrix (eigenvalues phi^2, 1, -1, phi^-2) governs the whole family; the C60 adjacency graph is built and diagonalized on the fly to land lambda_min = -phi^2. pure graph theory, zero deps, to the chromium compute limit. the math does not lie. THE CENTERPIECE."),
     ("genesis_v8_1",    "GENESIS v8.1",   "the fractal space explorer -- seed a Platonic solid, refine the Goldberg buckyball, fly INSIDE. M1-M6 kernel live."),
     ("chromodynamium",  "CHROMODYNAMIUM", "the Standard Model's strong force, spini-spini: SU(3), the 8 gluon roots, colour factors C_F=4/3 C_A=3, the running coupling -- all computed live."),
     ("aequalium",       "AEQUALIUM",      "the equals sign, EARNED: a pure-Fourier curve trapped in the C60. grow / WELD the fullerene shell (C60->C240->C960 closed, chi=2 ENUMERATED not formula), buy harmonics, watch the residual fall. the Standard Modelium tower reads how many DIGITS of agreement each real physics '=' can buy, with a portable SHA-256 certificate + an independent verifier. a core focus."),
