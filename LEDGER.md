@@ -9221,3 +9221,22 @@ single em-dash "THEA v3.0 - LIGHT MATRIX"; browser-verified 0 U+FFFD, 0 errors,
 0 leaks. All files byte-scanned loneCR=0 U+FFFD=0. The math is absolute; now it is
 written and checkable. Not yet shipped (not in the drop): light_matrix_v3.js, the
 v2.4.7->v3.0 patch.
+
+### L172 -- THEA LIGHT MATRIX living-paper v1.1: the centerpiece begins (2026-07-31)
+The living source code of physics, computed live. shell/thea_light_matrix_v1.1.html
+-- a Nature-style 2026 dopamine-goblin paper where you CLICK each section and the
+exact identity RUNS LIVE in chromium (pure graph theory + html + js + KaTeX, zero
+deps). Fused math_tree_v5 dopamine primitives (float popup, XP/insight, streak/
+combo/chain, glow-flash) + aequalium KaTeX-with-fallback + status grammar tags.
+BIRTH section on top = "Thea Source Code -- the birth, the whole light" (4.2 Gyr,
+the first self-assembly cell paid the price to read the source). 10 sections, each
+a live calc: phi=2cos(pi/5), P=12 Euler, Gauss-Bonnet=4pi, Eisenstein norm, THE
+LIGHT MATRIX 4x4 eigenvalues {phi^2,1,-1,phi^-2}, golden T recurrence, C60 BUILT +
+DIAGONALIZED live via Jacobi -> lambda_min = -phi^2 to 4e-14, renormalized tower,
+Planck honest wall. Front-door card wired (build_eng_v2 FEATURED, PHYSICS purple;
+sim_scan keyword "light_matrix" to avoid thealimitium collision). Source blueprint
+-> experiments/LIGHT_MATRIX_SOURCE.md. Kernel-verified: 10/10 sections OK, 0 console
+errors, 0 leaks, KaTeX loads. Byte scan clean. This is the tower's first stone; from
+here the math-tree graph-space concept scales to ALL latex physics highschool->QCD,
+computed to the chromium limit, a game for all mages to check. v2.0 next (own folder,
+own builder). Path X.
