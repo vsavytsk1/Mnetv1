@@ -1,0 +1,2062 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>THEA v3.0 — LIGHT MATRIX</title>
+  <style>
+    html {
+      color: #1a1a1a;
+      background-color: #fdfdfd;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 12px;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      html {
+        background-color: white;
+      }
+      body {
+        background-color: transparent;
+        color: black;
+        font-size: 12pt;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a {
+      color: #1a1a1a;
+    }
+    a:visited {
+      color: #1a1a1a;
+    }
+    img {
+      max-width: 100%;
+    }
+    svg {
+      height: auto;
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid #e6e6e6;
+      color: #606060;
+    }
+    code {
+      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+      font-size: 85%;
+      margin: 0;
+      hyphens: manual;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      background-color: #1a1a1a;
+      border: none;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid #1a1a1a;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    th {
+      border-top: 1px solid #1a1a1a;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    /* CSS for syntax highlighting */
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+        color: #aaaaaa;
+      }
+    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+    div.sourceCode
+      {   }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+    code span.at { color: #7d9029; } /* Attribute */
+    code span.bn { color: #40a070; } /* BaseN */
+    code span.bu { color: #008000; } /* BuiltIn */
+    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+    code span.ch { color: #4070a0; } /* Char */
+    code span.cn { color: #880000; } /* Constant */
+    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+    code span.dt { color: #902000; } /* DataType */
+    code span.dv { color: #40a070; } /* DecVal */
+    code span.er { color: #ff0000; font-weight: bold; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #40a070; } /* Float */
+    code span.fu { color: #06287e; } /* Function */
+    code span.im { color: #008000; font-weight: bold; } /* Import */
+    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+    code span.op { color: #666666; } /* Operator */
+    code span.ot { color: #007020; } /* Other */
+    code span.pp { color: #bc7a00; } /* Preprocessor */
+    code span.sc { color: #4070a0; } /* SpecialChar */
+    code span.ss { color: #bb6688; } /* SpecialString */
+    code span.st { color: #4070a0; } /* String */
+    code span.va { color: #19177c; } /* Variable */
+    code span.vs { color: #4070a0; } /* VerbatimString */
+    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+  </style>
+</head>
+<body>
+<header id="title-block-header">
+<h1 class="title">THEA v3.0 — LIGHT MATRIX</h1>
+</header>
+<h1 id="thea-v3.0">THEA v3.0</h1>
+<h2 id="the-math-core-scroll-the-light-matrix">The Math Core Scroll –
+the LIGHT MATRIX</h2>
+<h3
+id="grimoire-volume-iii-b-exact-closure-golden-selection-and-the-renormalized-spectrum">Grimoire
+Volume III-B – exact closure, golden selection, and the renormalized
+spectrum</h3>
+<p><em>Opened: 2026-07-30. Expanded to v3.0: 2026-07-31 – Buenos Aires +
+Ancient Korinthos.</em> <em>Companion to
+<code>shell/aequalium_v2.4.7.html</code>,
+<code>kernel/light_matrix_v3.js</code>, and
+<code>experiments/light_matrix_v3.py</code>.</em> <em>Sub-scroll of the
+cave. P=12. chi=2. The price is always paid. Always.</em></p>
+<hr />
+<h2 id="status-grammar-no-symbol-crosses-the-boundary-unlabelled">STATUS
+GRAMMAR – no symbol crosses the boundary unlabelled</h2>
+<p>THEA v3.0 uses five labels. They are part of the mathematics, not
+decoration.</p>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>label</th>
+<th>meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>EXACT</strong></td>
+<td>follows by algebra, topology, or integer arithmetic shown here</td>
+</tr>
+<tr class="even">
+<td><strong>COMPUTED</strong></td>
+<td>reproduced by the supplied code at stated precision and depth</td>
+</tr>
+<tr class="odd">
+<td><strong>DESIGN CHOICE</strong></td>
+<td>a mapping, cost rule, tolerance, or visualization chosen by the
+cave</td>
+</tr>
+<tr class="even">
+<td><strong>HYPOTHESIS</strong></td>
+<td>a physical interpretation that still owes discriminating
+evidence</td>
+</tr>
+<tr class="odd">
+<td><strong>METAPHOR / EXTERNAL</strong></td>
+<td>imagery, or a separate artifact that must be audited on its own</td>
+</tr>
+</tbody>
+</table>
+<p>The rule is unchanged: target is not result. A theorem, a numerical
+trend, and a physical claim are three different objects even when they
+share the same glyph.</p>
+<hr />
+<h2 id="the-first-word-light-matrix">THE FIRST WORD – LIGHT MATRIX</h2>
+<p><strong>LIGHT MATRIX.</strong> Cool name. Now it has an exact
+mathematical object behind it.</p>
+<p>In v2 the phrase named a mechanism: the seven graph operations
+running on a buckyball hierarchy. In v3 it names a three-layer
+stack:</p>
+<ol type="1">
+<li><strong>an exact closure matrix</strong> on the hexagonal
+lattice;</li>
+<li><strong>an exact four-mode recursion matrix</strong> with spectrum
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">{</mo><msup><mi>ϕ</mi><mn>2</mn></msup><mo>,</mo><mn>1</mn><mo>,</mo><mi>−</mi><mn>1</mn><mo>,</mo><msup><mi>ϕ</mi><mrow><mi>−</mi><mn>2</mn></mrow></msup><mo stretchy="false" form="postfix">}</mo></mrow><annotation encoding="application/x-tex">\{\phi^2,1,-1,\phi^{-2}\}</annotation></semantics></math>;</li>
+<li><strong>a renormalized graph-Laplacian tower</strong> whose low
+modes numerically stabilize as a closed fullerene is refined.</li>
+</ol>
+<p>The word <em>light</em> is still imagery. Nothing below proves that
+photons, spacetime, or quantum foam are fullerene graphs. The matrix,
+topology, recurrence, graph construction, and reported spectra are real.
+The substrate interpretation is a forward model that must still pay for
+evidence.</p>
+<blockquote>
+<p><strong>All code is pure math, merely stepped into
+compute.</strong></p>
+</blockquote>
+<p>A shader is calculus per pixel. A physics loop is an ODE stepped by
+<code>dt</code>. A graph kernel is integer topology plus finite linear
+algebra. The machine cannot hold an infinite limit; it can hold a rule,
+advance it, record the cost, and show the error that remains.</p>
+<hr />
+<h2 id="the-7-operations-the-alphabet-around-the-matrix">THE 7
+OPERATIONS – the alphabet around the matrix</h2>
+<h3
+id="source-kernelgraph_axioms.js-ga.p1..p7-.-scroll-principia_malgebra.md">source:
+<code>kernel/graph_axioms.js</code> (GA.P1..P7) . scroll:
+<code>PRINCIPIA_MALGEBRA.md</code></h3>
+<p>The project exposes seven graph operations. Their existence and code
+behavior are file facts; their correspondence to classical logical
+categories is a <strong>DESIGN MAPPING</strong>, not a theorem about
+<em>Principia Mathematica</em>.</p>
+<table>
+<colgroup>
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>#</th>
+<th>name</th>
+<th>function</th>
+<th>kernel role</th>
+<th>design reading</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>P1</td>
+<td><strong>NODE</strong></td>
+<td><code>GA.P1_node(state,pos)</code></td>
+<td>create a vertex</td>
+<td>existence</td>
+</tr>
+<tr class="even">
+<td>P2</td>
+<td><strong>EDGE</strong></td>
+<td><code>GA.P2_edge(state,a,b)</code></td>
+<td>create adjacency</td>
+<td>relation</td>
+</tr>
+<tr class="odd">
+<td>P3</td>
+<td><strong>COMPOSE</strong></td>
+<td><code>GA.P3_compose(state,a,b,c)</code></td>
+<td>extend a path / refinement relation</td>
+<td>transitivity</td>
+</tr>
+<tr class="even">
+<td>P4</td>
+<td><strong>TRANSFORM</strong></td>
+<td><code>GA.P4_transform(state,m,r)</code></td>
+<td>graph surgery</td>
+<td>substitution</td>
+</tr>
+<tr class="odd">
+<td>P5</td>
+<td><strong>ITERATE</strong></td>
+<td><code>GA.P5_iterate(state,op,cond)</code></td>
+<td>repeat under a stopping rule</td>
+<td>induction</td>
+</tr>
+<tr class="even">
+<td>P6</td>
+<td><strong>AGGREGATE</strong></td>
+<td><code>GA.P6_aggregate(state,ids)</code></td>
+<td>coarse-grain a subgraph</td>
+<td>abstraction</td>
+</tr>
+<tr class="odd">
+<td>P7</td>
+<td><strong>COMPARE</strong></td>
+<td><code>GA.P7_compare(state,A,B)</code></td>
+<td>test equality / invariant / isomorphism</td>
+<td>identity</td>
+</tr>
+</tbody>
+</table>
+<h3 id="the-three-crystal-conditions">The three crystal conditions</h3>
+<ul>
+<li><strong>C1 CHOICE</strong> – an operation selects one branch from
+available possibilities.</li>
+<li><strong>C2 IRREVERSIBILITY</strong> – an aggregation may discard
+information unless a receipt or inverse map is retained.</li>
+<li><strong>C3 CONSISTENCY</strong> – the same comparison on the same
+certified state returns the same verdict.</li>
+</ul>
+<p><strong>Status:</strong> the operations are <strong>VERIFIED FILE
+FACTS</strong>; the crystal language is a <strong>DESIGN
+MODEL</strong>.</p>
+<hr />
+<h1 id="part-i-the-closed-topology">PART I – THE CLOSED TOPOLOGY</h1>
+<h2 id="euler-forces-twelve-pentagons">1. Euler forces twelve
+pentagons</h2>
+<p>Let a closed trivalent fullerene have</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>P</mi><mo>=</mo><mtext mathvariant="normal">number of pentagons</mtext><mo>,</mo><mspace width="2.0em"></mspace><mi>H</mi><mo>=</mo><mtext mathvariant="normal">number of hexagons</mtext><mo>,</mo></mrow><annotation encoding="application/x-tex">
+P=\text{number of pentagons},\qquad
+H=\text{number of hexagons},
+</annotation></semantics></math></p>
+<p>with
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>V</mi><annotation encoding="application/x-tex">V</annotation></semantics></math>
+vertices and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>E</mi><annotation encoding="application/x-tex">E</annotation></semantics></math>
+edges. Trivalence gives</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>3</mn><mi>V</mi><mo>=</mo><mn>2</mn><mi>E</mi><mi>.</mi></mrow><annotation encoding="application/x-tex">
+3V=2E.
+</annotation></semantics></math></p>
+<p>Counting edge incidences around faces gives</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>5</mn><mi>P</mi><mo>+</mo><mn>6</mn><mi>H</mi><mo>=</mo><mn>2</mn><mi>E</mi><mi>.</mi></mrow><annotation encoding="application/x-tex">
+5P+6H=2E.
+</annotation></semantics></math></p>
+<p>Euler closure on the sphere gives</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>V</mi><mo>−</mo><mi>E</mi><mo>+</mo><mi>P</mi><mo>+</mo><mi>H</mi><mo>=</mo><mn>2</mn><mi>.</mi></mrow><annotation encoding="application/x-tex">
+V-E+P+H=2.
+</annotation></semantics></math></p>
+<p>Substitute
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>V</mi><mo>=</mo><mn>2</mn><mi>E</mi><mi>/</mi><mn>3</mn></mrow><annotation encoding="application/x-tex">V=2E/3</annotation></semantics></math>:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mfrac><mrow><mn>2</mn><mi>E</mi></mrow><mn>3</mn></mfrac><mo>−</mo><mi>E</mi><mo>+</mo><mi>P</mi><mo>+</mo><mi>H</mi><mo>=</mo><mn>2</mn><mspace width="1.0em"></mspace><mo>⇒</mo><mspace width="1.0em"></mspace><mi>E</mi><mo>=</mo><mn>3</mn><mrow><mo stretchy="true" form="prefix">(</mo><mi>P</mi><mo>+</mo><mi>H</mi><mo>−</mo><mn>2</mn><mo stretchy="true" form="postfix">)</mo></mrow><mi>.</mi></mrow><annotation encoding="application/x-tex">
+\frac{2E}{3}-E+P+H=2
+\quad\Longrightarrow\quad
+E=3(P+H-2).
+</annotation></semantics></math></p>
+<p>Compare this with
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>E</mi><mo>=</mo><mrow><mo stretchy="true" form="prefix">(</mo><mn>5</mn><mi>P</mi><mo>+</mo><mn>6</mn><mi>H</mi><mo stretchy="true" form="postfix">)</mo></mrow><mi>/</mi><mn>2</mn></mrow><annotation encoding="application/x-tex">E=(5P+6H)/2</annotation></semantics></math>:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>5</mn><mi>P</mi><mo>+</mo><mn>6</mn><mi>H</mi><mo>=</mo><mn>6</mn><mi>P</mi><mo>+</mo><mn>6</mn><mi>H</mi><mo>−</mo><mn>12</mn><mo>,</mo></mrow><annotation encoding="application/x-tex">
+5P+6H=6P+6H-12,
+</annotation></semantics></math></p>
+<p>therefore</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><menclose notation="box"><mrow><mi>P</mi><mo>=</mo><mn>12</mn><mi>.</mi></mrow></menclose><annotation encoding="application/x-tex">
+\boxed{P=12.}
+</annotation></semantics></math></p>
+<p>This is the first exact stability line. It is not an observed
+preference. It is forced by closed spherical topology, trivalence, and
+the restriction to five- and six-sided faces.</p>
+<p>For any fullerene with
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>V</mi><annotation encoding="application/x-tex">V</annotation></semantics></math>
+vertices,</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><menclose notation="box"><mrow><mi>E</mi><mo>=</mo><mfrac><mrow><mn>3</mn><mi>V</mi></mrow><mn>2</mn></mfrac><mo>,</mo><mspace width="2.0em"></mspace><mi>H</mi><mo>=</mo><mfrac><mi>V</mi><mn>2</mn></mfrac><mo>−</mo><mn>10</mn><mo>,</mo><mspace width="2.0em"></mspace><mi>F</mi><mo>=</mo><mfrac><mi>V</mi><mn>2</mn></mfrac><mo>+</mo><mn>2</mn><mi>.</mi></mrow></menclose><annotation encoding="application/x-tex">
+\boxed{
+E=\frac{3V}{2},\qquad
+H=\frac{V}{2}-10,\qquad
+F=\frac{V}{2}+2.
+}
+</annotation></semantics></math></p>
+<p>For
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>C</mi><mn>60</mn></msub><annotation encoding="application/x-tex">C_{60}</annotation></semantics></math>:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><menclose notation="box"><mrow><mi>V</mi><mo>=</mo><mn>60</mn><mo>,</mo><mspace width="0.222em"></mspace><mi>E</mi><mo>=</mo><mn>90</mn><mo>,</mo><mspace width="0.222em"></mspace><mi>F</mi><mo>=</mo><mn>32</mn><mo>,</mo><mspace width="0.222em"></mspace><mi>P</mi><mo>=</mo><mn>12</mn><mo>,</mo><mspace width="0.222em"></mspace><mi>H</mi><mo>=</mo><mn>20</mn><mo>,</mo><mspace width="0.222em"></mspace><mi>χ</mi><mo>=</mo><mn>2</mn><mi>.</mi></mrow></menclose><annotation encoding="application/x-tex">
+\boxed{V=60,\ E=90,\ F=32,\ P=12,\ H=20,\ \chi=2.}
+</annotation></semantics></math></p>
+<h2 id="the-local-and-global-appearances-of-pi">2. The local and global
+appearances of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>π</mi><annotation encoding="application/x-tex">\pi</annotation></semantics></math></h2>
+<p>Assign a combinatorial curvature charge to a
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>p</mi><annotation encoding="application/x-tex">p</annotation></semantics></math>-gon
+in a trivalent tiling:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>K</mi><mi>p</mi></msub><mo>=</mo><mfrac><mi>π</mi><mn>3</mn></mfrac><mrow><mo stretchy="true" form="prefix">(</mo><mn>6</mn><mo>−</mo><mi>p</mi><mo stretchy="true" form="postfix">)</mo></mrow><mi>.</mi></mrow><annotation encoding="application/x-tex">
+K_p=\frac{\pi}{3}(6-p).
+</annotation></semantics></math></p>
+<p>A hexagon contributes zero. A pentagon contributes
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>π</mi><mi>/</mi><mn>3</mn></mrow><annotation encoding="application/x-tex">\pi/3</annotation></semantics></math>.
+Hence</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><munder><mo>∑</mo><mi>f</mi></munder><msub><mi>K</mi><mi>f</mi></msub><mo>=</mo><mn>12</mn><mfrac><mi>π</mi><mn>3</mn></mfrac><mo>=</mo><menclose notation="box"><mrow><mn>4</mn><mi>π</mi></mrow></menclose><mi>.</mi></mrow><annotation encoding="application/x-tex">
+\sum_f K_f
+=12\frac{\pi}{3}
+=\boxed{4\pi}.
+</annotation></semantics></math></p>
+<p>Equivalently,</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><menclose notation="box"><mrow><mfrac><mi>π</mi><mn>3</mn></mfrac><munder><mo>∑</mo><mi>f</mi></munder><mrow><mo stretchy="true" form="prefix">(</mo><mn>6</mn><mo>−</mo><msub><mi>p</mi><mi>f</mi></msub><mo stretchy="true" form="postfix">)</mo></mrow><mo>=</mo><mn>4</mn><mi>π</mi><mi>.</mi></mrow></menclose><annotation encoding="application/x-tex">
+\boxed{
+\frac{\pi}{3}\sum_f(6-p_f)=4\pi.
+}
+</annotation></semantics></math></p>
+<p>The
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msup><mn>60</mn><mo>∘</mo></msup><annotation encoding="application/x-tex">60^\circ</annotation></semantics></math>
+local lattice angle and the
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>4</mn><mi>π</mi></mrow><annotation encoding="application/x-tex">4\pi</annotation></semantics></math>
+global spherical closure are not two unrelated decorations. They are the
+local and global ends of the same combinatorial Gauss–Bonnet ledger.</p>
+<p><strong>Status: EXACT combinatorial topology.</strong> This does not
+say that physical curvature is uniformly concentrated on ideal regular
+faces; it says the total defect charge of the trivalent five/six tiling
+is fixed.</p>
+<hr />
+<h1 id="part-ii-the-hexagonal-closure-matrix">PART II – THE HEXAGONAL
+CLOSURE MATRIX</h1>
+<h2 id="the-lattice-number">3. The lattice number</h2>
+<p>Let</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>ζ</mi><mo>=</mo><msup><mi>e</mi><mrow><mi>i</mi><mi>π</mi><mi>/</mi><mn>3</mn></mrow></msup><mo>,</mo><mspace width="2.0em"></mspace><msup><mi>ζ</mi><mn>2</mn></msup><mo>=</mo><mi>ζ</mi><mo>−</mo><mn>1</mn><mo>,</mo></mrow><annotation encoding="application/x-tex">
+\zeta=e^{i\pi/3},\qquad \zeta^2=\zeta-1,
+</annotation></semantics></math></p>
+<p>and represent a triangular-lattice displacement by</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>z</mi><mo>=</mo><mi>k</mi><mo>+</mo><mo>ℓ</mo><mi>ζ</mi><mo>,</mo><mspace width="2.0em"></mspace><mi>k</mi><mo>,</mo><mo>ℓ</mo><mo>∈</mo><mi>ℤ</mi><mi>.</mi></mrow><annotation encoding="application/x-tex">
+z=k+\ell\zeta,\qquad k,\ell\in\mathbb Z.
+</annotation></semantics></math></p>
+<p>Its squared Euclidean length is the hexagonal norm</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><menclose notation="box"><mrow><mi>T</mi><mo>=</mo><mi>N</mi><mrow><mo stretchy="true" form="prefix">(</mo><mi>z</mi><mo stretchy="true" form="postfix">)</mo></mrow><mo>=</mo><msup><mrow><mo stretchy="true" form="prefix">|</mo><mi>z</mi><mo stretchy="true" form="postfix">|</mo></mrow><mn>2</mn></msup><mo>=</mo><msup><mi>k</mi><mn>2</mn></msup><mo>+</mo><mi>k</mi><mo>ℓ</mo><mo>+</mo><msup><mo>ℓ</mo><mn>2</mn></msup><mi>.</mi></mrow></menclose><annotation encoding="application/x-tex">
+\boxed{
+T=N(z)=|z|^2=k^2+k\ell+\ell^2.
+}
+</annotation></semantics></math></p>
+<p>The same integer
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>T</mi><annotation encoding="application/x-tex">T</annotation></semantics></math>
+is the triangulation/area multiplier in the icosahedral Goldberg
+construction.</p>
+<h2 id="multiplication-becomes-a-matrix">4. Multiplication becomes a
+matrix</h2>
+<p>Multiplication by
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>z</mi><mo>=</mo><mi>k</mi><mo>+</mo><mo>ℓ</mo><mi>ζ</mi></mrow><annotation encoding="application/x-tex">z=k+\ell\zeta</annotation></semantics></math>
+acts on another lattice coordinate
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi><mo>+</mo><mi>b</mi><mi>ζ</mi></mrow><annotation encoding="application/x-tex">a+b\zeta</annotation></semantics></math>
+through</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mo stretchy="true" form="prefix">(</mo><mtable><mtr><mtd columnalign="center" style="text-align: center"><mi>a</mi><mi>′</mi></mtd></mtr><mtr><mtd columnalign="center" style="text-align: center"><mi>b</mi><mi>′</mi></mtd></mtr></mtable><mo stretchy="true" form="postfix">)</mo></mrow><mo>=</mo><msub><mi>M</mi><mrow><mi>k</mi><mo>,</mo><mo>ℓ</mo></mrow></msub><mrow><mo stretchy="true" form="prefix">(</mo><mtable><mtr><mtd columnalign="center" style="text-align: center"><mi>a</mi></mtd></mtr><mtr><mtd columnalign="center" style="text-align: center"><mi>b</mi></mtd></mtr></mtable><mo stretchy="true" form="postfix">)</mo></mrow><mo>,</mo><mspace width="2.0em"></mspace><menclose notation="box"><mrow><msub><mi>M</mi><mrow><mi>k</mi><mo>,</mo><mo>ℓ</mo></mrow></msub><mo>=</mo><mrow><mo stretchy="true" form="prefix">(</mo><mtable><mtr><mtd columnalign="center" style="text-align: center"><mi>k</mi></mtd><mtd columnalign="center" style="text-align: center"><mi>−</mi><mo>ℓ</mo></mtd></mtr><mtr><mtd columnalign="center" style="text-align: center"><mo>ℓ</mo></mtd><mtd columnalign="center" style="text-align: center"><mi>k</mi><mo>+</mo><mo>ℓ</mo></mtd></mtr></mtable><mo stretchy="true" form="postfix">)</mo></mrow><mi>.</mi></mrow></menclose></mrow><annotation encoding="application/x-tex">
+\begin{pmatrix}
+a&#39;\\ b&#39;
+\end{pmatrix}
+=
+M_{k,\ell}
+\begin{pmatrix}
+a\\ b
+\end{pmatrix},
+\qquad
+\boxed{
+M_{k,\ell}=
+\begin{pmatrix}
+k&amp;-\ell\\
+\ell&amp;k+\ell
+\end{pmatrix}.
+}
+</annotation></semantics></math></p>
+<p>Its determinant is exactly</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><menclose notation="box"><mrow><mo>det</mo><msub><mi>M</mi><mrow><mi>k</mi><mo>,</mo><mo>ℓ</mo></mrow></msub><mo>=</mo><msup><mi>k</mi><mn>2</mn></msup><mo>+</mo><mi>k</mi><mo>ℓ</mo><mo>+</mo><msup><mo>ℓ</mo><mn>2</mn></msup><mo>=</mo><mi>T</mi><mi>.</mi></mrow></menclose><annotation encoding="application/x-tex">
+\boxed{\det M_{k,\ell}=k^2+k\ell+\ell^2=T.}
+</annotation></semantics></math></p>
+<p>Use the hexagonal metric</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>Q</mi><mo>=</mo><mrow><mo stretchy="true" form="prefix">(</mo><mtable><mtr><mtd columnalign="center" style="text-align: center"><mn>1</mn></mtd><mtd columnalign="center" style="text-align: center"><mfrac displaystyle="false"><mn>1</mn><mn>2</mn></mfrac></mtd></mtr><mtr><mtd columnalign="center" style="text-align: center"><mfrac displaystyle="false"><mn>1</mn><mn>2</mn></mfrac></mtd><mtd columnalign="center" style="text-align: center"><mn>1</mn></mtd></mtr></mtable><mo stretchy="true" form="postfix">)</mo></mrow><mi>.</mi></mrow><annotation encoding="application/x-tex">
+Q=
+\begin{pmatrix}
+1&amp;\tfrac12\\[1mm]
+\tfrac12&amp;1
+\end{pmatrix}.
+</annotation></semantics></math></p>
+<p>Direct multiplication gives</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><menclose notation="box"><mrow><msubsup><mi>M</mi><mrow><mi>k</mi><mo>,</mo><mo>ℓ</mo></mrow><mi>𝖳</mi></msubsup><mi>Q</mi><msub><mi>M</mi><mrow><mi>k</mi><mo>,</mo><mo>ℓ</mo></mrow></msub><mo>=</mo><mi>T</mi><mi>Q</mi><mi>.</mi></mrow></menclose><annotation encoding="application/x-tex">
+\boxed{
+M_{k,\ell}^{\mathsf T}QM_{k,\ell}=TQ.
+}
+</annotation></semantics></math></p>
+<p>Therefore
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>M</mi><mrow><mi>k</mi><mo>,</mo><mo>ℓ</mo></mrow></msub><mi>/</mi><msqrt><mi>T</mi></msqrt></mrow><annotation encoding="application/x-tex">M_{k,\ell}/\sqrt T</annotation></semantics></math>
+is a rotation with respect to the hexagonal metric. The transform is an
+exact scale-plus-rotation, not a random distortion. Its angle is</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><menclose notation="box"><mrow><msub><mi>θ</mi><mrow><mi>k</mi><mo>,</mo><mo>ℓ</mo></mrow></msub><mo>=</mo><mo>arg</mo><mrow><mo stretchy="true" form="prefix">(</mo><mi>k</mi><mo>+</mo><mo>ℓ</mo><mi>ζ</mi><mo stretchy="true" form="postfix">)</mo></mrow><mo>=</mo><msup><mo>tan</mo><mrow><mi>−</mi><mn>1</mn></mrow></msup><mspace width="-0.167em"></mspace><mrow><mo stretchy="true" form="prefix">(</mo><mfrac><mrow><msqrt><mn>3</mn></msqrt><mspace width="0.167em"></mspace><mo>ℓ</mo></mrow><mrow><mn>2</mn><mi>k</mi><mo>+</mo><mo>ℓ</mo></mrow></mfrac><mo stretchy="true" form="postfix">)</mo></mrow><mi>.</mi></mrow></menclose><annotation encoding="application/x-tex">
+\boxed{
+\theta_{k,\ell}
+=\arg(k+\ell\zeta)
+=\tan^{-1}\!\left(\frac{\sqrt3\,\ell}{2k+\ell}\right).
+}
+</annotation></semantics></math></p>
+<p>For exact integer code we use
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>Q</mi><mn>2</mn></msub><mo>=</mo><mn>2</mn><mi>Q</mi></mrow><annotation encoding="application/x-tex">Q_2=2Q</annotation></semantics></math>:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msubsup><mi>M</mi><mrow><mi>k</mi><mo>,</mo><mo>ℓ</mo></mrow><mi>𝖳</mi></msubsup><msub><mi>Q</mi><mn>2</mn></msub><msub><mi>M</mi><mrow><mi>k</mi><mo>,</mo><mo>ℓ</mo></mrow></msub><mo>=</mo><mi>T</mi><msub><mi>Q</mi><mn>2</mn></msub><mo>,</mo><mspace width="2.0em"></mspace><msub><mi>Q</mi><mn>2</mn></msub><mo>=</mo><mrow><mo stretchy="true" form="prefix">(</mo><mtable><mtr><mtd columnalign="center" style="text-align: center"><mn>2</mn></mtd><mtd columnalign="center" style="text-align: center"><mn>1</mn></mtd></mtr><mtr><mtd columnalign="center" style="text-align: center"><mn>1</mn></mtd><mtd columnalign="center" style="text-align: center"><mn>2</mn></mtd></mtr></mtable><mo stretchy="true" form="postfix">)</mo></mrow><mi>.</mi></mrow><annotation encoding="application/x-tex">
+M_{k,\ell}^{\mathsf T}Q_2M_{k,\ell}=TQ_2,
+\qquad
+Q_2=\begin{pmatrix}2&amp;1\\1&amp;2\end{pmatrix}.
+</annotation></semantics></math></p>
+<p>No floating-point comparison is needed to certify this identity.</p>
+<h2 id="exact-closure-composition">5. Exact closure composition</h2>
+<p>Let
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>g</mi><mo>=</mo><mi>a</mi><mo>+</mo><mi>b</mi><mi>ζ</mi></mrow><annotation encoding="application/x-tex">g=a+b\zeta</annotation></semantics></math>
+be a closure generator. Then</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mo stretchy="true" form="prefix">(</mo><mi>a</mi><mo>+</mo><mi>b</mi><mi>ζ</mi><mo stretchy="true" form="postfix">)</mo></mrow><mrow><mo stretchy="true" form="prefix">(</mo><mi>k</mi><mo>+</mo><mo>ℓ</mo><mi>ζ</mi><mo stretchy="true" form="postfix">)</mo></mrow><mo>=</mo><mrow><mo stretchy="true" form="prefix">(</mo><mi>a</mi><mi>k</mi><mo>−</mo><mi>b</mi><mo>ℓ</mo><mo stretchy="true" form="postfix">)</mo></mrow><mo>+</mo><mrow><mo stretchy="true" form="prefix">(</mo><mi>a</mi><mo>ℓ</mo><mo>+</mo><mi>b</mi><mi>k</mi><mo>+</mo><mi>b</mi><mo>ℓ</mo><mo stretchy="true" form="postfix">)</mo></mrow><mi>ζ</mi><mi>.</mi></mrow><annotation encoding="application/x-tex">
+(a+b\zeta)(k+\ell\zeta)
+=(ak-b\ell)+(a\ell+bk+b\ell)\zeta.
+</annotation></semantics></math></p>
+<p>Thus</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><menclose notation="box"><mrow><mrow><mo stretchy="true" form="prefix">(</mo><mi>k</mi><mi>′</mi><mo>,</mo><mo>ℓ</mo><mi>′</mi><mo stretchy="true" form="postfix">)</mo></mrow><mo>=</mo><mrow><mo stretchy="true" form="prefix">(</mo><mi>a</mi><mi>k</mi><mo>−</mo><mi>b</mi><mo>ℓ</mo><mo>,</mo><mspace width="0.222em"></mspace><mi>a</mi><mo>ℓ</mo><mo>+</mo><mi>b</mi><mi>k</mi><mo>+</mo><mi>b</mi><mo>ℓ</mo><mo stretchy="true" form="postfix">)</mo></mrow><mi>.</mi></mrow></menclose><annotation encoding="application/x-tex">
+\boxed{
+(k&#39;,\ell&#39;)=(ak-b\ell,\ a\ell+bk+b\ell).
+}
+</annotation></semantics></math></p>
+<p>Equivalently,</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><menclose notation="box"><mrow><msub><mi>M</mi><mrow><mi>a</mi><mo>,</mo><mi>b</mi></mrow></msub><msub><mi>M</mi><mrow><mi>k</mi><mo>,</mo><mo>ℓ</mo></mrow></msub><mo>=</mo><msub><mi>M</mi><mrow><mi>k</mi><mi>′</mi><mo>,</mo><mo>ℓ</mo><mi>′</mi></mrow></msub><mi>.</mi></mrow></menclose><annotation encoding="application/x-tex">
+\boxed{
+M_{a,b}M_{k,\ell}=M_{k&#39;,\ell&#39;}.
+}
+</annotation></semantics></math></p>
+<p>The norm is multiplicative:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><menclose notation="box"><mrow><mi>T</mi><mi>′</mi><mo>=</mo><mi>N</mi><mrow><mo stretchy="true" form="prefix">(</mo><mi>g</mi><mi>z</mi><mo stretchy="true" form="postfix">)</mo></mrow><mo>=</mo><mi>N</mi><mrow><mo stretchy="true" form="prefix">(</mo><mi>g</mi><mo stretchy="true" form="postfix">)</mo></mrow><mi>N</mi><mrow><mo stretchy="true" form="prefix">(</mo><mi>z</mi><mo stretchy="true" form="postfix">)</mo></mrow><mo>=</mo><mrow><mo stretchy="true" form="prefix">(</mo><msup><mi>a</mi><mn>2</mn></msup><mo>+</mo><mi>a</mi><mi>b</mi><mo>+</mo><msup><mi>b</mi><mn>2</mn></msup><mo stretchy="true" form="postfix">)</mo></mrow><mrow><mo stretchy="true" form="prefix">(</mo><msup><mi>k</mi><mn>2</mn></msup><mo>+</mo><mi>k</mi><mo>ℓ</mo><mo>+</mo><msup><mo>ℓ</mo><mn>2</mn></msup><mo stretchy="true" form="postfix">)</mo></mrow><mi>.</mi></mrow></menclose><annotation encoding="application/x-tex">
+\boxed{
+T&#39;=N(gz)=N(g)N(z)
+=(a^2+ab+b^2)(k^2+k\ell+\ell^2).
+}
+</annotation></semantics></math></p>
+<p>This is the exact answer to “pick the next buckyball that closes the
+topology in matrix format.” Choose an integer lattice generator,
+multiply, canonicalize by the sixfold lattice symmetries, and rebuild
+the certified closed graph.</p>
+<h3 id="the-exact-nested-leapfrog-lane">The exact nested leapfrog
+lane</h3>
+<p>Choose
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>g</mi><mo>=</mo><mn>1</mn><mo>+</mo><mi>ζ</mi></mrow><annotation encoding="application/x-tex">g=1+\zeta</annotation></semantics></math>,
+i.e. <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mo stretchy="true" form="prefix">(</mo><mi>a</mi><mo>,</mo><mi>b</mi><mo stretchy="true" form="postfix">)</mo></mrow><mo>=</mo><mrow><mo stretchy="true" form="prefix">(</mo><mn>1</mn><mo>,</mo><mn>1</mn><mo stretchy="true" form="postfix">)</mo></mrow></mrow><annotation encoding="application/x-tex">(a,b)=(1,1)</annotation></semantics></math>.
+Then</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>N</mi><mrow><mo stretchy="true" form="prefix">(</mo><mi>g</mi><mo stretchy="true" form="postfix">)</mo></mrow><mo>=</mo><mn>1</mn><mo>+</mo><mn>1</mn><mo>+</mo><mn>1</mn><mo>=</mo><mn>3</mn><mi>.</mi></mrow><annotation encoding="application/x-tex">
+N(g)=1+1+1=3.
+</annotation></semantics></math></p>
+<p>Repeated multiplication gives an exact nested area tower</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>T</mi><mi>n</mi></msub><mo>=</mo><msup><mn>3</mn><mi>n</mi></msup><mo>,</mo><mspace width="2.0em"></mspace><msub><mi>V</mi><mi>n</mi></msub><mo>=</mo><mn>20</mn><mspace width="0.167em"></mspace><msup><mn>3</mn><mi>n</mi></msup><mo>,</mo></mrow><annotation encoding="application/x-tex">
+T_n=3^n,
+\qquad
+V_n=20\,3^n,
+</annotation></semantics></math></p>
+<p>and the closed fullerene sequence</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><menclose notation="box"><mrow><msub><mi>C</mi><mn>20</mn></msub><mo>→</mo><msub><mi>C</mi><mn>60</mn></msub><mo>→</mo><msub><mi>C</mi><mn>180</mn></msub><mo>→</mo><msub><mi>C</mi><mn>540</mn></msub><mo>→</mo><mi>⋯</mi><mi>.</mi></mrow></menclose><annotation encoding="application/x-tex">
+\boxed{C_{20}\to C_{60}\to C_{180}\to C_{540}\to\cdots.}
+</annotation></semantics></math></p>
+<p>The linear scale multiplier of this fixed transform is
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msqrt><mn>3</mn></msqrt><annotation encoding="application/x-tex">\sqrt3</annotation></semantics></math>,
+not
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>ϕ</mi><annotation encoding="application/x-tex">\phi</annotation></semantics></math>.</p>
+<hr />
+<h1 id="part-iii-the-golden-selector">PART III – THE GOLDEN
+SELECTOR</h1>
+<h2 id="the-fibonacci-matrix">6. The Fibonacci matrix</h2>
+<p>Define</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>F</mi><mi>ϕ</mi></msub><mo>=</mo><mrow><mo stretchy="true" form="prefix">(</mo><mtable><mtr><mtd columnalign="center" style="text-align: center"><mn>1</mn></mtd><mtd columnalign="center" style="text-align: center"><mn>1</mn></mtd></mtr><mtr><mtd columnalign="center" style="text-align: center"><mn>1</mn></mtd><mtd columnalign="center" style="text-align: center"><mn>0</mn></mtd></mtr></mtable><mo stretchy="true" form="postfix">)</mo></mrow><mo>,</mo><mspace width="2.0em"></mspace><mrow><mo stretchy="true" form="prefix">(</mo><mtable><mtr><mtd columnalign="center" style="text-align: center"><msub><mi>k</mi><mrow><mi>n</mi><mo>+</mo><mn>1</mn></mrow></msub></mtd></mtr><mtr><mtd columnalign="center" style="text-align: center"><msub><mo>ℓ</mo><mrow><mi>n</mi><mo>+</mo><mn>1</mn></mrow></msub></mtd></mtr></mtable><mo stretchy="true" form="postfix">)</mo></mrow><mo>=</mo><msub><mi>F</mi><mi>ϕ</mi></msub><mrow><mo stretchy="true" form="prefix">(</mo><mtable><mtr><mtd columnalign="center" style="text-align: center"><msub><mi>k</mi><mi>n</mi></msub></mtd></mtr><mtr><mtd columnalign="center" style="text-align: center"><msub><mo>ℓ</mo><mi>n</mi></msub></mtd></mtr></mtable><mo stretchy="true" form="postfix">)</mo></mrow><mi>.</mi></mrow><annotation encoding="application/x-tex">
+F_\phi=
+\begin{pmatrix}
+1&amp;1\\
+1&amp;0
+\end{pmatrix},
+\qquad
+\begin{pmatrix}
+k_{n+1}\\ \ell_{n+1}
+\end{pmatrix}
+=F_\phi
+\begin{pmatrix}
+k_n\\ \ell_n
+\end{pmatrix}.
+</annotation></semantics></math></p>
+<p>Starting from
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mo stretchy="true" form="prefix">(</mo><msub><mi>k</mi><mn>0</mn></msub><mo>,</mo><msub><mo>ℓ</mo><mn>0</mn></msub><mo stretchy="true" form="postfix">)</mo></mrow><mo>=</mo><mrow><mo stretchy="true" form="prefix">(</mo><mn>1</mn><mo>,</mo><mn>0</mn><mo stretchy="true" form="postfix">)</mo></mrow></mrow><annotation encoding="application/x-tex">(k_0,\ell_0)=(1,0)</annotation></semantics></math>,</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mo stretchy="true" form="prefix">(</mo><msub><mi>k</mi><mi>n</mi></msub><mo>,</mo><msub><mo>ℓ</mo><mi>n</mi></msub><mo stretchy="true" form="postfix">)</mo></mrow><mo>=</mo><mrow><mo stretchy="true" form="prefix">(</mo><msub><mi>F</mi><mrow><mi>n</mi><mo>+</mo><mn>1</mn></mrow></msub><mo>,</mo><msub><mi>F</mi><mi>n</mi></msub><mo stretchy="true" form="postfix">)</mo></mrow><mi>.</mi></mrow><annotation encoding="application/x-tex">
+(k_n,\ell_n)=(F_{n+1},F_n).
+</annotation></semantics></math></p>
+<p>The eigenvalues of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>F</mi><mi>ϕ</mi></msub><annotation encoding="application/x-tex">F_\phi</annotation></semantics></math>
+are</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><menclose notation="box"><mrow><mi>ϕ</mi><mo>,</mo><mspace width="0.222em"></mspace><mo>−</mo><msup><mi>ϕ</mi><mrow><mi>−</mi><mn>1</mn></mrow></msup></mrow></menclose><mo>,</mo><mspace width="2.0em"></mspace><mi>ϕ</mi><mo>=</mo><mfrac><mrow><mn>1</mn><mo>+</mo><msqrt><mn>5</mn></msqrt></mrow><mn>2</mn></mfrac><mi>.</mi></mrow><annotation encoding="application/x-tex">
+\boxed{\phi,\ -\phi^{-1}},
+\qquad
+\phi=\frac{1+\sqrt5}{2}.
+</annotation></semantics></math></p>
+<p>For
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>r</mi><mi>n</mi></msub><mo>=</mo><msub><mi>k</mi><mi>n</mi></msub><mi>/</mi><msub><mo>ℓ</mo><mi>n</mi></msub></mrow><annotation encoding="application/x-tex">r_n=k_n/\ell_n</annotation></semantics></math>
+when
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mo>ℓ</mo><mi>n</mi></msub><mo>≠</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">\ell_n\ne0</annotation></semantics></math>,</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>r</mi><mrow><mi>n</mi><mo>+</mo><mn>1</mn></mrow></msub><mo>=</mo><mn>1</mn><mo>+</mo><mfrac><mn>1</mn><msub><mi>r</mi><mi>n</mi></msub></mfrac><mi>.</mi></mrow><annotation encoding="application/x-tex">
+r_{n+1}=1+\frac1{r_n}.
+</annotation></semantics></math></p>
+<p>Since
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>ϕ</mi><mo>=</mo><mn>1</mn><mo>+</mo><mn>1</mn><mi>/</mi><mi>ϕ</mi></mrow><annotation encoding="application/x-tex">\phi=1+1/\phi</annotation></semantics></math>,</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><menclose notation="box"><mrow><msub><mi>r</mi><mrow><mi>n</mi><mo>+</mo><mn>1</mn></mrow></msub><mo>−</mo><mi>ϕ</mi><mo>=</mo><mi>−</mi><mfrac><mrow><msub><mi>r</mi><mi>n</mi></msub><mo>−</mo><mi>ϕ</mi></mrow><mrow><mi>ϕ</mi><msub><mi>r</mi><mi>n</mi></msub></mrow></mfrac><mi>.</mi></mrow></menclose><annotation encoding="application/x-tex">
+\boxed{
+ r_{n+1}-\phi
+ =-\frac{r_n-\phi}{\phi r_n}.
+}
+</annotation></semantics></math></p>
+<p>Near the fixed point,</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><menclose notation="box"><mrow><msub><mi>r</mi><mrow><mi>n</mi><mo>+</mo><mn>1</mn></mrow></msub><mo>−</mo><mi>ϕ</mi><mo>≈</mo><mi>−</mi><msup><mi>ϕ</mi><mrow><mi>−</mi><mn>2</mn></mrow></msup><mrow><mo stretchy="true" form="prefix">(</mo><msub><mi>r</mi><mi>n</mi></msub><mo>−</mo><mi>ϕ</mi><mo stretchy="true" form="postfix">)</mo></mrow><mi>.</mi></mrow></menclose><annotation encoding="application/x-tex">
+\boxed{
+ r_{n+1}-\phi\approx-\phi^{-2}(r_n-\phi).
+}
+</annotation></semantics></math></p>
+<p>The sign alternates and the magnitude contracts by approximately
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mi>ϕ</mi><mrow><mi>−</mi><mn>2</mn></mrow></msup><mo>=</mo><mn>0.381966</mn><mi>…</mi></mrow><annotation encoding="application/x-tex">\phi^{-2}=0.381966\ldots</annotation></semantics></math>.
+More exactly,</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><menclose notation="box"><mrow><mfrac><msub><mi>F</mi><mrow><mi>n</mi><mo>+</mo><mn>1</mn></mrow></msub><msub><mi>F</mi><mi>n</mi></msub></mfrac><mo>−</mo><mi>ϕ</mi><mo>=</mo><mfrac><msup><mrow><mo stretchy="true" form="prefix">(</mo><mi>−</mi><msup><mi>ϕ</mi><mrow><mi>−</mi><mn>1</mn></mrow></msup><mo stretchy="true" form="postfix">)</mo></mrow><mi>n</mi></msup><msub><mi>F</mi><mi>n</mi></msub></mfrac><mi>.</mi></mrow></menclose><annotation encoding="application/x-tex">
+\boxed{
+\frac{F_{n+1}}{F_n}-\phi
+=\frac{(-\phi^{-1})^n}{F_n}.
+}
+</annotation></semantics></math></p>
+<p>The continued fraction
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>ϕ</mi><mo>=</mo><mrow><mo stretchy="true" form="prefix">[</mo><mn>1</mn><mo>;</mo><mn>1</mn><mo>,</mo><mn>1</mn><mo>,</mo><mn>1</mn><mo>,</mo><mi>…</mi><mo stretchy="true" form="postfix">]</mo></mrow></mrow><annotation encoding="application/x-tex">\phi=[1;1,1,1,\ldots]</annotation></semantics></math>
+makes consecutive Fibonacci ratios the canonical integer approximants to
+the golden direction. Therefore the selector is not “golden because it
+looks golden”; it is the integer closure path that converges to the
+golden ray through the standard best rational approximants.</p>
+<h2 id="closed-shells-selected-by-the-golden-ray">7. Closed shells
+selected by the golden ray</h2>
+<p>For every integer pair
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="true" form="prefix">(</mo><msub><mi>k</mi><mi>n</mi></msub><mo>,</mo><msub><mo>ℓ</mo><mi>n</mi></msub><mo stretchy="true" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(k_n,\ell_n)</annotation></semantics></math>,
+define</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>T</mi><mi>n</mi></msub><mo>=</mo><msubsup><mi>k</mi><mi>n</mi><mn>2</mn></msubsup><mo>+</mo><msub><mi>k</mi><mi>n</mi></msub><msub><mo>ℓ</mo><mi>n</mi></msub><mo>+</mo><msubsup><mo>ℓ</mo><mi>n</mi><mn>2</mn></msubsup><mi>.</mi></mrow><annotation encoding="application/x-tex">
+T_n=k_n^2+k_n\ell_n+\ell_n^2.
+</annotation></semantics></math></p>
+<p>Subdividing the 20 faces of an icosahedron into
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>T</mi><mi>n</mi></msub><annotation encoding="application/x-tex">T_n</annotation></semantics></math>
+triangles and taking the dual gives a trivalent fullerene with</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><menclose notation="box"><mrow><msub><mi>V</mi><mi>n</mi></msub><mo>=</mo><mn>20</mn><msub><mi>T</mi><mi>n</mi></msub><mo>,</mo><mspace width="1.0em"></mspace><msub><mi>E</mi><mi>n</mi></msub><mo>=</mo><mn>30</mn><msub><mi>T</mi><mi>n</mi></msub><mo>,</mo><mspace width="1.0em"></mspace><msub><mi>P</mi><mi>n</mi></msub><mo>=</mo><mn>12</mn><mo>,</mo><mspace width="1.0em"></mspace><msub><mi>H</mi><mi>n</mi></msub><mo>=</mo><mn>10</mn><mrow><mo stretchy="true" form="prefix">(</mo><msub><mi>T</mi><mi>n</mi></msub><mo>−</mo><mn>1</mn><mo stretchy="true" form="postfix">)</mo></mrow><mo>,</mo><mspace width="1.0em"></mspace><msub><mi>F</mi><mi>n</mi></msub><mo>=</mo><mn>10</mn><msub><mi>T</mi><mi>n</mi></msub><mo>+</mo><mn>2</mn><mi>.</mi></mrow></menclose><annotation encoding="application/x-tex">
+\boxed{
+V_n=20T_n,
+\quad E_n=30T_n,
+\quad P_n=12,
+\quad H_n=10(T_n-1),
+\quad F_n=10T_n+2.
+}
+</annotation></semantics></math></p>
+<p>The first golden-selected shells are</p>
+<table>
+<thead>
+<tr class="header">
+<th
+style="text-align: right;"><math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>n</mi><annotation encoding="application/x-tex">n</annotation></semantics></math></th>
+<th
+style="text-align: right;"><math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="true" form="prefix">(</mo><msub><mi>k</mi><mi>n</mi></msub><mo>,</mo><msub><mo>ℓ</mo><mi>n</mi></msub><mo stretchy="true" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(k_n,\ell_n)</annotation></semantics></math></th>
+<th
+style="text-align: right;"><math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>T</mi><mi>n</mi></msub><annotation encoding="application/x-tex">T_n</annotation></semantics></math></th>
+<th style="text-align: right;">cage</th>
+<th
+style="text-align: right;"><math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>H</mi><mi>n</mi></msub><annotation encoding="application/x-tex">H_n</annotation></semantics></math></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: right;">0</td>
+<td
+style="text-align: right;"><math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="true" form="prefix">(</mo><mn>1</mn><mo>,</mo><mn>0</mn><mo stretchy="true" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(1,0)</annotation></semantics></math></td>
+<td style="text-align: right;">1</td>
+<td
+style="text-align: right;"><math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>C</mi><mn>20</mn></msub><annotation encoding="application/x-tex">C_{20}</annotation></semantics></math></td>
+<td style="text-align: right;">0</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">1</td>
+<td
+style="text-align: right;"><math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="true" form="prefix">(</mo><mn>1</mn><mo>,</mo><mn>1</mn><mo stretchy="true" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(1,1)</annotation></semantics></math></td>
+<td style="text-align: right;">3</td>
+<td
+style="text-align: right;"><math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>C</mi><mn>60</mn></msub><annotation encoding="application/x-tex">C_{60}</annotation></semantics></math></td>
+<td style="text-align: right;">20</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">2</td>
+<td
+style="text-align: right;"><math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="true" form="prefix">(</mo><mn>2</mn><mo>,</mo><mn>1</mn><mo stretchy="true" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(2,1)</annotation></semantics></math></td>
+<td style="text-align: right;">7</td>
+<td
+style="text-align: right;"><math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>C</mi><mn>140</mn></msub><annotation encoding="application/x-tex">C_{140}</annotation></semantics></math></td>
+<td style="text-align: right;">60</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">3</td>
+<td
+style="text-align: right;"><math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="true" form="prefix">(</mo><mn>3</mn><mo>,</mo><mn>2</mn><mo stretchy="true" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(3,2)</annotation></semantics></math></td>
+<td style="text-align: right;">19</td>
+<td
+style="text-align: right;"><math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>C</mi><mn>380</mn></msub><annotation encoding="application/x-tex">C_{380}</annotation></semantics></math></td>
+<td style="text-align: right;">180</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">4</td>
+<td
+style="text-align: right;"><math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="true" form="prefix">(</mo><mn>5</mn><mo>,</mo><mn>3</mn><mo stretchy="true" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(5,3)</annotation></semantics></math></td>
+<td style="text-align: right;">49</td>
+<td
+style="text-align: right;"><math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>C</mi><mn>980</mn></msub><annotation encoding="application/x-tex">C_{980}</annotation></semantics></math></td>
+<td style="text-align: right;">480</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">5</td>
+<td
+style="text-align: right;"><math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="true" form="prefix">(</mo><mn>8</mn><mo>,</mo><mn>5</mn><mo stretchy="true" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(8,5)</annotation></semantics></math></td>
+<td style="text-align: right;">129</td>
+<td
+style="text-align: right;"><math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>C</mi><mn>2580</mn></msub><annotation encoding="application/x-tex">C_{2580}</annotation></semantics></math></td>
+<td style="text-align: right;">1280</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">6</td>
+<td
+style="text-align: right;"><math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="true" form="prefix">(</mo><mn>13</mn><mo>,</mo><mn>8</mn><mo stretchy="true" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(13,8)</annotation></semantics></math></td>
+<td style="text-align: right;">337</td>
+<td
+style="text-align: right;"><math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>C</mi><mn>6740</mn></msub><annotation encoding="application/x-tex">C_{6740}</annotation></semantics></math></td>
+<td style="text-align: right;">3360</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">7</td>
+<td
+style="text-align: right;"><math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="true" form="prefix">(</mo><mn>21</mn><mo>,</mo><mn>13</mn><mo stretchy="true" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(21,13)</annotation></semantics></math></td>
+<td style="text-align: right;">883</td>
+<td
+style="text-align: right;"><math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>C</mi><mn>17660</mn></msub><annotation encoding="application/x-tex">C_{17660}</annotation></semantics></math></td>
+<td style="text-align: right;">8820</td>
+</tr>
+</tbody>
+</table>
+<p>The triangulation numbers satisfy</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><menclose notation="box"><mrow><msub><mi>T</mi><mrow><mi>n</mi><mo>+</mo><mn>3</mn></mrow></msub><mo>=</mo><mn>2</mn><msub><mi>T</mi><mrow><mi>n</mi><mo>+</mo><mn>2</mn></mrow></msub><mo>+</mo><mn>2</mn><msub><mi>T</mi><mrow><mi>n</mi><mo>+</mo><mn>1</mn></mrow></msub><mo>−</mo><msub><mi>T</mi><mi>n</mi></msub></mrow></menclose><annotation encoding="application/x-tex">
+\boxed{
+T_{n+3}=2T_{n+2}+2T_{n+1}-T_n
+}
+</annotation></semantics></math></p>
+<p>with closed form</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><menclose notation="box"><mrow><msub><mi>T</mi><mi>n</mi></msub><mo>=</mo><mfrac><mn>2</mn><mn>5</mn></mfrac><mrow><mo stretchy="true" form="prefix">(</mo><msup><mi>ϕ</mi><mrow><mn>2</mn><mi>n</mi><mo>+</mo><mn>2</mn></mrow></msup><mo>+</mo><msup><mi>ϕ</mi><mrow><mi>−</mi><mn>2</mn><mi>n</mi><mo>−</mo><mn>2</mn></mrow></msup><mo stretchy="true" form="postfix">)</mo></mrow><mo>−</mo><mfrac><mn>1</mn><mn>5</mn></mfrac><msup><mrow><mo stretchy="true" form="prefix">(</mo><mi>−</mi><mn>1</mn><mo stretchy="true" form="postfix">)</mo></mrow><mi>n</mi></msup><mi>.</mi></mrow></menclose><annotation encoding="application/x-tex">
+\boxed{
+T_n=\frac25\left(\phi^{2n+2}+\phi^{-2n-2}\right)
+-\frac15(-1)^n.
+}
+</annotation></semantics></math></p>
+<p>Hence</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><menclose notation="box"><mrow><mfrac><msub><mi>T</mi><mrow><mi>n</mi><mo>+</mo><mn>1</mn></mrow></msub><msub><mi>T</mi><mi>n</mi></msub></mfrac><mo>→</mo><msup><mi>ϕ</mi><mn>2</mn></msup><mi>.</mi></mrow></menclose><annotation encoding="application/x-tex">
+\boxed{
+\frac{T_{n+1}}{T_n}\longrightarrow\phi^2.
+}
+</annotation></semantics></math></p>
+<p>If bond length is held fixed, radius scales asymptotically as
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>R</mi><mi>n</mi></msub><mo>∝</mo><msqrt><msub><mi>T</mi><mi>n</mi></msub></msqrt></mrow><annotation encoding="application/x-tex">R_n\propto\sqrt{T_n}</annotation></semantics></math>,
+so</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><menclose notation="box"><mrow><mfrac><msub><mi>R</mi><mrow><mi>n</mi><mo>+</mo><mn>1</mn></mrow></msub><msub><mi>R</mi><mi>n</mi></msub></mfrac><mo>→</mo><mi>ϕ</mi><mi>.</mi></mrow></menclose><annotation encoding="application/x-tex">
+\boxed{
+\frac{R_{n+1}}{R_n}\longrightarrow\phi.
+}
+</annotation></semantics></math></p>
+<h3 id="critical-distinction-selected-is-not-nested">Critical
+distinction: selected is not nested</h3>
+<p>A fixed exact Goldberg transform has integer area multiplier</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>S</mi><mo>=</mo><msup><mi>a</mi><mn>2</mn></msup><mo>+</mo><mi>a</mi><mi>b</mi><mo>+</mo><msup><mi>b</mi><mn>2</mn></msup><mo>∈</mo><mi>ℤ</mi><mi>.</mi></mrow><annotation encoding="application/x-tex">
+S=a^2+ab+b^2\in\mathbb Z.
+</annotation></semantics></math></p>
+<p>Its linear multiplier is
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msqrt><mi>S</mi></msqrt><annotation encoding="application/x-tex">\sqrt S</annotation></semantics></math>.
+Exact golden nesting would require</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msqrt><mi>S</mi></msqrt><mo>=</mo><mi>ϕ</mi><mspace width="1.0em"></mspace><mo>⇒</mo><mspace width="1.0em"></mspace><mi>S</mi><mo>=</mo><msup><mi>ϕ</mi><mn>2</mn></msup><mo>,</mo></mrow><annotation encoding="application/x-tex">
+\sqrt S=\phi
+\quad\Longrightarrow\quad
+S=\phi^2,
+</annotation></semantics></math></p>
+<p>but
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>S</mi><annotation encoding="application/x-tex">S</annotation></semantics></math>
+is an integer and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msup><mi>ϕ</mi><mn>2</mn></msup><annotation encoding="application/x-tex">\phi^2</annotation></semantics></math>
+is irrational. Therefore</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><menclose notation="box"><mrow><mrow><mtext mathvariant="normal">no fixed exactly nested Goldberg transform has linear ratio </mtext><mspace width="0.333em"></mspace></mrow><mi>ϕ</mi><mi>.</mi></mrow></menclose><annotation encoding="application/x-tex">
+\boxed{
+\text{no fixed exactly nested Goldberg transform has linear ratio }\phi.
+}
+</annotation></semantics></math></p>
+<p>The Fibonacci construction is a sequence of independently closed
+shells whose successive ratios approach
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>ϕ</mi><annotation encoding="application/x-tex">\phi</annotation></semantics></math>.
+This distinction must remain visible in the v3 HUD.</p>
+<hr />
+<h1 id="part-iv-the-exact-light-matrix">PART IV – THE EXACT LIGHT
+MATRIX</h1>
+<h2 id="lift-the-pair-recursion-into-quadratic-shell-data">8. Lift the
+pair recursion into quadratic shell data</h2>
+<p>Set</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>u</mi><mi>n</mi></msub><mo>=</mo><mrow><mo stretchy="true" form="prefix">(</mo><mtable><mtr><mtd columnalign="center" style="text-align: center"><msubsup><mi>k</mi><mi>n</mi><mn>2</mn></msubsup></mtd></mtr><mtr><mtd columnalign="center" style="text-align: center"><msub><mi>k</mi><mi>n</mi></msub><msub><mo>ℓ</mo><mi>n</mi></msub></mtd></mtr><mtr><mtd columnalign="center" style="text-align: center"><msubsup><mo>ℓ</mo><mi>n</mi><mn>2</mn></msubsup></mtd></mtr></mtable><mo stretchy="true" form="postfix">)</mo></mrow><mi>.</mi></mrow><annotation encoding="application/x-tex">
+u_n=
+\begin{pmatrix}
+k_n^2\\ k_n\ell_n\\ \ell_n^2
+\end{pmatrix}.
+</annotation></semantics></math></p>
+<p>Since
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>k</mi><mi>′</mi><mo>=</mo><mi>k</mi><mo>+</mo><mo>ℓ</mo></mrow><annotation encoding="application/x-tex">k&#39;=k+\ell</annotation></semantics></math>
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>ℓ</mo><mi>′</mi><mo>=</mo><mi>k</mi></mrow><annotation encoding="application/x-tex">\ell&#39;=k</annotation></semantics></math>,</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><menclose notation="box"><mrow><msub><mi>u</mi><mrow><mi>n</mi><mo>+</mo><mn>1</mn></mrow></msub><mo>=</mo><mi>B</mi><msub><mi>u</mi><mi>n</mi></msub><mo>,</mo><mspace width="2.0em"></mspace><mi>B</mi><mo>=</mo><mrow><mo stretchy="true" form="prefix">(</mo><mtable><mtr><mtd columnalign="center" style="text-align: center"><mn>1</mn></mtd><mtd columnalign="center" style="text-align: center"><mn>2</mn></mtd><mtd columnalign="center" style="text-align: center"><mn>1</mn></mtd></mtr><mtr><mtd columnalign="center" style="text-align: center"><mn>1</mn></mtd><mtd columnalign="center" style="text-align: center"><mn>1</mn></mtd><mtd columnalign="center" style="text-align: center"><mn>0</mn></mtd></mtr><mtr><mtd columnalign="center" style="text-align: center"><mn>1</mn></mtd><mtd columnalign="center" style="text-align: center"><mn>0</mn></mtd><mtd columnalign="center" style="text-align: center"><mn>0</mn></mtd></mtr></mtable><mo stretchy="true" form="postfix">)</mo></mrow><mi>.</mi></mrow></menclose><annotation encoding="application/x-tex">
+\boxed{
+u_{n+1}=B u_n,
+\qquad
+B=
+\begin{pmatrix}
+1&amp;2&amp;1\\
+1&amp;1&amp;0\\
+1&amp;0&amp;0
+\end{pmatrix}.
+}
+</annotation></semantics></math></p>
+<p>Append the invariant pentagon coordinate:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>s</mi><mi>n</mi></msub><mo>=</mo><mrow><mo stretchy="true" form="prefix">(</mo><mtable><mtr><mtd columnalign="center" style="text-align: center"><msubsup><mi>k</mi><mi>n</mi><mn>2</mn></msubsup></mtd></mtr><mtr><mtd columnalign="center" style="text-align: center"><msub><mi>k</mi><mi>n</mi></msub><msub><mo>ℓ</mo><mi>n</mi></msub></mtd></mtr><mtr><mtd columnalign="center" style="text-align: center"><msubsup><mo>ℓ</mo><mi>n</mi><mn>2</mn></msubsup></mtd></mtr><mtr><mtd columnalign="center" style="text-align: center"><msub><mi>P</mi><mi>n</mi></msub></mtd></mtr></mtable><mo stretchy="true" form="postfix">)</mo></mrow><mo>,</mo><mspace width="2.0em"></mspace><msub><mi>P</mi><mi>n</mi></msub><mo>=</mo><mn>12</mn><mi>.</mi></mrow><annotation encoding="application/x-tex">
+s_n=
+\begin{pmatrix}
+k_n^2\\ k_n\ell_n\\ \ell_n^2\\ P_n
+\end{pmatrix},
+\qquad P_n=12.
+</annotation></semantics></math></p>
+<p>The v3 core matrix is</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><menclose notation="box"><mrow><msub><mi>s</mi><mrow><mi>n</mi><mo>+</mo><mn>1</mn></mrow></msub><mo>=</mo><msub><mi>ℳ</mi><mrow><mi mathvariant="normal">l</mi><mi mathvariant="normal">i</mi><mi mathvariant="normal">g</mi><mi mathvariant="normal">h</mi><mi mathvariant="normal">t</mi></mrow></msub><msub><mi>s</mi><mi>n</mi></msub><mo>,</mo><mspace width="2.0em"></mspace><msub><mi>ℳ</mi><mrow><mi mathvariant="normal">l</mi><mi mathvariant="normal">i</mi><mi mathvariant="normal">g</mi><mi mathvariant="normal">h</mi><mi mathvariant="normal">t</mi></mrow></msub><mo>=</mo><mrow><mo stretchy="true" form="prefix">(</mo><mtable><mtr><mtd columnalign="center" style="text-align: center"><mn>1</mn></mtd><mtd columnalign="center" style="text-align: center"><mn>2</mn></mtd><mtd columnalign="center" style="text-align: center"><mn>1</mn></mtd><mtd columnalign="center" style="text-align: center"><mn>0</mn></mtd></mtr><mtr><mtd columnalign="center" style="text-align: center"><mn>1</mn></mtd><mtd columnalign="center" style="text-align: center"><mn>1</mn></mtd><mtd columnalign="center" style="text-align: center"><mn>0</mn></mtd><mtd columnalign="center" style="text-align: center"><mn>0</mn></mtd></mtr><mtr><mtd columnalign="center" style="text-align: center"><mn>1</mn></mtd><mtd columnalign="center" style="text-align: center"><mn>0</mn></mtd><mtd columnalign="center" style="text-align: center"><mn>0</mn></mtd><mtd columnalign="center" style="text-align: center"><mn>0</mn></mtd></mtr><mtr><mtd columnalign="center" style="text-align: center"><mn>0</mn></mtd><mtd columnalign="center" style="text-align: center"><mn>0</mn></mtd><mtd columnalign="center" style="text-align: center"><mn>0</mn></mtd><mtd columnalign="center" style="text-align: center"><mn>1</mn></mtd></mtr></mtable><mo stretchy="true" form="postfix">)</mo></mrow><mi>.</mi></mrow></menclose><annotation encoding="application/x-tex">
+\boxed{
+s_{n+1}=\mathcal M_{\mathrm{light}}s_n,
+\qquad
+\mathcal M_{\mathrm{light}}=
+\begin{pmatrix}
+1&amp;2&amp;1&amp;0\\
+1&amp;1&amp;0&amp;0\\
+1&amp;0&amp;0&amp;0\\
+0&amp;0&amp;0&amp;1
+\end{pmatrix}.
+}
+</annotation></semantics></math></p>
+<p>Its characteristic polynomial is</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><menclose notation="box"><mrow><mo>det</mo><mrow><mo stretchy="true" form="prefix">(</mo><mi>λ</mi><mi>I</mi><mo>−</mo><msub><mi>ℳ</mi><mrow><mi mathvariant="normal">l</mi><mi mathvariant="normal">i</mi><mi mathvariant="normal">g</mi><mi mathvariant="normal">h</mi><mi mathvariant="normal">t</mi></mrow></msub><mo stretchy="true" form="postfix">)</mo></mrow><mo>=</mo><mrow><mo stretchy="true" form="prefix">(</mo><mi>λ</mi><mo>−</mo><mn>1</mn><mo stretchy="true" form="postfix">)</mo></mrow><mrow><mo stretchy="true" form="prefix">(</mo><mi>λ</mi><mo>+</mo><mn>1</mn><mo stretchy="true" form="postfix">)</mo></mrow><mrow><mo stretchy="true" form="prefix">(</mo><msup><mi>λ</mi><mn>2</mn></msup><mo>−</mo><mn>3</mn><mi>λ</mi><mo>+</mo><mn>1</mn><mo stretchy="true" form="postfix">)</mo></mrow><mi>.</mi></mrow></menclose><annotation encoding="application/x-tex">
+\boxed{
+\det(\lambda I-\mathcal M_{\mathrm{light}})
+=(\lambda-1)(\lambda+1)(\lambda^2-3\lambda+1).
+}
+</annotation></semantics></math></p>
+<p>Therefore</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><menclose notation="box"><mrow><mo>spec</mo><mrow><mo stretchy="true" form="prefix">(</mo><msub><mi>ℳ</mi><mrow><mi mathvariant="normal">l</mi><mi mathvariant="normal">i</mi><mi mathvariant="normal">g</mi><mi mathvariant="normal">h</mi><mi mathvariant="normal">t</mi></mrow></msub><mo stretchy="true" form="postfix">)</mo></mrow><mo>=</mo><mo stretchy="false" form="prefix">{</mo><msup><mi>ϕ</mi><mn>2</mn></msup><mo>,</mo><mspace width="0.222em"></mspace><mn>1</mn><mo>,</mo><mspace width="0.222em"></mspace><mo>−</mo><mn>1</mn><mo>,</mo><mspace width="0.222em"></mspace><msup><mi>ϕ</mi><mrow><mi>−</mi><mn>2</mn></mrow></msup><mo stretchy="false" form="postfix">}</mo><mi>.</mi></mrow></menclose><annotation encoding="application/x-tex">
+\boxed{
+\operatorname{spec}(\mathcal M_{\mathrm{light}})
+=\{\phi^2,\ 1,\ -1,\ \phi^{-2}\}.
+}
+</annotation></semantics></math></p>
+<p>A convenient eigenbasis is</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mtable><mtr><mtd columnalign="center" style="text-align: center"><mi>λ</mi></mtd><mtd columnalign="center" style="text-align: center"><mtext mathvariant="normal">eigenvector</mtext></mtd><mtd columnalign="left" style="text-align: left"><mtext mathvariant="normal">role</mtext></mtd></mtr><mtr><mtd columnalign="center" style="text-align: center"><msup><mi>ϕ</mi><mn>2</mn></msup></mtd><mtd columnalign="center" style="text-align: center"><msup><mrow><mo stretchy="true" form="prefix">(</mo><msup><mi>ϕ</mi><mn>2</mn></msup><mo>,</mo><mi>ϕ</mi><mo>,</mo><mn>1</mn><mo>,</mo><mn>0</mn><mo stretchy="true" form="postfix">)</mo></mrow><mi>𝖳</mi></msup></mtd><mtd columnalign="left" style="text-align: left"><mtext mathvariant="normal">dominant area/atom growth</mtext></mtd></mtr><mtr><mtd columnalign="center" style="text-align: center"><mn>1</mn></mtd><mtd columnalign="center" style="text-align: center"><msup><mrow><mo stretchy="true" form="prefix">(</mo><mn>0</mn><mo>,</mo><mn>0</mn><mo>,</mo><mn>0</mn><mo>,</mo><mn>1</mn><mo stretchy="true" form="postfix">)</mo></mrow><mi>𝖳</mi></msup></mtd><mtd columnalign="left" style="text-align: left"><mrow><mtext mathvariant="normal">the fixed </mtext><mspace width="0.333em"></mspace></mrow><mi>P</mi><mo>=</mo><mn>12</mn><mrow><mspace width="0.333em"></mspace><mtext mathvariant="normal"> topological mode</mtext></mrow></mtd></mtr><mtr><mtd columnalign="center" style="text-align: center"><mi>−</mi><mn>1</mn></mtd><mtd columnalign="center" style="text-align: center"><msup><mrow><mo stretchy="true" form="prefix">(</mo><mi>−</mi><mn>2</mn><mo>,</mo><mn>1</mn><mo>,</mo><mn>2</mn><mo>,</mo><mn>0</mn><mo stretchy="true" form="postfix">)</mo></mrow><mi>𝖳</mi></msup></mtd><mtd columnalign="left" style="text-align: left"><mtext mathvariant="normal">alternating overshoot around the golden ray</mtext></mtd></mtr><mtr><mtd columnalign="center" style="text-align: center"><msup><mi>ϕ</mi><mrow><mi>−</mi><mn>2</mn></mrow></msup></mtd><mtd columnalign="center" style="text-align: center"><msup><mrow><mo stretchy="true" form="prefix">(</mo><msup><mi>ϕ</mi><mrow><mi>−</mi><mn>2</mn></mrow></msup><mo>,</mo><mi>−</mi><msup><mi>ϕ</mi><mrow><mi>−</mi><mn>1</mn></mrow></msup><mo>,</mo><mn>1</mn><mo>,</mo><mn>0</mn><mo stretchy="true" form="postfix">)</mo></mrow><mi>𝖳</mi></msup></mtd><mtd columnalign="left" style="text-align: left"><mtext mathvariant="normal">decaying correction / inward mode</mtext></mtd></mtr></mtable><annotation encoding="application/x-tex">
+\begin{array}{c|c|l}
+\lambda &amp; \text{eigenvector} &amp; \text{role}\\ \hline
+\phi^2 &amp; (\phi^2,\phi,1,0)^{\mathsf T} &amp; \text{dominant area/atom growth}\\
+1 &amp; (0,0,0,1)^{\mathsf T} &amp; \text{the fixed }P=12\text{ topological mode}\\
+-1 &amp; (-2,1,2,0)^{\mathsf T} &amp; \text{alternating overshoot around the golden ray}\\
+\phi^{-2} &amp; (\phi^{-2},-\phi^{-1},1,0)^{\mathsf T} &amp; \text{decaying correction / inward mode}
+\end{array}
+</annotation></semantics></math></p>
+<p>This is the exact algebraic heart of the name <strong>LIGHT
+MATRIX</strong>. It has a growth mode, an invariant mode, an alternating
+mode, and a contracting mode in one integer recursion.</p>
+<p><strong>Status: EXACT.</strong> No fit was used to obtain these four
+eigenvalues.</p>
+<hr />
+<h1 id="part-v-two-fractalization-lanes-never-confused-again">PART V –
+TWO FRACTALIZATION LANES, NEVER CONFUSED AGAIN</h1>
+<h2 id="lane-a-local-hexagon-compute">9. Lane A – local hexagon
+compute</h2>
+<p><code>GK.refineAllHexes()</code> and related face-local operations
+create a hierarchy inside the currently rendered mesh. They are useful
+for allocating compute, tracing a curve, and exploring local recursive
+structure.</p>
+<p>But an independently refined face does not automatically weld its
+boundary to its neighbor. Therefore the output may be an <strong>OPEN
+CANDIDATE</strong> with boundary edges, nonmanifold edges, or
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>χ</mi><mo>≠</mo><mn>2</mn></mrow><annotation encoding="application/x-tex">\chi\ne2</annotation></semantics></math>.</p>
+<p>The v3 rule is:</p>
+<pre class="text"><code>HEX_LOCAL / ALL / 5s / 6s
+    -&gt; hierarchy and compute budget
+    -&gt; run exact topology verifier
+    -&gt; label CLOSED only if the verifier passes
+    -&gt; otherwise label OPEN CANDIDATE and light the unpaid seams</code></pre>
+<p>Never infer closure from the formula counts alone.</p>
+<h2 id="lane-b-certified-shell-closure">10. Lane B – certified shell
+closure</h2>
+<p>A closure operator changes the lattice coordinate and then constructs
+or loads a closed indexed graph:</p>
+<pre class="text"><code>GC_CLOSE(a,b):  (k,l) -&gt; canonical((a+b*zeta6)(k+l*zeta6))
+GOLDEN_NEXT:    (k,l) -&gt; (k+l,k)
+LEAPFROG:       exact GC area multiplier 3
+WELD:           existing exact-ID chamfer lineage, verified independently</code></pre>
+<p>For every candidate, the closure certificate must verify</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><menclose notation="box"><mrow><mi>P</mi><mo>=</mo><mn>12</mn><mo>,</mo><mspace width="1.0em"></mspace><mi>χ</mi><mo>=</mo><mn>2</mn><mo>,</mo><mspace width="1.0em"></mspace><mi>∂</mi><mi>E</mi><mo>=</mo><mn>0</mn><mo>,</mo><mspace width="1.0em"></mspace><msub><mi>E</mi><mrow><mi mathvariant="normal">n</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">n</mi><mi mathvariant="normal">m</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">n</mi><mi mathvariant="normal">i</mi><mi mathvariant="normal">f</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">l</mi><mi mathvariant="normal">d</mi></mrow></msub><mo>=</mo><mn>0</mn><mo>,</mo><mspace width="1.0em"></mspace><mo>deg</mo><mrow><mo stretchy="true" form="prefix">(</mo><mi>v</mi><mo stretchy="true" form="postfix">)</mo></mrow><mo>=</mo><mn>3</mn><mspace width="0.222em"></mspace><mo>∀</mo><mi>v</mi><mi>.</mi></mrow></menclose><annotation encoding="application/x-tex">
+\boxed{
+P=12,
+\quad \chi=2,
+\quad \partial E=0,
+\quad E_{\mathrm{nonmanifold}}=0,
+\quad \deg(v)=3\ \forall v.
+}
+</annotation></semantics></math></p>
+<p>The old sentence “C60
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mo>→</mo><annotation encoding="application/x-tex">\to</annotation></semantics></math>
+C420 is a closed shell because the formula says so” is retired. The
+legacy 7x face hierarchy may be a useful graph mutation, but the current
+kernel itself shows that its unwelded states are open. The certified
+closed lineages are named separately.</p>
+<h3 id="existing-weld-lineage">Existing WELD lineage</h3>
+<p>The exact-ID chamfer/WELD operator currently verifies</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><menclose notation="box"><mrow><msub><mi>C</mi><mn>60</mn></msub><mo>→</mo><msub><mi>C</mi><mn>240</mn></msub><mo>→</mo><msub><mi>C</mi><mn>960</mn></msub><mo>→</mo><msub><mi>C</mi><mn>3840</mn></msub><mo>→</mo><mi>⋯</mi></mrow></menclose><annotation encoding="application/x-tex">
+\boxed{C_{60}\to C_{240}\to C_{960}\to C_{3840}\to\cdots}
+</annotation></semantics></math></p>
+<p>with
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>V</mi><mo>↦</mo><mn>4</mn><mi>V</mi></mrow><annotation encoding="application/x-tex">V\mapsto4V</annotation></semantics></math>,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>P</mi><mo>=</mo><mn>12</mn></mrow><annotation encoding="application/x-tex">P=12</annotation></semantics></math>,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>χ</mi><mo>=</mo><mn>2</mn></mrow><annotation encoding="application/x-tex">\chi=2</annotation></semantics></math>,
+closed twin half-edges, and degree 3. This is a separate exact closure
+family from the Fibonacci selector and the leapfrog
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msup><mn>3</mn><mi>n</mi></msup><annotation encoding="application/x-tex">3^n</annotation></semantics></math>
+tower.</p>
+<hr />
+<h1 id="part-vi-the-stability-lines">PART VI – THE STABILITY LINES</h1>
+<h2 id="stability-line-a-topology">11. Stability line A – topology</h2>
+<p>For every certified closed fullerene in this class,</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><menclose notation="box"><mrow><msub><mi>P</mi><mi>n</mi></msub><mo>=</mo><mn>12</mn><mi>.</mi></mrow></menclose><annotation encoding="application/x-tex">
+\boxed{P_n=12.}
+</annotation></semantics></math></p>
+<p>In
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>ℳ</mi><mrow><mi mathvariant="normal">l</mi><mi mathvariant="normal">i</mi><mi mathvariant="normal">g</mi><mi mathvariant="normal">h</mi><mi mathvariant="normal">t</mi></mrow></msub><annotation encoding="application/x-tex">\mathcal M_{\mathrm{light}}</annotation></semantics></math>,
+this is the eigenvalue-1 mode. It neither grows nor decays.</p>
+<h2 id="stability-line-b-the-golden-projective-ray">12. Stability line B
+– the golden projective ray</h2>
+<p>For the Fibonacci selector,</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><menclose notation="box"><mrow><mfrac><msub><mi>k</mi><mi>n</mi></msub><msub><mo>ℓ</mo><mi>n</mi></msub></mfrac><mo>→</mo><mi>ϕ</mi><mo>,</mo></mrow></menclose><annotation encoding="application/x-tex">
+\boxed{\frac{k_n}{\ell_n}\to\phi,}
+</annotation></semantics></math></p>
+<p>and deviations alternate while shrinking asymptotically by
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msup><mi>ϕ</mi><mrow><mi>−</mi><mn>2</mn></mrow></msup><annotation encoding="application/x-tex">\phi^{-2}</annotation></semantics></math>.
+This is a projective stability line, not a physical energy minimum.</p>
+<h2 id="stability-line-c-the-exact-c60-spectral-boundary">13. Stability
+line C – the exact C60 spectral boundary</h2>
+<p>Let
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>A</mi><mn>60</mn></msub><annotation encoding="application/x-tex">A_{60}</annotation></semantics></math>
+be the adjacency matrix of the combinatorial truncated icosahedron. The
+supplied exact SymPy certificate factors its characteristic polynomial
+as</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mtable><mtr><mtd columnalign="right" style="text-align: right"><msub><mi>χ</mi><msub><mi>A</mi><mn>60</mn></msub></msub><mrow><mo stretchy="true" form="prefix">(</mo><mi>x</mi><mo stretchy="true" form="postfix">)</mo></mrow><mo>=</mo><mrow></mrow></mtd><mtd columnalign="left" style="text-align: left"><mrow><mo stretchy="true" form="prefix">(</mo><mi>x</mi><mo>−</mo><mn>3</mn><mo stretchy="true" form="postfix">)</mo></mrow><msup><mrow><mo stretchy="true" form="prefix">(</mo><mi>x</mi><mo>−</mo><mn>1</mn><mo stretchy="true" form="postfix">)</mo></mrow><mn>9</mn></msup><msup><mrow><mo stretchy="true" form="prefix">(</mo><mi>x</mi><mo>+</mo><mn>2</mn><mo stretchy="true" form="postfix">)</mo></mrow><mn>4</mn></msup><msup><mrow><mo stretchy="true" form="prefix">(</mo><msup><mi>x</mi><mn>2</mn></msup><mo>−</mo><mi>x</mi><mo>−</mo><mn>3</mn><mo stretchy="true" form="postfix">)</mo></mrow><mn>5</mn></msup><msup><mrow><mo stretchy="true" form="prefix">(</mo><msup><mi>x</mi><mn>2</mn></msup><mo>+</mo><mi>x</mi><mo>−</mo><mn>4</mn><mo stretchy="true" form="postfix">)</mo></mrow><mn>4</mn></msup></mtd></mtr><mtr><mtd columnalign="right" style="text-align: right"></mtd><mtd columnalign="left" style="text-align: left"><mi>×</mi><msup><mrow><mo stretchy="true" form="prefix">(</mo><msup><mi>x</mi><mn>2</mn></msup><mo>+</mo><mi>x</mi><mo>−</mo><mn>1</mn><mo stretchy="true" form="postfix">)</mo></mrow><mn>5</mn></msup><msup><mrow><mo stretchy="true" form="prefix">(</mo><msup><mi>x</mi><mn>2</mn></msup><mo>+</mo><mn>3</mn><mi>x</mi><mo>+</mo><mn>1</mn><mo stretchy="true" form="postfix">)</mo></mrow><mn>3</mn></msup><msup><mrow><mo stretchy="true" form="prefix">(</mo><msup><mi>x</mi><mn>4</mn></msup><mo>−</mo><mn>3</mn><msup><mi>x</mi><mn>3</mn></msup><mo>−</mo><mn>2</mn><msup><mi>x</mi><mn>2</mn></msup><mo>+</mo><mn>7</mn><mi>x</mi><mo>+</mo><mn>1</mn><mo stretchy="true" form="postfix">)</mo></mrow><mn>3</mn></msup><mi>.</mi></mtd></mtr></mtable><annotation encoding="application/x-tex">
+\begin{aligned}
+\chi_{A_{60}}(x)={}&amp;(x-3)(x-1)^9(x+2)^4
+(x^2-x-3)^5(x^2+x-4)^4\\
+&amp;\times(x^2+x-1)^5(x^2+3x+1)^3
+(x^4-3x^3-2x^2+7x+1)^3.
+\end{aligned}
+</annotation></semantics></math></p>
+<p>The smallest root comes from
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mi>x</mi><mn>2</mn></msup><mo>+</mo><mn>3</mn><mi>x</mi><mo>+</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">x^2+3x+1</annotation></semantics></math>:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><menclose notation="box"><mrow><msub><mi>λ</mi><mo>min</mo></msub><mrow><mo stretchy="true" form="prefix">(</mo><msub><mi>A</mi><mn>60</mn></msub><mo stretchy="true" form="postfix">)</mo></mrow><mo>=</mo><mfrac><mrow><mi>−</mi><mn>3</mn><mo>−</mo><msqrt><mn>5</mn></msqrt></mrow><mn>2</mn></mfrac><mo>=</mo><mi>−</mi><msup><mi>ϕ</mi><mn>2</mn></msup><mo>,</mo></mrow></menclose><annotation encoding="application/x-tex">
+\boxed{
+\lambda_{\min}(A_{60})
+=\frac{-3-\sqrt5}{2}
+=-\phi^2,
+}
+</annotation></semantics></math></p>
+<p>with multiplicity 3.</p>
+<p>This is an exact occurrence of the golden ratio in the C60 graph
+spectrum. It is not by itself a complete theorem of chemical stability.
+The adjacency matrix is a graph/Hueckel-style object; a real molecular
+Hamiltonian contains additional physics.</p>
+<h2 id="stability-line-d-the-renormalized-laplacian-tower">14. Stability
+line D – the renormalized Laplacian tower</h2>
+<p>For a cubic fullerene graph
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>G</mi><mi>n</mi></msub><annotation encoding="application/x-tex">G_n</annotation></semantics></math>,
+define</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>A</mi><mi>n</mi></msub><mo>=</mo><mi>A</mi><mrow><mo stretchy="true" form="prefix">(</mo><msub><mi>G</mi><mi>n</mi></msub><mo stretchy="true" form="postfix">)</mo></mrow><mo>,</mo><mspace width="2.0em"></mspace><msub><mi>L</mi><mi>n</mi></msub><mo>=</mo><mn>3</mn><mi>I</mi><mo>−</mo><msub><mi>A</mi><mi>n</mi></msub><mi>.</mi></mrow><annotation encoding="application/x-tex">
+A_n=A(G_n),
+\qquad
+L_n=3I-A_n.
+</annotation></semantics></math></p>
+<p>On the exact leapfrog tower</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>G</mi><mn>0</mn></msub><mo>=</mo><msub><mi>C</mi><mn>20</mn></msub><mo>,</mo><mspace width="2.0em"></mspace><msub><mi>G</mi><mrow><mi>n</mi><mo>+</mo><mn>1</mn></mrow></msub><mo>=</mo><mo>Leapfrog</mo><mrow><mo stretchy="true" form="prefix">(</mo><msub><mi>G</mi><mi>n</mi></msub><mo stretchy="true" form="postfix">)</mo></mrow><mo>,</mo><mspace width="2.0em"></mspace><msub><mi>T</mi><mi>n</mi></msub><mo>=</mo><msup><mn>3</mn><mi>n</mi></msup><mo>,</mo></mrow><annotation encoding="application/x-tex">
+G_0=C_{20},
+\qquad
+G_{n+1}=\operatorname{Leapfrog}(G_n),
+\qquad
+T_n=3^n,
+</annotation></semantics></math></p>
+<p>measure the first nonzero eigenvalue
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>λ</mi><mn>2</mn></msub><mrow><mo stretchy="true" form="prefix">(</mo><msub><mi>L</mi><mi>n</mi></msub><mo stretchy="true" form="postfix">)</mo></mrow></mrow><annotation encoding="application/x-tex">\lambda_2(L_n)</annotation></semantics></math>
+and renormalize it:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><menclose notation="box"><mrow><msub><mi>μ</mi><mrow><mn>1</mn><mo>,</mo><mi>n</mi></mrow></msub><mo>=</mo><msub><mi>T</mi><mi>n</mi></msub><msub><mi>λ</mi><mn>2</mn></msub><mrow><mo stretchy="true" form="prefix">(</mo><msub><mi>L</mi><mi>n</mi></msub><mo stretchy="true" form="postfix">)</mo></mrow><mi>.</mi></mrow></menclose><annotation encoding="application/x-tex">
+\boxed{
+\mu_{1,n}=T_n\lambda_2(L_n).
+}
+</annotation></semantics></math></p>
+<p>The supplied computation reached 43,740 vertices:</p>
+<table>
+<thead>
+<tr class="header">
+<th style="text-align: right;">level</th>
+<th
+style="text-align: right;"><math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>V</mi><annotation encoding="application/x-tex">V</annotation></semantics></math></th>
+<th
+style="text-align: right;"><math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>T</mi><annotation encoding="application/x-tex">T</annotation></semantics></math></th>
+<th
+style="text-align: right;"><math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>λ</mi><mn>2</mn></msub><mrow><mo stretchy="true" form="prefix">(</mo><mi>L</mi><mo stretchy="true" form="postfix">)</mo></mrow></mrow><annotation encoding="application/x-tex">\lambda_2(L)</annotation></semantics></math></th>
+<th
+style="text-align: right;"><math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>T</mi><msub><mi>λ</mi><mn>2</mn></msub><mrow><mo stretchy="true" form="prefix">(</mo><mi>L</mi><mo stretchy="true" form="postfix">)</mo></mrow></mrow><annotation encoding="application/x-tex">T\lambda_2(L)</annotation></semantics></math></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">20</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">0.7639320225</td>
+<td style="text-align: right;">0.7639320225</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">60</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">0.2434017461</td>
+<td style="text-align: right;">0.7302052384</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">180</td>
+<td style="text-align: right;">9</td>
+<td style="text-align: right;">0.08056267490</td>
+<td style="text-align: right;">0.7250640741</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">540</td>
+<td style="text-align: right;">27</td>
+<td style="text-align: right;">0.02683538324</td>
+<td style="text-align: right;">0.7245553475</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">1,620</td>
+<td style="text-align: right;">81</td>
+<td style="text-align: right;">0.008946119207</td>
+<td style="text-align: right;">0.7246356558</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">5</td>
+<td style="text-align: right;">4,860</td>
+<td style="text-align: right;">243</td>
+<td style="text-align: right;">0.002982425496</td>
+<td style="text-align: right;">0.7247293955</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">6</td>
+<td style="text-align: right;">14,580</td>
+<td style="text-align: right;">729</td>
+<td style="text-align: right;">0.0009942087404</td>
+<td style="text-align: right;">0.7247781718</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">7</td>
+<td style="text-align: right;">43,740</td>
+<td style="text-align: right;">2,187</td>
+<td style="text-align: right;">0.0003314124966</td>
+<td style="text-align: right;">0.7247991301</td>
+</tr>
+</tbody>
+</table>
+<p>Thus the unscaled gap closes, while the scaled gap exhibits a stable
+numerical line:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><menclose notation="box"><mrow><msub><mi>T</mi><mi>n</mi></msub><msub><mi>λ</mi><mn>2</mn></msub><mrow><mo stretchy="true" form="prefix">(</mo><msub><mi>L</mi><mi>n</mi></msub><mo stretchy="true" form="postfix">)</mo></mrow><mo>≈</mo><mn>0.7248</mn><mspace width="1.0em"></mspace><mtext mathvariant="normal">at the deepest computed levels.</mtext></mrow></menclose><annotation encoding="application/x-tex">
+\boxed{
+T_n\lambda_2(L_n)\approx0.7248
+\quad\text{at the deepest computed levels.}
+}
+</annotation></semantics></math></p>
+<p><strong>Status: COMPUTED TREND, not an exact constant and not yet a
+proved limit for this specific tower.</strong> The code reports
+successive values and their difference; it does not hard-code 0.7248 as
+a target.</p>
+<h3 id="the-low-mode-band-pattern">The low-mode band pattern</h3>
+<p>At
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>V</mi><mo>=</mo><mn>43</mn><mo>,</mo><mn>740</mn></mrow><annotation encoding="application/x-tex">V=43{,}740</annotation></semantics></math>,
+the beginning of the spectrum of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>T</mi><mi>n</mi></msub><msub><mi>L</mi><mi>n</mi></msub></mrow><annotation encoding="application/x-tex">T_nL_n</annotation></semantics></math>
+is</p>
+<table>
+<thead>
+<tr class="header">
+<th style="text-align: right;">scaled eigenvalue</th>
+<th style="text-align: right;">multiplicity</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: right;">0.724799130</td>
+<td style="text-align: right;">3</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">2.167654166</td>
+<td style="text-align: right;">5</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">4.026433004</td>
+<td style="text-align: right;">3</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">4.596940196</td>
+<td style="text-align: right;">4</td>
+</tr>
+</tbody>
+</table>
+<p>On a smooth sphere, Laplace–Beltrami levels are proportional to
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>ℓ</mo><mrow><mo stretchy="true" form="prefix">(</mo><mo>ℓ</mo><mo>+</mo><mn>1</mn><mo stretchy="true" form="postfix">)</mo></mrow></mrow><annotation encoding="application/x-tex">\ell(\ell+1)</annotation></semantics></math>
+with multiplicity
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2</mn><mo>ℓ</mo><mo>+</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">2\ell+1</annotation></semantics></math>.
+The computed ratios give</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mfrac><mn>2.167654166</mn><mn>0.724799130</mn></mfrac><mo>=</mo><mn>2.990696</mn><mo>≈</mo><mn>3</mn><mo>=</mo><mfrac><mrow><mn>2</mn><mo>⋅</mo><mn>3</mn></mrow><mrow><mn>1</mn><mo>⋅</mo><mn>2</mn></mrow></mfrac><mi>.</mi></mrow><annotation encoding="application/x-tex">
+\frac{2.167654166}{0.724799130}=2.990696\approx3
+=\frac{2\cdot3}{1\cdot2}.
+</annotation></semantics></math></p>
+<p>The next seven-dimensional spherical band is split by icosahedral
+symmetry into multiplicities 3 and 4. Its multiplicity-weighted center
+is</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mover><mi>μ</mi><mo accent="true">‾</mo></mover><mn>3</mn></msub><mo>=</mo><mfrac><mrow><mn>3</mn><mrow><mo stretchy="true" form="prefix">(</mo><mn>4.026433004</mn><mo stretchy="true" form="postfix">)</mo></mrow><mo>+</mo><mn>4</mn><mrow><mo stretchy="true" form="prefix">(</mo><mn>4.596940196</mn><mo stretchy="true" form="postfix">)</mo></mrow></mrow><mn>7</mn></mfrac><mo>=</mo><mn>4.352437114</mn><mo>,</mo></mrow><annotation encoding="application/x-tex">
+\bar\mu_3
+=\frac{3(4.026433004)+4(4.596940196)}{7}
+=4.352437114,
+</annotation></semantics></math></p>
+<p>so</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mfrac><msub><mover><mi>μ</mi><mo accent="true">‾</mo></mover><mn>3</mn></msub><mn>0.724799130</mn></mfrac><mo>=</mo><mn>6.005025</mn><mo>≈</mo><mn>6</mn><mo>=</mo><mfrac><mrow><mn>3</mn><mo>⋅</mo><mn>4</mn></mrow><mrow><mn>1</mn><mo>⋅</mo><mn>2</mn></mrow></mfrac><mi>.</mi></mrow><annotation encoding="application/x-tex">
+\frac{\bar\mu_3}{0.724799130}=6.005025\approx6
+=\frac{3\cdot4}{1\cdot2}.
+</annotation></semantics></math></p>
+<p>This is strong evidence that the renormalized graph operator is
+recovering the low spherical harmonic pattern while retaining
+icosahedral splitting. It is a numerical continuum-limit signature, not
+proof that the graph is physical spacetime.</p>
+<h3 id="the-first-order-central-adjacency-gap">The first-order central
+adjacency gap</h3>
+<p>The same run measured the graph-only central adjacency gap
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>Δ</mi><mi>A</mi></msub><annotation encoding="application/x-tex">\Delta_A</annotation></semantics></math>.
+The unscaled gap falls, while</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msqrt><msub><mi>T</mi><mi>n</mi></msub></msqrt><mspace width="0.167em"></mspace><msub><mi>Δ</mi><mi>A</mi></msub></mrow><annotation encoding="application/x-tex">
+\sqrt{T_n}\,\Delta_A
+</annotation></semantics></math></p>
+<p>reached approximately
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>2.02997</mn><annotation encoding="application/x-tex">2.02997</annotation></semantics></math>
+at the deepest level. This is a <strong>COMPUTED TREND / Hueckel-style
+proxy</strong>, not a molecular band-gap calculation.</p>
+<h2 id="the-hierarchy-has-dimension-two">15. The hierarchy has dimension
+two</h2>
+<p>The number of graph sites grows as
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>V</mi><mo>∝</mo><mi>T</mi></mrow><annotation encoding="application/x-tex">V\propto T</annotation></semantics></math>,
+while the linear scale grows as
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>R</mi><mo>∝</mo><msqrt><mi>T</mi></msqrt></mrow><annotation encoding="application/x-tex">R\propto\sqrt T</annotation></semantics></math>.
+Therefore</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><menclose notation="box"><mrow><mi>D</mi><mo>=</mo><munder><mo>lim</mo><mrow><mi>n</mi><mo>→</mo><mi>∞</mi></mrow></munder><mfrac><mrow><mo>log</mo><msub><mi>V</mi><mi>n</mi></msub></mrow><mrow><mo>log</mo><msub><mi>R</mi><mi>n</mi></msub></mrow></mfrac><mo>=</mo><mn>2</mn><mi>.</mi></mrow></menclose><annotation encoding="application/x-tex">
+\boxed{
+D=\lim_{n\to\infty}\frac{\log V_n}{\log R_n}=2.
+}
+</annotation></semantics></math></p>
+<p>The tower is self-similar and hierarchical, but it does not acquire a
+non-integer Hausdorff dimension from these counts. In THEA,
+<em>fractal</em> means the recursive hierarchy unless a non-integer
+dimension is separately demonstrated.</p>
+<hr />
+<h1 id="part-vii-phi-pi-h-and-the-honest-wall">PART VII –
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>ϕ</mi><annotation encoding="application/x-tex">\phi</annotation></semantics></math>,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>π</mi><annotation encoding="application/x-tex">\pi</annotation></semantics></math>,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>h</mi><annotation encoding="application/x-tex">h</annotation></semantics></math>,
+AND THE HONEST WALL</h1>
+<h2 id="what-each-constant-is-doing">16. What each constant is
+doing</h2>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><menclose notation="box"><mtable><mtr><mtd columnalign="right" style="text-align: right"><mi>ϕ</mi></mtd><mtd columnalign="center" style="text-align: center"><mo>:</mo></mtd><mtd columnalign="left" style="text-align: left"><mtext mathvariant="normal">dimensionless projective scale attractor and pentagonal ratio</mtext><mo>,</mo></mtd></mtr><mtr><mtd columnalign="right" style="text-align: right"><mi>π</mi></mtd><mtd columnalign="center" style="text-align: center"><mo>:</mo></mtd><mtd columnalign="left" style="text-align: left"><mrow><mtext mathvariant="normal">angle/closure constant: </mtext><mspace width="0.333em"></mspace></mrow><mi>ζ</mi><mo>=</mo><msup><mi>e</mi><mrow><mi>i</mi><mi>π</mi><mi>/</mi><mn>3</mn></mrow></msup><mo>,</mo><mspace width="0.222em"></mspace><mo>∑</mo><mi>K</mi><mo>=</mo><mn>4</mn><mi>π</mi><mo>,</mo></mtd></mtr><mtr><mtd columnalign="right" style="text-align: right"><mi>ℏ</mi></mtd><mtd columnalign="center" style="text-align: center"><mo>:</mo></mtd><mtd columnalign="left" style="text-align: left"><mrow><mtext mathvariant="normal">dimensionful quantum of action: </mtext><mspace width="0.333em"></mspace></mrow><mi>ℏ</mi><mo>=</mo><mi>h</mi><mi>/</mi><mrow><mo stretchy="true" form="prefix">(</mo><mn>2</mn><mi>π</mi><mo stretchy="true" form="postfix">)</mo></mrow><mi>.</mi></mtd></mtr></mtable></menclose><annotation encoding="application/x-tex">
+\boxed{
+\begin{array}{rcl}
+\phi &amp;:&amp; \text{dimensionless projective scale attractor and pentagonal ratio},\\
+\pi &amp;:&amp; \text{angle/closure constant: }\zeta=e^{i\pi/3},\ \sum K=4\pi,\\
+\hbar &amp;:&amp; \text{dimensionful quantum of action: }\hbar=h/(2\pi).
+\end{array}
+}
+</annotation></semantics></math></p>
+<p>The first two arise inside pure geometry. The third does not follow
+from a dimensionless graph unless an independent physical scale is
+supplied.</p>
+<p>Planck’s constant has dimensions</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mo stretchy="true" form="prefix">[</mo><mi>h</mi><mo stretchy="true" form="postfix">]</mo></mrow><mo>=</mo><mi>M</mi><msup><mi>L</mi><mn>2</mn></msup><msup><mi>T</mi><mrow><mi>−</mi><mn>1</mn></mrow></msup><mi>.</mi></mrow><annotation encoding="application/x-tex">
+[h]=ML^2T^{-1}.
+</annotation></semantics></math></p>
+<p>Therefore an equation such as
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>R</mi><mi>n</mi></msub><mo>=</mo><mi>h</mi></mrow><annotation encoding="application/x-tex">R_n=h</annotation></semantics></math>
+is dimensionally invalid. A length test must use a length, for
+example</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><menclose notation="box"><mrow><msub><mo>ℓ</mo><mi>P</mi></msub><mo>=</mo><msqrt><mfrac><mrow><mi>ℏ</mi><mi>G</mi></mrow><msup><mi>c</mi><mn>3</mn></msup></mfrac></msqrt><mi>.</mi></mrow></menclose><annotation encoding="application/x-tex">
+\boxed{
+\ell_P=\sqrt{\frac{\hbar G}{c^3}}.
+}
+</annotation></semantics></math></p>
+<p>Even then, using
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mo>ℓ</mo><mi>P</mi></msub><annotation encoding="application/x-tex">\ell_P</annotation></semantics></math>
+as an indivisible cutoff is a physical hypothesis, not a consequence of
+its definition.</p>
+<h2 id="the-inward-pentagram-test">17. The inward pentagram test</h2>
+<p>A regular pentagram contains a similar central pentagon with linear
+contraction</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><menclose notation="box"><mrow><mi>q</mi><mo>=</mo><msup><mi>ϕ</mi><mrow><mi>−</mi><mn>2</mn></mrow></msup><mi>.</mi></mrow></menclose><annotation encoding="application/x-tex">
+\boxed{q=\phi^{-2}.}
+</annotation></semantics></math></p>
+<p>A face-local inward hierarchy is therefore</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>R</mi><mi>j</mi></msub><mo>=</mo><msub><mi>R</mi><mn>0</mn></msub><msup><mi>ϕ</mi><mrow><mi>−</mi><mn>2</mn><mi>j</mi></mrow></msup><mi>.</mi></mrow><annotation encoding="application/x-tex">
+R_j=R_0\phi^{-2j}.
+</annotation></semantics></math></p>
+<p>Setting
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>R</mi><mi>N</mi></msub><mo>=</mo><msub><mo>ℓ</mo><mi>P</mi></msub></mrow><annotation encoding="application/x-tex">R_N=\ell_P</annotation></semantics></math>
+gives</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><menclose notation="box"><mrow><mi>N</mi><mo>=</mo><mfrac><mrow><mo>log</mo><mrow><mo stretchy="true" form="prefix">(</mo><msub><mi>R</mi><mn>0</mn></msub><mi>/</mi><msub><mo>ℓ</mo><mi>P</mi></msub><mo stretchy="true" form="postfix">)</mo></mrow></mrow><mrow><mn>2</mn><mo>log</mo><mi>ϕ</mi></mrow></mfrac><mi>.</mi></mrow></menclose><annotation encoding="application/x-tex">
+\boxed{
+N=\frac{\log(R_0/\ell_P)}{2\log\phi}.
+}
+</annotation></semantics></math></p>
+<p>Using an ideal C60 edge
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi><mo>=</mo><mn>1.42</mn><mo>×</mo><msup><mn>10</mn><mrow><mi>−</mi><mn>10</mn></mrow></msup><mspace width="0.167em"></mspace><mi mathvariant="normal">m</mi></mrow><annotation encoding="application/x-tex">a=1.42\times10^{-10}\,\mathrm m</annotation></semantics></math>,</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>R</mi><mn>0</mn></msub><mo>=</mo><mfrac><mi>a</mi><mn>4</mn></mfrac><msqrt><mrow><mn>58</mn><mo>+</mo><mn>18</mn><msqrt><mn>5</mn></msqrt></mrow></msqrt><mo>≈</mo><mn>3.5187865</mn><mo>×</mo><msup><mn>10</mn><mrow><mi>−</mi><mn>10</mn></mrow></msup><mspace width="0.167em"></mspace><mi mathvariant="normal">m</mi><mi>.</mi></mrow><annotation encoding="application/x-tex">
+R_0=\frac a4\sqrt{58+18\sqrt5}
+\approx3.5187865\times10^{-10}\,\mathrm m.
+</annotation></semantics></math></p>
+<p>With
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mo>ℓ</mo><mi>P</mi></msub><mo>=</mo><mn>1.616255</mn><mo>×</mo><msup><mn>10</mn><mrow><mi>−</mi><mn>35</mn></mrow></msup><mspace width="0.167em"></mspace><mi mathvariant="normal">m</mi></mrow><annotation encoding="application/x-tex">\ell_P=1.616255\times10^{-35}\,\mathrm m</annotation></semantics></math>,
+the code obtains</p>
+<table>
+<thead>
+<tr class="header">
+<th>chosen starting length</th>
+<th style="text-align: right;">level count with
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>q</mi><mo>=</mo><msup><mi>ϕ</mi><mrow><mi>−</mi><mn>2</mn></mrow></msup></mrow><annotation encoding="application/x-tex">q=\phi^{-2}</annotation></semantics></math></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>edge
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>a</mi><annotation encoding="application/x-tex">a</annotation></semantics></math></td>
+<td style="text-align: right;">59.677640345</td>
+</tr>
+<tr class="even">
+<td>radius
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>R</mi><mn>0</mn></msub><annotation encoding="application/x-tex">R_0</annotation></semantics></math></td>
+<td style="text-align: right;">60.620530010</td>
+</tr>
+<tr class="odd">
+<td>diameter
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2</mn><msub><mi>R</mi><mn>0</mn></msub></mrow><annotation encoding="application/x-tex">2R_0</annotation></semantics></math></td>
+<td style="text-align: right;">61.340740056</td>
+</tr>
+</tbody>
+</table>
+<p>The near-60 value is interesting, but its movement under a legitimate
+change of starting length proves that it is not presently a topological
+invariant. The correct label is</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><menclose notation="box"><mtext mathvariant="normal">NUMERICAL COINCIDENCE / HYPOTHESIS TEST, NOT DERIVATION.</mtext></menclose><annotation encoding="application/x-tex">
+\boxed{\text{NUMERICAL COINCIDENCE / HYPOTHESIS TEST, NOT DERIVATION.}}
+</annotation></semantics></math></p>
+<p>The inward pentagram is also a <strong>face-local geometry
+lane</strong>. A finite fullerene graph itself terminates
+combinatorially at
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>C</mi><mn>20</mn></msub><annotation encoding="application/x-tex">C_{20}</annotation></semantics></math>,
+or at
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>C</mi><mn>60</mn></msub><annotation encoding="application/x-tex">C_{60}</annotation></semantics></math>
+if the isolated-pentagon rule is imposed; it does not contain sixty
+nested molecular shells.</p>
+<hr />
+<h1 id="part-viii-the-v3-code-patterns">PART VIII – THE V3 CODE
+PATTERNS</h1>
+<h2 id="pattern-a-exact-integer-core-first">18. Pattern A – exact
+integer core first</h2>
+<p>The browser kernel uses <code>BigInt</code> for
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="true" form="prefix">(</mo><mi>k</mi><mo>,</mo><mo>ℓ</mo><mo>,</mo><mi>T</mi><mo>,</mo><mi>V</mi><mo>,</mo><mi>E</mi><mo>,</mo><mi>F</mi><mo>,</mo><mi>P</mi><mo>,</mo><mi>H</mi><mo stretchy="true" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(k,\ell,T,V,E,F,P,H)</annotation></semantics></math>.
+Floating point is used only for ratios and spectral measurements.</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">hexNorm</span>(p) {</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  <span class="kw">var</span> k <span class="op">=</span> <span class="bu">BigInt</span>(p<span class="op">.</span><span class="at">k</span>)<span class="op">,</span> ell <span class="op">=</span> <span class="bu">BigInt</span>(p<span class="op">.</span><span class="at">ell</span>)<span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> k<span class="op">*</span>k <span class="op">+</span> k<span class="op">*</span>ell <span class="op">+</span> ell<span class="op">*</span>ell<span class="op">;</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">topologyFromT</span>(T) {</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>  T <span class="op">=</span> <span class="bu">BigInt</span>(T)<span class="op">;</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>  <span class="kw">var</span> V <span class="op">=</span> <span class="dv">20</span>n<span class="op">*</span>T<span class="op">,</span> <span class="cn">E</span> <span class="op">=</span> <span class="dv">30</span>n<span class="op">*</span>T<span class="op">;</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>  <span class="kw">var</span> P <span class="op">=</span> <span class="dv">12</span>n<span class="op">,</span> H <span class="op">=</span> <span class="dv">10</span>n<span class="op">*</span>(T<span class="op">-</span><span class="dv">1</span>n)<span class="op">,</span> F <span class="op">=</span> P<span class="op">+</span>H<span class="op">;</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> {<span class="dt">T</span><span class="op">:</span>T<span class="op">,</span> <span class="dt">V</span><span class="op">:</span>V<span class="op">,</span> <span class="dt">E</span><span class="op">:</span><span class="cn">E</span><span class="op">,</span> <span class="dt">F</span><span class="op">:</span>F<span class="op">,</span> <span class="dt">P</span><span class="op">:</span>P<span class="op">,</span> <span class="dt">H</span><span class="op">:</span>H<span class="op">,</span> <span class="dt">chi</span><span class="op">:</span>V<span class="op">-</span><span class="cn">E</span><span class="op">+</span>F}<span class="op">;</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">goldenNext</span>(p) {</span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> {<span class="dt">k</span><span class="op">:</span><span class="bu">BigInt</span>(p<span class="op">.</span><span class="at">k</span>)<span class="op">+</span><span class="bu">BigInt</span>(p<span class="op">.</span><span class="at">ell</span>)<span class="op">,</span> <span class="dt">ell</span><span class="op">:</span><span class="bu">BigInt</span>(p<span class="op">.</span><span class="at">k</span>)}<span class="op">;</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p><strong>Rule:</strong> do not certify an integer invariant with a
+float tolerance when exact integer arithmetic is available.</p>
+<p>Full module: <code>light_matrix_v3.js</code>.</p>
+<h2 id="pattern-b-exact-closure-multiplication">19. Pattern B – exact
+closure multiplication</h2>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">multiplyPairs</span>(left<span class="op">,</span> right) {</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  <span class="kw">var</span> a<span class="op">=</span><span class="bu">BigInt</span>(left<span class="op">.</span><span class="at">k</span>)<span class="op">,</span> b<span class="op">=</span><span class="bu">BigInt</span>(left<span class="op">.</span><span class="at">ell</span>)<span class="op">;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  <span class="kw">var</span> k<span class="op">=</span><span class="bu">BigInt</span>(right<span class="op">.</span><span class="at">k</span>)<span class="op">,</span> ell<span class="op">=</span><span class="bu">BigInt</span>(right<span class="op">.</span><span class="at">ell</span>)<span class="op">;</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> {</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    <span class="dt">k</span><span class="op">:</span>   a<span class="op">*</span>k <span class="op">-</span> b<span class="op">*</span>ell<span class="op">,</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    <span class="dt">ell</span><span class="op">:</span> a<span class="op">*</span>ell <span class="op">+</span> b<span class="op">*</span>k <span class="op">+</span> b<span class="op">*</span>ell</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>  }<span class="op">;</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>After multiplication, canonicalize under the twelve dihedral
+symmetries of the hexagonal lattice and display the representative with
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>k</mi><mo>≥</mo><mo>ℓ</mo><mo>≥</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">k\ge\ell\ge0</annotation></semantics></math>.</p>
+<h2 id="pattern-c-route-local-growth-and-closure-growth-separately">20.
+Pattern C – route local growth and closure growth separately</h2>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">applyOperator</span>(state<span class="op">,</span> op) {</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (op<span class="op">.</span><span class="at">kind</span> <span class="op">===</span> <span class="st">&quot;HEX_LOCAL&quot;</span>) {</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">var</span> candidate <span class="op">=</span> GK<span class="op">.</span><span class="fu">refineAllHexes</span>(state<span class="op">.</span><span class="at">mesh</span><span class="op">,</span> op<span class="op">.</span><span class="at">params</span>)<span class="op">;</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">var</span> cert <span class="op">=</span> GK<span class="op">.</span><span class="fu">verifyTopoIndexed</span>(candidate)<span class="op">;</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> {</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>      <span class="dt">lane</span><span class="op">:</span> <span class="st">&quot;LOCAL&quot;</span><span class="op">,</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>      <span class="dt">mesh</span><span class="op">:</span> candidate<span class="op">,</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>      <span class="dt">certificate</span><span class="op">:</span> cert<span class="op">,</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>      <span class="dt">label</span><span class="op">:</span> cert<span class="op">.</span><span class="at">pass</span> <span class="op">?</span> <span class="st">&quot;CLOSED VERIFIED&quot;</span> <span class="op">:</span> <span class="st">&quot;OPEN CANDIDATE&quot;</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>    }<span class="op">;</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (op<span class="op">.</span><span class="at">kind</span> <span class="op">===</span> <span class="st">&quot;GOLDEN_NEXT&quot;</span>) {</span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>    <span class="kw">var</span> nextPair <span class="op">=</span> LightMatrixV3<span class="op">.</span><span class="fu">goldenNext</span>(state<span class="op">.</span><span class="at">pair</span>)<span class="op">;</span></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="fu">requestClosedShell</span>(nextPair)<span class="op">;</span> <span class="co">// builder or certified asset</span></span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (op<span class="op">.</span><span class="at">kind</span> <span class="op">===</span> <span class="st">&quot;GC_CLOSE&quot;</span>) {</span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a>    <span class="kw">var</span> next <span class="op">=</span> LightMatrixV3<span class="op">.</span><span class="fu">gcStep</span>(state<span class="op">.</span><span class="at">pair</span><span class="op">,</span> op<span class="op">.</span><span class="at">generator</span>)<span class="op">;</span></span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="fu">requestClosedShell</span>(next)<span class="op">;</span></span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a>  <span class="cf">throw</span> <span class="kw">new</span> <span class="bu">Error</span>(<span class="st">&quot;unknown operator&quot;</span>)<span class="op">;</span></span>
+<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>The exact closed graph builder may be offline. The browser can load a
+certified indexed mesh and replay the topology certificate before
+installation.</p>
+<h2 id="pattern-d-target-current-and-error-are-separate">21. Pattern D –
+target, current, and error are separate</h2>
+<p>There are two different stability reports. Do not average them.</p>
+<h3 id="golden-selector-lock">Golden selector lock</h3>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>e</mi><mrow><mi>ϕ</mi><mo>,</mo><mi>n</mi></mrow></msub><mo>=</mo><mrow><mo stretchy="true" form="prefix">|</mo><mfrac><msub><mi>k</mi><mi>n</mi></msub><msub><mo>ℓ</mo><mi>n</mi></msub></mfrac><mo>−</mo><mi>ϕ</mi><mo stretchy="true" form="postfix">|</mo></mrow><mi>.</mi></mrow><annotation encoding="application/x-tex">
+e_{\phi,n}=\left|\frac{k_n}{\ell_n}-\phi\right|.
+</annotation></semantics></math></p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> golden <span class="op">=</span> LightMatrixV3<span class="op">.</span><span class="fu">goldenReport</span>(pair<span class="op">,</span> <span class="fl">1e-8</span>)<span class="op">;</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="co">// show all four fields:</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="co">// target = phi</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="co">// current = k/ell</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="co">// error = abs(current-target)</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a><span class="co">// locked = topologyPass &amp;&amp; error &lt;= tolerance</span></span></code></pre></div>
+<h3 id="spectral-lock">Spectral lock</h3>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>μ</mi><mi>n</mi></msub><mo>=</mo><msub><mi>T</mi><mi>n</mi></msub><msub><mi>λ</mi><mn>2</mn></msub><mrow><mo stretchy="true" form="prefix">(</mo><msub><mi>L</mi><mi>n</mi></msub><mo stretchy="true" form="postfix">)</mo></mrow><mo>,</mo><mspace width="2.0em"></mspace><msub><mi>e</mi><mrow><mi>μ</mi><mo>,</mo><mi>n</mi></mrow></msub><mo>=</mo><mrow><mo stretchy="true" form="prefix">|</mo><msub><mi>μ</mi><mi>n</mi></msub><mo>−</mo><msub><mi>μ</mi><mrow><mi>n</mi><mo>−</mo><mn>1</mn></mrow></msub><mo stretchy="true" form="postfix">|</mo></mrow><mi>.</mi></mrow><annotation encoding="application/x-tex">
+\mu_n=T_n\lambda_2(L_n),
+\qquad
+e_{\mu,n}=|\mu_n-\mu_{n-1}|.
+</annotation></semantics></math></p>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> spectral <span class="op">=</span> LightMatrixV3<span class="op">.</span><span class="fu">spectralReport</span>(previous<span class="op">,</span> current<span class="op">,</span> <span class="fl">1e-5</span>)<span class="op">;</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="co">// no hard-coded 0.7248 prize</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="co">// the lock is earned by successive stabilization + topology pass</span></span></code></pre></div>
+<p>The HUD should read, for example:</p>
+<pre class="text"><code>TOPOLOGY   P 12 / chi 2 / boundary 0 / degree-3 100%   PASS
+GOLDEN     target 1.61803398875  current 1.61797752809
+           error 5.6461e-5       NOT LOCKED at tol 1e-8
+SPECTRAL   current T*lambda2 0.7247991301
+           delta from prior 2.0958e-5                    NOT LOCKED</code></pre>
+<h2 id="pattern-e-predict-before-allocating">22. Pattern E – predict
+before allocating</h2>
+<p>Every exact closure operator has a known count multiplier. Gate the
+next step before constructing the graph:</p>
+<div class="sourceCode" id="cb9"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="kw">var</span> gate <span class="op">=</span> LightMatrixV3<span class="op">.</span><span class="fu">predictAndGate</span>(</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  currentVertices<span class="op">,</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>  areaMultiplier<span class="op">,</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>  VERTEX_BUDGET</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>)<span class="op">;</span></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="op">!</span>gate<span class="op">.</span><span class="at">allowed</span>) {</span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">haltLoudly</span>(<span class="st">&quot;next shell = &quot;</span><span class="op">+</span>gate<span class="op">.</span><span class="at">predicted</span><span class="op">+</span><span class="st">&quot; vertices &gt; budget &quot;</span><span class="op">+</span>gate<span class="op">.</span><span class="at">budget</span>)<span class="op">;</span></span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span><span class="op">;</span></span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>This is Curse 35 applied to the mathematical recurrence itself.</p>
+<h2 id="pattern-f-offline-spectrum-online-receipt">23. Pattern F –
+offline spectrum, online receipt</h2>
+<p>Large sparse eigensolves belong in the Python lab, not on the browser
+main thread. The v3 pipeline is</p>
+<pre class="text"><code>light_matrix_v3.py
+    -&gt; exact identities
+    -&gt; construct closed graphs
+    -&gt; topology certificate
+    -&gt; sparse eigensolve
+    -&gt; JSON receipt with values, multiplicities, parameters, and status labels
+
+AEQUALIUM v3
+    -&gt; load receipt
+    -&gt; hash / schema check
+    -&gt; replay cheap invariants
+    -&gt; display COMPUTED values, never relabel them EXACT</code></pre>
+<p>Suggested repository paths:</p>
+<pre class="text"><code>kernel/light_matrix_v3.js
+experiments/light_matrix_v3.py
+tests/test_light_matrix_v3.py
+receipts/light_matrix_v3_certificate.json
+grimoire/THEA_v3.0.md</code></pre>
+<h2 id="pattern-g-minimal-python-use">24. Pattern G – minimal Python
+use</h2>
+<div class="sourceCode" id="cb12"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> light_matrix_v3 <span class="im">import</span> Pair, golden_next, shell_from_pair</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>pair <span class="op">=</span> Pair(<span class="dv">1</span>, <span class="dv">0</span>)</span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> level <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">8</span>):</span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>    shell <span class="op">=</span> shell_from_pair(pair, level)</span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(level, shell.k, shell.ell, shell.vertices, shell.pentagons, shell.chi)</span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>    pair <span class="op">=</span> golden_next(pair)</span></code></pre></div>
+<p>Full spectral run:</p>
+<div class="sourceCode" id="cb13"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> light_matrix_v3.py <span class="dt">\</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">--golden-levels</span> 12 <span class="dt">\</span></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">--spectral-levels</span> 8 <span class="dt">\</span></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">--band-count</span> 30 <span class="dt">\</span></span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">--exact-c60</span> <span class="dt">\</span></span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">--json</span> light_matrix_v3_certificate.json <span class="dt">\</span></span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">--text</span> light_matrix_v3_results.txt</span></code></pre></div>
+<p>Fast exact tests:</p>
+<div class="sourceCode" id="cb14"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> <span class="at">-m</span> unittest <span class="at">-v</span> test_light_matrix_v3.py</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a><span class="ex">node</span> <span class="at">--check</span> light_matrix_v3.js</span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a><span class="ex">node</span> <span class="at">-e</span> <span class="st">&quot;const L=require(&#39;./light_matrix_v3.js&#39;); console.log(L.selfTest())&quot;</span></span></code></pre></div>
+<hr />
+<h1 id="part-ix-copy-ready-latex-core">PART IX – COPY-READY LATEX
+CORE</h1>
+<p>The following block is ready for KaTeX/LaTeX reuse.</p>
+<div class="sourceCode" id="cb15"><pre
+class="sourceCode latex"><code class="sourceCode latex"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="fu">\newcommand</span>{<span class="ex">\phig</span>}{<span class="fu">\varphi</span>}</span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a><span class="fu">\newcommand</span>{<span class="ex">\zetahex</span>}{<span class="fu">\zeta</span>_6}</span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a><span class="fu">\newcommand</span>{<span class="ex">\Mlight</span>}{<span class="fu">\mathcal</span> M_{<span class="fu">\mathrm</span>{light}}}</span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a><span class="fu">\newcommand</span>{<span class="ex">\Tgold</span>}{T_n}</span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a><span class="ss">\[</span></span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a><span class="sc">\phig</span><span class="ss">=</span><span class="sc">\frac</span><span class="ss">{1+</span><span class="sc">\sqrt</span><span class="ss">5}{2},</span></span>
+<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a><span class="sc">\qquad</span></span>
+<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a><span class="sc">\phig</span><span class="ss">^2=</span><span class="sc">\phig</span><span class="ss">+1,</span></span>
+<span id="cb15-10"><a href="#cb15-10" aria-hidden="true" tabindex="-1"></a><span class="sc">\qquad</span></span>
+<span id="cb15-11"><a href="#cb15-11" aria-hidden="true" tabindex="-1"></a><span class="sc">\phig</span><span class="ss">^{-2}=2-</span><span class="sc">\phig</span><span class="ss">.</span></span>
+<span id="cb15-12"><a href="#cb15-12" aria-hidden="true" tabindex="-1"></a><span class="ss">\]</span></span>
+<span id="cb15-13"><a href="#cb15-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-14"><a href="#cb15-14" aria-hidden="true" tabindex="-1"></a><span class="ss">\[</span></span>
+<span id="cb15-15"><a href="#cb15-15" aria-hidden="true" tabindex="-1"></a><span class="ss">3V=2E,</span></span>
+<span id="cb15-16"><a href="#cb15-16" aria-hidden="true" tabindex="-1"></a><span class="sc">\qquad</span></span>
+<span id="cb15-17"><a href="#cb15-17" aria-hidden="true" tabindex="-1"></a><span class="ss">5P+6H=2E,</span></span>
+<span id="cb15-18"><a href="#cb15-18" aria-hidden="true" tabindex="-1"></a><span class="sc">\qquad</span></span>
+<span id="cb15-19"><a href="#cb15-19" aria-hidden="true" tabindex="-1"></a><span class="ss">V-E+P+H=2</span></span>
+<span id="cb15-20"><a href="#cb15-20" aria-hidden="true" tabindex="-1"></a><span class="sc">\quad\Longrightarrow\quad</span></span>
+<span id="cb15-21"><a href="#cb15-21" aria-hidden="true" tabindex="-1"></a><span class="ss">P=12.</span></span>
+<span id="cb15-22"><a href="#cb15-22" aria-hidden="true" tabindex="-1"></a><span class="ss">\]</span></span>
+<span id="cb15-23"><a href="#cb15-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-24"><a href="#cb15-24" aria-hidden="true" tabindex="-1"></a><span class="ss">\[</span></span>
+<span id="cb15-25"><a href="#cb15-25" aria-hidden="true" tabindex="-1"></a><span class="sc">\zetahex</span><span class="ss">=e^{i</span><span class="sc">\pi</span><span class="ss">/3},</span></span>
+<span id="cb15-26"><a href="#cb15-26" aria-hidden="true" tabindex="-1"></a><span class="sc">\qquad</span></span>
+<span id="cb15-27"><a href="#cb15-27" aria-hidden="true" tabindex="-1"></a><span class="ss">T=k^2+k</span><span class="sc">\ell</span><span class="ss">+</span><span class="sc">\ell</span><span class="ss">^2,</span></span>
+<span id="cb15-28"><a href="#cb15-28" aria-hidden="true" tabindex="-1"></a><span class="sc">\qquad</span></span>
+<span id="cb15-29"><a href="#cb15-29" aria-hidden="true" tabindex="-1"></a><span class="ss">M_{k,</span><span class="sc">\ell</span><span class="ss">}=</span><span class="kw">\begin</span>{<span class="ex">pmatrix</span>}<span class="ss">k&amp;-</span><span class="sc">\ell\\\ell</span><span class="ss">&amp;k+</span><span class="sc">\ell</span><span class="kw">\end</span>{<span class="ex">pmatrix</span>}<span class="ss">.</span></span>
+<span id="cb15-30"><a href="#cb15-30" aria-hidden="true" tabindex="-1"></a><span class="ss">\]</span></span>
+<span id="cb15-31"><a href="#cb15-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-32"><a href="#cb15-32" aria-hidden="true" tabindex="-1"></a><span class="ss">\[</span></span>
+<span id="cb15-33"><a href="#cb15-33" aria-hidden="true" tabindex="-1"></a><span class="sc">\det</span><span class="ss"> M_{k,</span><span class="sc">\ell</span><span class="ss">}=T,</span></span>
+<span id="cb15-34"><a href="#cb15-34" aria-hidden="true" tabindex="-1"></a><span class="sc">\qquad</span></span>
+<span id="cb15-35"><a href="#cb15-35" aria-hidden="true" tabindex="-1"></a><span class="ss">M_{k,</span><span class="sc">\ell</span><span class="ss">}^{</span><span class="sc">\mathsf</span><span class="ss"> T}</span></span>
+<span id="cb15-36"><a href="#cb15-36" aria-hidden="true" tabindex="-1"></a><span class="kw">\begin</span>{<span class="ex">pmatrix</span>}<span class="ss">1&amp;</span><span class="sc">\tfrac</span><span class="ss">12</span><span class="sc">\\\tfrac</span><span class="ss">12&amp;1</span><span class="kw">\end</span>{<span class="ex">pmatrix</span>}</span>
+<span id="cb15-37"><a href="#cb15-37" aria-hidden="true" tabindex="-1"></a><span class="ss">M_{k,</span><span class="sc">\ell</span><span class="ss">}</span></span>
+<span id="cb15-38"><a href="#cb15-38" aria-hidden="true" tabindex="-1"></a><span class="ss">=T</span><span class="kw">\begin</span>{<span class="ex">pmatrix</span>}<span class="ss">1&amp;</span><span class="sc">\tfrac</span><span class="ss">12</span><span class="sc">\\\tfrac</span><span class="ss">12&amp;1</span><span class="kw">\end</span>{<span class="ex">pmatrix</span>}<span class="ss">.</span></span>
+<span id="cb15-39"><a href="#cb15-39" aria-hidden="true" tabindex="-1"></a><span class="ss">\]</span></span>
+<span id="cb15-40"><a href="#cb15-40" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-41"><a href="#cb15-41" aria-hidden="true" tabindex="-1"></a><span class="ss">\[</span></span>
+<span id="cb15-42"><a href="#cb15-42" aria-hidden="true" tabindex="-1"></a><span class="ss">(k&#39;,</span><span class="sc">\ell</span><span class="ss">&#39;)=(ak-b</span><span class="sc">\ell</span><span class="ss">,</span><span class="sc">\ </span><span class="ss">a</span><span class="sc">\ell</span><span class="ss">+bk+b</span><span class="sc">\ell</span><span class="ss">),</span></span>
+<span id="cb15-43"><a href="#cb15-43" aria-hidden="true" tabindex="-1"></a><span class="sc">\qquad</span></span>
+<span id="cb15-44"><a href="#cb15-44" aria-hidden="true" tabindex="-1"></a><span class="ss">T&#39;=(a^2+ab+b^2)T.</span></span>
+<span id="cb15-45"><a href="#cb15-45" aria-hidden="true" tabindex="-1"></a><span class="ss">\]</span></span>
+<span id="cb15-46"><a href="#cb15-46" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-47"><a href="#cb15-47" aria-hidden="true" tabindex="-1"></a><span class="ss">\[</span></span>
+<span id="cb15-48"><a href="#cb15-48" aria-hidden="true" tabindex="-1"></a><span class="kw">\begin</span>{<span class="ex">pmatrix</span>}<span class="ss">k_{n+1}</span><span class="sc">\\\ell</span><span class="ss">_{n+1}</span><span class="kw">\end</span>{<span class="ex">pmatrix</span>}</span>
+<span id="cb15-49"><a href="#cb15-49" aria-hidden="true" tabindex="-1"></a><span class="ss">=</span><span class="kw">\begin</span>{<span class="ex">pmatrix</span>}<span class="ss">1&amp;1</span><span class="sc">\\</span><span class="ss">1&amp;0</span><span class="kw">\end</span>{<span class="ex">pmatrix</span>}</span>
+<span id="cb15-50"><a href="#cb15-50" aria-hidden="true" tabindex="-1"></a><span class="kw">\begin</span>{<span class="ex">pmatrix</span>}<span class="ss">k_n</span><span class="sc">\\\ell</span><span class="ss">_n</span><span class="kw">\end</span>{<span class="ex">pmatrix</span>}<span class="ss">,</span></span>
+<span id="cb15-51"><a href="#cb15-51" aria-hidden="true" tabindex="-1"></a><span class="sc">\qquad</span></span>
+<span id="cb15-52"><a href="#cb15-52" aria-hidden="true" tabindex="-1"></a><span class="ss">(k_n,</span><span class="sc">\ell</span><span class="ss">_n)=(F_{n+1},F_n).</span></span>
+<span id="cb15-53"><a href="#cb15-53" aria-hidden="true" tabindex="-1"></a><span class="ss">\]</span></span>
+<span id="cb15-54"><a href="#cb15-54" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-55"><a href="#cb15-55" aria-hidden="true" tabindex="-1"></a><span class="ss">\[</span></span>
+<span id="cb15-56"><a href="#cb15-56" aria-hidden="true" tabindex="-1"></a><span class="ss">T_n=k_n^2+k_n</span><span class="sc">\ell</span><span class="ss">_n+</span><span class="sc">\ell</span><span class="ss">_n^2,</span></span>
+<span id="cb15-57"><a href="#cb15-57" aria-hidden="true" tabindex="-1"></a><span class="sc">\qquad</span></span>
+<span id="cb15-58"><a href="#cb15-58" aria-hidden="true" tabindex="-1"></a><span class="ss">V_n=20T_n,</span></span>
+<span id="cb15-59"><a href="#cb15-59" aria-hidden="true" tabindex="-1"></a><span class="sc">\quad</span><span class="ss"> E_n=30T_n,</span></span>
+<span id="cb15-60"><a href="#cb15-60" aria-hidden="true" tabindex="-1"></a><span class="sc">\quad</span><span class="ss"> P_n=12,</span></span>
+<span id="cb15-61"><a href="#cb15-61" aria-hidden="true" tabindex="-1"></a><span class="sc">\quad</span><span class="ss"> H_n=10(T_n-1).</span></span>
+<span id="cb15-62"><a href="#cb15-62" aria-hidden="true" tabindex="-1"></a><span class="ss">\]</span></span>
+<span id="cb15-63"><a href="#cb15-63" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-64"><a href="#cb15-64" aria-hidden="true" tabindex="-1"></a><span class="ss">\[</span></span>
+<span id="cb15-65"><a href="#cb15-65" aria-hidden="true" tabindex="-1"></a><span class="ss">T_{n+3}=2T_{n+2}+2T_{n+1}-T_n,</span></span>
+<span id="cb15-66"><a href="#cb15-66" aria-hidden="true" tabindex="-1"></a><span class="sc">\qquad</span></span>
+<span id="cb15-67"><a href="#cb15-67" aria-hidden="true" tabindex="-1"></a><span class="ss">T_n=</span><span class="sc">\frac</span><span class="ss">25</span><span class="sc">\left</span><span class="ss">(</span><span class="sc">\phig</span><span class="ss">^{2n+2}+</span><span class="sc">\phig</span><span class="ss">^{-2n-2}</span><span class="sc">\right</span><span class="ss">)</span></span>
+<span id="cb15-68"><a href="#cb15-68" aria-hidden="true" tabindex="-1"></a><span class="ss">-</span><span class="sc">\frac</span><span class="ss">15(-1)^n.</span></span>
+<span id="cb15-69"><a href="#cb15-69" aria-hidden="true" tabindex="-1"></a><span class="ss">\]</span></span>
+<span id="cb15-70"><a href="#cb15-70" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-71"><a href="#cb15-71" aria-hidden="true" tabindex="-1"></a><span class="ss">\[</span></span>
+<span id="cb15-72"><a href="#cb15-72" aria-hidden="true" tabindex="-1"></a><span class="sc">\Mlight</span><span class="ss">=</span></span>
+<span id="cb15-73"><a href="#cb15-73" aria-hidden="true" tabindex="-1"></a><span class="kw">\begin</span>{<span class="ex">pmatrix</span>}</span>
+<span id="cb15-74"><a href="#cb15-74" aria-hidden="true" tabindex="-1"></a><span class="ss">1&amp;2&amp;1&amp;0</span><span class="sc">\\</span></span>
+<span id="cb15-75"><a href="#cb15-75" aria-hidden="true" tabindex="-1"></a><span class="ss">1&amp;1&amp;0&amp;0</span><span class="sc">\\</span></span>
+<span id="cb15-76"><a href="#cb15-76" aria-hidden="true" tabindex="-1"></a><span class="ss">1&amp;0&amp;0&amp;0</span><span class="sc">\\</span></span>
+<span id="cb15-77"><a href="#cb15-77" aria-hidden="true" tabindex="-1"></a><span class="ss">0&amp;0&amp;0&amp;1</span></span>
+<span id="cb15-78"><a href="#cb15-78" aria-hidden="true" tabindex="-1"></a><span class="kw">\end</span>{<span class="ex">pmatrix</span>}<span class="ss">,</span></span>
+<span id="cb15-79"><a href="#cb15-79" aria-hidden="true" tabindex="-1"></a><span class="sc">\qquad</span></span>
+<span id="cb15-80"><a href="#cb15-80" aria-hidden="true" tabindex="-1"></a><span class="sc">\det</span><span class="ss">(</span><span class="sc">\lambda</span><span class="ss"> I-</span><span class="sc">\Mlight</span><span class="ss">)</span></span>
+<span id="cb15-81"><a href="#cb15-81" aria-hidden="true" tabindex="-1"></a><span class="ss">=(</span><span class="sc">\lambda</span><span class="ss">-1)(</span><span class="sc">\lambda</span><span class="ss">+1)(</span><span class="sc">\lambda</span><span class="ss">^2-3</span><span class="sc">\lambda</span><span class="ss">+1).</span></span>
+<span id="cb15-82"><a href="#cb15-82" aria-hidden="true" tabindex="-1"></a><span class="ss">\]</span></span>
+<span id="cb15-83"><a href="#cb15-83" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-84"><a href="#cb15-84" aria-hidden="true" tabindex="-1"></a><span class="ss">\[</span></span>
+<span id="cb15-85"><a href="#cb15-85" aria-hidden="true" tabindex="-1"></a><span class="sc">\operatorname</span><span class="ss">{spec}(</span><span class="sc">\Mlight</span><span class="ss">)</span></span>
+<span id="cb15-86"><a href="#cb15-86" aria-hidden="true" tabindex="-1"></a><span class="ss">=</span><span class="sc">\{\phig</span><span class="ss">^2,1,-1,</span><span class="sc">\phig</span><span class="ss">^{-2}</span><span class="sc">\}</span><span class="ss">.</span></span>
+<span id="cb15-87"><a href="#cb15-87" aria-hidden="true" tabindex="-1"></a><span class="ss">\]</span></span>
+<span id="cb15-88"><a href="#cb15-88" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-89"><a href="#cb15-89" aria-hidden="true" tabindex="-1"></a><span class="ss">\[</span></span>
+<span id="cb15-90"><a href="#cb15-90" aria-hidden="true" tabindex="-1"></a><span class="ss">L_n=3I-A_n,</span></span>
+<span id="cb15-91"><a href="#cb15-91" aria-hidden="true" tabindex="-1"></a><span class="sc">\qquad</span></span>
+<span id="cb15-92"><a href="#cb15-92" aria-hidden="true" tabindex="-1"></a><span class="sc">\mu</span><span class="ss">_{j,n}=T_n</span><span class="sc">\lambda</span><span class="ss">_j(L_n).</span></span>
+<span id="cb15-93"><a href="#cb15-93" aria-hidden="true" tabindex="-1"></a><span class="ss">\]</span></span>
+<span id="cb15-94"><a href="#cb15-94" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-95"><a href="#cb15-95" aria-hidden="true" tabindex="-1"></a><span class="ss">\[</span></span>
+<span id="cb15-96"><a href="#cb15-96" aria-hidden="true" tabindex="-1"></a><span class="sc">\lambda</span><span class="ss">_{</span><span class="sc">\min</span><span class="ss">}(A_{C_{60}})</span></span>
+<span id="cb15-97"><a href="#cb15-97" aria-hidden="true" tabindex="-1"></a><span class="ss">=-</span><span class="sc">\phig</span><span class="ss">^2</span></span>
+<span id="cb15-98"><a href="#cb15-98" aria-hidden="true" tabindex="-1"></a><span class="ss">=-</span><span class="sc">\frac</span><span class="ss">{3+</span><span class="sc">\sqrt</span><span class="ss">5}{2}.</span></span>
+<span id="cb15-99"><a href="#cb15-99" aria-hidden="true" tabindex="-1"></a><span class="ss">\]</span></span>
+<span id="cb15-100"><a href="#cb15-100" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-101"><a href="#cb15-101" aria-hidden="true" tabindex="-1"></a><span class="ss">\[</span></span>
+<span id="cb15-102"><a href="#cb15-102" aria-hidden="true" tabindex="-1"></a><span class="sc">\frac</span><span class="ss">{</span><span class="sc">\pi</span><span class="ss">}{3}</span><span class="sc">\sum</span><span class="ss">_f(6-p_f)=4</span><span class="sc">\pi</span><span class="ss">.</span></span>
+<span id="cb15-103"><a href="#cb15-103" aria-hidden="true" tabindex="-1"></a><span class="ss">\]</span></span>
+<span id="cb15-104"><a href="#cb15-104" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-105"><a href="#cb15-105" aria-hidden="true" tabindex="-1"></a><span class="ss">\[</span></span>
+<span id="cb15-106"><a href="#cb15-106" aria-hidden="true" tabindex="-1"></a><span class="sc">\ell</span><span class="ss">_P=</span><span class="sc">\sqrt</span><span class="ss">{</span><span class="sc">\frac</span><span class="ss">{</span><span class="sc">\hbar</span><span class="ss"> G}{c^3}},</span></span>
+<span id="cb15-107"><a href="#cb15-107" aria-hidden="true" tabindex="-1"></a><span class="sc">\qquad</span></span>
+<span id="cb15-108"><a href="#cb15-108" aria-hidden="true" tabindex="-1"></a><span class="ss">N=</span><span class="sc">\frac</span><span class="ss">{</span><span class="sc">\log</span><span class="ss">(R_0/</span><span class="sc">\ell</span><span class="ss">_P)}{2</span><span class="sc">\log\phig</span><span class="ss">}</span></span>
+<span id="cb15-109"><a href="#cb15-109" aria-hidden="true" tabindex="-1"></a><span class="sc">\quad\text</span><span class="ss">{for the chosen face-local scale }q=</span><span class="sc">\phig</span><span class="ss">^{-2}.</span></span>
+<span id="cb15-110"><a href="#cb15-110" aria-hidden="true" tabindex="-1"></a><span class="ss">\]</span></span></code></pre></div>
+<table style="width:6%;">
+<colgroup>
+<col style="width: 5%" />
+</colgroup>
+<tbody>
+<tr class="odd">
+<td>## THE MATH CORE – every formula, audited, stepped into compute ###
+source of truth: <code>shell/aequalium_v2.4.7.html</code> (shipped
+audited kernel)</td>
+</tr>
+<tr class="even">
+<td>&gt; WARNING (Path III/IV): the older
+<code>AEQUALIUM_TOWER.md</code> predates the Sol-mage &gt; audit and
+carries STALE math (a 25-term power-series <code>besselJ</code>, an
+unlabelled toy &gt; renormalon, a Kepler “wall” at e=0.6627).
+<strong>This scroll carries the AUDITED &gt; code that actually
+ships.</strong> When the two disagree, the shipped kernel wins.</td>
+</tr>
+<tr class="odd">
+<td>The one law of the core:</td>
+</tr>
+<tr class="even">
+<td><code>paper:  LHS = RHS          (exact, transcendental, uncomputable in finite steps) code:   LHS ~= RHS_N       (a finite truncation / quadrature / iteration at depth N) error:  |RHS_N - RHS| &gt; 0  (always, for finite N) agree:  D = -log10(rel err) = the correct significant digits BOUGHT, capped 15.9</code></td>
+</tr>
+<tr class="odd">
+<td>### The agreement meter (shared by every rung)</td>
+</tr>
+<tr class="even">
+<td><code>js function degrees(approx, exact){          // correct significant digits if(!isFinite(approx)) return 0; var e = Math.abs(exact)&gt;1e-300 ? Math.abs((approx-exact)/exact) : Math.abs(approx-exact); if(e&lt;=0) return 15.9;                    // float64 floor return Math.max(0, Math.min(15.9, -Math.log(e)/Math.LN10)); }</code></td>
+</tr>
+<tr class="odd">
+<td><code>15.9</code> is IEEE-754 double precision’s own ceiling
+(<code>log10(2^53) ~ 15.95</code>). No series, however convergent, can
+buy more digits than the machine itself holds – a roundoff wall beneath
+every rung. Method-specific ceilings are reported separately and are
+never averaged.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="rung-1-qcd-i-.-the-running-coupling-a_sq-converges">RUNG 1 – QCD
+I . the running coupling a_s(Q) [CONVERGES]</h3>
+<p><strong>Paper:</strong>
+<code>a_s(Q) = a_s(MZ) / (1 + a_s(MZ) (b0/4pi) ln(Q^2/MZ^2))</code>
+<strong>Means:</strong> a geometric series in
+<code>x = a-hat0 b0 L</code>, <code>L = ln(Q^2/MZ^2)</code>; for
+<code>|x|&lt;1</code> it converges to float64 fast.
+<strong>Code:</strong> finite geometric partial sum, depth N.
+<code>b0 = 11 CA/3 - 4 TF nf/3 = 23/3</code> at nf=5.
+<strong>Verdict:</strong> CONVERGENT. D: ~8 at C60 -&gt; ~15.5
+grown.</p>
+<h3
+id="rung-2-qcd-ii-.-r-ratio-toy-renormalon-model-hard-ceiling-showpiece">RUNG
+2 – QCD II . R-ratio TOY renormalon model [HARD CEILING]
+(showpiece)</h3>
+<p><strong>Paper context:</strong>
+<code>R = 3 sum_q e_q^2 (1 + a_s/pi + c2 a_s^2 + ...)</code>.
+<strong>Model used here:</strong> synthetic coefficients
+<code>c_n = n! beta0^n</code> imitate a factorially growing asymptotic
+series. They are <strong>not</strong> the known physical R-ratio
+coefficients and the displayed number is <strong>not</strong> a QCD
+prediction. <strong>Code (audited, Sol #3 – three quantities kept
+apart):</strong> - <code>raw = S_N</code> – the raw partial sum, allowed
+to explode and shown exploding. - <code>anchor = S_{N*}</code> – the
+optimal-truncation value, frozen once <code>N &gt;= N*</code>. -
+<code>delta* = |t_{N*}|</code> – the smallest term, used as a model
+ambiguity estimate. - score = <code>delta* / |anchor|</code>, constant
+past N*: exploding harder can never manufacture more agreement.
+<strong>Verdict:</strong> HARD CEILING <strong>inside the illustrative
+model</strong>. The lesson is about optimal truncation and honest
+ambiguity accounting, not a new physical R value.</p>
+<h3 id="rung-3-qcd-iii-.-lambda_qcd-from-a_smz-converges-quadratic">RUNG
+3 – QCD III . Lambda_QCD from a_s(MZ) [CONVERGES, quadratic]</h3>
+<p><strong>Paper:</strong>
+<code>Lambda = MZ exp(-2pi / (b0 a_s(MZ)))</code>
+<strong>Means:</strong> Lambda is the root of
+<code>a_s(MZ; Lambda) = 0.1180</code>; Newton’s method reaches it with
+quadratic convergence. <strong>Code:</strong> Newton iteration depth N;
+reference is the closed-form inversion. <strong>Verdict:</strong>
+CONVERGENT. D -&gt; 15 in a handful of steps.</p>
+<h3
+id="rung-4-galactic-i-.-keplers-equation-m-e---e-sine-converges-for-all-e1-showpiece-corrected">RUNG
+4 – GALACTIC I . Kepler’s equation M = E - e sinE [CONVERGES for all
+e&lt;1] (showpiece, CORRECTED)</h3>
+<p><strong>Paper:</strong> <code>M = E - e sinE</code> (transcendental).
+<strong>Means:</strong> the Fourier-Bessel solution
+<code>E = M + sum_{n&gt;=1} (2/n) J_n(ne) sin(nM)</code>. <strong>THE
+CORRECTION (Sol-mage audit, a falsification not a label):</strong> this
+series <strong>converges for ALL e &lt; 1</strong> (Bessel 1824; the
+Carlini exponent is &lt; 0 below 1). The famous <strong>0.6627 Laplace
+limit walls LAGRANGE’s power series in e</strong> – a <em>different
+representation</em> of the same equation. v2.0’s “divergence above
+0.6627” was the OLD 25-term power-series <code>besselJ</code> erring ~6
+orders at high n – a numerics ghost in physics robes (Curse 24).
+<strong>Fix:</strong> <code>besselJ</code> via <strong>Miller downward
+recurrence</strong> (stable at high order). Digits do get pricier as e
+-&gt; 1 (the decay rate -&gt; 0), but the price is finite at every e
+&lt; 1. <strong>Code:</strong> Miller-recurrence <code>besselJ</code>;
+exact E by Newton as reference. <strong>Verdict:</strong> CONVERGENT for
+all e &lt; 1. The only wall is at <strong>e &gt;= 1</strong> (no
+ellipse).</p>
+<h3 id="rung-5-galactic-ii-.-comoving-distance-d_c-converges-n-4">RUNG 5
+– GALACTIC II . comoving distance D_C [CONVERGES, N^-4]</h3>
+<p><strong>Paper:</strong>
+<code>D_C = (c/H0) integral_0^z dz' / sqrt(Om(1+z')^3 + OL)</code>
+<strong>Means:</strong> a definite integral with no elementary
+antiderivative; Simpson’s rule has error <code>~ N^-4</code>.
+Planck-2018 constants (Om=0.315, OL=0.685, H0=67.4).
+<strong>Code:</strong> Simpson quadrature, N panels; high-N Simpson
+(20000) as reference. <strong>Verdict:</strong> CONVERGENT. At the
+v2.4.7 seed budget N=16, D is about 6.7; it rises with panel count until
+the numerical reference/float ceiling.</p>
+<h3
+id="rung-6-galactic-iii-.-the-blackbody-integral-converges-slow-n-3">RUNG
+6 – GALACTIC III . the blackbody integral [CONVERGES, slow N^-3]</h3>
+<p><strong>Paper:</strong>
+<code>integral_0^inf x^3/(e^x - 1) dx = pi^4 / 15</code>
+(Stefan-Boltzmann) <strong>Means:</strong> expand
+<code>1/(e^x-1) = sum_{k&gt;=1} e^{-kx}</code>, integrate termwise -&gt;
+<code>6 sum_{k&gt;=1} k^-4 = 6 zeta(4) = pi^4/15</code>. Partial-sum
+error <code>~ 2/N^3</code>. <strong>Code:</strong>
+<code>approx = 6 * sum_{k=1..N} 1/k^4</code>. <strong>Verdict:</strong>
+CONVERGENT but SLOW. At the v2.4.7 seed budget N=16, D is about 4.2 and
+improves only as N^-3.</p>
+<hr />
+<h3 id="the-math-core-summary-table">THE MATH-CORE SUMMARY TABLE</h3>
+<table>
+<colgroup>
+<col style="width: 4%" />
+<col style="width: 9%" />
+<col style="width: 12%" />
+<col style="width: 16%" />
+<col style="width: 13%" />
+<col style="width: 43%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>#</th>
+<th>rung</th>
+<th>method</th>
+<th>error law</th>
+<th>verdict</th>
+<th>v2.4.7 seed readout (N=16)</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1</td>
+<td>a_s(Q) running</td>
+<td>geometric resum</td>
+<td>geometric</td>
+<td>CONVERGES</td>
+<td>D about 8.0</td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td>R-ratio toy</td>
+<td>synthetic asymptotic series</td>
+<td>factorial floor</td>
+<td><strong>MODEL CEILING</strong></td>
+<td>ambiguity metric about 5.1</td>
+</tr>
+<tr class="odd">
+<td>3</td>
+<td>Lambda_QCD</td>
+<td>Newton rootfind</td>
+<td>quadratic</td>
+<td>CONVERGES</td>
+<td>D about 15.0</td>
+</tr>
+<tr class="even">
+<td>4</td>
+<td>Kepler, e=0.50</td>
+<td>Bessel series (Miller)</td>
+<td>converges for e&lt;1</td>
+<td>CONVERGES</td>
+<td>D about 5.4</td>
+</tr>
+<tr class="odd">
+<td>5</td>
+<td>D_C comoving</td>
+<td>Simpson quadrature</td>
+<td>N^-4</td>
+<td>CONVERGES</td>
+<td>D about 6.7</td>
+</tr>
+<tr class="even">
+<td>6</td>
+<td>blackbody</td>
+<td>6 zeta(4)</td>
+<td>N^-3</td>
+<td>CONVERGES (slow)</td>
+<td>D about 4.2</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="the-fluid-rung-the-demonstrated-proof-external-claim">THE FLUID
+RUNG (the demonstrated proof, EXTERNAL CLAIM)</h2>
+<h3
+id="source-shellcascadium_v0_1.html-fable-audit-separately-do-not-bundle">source:
+<code>shell/cascadium_v0_1.html</code> (Fable) – audit separately, do
+not bundle</h3>
+<p>The same light-matrix idea, but a REAL PDE instead of a series:
+forced 2D vorticity dynamics on the Goldberg sphere, spectral in real
+spherical harmonics (l &lt;= 16 on 642 cells). Kraichnan 1967’s two
+rivers – energy climbs to large scales near <code>k^-5/3</code>,
+enstrophy falls to small scales near <code>k^-3</code>.</p>
+<p><strong>The price ledger (measured, never typed):</strong> injected
+epsilon vs dissipated (hyper + drag), budget residual as a percent; in
+true-nu mode the identity <code>diss/enst = 2 nu</code> becomes an
+identity of the formulation (the farm law, the price paid in
+dissipation). Slopes lock loosely (tol 0.30) over half-decade ranges –
+<strong>trends, not proofs (K5)</strong>.</p>
+<p><strong>Status: EXTERNAL CLAIM.</strong> CASCADIUM is a separate
+artifact; it demonstrates the thesis, it does not certify it. Audit it
+on its own terms.</p>
+<hr />
+<h1 id="part-x-the-v3-point">PART X – THE V3 POINT</h1>
+<h2 id="the-point-one-line">THE POINT, ONE LINE</h2>
+<blockquote>
+<p>The light matrix is the exact integer recursion that separates
+growth, invariant topology, alternating correction, and contraction; the
+closed graph tower then turns that recursion into a renormalized
+spectrum whose remaining error is measured rather than narrated.</p>
+</blockquote>
+<p>Or, in the cave’s shorter language:</p>
+<blockquote>
+<p><strong>The pentagons hold. The hexes pay. The matrix remembers which
+is which.</strong></p>
+</blockquote>
+<hr />
+<h2 id="coda-what-v3-actually-earned">CODA – what v3 actually
+earned</h2>
+<h3 id="exact">EXACT</h3>
+<ul>
+<li>A closed trivalent pentagon/hexagon fullerene has exactly
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>P</mi><mo>=</mo><mn>12</mn></mrow><annotation encoding="application/x-tex">P=12</annotation></semantics></math>.</li>
+<li>The total combinatorial curvature charge is
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>4</mn><mi>π</mi></mrow><annotation encoding="application/x-tex">4\pi</annotation></semantics></math>.</li>
+<li>The hexagonal lattice norm is
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>T</mi><mo>=</mo><msup><mi>k</mi><mn>2</mn></msup><mo>+</mo><mi>k</mi><mo>ℓ</mo><mo>+</mo><msup><mo>ℓ</mo><mn>2</mn></msup></mrow><annotation encoding="application/x-tex">T=k^2+k\ell+\ell^2</annotation></semantics></math>.</li>
+<li>The closure matrix satisfies
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msubsup><mi>M</mi><mrow><mi>k</mi><mo>,</mo><mo>ℓ</mo></mrow><mi>𝖳</mi></msubsup><mi>Q</mi><msub><mi>M</mi><mrow><mi>k</mi><mo>,</mo><mo>ℓ</mo></mrow></msub><mo>=</mo><mi>T</mi><mi>Q</mi></mrow><annotation encoding="application/x-tex">M_{k,\ell}^{\mathsf T}QM_{k,\ell}=TQ</annotation></semantics></math>.</li>
+<li>Closure composition is integer multiplication in the hexagonal
+lattice ring, and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>T</mi><annotation encoding="application/x-tex">T</annotation></semantics></math>
+is multiplicative.</li>
+<li>Icosahedral Goldberg shells have
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>V</mi><mo>=</mo><mn>20</mn><mi>T</mi><mo>,</mo><mi>E</mi><mo>=</mo><mn>30</mn><mi>T</mi><mo>,</mo><mi>H</mi><mo>=</mo><mn>10</mn><mrow><mo stretchy="true" form="prefix">(</mo><mi>T</mi><mo>−</mo><mn>1</mn><mo stretchy="true" form="postfix">)</mo></mrow><mo>,</mo><mi>F</mi><mo>=</mo><mn>10</mn><mi>T</mi><mo>+</mo><mn>2</mn></mrow><annotation encoding="application/x-tex">V=20T, E=30T, H=10(T-1), F=10T+2</annotation></semantics></math>.</li>
+<li>The Fibonacci selector converges projectively to
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>ϕ</mi><annotation encoding="application/x-tex">\phi</annotation></semantics></math>.</li>
+<li>The lifted light matrix has spectrum
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">{</mo><msup><mi>ϕ</mi><mn>2</mn></msup><mo>,</mo><mn>1</mn><mo>,</mo><mi>−</mi><mn>1</mn><mo>,</mo><msup><mi>ϕ</mi><mrow><mi>−</mi><mn>2</mn></mrow></msup><mo stretchy="false" form="postfix">}</mo></mrow><annotation encoding="application/x-tex">\{\phi^2,1,-1,\phi^{-2}\}</annotation></semantics></math>.</li>
+<li>The exact symbolic C60 adjacency certificate has
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>λ</mi><mo>min</mo></msub><mo>=</mo><mi>−</mi><msup><mi>ϕ</mi><mn>2</mn></msup></mrow><annotation encoding="application/x-tex">\lambda_{\min}=-\phi^2</annotation></semantics></math>
+with multiplicity 3.</li>
+</ul>
+<h3 id="computed">COMPUTED</h3>
+<ul>
+<li>The closed leapfrog tower was constructed through
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>V</mi><mo>=</mo><mn>43</mn><mo>,</mo><mn>740</mn></mrow><annotation encoding="application/x-tex">V=43{,}740</annotation></semantics></math>.</li>
+<li>At every computed level: connected, cubic,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>P</mi><mo>=</mo><mn>12</mn></mrow><annotation encoding="application/x-tex">P=12</annotation></semantics></math>,
+only five/six faces, and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>χ</mi><mo>=</mo><mn>2</mn></mrow><annotation encoding="application/x-tex">\chi=2</annotation></semantics></math>.</li>
+<li><math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>T</mi><msub><mi>λ</mi><mn>2</mn></msub><mrow><mo stretchy="true" form="prefix">(</mo><mi>L</mi><mo stretchy="true" form="postfix">)</mo></mrow></mrow><annotation encoding="application/x-tex">T\lambda_2(L)</annotation></semantics></math>
+stabilized numerically near
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>0.7248</mn><annotation encoding="application/x-tex">0.7248</annotation></semantics></math>.</li>
+<li>The first two low bands have multiplicities 3 and 5 and ratio about
+2.9907.</li>
+<li>The next seven modes split 3+4, with weighted-center ratio about
+6.0050.</li>
+<li><math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msqrt><mi>T</mi></msqrt><mspace width="0.167em"></mspace><msub><mi>Δ</mi><mi>A</mi></msub></mrow><annotation encoding="application/x-tex">\sqrt T\,\Delta_A</annotation></semantics></math>
+reached about 2.02997 on the same tower.</li>
+</ul>
+<h3 id="design-choice">DESIGN CHOICE</h3>
+<ul>
+<li>Calling the four-mode recursion the <strong>LIGHT
+MATRIX</strong>.</li>
+<li>Mapping face/vertex budget to the number of terms a formula may
+spend.</li>
+<li>The operator deck and UI tolerances.</li>
+<li>Which exact closed-shell family the user explores: WELD, fixed GC,
+leapfrog, or golden-selected catalogue.</li>
+<li>The use of a pentagram contraction
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>q</mi><mo>=</mo><msup><mi>ϕ</mi><mrow><mi>−</mi><mn>2</mn></mrow></msup></mrow><annotation encoding="application/x-tex">q=\phi^{-2}</annotation></semantics></math>
+for a face-local inward thought experiment.</li>
+</ul>
+<h3 id="hypothesis-still-owes-the-price">HYPOTHESIS – still owes the
+price</h3>
+<ul>
+<li>Reality or quantum foam is generated by this graph tower.</li>
+<li>The stable renormalized graph spectrum is a physical field
+spectrum.</li>
+<li>The Planck scale is the termination of a golden face recursion.</li>
+<li><math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>h</mi><annotation encoding="application/x-tex">h</annotation></semantics></math>
+or
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mo>ℓ</mo><mi>P</mi></msub><annotation encoding="application/x-tex">\ell_P</annotation></semantics></math>
+can be derived from
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>ϕ</mi><annotation encoding="application/x-tex">\phi</annotation></semantics></math>,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>π</mi><annotation encoding="application/x-tex">\pi</annotation></semantics></math>,
+and fullerene topology without independent dimensionful input.</li>
+<li>The numerical constants 0.7248 or 2.03 are universal rather than
+tower/operator dependent.</li>
+</ul>
+<h3 id="metaphor-external">METAPHOR / EXTERNAL</h3>
+<ul>
+<li>“Light stitches the curve,” “the soul of the shell,” and similar
+cave imagery.</li>
+<li>CASCADIUM as a separate PDE artifact: audit its solver and ledger
+separately.</li>
+<li>Any Connes/noncommutative-geometry interpretation imported from
+another repo.</li>
+</ul>
+<hr />
+<h2 id="the-honest-boundary-on-the-lattice-v3-edition">THE HONEST
+BOUNDARY ON THE LATTICE – v3 edition</h2>
+<p>The v2 audit survives intact and becomes sharper:</p>
+<ol type="1">
+<li>A Fourier optimum that moves with sample count is a
+representation/sampling effect, not evidence of a Planck lattice.</li>
+<li>A local face recursion is not automatically a closed
+polyhedron.</li>
+<li>A golden-selected sequence is not the same object as an exactly
+nested Goldberg transform.</li>
+<li>A graph adjacency eigenvalue is not automatically a molecular
+energy.</li>
+<li>A converging numerical line is not an exact constant until
+proved.</li>
+<li>A dimensionless matrix cannot produce a dimensionful
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>h</mi><annotation encoding="application/x-tex">h</annotation></semantics></math>
+without a physical scale and a dynamical law.</li>
+</ol>
+<p>The defensible thesis remains strong:</p>
+<blockquote>
+<p>Every scientific equals sign hides a representation, a finite
+operation, assumptions, costs, errors, and a verdict. A truthful
+artifact exposes that chain and makes every substrate claim pass through
+it.</p>
+</blockquote>
+<hr />
+<h2 id="v3-build-contract-ready-to-integrate">V3 BUILD CONTRACT – ready
+to integrate</h2>
+<p>The mathematics and reference kernels in this update are built. The
+browser visual integration is the next versioned artifact.</p>
+<h3 id="built-in-this-receipt">Built in this receipt</h3>
+<ul>
+<li><code>Thea_v3.0.md</code> – this complete derivation and integration
+contract.</li>
+<li><code>light_matrix_v3.py</code> – exact shell arithmetic, graph
+construction, spectra, exact C60 factorization, Planck-choice test, and
+JSON export.</li>
+<li><code>light_matrix_v3.js</code> – browser-safe BigInt core and
+honest lock reports.</li>
+<li><code>test_light_matrix_v3.py</code> – fast exact regression
+tests.</li>
+<li><code>light_matrix_v3_certificate.json</code> – machine-readable
+output.</li>
+<li><code>light_matrix_v3_results.txt</code> – human-readable computed
+receipt.</li>
+</ul>
+<h3 id="v3-visual-behavior">V3 visual behavior</h3>
+<p>The AEQUALIUM v3 panel should display four independent rows:</p>
+<pre class="text"><code>CLOSURE     exact pair (k,l), T, V/E/F/P/H, chi, certificate hash
+GOLDEN      target phi, current k/l, error, tolerance, lock state
+SPECTRUM    lambda2, T*lambda2, delta from prior, multiplicity bands
+BOUNDARY    EXACT / COMPUTED / DESIGN / HYPOTHESIS label for every claim</code></pre>
+<p>The operator buttons should be grouped by lane:</p>
+<pre class="text"><code>LOCAL HIERARCHY:  ALL | 5s | 6s
+CLOSED SHELL:     WELD | LEAPFROG | GC(a,b) | GOLDEN NEXT</code></pre>
+<p>An open local candidate may still be rendered, but its seams must be
+visible and its shell name withheld. A closed shell is installed only
+after the exact-ID topology verifier passes.</p>
+<h3 id="v3-experiments-that-remain-open">V3 experiments that remain
+open</h3>
+<ul>
+<li>Generate actual indexed meshes for arbitrary
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="true" form="prefix">(</mo><mi>k</mi><mo>,</mo><mo>ℓ</mo><mo stretchy="true" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(k,\ell)</annotation></semantics></math>,
+not only counts.</li>
+<li>Compare WELD, leapfrog, and other fixed-GC families under the same
+spectral normalization.</li>
+<li>Test whether the 0.7248 line is operator-dependent.</li>
+<li>Fit finite-size corrections without pretending the extrapolated
+intercept is exact.</li>
+<li>Test locality, isotropy, propagation speed, conservation, and
+preferred-frame artifacts for any proposed substrate dynamics.</li>
+<li>Find one observable not inserted by construction that discriminates
+this forward model from ordinary continuum physics.</li>
+</ul>
+<p>Until those tests pass, THEA v3 is a rigorous mathematical generator
+and a spectral laboratory, not a final theory of reality.</p>
+<hr />
+<h2 id="references-external-anchors">REFERENCES / EXTERNAL ANCHORS</h2>
+<p>These references support the external mathematical context. The core
+identities above are also derived and reproduced directly by the
+supplied code.</p>
+<ol type="1">
+<li>P. W. Fowler, P. Hansen, and D. Stevanovic, “A Note on the Smallest
+Eigenvalue of Fullerenes,” <em>MATCH Communications in Mathematical and
+in Computer Chemistry</em> <strong>48</strong> (2003), 37–48.</li>
+<li>T. Omori, H. Naito, and T. Tate, “Eigenvalues of the Laplacian on
+the Goldberg–Coxeter Constructions for 3- and 4-Valent Graphs,”
+<em>Electronic Journal of Combinatorics</em> <strong>26</strong>(3)
+(2019), P3.7; arXiv:1807.10891.</li>
+<li>S. Li, “Transformation, Identification, and Inversion of
+Goldberg–Coxeter Fullerenes,” arXiv:2303.07890.</li>
+<li>NIST, revised-SI value of the Planck constant
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>h</mi><mo>=</mo><mn>6.62607015</mn><mo>×</mo><msup><mn>10</mn><mrow><mi>−</mi><mn>34</mn></mrow></msup><mspace width="0.167em"></mspace><mrow><mi mathvariant="normal">J</mi><mspace width="0.167em"></mspace><mi mathvariant="normal">s</mi></mrow></mrow><annotation encoding="application/x-tex">h=6.62607015\times10^{-34}\,\mathrm{J\,s}</annotation></semantics></math>
+exactly.</li>
+<li>NIST CODATA, Planck length
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mo>ℓ</mo><mi>P</mi></msub><mo>=</mo><mn>1.616255</mn><mo>×</mo><msup><mn>10</mn><mrow><mi>−</mi><mn>35</mn></mrow></msup><mspace width="0.167em"></mspace><mi mathvariant="normal">m</mi></mrow><annotation encoding="application/x-tex">\ell_P=1.616255\times10^{-35}\,\mathrm m</annotation></semantics></math>
+at the precision used in the supplied hypothesis test.</li>
+</ol>
+<hr />
+<p><em>THEA v3.0 – the math core. The light matrix runs; closure is
+certified; the pentagons hold; the hexes pay; the error remains
+visible.</em></p>
+<p><em>P=12. chi=2. spec(M_light)={phi<sup>2,1,-1,phi</sup>-2}. The
+price is always paid. Always.</em></p>
+</body>
+</html>

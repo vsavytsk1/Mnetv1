@@ -9187,3 +9187,37 @@ re-embed, SURFACE VERIFIED, chi=2. No crash (reshape re-audits and warns). All 8
 views: 0 console errors, GK injected, 0 leaks; byte scan loneCR=0 U+FFFD=0 BOM=0.
 Featured -> v2.4.7. v2.4.6 frozen beside (Path X). The math is absolute; the byte
 representation is what breaks -- the slider sets the net itself.
+
+### L171 -- THE LIGHT MATRIX: THEA v3.0 core installed + math VERIFIED (2026-07-31)
+The last piece before the V3 jump. The Sol-mage delivered the light-matrix V3
+bundle; we re-checked the math BY OUR OWN KERNEL (Vlad: "recheck the math, if
+correct add to Thea.md") and it is correct + reproducible. Installed the complete
+v3.0 scroll as grimoire/Thea.md (Parts I-X: closed topology, hexagonal closure
+matrix, golden selector, the exact light matrix, stability lines A-D, the honest
+wall, code patterns, LaTeX core, status-grammar coda). The old v2.x Thea.md is
+preserved in git history; Thea_v2.4.7_frozen.md kept beside (Path X).
+
+VERIFIED INDEPENDENTLY (my own sympy/numpy, not trusting the shipped kernel):
+- 8/8 unit tests PASS (pytest + unittest, Py3.11.9), re-run from the repo location.
+- Topology T=k^2+kl+l^2, V=20T E=30T F=12+10(T-1) -> chi=2, P=12 at every shell.
+- Golden shells = Fibonacci (k,l): T=1,3,7,19,49,129,337,883,2311...; T ratio ->
+  phi^2=2.618033989 (the golden projective attractor).
+- Eisenstein norm N(a*b)=N(a)N(b) multiplicative.
+- THE LIGHT MATRIX itself: the 4x4 integer M_light=[[1,2,1,0],[1,1,0,0],
+  [1,0,0,0],[0,0,0,1]], charpoly (l-1)(l+1)(l^2-3l+1), eigenvalues EXACTLY
+  {phi^2, 1, -1, phi^-2} = growth / invariant-P=12 / alternating / contracting-
+  inward. This is the algebraic heart of the name.
+- EXACT C60 adjacency charpoly: total degree 60, least root = -(3+sqrt5)/2 =
+  -phi^2 EXACTLY, multiplicity 3 (factor (x^2+3x+1)^3). Chung-Sternberg.
+- Leapfrog renormalized spectrum: second/first -> 3, split-seven center/first ->
+  6 (the sphere targets); regenerated results.txt = byte-identical bar last-digit
+  float noise.
+- Planck test HONEST: "h is not a length" (count depends on start length &
+  contraction). NOT claimed as proof -- matches the Sol-mage boundary.
+Also installed the light_matrix kernel + test + results + certificate + manifest
+into grimoire/ (light_matrix_v3.py is ASCII-only, Curse 2 clean). Healed a Curse-25
+bite in Thea_v3.0_preview.html: 6 U+FFFD (a corrupted em-dash in <title>+<h1>) ->
+single em-dash "THEA v3.0 - LIGHT MATRIX"; browser-verified 0 U+FFFD, 0 errors,
+0 leaks. All files byte-scanned loneCR=0 U+FFFD=0. The math is absolute; now it is
+written and checkable. Not yet shipped (not in the drop): light_matrix_v3.js, the
+v2.4.7->v3.0 patch.
