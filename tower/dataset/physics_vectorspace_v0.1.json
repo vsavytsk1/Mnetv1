@@ -1,0 +1,116 @@
+{
+  "schema": "physics-vectorspace/0.1",
+  "purpose": "The smallest seed of the LaTeX vector space: every known physics/eng formula becomes a POINT (a node), and its derivation/prerequisite links become EDGES (graph math to all interconnections). We query this dataset as we build, because all math is interconnected. Start small (the THEA v1.1 formulas), iterate to all of physics highschool->QCD. html+js+KaTeX, zero deps: once the net is paid in compute, the browser renders as much as you pay for.",
+  "version": "0.1",
+  "built": "2026-07-31",
+  "source": "shell/thea_light_matrix_v1.1.html (the first live-compute nodes)",
+  "domains": {
+    "geometry": "#7fff9f",
+    "topology": "#00d4ff",
+    "algebra": "#a78bfa",
+    "spectral": "#ff9040",
+    "hypothesis": "#ff69b4"
+  },
+  "status_grammar": ["exact", "computed", "design", "hypothesis", "metaphor", "external"],
+  "nodes": [
+    {
+      "id": "phi_pentagon",
+      "title": "The golden ratio is the pentagon's number",
+      "latex": "\\phi=2\\cos\\frac{\\pi}{5}=\\frac{1+\\sqrt5}{2}",
+      "domain": "geometry",
+      "status": "exact",
+      "connects": ["phi_algebra", "P12_euler"],
+      "compute": "phi = 2*cos(pi/5)",
+      "note": "the one forced number; everything grows from it"
+    },
+    {
+      "id": "phi_algebra",
+      "title": "Golden identities",
+      "latex": "\\phi^2=\\phi+1,\\quad \\phi^{-2}=2-\\phi,\\quad \\phi^2+\\phi^{-2}=3,\\quad \\phi^2-\\phi^{-2}=\\sqrt5",
+      "domain": "algebra",
+      "status": "exact",
+      "connects": ["light_matrix"],
+      "compute": "phi^2 = phi+1"
+    },
+    {
+      "id": "P12_euler",
+      "title": "Euler forces twelve pentagons",
+      "latex": "3V=2E,\\quad V-E+F=2\\;\\Rightarrow\\;\\sum_{p}(6-p)f_p=12\\;\\Rightarrow\\;P=12",
+      "domain": "topology",
+      "status": "exact",
+      "connects": ["gauss_bonnet", "closure_norm"],
+      "compute": "sum (6-p) f_p = 12"
+    },
+    {
+      "id": "gauss_bonnet",
+      "title": "Discrete Gauss-Bonnet = 4 pi",
+      "latex": "K_p=\\frac{\\pi}{3}(6-p),\\qquad \\sum_{\\text{faces}}K_p=\\frac{\\pi}{3}\\cdot 12=4\\pi=\\int_{S^2}K\\,dA",
+      "domain": "geometry",
+      "status": "exact",
+      "connects": [],
+      "compute": "(pi/3)*12 = 4*pi",
+      "note": "bridge to differential geometry; the continuum sphere from pure counting"
+    },
+    {
+      "id": "closure_norm",
+      "title": "The hexagonal closure norm T = k^2 + k l + l^2",
+      "latex": "T=N(k+\\ell\\,\\zeta_6)=k^2+k\\ell+\\ell^2,\\qquad N(ab)=N(a)N(b)",
+      "domain": "algebra",
+      "status": "exact",
+      "connects": ["golden_selector", "light_matrix"],
+      "compute": "T = k*k + k*l + l*l; V = 20*T"
+    },
+    {
+      "id": "light_matrix",
+      "title": "THE LIGHT MATRIX",
+      "latex": "\\mathcal M_{\\text{light}}=\\begin{pmatrix}1&2&1&0\\\\1&1&0&0\\\\1&0&0&0\\\\0&0&0&1\\end{pmatrix}\\;\\Rightarrow\\;\\operatorname{spec}=\\{\\phi^2,\\,1,\\,-1,\\,\\phi^{-2}\\}",
+      "domain": "spectral",
+      "status": "exact",
+      "connects": ["golden_selector", "c60_eigenvalue"],
+      "compute": "charpoly = (l-1)(l+1)(l^2-3l+1); eigenvalues {phi^2,1,-1,phi^-2}",
+      "note": "the algebraic heart: growth phi^2, invariant 1, alternating -1, inward phi^-2"
+    },
+    {
+      "id": "golden_selector",
+      "title": "The golden selector (Fibonacci shells)",
+      "latex": "(k_n,\\ell_n)=(F_{n+1},F_n),\\qquad T_n=F_{n+1}^2+F_{n+1}F_n+F_n^2,\\qquad T_{n+1}/T_n\\to\\phi^2",
+      "domain": "algebra",
+      "status": "exact",
+      "connects": ["c60_eigenvalue"],
+      "compute": "T ratio -> phi^2 = 2.618033989"
+    },
+    {
+      "id": "c60_eigenvalue",
+      "title": "The exact C60 spectral boundary",
+      "latex": "\\lambda_{\\min}\\big(A_{C_{60}}\\big)=-\\phi^2=-\\frac{3+\\sqrt5}{2}\\quad(\\text{multiplicity }3)",
+      "domain": "spectral",
+      "status": "computed",
+      "connects": ["renorm_tower"],
+      "compute": "build C60 adjacency, diagonalize (Jacobi), lambda_min = -phi^2",
+      "note": "Chung-Sternberg; built and diagonalized live in the browser"
+    },
+    {
+      "id": "renorm_tower",
+      "title": "The renormalized Laplacian tower",
+      "latex": "\\mu_2/\\mu_1 \\to 3,\\qquad \\mu_{\\text{center}}/\\mu_1 \\to 6\\quad(\\text{sphere targets})",
+      "domain": "spectral",
+      "status": "computed",
+      "connects": ["planck_wall"],
+      "compute": "leapfrog subdivision Laplacian spectra -> sphere ratios 3, 6"
+    },
+    {
+      "id": "planck_wall",
+      "title": "The honest wall (h is not a length)",
+      "latex": "n=\\frac{\\log(L_{\\text{start}}/\\ell_P)}{-\\log q}\\quad\\text{depends on }L_{\\text{start}},q",
+      "domain": "hypothesis",
+      "status": "hypothesis",
+      "connects": [],
+      "compute": "level count depends on chosen start length + contraction",
+      "note": "NOT a proof of a Planck lattice; the count is representation-dependent"
+    }
+  ],
+  "provenance": {
+    "law": "code is pure math stepped into compute. each node's LaTeX is the exact claim; each node's compute is a live browser calculation to the chromium limit; each edge is a derivation/prerequisite link. query this graph as you build -- all math is interconnected.",
+    "next": "grow domains: highschool (kinematics, F=ma, energy) -> mechanics -> EM (Maxwell) -> thermo -> relativity -> QM -> QCD. each new formula: add a node (id, latex, domain, status, compute) and its connects[] edges to what it needs."
+  }
+}
