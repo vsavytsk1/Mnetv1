@@ -427,9 +427,10 @@ body{{background:var(--bg);color:var(--text);
 #load-cv{{position:absolute;top:50%;left:50%;width:min(88vh,88vw);height:min(88vh,88vw);
   transform:translate(-50%,-54%);opacity:0.95;pointer-events:none;z-index:2}}
 #load.done{{opacity:0;pointer-events:none}}
-#load .load-logo{{font-size:20px;color:var(--purple);letter-spacing:0.28em;font-weight:bold;
-  text-shadow:0 0 24px rgba(167,139,250,0.6);z-index:1;margin-top:150px}}
-#load .load-sub{{font-size:9px;color:#3a4a5a;letter-spacing:0.14em;text-transform:uppercase;z-index:1}}
+#load .load-logo{{font-size:20px;color:#ffd700;letter-spacing:0.28em;font-weight:bold;
+  text-shadow:0 0 28px rgba(255,215,0,0.75),0 0 6px rgba(255,215,0,0.9);z-index:1;margin-top:150px}}
+#load .load-sub{{font-size:9px;color:#7fe6ff;letter-spacing:0.14em;text-transform:uppercase;z-index:1;
+  text-shadow:0 0 12px rgba(127,230,255,0.5)}}
 #load .load-bar{{width:340px;height:3px;background:#12101e;border-radius:2px;overflow:hidden;z-index:1}}
 #load .load-fill{{height:100%;width:0%;border-radius:2px;
   background:linear-gradient(90deg,var(--purple),var(--cyan));transition:width 0.28s ease}}
@@ -778,7 +779,14 @@ function loadSpiniInit(){{
   var SZ=Math.min(window.innerHeight*0.88,window.innerWidth*0.88);
   cv.width=SZ*dpr; cv.height=SZ*dpr;
   var ctx=cv.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0);
+  // the loading net: fractalize ALL once, then 2x fractalize the 6s (hexes),
+  // inner/mid=0.1 -- the genesis canon look. 9812 faces: dense + real-time
+  // (3x hexes = 68612 faces = 2fps; Curse 35 -- predict the bill before allocating).
+  var _lp={{innerScale:0.1,midScale:0.1}};
   _loadNet=GK.buildC60();
+  try{{ _loadNet=GK.refineAll(_loadNet,_lp);
+        _loadNet=GK.refineAllHexes(_loadNet,_lp);
+        _loadNet=GK.refineAllHexes(_loadNet,_lp); _loadLevel=4; }}catch(e){{}}
   (function loop(){{
     if(!_loadRun) return;
     requestAnimationFrame(loop);
@@ -789,7 +797,7 @@ function loadSpiniInit(){{
     ctx.clearRect(0,0,W,H);
     var cy2=Math.cos(_loadCam.ry),sy2=Math.sin(_loadCam.ry);
     var cx2=Math.cos(_loadCam.rx),sx2=Math.sin(_loadCam.rx);
-    var zoom=Math.min(W,H)*0.46;   // blown up: border reaches the frame
+    var zoom=Math.min(W,H)*0.92;   // 2x -- the fractalized net fills the frame
     function proj(p){{
       var x=p[0],y=p[1],z=p[2];
       var x1=x*cy2-z*sy2,z1=x*sy2+z*cy2;
