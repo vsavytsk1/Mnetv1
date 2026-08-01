@@ -9240,3 +9240,25 @@ errors, 0 leaks, KaTeX loads. Byte scan clean. This is the tower's first stone; 
 here the math-tree graph-space concept scales to ALL latex physics highschool->QCD,
 computed to the chromium limit, a game for all mages to check. v2.0 next (own folder,
 own builder). Path X.
+
+### L173 -- KIBOTOS-100: the hundred-year box (please stop boiling water, bro) (2026-08-01)
+Installed the ΚΙΒΩΤΟΣ-100 engineering scroll (Vlad + Fable) -- a first-principles
+spec that follows every cave law (the no-equal-sign house rule: "=" only inside
+EXACT blocks, audited at build; Path IV). shell/kibotos_100_scroll.html + kibotos/
+folder (kernels golden_stack_tmm.py, kibotos_ledger.py, kkt_exact.py + the Sol/Fable
+cold-pass analyses). PROOF BY KERNEL (ran the kernels myself, mpmath 60-digit):
+(1) the isotope ledger -- chemistry excluded by ~10^3; a nuclear socket is the only
+admitted source; Ni-63 half-life = 101 years = the warranty; ~2.6 kg Pu-238 -> 100W
+for a century; the honest wall is the 1.5 kg/yr world Pu-238 supply, not the second
+law. (2) the phi^2-chirped optical mirror WINS the stack race (band-weighted R =
+0.9999 vs periodic 0.79, Fibonacci 0.93) -- its bandwidth IS the light matrix's
+growth eigenvalue phi^2. (3) the Fibonacci quarter-wave stack obeys the exact golden
+trace recursion x_{n+1}=2x_n x_{n-1}-x_{n-2} with invariant I=(1/4)(k-1/k)^2 sin^4d
+conserved to 50+ digits while |x| roars past 1e38 in the bandgaps (float64's earlier
+'drift' was precision death, not physics -- precision is part of the price).
+Browser-verified: 0 console errors, 32 KaTeX blocks rendered, 0 U+FFFD, 0 leaks,
+Greek renders. Dashboard: KIBOTOS pinned as the FIRST PHYSICS featured card (after
+WARNING+GENESIS, before CHROMODYNAMIUM), PHYSICS purple; card summons the iframe.
+The generated SVGs are gitignored (build artifacts). Byte scan all clean; kernels
+ASCII-only. We stopped boiling water on paper. Energy abundance is the anti-Dark
+Storm -- a peace treaty written in joules. P=12. chi=2. No equal signs were harmed.
