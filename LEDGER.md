@@ -9335,3 +9335,28 @@ comet. LIVE-VERIFIED: lambda2=0.24340175 match, comets march (travel 0.07->0.49)
 (swing 0.871->0.288), 0 errors. Front-door pin -> v8.4.1. Rebuilt dashboard (369 sims, IO=460).
 All byte-clean loneCR=0 U+FFFD=0, kernels ASCII-only. The net sings phi. The pentagons hold; the
 hexes pay; the light flows. P=12. chi=2. spec(M_light)={phi^2,1,-1,phi^-2}. Hash the math not the moment.
+### L177 -- GENESIS v8.5: the light is the ONLY thing you see (+ the graph-wave perfect-math block) (2026-08-01)
+Vlad: "the light is the only thing we see; once we click, all else is background colour so we see
+the flow itself. the net stays the same -- the idea is to use the Thea/Heleni light math to trick
+the monkey brain: are you seeing a solid pixel? nu nu nu, it's just background and you see the light
+flow from that perspective. the net rendering is the most efficient this reality lets us do, so the
+light is an aesthetic, and the price is already paid for the net. and we know there are code blocks
+that are perfect math stepped in compute -- let's find them for the light. step by step. (this helps
+me see the light on BIGGER nets.)"
+STEP 1 (v8.5, from v8.4.1, Path X -- v8.4.1 frozen): on LIGHT the static net renders to BACKGROUND
+(draw() dim 0.14 -> 0; net still projected/sorted/painted = the price is paid, just at 0 alpha;
+vertex atoms skipped). Result: on the big shells (C980/C2580/C6740) you see ONLY the light flow, no
+solid net competing -- exactly the ask. Math absolute: lambda_2=0.24340175 (C60) still matches kernel.
+THE PERFECT-MATH BLOCK (Thea doctrine "all code is pure math, merely stepped into compute"), for the
+NEXT rung's center-propagation, PROVEN by kernel now: tower/graph_wave.py -- the GRAPH WAVE EQUATION
+u'' = -c^2 L u (L = the net's Laplacian), leapfrog / Stormer-Verlet (symplectic). PROOF: discrete
+energy H = 0.5|v_{n+1/2}|^2 + 0.5 c^2 u_n.L u_{n+1} conserved to 3.6e-15 (MACHINE PRECISION) over
+4000 steps across ALL 7 golden shells; a single eigenmode is a pure standing wave at the EXACT
+leapfrog dispersion omega = (2/dt) arcsin((c dt/2) sqrt(lambda)) (err 2.6e-13). CFL (c dt)^2 lam_max<4.
+EXACT vs COMPUTED labelled (Thea grammar): EXACT = L integer + spectrum + leapfrog recurrence +
+staggered energy invariant + arcsin dispersion; COMPUTED = numeric drift at finite dt (shown, not
+claimed zero). Kernel caught 2 of my measurement bugs (backward velocity, wrong phase) -> fixed in
+the open, celebrated. graph_wave_receipt.json emitted (7 shells).
+Front-door pin -> v8.5. Rebuilt dashboard (370 sims, IO=463). All byte-clean loneCR=0 U+FFFD=0,
+kernels ASCII-only. The net is the substrate; the light is the aesthetic; the price is paid; the
+wave conserves the rest. P=12. chi=2. spec(M_light)={phi^2,1,-1,phi^-2}. Hash the math, not the moment.
