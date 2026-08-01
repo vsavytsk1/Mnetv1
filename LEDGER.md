@@ -9285,3 +9285,26 @@ Carved Curse 38 into KERNELIMAGIC (index + full section); fixed stale "29 curses
 the 12 Paths capstone. Featured KIBOTOS card -> v1.2 (first physics). All byte-clean,
 kernels ASCII-only. We stopped boiling water on paper -- reproducibly this time. P=12. chi=2.
 Hash the math, not the moment. No equal signs were harmed.
+
+### L175 -- GENESIS v8.2 the GOLDEN CATALOGUE + FLIGHT EXPLORER (2026-08-01)
+Vlad: "open the SEED C60 button into the next 7 buckyballs, add a flight explorer -- lock
+each point on seed, click a dropdown to center that point." Bit by bit, proof by kernel.
+Path X: v8.1 stays frozen + pinned in history; ALL work on a fresh copy shell/genesis_v8.2.html.
+THE GOLDEN CATALOGUE (Thea Lane B, certified closure): a new Goldberg-Coxeter (k,l) mesh
+generator builds real 3D coords for the golden selector shells C20->C60->C140->C380->C980->
+C2580->C6740 (Fibonacci pairs (1,0)..(13,8), T=k^2+k*l+l^2). PROOF BY KERNEL FIRST:
+tower/goldberg_gc.py verifies all 7 -> V=20T E=30T F=10T+2 P=12 chi=2 all-trivalent (matches
+Thea Part III table exactly). Chiral (Class III) shells solved via convex hull of the
+cospherical lattice points (per-face unit-tri tiling FAILS the chiral boundary cut; integer
+barycentric + hull is the truth). Ported EXACTLY to JS (GK.buildGoldberg); a Node harness
+re-verified the port matched the python cert BEFORE trusting it (Path V, both sides of the
+seam). FLIGHT EXPLORER panel: on seed, every point position is frozen; dropdown = 12 pentagon
+centers + capped vertex list; CENTER rotates the polyhedron so the chosen point faces
+front-and-center (ry=atan2(dx,dz), rx=-asin(dy)) then holds (spin->0, motion opt-in Path VIII);
+LOCK re-aims each frame so it survives spin/drag; FREE releases. Curse 35 respected: predV=20T
+predict-and-gate with a "forging" status for the big hull. LIVE-VERIFIED (0 console errors):
+C980 built 25ms, pentagon centered EXACTLY at screen center facing camera, LOCK held through a
+forced spin; C6740 forged 637ms V=6740 chi=2. One curse slain mid-build (Path V seam):
+flCenterOn reached for vnorm() sealed inside the M1 kernel IIFE -> ReferenceError; healed by
+inlining the normalize. Front-door pin bumped v8.1->v8.2. Rebuilt dashboard (366 sims, IO=457).
+All byte-clean: loneCR=0 U+FFFD=0. The pentagons hold; the hexes pay. P=12. chi=2.
