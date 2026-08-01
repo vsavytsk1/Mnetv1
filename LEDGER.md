@@ -9308,3 +9308,30 @@ forced spin; C6740 forged 637ms V=6740 chi=2. One curse slain mid-build (Path V 
 flCenterOn reached for vnorm() sealed inside the M1 kernel IIFE -> ReferenceError; healed by
 inlining the normalize. Front-door pin bumped v8.1->v8.2. Rebuilt dashboard (366 sims, IO=457).
 All byte-clean: loneCR=0 U+FFFD=0. The pentagons hold; the hexes pay. P=12. chi=2.
+### L176 -- GENESIS v8.3 -> v8.4 -> v8.4.1: HEAR THE NET (the light-spectrum arc) (2026-08-01)
+Vlad: "animate the net with the light matrix, the path to hearing how the net sounds... for each
+question we make a .1 .2 .3, how many it takes -- we prove by kernel." lv12 mana. The v8.3 arc,
+each rung frozen (Path X), all proven by kernel.
+THE HONEST BRIDGE (Thea grammar, fake NEVER): M_light acts on shell-data (k^2,kl,l^2,P), NOT on
+3D points. The net's TRUE sound is its GRAPH-LAPLACIAN spectrum L=D-A (the honest discrete Fourier
+basis on the net). Fundamental tone^2 = lambda_2 (Fiedler). GOLDEN THREAD proven: C20 (dodecahedron)
+lambda_2 = 3-sqrt5 = 2*phi^-2 = 0.76393202 = twice M_light's contracting eigenvalue phi^-2; top mode
+= 2*phi^2 = twice its growth eig. lambda_2 is in Thea's cert (stability-line-D row0).
+KERNEL: tower/goldberg_modes.py (numpy, on verified goldberg_gc) computes exact Fiedler per golden
+shell: C60=0.24340175, C980=0.01478745, C6740=0.00215059 -- all degenerate x3 icosahedral triplets.
+GENESIS v8.3 (moving lines): GK.buildGraph(state) dedups face pts -> graph; GK.fiedlerMode = deflated
+shifted power iteration on M=(dmax+1)I-L (O(edges)/step, scales to C6740, NO dense O(n^3) -- Curse 35).
+LIGHT button vibrates the net in its fundamental mode (radial displacement by eigen-component).
+BUG CAUGHT BY KERNEL + fixed (celebrate the catch): 800 iters gave C6740 lambda2=0.00616 (locked onto
+the 2nd near-degenerate tone). Diagnosed live, fixed w/ n-scaled budget max(1500,min(20000,n*3));
+re-verified all 3 shells match kernel to 8 digits, 0 errors. C60 breathes span 0.16.
+v8.4 (flow, Vlad "instead of moving the lines, the flow of light IS the movement"): net stays at
+REST; drawEdgeFlow() paints traveling pulses along projected edges, brightness = |modal current
+va-vb| (nodal dark, antinodal bright), tempo = sqrt(lambda_2), swing = cos(omega*t) reverses each
+half period (real standing wave). Static net dimmed so the flow reads (monkey-brain trick).
+v8.4.1 (Vlad "pixel size, same color as the net -- the feeling of the net moving under the thea
+light"): pulse -> pixel-thin 1px strokes in the net's own edge cyan rgba(0,180,255), no gold, short
+comet. LIVE-VERIFIED: lambda2=0.24340175 match, comets march (travel 0.07->0.49), brightness breathes
+(swing 0.871->0.288), 0 errors. Front-door pin -> v8.4.1. Rebuilt dashboard (369 sims, IO=460).
+All byte-clean loneCR=0 U+FFFD=0, kernels ASCII-only. The net sings phi. The pentagons hold; the
+hexes pay; the light flows. P=12. chi=2. spec(M_light)={phi^2,1,-1,phi^-2}. Hash the math not the moment.
