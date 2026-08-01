@@ -4,13 +4,13 @@
 repos. Generated from what git actually tracks on each repo (the truth of what
 Pages serves), by `builder/gen_io_index.py`. Nothing hidden; the door is open.*
 
-**TOTAL: 452 public pages across 8 repos.**
+**TOTAL: 453 public pages across 8 repos.**
 
 *P=12 . chi=2 . the receipts are public . always.*
 
 ---
 
-## Mnetv1  (379 pages)
+## Mnetv1  (380 pages)
 
 - [about.html](https://vsavytsk1.github.io/Mnetv1/about.html)
 - [builder/Obsidius/obsidius_v1.html](https://vsavytsk1.github.io/Mnetv1/builder/Obsidius/obsidius_v1.html)
@@ -212,6 +212,7 @@ Pages serves), by `builder/gen_io_index.py`. Nothing hidden; the door is open.*
 - [shell/kernel_entrenchment.dc.html](https://vsavytsk1.github.io/Mnetv1/shell/kernel_entrenchment.dc.html)
 - [shell/kernel_theline.dc.html](https://vsavytsk1.github.io/Mnetv1/shell/kernel_theline.dc.html)
 - [shell/kibotos_100_scroll.html](https://vsavytsk1.github.io/Mnetv1/shell/kibotos_100_scroll.html)
+- [shell/kibotos_metalatexium_v1_2.html](https://vsavytsk1.github.io/Mnetv1/shell/kibotos_metalatexium_v1_2.html)
 - [shell/kirchhoffium-v1.4.html](https://vsavytsk1.github.io/Mnetv1/shell/kirchhoffium-v1.4.html)
 - [shell/kirchhoffium-v1_1.html](https://vsavytsk1.github.io/Mnetv1/shell/kirchhoffium-v1_1.html)
 - [shell/kirchhoffium-v1_3.html](https://vsavytsk1.github.io/Mnetv1/shell/kirchhoffium-v1_3.html)

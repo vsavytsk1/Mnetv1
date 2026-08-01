@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>METALATEXIUM v0.1 — THE BOX THAT PAYS</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#05060d;--panel:#0b0f1b;--line:#202a42;--text:#e5ebf5;--dim:#8490aa;--gold:#ffd75a;--cyan:#38d9ff;--green:#7fff9f;--pink:#ff72b6;--orange:#ff9c52;--purple:#bf8cff;--red:#ff637d}
+html,body{background:radial-gradient(1100px 650px at 50% -15%,#15203a 0,#070912 55%,#05060d 100%);color:var(--text);font-family:ui-monospace,"SFMono-Regular",Consolas,monospace;font-size:13px;line-height:1.58;min-height:100%}
+body{padding-top:40px}
+#hud{position:fixed;z-index:50;top:0;left:0;right:0;display:flex;justify-content:center;gap:20px;padding:8px 12px;background:rgba(5,6,13,.91);backdrop-filter:blur(9px);border-bottom:1px solid var(--line);font-size:10px;letter-spacing:.08em}
+#hud .k{color:var(--dim);text-transform:uppercase}.gold{color:var(--gold)}.cyan{color:var(--cyan)}.green{color:var(--green)}.pink{color:var(--pink)}.orange{color:var(--orange)}.red{color:var(--red)}
+#wrap{max-width:1180px;margin:0 auto;padding:28px 3vw 100px}
+.hero{text-align:center;padding:32px 10px 20px}.hero .eye{font-size:10px;letter-spacing:.32em;color:var(--green);text-transform:uppercase}.hero h1{font-size:30px;color:var(--gold);letter-spacing:.08em;margin:8px 0 5px}.hero h2{font-size:14px;color:var(--cyan);font-weight:500;letter-spacing:.12em}.hero p{max-width:830px;margin:16px auto 0;color:#aeb9cd}.hero .wall{max-width:850px;margin:18px auto 0;padding:13px 16px;border:1px solid #4c2530;border-left:4px solid var(--red);background:rgba(42,10,19,.45);border-radius:8px;color:#ffc2ce;text-align:left}
+.status{display:inline-block;font-size:8px;padding:1px 6px;border:1px solid var(--line);border-radius:4px;letter-spacing:.11em;text-transform:uppercase;margin-right:5px}.exact{color:var(--green);border-color:#265036}.computed{color:var(--cyan);border-color:#1d4c5a}.design{color:var(--gold);border-color:#5c4c1f}.hyp{color:var(--orange);border-color:#5b3b22}.rejected{color:var(--red);border-color:#5a2631}
+.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:12px}.panel{background:linear-gradient(180deg,rgba(13,17,31,.93),rgba(7,10,20,.93));border:1px solid var(--line);border-radius:10px;padding:15px;box-shadow:0 12px 35px rgba(0,0,0,.18)}.panel h3{font-size:12px;letter-spacing:.1em;color:var(--gold);text-transform:uppercase;margin-bottom:10px}.panel h4{font-size:11px;color:var(--cyan);margin:12px 0 6px}.panel p{color:#aeb9cd;font-size:11.5px}.span12{grid-column:span 12}.span8{grid-column:span 8}.span7{grid-column:span 7}.span6{grid-column:span 6}.span5{grid-column:span 5}.span4{grid-column:span 4}
+.controls{display:grid;grid-template-columns:repeat(3,minmax(180px,1fr));gap:12px}.control{padding:10px;border:1px solid #1c263d;border-radius:8px;background:#080b15}.control label{display:flex;justify-content:space-between;gap:12px;color:#aeb9cd;font-size:10px;text-transform:uppercase;letter-spacing:.06em}.control output{color:var(--cyan);font-weight:700;text-transform:none}.control input[type=range]{width:100%;margin-top:8px;accent-color:var(--cyan)}
+.metrics{display:grid;grid-template-columns:repeat(4,minmax(130px,1fr));gap:8px}.metric{padding:10px;border:1px solid #1b263d;border-radius:7px;background:#070a13}.metric .name{font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--dim)}.metric .val{font-size:16px;color:var(--green);margin-top:3px;word-break:break-word}.metric.warn .val{color:var(--orange)}.metric.bad .val{color:var(--pink)}
+.eq{margin:10px 0;padding:9px 11px;border-left:3px solid #293858;background:#070a14;overflow-x:auto;min-height:44px}.eq .plain{color:#c6d1e5;white-space:pre-wrap}.eq .katex-display{margin:.2em 0}
+canvas{display:block;width:100%;height:260px;border:1px solid #182238;border-radius:7px;background:#050812}.legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:7px;font-size:9px;color:var(--dim)}.dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px}
+.stack{display:grid;grid-template-columns:repeat(12,1fr);gap:5px;align-items:stretch}.layer{min-height:116px;border:1px solid #25314b;border-radius:6px;padding:7px 5px;display:flex;flex-direction:column;justify-content:space-between;background:linear-gradient(180deg,#11182a,#080b14);position:relative;overflow:hidden}.layer:before{content:"";position:absolute;inset:0 auto 0 0;width:3px;background:var(--cyan)}.layer:nth-child(4n+1):before{background:var(--gold)}.layer:nth-child(4n+2):before{background:var(--pink)}.layer:nth-child(4n+3):before{background:var(--green)}.layer .id{font-size:8px;color:var(--dim)}.layer .title{font-size:9px;color:#eaf0fb;line-height:1.3}.layer .s{font-size:7px;color:var(--cyan);text-transform:uppercase;letter-spacing:.06em}
+.anchor-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.anchor{padding:9px;border:1px solid #202c44;border-radius:7px;background:#080b15}.anchor b{display:block;color:var(--gold);font-size:10px}.anchor span{color:#9aa7bd;font-size:9px}
+.table{width:100%;border-collapse:collapse;font-size:10px}.table th,.table td{padding:7px;border-bottom:1px solid #19233a;text-align:left}.table th{color:var(--dim);font-size:9px;text-transform:uppercase;letter-spacing:.07em}.table td:last-child{text-align:right;color:var(--green)}
+.btnrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.btn{border:1px solid #2a3a58;background:#0a1020;color:var(--cyan);padding:7px 12px;border-radius:6px;font:inherit;font-size:10px;cursor:pointer}.btn:hover{border-color:var(--cyan);box-shadow:0 0 14px rgba(56,217,255,.18)}.btn.goldbtn{color:var(--gold);border-color:#5a4920}.btn.redbtn{color:var(--red);border-color:#542631}
+.receipt{white-space:pre-wrap;max-height:320px;overflow:auto;padding:10px;border:1px solid #1e2940;background:#050812;color:#9fb0cb;border-radius:7px;font-size:9px}.foot{text-align:center;color:#58647d;font-size:9px;margin-top:25px}.foot b{color:#8897b3}
+.callout{border:1px solid #3e3420;border-left:4px solid var(--gold);background:rgba(38,31,10,.34);padding:10px 12px;border-radius:7px;color:#d8cfad}.callout.cyanline{border-color:#1d3d4b;border-left-color:var(--cyan);background:rgba(7,29,38,.35)}
+@media(max-width:900px){.span8,.span7,.span6,.span5,.span4{grid-column:span 12}.controls{grid-template-columns:1fr 1fr}.metrics{grid-template-columns:1fr 1fr}.stack{grid-template-columns:repeat(4,1fr)}.anchor-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:560px){body{padding-top:54px}#hud{gap:9px;flex-wrap:wrap}.controls{grid-template-columns:1fr}.metrics{grid-template-columns:1fr}.stack{grid-template-columns:repeat(2,1fr)}.anchor-grid{grid-template-columns:1fr}.hero h1{font-size:23px}}
+</style>
+</head>
+<body>
+<div id="hud">
+  <span><span class="k">status</span> <b class="red">NO FREE ENERGY</b></span>
+  <span><span class="k">output</span> <b class="gold" id="hudPower">100 W</b></span>
+  <span><span class="k">life</span> <b class="cyan" id="hudYears">100 y</b></span>
+  <span><span class="k">insight</span> <b class="green" id="hudInsight">0</b></span>
+</div>
+<div id="wrap">
+  <header class="hero">
+    <div class="eye">Grimoire engineering volume · proof by ledger</div>
+    <h1>METALATEXIUM v0.1</h1>
+    <h2>THE BOX THAT PAYS</h2>
+    <p>A source-agnostic metamaterial power-stack laboratory. The goal is a cooler-scale solid-state box that conditions a persistent free-energy source into 220 V RMS at 60 Hz without a steam turbine. Every visible relation uses a target, map, approximation, limit, or residual — never a naked equality claim.</p>
+    <div class="wall"><span class="status rejected">rejected</span><b>Symmetry is the valve, not the fuel.</b> Broken inversion symmetry can permit rectification and shift current. At global equilibrium, detailed balance removes sustained directed work. The box must expose a real source port and a real heat-rejection surface.</div>
+  </header>
+
+  <main class="grid">
+    <section class="panel span12">
+      <h3>01 · The specification knobs</h3>
+      <div class="controls">
+        <div class="control"><label>rated AC output <output id="oPower">100 W</output></label><input id="power" type="range" min="0" max="3" step="0.01" value="2"></div>
+        <div class="control"><label>service target <output id="oYears">100 y</output></label><input id="years" type="range" min="1" max="100" step="1" value="100"></div>
+        <div class="control"><label>TPV module design efficiency <output id="oEtaTpv">30.0 %</output></label><input id="etaTpv" type="range" min="5" max="44" step="0.5" value="30"></div>
+        <div class="control"><label>inverter efficiency <output id="oEtaInv">95.0 %</output></label><input id="etaInv" type="range" min="80" max="99" step="0.1" value="95"></div>
+        <div class="control"><label>radiator surface <output id="oTrad">80 °C</output></label><input id="trad" type="range" min="45" max="130" step="1" value="80"></div>
+        <div class="control"><label>TPV bandgap <output id="oEg">0.74 eV</output></label><input id="eg" type="range" min="0.60" max="1.10" step="0.01" value="0.74"></div>
+        <div class="control"><label>Fibonacci order <output id="oOrder">4</output></label><input id="order" type="range" min="2" max="11" step="1" value="4"></div>
+        <div class="control"><label>high-index thickness scale <output id="oScaleH">0.80</output></label><input id="scaleH" type="range" min="0.60" max="1.40" step="0.01" value="0.80"></div>
+        <div class="control"><label>low-index thickness scale <output id="oScaleL">1.28</output></label><input id="scaleL" type="range" min="0.60" max="1.40" step="0.01" value="1.28"></div>
+      </div>
+      <div class="btnrow"><button class="btn goldbtn" id="computeBtn">RECOMPUTE RECEIPT</button><button class="btn" id="exportBtn">EXPORT JSON</button><button class="btn redbtn" id="resetBtn">RESET DESIGN</button></div>
+    </section>
+
+    <section class="panel span12">
+      <h3>02 · Interface and century ledger</h3>
+      <div class="metrics">
+        <div class="metric"><div class="name">RMS output current</div><div class="val" id="mCurrent">0.4545 A</div></div>
+        <div class="metric"><div class="name">sine peak</div><div class="val" id="mPeak">311.13 V</div></div>
+        <div class="metric"><div class="name">DC bus design floor</div><div class="val" id="mBus">373.35 V</div></div>
+        <div class="metric"><div class="name">load energy</div><div class="val" id="mEnergy">87,660 kWh</div></div>
+        <div class="metric warn"><div class="name">active-source lower bound</div><div class="val" id="mMass">1.357 kg</div></div>
+        <div class="metric warn"><div class="name">beginning thermal power</div><div class="val" id="mBolTherm">773 Wth</div></div>
+        <div class="metric bad"><div class="name">beginning rejected heat</div><div class="val" id="mBolWaste">673 W</div></div>
+        <div class="metric bad"><div class="name">radiator area at beginning</div><div class="val" id="mArea">1.012 m²</div></div>
+      </div>
+      <div class="eq" data-tex="\mathcal B_\star\gets\{V_{\rm RMS}\rightsquigarrow220\,{\rm V},\ f\rightsquigarrow60\,{\rm Hz},\ P_\star,\ \tau_\star\}"></div>
+      <div class="eq" data-tex="E_{\rm load}\gets P_\star\tau_\star,\qquad I_{\rm RMS}\approx\frac{P_\star}{220\,{\rm V}}"></div>
+      <div class="callout"><span class="status design">design input</span>220 V and 60 Hz describe the interface, not the amount of power. The rated power slider is the price knob.</div>
+    </section>
+
+    <section class="panel span6">
+      <h3>03 · Output waveform</h3>
+      <canvas id="waveCanvas" width="700" height="300"></canvas>
+      <div class="legend"><span><i class="dot" style="background:#38d9ff"></i>target sine</span><span><i class="dot" style="background:#ffd75a"></i>RMS envelope</span></div>
+      <div class="eq" data-tex="v_{\rm out}(t)\rightsquigarrow\sqrt2\,(220\,{\rm V})\sin(2\pi\,60t)"></div>
+    </section>
+
+    <section class="panel span6">
+      <h3>04 · Source decay and output clamp</h3>
+      <canvas id="decayCanvas" width="700" height="300"></canvas>
+      <div class="legend"><span><i class="dot" style="background:#ff72b6"></i>available source heat</span><span><i class="dot" style="background:#7fff9f"></i>thermal input required for rated output</span></div>
+      <div class="eq" data-tex="P_{\rm th}(t)\sim P_{\rm th,0}\,2^{-t/t_{1/2}}"></div>
+      <p><span class="status hyp">analytical bound</span>The source model uses Pu-238 decay parameters only to expose scale. It omits containment, shielding, licensing, converter area, and component degradation. It is not a fabrication route.</p>
+    </section>
+
+    <section class="panel span7">
+      <h3>05 · Fibonacci optical stack</h3>
+      <canvas id="optCanvas" width="800" height="320"></canvas>
+      <div class="legend"><span><i class="dot" style="background:#ff9c52"></i>emissivity surrogate</span><span><i class="dot" style="background:#38d9ff"></i>TPV bandgap cutoff</span></div>
+      <div class="eq" data-tex="H\mapsto HL,\qquad L\mapsto H,\qquad N_H^{(n)}/N_L^{(n)}\to\phi"></div>
+      <div class="eq" data-tex="\mathbf M_{\rm stack}(\lambda)\gets\prod_j\mathbf M_j(\lambda),\qquad \epsilon(\lambda)\approx1-R(\lambda)"></div>
+      <p><span class="status computed">computed</span>Constant surrogate optical indices are used. This is a design-search sandbox, not a hot optical-material certificate.</p>
+    </section>
+
+    <section class="panel span5">
+      <h3>06 · Current optical receipt</h3>
+      <table class="table"><tbody>
+        <tr><th>layer word</th><td id="rWord">HLHHLHLH</td></tr>
+        <tr><th>layer count</th><td id="rLayers">8</td></tr>
+        <tr><th>H / L count</th><td id="rCounts">5 / 3</td></tr>
+        <tr><th>golden count ratio</th><td id="rRatio">1.6667</td></tr>
+        <tr><th>bandgap cutoff</th><td id="rLambda">1.675 μm</td></tr>
+        <tr><th>H thickness</th><td id="rDh">163.5 nm</td></tr>
+        <tr><th>L thickness</th><td id="rDl">324.9 nm</td></tr>
+        <tr><th>in-band mean emissivity</th><td id="rIn">0.756</td></tr>
+        <tr><th>long-wave mean emissivity</th><td id="rOut">0.708</td></tr>
+        <tr><th>selectivity score</th><td id="rScore">0.146</td></tr>
+      </tbody></table>
+      <div class="callout cyanline"><b>Target is not result.</b> The first simple Fibonacci dielectric candidate produces only moderate selectivity. The next kernel needs measured temperature-dependent complex optical constants and absorbing refractory layers.</div>
+    </section>
+
+    <section class="panel span12">
+      <h3>07 · The twelve-layer candidate stack</h3>
+      <div class="stack" id="stack"></div>
+    </section>
+
+    <section class="panel span12">
+      <h3>08 · The twelve fixed constraints</h3>
+      <div class="anchor-grid" id="anchors"></div>
+    </section>
+
+    <section class="panel span6">
+      <h3>09 · The symmetry gate</h3>
+      <div class="eq" data-tex="J^a_{\rm shift}\propto\sigma^{abc}(0;\omega,-\omega)E^b(\omega)E^c(-\omega)"></div>
+      <div class="eq" data-tex="E(\omega)\to0\quad\Longrightarrow\quad J_{\rm shift}\to0"></div>
+      <p>Layer order, translation, twist, strain, polarity, and interface chemistry can permit and steer nonlinear photocurrent. The optical or thermal drive remains the energy port.</p>
+      <h4>Detailed-balance gate</h4>
+      <div class="eq" data-tex="I\propto\int\mathcal T(E)[f_L(E)-f_R(E)]\,dE"></div>
+      <div class="eq" data-tex="f_L-f_R\to0\quad\Longrightarrow\quad I\to0"></div>
+    </section>
+
+    <section class="panel span6">
+      <h3>10 · The actual first prototype</h3>
+      <p><span class="status design">Phase A</span>Use an external electrical heater. Keep nuclear material outside the experiment. The purpose is to close the converter ledger and discover whether the spectral stack and collector geometry beat simpler controls.</p>
+      <table class="table"><tbody>
+        <tr><th>heat input target</th><td>50–500 Wth</td></tr>
+        <tr><th>DC output target</th><td>5–100 W</td></tr>
+        <tr><th>emitter target</th><td>1000–1435 °C research range</td></tr>
+        <tr><th>cold junction</th><td>actively measured and constrained</td></tr>
+        <tr><th>atmosphere</th><td>vacuum or inert test chamber</td></tr>
+        <tr><th>controls</th><td>periodic stack and straight collector</td></tr>
+        <tr><th>receipt</th><td>source, output, heat, spectrum, uncertainty</td></tr>
+      </tbody></table>
+      <div class="eq" data-tex="\mathcal R_E\gets P_{\rm source}-P_{\rm AC}-P_{\rm reject}-P_{\rm aux}-dU/dt\to0"></div>
+    </section>
+
+    <section class="panel span12">
+      <h3>11 · Live certificate</h3>
+      <div class="receipt" id="receipt"></div>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <b>METALATEXIUM v0.1</b> · source pays · layers persuade · electrons follow the permitted path · receipt stays visible<br>
+    The integrated century box remains a hypothesis. The arithmetic, transfer matrix, and declared lower-bound model run locally in this browser.
+  </footer>
+</div>
+<script>
+"use strict";
+const K={secYear:365.25*24*3600,hourYear:365.25*24,sigma:5.670374419e-8,hc:1.239841984,halfLife:87.7,specific:0.57,ambientC:25,emiss:0.90,hconv:5.0};
+let insight=0,lastReceipt=null;
+const $=id=>document.getElementById(id);
+const fmt=(x,d=3)=>Number(x).toLocaleString(undefined,{maximumFractionDigits:d,minimumFractionDigits:d});
+const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
+
+const layers=[
+ ["L01","FREE-ENERGY PORT","external heat first; regulated persistent source only institutionally","SOURCE"],
+ ["L02","HOT SPREADER","SiC / W / Mo / graphite candidate","DESIGN"],
+ ["L03","DIFFUSION BARRIER","ALD ceramic or refractory nitride candidate","DESIGN"],
+ ["L04","SELECTIVE EMITTER","W/HfO₂-inspired refractory multilayer","RESEARCH"],
+ ["L05","FIBONACCI FILTER","H→HL · L→H quasiperiodic stack","COMPUTED"],
+ ["L06","PHOTON CAVITY","vacuum or controlled low-index gap","DESIGN"],
+ ["L07","TPV JUNCTION","air-bridge InGaAs(P)-class cell","RESEARCH"],
+ ["L08","PHOTON RECYCLER","sub-bandgap back reflector","RESEARCH"],
+ ["L09","FRACTAL COLLECTOR","space-filling electrode versus busbar control","HYPOTHESIS"],
+ ["L10","COLD SPREADER","AlN / SiC / graphite / diamond candidate","DESIGN"],
+ ["L11","DC + INVERTER","film/ceramic link · SiC/GaN bridge · LC","ENGINEERING"],
+ ["L12","SHELL + RADIATOR","hermetic seal · getters · sensors · passive fins","ENGINEERING"]
+];
+const anchors=[
+ ["A01","Energy ledger","source, AC output, rejected heat, auxiliaries, and stored energy close"],
+ ["A02","Non-equilibrium port","temperature, photon, chemical, mechanical, or nuclear gradient remains explicit"],
+ ["A03","Charge continuity","persistent charge accumulation appears only in declared capacitive state"],
+ ["A04","Electrical stress","field crowding, insulation, creepage, clearance, and transients remain qualified"],
+ ["A05","Heat rejection","worst-case surplus reaches the environment without hidden sinks"],
+ ["A06","Hot-stack stability","oxidation, diffusion, agglomeration, and phase drift stay bounded"],
+ ["A07","Cold-cell stability","junction temperature, dark current, contacts, and reflector remain qualified"],
+ ["A08","Radiation compatibility","damage and source containment receive institutional certification when relevant"],
+ ["A09","Current-density life","electromigration, contact heating, and fatigue remain within damage budget"],
+ ["A10","Hermeticity","vacuum, getters, seals, feedthroughs, and corrosion barriers survive"],
+ ["A11","Power quality","220 V RMS and 60 Hz output satisfy isolation, harmonics, faults, and shutdown rules"],
+ ["A12","Receipt","materials, processes, measurements, uncertainty, and hashes stay traceable"]
+];
+function buildStatic(){
+  $("stack").innerHTML=layers.map(x=>`<div class="layer"><div class="id">${x[0]}</div><div class="title">${x[1]}</div><div class="s">${x[3]}</div></div>`).join("");
+  $("anchors").innerHTML=anchors.map(x=>`<div class="anchor"><b>${x[0]} · ${x[1]}</b><span>${x[2]}</span></div>`).join("");
+}
+function fibWord(order){let w="H";for(let n=0;n<order;n++)w=[...w].map(ch=>ch==="H"?"HL":"H").join("");return w;}
+function c(re,im=0){return {re,im};}
+function cadd(a,b){return c(a.re+b.re,a.im+b.im)}
+function csub(a,b){return c(a.re-b.re,a.im-b.im)}
+function cmul(a,b){return c(a.re*b.re-a.im*b.im,a.re*b.im+a.im*b.re)}
+function cdiv(a,b){const q=b.re*b.re+b.im*b.im;return c((a.re*b.re+a.im*b.im)/q,(a.im*b.re-a.re*b.im)/q)}
+function cscale(a,s){return c(a.re*s,a.im*s)}
+function cabs2(a){return a.re*a.re+a.im*a.im}
+function mmul(A,B){return [[cadd(cmul(A[0][0],B[0][0]),cmul(A[0][1],B[1][0])),cadd(cmul(A[0][0],B[0][1]),cmul(A[0][1],B[1][1]))],[cadd(cmul(A[1][0],B[0][0]),cmul(A[1][1],B[1][0])),cadd(cmul(A[1][0],B[0][1]),cmul(A[1][1],B[1][1]))]]}
+function layerMatrix(n,d,lam){const delta=2*Math.PI*n*d/lam,co=Math.cos(delta),si=Math.sin(delta);return [[c(co),c(0,si/n)],[c(0,n*si),c(co)]]}
+function emissivityAt(word,lam,lg,scaleH,scaleL){const nH=2.05,nL=1.65,nSub=c(3.50,2.70);const dH=scaleH*lg/(4*nH),dL=scaleL*lg/(4*nL);let M=[[c(1),c(0)],[c(0),c(1)]];for(const ch of word)M=mmul(M,layerMatrix(ch==="H"?nH:nL,ch==="H"?dH:dL,lam));const A=M[0][0],B=M[0][1],C=M[1][0],D=M[1][1];const yin=cdiv(cadd(C,cmul(D,nSub)),cadd(A,cmul(B,nSub)));const r=cdiv(csub(c(1),yin),cadd(c(1),yin));return clamp(1-clamp(cabs2(r),0,1),0,1)}
+function state(){
+ const p=Math.pow(10,+$("power").value),years=+$("years").value,etaTpv=+$("etaTpv").value/100,etaInv=+$("etaInv").value/100,trad=+$("trad").value,eg=+$("eg").value,order=+$("order").value,scaleH=+$("scaleH").value,scaleL=+$("scaleL").value;
+ return {p,years,etaTpv,etaInv,trad,eg,order,scaleH,scaleL};
+}
+function compute(){
+ const s=state(),eta=s.etaTpv*s.etaInv,decay=Math.pow(2,-s.years/K.halfLife),eolTherm=s.p/eta,bolTherm=eolTherm/decay,massG=bolTherm/K.specific,bolWaste=bolTherm-s.p,eolWaste=eolTherm-s.p,ts=s.trad+273.15,ta=K.ambientC+273.15,flux=K.emiss*K.sigma*(Math.pow(ts,4)-Math.pow(ta,4))+K.hconv*(ts-ta),area=bolWaste/flux,current=s.p/220,peak=Math.sqrt(2)*220,bus=1.2*peak,kwh=s.p*s.years*K.hourYear/1000,gj=s.p*s.years*K.secYear/1e9;
+ const lg=K.hc/s.eg,word=fibWord(s.order),h=[...word].filter(x=>x==="H").length,l=word.length-h,dH=s.scaleH*lg/(4*2.05),dL=s.scaleL*lg/(4*1.65),n=300,waves=[],ems=[];let inSum=0,inN=0,outSum=0,outN=0,shortSum=0,shortN=0;
+ for(let i=0;i<n;i++){const lam=.45*lg+(3*lg-.45*lg)*i/(n-1),em=emissivityAt(word,lam,lg,s.scaleH,s.scaleL);waves.push(lam);ems.push(em);if(lam>=.78*lg&&lam<=1.12*lg){inSum+=em;inN++}if(lam>=1.45*lg&&lam<=3*lg){outSum+=em;outN++}if(lam>=.45*lg&&lam<.78*lg){shortSum+=em;shortN++}}
+ const inMean=inSum/inN,outMean=outSum/outN,shortMean=shortSum/shortN,score=inMean-.70*outMean-.15*shortMean-.002*word.length;
+ return {...s,eta,decay,eolTherm,bolTherm,massG,bolWaste,eolWaste,flux,area,current,peak,bus,kwh,gj,lg,word,h,l,dH,dL,waves,ems,inMean,outMean,shortMean,score};
+}
+function updateLabels(s){
+ $("oPower").textContent=fmt(s.p,s.p<10?2:s.p<100?1:0)+" W";$("oYears").textContent=fmt(s.years,0)+" y";$("oEtaTpv").textContent=fmt(s.etaTpv*100,1)+" %";$("oEtaInv").textContent=fmt(s.etaInv*100,1)+" %";$("oTrad").textContent=fmt(s.trad,0)+" °C";$("oEg").textContent=fmt(s.eg,2)+" eV";$("oOrder").textContent=s.order;$("oScaleH").textContent=fmt(s.scaleH,2);$("oScaleL").textContent=fmt(s.scaleL,2);$("hudPower").textContent=fmt(s.p,s.p<10?2:s.p<100?1:0)+" W";$("hudYears").textContent=fmt(s.years,0)+" y";
+}
+function updateMetrics(s){
+ $("mCurrent").textContent=fmt(s.current,s.current<.1?5:4)+" A";$("mPeak").textContent=fmt(s.peak,2)+" V";$("mBus").textContent=fmt(s.bus,2)+" V";$("mEnergy").textContent=fmt(s.kwh,0)+" kWh";$("mMass").textContent=fmt(s.massG/1000,3)+" kg";$("mBolTherm").textContent=fmt(s.bolTherm,0)+" Wth";$("mBolWaste").textContent=fmt(s.bolWaste,0)+" W";$("mArea").textContent=fmt(s.area,3)+" m²";
+ $("rWord").textContent=s.word;$("rLayers").textContent=s.word.length;$("rCounts").textContent=s.h+" / "+s.l;$("rRatio").textContent=s.l?fmt(s.h/s.l,4):"∞";$("rLambda").textContent=fmt(s.lg,3)+" μm";$("rDh").textContent=fmt(s.dH*1000,1)+" nm";$("rDl").textContent=fmt(s.dL*1000,1)+" nm";$("rIn").textContent=fmt(s.inMean,3);$("rOut").textContent=fmt(s.outMean,3);$("rScore").textContent=fmt(s.score,3);
+}
+function setupCanvas(cv){const dpr=window.devicePixelRatio||1,rect=cv.getBoundingClientRect();cv.width=Math.max(300,Math.floor(rect.width*dpr));cv.height=Math.floor(260*dpr);const x=cv.getContext("2d");x.setTransform(dpr,0,0,dpr,0,0);return {x,w:rect.width,h:260}}
+function axes(o,xmin,xmax,ymin,ymax,xlab,ylab){const {x,w,h}=o,m={l:48,r:15,t:14,b:34};x.strokeStyle="#26334c";x.lineWidth=1;x.beginPath();x.moveTo(m.l,m.t);x.lineTo(m.l,h-m.b);x.lineTo(w-m.r,h-m.b);x.stroke();x.fillStyle="#71809a";x.font="9px monospace";x.fillText(xlab,w-90,h-10);x.save();x.translate(12,90);x.rotate(-Math.PI/2);x.fillText(ylab,0,0);x.restore();for(let i=0;i<=4;i++){const yy=m.t+(h-m.t-m.b)*i/4,val=ymax-(ymax-ymin)*i/4;x.fillText(fmt(val,1),4,yy+3);x.strokeStyle="#111a2a";x.beginPath();x.moveTo(m.l,yy);x.lineTo(w-m.r,yy);x.stroke()}return {m,X:v=>m.l+(v-xmin)/(xmax-xmin)*(w-m.l-m.r),Y:v=>m.t+(ymax-v)/(ymax-ymin)*(h-m.t-m.b)}}
+function plotWave(s){const o=setupCanvas($("waveCanvas")),a=axes(o,0,1/60,-350,350,"time · one cycle","voltage");const x=o.x;x.strokeStyle="#38d9ff";x.lineWidth=2;x.beginPath();for(let i=0;i<=400;i++){const t=i/400/60,v=s.peak*Math.sin(2*Math.PI*60*t),xx=a.X(t),yy=a.Y(v);i?x.lineTo(xx,yy):x.moveTo(xx,yy)}x.stroke();x.strokeStyle="#ffd75a";x.setLineDash([5,5]);for(const v of [220,-220]){x.beginPath();x.moveTo(a.X(0),a.Y(v));x.lineTo(a.X(1/60),a.Y(v));x.stroke()}x.setLineDash([])}
+function plotDecay(s){const o=setupCanvas($("decayCanvas")),a=axes(o,0,s.years,0,s.bolTherm*1.08,"service years","thermal power · W");const x=o.x;x.strokeStyle="#ff72b6";x.lineWidth=2;x.beginPath();for(let i=0;i<=300;i++){const y=s.years*i/300,p=s.bolTherm*Math.pow(2,-y/K.halfLife),xx=a.X(y),yy=a.Y(p);i?x.lineTo(xx,yy):x.moveTo(xx,yy)}x.stroke();x.strokeStyle="#7fff9f";x.setLineDash([6,5]);x.beginPath();x.moveTo(a.X(0),a.Y(s.eolTherm));x.lineTo(a.X(s.years),a.Y(s.eolTherm));x.stroke();x.setLineDash([])}
+function plotOpt(s){const o=setupCanvas($("optCanvas")),a=axes(o,s.waves[0],s.waves[s.waves.length-1],0,1,"wavelength · μm","emissivity surrogate");const x=o.x;x.strokeStyle="#ff9c52";x.lineWidth=2;x.beginPath();for(let i=0;i<s.waves.length;i++){const xx=a.X(s.waves[i]),yy=a.Y(s.ems[i]);i?x.lineTo(xx,yy):x.moveTo(xx,yy)}x.stroke();x.strokeStyle="#38d9ff";x.setLineDash([5,4]);x.beginPath();x.moveTo(a.X(s.lg),a.Y(0));x.lineTo(a.X(s.lg),a.Y(1));x.stroke();x.setLineDash([])}
+function makeReceipt(s){return {artifact:"METALATEXIUM v0.1 — THE BOX THAT PAYS",generated_utc:new Date().toISOString(),status:{free_energy:"REJECTED",energy_ledger:"COMPUTED UNDER DECLARED INPUTS",decay_source:"ANALYTICAL LOWER BOUND",optical_stack:"ILLUSTRATIVE TRANSFER MATRIX",century_box:"HYPOTHESIS — NOT DEMONSTRATED"},inputs:{output_power_w:s.p,output_voltage_rms_v:220,output_frequency_hz:60,service_years:s.years,tpv_efficiency:s.etaTpv,inverter_efficiency:s.etaInv,radiator_surface_c:s.trad,ambient_c:K.ambientC,source_half_life_years:K.halfLife,source_specific_thermal_power_w_per_g:K.specific,bandgap_ev:s.eg,fibonacci_order:s.order,scale_high:s.scaleH,scale_low:s.scaleL},computed:{load_energy_kwh:s.kwh,load_energy_gj:s.gj,output_current_rms_a:s.current,output_peak_v:s.peak,dc_bus_floor_v:s.bus,end_decay_fraction:s.decay,active_source_lower_bound_kg:s.massG/1000,beginning_thermal_power_w:s.bolTherm,end_thermal_power_w:s.eolTherm,beginning_rejected_heat_w:s.bolWaste,end_rejected_heat_w:s.eolWaste,radiator_flux_w_m2:s.flux,radiator_area_bol_m2:s.area,fibonacci_word:s.word,layer_count:s.word.length,high_layers:s.h,low_layers:s.l,bandgap_cutoff_um:s.lg,high_thickness_nm:s.dH*1000,low_thickness_nm:s.dL*1000,inband_mean_emissivity:s.inMean,longwave_mean_emissivity:s.outMean,selectivity_score:s.score},fixed_constraints:anchors.map(a=>({id:a[0],name:a[1],criterion:a[2]})),candidate_stack:layers.map(a=>({id:a[0],name:a[1],candidate:a[2],status:a[3]})),notes:["Symmetry shapes transport but does not provide net work at equilibrium.","Radioisotope values expose scale only and are not a build prescription.","Optical constants are fixed surrogates and omit temperature dispersion and degradation."]}}
+function refresh(forceInsight=false){const s=compute();updateLabels(s);updateMetrics(s);plotWave(s);plotDecay(s);plotOpt(s);lastReceipt=makeReceipt(s);$("receipt").textContent=JSON.stringify(lastReceipt,null,2);if(forceInsight){insight+=25;$("hudInsight").textContent=insight}}
+function renderMath(){document.querySelectorAll("[data-tex]").forEach(el=>{const tex=el.getAttribute("data-tex");if(window.katex){try{el.innerHTML=katex.renderToString(tex,{displayMode:true,throwOnError:false});return}catch(e){}}el.innerHTML=`<div class="plain">${tex.replace(/</g,"&lt;").replace(/>/g,"&gt;")}</div>`})}
+function exportReceipt(){if(!lastReceipt)refresh(false);const blob=new Blob([JSON.stringify(lastReceipt,null,2)],{type:"application/json"}),a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="metalatexium_receipt_"+Date.now()+".json";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);insight+=40;$("hudInsight").textContent=insight}
+function reset(){const vals={power:2,years:100,etaTpv:30,etaInv:95,trad:80,eg:.74,order:4,scaleH:.80,scaleL:1.28};for(const [k,v] of Object.entries(vals))$(k).value=v;refresh(true)}
+function bind(){for(const id of ["power","years","etaTpv","etaInv","trad","eg","order","scaleH","scaleL"])$(id).addEventListener("input",()=>refresh(false));$("computeBtn").addEventListener("click",()=>refresh(true));$("exportBtn").addEventListener("click",exportReceipt);$("resetBtn").addEventListener("click",reset);window.addEventListener("resize",()=>refresh(false));}
+buildStatic();bind();refresh(false);window.addEventListener("load",()=>{renderMath();refresh(false)});setTimeout(renderMath,600);
+</script>
+</body>
+</html>

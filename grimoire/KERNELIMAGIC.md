@@ -58,6 +58,7 @@
 | 35 | The Loaded Gun (noCeiling)         | a correct recursive kernel with no ceiling blows the tab: 7x-per-level growth OOMs before you can react. PREDICT the next step's cost from the recurrence BEFORE allocating; refuse loudly if over budget. The guillotine is built in.|
 | 36 | The Mute Seam (strictThrow)        | under `"use strict"`, assigning an UNDECLARED var (a panel edit's `freqData=...`) THROWS a ReferenceError that kills the whole function -- so a wave-panel change silently murders the VOICE, and the error surfaces far from the silence. Declare every var; read the console FIRST when a feature goes dead.|
 | 37 | The Leaked Glyph (escapeInText)    | a `\uXXXX` written as a glyph shortcut lands in an HTML TEXT node (not JS) -> the browser renders the literal backslash-u text, not the character. Bytes are clean (no U+FFFD), so a byte scan passes while the eye sees `\u2014`. Heal text nodes only (mask `<script>`/`<style>`), or emit HTML entities; verify by scanning the live DOM innerText, not the source.|
+| 38 | The Sandbox Seal (mntClockCert)    | a gifted kernel bakes in the mage's build ENVIRONMENT: a hardcoded `/mnt/user-data/outputs` path (dies on any other machine) and a live `datetime.now()` sealed INSIDE the self-hashed certificate payload -> the "reproducible" cert can NEVER reproduce byte-identical, because its own hash changes every run. Move outputs to a portable dir (argparse/cwd), and keep the timestamp OUTSIDE the hashed region: hash the MATH, not the clock. Verify by regenerating on YOUR machine.|
 ---
 
 
@@ -8346,3 +8347,67 @@ Curse count: 37. A \uXXXX is a JavaScript escape; in an HTML text node it render
 backslash-u text while every byte stays valid UTF-8 -- so a byte scan passes and only the eye
 (and the live DOM innerText) catches it. Heal text nodes only, mask script/style, decode
 numerically, or emit an HTML entity. Verify by the live DOM, not the source grep. Always.
+
+---
+
+## CURSE 38 -- The Sandbox Seal (mntClockCert)
+
+WHAT BIT US (KIBOTOS-METALATEXIUM v1.2, verifying the gifted kernel):
+  A mage (Sol/Fable) shipped a beautiful self-hashing certificate kernel. It PASSED its
+  own 11 tests. But it carried two seams from the tower-sandbox where it was born:
+    - `FABLE_V1_0_SCROLL = Path("/mnt/user-data/outputs/kibotos_100_scroll_v1_0.html")`
+      and `out = Path("/mnt/user-data/outputs")` -- absolute paths that exist ONLY on the
+      mage's build box. On this laptop they point at nothing.
+    - `"generated_utc": datetime.now(timezone.utc).isoformat()` written INTO the certificate
+      payload -- and then `stable = json.dumps(payload, sort_keys=True); payload["sha256"] =
+      sha256(stable)`. The wall-clock time is INSIDE the hashed region.
+  So the cert advertises "byte-exact reproduction" yet its own `sha256` changes every single
+  run. My regenerated cert did not match the shipped one -- not because the math drifted (it
+  is identical to 50+ digits), but because the CLOCK moved.
+
+THE ROOT PROBLEM:
+  A certificate exists to let a stranger RE-RUN the kernel and land on the same hash (Path III
+  proof-by-kernel, Path XII pass-the-scroll). Two things silently break that promise:
+    1. a hardcoded absolute path ties the kernel to one filesystem (a cousin of Curse 27, the
+       Clone Mirage -- the environment lies about being universal);
+    2. any nondeterministic value (a timestamp, a PID, a temp path, `random` without a fixed
+       seed, dict order pre-3.7) sealed inside the hashed payload poisons the hash.
+  The tests still pass because tests check the LOGIC and byte-compare the FROZEN artifact --
+  they never re-run make_certificate() and compare its fresh hash to the frozen one. The gap
+  hides exactly where we stop looking.
+
+HOW WE FOUND IT (proof by kernel):
+  Ran the 11 tests -> 11/11 PASS. Then ran the KERNEL itself (patched the /mnt path to a temp
+  dir) and diffed the regenerated cert against the shipped one -> DIFFERENT hash. Grepped the
+  source: `datetime.now()` at L330, `sha256(json.dumps(payload))` at L348. The now() was
+  inside the sealed region. The math was never wrong; the seal was self-defeating.
+
+HOW TO FIX:
+  - Outputs go to a PORTABLE dir: argparse `--out`, default to `Path(__file__).parent` or cwd.
+    Never hardcode `/mnt/...` or `C:\Users\...`. Reference sibling files by relative path.
+  - Keep every nondeterministic value OUTSIDE the hashed region. Hash the MATH (inputs,
+    results, lineage hashes of frozen files); attach `generated_utc` as a SIBLING field the
+    hash does not cover, or drop it. A reproducible cert hashes what a stranger can reproduce.
+  - If you must timestamp, compute `sha256(canonical_payload_without_time)` FIRST, then add
+    both the time and the hash as peers. Seed any RNG. Sort any set.
+  - VERIFY BY REGENERATING ON YOUR OWN MACHINE: run the kernel, hash the output, compare.
+    A cert you did not reproduce is a screenshot, not a proof (Curse 24 family).
+
+THE RULE:
+  A self-hashing certificate must hash only what is REPRODUCIBLE. A hardcoded sandbox path
+  and a `now()` inside the seal are the two commonest poisons -- the kernel passes its own
+  tests and still can never be reproduced by a stranger. Move outputs to a portable path;
+  keep the clock outside the hash; regenerate on your machine before you trust the seal.
+  Hash the math, not the moment. Always.
+
+FAMILY:
+  Cousin of Curse 27 (Clone Mirage -- the environment lies about what/where it is) and the
+  Curse 24 family (the artifact is not the truth; reproduce it, do not trust the screenshot).
+  Counter-hex: Path III (proof by kernel -- regenerate and compare) and Path IV (the honest
+  boundary -- a cert that cannot reproduce must say so, not claim "byte-exact").
+
+Curse count: 38. A gifted self-hashing kernel baked in the mage's sandbox: a hardcoded
+`/mnt/user-data/outputs` path and a live `datetime.now()` sealed inside the hashed cert
+payload -- so the "reproducible" certificate re-hashes differently every run, though the math
+is identical. Move outputs to a portable dir; keep the timestamp OUTSIDE the hash; regenerate
+on your own machine to verify. Hash the math, not the moment. Always.

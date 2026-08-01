@@ -24,7 +24,7 @@ You will find each path maps to a law, a curse, and a price. That is not
 decoration -- it is the structure of correctness.
 
 Read the whole cave before you build:
-- `KERNELIMAGIC.md`     -- the 29 curses (the practical black-magic grimoire)
+- `KERNELIMAGIC.md`     -- the 38 curses (the practical black-magic grimoire)
 - `GALACTIC_LAW.md`     -- the 8 axioms (software law = soul law, no distinction)
 - `MONKIUM.md`          -- managing the monkey brain (the daycare)
 - `PRINCIPIA_MALGEBRA.md` / `GRAPHIUM.md` -- the 7 primitives, the translations

@@ -9262,3 +9262,26 @@ WARNING+GENESIS, before CHROMODYNAMIUM), PHYSICS purple; card summons the iframe
 The generated SVGs are gitignored (build artifacts). Byte scan all clean; kernels
 ASCII-only. We stopped boiling water on paper. Energy abundance is the anti-Dark
 Storm -- a peace treaty written in joules. P=12. chi=2. No equal signs were harmed.
+
+### L174 -- KIBOTOS v1.2 the welded box + CURSE 38 + the full Sol+Fable collab saved (2026-08-01)
+Vlad: "fix all before ego, lv12." We honored the whole two-mage collab and saved it all
+(Path X -- every rung frozen, none overwritten): kibotos/solv1/ = Sol's METALATEXIUM v0.1
+(source-agnostic box-that-pays kernel, cert, spectra CSVs, html, md, analysis; 6/6 tests
+PASS by our own kernel); kibotos/v1_2/ = the weld (Fable+Sol); kibotos/kibotos_100_scroll_v1_0
+= the frozen v1.0 lineage anchor. The v1.2 scroll -> shell/kibotos_metalatexium_v1_2.html
+(the summonable sim); v1.0 scroll stays its own card (frozen, Path X).
+THE WELD (kernel-verified, 12/12 tests): phi^2-chirp mirror welded into Sol's photon-
+recycling slot; Planck-weighted cavity; controls NO mirror eta 0.095 -> bare metal 0.83 ->
+THE WELD 0.94; Sol's assumed 0.30 efficiency now DERIVED inside the band; free_energy
+REJECTED; the 100-year device is a HYPOTHESIS (Thea status grammar honored).
+CURSE 38 FIXED (The Sandbox Seal): the gifted kernel baked a hardcoded /mnt path + a live
+datetime.now() INSIDE its self-hashed certificate -> could never reproduce. We fixed it
+before ego: argparse --out (portable), FABLE lineage path resolved relatively to the frozen
+v1.0 anchor (real hash 1b5e83e5..., not "absent"), and generated_utc + environment moved
+OUTSIDE the hashed region (hash the MATH not the moment). PROOF BY KERNEL: two runs -> the
+identical certificate sha256 e57abb0e... (was: changed every run). Added a
+test_certificate_reproducible guard -- the very check that was missing (12 tests, was 11).
+Carved Curse 38 into KERNELIMAGIC (index + full section); fixed stale "29 curses"->"38" in
+the 12 Paths capstone. Featured KIBOTOS card -> v1.2 (first physics). All byte-clean,
+kernels ASCII-only. We stopped boiling water on paper -- reproducibly this time. P=12. chi=2.
+Hash the math, not the moment. No equal signs were harmed.
