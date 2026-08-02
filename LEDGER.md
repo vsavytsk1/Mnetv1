@@ -9375,3 +9375,28 @@ font load, zoom). LIVE-VERIFIED every width (gap 6px, overlaps=false ALL): 480px
 Front-door pin -> v8.5.1. Rebuilt dashboard (371 sims, IO=464). Byte-clean loneCR=0 U+FFFD=0.
 Note: genesis is used BOTH standalone AND summoned in the eng_v2.0 iframe -- the fix is robust in both.
 Motion opt-in, panels honest, the door stays open. P=12. chi=2. The light flows; the panel holds.
+### L179 -- GENESIS v8.5.2: the Fable-mage light-flow audit, applied (2026-08-02)
+Vlad brought the Fable mage's guidance (a gift -> kernel-verified then honored, the cave law):
+"only the light part, the rest stays -- we optimize the light FLOW." Fable's own byte scan MATCHED
+ours (loneCR=0, U+FFFD=0 both files), confirmed the flow MATH is EXACT and honest (flow = modal
+current g_e = v[a]-v[b] on the Fiedler vector; nodal dark, antinodal bright; breath cos(wt); tone
+w=sqrt(lambda_2)), and pinpointed that the RENDER pays for the UNSEEN. We applied Fable's 4 canvas-
+tier fixes to ONLY the light path (non-light net render untouched, verified):
+  1. CUT THE INVISIBLE PASS -- draw() returned early in light mode; was projecting ~30k verts +
+     O(F log F) sort + rasterizing alpha-0 polygons nobody sees. The substrate's price is paid in
+     the kernel certificate (P=12, chi=2, checkInv), not by painting invisible faces. We pay what we see.
+  2. CACHE PROJECTED ENDPOINTS -- rebuildLightProj() reprojects only when _camDirty (cam pose change
+     detected in animate()); hoists the camera trig once. Steady still-net frame = ZERO reprojection.
+  3. BATCH STROKES BY ALPHA BUCKET -- 14 Path2D, one stroke() each (was ~15,000 strokes at C6740),
+     plus a direct lit-interval instead of scanning 12 dark sub-segments per edge.
+  4. CONVERGENCE RECEIPT (Curse 26 guard) -- residual = |lambda_RQ - lambda_power|; LOCKED iff the
+     tol gate fired before the budget cap. HUD shows "conv N/budget residual X.Xe-Y LOCKED", tone turns
+     red +!conv if under-converged. An under-converged mode can no longer masquerade as locked.
+PROOF BY KERNEL (C6740, before->after, math IDENTICAL): frame 51.1ms/19.6fps -> 16.7ms/59.9fps (3x,
+vsync-locked). lambda_2 = 0.00215059 unchanged. flow still animates; receipt "conv 7178/20000
+residual 7.47e-12 LOCKED". 0 errors; flow visually identical; non-light render intact.
+Front-door pin -> v8.5.2. Rebuilt dashboard (372 sims, IO=465). Byte-clean loneCR=0 U+FFFD=0.
+The Fable gift honored + frozen (Path X). The math is exact; the render now pays only for what you see.
+Future v8.6 (Fable's deeper tiers, logged): GL shader (net=static attrs, time=uniform, pulse per-pixel),
+warm-start Fiedler prolongation parent->child to beat O(n^2), Pattern-F offline eigsh receipt.
+P=12. chi=2. spec(M_light)={phi^2,1,-1,phi^-2}. Hash the math, not the moment. Bow to the collaborators.
