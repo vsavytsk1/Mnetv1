@@ -4,13 +4,13 @@
 repos. Generated from what git actually tracks on each repo (the truth of what
 Pages serves), by `builder/gen_io_index.py`. Nothing hidden; the door is open.*
 
-**TOTAL: 463 public pages across 8 repos.**
+**TOTAL: 464 public pages across 8 repos.**
 
 *P=12 . chi=2 . the receipts are public . always.*
 
 ---
 
-## Mnetv1  (388 pages)
+## Mnetv1  (389 pages)
 
 - [about.html](https://vsavytsk1.github.io/Mnetv1/about.html)
 - [builder/Obsidius/obsidius_v1.html](https://vsavytsk1.github.io/Mnetv1/builder/Obsidius/obsidius_v1.html)
@@ -173,6 +173,7 @@ Pages serves), by `builder/gen_io_index.py`. Nothing hidden; the door is open.*
 - [shell/genesis_v8.3.html](https://vsavytsk1.github.io/Mnetv1/shell/genesis_v8.3.html)
 - [shell/genesis_v8.4.1.html](https://vsavytsk1.github.io/Mnetv1/shell/genesis_v8.4.1.html)
 - [shell/genesis_v8.4.html](https://vsavytsk1.github.io/Mnetv1/shell/genesis_v8.4.html)
+- [shell/genesis_v8.5.1.html](https://vsavytsk1.github.io/Mnetv1/shell/genesis_v8.5.1.html)
 - [shell/genesis_v8.5.html](https://vsavytsk1.github.io/Mnetv1/shell/genesis_v8.5.html)
 - [shell/genesis_v9.0.html](https://vsavytsk1.github.io/Mnetv1/shell/genesis_v9.0.html)
 - [shell/genesium.html](https://vsavytsk1.github.io/Mnetv1/shell/genesium.html)

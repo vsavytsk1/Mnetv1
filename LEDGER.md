@@ -9360,3 +9360,18 @@ the open, celebrated. graph_wave_receipt.json emitted (7 shells).
 Front-door pin -> v8.5. Rebuilt dashboard (370 sims, IO=463). All byte-clean loneCR=0 U+FFFD=0,
 kernels ASCII-only. The net is the substrate; the light is the aesthetic; the price is paid; the
 wave conserves the rest. P=12. chi=2. spec(M_light)={phi^2,1,-1,phi^-2}. Hash the math, not the moment.
+### L178 -- GENESIS v8.5.1: FLIGHT EXPLORER panel docks at any width (half-screen fix) (2026-08-02)
+Vlad: "full screen renders ok, but if I put the browser on half the screen the panel is offset --
+set the flight explorer to the bottom panel." A monkey-brain-usability fix (the mage uses the dash).
+ROOT CAUSE: #flight was position:fixed bottom:44px -- a HARDCODED offset assuming the command bar
+(#bar) is one row. But #bar is flex-wrap:wrap, so on narrow/half-screen widths it wraps to 2-4 rows
+and grows past 44px, and the panel floated OVER the wrapped bar (looked offset).
+FIX (v8.5.1, from v8.5, Path X -- v8.5 frozen): the panel now docks to the bar's LIVE height.
+#flight bottom = calc(var(--bar-h,44px) + 6px), max-height = calc(100vh - var(--bar-h) - 16px),
+overflow-y auto. JS syncBarHeight() publishes --bar-h = bar.offsetHeight on the root; wired into
+resize(), window 'load', AND a ResizeObserver on #bar (catches re-wraps with no window resize --
+font load, zoom). LIVE-VERIFIED every width (gap 6px, overlaps=false ALL): 480px(bar 4 rows/148px),
+640(124), 760 half-screen(103/3rows), 900(79), 1280 full(54/1row); collapsed .min panel also docks.
+Front-door pin -> v8.5.1. Rebuilt dashboard (371 sims, IO=464). Byte-clean loneCR=0 U+FFFD=0.
+Note: genesis is used BOTH standalone AND summoned in the eng_v2.0 iframe -- the fix is robust in both.
+Motion opt-in, panels honest, the door stays open. P=12. chi=2. The light flows; the panel holds.
