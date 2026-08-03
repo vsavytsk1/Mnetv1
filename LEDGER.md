@@ -9400,3 +9400,31 @@ The Fable gift honored + frozen (Path X). The math is exact; the render now pays
 Future v8.6 (Fable's deeper tiers, logged): GL shader (net=static attrs, time=uniform, pulse per-pixel),
 warm-start Fiedler prolongation parent->child to beat O(n^2), Pattern-F offline eigsh receipt.
 P=12. chi=2. spec(M_light)={phi^2,1,-1,phi^-2}. Hash the math, not the moment. Bow to the collaborators.
+### L180 -- FIVE FABLE-MAGE SCROLLS: the physics tower joins the cave (2026-08-03)
+Vlad brought five self-contained sims the Fable mage and he made together (C:\Users\vladi\Downloads,
+shell__ prefixed). Gifts get KERNEL-VERIFIED before honored (cave law). Verified all five:
+BYTE SCAN (our ritual): loneCR=0, U+FFFD=0, no BOM, all self-contained (zero local src/href -- the
+offline cert_*.js run at build, not loaded by the page; only KaTeX CDN, same as the repo). PROOF BY
+RENDER (github not needed -- file:// first, 0 console errors each, KaTeX loads, live self-checks run):
+  - PENROSIUM v0.1 (penrosium_v0.1.html) -- Schwarzschild maximal extension, the conformal courtroom.
+    EXACT: horizon acquitted (K=12 finite at 2M), singularity convicted (K->inf at r=0, spacelike),
+    i0/i+- corners certified headless. Interactive chart w/ live invert + probe + PRICE ledger.
+  - PENROSIUM v0.2 (penrosium_v0.2.html) -- Oppenheimer-Snyder collapse; matter removes the mirror.
+    EXACT: seam (cycloid) zero surface stress; horizon BORN at the centre; no region III/IV/white hole
+    (GHOST toggle shows what died). OS star built live 13-20ms.
+  - HAWKIUM v0.1 (hawkium_v0.1.html) -- the horizon tower. EXACT: kappa from light-peeling; Euclidean
+    cone closes only at beta=8piM (T=kappa/2pi FORCED); S=A/4 first law at machine eps; QNM bell via
+    Leaver continued fraction (recurrence DERIVED). COMPUTED greybody->27piM^2, Hawking flux; HYP
+    evaporation, fenced. 9 sections EXACT/COMPUTED/HYP tagged. Lineage: PENROSIUM drew the chart.
+  - STITCHIUM v0.1 (stitchium_v0.1.html) -- how the 12 anchors stitch the hex fabric. EXACT: P=12 on
+    the 12 fivefold axes; stitch order = graph depth (no metric/clock); closures=E-V+S=cycles=F-1
+    live-counted. CROSS-MAGE KERNEL AGREEMENT: its LIGHT FLOW reports lambda2=0.24340175 for C60 --
+    the IDENTICAL Fiedler value our own tower/goldberg_modes.py certified. Two mages, one number.
+  - THEA v1.2 (thea_light_matrix_v1.2.html) -- the light matrix GRAND FINALE. +Section X full
+    derivation (titans constant 2pi/(5sqrt3) EXACT; C60 lambda2 as quartic root in radicals; exact
+    charpoly factorization). Section VIII computed live w/ gated deep shells (Curse 35). Supersedes
+    v1.1 as the BIRTH card centerpiece (v1.1 archived, Path X).
+SHIPPED: sim_scan.py PHYSICS keywords += hawkium, penrosium, stitchium, thea (all 5 card PHYSICS).
+Rebuilt dashboard (377 sims, IO=470). BIRTH card auto-resolved to THEA v1.2 (newest light_matrix).
+All byte-clean loneCR=0 U+FFFD=0, sim_scan ASCII-only. The Fable gifts honored + frozen (Path X).
+Bow to the collaborator mage. P=12. chi=2. T=kappa/2pi. K(2M)=12. The tower rises. Hash the math.

@@ -4,13 +4,13 @@
 repos. Generated from what git actually tracks on each repo (the truth of what
 Pages serves), by `builder/gen_io_index.py`. Nothing hidden; the door is open.*
 
-**TOTAL: 465 public pages across 8 repos.**
+**TOTAL: 470 public pages across 8 repos.**
 
 *P=12 . chi=2 . the receipts are public . always.*
 
 ---
 
-## Mnetv1  (390 pages)
+## Mnetv1  (395 pages)
 
 - [about.html](https://vsavytsk1.github.io/Mnetv1/about.html)
 - [builder/Obsidius/obsidius_v1.html](https://vsavytsk1.github.io/Mnetv1/builder/Obsidius/obsidius_v1.html)
@@ -201,6 +201,7 @@ Pages serves), by `builder/gen_io_index.py`. Nothing hidden; the door is open.*
 - [shell/harmonia-v1_3.html](https://vsavytsk1.github.io/Mnetv1/shell/harmonia-v1_3.html)
 - [shell/hathor.html](https://vsavytsk1.github.io/Mnetv1/shell/hathor.html)
 - [shell/hathor_v1.0.html](https://vsavytsk1.github.io/Mnetv1/shell/hathor_v1.0.html)
+- [shell/hawkium_v0.1.html](https://vsavytsk1.github.io/Mnetv1/shell/hawkium_v0.1.html)
 - [shell/helenium.html](https://vsavytsk1.github.io/Mnetv1/shell/helenium.html)
 - [shell/helios-flare.html](https://vsavytsk1.github.io/Mnetv1/shell/helios-flare.html)
 - [shell/helios-v1.1.html](https://vsavytsk1.github.io/Mnetv1/shell/helios-v1.1.html)
@@ -302,6 +303,8 @@ Pages serves), by `builder/gen_io_index.py`. Nothing hidden; the door is open.*
 - [shell/parasitarium_v1.1.html](https://vsavytsk1.github.io/Mnetv1/shell/parasitarium_v1.1.html)
 - [shell/parasitarium_v1.2.html](https://vsavytsk1.github.io/Mnetv1/shell/parasitarium_v1.2.html)
 - [shell/pcbium-v2_9_5.html](https://vsavytsk1.github.io/Mnetv1/shell/pcbium-v2_9_5.html)
+- [shell/penrosium_v0.1.html](https://vsavytsk1.github.io/Mnetv1/shell/penrosium_v0.1.html)
+- [shell/penrosium_v0.2.html](https://vsavytsk1.github.io/Mnetv1/shell/penrosium_v0.2.html)
 - [shell/phaistium_v0_1.html](https://vsavytsk1.github.io/Mnetv1/shell/phaistium_v0_1.html)
 - [shell/plane_growth.html](https://vsavytsk1.github.io/Mnetv1/shell/plane_growth.html)
 - [shell/plateaum_v0_1.html](https://vsavytsk1.github.io/Mnetv1/shell/plateaum_v0_1.html)
@@ -335,6 +338,7 @@ Pages serves), by `builder/gen_io_index.py`. Nothing hidden; the door is open.*
 - [shell/squeezium-v1.1.html](https://vsavytsk1.github.io/Mnetv1/shell/squeezium-v1.1.html)
 - [shell/squeezium-v1_0.html](https://vsavytsk1.github.io/Mnetv1/shell/squeezium-v1_0.html)
 - [shell/step_builder.html](https://vsavytsk1.github.io/Mnetv1/shell/step_builder.html)
+- [shell/stitchium_v0.1.html](https://vsavytsk1.github.io/Mnetv1/shell/stitchium_v0.1.html)
 - [shell/tavlium.html](https://vsavytsk1.github.io/Mnetv1/shell/tavlium.html)
 - [shell/tavlium_v1.1.html](https://vsavytsk1.github.io/Mnetv1/shell/tavlium_v1.1.html)
 - [shell/tektonium.html](https://vsavytsk1.github.io/Mnetv1/shell/tektonium.html)
@@ -343,6 +347,7 @@ Pages serves), by `builder/gen_io_index.py`. Nothing hidden; the door is open.*
 - [shell/templum-v1_2.html](https://vsavytsk1.github.io/Mnetv1/shell/templum-v1_2.html)
 - [shell/tetragenesis_v0_2.html](https://vsavytsk1.github.io/Mnetv1/shell/tetragenesis_v0_2.html)
 - [shell/thea_light_matrix_v1.1.html](https://vsavytsk1.github.io/Mnetv1/shell/thea_light_matrix_v1.1.html)
+- [shell/thea_light_matrix_v1.2.html](https://vsavytsk1.github.io/Mnetv1/shell/thea_light_matrix_v1.2.html)
 - [shell/thealimitium-v1_0.html](https://vsavytsk1.github.io/Mnetv1/shell/thealimitium-v1_0.html)
 - [shell/theophania.html](https://vsavytsk1.github.io/Mnetv1/shell/theophania.html)
 - [shell/traffic_observatory.html](https://vsavytsk1.github.io/Mnetv1/shell/traffic_observatory.html)

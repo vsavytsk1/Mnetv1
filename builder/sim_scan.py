@@ -51,7 +51,7 @@ CATEGORY = [
       "kirchhoffium", "mayerium", "kelvinium", "helios", "bicium", "spectrium",
       "cofium", "feynmanium", "chromium", "kuramium", "shannonium", "pcbium",
       "byte", "chromodynamium", "alphium", "plateaum", "aequalium", "light_matrix",
-      "kibotos"),
+      "kibotos", "hawkium", "penrosium", "stitchium", "thea"), 
                                             ("PHYSICS",  "#a78bfa", "#2a1a4a")),
     (("gardinerium", "phaistium", "vitruvium", "simcityc", "flagellium",
       "parasitarium", "transmutation"),     ("ATLAS",    "#00d4ff", "#123244")),
