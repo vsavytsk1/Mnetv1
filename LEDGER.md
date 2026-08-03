@@ -9428,3 +9428,19 @@ SHIPPED: sim_scan.py PHYSICS keywords += hawkium, penrosium, stitchium, thea (al
 Rebuilt dashboard (377 sims, IO=470). BIRTH card auto-resolved to THEA v1.2 (newest light_matrix).
 All byte-clean loneCR=0 U+FFFD=0, sim_scan ASCII-only. The Fable gifts honored + frozen (Path X).
 Bow to the collaborator mage. P=12. chi=2. T=kappa/2pi. K(2M)=12. The tower rises. Hash the math.
+### L181 -- math_tree_v5.0 UNBROKEN: the escaped closing tag that ate the document (2026-08-03)
+Getting ready for the Caltech titans -- a dead card is a 404 in front of the curators. The MATH_TREE
+v5.0 card "wasn't loading". Diagnosed by kernel (proof by render): file WAS git-tracked and served 200
+(47KB), but the live DOM had body.children=0, 0 canvases, 0 eq-boxes, only 1 <script>, and ZERO console
+errors -- a silent blank. ROOT CAUSE (cousin of Curse 25/37, the escaped-glyph seam): line 8 read
+<script src=".../katex.min.js"><\/script> -- an escaped closing tag <\/script> (literal backslash,
+an artifact of HTML emitted through a JS string where </script> must be written <\/script> to not close
+the parent early -- but the backslash was never stripped on write). The browser does NOT accept
+<\/script> as a close, so the KaTeX <script> never closed and SWALLOWED the entire rest of the
+document (style, body, the whole app script) as its text content -> nothing rendered. FIX: <\/script>
+-> </script> (surgical; the sim was never working, so a bug fix in place, not a version bump). Swept
+for siblings (<\/div> etc) -- none. VERIFIED live (file://): body.children=11, TUNE panel + 10-tree
+dropdown + sliders all alive, KaTeX loaded, 0 errors, 0 lone CR, 0 U+FFFD. NEW CURSE for the grimoire:
+the Escaped Closing Tag -- <\/script> in served HTML never closes; the tag eats the document; a byte
+scan passes and the console is SILENT, only the empty body betrays it. Verify body.children>0 on load.
+P=12. chi=2. Ready for the titans. Hash the math, not the moment.
