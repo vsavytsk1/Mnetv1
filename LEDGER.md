@@ -9444,3 +9444,20 @@ dropdown + sliders all alive, KaTeX loaded, 0 errors, 0 lone CR, 0 U+FFFD. NEW C
 the Escaped Closing Tag -- <\/script> in served HTML never closes; the tag eats the document; a byte
 scan passes and the console is SILENT, only the empty body betrays it. Verify body.children>0 on load.
 P=12. chi=2. Ready for the titans. Hash the math, not the moment.
+### L182 -- FULL PARANOIA SWEEP before the titans: two truncated sims healed (2026-08-03)
+Before showing the cave to the Caltech / Feynman-lectures curators, ran a three-layer dead-card sweep
+(a 404 or blank sim in front of the titans is a price we do not pay):
+  SWEEP 1 (static, all 395 tracked .html): scan for escaped tags <\/script>, loneCR, U+FFFD, BOM, and
+    <script> open/close imbalance. FLAGGED 2: shell/lattice_probe.html and shell/obsidius_v1.html --
+    both TRUNCATED (script opened, never closed; no </body></html>). lattice_probe was genuinely DEAD
+    live (points 0, empty canvas, buildLattice() eaten by the unclosed script); obsidius happened to
+    still boot (browser auto-close at EOF + it waits for user input) but was malformed. FIX: appended
+    </script></body></html> to both (content intact, only terminal tags were lost). VERIFIED: lattice_
+    probe now builds 625 pts / 2800 edges, D_12; obsidius still ready; re-scan = all 395 CLEAN.
+  SWEEP 2 (HTTP, every summon URL in eng_v2.0 LINKS_JS): 379 URLs (local + external cross-repo pins)
+    -> ALL 200. No 404 behind any card.
+  SWEEP 3 (live render, titan-facing cards): warningsim, genesis v8.5.2, kibotos v1.2, chromodynamium
+    v2.2, aequalium v2.4.7, pcbium v2.9.5, thea v1.2, hawkium, penrosium v0.1/v0.2, stitchium,
+    feynmanium_qcd v1.1, feynmanium v1 -- ALL status 200, body built (kids>0), 0 console errors.
+Cousin of L181 (the escaped closing tag). New sweep tooling is a reusable ritual. The cave is
+titan-ready: every card renders, every link resolves, every body builds. P=12. chi=2. Bow to the titans.
