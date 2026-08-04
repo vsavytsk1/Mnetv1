@@ -1,0 +1,473 @@
+<!DOCTYPE html><html><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GENESIS·α II v0.2 — THE LOCKED SHELL</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#04060b;color:#c8d8e8;font-family:'Courier New',monospace;overflow:hidden;touch-action:none}
+canvas{position:fixed;top:0;left:0}
+#cv{z-index:0}#ov{z-index:1;pointer-events:none}
+
+#hero{position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:6;pointer-events:none;
+  background:rgba(6,10,16,.84);border:1px solid #16303c;border-radius:8px;padding:9px 18px;text-align:center;backdrop-filter:blur(6px)}
+#hero .eq{font-family:'Orbitron';font-size:14px;font-weight:700;color:#e8f4ff;letter-spacing:.02em}
+#hero .eq .lk{color:#ffd166}#hero .eq .mp{color:#22d3ee}#hero .eq .cn{color:#f472b6}
+#hero .sub{font-size:8px;color:#4a6070;letter-spacing:.2em;margin-top:5px;text-transform:uppercase}
+
+#hud{position:fixed;top:12px;left:12px;z-index:6;pointer-events:none;font-size:10px;line-height:1.7;
+  background:rgba(6,10,16,.82);border:1px solid #16303c;border-radius:6px;padding:9px 11px;width:266px}
+#hud h1{font-family:'Orbitron';font-size:9.5px;letter-spacing:.18em;color:#22d3ee;margin-bottom:6px}
+.r{display:flex;justify-content:space-between;gap:10px}
+.k{color:#3f5666}.v{color:#8fe9ff}.vg{color:#ffd166}.vp{color:#f472b6}
+.sep{height:1px;background:#16303c;margin:6px 0}
+.tri{display:grid;grid-template-columns:1fr auto auto auto;gap:0 8px;font-size:9px}
+.tri .hd{color:#2d4150;font-size:7.5px;letter-spacing:.1em;text-transform:uppercase}
+.ok{color:#7dffa8}.no{color:#ff5a5a}
+.tag{font-size:7px;letter-spacing:.1em;padding:1px 4px;border-radius:2px;border:1px solid}
+.EX{color:#7dffa8;border-color:#1d4a2c}.CO{color:#8fe9ff;border-color:#1c3a48}.DE{color:#ffd166;border-color:#3a3000}
+
+#ops{position:fixed;top:12px;right:12px;z-index:6;width:206px;font-size:9px;line-height:1.65;
+  background:rgba(6,10,16,.86);border:1px solid #2a2340;border-radius:6px;padding:9px 10px}
+#ops h2{font-family:'Orbitron';font-size:9px;letter-spacing:.16em;color:#a78bfa;margin-bottom:2px}
+#ops .cap{color:#3f5666;font-size:7.5px;margin-bottom:6px;line-height:1.4}
+#ops .op{display:flex;justify-content:space-between;gap:6px;opacity:.32;transition:.2s}
+#ops .op.live{opacity:1}
+#ops .op .n{color:#a78bfa}#ops .op .d{color:#4a6070;font-size:8px}#ops .op .c{color:#8fe9ff}
+
+#bar{position:fixed;bottom:0;left:0;right:0;z-index:8;background:rgba(4,6,11,.96);border-top:1px solid #16303c;
+  padding:7px 10px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:center}
+.btn{background:#080d15;border:1px solid #24323e;color:#8fe9ff;padding:4px 9px;font-family:inherit;font-size:9px;
+  cursor:pointer;border-radius:3px;white-space:nowrap;transition:.14s}
+.btn:hover{border-color:#3f6a80;color:#fff}
+.btn.on{color:#04060b;background:#22d3ee;border-color:#22d3ee;font-weight:bold}
+.btn.gd{color:#ffd166;border-color:#3a3000}.btn.gd.on{background:#ffd166;color:#04060b;border-color:#ffd166}
+.btn:focus-visible{outline:2px solid #f472b6;outline-offset:1px}
+.vs{width:1px;height:17px;background:#16303c}
+.sl{display:flex;align-items:center;gap:4px}
+.sl label{font-size:7.5px;color:#3f5666;min-width:24px}
+.sl input[type=range]{width:58px;accent-color:#22d3ee}
+.sl .sv{font-size:8.5px;color:#22d3ee;min-width:26px;text-align:right}
+#tip{position:fixed;bottom:46px;left:12px;z-index:5;font-size:8.5px;color:#2a3a46;line-height:1.6;pointer-events:none}
+#tip b{color:#4a6070}
+#stamp{position:fixed;bottom:46px;right:12px;z-index:5;font-size:7.5px;color:#1c2830;text-align:right;line-height:1.7;pointer-events:none}
+</style></head><body>
+
+<canvas id="cv"></canvas><canvas id="ov"></canvas>
+
+<div id="hero">
+  <div class="eq">p<sub>n+1</sub> = <span class="mp">[F<sub>w</sub> : −F<sub>z</sub>](p<sub>n</sub>)</span>, &nbsp;<span class="lk">F = <span id="he-F">H</span></span> &nbsp;·&nbsp; <span class="cn">shell = C60, locked</span></div>
+  <div class="sub">alphium holds c constant · genesis holds P = 12 · same move</div>
+</div>
+
+<div id="hud">
+  <h1>GENESIS·α II v0.2 — LOCKED SHELL</h1>
+  <div class="r"><span class="k">map</span><span class="v" id="h-map">g19 = [H_w : −H_z]</span></div>
+  <div class="r"><span class="k">degree</span><span class="v" id="h-deg">19</span></div>
+  <div class="r"><span class="k">view</span><span class="v" id="h-view">SPHERE</span></div>
+  <div class="sep"></div>
+  <div class="tri">
+    <span class="hd">quantity</span><span class="hd">target</span><span class="hd">measured</span><span class="hd">err</span>
+    <span class="k">basins</span><span class="vg" id="t-b">12</span><span class="v" id="m-b">—</span><span id="e-b">—</span>
+    <span class="k">P (pentagons)</span><span class="vg">12</span><span class="v" id="m-P">—</span><span id="e-P">—</span>
+    <span class="k">χ = V−E+F</span><span class="vg">2</span><span class="v" id="m-chi">—</span><span id="e-chi">—</span>
+    <span class="k">C60 vertices</span><span class="vg">60</span><span class="v" id="m-V">—</span><span id="e-V">—</span>
+    <span class="k">C60 edges</span><span class="vg">90</span><span class="v" id="m-E">—</span><span id="e-E">—</span>
+  </div>
+  <div style="font-size:7.5px;color:#3f5666;line-height:1.5;margin-top:5px">
+    basin err &gt; 0 means a basin is not on screen at this view — measured basin
+    areas run 0.12%–13.25% of the sphere, so small ones need zoom, not more steps.
+  </div>
+  <div class="sep"></div>
+  <div class="r"><span class="k">basin at cursor</span><span class="vp" id="h-cur">—</span></div>
+  <div class="r"><span class="k">steps to converge</span><span class="vp" id="h-it">—</span></div>
+  <div class="r"><span class="k">render</span><span class="v" id="h-ms">—</span></div>
+  <div class="sep"></div>
+  <div style="font-size:7.5px;line-height:1.6;color:#3f5666">
+    <span class="tag EX">EXACT</span> deg(f,H,T)=(12,20,30); syzygy (aT)²+(bH)³=1728f⁵, a=−1/2420, b=1/121<br>
+    <span class="tag CO">COMPUTED</span> equivariance resid 2.3e−14; basins {20,12,32} from 600 seeds<br>
+    <span class="tag DE">DESIGN</span> reading the basin count as a shell number
+  </div>
+</div>
+
+<div id="ops">
+  <h2>THE 7 OPERATIONS</h2>
+  <div class="cap">GA.P1–P7. Which primitive each render pass uses. Correspondence is a DESIGN MAPPING (THEA), not a theorem.</div>
+  <div class="op" id="op1"><span><span class="n">P1</span> NODE</span><span class="c" id="c1">—</span></div>
+  <div class="op" id="op2"><span><span class="n">P2</span> EDGE</span><span class="c" id="c2">—</span></div>
+  <div class="op" id="op3"><span><span class="n">P3</span> COMPOSE</span><span class="c" id="c3">—</span></div>
+  <div class="op" id="op4"><span><span class="n">P4</span> TRANSFORM</span><span class="c" id="c4">—</span></div>
+  <div class="op" id="op5"><span><span class="n">P5</span> ITERATE</span><span class="c" id="c5">—</span></div>
+  <div class="op" id="op6"><span><span class="n">P6</span> AGGREGATE</span><span class="c" id="c6">—</span></div>
+  <div class="op" id="op7"><span><span class="n">P7</span> COMPARE</span><span class="c" id="c7">—</span></div>
+</div>
+
+<div id="tip"><b>drag</b> turn the shell · <b>wheel</b> zoom · <b>H</b> hide chrome · motion is opt-in</div>
+<div id="stamp">GENESIS·α II — genesis v8.5.2 · thea v3.0 · alphium v1.1<br>
+locked: C60 (T=3, V=60, E=90, F=32, P=12, χ=2)<br>
+vertices = {0, ∞} ∪ (1/φ)Z₅ ∪ (φe<sup>iπ/5</sup>)Z₅ — φ is the ring radius<br>
+the centre is held, not rendered</div>
+
+<div id="bar">
+  <button class="btn" id="b-g11">g₁₁ · f · 20</button>
+  <button class="btn on" id="b-g19">g₁₉ · H · 12</button>
+  <button class="btn" id="b-g29">g₂₉ · T · 32</button>
+  <div class="vs"></div>
+  <button class="btn on" id="b-sph">Sphere</button>
+  <button class="btn" id="b-pln">Plane</button>
+  <div class="vs"></div>
+  <div class="sl"><label>steps</label><input type="range" id="s-i" min="8" max="120" step="4" value="48"><span class="sv" id="v-i">48</span></div>
+  <div class="sl"><label>bands</label><input type="range" id="s-k" min="1" max="24" step="1" value="7"><span class="sv" id="v-k">7</span></div>
+  <div class="vs"></div>
+  <button class="btn gd on" id="b-c60">C60 cage</button>
+  <button class="btn gd" id="b-orb">orbit pts</button>
+  <button class="btn gd" id="b-spin">spin</button>
+  <div class="vs"></div>
+  <button class="btn" id="b-reset">reset</button>
+  <button class="btn" id="b-save">save png</button>
+</div>
+
+<script>
+"use strict";
+/* ===========================================================================
+   GENESIS·α II — THE LOCKED SHELL
+   The move: ALPHIUM's Julia lane holds c constant and paints the interior.
+   GENESIS holds P = 12 constant (the eigenvalue-1 mode of the light matrix)
+   and grows the shell. Same move. So: LOCK the shell at C60 and paint what
+   its own symmetry generates below the lattice.
+
+   Klein's three icosahedral forms have degrees 12, 20, 30 = P, V(C20), E(C20).
+   Their gradient equivariants g = [F_w : −F_z] are icosahedrally symmetric
+   rational maps; their basins tile the sphere with C60's symmetry group,
+   infinitely finely. That is the sub-lattice structure this paints.
+
+   RECEIPTS (see klein_receipt_v0_3.py):
+     EXACT     deg(f,H,T) = (12,20,30)
+     EXACT     (aT)² + (bH)³ = 1728 f⁵, a = −1/2420, b = 1/121  (symbolic zero)
+     EXACT     vertices = {0,∞} ∪ (1/φ)Z₅ ∪ (φe^{iπ/5})Z₅       (4.7e−15)
+     COMPUTED  |I| = 60, closed; equivariance residual 2.3e−14
+     COMPUTED  basins: g₁₁→20 (faces), g₁₉→12 (vertices = P), g₂₉→32 (=12+20)
+     DESIGN    reading a basin count as a shell number
+   =========================================================================== */
+
+const PHI = (1 + Math.sqrt(5)) / 2;
+
+/* ---- P1 NODE: the 12 icosahedral vertices, straight from φ ---------------- */
+function icosa12() {
+  const V = [[0, 0, 1], [0, 0, -1]];                       // 0 and ∞
+  for (let k = 0; k < 5; k++) {
+    V.push(s2FromC(Math.cos(2 * Math.PI * k / 5) / PHI, Math.sin(2 * Math.PI * k / 5) / PHI));
+    const a = Math.PI / 5 + 2 * Math.PI * k / 5;
+    V.push(s2FromC(PHI * Math.cos(a), PHI * Math.sin(a)));
+  }
+  return V;
+}
+function s2FromC(x, y) { const d = 1 + x * x + y * y; return [2 * x / d, 2 * y / d, (d - 2) / d]; }
+const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+const nrm = a => { const L = Math.hypot(a[0], a[1], a[2]); return [a[0] / L, a[1] / L, a[2] / L]; };
+const add = (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
+
+const ICO = icosa12();
+/* ---- P2 EDGE / P3 COMPOSE: 30 edges, 20 faces, then the C60 truncation ---- */
+const IEDGE = [], IFACE = [];
+{
+  const d2 = [];
+  for (let i = 0; i < 12; i++) for (let j = i + 1; j < 12; j++) d2.push([i, j, dot(ICO[i], ICO[j])]);
+  d2.sort((a, b) => b[2] - a[2]);
+  const cut = d2[29][2] - 1e-6;
+  for (const [i, j, c] of d2) if (c > cut) IEDGE.push([i, j]);
+  const adj = i => IEDGE.filter(e => e[0] === i || e[1] === i).map(e => e[0] === i ? e[1] : e[0]);
+  for (let i = 0; i < 12; i++) for (const j of adj(i)) for (const k of adj(i))
+    if (i < j && j < k && adj(j).includes(k)) IFACE.push([i, j, k]);
+}
+const FACEPT = IFACE.map(t => nrm(add(add(ICO[t[0]], ICO[t[1]]), ICO[t[2]])));
+const EDGEPT = IEDGE.map(e => nrm(add(ICO[e[0]], ICO[e[1]])));
+
+/* C60 = truncated icosahedron: two points per icosahedral edge */
+const C60 = [], C60E = [];
+{
+  const idx = new Map();
+  for (const [i, j] of IEDGE) {
+    idx.set(i + ',' + j, C60.length); C60.push(nrm([2 * ICO[i][0] + ICO[j][0], 2 * ICO[i][1] + ICO[j][1], 2 * ICO[i][2] + ICO[j][2]]));
+    idx.set(j + ',' + i, C60.length); C60.push(nrm([2 * ICO[j][0] + ICO[i][0], 2 * ICO[j][1] + ICO[i][1], 2 * ICO[j][2] + ICO[i][2]]));
+    C60E.push([idx.get(i + ',' + j), idx.get(j + ',' + i)]);       // 30 truncation edges
+  }
+  for (let i = 0; i < 12; i++) {                                    // 12 pentagons = 60 edges
+    const ring = IEDGE.filter(e => e[0] === i || e[1] === i).map(e => e[0] === i ? e[1] : e[0]);
+    const n = ICO[i], t1 = nrm([-n[1], n[0], 0].some(v => v) ? [-n[1], n[0], 0] : [0, -n[2], n[1]]);
+    const t2 = [n[1] * t1[2] - n[2] * t1[1], n[2] * t1[0] - n[0] * t1[2], n[0] * t1[1] - n[1] * t1[0]];
+    ring.sort((a, b) => Math.atan2(dot(ICO[a], t2), dot(ICO[a], t1)) - Math.atan2(dot(ICO[b], t2), dot(ICO[b], t1)));
+    for (let q = 0; q < 5; q++) C60E.push([idx.get(i + ',' + ring[q]), idx.get(i + ',' + ring[(q + 1) % 5])]);
+  }
+}
+const TOPO = { V: C60.length, E: C60E.length, F: 32, P: 12 };
+TOPO.chi = TOPO.V - TOPO.E + TOPO.F;
+
+/* ---- P4 TRANSFORM: the three Klein gradient equivariants ------------------
+   Homogeneous, exact integers, verified === (F_w, −F_z) symbolically.
+   Written in (Z5, W5) = (z^5, w^5) with a monomial prefactor.            */
+const MAPS = {
+  g19: { F: 'H', deg: 19, basins: 12, orbit: 'vertices (P)', pts: ICO,
+         nC: [57, -247, -171, -1], nZ: 0, nW: 4,
+         dC: [1, -171, 247, 57], dZ: 4, dW: 0 },
+  g11: { F: 'f', deg: 11, basins: 20, orbit: 'face axes (V of C20)', pts: FACEPT,
+         nC: [1, 66, -11], nZ: 1, nW: 0,
+         dC: [-11, -66, 1], dZ: 0, dW: 1 },
+  g29: { F: 'T', deg: 29, basins: 32, orbit: 'vertices ∪ faces (F of C60)', pts: ICO.concat(FACEPT),
+         nC: [87, -3335, 0, -6670, -435, 1], nZ: 0, nW: 4,
+         dC: [-1, -435, 6670, 0, 3335, 87], dZ: 4, dW: 0 }
+};
+
+/* homogeneous Horner:  Σ c[j]·Z^(m−j)·W^j  */
+function homEval(c, Zr, Zi, Wr, Wi, o) {
+  let rr = c[0], ri = 0, kr = 1, ki = 0;
+  for (let j = 1; j < c.length; j++) {
+    const t = rr * Zr - ri * Zi; ri = rr * Zi + ri * Zr; rr = t;
+    const u = kr * Wr - ki * Wi; ki = kr * Wi + ki * Wr; kr = u;
+    rr += c[j] * kr; ri += c[j] * ki;
+  }
+  o[0] = rr; o[1] = ri;
+}
+const _n = [0, 0], _d = [0, 0], _p = [0, 0, 0, 0];
+function cmulPow(ar, ai, n, o) {                 // o *= (a)^n
+  for (let i = 0; i < n; i++) { const t = o[0] * ar - o[1] * ai; o[1] = o[0] * ai + o[1] * ar; o[0] = t; }
+}
+/* one step of p ↦ [num : den], p = (z,w) homogeneous, normalised */
+function step(M, zr, zi, wr, wi, out) {
+  const z2r = zr * zr - zi * zi, z2i = 2 * zr * zi, z4r = z2r * z2r - z2i * z2i, z4i = 2 * z2r * z2i;
+  const Zr = z4r * zr - z4i * zi, Zi = z4r * zi + z4i * zr;
+  const w2r = wr * wr - wi * wi, w2i = 2 * wr * wi, w4r = w2r * w2r - w2i * w2i, w4i = 2 * w2r * w2i;
+  const Wr = w4r * wr - w4i * wi, Wi = w4r * wi + w4i * wr;
+  homEval(M.nC, Zr, Zi, Wr, Wi, _n); homEval(M.dC, Zr, Zi, Wr, Wi, _d);
+  if (M.nZ) cmulPow(zr, zi, M.nZ, _n); if (M.nW) cmulPow(wr, wi, M.nW, _n);
+  if (M.dZ) cmulPow(zr, zi, M.dZ, _d); if (M.dW) cmulPow(wr, wi, M.dW, _d);
+  const m = Math.hypot(_n[0], _n[1], _d[0], _d[1]) || 1;
+  out[0] = _n[0] / m; out[1] = _n[1] / m; out[2] = _d[0] / m; out[3] = _d[1] / m;
+}
+/* CP¹ → S², projective-safe */
+function toS2(zr, zi, wr, wi, o) {
+  const wm = wr * wr + wi * wi;
+  if (wm < 1e-24) { o[0] = 0; o[1] = 0; o[2] = 1; return; }
+  const x = (zr * wr + zi * wi) / wm, y = (zi * wr - zr * wi) / wm, d = 1 + x * x + y * y;
+  o[0] = 2 * x / d; o[1] = 2 * y / d; o[2] = (d - 2) / d;
+}
+
+/* ---- state --------------------------------------------------------------- */
+const S = { map: 'g19', view: 'sphere', iter: 48, bands: 7, zoom: 1.0,
+            yaw: 0.55, pitch: 0.42, cx: 0, cy: 0, pz: 3.2,
+            cage: true, orbpts: false, spin: false, chrome: true };
+
+const cv = document.getElementById('cv'), ctx = cv.getContext('2d', { alpha: false });
+const ov = document.getElementById('ov'), octx = ov.getContext('2d');
+let W = 0, H = 0, img = null, basinBuf = null, itBuf = null;
+
+function resize() {
+  const nw = innerWidth || 900, nh = innerHeight || 640;
+  if (nw === W && nh === H) return;
+  W = nw; H = nh; cv.width = ov.width = W; cv.height = ov.height = H;
+  img = ctx.createImageData(W, H);
+  basinBuf = new Int16Array(W * H); itBuf = new Int16Array(W * H);
+  render();
+}
+
+/* camera */
+function rotY(v, a) { const c = Math.cos(a), s = Math.sin(a); return [c * v[0] + s * v[2], v[1], -s * v[0] + c * v[2]]; }
+function rotX(v, a) { const c = Math.cos(a), s = Math.sin(a); return [v[0], c * v[1] - s * v[2], s * v[1] + c * v[2]]; }
+const camFwd = v => rotX(rotY(v, S.yaw), S.pitch);          // object → screen
+const camInv = v => rotY(rotX(v, -S.pitch), -S.yaw);        // screen → object
+
+/* ---- basin palette: distinct hue per basin ------------------------------- */
+let PAL = [];
+function buildPal(n) {
+  PAL = [];
+  for (let i = 0; i < n; i++) {
+    const h = (i * 360 / n + (i % 2) * 180 / n) % 360, s = .68, l = .55;
+    const c = (1 - Math.abs(2 * l - 1)) * s, x = c * (1 - Math.abs((h / 60) % 2 - 1)), m = l - c / 2;
+    const t = h < 60 ? [c, x, 0] : h < 120 ? [x, c, 0] : h < 180 ? [0, c, x]
+            : h < 240 ? [0, x, c] : h < 300 ? [x, 0, c] : [c, 0, x];
+    PAL.push([(t[0] + m) * 255, (t[1] + m) * 255, (t[2] + m) * 255]);
+  }
+}
+
+/* ---- THE RENDER: alphium's pixel loop, basins instead of escape ---------- */
+const _o = [0, 0, 0, 0], _s = [0, 0, 0];
+let tok = 0, opCount = { P4: 0, P5: 0, P7: 0 };
+function render() {
+  if (!img) return;
+  const M = MAPS[S.map]; buildPal(M.pts.length);
+  const t0 = performance.now(), my = ++tok, data = img.data;
+  opCount = { P4: 0, P5: 0, P7: 0 };
+  const seen = new Set();
+
+  const pass = (stp, last) => {
+    if (my !== tok) return;
+    const R = Math.min(W, H) * 0.44 * S.zoom;
+    for (let py = 0; py < H; py += stp) {
+      for (let px = 0; px < W; px += stp) {
+        let zr, zi, wr = 1, wi = 0, inside = true;
+        if (S.view === 'sphere') {
+          const X = (px - W / 2) / R, Y = (H / 2 - py) / R, q = X * X + Y * Y;
+          if (q > 1) { inside = false; }
+          else {
+            const v = camInv([X, Y, Math.sqrt(1 - q)]);
+            if (1 - v[2] < 1e-12) { zr = 1; zi = 0; wr = 0; wi = 0; }
+            else { zr = v[0]; zi = v[1]; wr = 1 - v[2]; wi = 0; }
+          }
+        } else {
+          zr = S.cx + (px - W / 2) / (H / S.pz); zi = S.cy - (py - H / 2) / (H / S.pz);
+        }
+        let bi = -1, nit = 0;
+        if (inside) {
+          const m0 = Math.hypot(zr, zi, wr, wi) || 1; zr /= m0; zi /= m0; wr /= m0; wi /= m0;
+          for (let n = 0; n < S.iter; n++) {
+            step(M, zr, zi, wr, wi, _o); opCount.P4++; opCount.P5++;
+            const d = Math.abs(zr * _o[2] - _o[0] * wr - (zi * _o[3] - _o[1] * wi))
+                    + Math.abs(zr * _o[3] - _o[1] * wr + zi * _o[2] - _o[0] * wi);
+            zr = _o[0]; zi = _o[1]; wr = _o[2]; wi = _o[3]; nit = n + 1;
+            if (d < 1e-9) break;
+          }
+          toS2(zr, zi, wr, wi, _s);
+          let best = 9;                                       // P7 COMPARE
+          for (let i = 0; i < M.pts.length; i++) {
+            const p = M.pts[i], dd = (p[0] - _s[0]) ** 2 + (p[1] - _s[1]) ** 2 + (p[2] - _s[2]) ** 2;
+            if (dd < best) { best = dd; bi = i; }
+          }
+          opCount.P7++;
+          if (best > 4e-4) bi = -1; else if (last) seen.add(bi);
+        }
+        let r, g, b;
+        if (bi < 0) { r = 4; g = 6; b = 11; }
+        else {
+          const c = PAL[bi];                                   // P6 AGGREGATE (banding)
+          const t = S.bands <= 1 ? 1 : .34 + .66 * (.5 + .5 * Math.cos(2 * Math.PI * nit / S.bands));
+          r = c[0] * t; g = c[1] * t; b = c[2] * t;
+        }
+        if (stp === 1) { basinBuf[py * W + px] = bi; itBuf[py * W + px] = nit; }
+        for (let dy = 0; dy < stp && py + dy < H; dy++) {
+          let o = ((py + dy) * W + px) * 4;
+          for (let dx = 0; dx < stp && px + dx < W; dx++) { data[o] = r; data[o + 1] = g; data[o + 2] = b; data[o + 3] = 255; o += 4; }
+        }
+      }
+    }
+    ctx.putImageData(img, 0, 0);
+    if (last) {
+      document.getElementById('h-ms').textContent = Math.round(performance.now() - t0) + ' ms';
+      report(seen.size, M); overlay();
+    }
+  };
+  pass(8, false);
+  requestAnimationFrame(() => pass(2, false));
+  requestAnimationFrame(() => setTimeout(() => pass(1, true), 0));
+}
+
+/* ---- PATH III: target · measured · err, never the target alone ----------- */
+function cell(id, tgt, meas) {
+  document.getElementById('m-' + id).textContent = meas;
+  const e = document.getElementById('e-' + id), d = meas - tgt;
+  e.textContent = d === 0 ? '0 ✓' : (d > 0 ? '+' : '') + d;
+  e.className = d === 0 ? 'ok' : 'no';
+}
+function report(seen, M) {
+  cell('b', M.basins, seen);
+  cell('P', 12, ICO.length); cell('chi', 2, TOPO.chi);
+  cell('V', 60, TOPO.V); cell('E', 90, TOPO.E);
+  const live = { 1: ICO.length, 2: IEDGE.length, 3: IFACE.length, 4: opCount.P4, 5: opCount.P5, 6: S.bands, 7: opCount.P7 };
+  for (let i = 1; i <= 7; i++) {
+    document.getElementById('c' + i).textContent = live[i] > 9999 ? (live[i] / 1e6).toFixed(1) + 'M' : live[i];
+    document.getElementById('op' + i).classList.add('live');
+  }
+}
+
+/* ---- overlay: the locked cage on top of what its symmetry generates ------ */
+function proj(v) {
+  const p = camFwd(v), R = Math.min(W, H) * 0.44 * S.zoom;
+  return [W / 2 + p[0] * R, H / 2 - p[1] * R, p[2]];
+}
+function overlay() {
+  octx.clearRect(0, 0, W, H);
+  if (!S.chrome || S.view !== 'sphere') return;
+  if (S.cage) {
+    octx.lineWidth = 1; octx.strokeStyle = 'rgba(255,255,255,.5)';
+    for (const [a, b] of C60E) {
+      const A = proj(C60[a]), B = proj(C60[b]);
+      if (A[2] < -.05 && B[2] < -.05) continue;
+      octx.globalAlpha = (A[2] + B[2]) / 2 > 0 ? .62 : .13;
+      octx.beginPath(); octx.moveTo(A[0], A[1]); octx.lineTo(B[0], B[1]); octx.stroke();
+    }
+    octx.globalAlpha = 1;
+    for (const v of C60) { const P = proj(v); if (P[2] < 0) continue;
+      octx.fillStyle = 'rgba(255,255,255,.72)'; octx.beginPath(); octx.arc(P[0], P[1], 1.5, 0, 6.2832); octx.fill(); }
+  }
+  if (S.orbpts) {
+    const M = MAPS[S.map];
+    for (let i = 0; i < M.pts.length; i++) {
+      const P = proj(M.pts[i]); if (P[2] < 0) continue;
+      octx.strokeStyle = '#04060b'; octx.lineWidth = 2;
+      octx.fillStyle = `rgb(${PAL[i][0]},${PAL[i][1]},${PAL[i][2]})`;
+      octx.beginPath(); octx.arc(P[0], P[1], 4.2, 0, 6.2832); octx.fill(); octx.stroke();
+    }
+  }
+}
+
+/* ---- input --------------------------------------------------------------- */
+let drag = false, lx = 0, ly = 0;
+cv.addEventListener('mousedown', e => { drag = true; lx = e.clientX; ly = e.clientY; });
+addEventListener('mouseup', () => drag = false);
+addEventListener('mousemove', e => {
+  if (drag) {
+    if (S.view === 'sphere') { S.yaw += (e.clientX - lx) * .0075; S.pitch += (e.clientY - ly) * .0075; }
+    else { S.cx -= (e.clientX - lx) / (H / S.pz); S.cy += (e.clientY - ly) / (H / S.pz); }
+    lx = e.clientX; ly = e.clientY; render();
+  }
+  const i = (e.clientY | 0) * W + (e.clientX | 0);
+  if (basinBuf && i >= 0 && i < basinBuf.length) {
+    const b = basinBuf[i];
+    document.getElementById('h-cur').textContent = b < 0 ? '—' : ('#' + b + ' / ' + MAPS[S.map].pts.length);
+    document.getElementById('h-it').textContent = b < 0 ? '—' : itBuf[i];
+  }
+});
+cv.addEventListener('wheel', e => {
+  e.preventDefault();
+  if (S.view === 'sphere') S.zoom *= e.deltaY > 0 ? 1 / 1.12 : 1.12;
+  else S.pz *= e.deltaY > 0 ? 1.15 : 1 / 1.15;
+  render();
+}, { passive: false });
+
+const $ = id => document.getElementById(id);
+function setMap(k) {
+  S.map = k;
+  for (const q of ['g11', 'g19', 'g29']) $('b-' + q).classList.toggle('on', q === k);
+  const M = MAPS[k];
+  $('h-map').textContent = `${k} = [${M.F}_w : −${M.F}_z]`;
+  $('h-deg').textContent = M.deg; $('he-F').textContent = M.F; $('t-b').textContent = M.basins;
+  render();
+}
+function setView(v) {
+  S.view = v; $('b-sph').classList.toggle('on', v === 'sphere'); $('b-pln').classList.toggle('on', v === 'plane');
+  $('h-view').textContent = v.toUpperCase(); render();
+}
+$('b-g11').onclick = () => setMap('g11'); $('b-g19').onclick = () => setMap('g19'); $('b-g29').onclick = () => setMap('g29');
+$('b-sph').onclick = () => setView('sphere'); $('b-pln').onclick = () => setView('plane');
+$('s-i').oninput = e => { S.iter = +e.target.value; $('v-i').textContent = S.iter; render(); };
+$('s-k').oninput = e => { S.bands = +e.target.value; $('v-k').textContent = S.bands; render(); };
+$('b-c60').onclick = () => { S.cage = !S.cage; $('b-c60').classList.toggle('on', S.cage); overlay(); };
+$('b-orb').onclick = () => { S.orbpts = !S.orbpts; $('b-orb').classList.toggle('on', S.orbpts); overlay(); };
+$('b-spin').onclick = () => { S.spin = !S.spin; $('b-spin').classList.toggle('on', S.spin); if (S.spin) spin(); };
+$('b-reset').onclick = () => { S.yaw = .55; S.pitch = .42; S.zoom = 1; S.cx = 0; S.cy = 0; S.pz = 3.2; render(); };
+$('b-save').onclick = () => {
+  const o = document.createElement('canvas'); o.width = W; o.height = H;
+  const c = o.getContext('2d'); c.drawImage(cv, 0, 0); c.drawImage(ov, 0, 0);
+  const a = document.createElement('a'); a.download = 'genesis_alpha_II.png'; a.href = o.toDataURL(); a.click();
+};
+addEventListener('keydown', e => {
+  if (e.key === 'h' || e.key === 'H') {
+    S.chrome = !S.chrome;
+    for (const id of ['hud', 'ops', 'bar', 'hero', 'tip', 'stamp']) $(id).style.display = S.chrome ? '' : 'none';
+    overlay();
+  }
+});
+/* PATH VIII — motion is opt-in. Nothing turns until the user asks. */
+function spin() { if (!S.spin) return; S.yaw += .006; render(); requestAnimationFrame(spin); }
+addEventListener('resize', resize);
+
+resize(); setMap('g19'); setTimeout(resize, 120);
+</script></body></html>

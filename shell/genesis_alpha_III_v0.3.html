@@ -1,0 +1,430 @@
+<!DOCTYPE html><html><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GENESIS·α III v0.3 — THE TRADEOFF</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#04060a;color:#c8d8e8;font-family:'Courier New',monospace;overflow:hidden;touch-action:none}
+canvas{position:fixed;top:0;left:0}
+#cv{z-index:0}#ov{z-index:1;pointer-events:none}
+
+#hero{position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:6;pointer-events:none;
+  background:rgba(6,10,16,.84);border:1px solid #16303c;border-radius:8px;padding:9px 18px;text-align:center;backdrop-filter:blur(6px)}
+#hero .eq{font-family:'Orbitron';font-size:14px;font-weight:700;color:#e8f4ff}
+#hero .a{color:#ffd166}#hero .b{color:#22d3ee}#hero .c{color:#f472b6}
+#hero .sub{font-size:8px;color:#4a6070;letter-spacing:.2em;margin-top:5px;text-transform:uppercase}
+
+#hud{position:fixed;top:12px;left:12px;z-index:6;pointer-events:none;font-size:10px;line-height:1.65;
+  background:rgba(6,10,16,.84);border:1px solid #16303c;border-radius:6px;padding:9px 11px;width:262px}
+#hud h1{font-family:'Orbitron';font-size:9.5px;letter-spacing:.16em;color:#22d3ee;margin-bottom:6px}
+.r{display:flex;justify-content:space-between;gap:10px}
+.k{color:#3f5666}.v{color:#8fe9ff}.vg{color:#ffd166}.vp{color:#f472b6}
+.sep{height:1px;background:#16303c;margin:6px 0}
+.tag{font-size:7px;letter-spacing:.09em;padding:1px 4px;border-radius:2px;border:1px solid}
+.EX{color:#7dffa8;border-color:#1d4a2c}.CO{color:#8fe9ff;border-color:#1c3a48}.DE{color:#ffd166;border-color:#3a3000}
+.ok{color:#7dffa8}.no{color:#ff5a5a}
+
+#fence{position:fixed;top:12px;right:12px;z-index:6;width:224px;font-size:9.5px;line-height:1.6;
+  background:rgba(10,6,6,.88);border:1px solid #4a2000;border-radius:6px;padding:9px 10px}
+#fence h2{font-family:'Orbitron';font-size:9px;letter-spacing:.14em;color:#ff9d4d;margin-bottom:2px}
+#fence .cap{color:#4a3020;font-size:7.5px;margin-bottom:6px;line-height:1.45}
+#fence .bar{height:7px;background:#1a1008;border:1px solid #3a2410;border-radius:2px;margin:5px 0 3px;position:relative;overflow:hidden}
+#fence .fill{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#7dffa8,#ffd166,#ff5a5a)}
+#fence .vo{color:#ff9d4d}
+
+#bar{position:fixed;bottom:0;left:0;right:0;z-index:8;background:rgba(4,6,10,.96);border-top:1px solid #16303c;
+  padding:7px 10px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:center}
+.btn{background:#080d15;border:1px solid #24323e;color:#8fe9ff;padding:4px 9px;font-family:inherit;font-size:9px;
+  cursor:pointer;border-radius:3px;white-space:nowrap;transition:.14s}
+.btn:hover{border-color:#3f6a80;color:#fff}
+.btn.on{color:#04060a;background:#22d3ee;border-color:#22d3ee;font-weight:bold}
+.btn.gd{color:#ffd166;border-color:#3a3000}.btn.gd.on{background:#ffd166;color:#04060a;border-color:#ffd166}
+.btn:focus-visible{outline:2px solid #f472b6;outline-offset:1px}
+.vs{width:1px;height:17px;background:#16303c}
+.sl{display:flex;align-items:center;gap:4px}
+.sl label{font-size:7.5px;color:#3f5666;min-width:24px}
+.sl input[type=range]{width:56px;accent-color:#22d3ee}
+.sl .sv{font-size:8.5px;color:#22d3ee;min-width:26px;text-align:right}
+#tip{position:fixed;bottom:82px;left:12px;z-index:5;font-size:8.5px;color:#2a3a46;pointer-events:none}
+#tip b{color:#4a6070}
+</style></head><body>
+
+<canvas id="cv"></canvas><canvas id="ov"></canvas>
+
+<div id="hero">
+  <div class="eq"><span class="a">T = k²+kℓ+ℓ²</span> = <span class="b">|w|²</span> = <span class="c">A₂ norm</span> &nbsp;·&nbsp; 3C₂ = T + 3(p+q)</div>
+  <div class="sub">one quadratic form · shell · su(3) · scale — the trade is the fence, not the math</div>
+</div>
+
+<div id="hud">
+  <h1>GENESIS·α III v0.3 — THE TRADEOFF</h1>
+  <div class="r"><span class="k">lock</span><span class="v" id="h-lock">SHELL</span></div>
+  <div class="r"><span class="k">paint</span><span class="v" id="h-paint">RUNG</span></div>
+  <div class="sep"></div>
+  <div class="r"><span class="k">cursor (k, ℓ)</span><span class="vg" id="h-kl">—</span></div>
+  <div class="r"><span class="k">T = |w|²</span><span class="vg" id="h-T">—</span></div>
+  <div class="r"><span class="k">φ² rung</span><span class="vp" id="h-rung">—</span></div>
+  <div class="sep"></div>
+  <div id="read-shell">
+    <div class="r"><span class="k">nearest shell</span><span class="v" id="s-nm">C20</span></div>
+    <div class="r"><span class="k">V = 20T</span><span class="v" id="s-V">20</span></div>
+    <div class="r"><span class="k">E = 30T</span><span class="v" id="s-E">30</span></div>
+    <div class="r"><span class="k">F = 10T+2</span><span class="v" id="s-F">12</span></div>
+    <div class="r"><span class="k">P · χ</span><span class="ok" id="s-chi">12 · 2 ✓</span></div>
+  </div>
+  <div id="read-su3" style="display:none">
+    <div class="r"><span class="k">irrep (p, q)</span><span class="v" id="q-pq">1, 0</span></div>
+    <div class="r"><span class="k">dim</span><span class="v" id="q-d">3</span></div>
+    <div class="r"><span class="k">C₂ = (T+3(p+q))/3</span><span class="v" id="q-c">4/3</span></div>
+    <div class="r"><span class="k">name</span><span class="vp" id="q-nm">quark triplet</span></div>
+    <div class="r"><span class="k">A₂ roots · units ℤ[ζ₆]</span><span class="ok">6 · 6 ✓</span></div>
+  </div>
+  <div id="read-scale" style="display:none">
+    <div class="r"><span class="k">anchor T=1</span><span class="v" id="c-anc">proton</span></div>
+    <div class="r"><span class="k">length at cursor</span><span class="v" id="c-L">—</span></div>
+    <div class="r"><span class="k">rung from Planck</span><span class="v" id="c-rp">—</span></div>
+    <div class="r"><span class="k">nearest anchor</span><span class="vp" id="c-near">—</span></div>
+    <div class="r"><span class="k">ladder Planck→universe</span><span class="vg">147.0 rungs</span></div>
+  </div>
+  <div class="sep"></div>
+  <div style="font-size:7.5px;line-height:1.55;color:#3f5666">
+    <span class="tag EX">EXACT</span> T is the A₂ norm form (1.4e−14); 3C₂ = T+3(p+q) on all 64 pairs<br>
+    <span class="tag CO">COMPUTED</span> L_Edd/M = 1.257e38 erg/s vs textbook 1.26e38<br>
+    <span class="tag DE">DESIGN</span> reading one quadratic form as both shell and colour charge
+  </div>
+</div>
+
+<div id="fence">
+  <h2>THE CHROMIUM FENCE</h2>
+  <div class="cap">The math is absolute. The chip is not. This is what float64 actually buys, shown rather than hidden.</div>
+  <div class="r"><span class="k">float64 ε</span><span class="vo">2.220e−16</span></div>
+  <div class="r"><span class="k">one chart holds</span><span class="vo">37.5 rungs</span></div>
+  <div class="r"><span class="k">ladder needs</span><span class="vo">147.0 rungs</span></div>
+  <div class="r"><span class="k">charts required</span><span class="vo">4</span></div>
+  <div class="sep"></div>
+  <div class="r"><span class="k">ulps / pixel</span><span class="vo" id="f-ulp">—</span></div>
+  <div class="r"><span class="k">headroom left</span><span class="vo" id="f-head">—</span></div>
+  <div class="bar"><div class="fill" id="f-fill" style="width:2%"></div></div>
+  <div style="font-size:7.5px;color:#4a3020;line-height:1.45">
+    log-periodic period in ln(scale) = <span class="vo">0.962424</span> — O(1), not 10⁻³⁵.
+    That is why this is renderable at all. Sub-Planck was never required;
+    only the <i>period</i> has to resolve.
+  </div>
+</div>
+
+<div id="tip"><b>drag</b> pan · <b>wheel</b> zoom · <b>H</b> hide chrome · the ladder strip is the honest span</div>
+
+<div id="bar">
+  <button class="btn on" id="l-shell">lock: Shell</button>
+  <button class="btn" id="l-su3">lock: SU(3)</button>
+  <button class="btn" id="l-scale">lock: Scale</button>
+  <div class="vs"></div>
+  <button class="btn gd on" id="p-rung">rung</button>
+  <button class="btn gd" id="p-norm">norm T</button>
+  <button class="btn gd" id="p-hex">hex cell</button>
+  <div class="vs"></div>
+  <div class="sl"><label>bands</label><input type="range" id="s-b" min="1" max="12" step="1" value="1"><span class="sv" id="v-b">1</span></div>
+  <div class="vs"></div>
+  <button class="btn gd on" id="b-lat">lattice</button>
+  <button class="btn gd on" id="b-lad">golden ladder</button>
+  <button class="btn gd" id="b-root">A₂ roots</button>
+  <div class="vs"></div>
+  <button class="btn" id="b-reset">reset</button>
+  <button class="btn" id="b-save">save png</button>
+</div>
+
+<script>
+"use strict";
+/* ===========================================================================
+   GENESIS·α III — THE TRADEOFF
+   Brief: a faithful sub-Planck render is not computable on this chip. So do
+   not fake depth. Lock the numeric fence at what float64 honestly gives, and
+   read the SAME generator in bands that have real anchors.
+
+   The load-bearing identity (receipt: tradeoff_receipt.py):
+     T(k,ℓ) = k² + kℓ + ℓ²  is the norm form of the A₂ root lattice,
+     which is the SU(3) weight lattice, which is the Eisenstein lattice ℤ[ζ₆],
+     which is the Goldberg shell index.  ONE form, three readings.
+       EXACT   |p a₁ − q a₂|²/2 = p²+pq+q²                    (1.4e−14)
+       EXACT   3·C₂(p,q) = T(p,q) + 3(p+q)                    (all 64 pairs)
+       EXACT   dim(p,q) = (p+1)(q+1)(p+q+2)/2                 (standard table)
+       COMPUTED  golden ladder = 3, 8, 15, 42, 120, 405, 1449
+       COMPUTED  Planck→universe = 147.0 φ² rungs; float64 holds 37.5 → 4 charts
+       COMPUTED  L_Edd/M = 1.257e38 erg/s  vs textbook 1.26e38
+       DESIGN    reading one quadratic form as both shell and colour charge
+
+   Why it is renderable: the log-periodic period in ln(scale) is ln φ² =
+   0.962424 — O(1). Only the PERIOD must resolve, never the Planck length.
+   =========================================================================== */
+
+const PHI = (1 + Math.sqrt(5)) / 2, LNP2 = Math.log(PHI * PHI);   // 0.962423650
+const SQ3 = Math.sqrt(3), OMx = .5, OMy = SQ3 / 2;                 // ζ = e^{iπ/3}
+const EPS = Number.EPSILON;
+const klToXY = (k, l) => [k + l * OMx, l * OMy];
+const xyToKL = (x, y) => { const l = y / OMy; return [x - l * OMx, l]; };
+const hexNorm = (k, l) => k * k + k * l + l * l;
+
+/* ---- the three readings of one integer ----------------------------------- */
+const topo = T => ({ V: 20 * T, E: 30 * T, F: 10 * T + 2, P: 12, chi: 20 * T - 30 * T + (10 * T + 2) });
+const su3dim = (p, q) => (p + 1) * (q + 1) * (p + q + 2) / 2;
+function su3cas(p, q) {                                            // exact fraction (T+3(p+q))/3
+  const n = hexNorm(p, q) + 3 * (p + q), g = (a, b) => b ? g(b, a % b) : a, d = g(Math.abs(n), 3) || 1;
+  return (n / d) + (3 / d === 1 ? '' : '/' + (3 / d));
+}
+const SU3NAME = { 3: 'quark triplet', 8: 'gluon octet (adjoint)', 6: 'sextet', 10: 'decuplet',
+  15: 'fifteen', 27: 'twenty-seven', 42: 'forty-two', 120: 'one-twenty', 405: 'four-oh-five' };
+const CAGE = { 1: 'C20', 3: 'C60', 4: 'C80', 7: 'C140', 9: 'C180', 12: 'C240', 13: 'C260',
+  16: 'C320', 19: 'C380', 21: 'C420', 25: 'C500', 27: 'C540', 31: 'C620', 36: 'C720', 49: 'C980' };
+
+/* ---- physical anchors, metres. COMPUTED from constants where derived ----- */
+const G_ = 6.6743e-11, C_ = 2.99792458e8, MSUN = 1.98892e30;
+const rs = M => 2 * G_ * M * MSUN / (C_ * C_);
+const ANCHOR = [
+  ['Planck length', 1.616255e-35], ['proton radius', 0.8414e-15], ['Bohr radius', 5.29177e-11],
+  ['human', 1.7], ['r_s of the Sun', rs(1)], ['Earth radius', 6.371e6], ['Sun radius', 6.957e8],
+  ['r_s 1e8 M☉ SMBH', rs(1e8)], ['r_s 1e10 M☉ quasar', rs(1e10)],
+  ['quasar ISCO (3 r_s)', 3 * rs(1e10)], ['observable universe', 4.4e26]];
+const LPLANCK = ANCHOR[0][1];
+const ANCPRESET = { planck: LPLANCK, proton: 0.8414e-15, quasar: rs(1e10) };
+const LADDER_TOTAL = Math.log(4.4e26 / LPLANCK) / LNP2;            // 147.0
+const CHART_RUNGS = Math.log(1 / EPS) / LNP2;                      // 37.5
+
+/* ---- state --------------------------------------------------------------- */
+const S = { lock: 'shell', paint: 'rung', bands: 1, anchor: 'proton',
+            cx: 0, cy: 0, zoom: 7.0, lattice: true, ladder: true, roots: false, chrome: true };
+
+const cv = document.getElementById('cv'), ctx = cv.getContext('2d', { alpha: false });
+const ov = document.getElementById('ov'), octx = ov.getContext('2d');
+let W = 0, H = 0, img = null;
+function resize() {
+  const nw = innerWidth || 900, nh = innerHeight || 640;
+  if (nw === W && nh === H) return;
+  W = nw; H = nh; cv.width = ov.width = W; cv.height = ov.height = H;
+  img = ctx.createImageData(W, H); render();
+}
+const pxW = px => S.cx + (px - W / 2) / H * S.zoom;
+const pyW = py => S.cy - (py - H / 2) / H * S.zoom;
+const wPX = x => (x - S.cx) * H / S.zoom + W / 2;
+const wPY = y => (S.cy - y) * H / S.zoom + H / 2;
+
+/* ---- the golden ladder: light-matrix orbit (k,ℓ)→(k+ℓ,k) ----------------- */
+function ladder(n) { const o = []; let k = 1, l = 0; for (let i = 0; i < n; i++) { o.push([k, l]); [k, l] = [k + l, k]; } return o; }
+
+/* ---- paint: the log-periodic field is the actual claim ------------------- */
+function hsl(h, s, l, o) {
+  const c = (1 - Math.abs(2 * l - 1)) * s, x = c * (1 - Math.abs((h / 60) % 2 - 1)), m = l - c / 2;
+  const t = h < 60 ? [c, x, 0] : h < 120 ? [x, c, 0] : h < 180 ? [0, c, x] : h < 240 ? [0, x, c] : h < 300 ? [x, 0, c] : [c, 0, x];
+  o[0] = (t[0] + m) * 255; o[1] = (t[1] + m) * 255; o[2] = (t[2] + m) * 255;
+}
+const _c = [0, 0, 0];
+function render() {
+  if (!img) return;
+  const t0 = performance.now(), d = img.data, B = S.bands;
+  for (let py = 0; py < H; py++) {
+    const y = pyW(py);
+    for (let px = 0; px < W; px++) {
+      const x = pxW(px), T = x * x + y * y;
+      let r, g, b;
+      if (T < 1e-300) { r = g = b = 8; }
+      else if (S.paint === 'rung') {
+        /* log-periodic: exactly self-similar under w → φ²w. period ln φ². */
+        const u = Math.log(T) / LNP2;                       // rung, real-valued
+        const ph = u - Math.floor(u), band = Math.floor(u);
+        const sh = .30 + .70 * (.5 + .5 * Math.cos(2 * Math.PI * ph * B));
+        hsl(((band * 41) % 360 + 360) % 360, .62, .52, _c);
+        r = _c[0] * sh; g = _c[1] * sh; b = _c[2] * sh;
+      } else if (S.paint === 'norm') {
+        const t = Math.log(1 + T) * 0.16 * B;
+        hsl((t * 90) % 360, .70, .30 + .35 * (t % 1), _c); r = _c[0]; g = _c[1]; b = _c[2];
+      } else {                                              /* hex cell: A₂ Voronoi */
+        const [k, l] = xyToKL(x, y);
+        let bd = 9;
+        for (let dk = -1; dk <= 1; dk++) for (let dl = -1; dl <= 1; dl++) {
+          const [ax, ay] = klToXY(Math.round(k) + dk, Math.round(l) + dl);
+          bd = Math.min(bd, Math.hypot(x - ax, y - ay));
+        }
+        const sh = .18 + .82 * Math.min(1, bd * 2.0);
+        const u = Math.log(Math.max(T, 1e-12)) / LNP2;
+        hsl(((Math.floor(u) * 41) % 360 + 360) % 360, .55, .50, _c);
+        r = _c[0] * sh; g = _c[1] * sh; b = _c[2] * sh;
+      }
+      const o = (py * W + px) * 4; d[o] = r; d[o + 1] = g; d[o + 2] = b; d[o + 3] = 255;
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+  document.getElementById('h-paint').textContent = S.paint.toUpperCase();
+  fence(); overlay();
+}
+
+/* ---- PATH III: the fence is shown, never assumed ------------------------- */
+function fence() {
+  const anch = Math.max(1, Math.abs(S.cx), Math.abs(S.cy));
+  const ulp = (S.zoom / H) / (EPS * anch);
+  const head = Math.log(Math.max(ulp, 1)) / LNP2;
+  document.getElementById('f-ulp').textContent = ulp.toExponential(2);
+  document.getElementById('f-head').textContent = head.toFixed(1) + ' rungs';
+  const used = Math.max(0, Math.min(1, 1 - head / CHART_RUNGS));
+  document.getElementById('f-fill').style.width = (2 + 98 * used).toFixed(1) + '%';
+}
+
+/* ---- overlay: lattice, ladder, roots, and the honest span strip ---------- */
+function overlay() {
+  octx.clearRect(0, 0, W, H);
+  if (!S.chrome) return;
+  const sc = H / S.zoom;
+
+  if (S.lattice && sc > 7) {
+    const c0 = xyToKL(pxW(0), pyW(H)), c1 = xyToKL(pxW(W), pyW(0)),
+          c2 = xyToKL(pxW(0), pyW(0)), c3 = xyToKL(pxW(W), pyW(H));
+    const kA = Math.floor(Math.min(c0[0], c1[0], c2[0], c3[0])) - 1, kB = Math.ceil(Math.max(c0[0], c1[0], c2[0], c3[0])) + 1;
+    const lA = Math.floor(Math.min(c0[1], c1[1])) - 1, lB = Math.ceil(Math.max(c0[1], c1[1])) + 1;
+    if ((kB - kA) * (lB - lA) < 30000) {
+      for (let l = lA; l <= lB; l++) for (let k = kA; k <= kB; k++) {
+        const T = hexNorm(k, l); if (!T) continue;
+        const [X, Y] = klToXY(k, l), px = wPX(X), py = wPY(Y);
+        if (px < -10 || px > W + 10 || py < -10 || py > H + 10) continue;
+        octx.fillStyle = 'rgba(232,244,255,.42)';
+        octx.beginPath(); octx.arc(px, py, Math.min(2.8, 1 + sc / 110), 0, 6.2832); octx.fill();
+        if (sc > 52) {
+          octx.fillStyle = 'rgba(232,244,255,.5)'; octx.font = '8px "Courier New"';
+          octx.fillText(S.lock === 'su3' ? String(su3dim(k, l)) : 'T' + T, px + 5, py - 4);
+        }
+      }
+    }
+  }
+  if (S.roots) {                                    /* the 6 A₂ roots = units of ℤ[ζ₆] */
+    octx.strokeStyle = 'rgba(244,114,182,.8)'; octx.lineWidth = 1.4;
+    for (const [k, l] of [[1, 0], [0, 1], [-1, 1], [-1, 0], [0, -1], [1, -1]]) {
+      const [X, Y] = klToXY(k, l);
+      octx.beginPath(); octx.moveTo(wPX(0), wPY(0)); octx.lineTo(wPX(X), wPY(Y)); octx.stroke();
+    }
+  }
+  if (S.ladder) {
+    const pts = ladder(12).map(([k, l]) => { const [X, Y] = klToXY(k, l); return [wPX(X), wPY(Y), k, l]; });
+    octx.strokeStyle = 'rgba(255,209,102,.8)'; octx.lineWidth = 1.6;
+    octx.beginPath(); octx.moveTo(pts[0][0], pts[0][1]);
+    for (let i = 1; i < pts.length; i++) octx.lineTo(pts[i][0], pts[i][1]);
+    octx.stroke();
+    for (const [px, py, k, l] of pts) {
+      if (px < -40 || px > W + 40 || py < -40 || py > H + 40) continue;
+      octx.fillStyle = '#ffd166'; octx.beginPath(); octx.arc(px, py, 3.4, 0, 6.2832); octx.fill();
+      if (sc > 12) {
+        const T = hexNorm(k, l);
+        octx.fillStyle = '#ffd166'; octx.font = 'bold 9px "Courier New"';
+        octx.fillText(S.lock === 'su3' ? String(su3dim(k, l)) : (CAGE[T] || 'T' + T), px + 7, py + 12);
+      }
+    }
+  }
+  ladderStrip();
+}
+
+/* the span strip: where this view sits on the real 147-rung ladder */
+function ladderStrip() {
+  const x0 = 24, x1 = W - 24, y = H - 58, wpx = x1 - x0;
+  const A0 = ANCPRESET[S.anchor];
+  const rung = L => Math.log(L / LPLANCK) / LNP2;
+  octx.fillStyle = 'rgba(6,10,16,.82)'; octx.fillRect(x0 - 10, y - 22, wpx + 20, 42);
+  octx.strokeStyle = '#16303c'; octx.lineWidth = 1; octx.strokeRect(x0 - 10, y - 22, wpx + 20, 42);
+  octx.strokeStyle = '#2a4250'; octx.beginPath(); octx.moveTo(x0, y); octx.lineTo(x1, y); octx.stroke();
+  for (const [nm, L] of ANCHOR) {
+    const px = x0 + wpx * rung(L) / LADDER_TOTAL;
+    const hot = /quasar|proton|Planck|universe/.test(nm);
+    octx.strokeStyle = hot ? '#ffd166' : '#3f5666'; octx.lineWidth = hot ? 1.4 : 1;
+    octx.beginPath(); octx.moveTo(px, y - 6); octx.lineTo(px, y + 6); octx.stroke();
+    if (hot) {
+      octx.fillStyle = '#ffd166'; octx.font = '7.5px "Courier New"'; octx.save();
+      octx.translate(px + 3, y - 9); octx.fillText(nm, 0, 0); octx.restore();
+    }
+  }
+  /* the visible window of THIS chart */
+  const rmin = Math.max(1e-9, Math.max(0, Math.hypot(S.cx, S.cy) - S.zoom / 2)), rmax = Math.hypot(S.cx, S.cy) + S.zoom;
+  const a = x0 + wpx * rung(A0 * rmin) / LADDER_TOTAL, b = x0 + wpx * rung(A0 * rmax) / LADDER_TOTAL;
+  octx.fillStyle = 'rgba(34,211,238,.28)'; octx.fillRect(Math.min(a, b), y - 5, Math.max(2, Math.abs(b - a)), 10);
+  octx.fillStyle = '#8fe9ff'; octx.font = '7.5px "Courier New"';
+  octx.fillText(`this view · anchor T=1 → ${S.anchor}`, x0, y + 15);
+  octx.fillText(`0 ─ Planck`, x0, y - 12);
+  octx.fillText(`${LADDER_TOTAL.toFixed(0)} rungs ─ observable universe`, x1 - 168, y - 12);
+}
+
+/* ---- readouts ------------------------------------------------------------ */
+const $ = id => document.getElementById(id);
+function readout(px, py) {
+  const x = pxW(px), y = pyW(py), [k, l] = xyToKL(x, y), T = x * x + y * y;
+  $('h-kl').textContent = k.toFixed(3) + ', ' + l.toFixed(3);
+  $('h-T').textContent = T.toFixed(4);
+  $('h-rung').textContent = T > 0 ? (Math.log(T) / LNP2).toFixed(3) : '—';
+  const ki = Math.max(0, Math.round(k)), li = Math.max(0, Math.round(l)), Ti = hexNorm(ki, li);
+  if (S.lock === 'shell') {
+    const t = topo(Math.max(1, Ti));
+    $('s-nm').textContent = CAGE[Ti] || (Ti ? `GC(${ki},${li})` : '—');
+    $('s-V').textContent = t.V; $('s-E').textContent = t.E; $('s-F').textContent = t.F;
+    $('s-chi').textContent = `12 · ${t.chi}` + (t.chi === 2 ? ' ✓' : ' ✗');
+    $('s-chi').className = t.chi === 2 ? 'ok' : 'no';
+  } else if (S.lock === 'su3') {
+    const d = su3dim(ki, li);
+    $('q-pq').textContent = `${ki}, ${li}`; $('q-d').textContent = d;
+    $('q-c').textContent = su3cas(ki, li);
+    $('q-nm').textContent = SU3NAME[d] || `dim ${d}`;
+  } else {
+    const A = ANCPRESET[S.anchor], L = A * Math.sqrt(Math.max(T, 1e-300));
+    $('c-anc').textContent = S.anchor;
+    $('c-L').textContent = L.toExponential(3) + ' m';
+    $('c-rp').textContent = (Math.log(L / LPLANCK) / LNP2).toFixed(1);
+    let bn = '—', bd = 1e9;
+    for (const [nm, AL] of ANCHOR) { const dd = Math.abs(Math.log(L / AL)); if (dd < bd) { bd = dd; bn = nm; } }
+    $('c-near').textContent = bn;
+  }
+}
+
+/* ---- input --------------------------------------------------------------- */
+let drag = false, lx = 0, ly = 0;
+cv.addEventListener('mousedown', e => { drag = true; lx = e.clientX; ly = e.clientY; });
+addEventListener('mouseup', () => drag = false);
+addEventListener('mousemove', e => {
+  if (drag) { S.cx -= (e.clientX - lx) / H * S.zoom; S.cy += (e.clientY - ly) / H * S.zoom; lx = e.clientX; ly = e.clientY; render(); }
+  readout(e.clientX, e.clientY);
+});
+cv.addEventListener('wheel', e => {
+  e.preventDefault();
+  const f = e.deltaY > 0 ? 1.18 : 1 / 1.18, x = pxW(e.clientX), y = pyW(e.clientY);
+  S.zoom *= f; S.cx = x - (e.clientX - W / 2) / H * S.zoom; S.cy = y + (e.clientY - H / 2) / H * S.zoom;
+  render();
+}, { passive: false });
+
+function setLock(k) {
+  S.lock = k;
+  for (const q of ['shell', 'su3', 'scale']) {
+    $('l-' + q).classList.toggle('on', q === k);
+    $('read-' + q).style.display = q === k ? '' : 'none';
+  }
+  $('h-lock').textContent = k.toUpperCase();
+  if (k === 'su3') S.roots = true, $('b-root').classList.add('on');
+  overlay();
+}
+function setPaint(p) {
+  S.paint = p;
+  for (const q of ['rung', 'norm', 'hex']) $('p-' + q).classList.toggle('on', q === p);
+  render();
+}
+$('l-shell').onclick = () => setLock('shell'); $('l-su3').onclick = () => setLock('su3'); $('l-scale').onclick = () => setLock('scale');
+$('p-rung').onclick = () => setPaint('rung'); $('p-norm').onclick = () => setPaint('norm'); $('p-hex').onclick = () => setPaint('hex');
+$('s-b').oninput = e => { S.bands = +e.target.value; $('v-b').textContent = S.bands; render(); };
+$('b-lat').onclick = () => { S.lattice = !S.lattice; $('b-lat').classList.toggle('on', S.lattice); overlay(); };
+$('b-lad').onclick = () => { S.ladder = !S.ladder; $('b-lad').classList.toggle('on', S.ladder); overlay(); };
+$('b-root').onclick = () => { S.roots = !S.roots; $('b-root').classList.toggle('on', S.roots); overlay(); };
+$('b-reset').onclick = () => { S.cx = 0; S.cy = 0; S.zoom = 7.0; render(); };
+$('b-save').onclick = () => {
+  const o = document.createElement('canvas'); o.width = W; o.height = H;
+  const c = o.getContext('2d'); c.drawImage(cv, 0, 0); c.drawImage(ov, 0, 0);
+  const a = document.createElement('a'); a.download = 'genesis_alpha_III.png'; a.href = o.toDataURL(); a.click();
+};
+addEventListener('keydown', e => {
+  if (e.key === 'h' || e.key === 'H') {
+    S.chrome = !S.chrome;
+    for (const id of ['hud', 'fence', 'bar', 'hero', 'tip']) $(id).style.display = S.chrome ? '' : 'none';
+    overlay();
+  }
+});
+addEventListener('resize', resize);
+resize(); setLock('shell'); setTimeout(resize, 120);
+</script></body></html>

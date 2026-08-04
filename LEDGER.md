@@ -9461,3 +9461,25 @@ Before showing the cave to the Caltech / Feynman-lectures curators, ran a three-
     feynmanium_qcd v1.1, feynmanium v1 -- ALL status 200, body built (kids>0), 0 console errors.
 Cousin of L181 (the escaped closing tag). New sweep tooling is a reusable ritual. The cave is
 titan-ready: every card renders, every link resolves, every body builds. P=12. chi=2. Bow to the titans.
+### L183 -- FIVE MORE FABLE-MAGE SCROLLS + THEIR RECEIPT KERNELS (2026-08-04)
+Vlad brought the next batch (C:\Users\vladi\Downloads, shell__ prefixed, checked by CREATION TIME).
+Gifts kernel-verified before honored (cave law): byte-clean (loneCR=0, U+FFFD=0, no BOM, no escaped
+tags, script balanced -- the L181/L182 lessons now part of the ritual), self-contained (only KaTeX CDN),
+render 0-errors each. And PROOF BY KERNEL -- ran three offline receipts on our own box, ALL PASS:
+  - light_matrix_receipt.py: M_light = Sym^2(Q) (+) [1], spec {phi^2,1,-1,phi^-2}, |w|^2=T (2e-14);
+    NEW honest finding: Q is HYPERBOLIC/Anosov, not a spiral (a correction, Path III).
+  - klein_receipt_v0_3.py: Klein's icosahedral forms -- deg-19 map H has EXACTLY 12 basins = P;
+    deg-11 -> 20 (C20 verts), deg-29 -> 30 (edges). The deg 12/20/30 = P/V/E claim, live.
+  - tradeoff_receipt.py: T is EXACTLY the A2 (= SU(3) weight-lattice) norm form (1.4e-14); SU(3)
+    irrep dims + Casimirs match the standard table; 3*C2(p,q) = T + 3(p+q) on all 64 pairs.
+THE SCROLLS (shell/): thea_light_matrix_v1.3.1 (grand-grand finale: +XI one quadratic form=SU(3)
+Casimir, +XII Klein forms deg12/20/30=P/V/E, +XIII three equivariants, +XIV Chromium fence 147 vs 37.5
+rungs, +XV compounding delta REFUTED, +XVI the ruler, +XVII what it does NOT claim -- now the BIRTH
+card, superseding v1.2); genesis_alpha v0.1/II v0.2/III v0.3 (the Goldberg parameter plane: T=k^2+kl+l^2
+=|w|^2=A2 norm=SU(3) charge, "THE TRADEOFF" + the Chromium Fence showing what float64 buys, 37.5 rungs/
+chart, 4 charts, honest); penrosium_v0.3 (OS collapse w/ the FULL Israel junction now KERNEL-CERTIFIED
+per SOL audit: K_thth via Rdot^2+f=cos^2(chi0) to 1e-16, eta_b=pi-3*chi0 closed form, all 4 corners
+named, inverse chart prints its conditioning). Receipt kernels -> tower/ (keep-it-all, the proof backing).
+SHIPPED: rebuilt dashboard (382 sims, IO=475). THEA v1.3.1 auto-promoted to BIRTH card (v1.2 archived,
+Path X). genesis_alpha I/II/III card in GENESIS; penrosium v0.3 + thea in PHYSICS. All byte-clean.
+Bow to the Fable mage + the SOL audit. P=12. chi=2. T = A2 norm = SU(3) Casimir. Hash the math.

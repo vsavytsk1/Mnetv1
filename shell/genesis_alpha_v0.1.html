@@ -1,0 +1,481 @@
+<!DOCTYPE html><html><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GENESIS·α v0.1 — the Goldberg parameter plane</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#04070c;color:#c8d8e8;font-family:'Courier New',monospace;overflow:hidden;touch-action:none}
+canvas{position:fixed;top:0;left:0}
+#cv{z-index:0}#ov{z-index:1;pointer-events:none}
+
+/* ---------- hero: the two equations that are the same equation ---------- */
+#hero{position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:6;pointer-events:none;
+  background:rgba(6,10,16,0.82);border:1px solid #16303c;border-radius:8px;padding:9px 16px;text-align:center;
+  backdrop-filter:blur(6px)}
+#hero .eq{font-family:'Orbitron';font-size:15px;font-weight:700;color:#e8f4ff;letter-spacing:.02em}
+#hero .eq .g{color:#ffd166}#hero .eq .a{color:#22d3ee}#hero .eq .eqs{color:#f472b6;padding:0 8px}
+#hero .sub{font-size:8.5px;color:#4a6070;letter-spacing:.22em;margin-top:5px;text-transform:uppercase}
+
+/* ---------- HUD ---------- */
+#hud{position:fixed;top:12px;left:12px;z-index:6;pointer-events:none;font-size:10px;line-height:1.75;
+  background:rgba(6,10,16,0.8);border:1px solid #16303c;border-radius:6px;padding:9px 12px;min-width:246px}
+#hud h1{font-family:'Orbitron';font-size:10px;letter-spacing:.2em;color:#22d3ee;margin-bottom:6px;font-weight:700}
+#hud .r{display:flex;justify-content:space-between;gap:14px}
+#hud .k{color:#3f5666}#hud .v{color:#8fe9ff}#hud .vg{color:#ffd166}#hud .vp{color:#f472b6}
+#hud .sep{height:1px;background:#16303c;margin:6px 0}
+#hud .chi{color:#7dffa8}#hud .bad{color:#ff5a5a}
+
+/* ---------- shell card ---------- */
+#card{position:fixed;top:12px;right:12px;z-index:6;width:210px;font-size:10px;line-height:1.7;
+  background:rgba(6,10,16,0.86);border:1px solid #3a3000;border-radius:6px;padding:9px 11px}
+#card h2{font-family:'Orbitron';font-size:9px;letter-spacing:.18em;color:#ffd166;margin-bottom:6px;font-weight:700}
+#card .r{display:flex;justify-content:space-between;gap:10px}
+#card .k{color:#3f5666}#card .v{color:#ffe9a8}
+#card .nm{color:#f472b6;font-weight:bold}
+#card .hint{color:#3f5666;font-size:8.5px;margin-top:6px;line-height:1.5}
+
+/* ---------- bottom bar ---------- */
+#bar{position:fixed;bottom:0;left:0;right:0;z-index:8;background:rgba(4,7,12,0.95);border-top:1px solid #16303c;
+  padding:7px 10px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:center}
+.btn{background:#080d15;border:1px solid #24323e;color:#8fe9ff;padding:4px 10px;font-family:inherit;font-size:9px;
+  cursor:pointer;border-radius:3px;white-space:nowrap;transition:.14s}
+.btn:hover{border-color:#3f6a80;color:#fff}
+.btn.on{color:#04070c;background:#22d3ee;border-color:#22d3ee;font-weight:bold}
+.btn.gd{color:#ffd166;border-color:#3a3000}.btn.gd.on{background:#ffd166;color:#04070c;border-color:#ffd166}
+.btn:focus-visible{outline:2px solid #f472b6;outline-offset:1px}
+.sep{width:1px;height:17px;background:#16303c}
+.sl{display:flex;align-items:center;gap:4px}
+.sl label{font-size:7.5px;color:#3f5666;letter-spacing:.06em;min-width:26px}
+.sl input[type=range]{width:64px;accent-color:#22d3ee}
+.sl .sv{font-size:8.5px;color:#22d3ee;min-width:30px;text-align:right}
+#stamp{position:fixed;bottom:46px;right:12px;z-index:5;font-size:8px;color:#1e2c36;text-align:right;line-height:1.6;pointer-events:none}
+#tip{position:fixed;bottom:46px;left:12px;z-index:5;font-size:8.5px;color:#2a3a46;line-height:1.6;pointer-events:none}
+#tip b{color:#4a6070}
+</style></head><body>
+
+<canvas id="cv"></canvas><canvas id="ov"></canvas>
+
+<div id="hero">
+  <div class="eq"><span class="g">T = k² + kl + l²</span><span class="eqs">=</span><span class="a">|w|², &nbsp;w = k + l·e<sup>iπ/3</sup></span></div>
+  <div class="sub">genesis index space · alphium canvas · one plane</div>
+</div>
+
+<div id="hud">
+  <h1>GENESIS·α v0.1</h1>
+  <div class="r"><span class="k">mode</span><span class="v" id="h-mode">ATLAS</span></div>
+  <div class="r"><span class="k">center</span><span class="v" id="h-c">0.0000, 0.0000</span></div>
+  <div class="r"><span class="k">magnify</span><span class="v" id="h-z">1.00×</span></div>
+  <div class="sep"></div>
+  <div class="r"><span class="k">cursor (k, l)</span><span class="vg" id="h-kl">—</span></div>
+  <div class="r"><span class="k">T = |w|²</span><span class="vg" id="h-T">—</span></div>
+  <div class="r"><span class="k">refinements</span><span class="vp" id="h-n">—</span></div>
+  <div class="sep"></div>
+  <div class="r"><span class="k">render</span><span class="v" id="h-ms">—</span></div>
+</div>
+
+<div id="card">
+  <h2>NEAREST SHELL</h2>
+  <div class="r"><span class="k">(k, l)</span><span class="v" id="c-kl">1, 0</span></div>
+  <div class="r"><span class="k">T</span><span class="v" id="c-T">1</span></div>
+  <div class="r"><span class="k">name</span><span class="nm" id="c-nm">C20</span></div>
+  <div class="r"><span class="k">V = 20T</span><span class="v" id="c-V">20</span></div>
+  <div class="r"><span class="k">E = 30T</span><span class="v" id="c-E">30</span></div>
+  <div class="r"><span class="k">F = 10T+2</span><span class="v" id="c-F">12</span></div>
+  <div class="r"><span class="k">P</span><span class="v" id="c-P">12</span></div>
+  <div class="r"><span class="k">χ = V−E+F</span><span class="chi" id="c-chi">2 ✓</span></div>
+  <div class="hint" id="c-hint">move the cursor · every lattice point is a Genesis shell</div>
+</div>
+
+<div id="tip"><b>drag</b> pan · <b>wheel</b> zoom · <b>click</b> set shell seed · <b>H</b> hide chrome</div>
+<div id="stamp">GENESIS·α — genesis v8.5.2 → alphium v1.1<br>bridge: THEA light matrix M = Sym²(Q) ⊕ [1]<br>float64 · escape count = GC refinement depth</div>
+
+<div id="bar">
+  <button class="btn on" id="b-atlas">Atlas</button>
+  <button class="btn" id="b-shell">Shell</button>
+  <div class="sep"></div>
+  <div class="sl"><label>GC d</label><input type="range" id="s-d" min="2" max="8" step="1" value="2"><span class="sv" id="v-d">2</span></div>
+  <div class="sl"><label>T max</label><input type="range" id="s-b" min="2" max="18" step="1" value="8"><span class="sv" id="v-b">256</span></div>
+  <div class="sl"><label>depth</label><input type="range" id="s-i" min="40" max="600" step="10" value="220"><span class="sv" id="v-i">220</span></div>
+  <div class="sl"><label>bands</label><input type="range" id="s-k" min="4" max="80" step="1" value="20"><span class="sv" id="v-k">20</span></div>
+  <div class="sep"></div>
+  <button class="btn gd on" id="b-lat">lattice</button>
+  <button class="btn gd on" id="b-lad">ladder</button>
+  <button class="btn gd" id="b-eig">eigen-axes</button>
+  <button class="btn gd" id="b-rng">φ² rings</button>
+  <div class="sep"></div>
+  <button class="btn" id="b-pal">palette</button>
+  <button class="btn" id="b-reset">reset</button>
+  <button class="btn" id="b-save">save png</button>
+</div>
+
+<script>
+"use strict";
+// ============================================================================
+// GENESIS·α — Genesis v8.5.2's Goldberg shell space, rendered by ALPHIUM v1.1's
+// escape-time engine. The bridge is THEA's light matrix.
+//
+//   THEA :  M_LIGHT = [[1,2,1,0],[1,1,0,0],[1,0,0,0],[0,0,0,1]]  on (k², kl, l², P)
+//           = Sym²(Q) ⊕ [1],  Q = [[1,1],[1,0]]  (verified integer-identical)
+//           eig Q = {φ, −1/φ}  →  eig M = {φ², 1, −1, 1/φ²}
+//           det Q = −1, eigenvalues REAL  →  HYPERBOLIC, not a similarity.
+//           The golden ladder lies on hyperbolas, NOT logarithmic spirals.
+//           The eigenvalue-1 direction is P: that is why P = 12 is conserved.
+//
+//   GENESIS: shell (k,l) has T = k²+kl+l², V=20T, E=30T, F=10T+2, P=12, χ=2.
+//   ALPHIUM: escape-time iteration of z ↦ z^d + c in ℂ.
+//
+//   THE PORT: Coxeter coordinates w = k + l·e^{iπ/3} give |w|² = k²+kl+l² = T
+//   exactly. T is multiplicative under Eisenstein multiplication, so squaring a
+//   seed SQUARES its triangulation number. Therefore ALPHIUM's escape count is
+//   literally the number of Goldberg–Coxeter refinements a seed survives before
+//   its shell exceeds T_max. Same kernel, different reading.
+// ============================================================================
+
+const PHI = (1 + Math.sqrt(5)) / 2, PHI2 = PHI * PHI;
+const SQ3 = Math.sqrt(3), OMx = 0.5, OMy = SQ3 / 2;   // ω = e^{iπ/3}
+
+// ---- Coxeter <-> world ------------------------------------------------------
+// w = k + l·ω  →  x = k + l/2 , y = l·√3/2
+const klToXY = (k, l) => [k + l * OMx, l * OMy];
+const xyToKL = (x, y) => { const l = y / OMy; return [x - l * OMx, l]; };
+
+// ---- Genesis topology (exact, integer) -------------------------------------
+const topoFromT = T => ({ T, V: 20 * T, E: 30 * T, H: 10 * (T - 1), F: 12 + 10 * (T - 1), P: 12, chi: 20 * T - 30 * T + (10 * T + 2) });
+const hexNorm = (k, l) => k * k + k * l + l * l;
+
+// ---- the light matrix, as Genesis and THEA both use it ---------------------
+const M_LIGHT = [[1, 2, 1, 0], [1, 1, 0, 0], [1, 0, 0, 0], [0, 0, 0, 1]];
+const lightStep = ([k, l]) => [k + l, k];          // Q, the 2×2 shadow of M_LIGHT
+function goldenLadder(n) {                          // (1,0)→(1,1)→(2,1)→(3,2)…
+  const out = []; let p = [1, 0];
+  for (let i = 0; i < n; i++) { out.push(p.slice()); p = lightStep(p); }
+  return out;
+}
+// eigen-directions of Q in (k,l): eigenvector (λ, 1)
+const EIG = [[PHI, 1], [-1 / PHI, 1]];
+
+// ---- Genesis's golden catalogue -------------------------------------------
+const CATALOG = { 1: 'C20', 3: 'C60', 4: 'C80', 7: 'C140', 9: 'C180', 12: 'C240',
+  13: 'C260', 16: 'C320', 19: 'C380', 21: 'C420', 25: 'C500', 27: 'C540',
+  31: 'C620', 36: 'C720', 37: 'C740', 43: 'C860', 48: 'C960', 49: 'C980' };
+
+// ---- palettes (ALPHIUM's, kept) --------------------------------------------
+const PALS = {
+  mnet:   ['#04070c','#0a7fae','#00d4ff','#7a5cff','#cc44ff','#ff69b4','#ffd700','#0a0a1a','#04070c'],
+  gold:   ['#050400','#241800','#5a3c0a','#a5730f','#ffd700','#fff3c0','#5a3c0a','#241800','#050400'],
+  ice:    ['#00030f','#00204a','#005fa8','#00a0e0','#4fd4ff','#b8f0ff','#ffffff','#0a1830','#00030f'],
+  plasma: ['#0d0221','#3a0a6b','#7b1fa2','#c31f8f','#f72585','#ff6d00','#ffd60a','#1a0630','#0d0221'],
+  fire:   ['#000008','#2a0000','#7a0a00','#e02200','#ff7a00','#ffc23a','#fff3c0','#3a1500','#000008']
+};
+const PAL_ORDER = ['mnet', 'gold', 'ice', 'plasma', 'fire'];
+const PAL_STOPS = {};
+for (const k in PALS) {
+  PAL_STOPS[k] = PALS[k].map((h, i, a) => {
+    h = h.replace('#', '');
+    return [i / (a.length - 1), parseInt(h.slice(0,2),16), parseInt(h.slice(2,4),16), parseInt(h.slice(4,6),16)];
+  });
+}
+
+// ---- state -----------------------------------------------------------------
+const S = {
+  mode: 'atlas',            // atlas = parameter plane · shell = filled shell set
+  cx: 0, cy: 0, zoom: 6.0,
+  d: 2, bailPow: 8, iter: 220, bands: 20,
+  seed: { x: -0.62, y: 0.42 },   // the held (k,l) seed for Shell mode
+  pal: 'mnet',
+  lattice: true, ladder: true, eig: false, rings: false,
+  chrome: true
+};
+
+// ---- canvas ----------------------------------------------------------------
+const cv = document.getElementById('cv'), ctx = cv.getContext('2d', { alpha: false });
+const ov = document.getElementById('ov'), octx = ov.getContext('2d');
+let W = 0, H = 0, img = null, nuBuf = null;
+
+function resize() {
+  const nw = innerWidth || 900, nh = innerHeight || 640;
+  if (nw === W && nh === H) return;
+  W = nw; H = nh;
+  cv.width = ov.width = W; cv.height = ov.height = H;
+  img = ctx.createImageData(W, H);
+  nuBuf = new Float32Array(W * H);
+  render();
+}
+const pxToWX = px => S.cx + (px - W / 2) / H * S.zoom;
+const pxToWY = py => S.cy - (py - H / 2) / H * S.zoom;
+const wxToPX = wx => (wx - S.cx) * H / S.zoom + W / 2;
+const wyToPY = wy => (S.cy - wy) * H / S.zoom + H / 2;
+
+// ---- palette lookup --------------------------------------------------------
+const _c = [0, 0, 0];
+function palette(t) {
+  t = t - Math.floor(t);
+  const s = PAL_STOPS[S.pal], last = s.length - 1;
+  let i = 0; while (i < last && t > s[i + 1][0]) i++;
+  const a = s[i], b = s[Math.min(i + 1, last)];
+  const f = (t - a[0]) / ((b[0] - a[0]) || 1);
+  _c[0] = a[1] + (b[1] - a[1]) * f; _c[1] = a[2] + (b[2] - a[2]) * f; _c[2] = a[3] + (b[3] - a[3]) * f;
+  return _c;
+}
+
+// ---- THE KERNEL ------------------------------------------------------------
+// Iterate w ↦ w^d + c in Coxeter coordinates. Escape test is T = |w|² > T_max.
+// Returns smooth refinement depth, or -1 for "bounded" (shell never blows up).
+function refineDepth(wx, wy, cx, cy) {
+  const d = S.d, N = S.iter, T2 = Math.pow(2, S.bailPow), R = Math.sqrt(T2), LR = Math.log(R);
+  let zx = wx, zy = wy;
+  for (let n = 0; n < N; n++) {
+    let nx, ny;
+    if (d === 2) { nx = zx * zx - zy * zy; ny = 2 * zx * zy; }
+    else {
+      const r = Math.sqrt(zx * zx + zy * zy), th = Math.atan2(zy, zx);
+      const rp = Math.pow(r, d), a = d * th;
+      nx = rp * Math.cos(a); ny = rp * Math.sin(a);
+    }
+    zx = nx + cx; zy = ny + cy;
+    const T = zx * zx + zy * zy;                       // ← the triangulation number
+    if (T > T2) {
+      const lz = 0.5 * Math.log(T);
+      return n + 1 - Math.log(lz / LR) / Math.log(d);  // smooth GC depth
+    }
+  }
+  return -1;
+}
+
+// ---- render (progressive: coarse pass, then full) --------------------------
+let renderTok = 0;
+function render() {
+  if (!img) return;
+  const tok = ++renderTok, t0 = performance.now();
+  const data = img.data;
+  const pass = (step, done) => {
+    if (tok !== renderTok) return;
+    for (let py = 0; py < H; py += step) {
+      const wy = pxToWY(py);
+      for (let px = 0; px < W; px += step) {
+        const wx = pxToWX(px);
+        const nu = (S.mode === 'atlas') ? refineDepth(0, 0, wx, wy)
+                                        : refineDepth(wx, wy, S.seed.x, S.seed.y);
+        if (step === 1) nuBuf[py * W + px] = nu;
+        let r, g, b;
+        if (nu < 0) { r = 4; g = 7; b = 12; }
+        else { const c = palette(nu / S.bands); r = c[0]; g = c[1]; b = c[2]; }
+        for (let dy = 0; dy < step && py + dy < H; dy++) {
+          let o = ((py + dy) * W + px) * 4;
+          for (let dx = 0; dx < step && px + dx < W; dx++) {
+            data[o] = r; data[o + 1] = g; data[o + 2] = b; data[o + 3] = 255; o += 4;
+          }
+        }
+      }
+    }
+    ctx.putImageData(img, 0, 0);
+    if (done) { document.getElementById('h-ms').textContent = Math.round(performance.now() - t0) + ' ms'; drawOverlay(); }
+  };
+  pass(6, false);
+  requestAnimationFrame(() => pass(1, true));
+}
+
+// ---- OVERLAY: the Genesis layer --------------------------------------------
+function drawOverlay() {
+  octx.clearRect(0, 0, W, H);
+  if (!S.chrome) return;
+  const scale = H / S.zoom;
+
+  // φ² norm rings — |w|² = T along the golden ladder. Shows the φ² scaling.
+  if (S.rings) {
+    octx.lineWidth = 1;
+    for (const [k, l] of goldenLadder(14)) {
+      const T = hexNorm(k, l), r = Math.sqrt(T) * scale;
+      if (r < 6 || r > 4 * Math.max(W, H)) continue;
+      octx.strokeStyle = 'rgba(255,209,102,0.16)';
+      octx.beginPath(); octx.arc(wxToPX(0), wyToPY(0), r, 0, 6.2832); octx.stroke();
+    }
+  }
+
+  // eigen-axes + invariant hyperbolas of Q — the receipt made visible
+  if (S.eig) {
+    const big = 4000;
+    for (let i = 0; i < 2; i++) {
+      const [ek, el] = EIG[i], [ex, ey] = klToXY(ek, el);
+      const n = Math.hypot(ex, ey);
+      octx.strokeStyle = i === 0 ? 'rgba(244,114,182,0.55)' : 'rgba(34,211,238,0.45)';
+      octx.lineWidth = 1.2; octx.setLineDash([6, 5]);
+      octx.beginPath();
+      octx.moveTo(wxToPX(-ex / n * big), wyToPY(-ey / n * big));
+      octx.lineTo(wxToPX(ex / n * big), wyToPY(ey / n * big));
+      octx.stroke(); octx.setLineDash([]);
+    }
+    // hyperbolas |uv| = const through ladder points, in the eigenbasis
+    const [a1, b1] = EIG[0], [a2, b2] = EIG[1], det = a1 * b2 - a2 * b1;
+    octx.strokeStyle = 'rgba(125,255,168,0.30)'; octx.lineWidth = 1;
+    for (const [k, l] of goldenLadder(9).slice(2)) {
+      const u0 = (k * b2 - l * a2) / det, v0 = (l * a1 - k * b1) / det, C = u0 * v0;
+      if (Math.abs(C) < 1e-9) continue;
+      octx.beginPath();
+      let first = true;
+      for (let t = -3.2; t <= 3.2; t += 0.045) {
+        const u = Math.sign(u0) * Math.exp(t) * Math.sqrt(Math.abs(C)) || 0;
+        const v = C / u;
+        const [X, Y] = klToXY(u * a1 + v * a2, u * b1 + v * b2);
+        const px = wxToPX(X), py = wyToPY(Y);
+        if (first) { octx.moveTo(px, py); first = false; } else octx.lineTo(px, py);
+      }
+      octx.stroke();
+    }
+  }
+
+  // Eisenstein lattice = the complete Genesis catalogue, one dot per shell
+  if (S.lattice && scale > 7) {
+    const kl0 = xyToKL(pxToWX(0), pxToWY(H)), kl1 = xyToKL(pxToWX(W), pxToWY(0));
+    const kA = Math.floor(Math.min(kl0[0], kl1[0], xyToKL(pxToWX(0), pxToWY(0))[0], xyToKL(pxToWX(W), pxToWY(H))[0])) - 1;
+    const kB = Math.ceil(Math.max(kl0[0], kl1[0], xyToKL(pxToWX(0), pxToWY(0))[0], xyToKL(pxToWX(W), pxToWY(H))[0])) + 1;
+    const lA = Math.floor(Math.min(kl0[1], kl1[1])) - 1, lB = Math.ceil(Math.max(kl0[1], kl1[1])) + 1;
+    if ((kB - kA) * (lB - lA) < 26000) {
+      for (let l = lA; l <= lB; l++) for (let k = kA; k <= kB; k++) {
+        const T = hexNorm(k, l); if (T === 0) continue;
+        const [X, Y] = klToXY(k, l), px = wxToPX(X), py = wyToPY(Y);
+        if (px < -12 || px > W + 12 || py < -12 || py > H + 12) continue;
+        const named = CATALOG[T] && (l === 0 || k === l || true);
+        const rr = Math.min(3.4, 1.1 + scale / 90);
+        octx.fillStyle = named ? 'rgba(255,209,102,0.85)' : 'rgba(143,233,255,0.36)';
+        octx.beginPath(); octx.arc(px, py, rr, 0, 6.2832); octx.fill();
+        if (scale > 46) {
+          octx.fillStyle = 'rgba(143,233,255,0.5)'; octx.font = '8px "Courier New"';
+          octx.fillText('T' + T, px + 5, py - 4);
+        }
+      }
+    }
+  }
+
+  // the light-matrix ladder: (1,0)→(1,1)→(2,1)→(3,2)→(5,3)…
+  if (S.ladder) {
+    const pts = goldenLadder(13).map(([k, l]) => { const [X, Y] = klToXY(k, l); return [wxToPX(X), wyToPY(Y), k, l]; });
+    octx.strokeStyle = 'rgba(255,209,102,0.75)'; octx.lineWidth = 1.6;
+    octx.beginPath(); octx.moveTo(pts[0][0], pts[0][1]);
+    for (let i = 1; i < pts.length; i++) octx.lineTo(pts[i][0], pts[i][1]);
+    octx.stroke();
+    for (const [px, py, k, l] of pts) {
+      if (px < -40 || px > W + 40 || py < -40 || py > H + 40) continue;
+      octx.fillStyle = '#ffd166'; octx.beginPath(); octx.arc(px, py, 3.6, 0, 6.2832); octx.fill();
+      octx.fillStyle = 'rgba(4,7,12,0.9)'; octx.beginPath(); octx.arc(px, py, 1.5, 0, 6.2832); octx.fill();
+      if (scale > 12) {
+        const T = hexNorm(k, l);
+        octx.fillStyle = '#ffd166'; octx.font = 'bold 9px "Courier New"';
+        octx.fillText((CATALOG[T] || ('T' + T)), px + 7, py + 12);
+      }
+    }
+  }
+
+  // Shell mode: mark the held seed
+  if (S.mode === 'shell') {
+    const px = wxToPX(S.seed.x), py = wyToPY(S.seed.y);
+    octx.strokeStyle = '#f472b6'; octx.lineWidth = 1.4;
+    octx.beginPath(); octx.arc(px, py, 7, 0, 6.2832); octx.stroke();
+    octx.beginPath(); octx.moveTo(px - 11, py); octx.lineTo(px + 11, py);
+    octx.moveTo(px, py - 11); octx.lineTo(px, py + 11); octx.stroke();
+  }
+}
+
+// ---- HUD -------------------------------------------------------------------
+function updHUD() {
+  document.getElementById('h-mode').textContent = S.mode.toUpperCase();
+  document.getElementById('h-c').textContent = S.cx.toFixed(4) + ', ' + S.cy.toFixed(4);
+  document.getElementById('h-z').textContent = (6.0 / S.zoom).toFixed(2) + '×';
+}
+function readout(px, py) {
+  const wx = pxToWX(px), wy = pxToWY(py);
+  const [k, l] = xyToKL(wx, wy), T = wx * wx + wy * wy;
+  document.getElementById('h-kl').textContent = k.toFixed(3) + ', ' + l.toFixed(3);
+  document.getElementById('h-T').textContent = T.toFixed(4);
+  const nu = (px >= 0 && px < W && py >= 0 && py < H) ? nuBuf[(py | 0) * W + (px | 0)] : -1;
+  document.getElementById('h-n').textContent = (nu < 0) ? 'bounded ∞' : nu.toFixed(2);
+
+  // nearest integer shell
+  const ki = Math.round(k), li = Math.round(l), Ti = hexNorm(ki, li);
+  const tp = topoFromT(Math.max(1, Ti));
+  document.getElementById('c-kl').textContent = ki + ', ' + li;
+  document.getElementById('c-T').textContent = Ti;
+  document.getElementById('c-nm').textContent = CATALOG[Ti] || (Ti > 0 ? 'GC(' + ki + ',' + li + ')' : '—');
+  document.getElementById('c-V').textContent = Ti > 0 ? tp.V : '—';
+  document.getElementById('c-E').textContent = Ti > 0 ? tp.E : '—';
+  document.getElementById('c-F').textContent = Ti > 0 ? tp.F : '—';
+  const chiEl = document.getElementById('c-chi');
+  chiEl.textContent = Ti > 0 ? (tp.chi + (tp.chi === 2 ? ' ✓' : ' ✗')) : '—';
+  chiEl.className = tp.chi === 2 ? 'chi' : 'bad';
+}
+
+// ---- input -----------------------------------------------------------------
+let drag = false, lx = 0, ly = 0, moved = false;
+cv.addEventListener('mousedown', e => { drag = true; moved = false; lx = e.clientX; ly = e.clientY; });
+addEventListener('mousemove', e => {
+  if (drag) {
+    const dx = e.clientX - lx, dy = e.clientY - ly;
+    if (Math.abs(dx) + Math.abs(dy) > 3) moved = true;
+    S.cx -= dx / H * S.zoom; S.cy += dy / H * S.zoom;
+    lx = e.clientX; ly = e.clientY; updHUD(); render();
+  }
+  readout(e.clientX, e.clientY);
+});
+addEventListener('mouseup', e => {
+  if (drag && !moved && S.mode === 'shell') { S.seed.x = pxToWX(e.clientX); S.seed.y = pxToWY(e.clientY); render(); }
+  else if (drag && !moved && S.mode === 'atlas') {
+    S.seed.x = pxToWX(e.clientX); S.seed.y = pxToWY(e.clientY);
+    document.getElementById('c-hint').textContent = 'seed held — switch to Shell to iterate it';
+  }
+  drag = false;
+});
+cv.addEventListener('wheel', e => {
+  e.preventDefault();
+  const f = e.deltaY > 0 ? 1.18 : 1 / 1.18;
+  const wx = pxToWX(e.clientX), wy = pxToWY(e.clientY);
+  S.zoom *= f;
+  S.cx = wx - (e.clientX - W / 2) / H * S.zoom;
+  S.cy = wy + (e.clientY - H / 2) / H * S.zoom;
+  updHUD(); render();
+}, { passive: false });
+
+// ---- controls --------------------------------------------------------------
+const $ = id => document.getElementById(id);
+function setMode(m) {
+  S.mode = m;
+  $('b-atlas').classList.toggle('on', m === 'atlas');
+  $('b-shell').classList.toggle('on', m === 'shell');
+  $('c-hint').textContent = m === 'shell'
+    ? 'click to move the seed · colour = refinements survived'
+    : 'move the cursor · every lattice point is a Genesis shell';
+  updHUD(); render();
+}
+$('b-atlas').onclick = () => setMode('atlas');
+$('b-shell').onclick = () => setMode('shell');
+$('s-d').oninput = e => { S.d = +e.target.value; $('v-d').textContent = S.d; render(); };
+$('s-b').oninput = e => { S.bailPow = +e.target.value; $('v-b').textContent = Math.pow(2, S.bailPow); render(); };
+$('s-i').oninput = e => { S.iter = +e.target.value; $('v-i').textContent = S.iter; render(); };
+$('s-k').oninput = e => { S.bands = +e.target.value; $('v-k').textContent = S.bands; render(); };
+for (const [id, key] of [['b-lat','lattice'],['b-lad','ladder'],['b-eig','eig'],['b-rng','rings']])
+  $(id).onclick = () => { S[key] = !S[key]; $(id).classList.toggle('on', S[key]); drawOverlay(); };
+$('b-pal').onclick = () => {
+  S.pal = PAL_ORDER[(PAL_ORDER.indexOf(S.pal) + 1) % PAL_ORDER.length];
+  $('b-pal').textContent = S.pal; render();
+};
+$('b-reset').onclick = () => { S.cx = 0; S.cy = 0; S.zoom = 6.0; updHUD(); render(); };
+$('b-save').onclick = () => {
+  const o = document.createElement('canvas'); o.width = W; o.height = H;
+  const c = o.getContext('2d'); c.drawImage(cv, 0, 0); c.drawImage(ov, 0, 0);
+  const a = document.createElement('a'); a.download = 'genesis_alpha.png'; a.href = o.toDataURL(); a.click();
+};
+addEventListener('keydown', e => {
+  if (e.key === 'h' || e.key === 'H') {
+    S.chrome = !S.chrome;
+    for (const id of ['hud','card','bar','hero','tip','stamp'])
+      $(id).style.display = S.chrome ? '' : 'none';
+    drawOverlay();
+  }
+});
+addEventListener('resize', resize);
+
+// ---- boot ------------------------------------------------------------------
+$('b-pal').textContent = S.pal;
+$('v-b').textContent = Math.pow(2, S.bailPow);
+resize(); updHUD();
+setTimeout(resize, 120);   // srcdoc/iframe can report 0 on first layout
+</script></body></html>
