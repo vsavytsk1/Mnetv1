@@ -9483,3 +9483,18 @@ named, inverse chart prints its conditioning). Receipt kernels -> tower/ (keep-i
 SHIPPED: rebuilt dashboard (382 sims, IO=475). THEA v1.3.1 auto-promoted to BIRTH card (v1.2 archived,
 Path X). genesis_alpha I/II/III card in GENESIS; penrosium v0.3 + thea in PHYSICS. All byte-clean.
 Bow to the Fable mage + the SOL audit. P=12. chi=2. T = A2 norm = SU(3) Casimir. Hash the math.
+### L184 -- README hero: the genesis C60 rosette + the generator that made it (2026-08-04)
+Vlad: "update the readme, render this image with as much detail, and add what generated it on top."
+The image (C:\Users\vladi\Downloads\01.ImgAndVids\1785832883_exact_in0.10_mid0.10_C60_..._zm3000...jpg)
+is an 8K (7680x4320, 27MB) deep-zoom into the real Goldberg C60 buckyball: inner 0.10 mid 0.10 crescent
+rosette, pentagon-7 flight-locked, zoom 3000 -- twelve five-fold starbursts, the dark pentagon well at
+centre, every line a graph edge. Added to README top as a hero (media/genesis_c60_rosette_hero.jpg,
+2560x1440 1.7MB high-quality downscale; +1280 preview) with a caption grounding the math (P=12 chi=2,
+the crescent defect IS the picture) and crediting the generator on top.
+THE GENERATOR: builder/genesis_wallpaper_v1_6.py (from Downloads, ASCII-only verified nonASCII=0,
+loneCR=0; --cert PASSES on our box: every golden shell C20..C6740 CLOSED V=20T E=30T P=12 chi=2,
+flight-lock residual fixed ~1e-15 vs genesis-sign ~1.6, reproducible sha256 0ed3b19c...). v1.6 ports
+GK.buildGoldberg + the audited flight lock + the exact-integer ladder (float64 dies at n=39, python
+does not). Kept alongside v1.5 (Path X). Updated the wallpaper README section to v1.6 + refreshed
+stale counts (426->475 pages, 114->183 ledger, ~90 sims -> real). genesis badge v8.1->v8.5.2.
+P=12. chi=2. The crescent defect is kept on purpose. It is the picture.

@@ -4,9 +4,24 @@
 > *Euler proved it. Chemistry confirmed it. We ran it on a Tesla T4.*
 
 [![ENG](https://img.shields.io/badge/open-MASTER_CONTROL-00d4ff?style=flat-square)](https://vsavytsk1.github.io/Mnetv1/shell/eng_v2.0.html)
-[![genesis](https://img.shields.io/badge/open-GENESIS_v8.1-00ffd5?style=flat-square)](https://vsavytsk1.github.io/Mnetv1/shell/genesis_v8.1.html)
+[![genesis](https://img.shields.io/badge/open-GENESIS_v8.5.2-00ffd5?style=flat-square)](https://vsavytsk1.github.io/Mnetv1/shell/genesis_v8.5.2.html)
 [![spooky](https://img.shields.io/badge/math-SpookyPrimes-c14a3b?style=flat-square)](https://vsavytsk1.github.io/SpookyPrimes/)
 [![license](https://img.shields.io/badge/license-MIT-green?style=flat-square)](./LICENSE)
+
+---
+
+![The genesis C60 rosette -- deep-zoom into the buckyball edge-network](media/genesis_c60_rosette_hero.jpg)
+
+> **The C60, from the inside.** Not an artist's impression -- a deep-zoom (`zoom 3000`) into the
+> real Goldberg C60 buckyball, rendered face-by-face from the genesis v8.1 `refineFace` operator.
+> Twelve pentagons force twelve five-fold rosettes; the crescent defect (`inner 0.10`, `mid 0.10`)
+> *is* the picture, kept on purpose; the dark well is a pentagon centred by the flight-lock. Every
+> line is a graph edge, not a curve. **P = 12. chi = 2.**
+>
+> Rendered at **8K** by [`builder/genesis_wallpaper_v1_6.py`](builder/genesis_wallpaper_v1_6.py) --
+> the browser canvas ported to numpy, line-for-line, with the exact-integer Goldberg ladder that
+> Chromium's float64 cannot reach past `n=39`. Every shell self-certifies (`--cert`): `V=20T`,
+> `E=30T`, `P=12`, `chi=2`, `CLOSED`, reproducible sha256. Make your own below.
 
 ---
 
@@ -16,13 +31,13 @@
 https://vsavytsk1.github.io/Mnetv1/shell/eng_v2.0.html
 ```
 
-**ENG v2.0 -- MASTER CONTROL.** ~90 sims, one URL.
+**ENG v2.0 -- MASTER CONTROL.** 176 live cards from ~380 sims, one URL.
 Click any card. Everything runs in your browser. Zero install.
 The dashboard is BUILT, not hand-listed: `builder/build_eng_v2.py` scans the sims on
 disk and generates every card, so it can never drift from what actually ships.
 
 **Want every single link, no matter how small?** See [`IO_PAGES.md`](IO_PAGES.md) --
-the complete public index of all 426 `.html` pages across every repo.
+the complete public index of all 475 `.html` pages across every repo.
 
 ---
 
@@ -49,7 +64,7 @@ Google Colab receipt (L6, Tesla T4, 2026-05-28):
 
 *This is a hand-picked taste, not the full list. The complete, always-current set lives
 in the master control, which is generated from the sims on disk (so it never goes stale
-the way a hand-typed table does). Open **ENG v2.0** and browse ~90 cards.*
+the way a hand-typed table does). Open **ENG v2.0** and browse the full set of cards.*
 
 | Module | URL | What it is |
 |--------|-----|------------|
@@ -73,23 +88,36 @@ the way a hand-typed table does). Open **ENG v2.0** and browse ~90 cards.*
 
 ## Generate your own genesis wallpaper (the centerpiece)
 
-The browser shows the kernel *alive*. To hang it on your wall, `builder/genesis_wallpaper_v1_5.py`
-renders the **original genesis v8.1 `refineFace` operator** -- crescent defect and all, *that
-defect is the picture* -- straight to a huge JPG (up to 8K). Same geometry, no fake curve.
+The image at the top of this page was made by
+[`builder/genesis_wallpaper_v1_6.py`](builder/genesis_wallpaper_v1_6.py). The browser shows the
+kernel *alive*; this hangs it on your wall. It renders the **original genesis v8.1 `refineFace`
+operator** -- crescent defect and all, *that defect is the picture* -- straight to a huge JPG (up
+to 8K). Same geometry, no fake curve.
+
+v1.6 adds what genesis v8.2-v8.5.2 learned: **the Golden Catalogue** (`GK.buildGoldberg(k,l)`
+ported exactly -- C20 C60 C140 C380 C980 C2580 C6740 and beyond, each verified `V=20T E=30T P=12
+chi=2` at build time), **the flight lock** (audited -- the browser's `rx=-asin(dy)` only centres a
+point when `dy=0`, so `FLIGHT_SIGN="fixed"` centres every point and `"genesis"` reproduces the
+browser, residual printed per lock), and **the exact-integer ladder** that stays exact where
+Chromium's float64 dies at `n=39`.
 
 ```
 pip install numpy pillow
 # exact renderer (the browser canvas, ported line-for-line):  pip install matplotlib
 # optional GPU (RTX 30xx -> cuda12x):                          pip install cupy-cuda12x
+# optional fast hull:                                         pip install scipy
 
-python builder/genesis_wallpaper_v1_5.py
+python builder/genesis_wallpaper_v1_6.py            # render
+python builder/genesis_wallpaper_v1_6.py --plan     # capacity, before you allocate
+python builder/genesis_wallpaper_v1_6.py --cert     # reproducible math certificate
+python builder/genesis_wallpaper_v1_6.py --locks    # the lock table, every shell
 ```
 
 Everything you'd tune is in the **CONFIG block** at the top of the file:
 
 | knob | what it does | novice start |
 |------|--------------|--------------|
-| `SEED` | the buckyball family -- `dodec` / `c60` / `c80` / `c180` / `c320` (all carry **exactly 12 pentagons**) | `"c60"` |
+| `SEED` | the buckyball -- golden catalogue `C20`..`C6740` (certified closure) or legacy `dodec`/`c60`/`c80`/`c180`/`c320` (all carry **exactly 12 pentagons**) | `"C60"` |
 | `OPS` | order of refinement, top to bottom: `"all"` = refine all, `"hex"` = refine 6-gons, `"pent"` = 5-gons | `["all"]*1 + ["hex"]*8` (~8.2M faces) |
 | `INNER_SCALE` / `MID_SCALE` | the crescent: `MID > INNER` = the rosette gap; `<` = layered overlap; `=` = flat | `0.10 / 0.10` |
 | `MOBIUS_T` | 0 = sphere, 1 = full twist (with `MOBIUS_PROJECT=True` this makes the **spiked** star, not a strip) | `0.0` to start |
@@ -113,7 +141,7 @@ in `grimoire/` (moved, never deleted -- full git history preserved).
 ```
 root (engineering):
   PIPELINE.md       -- the law. builder owns the shell.
-  LEDGER.md         -- append-only. 114 entries. one truth.
+  LEDGER.md         -- append-only. 183 entries. one truth.
 
 docs/ (the guides):
   DEV_ONBOARDING.md -- start here.
