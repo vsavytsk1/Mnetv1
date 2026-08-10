@@ -1,0 +1,1127 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>EML — THE LUCA SPIRAL — the conjecture, computed live</title>
+<!-- v0.1: first frozen artifact of the EML annex (spini spini sim).
+     Fig.1 of arXiv:2603.21852 rebuilt as a living object: 33 primitives, each
+     genuinely lowered to eml(S,S)|1 over C (principal branch, ln0=-inf lane),
+     verified live at N=16 samples/node against native refs with the Thea
+     degrees() meter (cap 15.9). Spin is OPT-IN (Curse 13: motion never forced).
+     HUD shows TARGET / CURRENT / ERR side by side (Path III: target != result).
+     Receipts measured, not narrated: branch-cut landing on the negative axis,
+     trig window held to |x|=300 (2pi-i wraps annihilated by periodic consumers),
+     minus(1) via the extended-reals lane, arctan(0) isolated point (paper 4.1).
+     This chain differs from SI Table S2 (DESIGN; spiral order after Fig.1).
+     Headless receipt: 34/34 locked at D>=9.0 before this shell was baked. -->
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{background:#05050f;color:#dfe6f2;font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  font-size:13px;line-height:1.6;-webkit-font-smoothing:antialiased}
+body{background:
+  radial-gradient(1200px 700px at 50% -10%, rgba(30,40,74,.35), transparent 60%),
+  radial-gradient(900px 600px at 100% 100%, rgba(60,24,40,.25), transparent 55%),
+  #05050f;min-height:100vh}
+a{color:#00d4ff;text-decoration:none}a:hover{text-decoration:underline}
+#wrap{max-width:940px;margin:0 auto;padding:64px 4vw 120px}
+
+/* HUD — Path III: target, current, err — always side by side */
+#hud{position:fixed;top:0;left:0;right:0;z-index:40;display:flex;flex-wrap:wrap;gap:4px 16px;align-items:center;
+  justify-content:center;padding:7px 12px;background:rgba(5,6,15,.88);backdrop-filter:blur(6px);
+  border-bottom:1px solid #1e2740;font-size:10.5px;letter-spacing:.05em}
+#hud .h{color:rgba(223,230,242,.4);text-transform:uppercase;font-size:9px}
+#hud b{font-variant-numeric:tabular-nums;font-weight:600}
+#hud .gold{color:#ffd700}#hud .cyan{color:#00d4ff}#hud .grn{color:#7fff9f}#hud .fire{color:#ff9040}#hud .pink{color:#ff5470}
+
+/* hero */
+#hero{text-align:center;padding:30px 0 14px}
+#hero .eyebrow{color:#7fff9f;font-size:10px;letter-spacing:.35em;text-transform:uppercase}
+#hero h1{color:#ffd700;font-size:25px;letter-spacing:.06em;margin:8px 0 6px;text-transform:uppercase}
+#hero .sub{color:rgba(223,230,242,.55);font-size:12px;max-width:700px;margin:0 auto;line-height:1.7}
+#hero .authors{color:rgba(223,230,242,.4);font-size:10.5px;margin-top:10px;letter-spacing:.04em}
+#hero .abstract{max-width:720px;margin:16px auto 0;padding:13px 18px;text-align:left;
+  background:rgba(9,12,24,.7);border:1px solid #1e2740;border-left:3px solid #ff5470;border-radius:8px;
+  color:rgba(223,230,242,.72);font-size:11.5px;line-height:1.75}
+#hero .abstract b{color:#ffd700}
+#hero .abstract .op{color:#ff8098}
+
+/* status grammar chips */
+.st{display:inline-block;border:1px solid #2a3040;border-radius:4px;padding:0 6px;font-size:8.5px;
+  letter-spacing:.1em;color:#8892b0;margin:0 4px 2px 0;vertical-align:1px;text-transform:uppercase}
+.st.exact{color:#7fff9f;border-color:#2a4a34}
+.st.computed{color:#00d4ff;border-color:#204050}
+.st.design{color:#d8c060;border-color:#4a4020}
+.st.hyp{color:#ffb454;border-color:#4a3820}
+.st.ext{color:#ffb454;border-color:#4a3820}
+.st.meta{color:#cc88ff;border-color:#3a2050}
+
+/* the spiral stage */
+#stage{max-width:900px;margin:18px auto 14px;background:rgba(9,12,24,.72);border:1px solid #1e2740;
+  border-left:3px solid #ff5470;border-radius:10px;padding:14px 14px 10px;overflow:hidden}
+#stage .lbl{color:#ff8098;font-size:9px;letter-spacing:.16em;text-transform:uppercase;margin-bottom:8px}
+#spiralbox{display:flex;justify-content:center}
+#spiral{display:block;touch-action:none;cursor:grab;border-radius:8px}
+#spiral:active{cursor:grabbing}
+#controls{display:flex;flex-wrap:wrap;gap:8px 10px;align-items:center;justify-content:center;
+  padding:10px 2px 4px;font-size:10.5px}
+.btn{background:#0b1120;color:#00d4ff;border:1px solid #204050;border-radius:6px;padding:6px 13px;
+  font-family:inherit;font-size:10.5px;letter-spacing:.06em;cursor:pointer;text-transform:uppercase}
+.btn:hover{background:#0e1730}
+.btn.on{color:#7fff9f;border-color:#2a4a34;background:rgba(127,255,159,.06)}
+.btn.gold{color:#ffd700;border-color:#4a4020}
+#controls label{color:rgba(223,230,242,.5);display:flex;align-items:center;gap:6px}
+#controls input[type=range]{accent-color:#00d4ff;width:110px}
+#curse13{width:100%;text-align:center;color:rgba(223,230,242,.35);font-size:9.5px;letter-spacing:.05em}
+
+/* inspector */
+#inspect{max-width:900px;margin:0 auto 14px;background:rgba(9,12,24,.72);border:1px solid #1e2740;
+  border-left:3px solid #204050;border-radius:10px;padding:13px 16px;min-height:60px;transition:border-color .25s}
+#inspect.locked{border-left-color:#7fff9f}
+#inspect .row{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:baseline}
+#inspect h3{color:#e8eefc;font-size:14px;letter-spacing:.03em}
+#inspect .fam{font-size:9px;letter-spacing:.12em;text-transform:uppercase;padding:1px 7px;border-radius:4px;border:1px solid}
+#inspect .id{color:#e8eefc;background:rgba(4,6,14,.75);border:1px solid #1e2740;border-radius:8px;
+  padding:9px 12px;margin:10px 0 8px;font-size:12px;overflow-x:auto;white-space:nowrap}
+#inspect .chain{color:rgba(223,230,242,.55);font-size:10.5px;margin-bottom:8px;overflow-x:auto;white-space:nowrap}
+#inspect .chain b{color:#ff8098;font-weight:600}
+#inspect .meter{display:flex;flex-wrap:wrap;gap:4px 18px;background:rgba(4,6,14,.75);border:1px solid #1e2740;
+  border-radius:8px;padding:9px 12px;font-size:11px}
+#inspect .meter .k{color:rgba(223,230,242,.45)}
+#inspect .meter .v{color:#7fff9f;font-variant-numeric:tabular-nums}
+#inspect .meter .v.gold{color:#ffd700}.meter .v.cyan{color:#00d4ff}.meter .v.bad{color:#ff69b4}
+#inspect .badge{font-size:9px;letter-spacing:.14em;padding:1px 8px;border-radius:4px;border:1px solid #2a4a34;color:#7fff9f}
+#inspect .badge.no{border-color:#4a3820;color:#ffb454}
+#inspect .cav{color:rgba(223,230,242,.45);font-size:10.5px;margin-top:8px;line-height:1.65}
+#inspect .srcs{margin-top:6px;font-size:10.5px;color:rgba(223,230,242,.45)}
+#inspect .srcs span{color:#00d4ff;cursor:pointer;margin-right:8px}
+#inspect .srcs span:hover{text-decoration:underline}
+#probe{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px;font-size:11px}
+#probe input{background:#0b1120;color:#e8eefc;border:1px solid #204050;border-radius:6px;padding:4px 8px;
+  font-family:inherit;font-size:11px;width:86px}
+#probe .out{color:#7fff9f;font-variant-numeric:tabular-nums}
+#probe .out.iso{color:#ffb454}
+
+/* section cards */
+.sec{max-width:900px;margin:14px auto;background:rgba(9,12,24,.72);border:1px solid #1e2740;
+  border-left:3px solid #1e2740;border-radius:10px;overflow:hidden;transition:border-color .25s}
+.sec .head{display:flex;align-items:center;gap:12px;padding:13px 16px;cursor:pointer;user-select:none}
+.sec .head:hover{background:rgba(0,212,255,.04)}
+.sec .num{color:#ffd700;font-size:11px;min-width:26px;letter-spacing:.05em}
+.sec .ttl{flex:1;color:#e8eefc;font-size:13px;letter-spacing:.02em}
+.sec .chev{color:#66708a;font-size:13px;transition:transform .25s}
+.sec.open .chev{transform:rotate(90deg)}
+.sec .body{max-height:0;overflow:hidden;transition:max-height .4s ease}
+.sec.open .body{max-height:5200px}
+.sec .inner{padding:2px 18px 18px}
+.sec .claim{color:rgba(223,230,242,.62);font-size:11.5px;margin:2px 0 12px;line-height:1.75}
+.sec .claim b{color:#ffd700}
+.sec .fm{color:#e8eefc;background:rgba(4,6,14,.75);border:1px solid #1e2740;border-radius:8px;
+  padding:9px 12px;margin:8px 0;font-size:12px;overflow-x:auto;white-space:nowrap}
+.sec .fm .op{color:#ff8098}
+.sec table{border-collapse:collapse;width:100%;font-size:11px;margin:8px 0}
+.sec th{color:rgba(223,230,242,.4);text-transform:uppercase;font-size:9px;letter-spacing:.1em;
+  text-align:left;padding:4px 10px 4px 0;border-bottom:1px solid #1e2740}
+.sec td{padding:4px 10px 4px 0;border-bottom:1px solid rgba(30,39,64,.5);color:rgba(223,230,242,.72);
+  font-variant-numeric:tabular-nums}
+.sec td.g{color:#7fff9f}.sec td.gold{color:#ffd700}.sec td.c{color:#00d4ff}.sec td.dim{color:rgba(223,230,242,.38)}
+.sec .note{color:rgba(223,230,242,.45);font-size:10.5px;line-height:1.7;margin-top:8px}
+
+/* two-button tape */
+#tape .machine{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start}
+#tape .keys{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+#tape .key{background:#0b1120;border:1px solid #204050;color:#e8eefc;border-radius:8px;
+  min-width:52px;padding:10px 0;text-align:center;font-size:15px;cursor:pointer}
+#tape .key:hover{background:#0e1730}
+#tape .key.eml{color:#ff8098;border-color:#4a2030;font-size:12px;letter-spacing:.08em}
+#tape .prog{font-size:12px;letter-spacing:.25em;margin:6px 0;color:rgba(223,230,242,.55)}
+#tape .prog b{color:#ffd700}
+#tape .prog .done{color:#7fff9f}
+#tape .stack{background:rgba(4,6,14,.75);border:1px solid #1e2740;border-radius:8px;padding:9px 12px;
+  min-width:220px;min-height:86px;font-size:11.5px}
+#tape .stack .h{color:#00d4ff;font-size:9px;letter-spacing:.14em;text-transform:uppercase;margin-bottom:5px}
+#tape .stack .cell{color:#e8eefc;font-variant-numeric:tabular-nums}
+#tape .stack .cell.top{color:#7fff9f}
+#tape .res{margin-top:8px;font-size:11px;color:rgba(223,230,242,.6)}
+#tape .res b{color:#7fff9f}
+
+/* receipts */
+#receipts .rc{display:flex;justify-content:space-between;gap:10px;padding:3px 0;font-size:11px;
+  border-bottom:1px solid rgba(30,39,64,.4)}
+#receipts .rc .k{color:rgba(223,230,242,.55)}
+#receipts .rc .v{color:#7fff9f;font-variant-numeric:tabular-nums;text-align:right}
+#receipts .rc .v.gold{color:#ffd700}#receipts .rc .v.warn{color:#ffb454}
+
+/* coda */
+#coda{max-width:900px;margin:26px auto 0;text-align:center;color:rgba(223,230,242,.4);
+  font-size:10.5px;line-height:2;letter-spacing:.04em}
+#coda .law{color:#ffd700}
+@media (max-width:640px){
+  #hud{gap:3px 10px;font-size:9.5px}
+  #hero h1{font-size:19px}
+  .sec .inner{padding:2px 12px 14px}
+}
+@media (prefers-reduced-motion: reduce){
+  .sec .body{transition:none}.sec .chev{transition:none}
+}
+</style></head><body>
+
+<div id="hud">
+  <span><span class="h">nodes</span> <b class="gold" id="hDerived">—</b></span>
+  <span><span class="h">locked</span> <b class="grn" id="hLocked">—</b></span>
+  <span><span class="h">target</span> <b class="cyan">D ≥ 9.0</b></span>
+  <span><span class="h">current worst</span> <b class="grn" id="hWorst">—</b></span>
+  <span><span class="h">err</span> <b id="hErr">—</b></span>
+  <span><span class="h">price</span> <b class="fire" id="hPrice">—</b> <span class="h">eml calls</span></span>
+  <span><span class="h">spin</span> <b class="pink" id="hSpin">off</b></span>
+  <span class="h">v0.1</span>
+</div>
+
+<div id="wrap">
+
+<div id="hero">
+  <div class="eyebrow">The Cave · EML Annex · frozen artifact</div>
+  <h1>EML — The LUCA Spiral</h1>
+  <div class="sub">The bootstrapping phylogeny of the elementary functions, rebuilt as a living object.
+  One operator and the digit 1; everything else is descent — recomputed and re-verified in this page, right now.</div>
+  <div class="authors">conjecture: A. Odrzywołek, <a href="https://arxiv.org/abs/2603.21852" rel="noopener">arXiv:2603.21852</a> (2026) · annex shell: the cave, v0.1 · Fig. 1 concept CC BY 4.0</div>
+  <div class="abstract">
+    <span class="st ext">external</span><span class="st exact">exact</span><span class="st computed">computed live</span><br>
+    <b>The conjecture.</b> A single binary operator, <span class="op">eml(x,y) = exp(x) − ln(y)</span>, together with the
+    constant <b>1</b>, generates the full 36-primitive repertoire of a scientific calculator — arithmetic, powers, logs,
+    trig, hyperbolics, their inverses, and the constants e, π, i. Grammar: <span class="op">S → 1 | eml(S,S)</span>.
+    A two-button calculator suffices. Internally, computation must pass through ℂ.
+    <br><br>
+    <b>What this shell does.</b> Every node in the spiral below is defined only from earlier nodes, terminating in
+    eml and 1 — so each one genuinely lowers to a pure EML binary tree. On load, this page evaluates every chain over ℂ
+    at 16 deterministic sample points and measures agreement against native references in correct digits
+    (D = −log₁₀ rel err, capped 15.9 — the float64 ceiling). A node earns its glow; nothing is drawn as true
+    that was not measured here. Target and result are never the same line.
+  </div>
+</div>
+
+<div id="stage">
+  <div class="lbl">The spiral — LUCA at center, discovery order unwinding outward · thick arrows = built directly from eml and 1</div>
+  <div id="spiralbox"><canvas id="spiral"></canvas></div>
+  <div id="controls">
+    <button class="btn" id="btnSpin">Spin — off</button>
+    <label>speed <input type="range" id="rSpeed" min="5" max="100" value="28"></label>
+    <button class="btn gold" id="btnReplay">Replay the bootstrap</button>
+    <label>unwind <input type="range" id="rUnwind" min="0" max="33" value="33"> <b id="unwindN" style="color:#ffd700">33</b>/33</label>
+    <div id="curse13">motion is opt-in, never forced — the spiral starts still and you choose to move it (Curse 13) · drag to rotate</div>
+  </div>
+</div>
+
+<div id="inspect">
+  <div class="row"><h3 id="iName">Select a node</h3><span id="iFam"></span><span id="iSt"></span></div>
+  <div id="iBody" style="display:none">
+    <div class="id" id="iIdent"></div>
+    <div class="chain" id="iChain"></div>
+    <div class="meter" id="iMeter"></div>
+    <div class="srcs" id="iSrcs"></div>
+    <div id="probe"></div>
+    <div class="cav" id="iCav"></div>
+  </div>
+  <div class="cav" id="iHint">Click any node in the spiral. Its identity, its ancestry arrows, its live verification —
+  target D, measured D, the error that remains — appear here. eml itself and the terminal 1 are the only axioms.</div>
+</div>
+
+<!-- I. THE CONJECTURE -->
+<div class="sec open" id="sec1">
+  <div class="head"><span class="num">I</span><span class="ttl">The conjecture — one operator, one constant</span><span class="chev">▶</span></div>
+  <div class="body"><div class="inner">
+    <div class="claim">
+      <span class="st ext">external</span> Continuous mathematics never had a NAND. Boolean logic collapses to one gate;
+      the calculator's 36 buttons — constants π, e, i, −1, 1, 2, x, y; functions exp, ln, 1/x, x/2, −x, √, x², σ, the six
+      trig, the six hyperbolic and their inverses; operations +, −, ×, /, log, pow, avg, hypot — were assumed
+      irreducibly many. The paper's claim: they all collapse to
+    </div>
+    <div class="fm"><span class="op">eml(x, y) = exp(x) − ln(y)</span>&nbsp;&nbsp;&nbsp;with the constant <b style="color:#ffd700">1</b>&nbsp;&nbsp;&nbsp;·&nbsp;&nbsp;&nbsp;grammar <span class="op">S → 1 | eml(S, S)</span></div>
+    <div class="claim">
+      <span class="st exact">exact</span> The seeds are one-liners: <b>e = eml(1,1)</b> since ln 1 = 0, and
+      <b>eˣ = eml(x,1)</b>. The first non-trivial descent is the logarithm — Eq. (5) of the paper:
+    </div>
+    <div class="fm">ln z = eml(1, eml(eml(1, z), 1))&nbsp;&nbsp;&nbsp;≡&nbsp;&nbsp;&nbsp;e − ln(eᵉ / z)&nbsp;&nbsp;&nbsp;·&nbsp;&nbsp;&nbsp;RPN: 1 1 z E 1 E E&nbsp;&nbsp;(K = 7)</div>
+    <div class="claim">
+      <span class="st ext">external</span> From there the discovery run bootstraps: each new primitive is composed from
+      already-derived ones, spiraling outward from the LUCA — subtraction, negation, the integers, arithmetic, powers,
+      then σ and hypot, the hyperbolic family, and finally — since <b>i = √−1 must be manufactured from ln(−1)</b> — the
+      circular family. Computation passes through ℂ by necessity; the paper argues a purely real continuous Sheffer
+      seems impossible. Completeness rests on the paper's Supplementary Part II (symbolic checks in Mathematica,
+      numeric cross-checks in C / NumPy / PyTorch / mpmath, and a constructive proof sketch) — cited here, not re-proved here.
+    </div>
+    <div class="claim">
+      <span class="st design">design</span> This shell re-derives all 33 primitives through its own reuse chain
+      (each node from earlier nodes; the true discovery chain is the paper's SI Table S2, not reproduced here) and
+      re-verifies every one, live, below your cursor. The ordering of the spiral follows Fig. 1 by eye.
+      <span class="st hyp">hypothesis</span> The paper speculates EML is the tip of an iceberg — a ternary variant may
+      need no distinguished constant at all. Cousins already known:
+      edl(x,y) = exp(x)/ln(y) with constant e, and −eml(y,x) with constant −∞.
+    </div>
+  </div></div>
+</div>
+
+<!-- II. THE REDUCTION LADDER -->
+<div class="sec" id="sec2">
+  <div class="head"><span class="num">II</span><span class="ttl">The reduction ladder — 36 buttons → 2</span><span class="chev">▶</span></div>
+  <div class="body"><div class="inner">
+    <div class="claim"><span class="st ext">external</span> The route down, in the paper's historical order.
+    Each row is a complete scientific calculator. "none" under constants means any real input seeds the system.</div>
+    <table>
+      <tr><th>calc</th><th>constants</th><th>unary</th><th>binary</th><th>count</th></tr>
+      <tr><td class="dim">Base</td><td>π, e, i, −1, 1, 2, x, y</td><td>20 functions</td><td>8 operations</td><td>36</td></tr>
+      <tr><td class="dim">Wolfram</td><td>π, e, i</td><td>ln</td><td>+, ×, ^</td><td>7</td></tr>
+      <tr><td class="dim">Calc 3</td><td>none</td><td>exp, ln, −x, 1/x</td><td>+</td><td>6</td></tr>
+      <tr><td class="dim">Calc 2</td><td>none</td><td>exp, ln</td><td>−</td><td>4</td></tr>
+      <tr><td class="dim">Calc 1</td><td>e or π</td><td>none</td><td>xʸ, log_x y</td><td>4</td></tr>
+      <tr><td class="dim">Calc 0</td><td>none</td><td>exp</td><td>log_x y</td><td>3</td></tr>
+      <tr><td class="gold">EML</td><td class="gold">1</td><td class="dim">none</td><td class="gold">eml(x,y)</td><td class="gold">3</td></tr>
+      <tr><td class="dim">?</td><td class="dim">none</td><td class="dim">none</td><td class="dim">? (speculated)</td><td class="dim">2</td></tr>
+    </table>
+    <div class="note">The non-commutativity of subtraction proved crucial (Calc 2): it supplies both tree growth and
+    inversion. The final pattern: pairs of inverse functions at the input, an asymmetric operation at the output.
+    No further reduction of the EML row is possible — at least one binary operator and one terminal are required.</div>
+  </div></div>
+</div>
+
+<!-- III. THE TWO-BUTTON TAPE -->
+<div class="sec" id="tape">
+  <div class="head"><span class="num">III</span><span class="ttl">The two-button calculator — run Eq. (5) yourself</span><span class="chev">▶</span></div>
+  <div class="body"><div class="inner">
+    <div class="claim"><span class="st exact">exact</span><span class="st computed">computed live</span>
+    A stack machine with exactly two buttons — <b>1</b> and <b>eml</b> — plus your input x.
+    The tape below is the paper's K=7 program for the natural logarithm. Step it, or free-play your own program.</div>
+    <div class="machine">
+      <div>
+        <div class="prog" id="tProg"></div>
+        <div class="keys">
+          <button class="key" id="k1">1</button>
+          <button class="key" id="kx">x</button>
+          <button class="key eml" id="kE">EML</button>
+          <span style="width:10px"></span>
+          <button class="btn" id="tStep">Step</button>
+          <button class="btn" id="tRun">Run tape</button>
+          <button class="btn" id="tReset">Reset</button>
+        </div>
+        <div style="margin-top:8px;font-size:11px;color:rgba(223,230,242,.5)">x = <input id="tX" value="2.5" style="background:#0b1120;color:#e8eefc;border:1px solid #204050;border-radius:6px;padding:3px 8px;font-family:inherit;font-size:11px;width:80px"></div>
+        <div class="res" id="tRes"></div>
+      </div>
+      <div class="stack"><div class="h">stack</div><div id="tStack"><span style="color:rgba(223,230,242,.3)">empty</span></div></div>
+    </div>
+    <div class="note">RPN semantics: eml pops y, then x, pushes exp(x) − ln(y). Over ℂ where needed.
+    When the tape completes, the top of stack is compared against Math.log(x) and the agreement D is printed —
+    measured, not assumed.</div>
+  </div></div>
+</div>
+
+<!-- IV. THE HONEST BOUNDARY -->
+<div class="sec" id="sec4">
+  <div class="head"><span class="num">IV</span><span class="ttl">The honest boundary — receipts, measured live</span><span class="chev">▶</span></div>
+  <div class="body"><div class="inner">
+    <div class="claim">
+      <span class="st exact">exact</span> The identities on every node are classical algebra over ℂ (principal branch,
+      with the extended-reals lane ln 0 = −∞, e⁻∞ = 0), and each genuinely lowers to eml/1 — the leaf counts are
+      computed from the chain itself.
+      <span class="st computed">computed</span> The locks below are float64 measurements at 16 points per node, in this
+      browser, on load. A point check is a sieve, not a proof — the paper says the same of its own search
+      (Schanuel-flavored: coincidental equality is vanishingly unlikely).
+      <span class="st design">design</span> Target D ≥ 9.0; N = 16; this chain's routing; the spiral order read off Fig. 1.
+      <span class="st ext">external</span> Completeness itself, the SI Table S2 chain, the paper's K values,
+      and the tip-of-the-iceberg speculation.
+    </div>
+    <div id="receipts"></div>
+    <div class="note" id="branchnote"></div>
+    <div class="note">Isolated points exist and are shown as such — e.g. this chain's arctan is undefined exactly at
+    x = 0 (the paper: "except for a few isolated points, especially at zero and domain endpoints"). K values marked
+    PAPER come from the paper's Table 4 (compiler / shortest found); K values marked THIS CHAIN are computed from the
+    chain in this file. They are different objects and are never merged into one number.</div>
+  </div></div>
+</div>
+
+<!-- V. CODA -->
+<div class="sec" id="sec5">
+  <div class="head"><span class="num">V</span><span class="ttl">Coda — the lineage</span><span class="chev">▶</span></div>
+  <div class="body"><div class="inner">
+    <div class="claim">
+      <b>v0.1 — frozen.</b> The spiral phylogeny computed live; 33 descents lowered to eml/1 and locked;
+      the two-button tape; the receipts. Built after a headless kernel run locked 34/34 — proof by kernel
+      before render, never after.<br><br>
+      <span class="st design">open for v0.2+</span> import the true discovery chain and adjacency from SI Table S2 /
+      Fig. S1 · the EDL cousin lane (constant e) · shortest-tree search vs the paper's direct-search K ·
+      a 3D unwind · exporting any node as a standalone pure-EML RPN tape.
+    </div>
+  </div></div>
+</div>
+
+<div id="coda">
+  the pentagons hold elsewhere — here, the exponent holds and the logarithm pays.<br>
+  <span class="law">S → 1 | eml(S,S) · the price is always paid · target ≠ result · motion is opt-in</span><br>
+  the cave, 2026 · for year 12026 · always
+</div>
+
+</div><!-- /wrap -->
+
+<script>
+"use strict";
+/* ================= EML LUCA CORE v0.1 — the certified kernel =================
+   Identical math to the headless receipt run before this shell was written. */
+var PRICE = 0; /* every eml application is counted — the price is paid in the open */
+function C(re, im){ return {re:re, im:(im||0)}; }
+var ONE = C(1,0);
+function csub(a,b){ return C(a.re-b.re, a.im-b.im); }
+function cmulRaw(a,b){ return C(a.re*b.re - a.im*b.im, a.re*b.im + a.im*b.re); }
+function cexp(a){
+  if(a.re === -Infinity) return C(0,0);
+  var m = Math.exp(a.re);
+  return C(m*Math.cos(a.im), m*Math.sin(a.im));
+}
+function clog(a){
+  var m = Math.hypot(a.re, a.im);
+  if(m === 0) return C(-Infinity, 0);
+  return C(Math.log(m), Math.atan2(a.im, a.re));
+}
+function EML(a,b){ PRICE++; return csub(cexp(a), clog(b)); }
+
+var F = {};
+F.e     = function(){ return EML(ONE, ONE); };
+F.exp   = function(x){ return EML(x, ONE); };
+F.ln    = function(x){ return EML(ONE, EML(EML(ONE,x), ONE)); };
+F.sub   = function(x,y){ return EML(F.ln(x), F.exp(y)); };
+F.minus = function(x){ return F.sub(F.sub(ONE,x), ONE); };
+F.neg1  = function(){ return F.minus(ONE); };
+F.add   = function(x,y){ return F.sub(x, F.minus(y)); };
+F.two   = function(){ return F.add(ONE, ONE); };
+F.inv   = function(x){ return F.exp(F.minus(F.ln(x))); };
+F.mul   = function(x,y){ return F.exp(F.add(F.ln(x), F.ln(y))); };
+F.div   = function(x,y){ return F.exp(F.sub(F.ln(x), F.ln(y))); };
+F.sqr   = function(x){ return F.mul(x,x); };
+F.half  = function(x){ return F.div(x, F.two()); };
+F.avg   = function(x,y){ return F.half(F.add(x,y)); };
+F.pow   = function(x,y){ return F.exp(F.mul(y, F.ln(x))); };
+F.sqrt  = function(x){ return F.pow(x, F.inv(F.two())); };
+F.log   = function(b,x){ return F.div(F.ln(x), F.ln(b)); };
+F.sigma = function(x){ return F.inv(F.add(ONE, F.exp(F.minus(x)))); };
+F.hypot = function(x,y){ return F.sqrt(F.add(F.sqr(x), F.sqr(y))); };
+F.cosh  = function(x){ return F.half(F.add(F.exp(x), F.exp(F.minus(x)))); };
+F.sinh  = function(x){ return F.half(F.sub(F.exp(x), F.exp(F.minus(x)))); };
+F.tanh  = function(x){ return F.div(F.sinh(x), F.cosh(x)); };
+F.arsinh= function(x){ return F.ln(F.add(x, F.sqrt(F.add(F.sqr(x), ONE)))); };
+F.arcosh= function(x){ return F.ln(F.add(x, F.sqrt(F.sub(F.sqr(x), ONE)))); };
+F.artanh= function(x){ return F.half(F.ln(F.div(F.add(ONE,x), F.sub(ONE,x)))); };
+F.i     = function(){ return F.pow(F.neg1(), F.inv(F.two())); };
+F.pi    = function(){ return F.mul(F.minus(F.i()), F.ln(F.neg1())); };
+F.cos   = function(x){ var ix = F.mul(F.i(), x);
+                       return F.half(F.add(F.exp(ix), F.exp(F.minus(ix)))); };
+F.sin   = function(x){ var ix = F.mul(F.i(), x);
+                       return F.div(F.sub(F.exp(ix), F.exp(F.minus(ix))), F.mul(F.two(), F.i())); };
+F.tan   = function(x){ return F.div(F.sin(x), F.cos(x)); };
+F.arcsin= function(x){ return F.mul(F.minus(F.i()),
+                       F.ln(F.add(F.mul(F.i(),x), F.sqrt(F.sub(ONE, F.sqr(x)))))); };
+F.arccos= function(x){ return F.sub(F.half(F.pi()), F.arcsin(x)); };
+F.arctan= function(x){ return F.arcsin(F.div(x, F.sqrt(F.add(ONE, F.sqr(x))))); };
+
+/* pure-EML leaf counts under THIS chain (K = 2L − 1) */
+var LF = {};
+LF.exp=function(a){return a+1;}; LF.ln=function(a){return a+3;};
+LF.sub=function(a,b){return LF.ln(a)+LF.exp(b);};
+LF.minus=function(a){return LF.sub(LF.sub(1,a),1);};
+LF.add=function(a,b){return LF.sub(a,LF.minus(b));};
+LF.inv=function(a){return LF.exp(LF.minus(LF.ln(a)));};
+LF.mul=function(a,b){return LF.exp(LF.add(LF.ln(a),LF.ln(b)));};
+LF.div=function(a,b){return LF.exp(LF.sub(LF.ln(a),LF.ln(b)));};
+LF.sqr=function(a){return LF.mul(a,a);};
+LF.two=function(){return LF.add(1,1);};
+LF.half=function(a){return LF.div(a,LF.two());};
+LF.avg=function(a,b){return LF.half(LF.add(a,b));};
+LF.pow=function(a,b){return LF.exp(LF.mul(b,LF.ln(a)));};
+LF.sqrt=function(a){return LF.pow(a,LF.inv(LF.two()));};
+LF.log=function(a,b){return LF.div(LF.ln(b),LF.ln(a));};
+LF.sigma=function(a){return LF.inv(LF.add(1,LF.exp(LF.minus(a))));};
+LF.hypot=function(a,b){return LF.sqrt(LF.add(LF.sqr(a),LF.sqr(b)));};
+LF.cosh=function(a){return LF.half(LF.add(LF.exp(a),LF.exp(LF.minus(a))));};
+LF.sinh=function(a){return LF.half(LF.sub(LF.exp(a),LF.exp(LF.minus(a))));};
+LF.tanh=function(a){return LF.div(LF.sinh(a),LF.cosh(a));};
+LF.arsinh=function(a){return LF.ln(LF.add(a,LF.sqrt(LF.add(LF.sqr(a),1))));};
+LF.arcosh=function(a){return LF.ln(LF.add(a,LF.sqrt(LF.sub(LF.sqr(a),1))));};
+LF.artanh=function(a){return LF.half(LF.ln(LF.div(LF.add(1,a),LF.sub(1,a))));};
+LF.neg1=function(){return LF.minus(1);};
+LF.i=function(){return LF.pow(LF.neg1(),LF.inv(LF.two()));};
+LF.pi=function(){return LF.mul(LF.minus(LF.i()),LF.ln(LF.neg1()));};
+LF.cos=function(a){var ix=LF.mul(LF.i(),a);return LF.half(LF.add(LF.exp(ix),LF.exp(LF.minus(ix))));};
+LF.sin=function(a){var ix=LF.mul(LF.i(),a);return LF.div(LF.sub(LF.exp(ix),LF.exp(LF.minus(ix))),LF.mul(LF.two(),LF.i()));};
+LF.tan=function(a){return LF.div(LF.sin(a),LF.cos(a));};
+LF.arcsin=function(a){return LF.mul(LF.minus(LF.i()),LF.ln(LF.add(LF.mul(LF.i(),a),LF.sqrt(LF.sub(1,LF.sqr(a))))));};
+LF.arccos=function(a){return LF.sub(LF.half(LF.pi()),LF.arcsin(a));};
+LF.arctan=function(a){return LF.arcsin(LF.div(a,LF.sqrt(LF.add(1,LF.sqr(a)))));};
+
+/* the agreement meter — Thea math core, verbatim law */
+function degrees(approx, exact){
+  if(!isFinite(approx)) return 0;
+  var e = Math.abs(exact) > 1e-300 ? Math.abs((approx-exact)/exact)
+                                   : Math.abs(approx-exact);
+  if(e <= 0) return 15.9;
+  return Math.max(0, Math.min(15.9, -Math.log(e)/Math.LN10));
+}
+function samples(lo, hi, n, seed){
+  var s = seed>>>0, out = [], i, t, j;
+  for(i=0;i<n;i++){
+    s = (1664525*s + 1013904223)>>>0;
+    j = (s/4294967296 - 0.5) * 0.6 / n;
+    t = n===1 ? 0.5 : i/(n-1);
+    out.push(lo + (hi-lo)*Math.min(1, Math.max(0, t + j)));
+  }
+  return out;
+}
+var N = 16, TOL = 9.0;
+
+/* ================= NODE REGISTRY — the phylogeny ================= */
+/* family: luca | one | konst | core | hyp | circ  ·  order = spiral index (design, after Fig.1) */
+var FAM_COLOR = {luca:'#ff5470', one:'#7fff9f', konst:'#7fff9f', core:'#8892b0', hyp:'#ff69b4', circ:'#6ab4ff'};
+var FAM_NAME  = {luca:'LUCA', one:'terminal', konst:'constant', core:'algebra', hyp:'hyperbolic', circ:'circular'};
+
+function vspec1(fn, ref, lo, hi, seed, guard){
+  return function(){
+    var xs = samples(lo,hi,N,seed), worst=16, wx=null, k;
+    for(k=0;k<xs.length;k++){
+      if(guard && !guard(xs[k])) continue;
+      var z = fn(C(xs[k],0)), r = ref(xs[k]);
+      var d = (!isFinite(z.re) || Math.abs(z.im) > 1e-8*Math.max(1,Math.abs(z.re))) ? 0 : degrees(z.re, r);
+      if(d < worst){ worst=d; wx=xs[k]; }
+    }
+    return {D:worst, at:(wx===null?'—':wx.toFixed(3))};
+  };
+}
+function vspec2(fn, ref, x0,x1,y0,y1, seed, guard){
+  return function(){
+    var xs = samples(x0,x1,N,seed), ys = samples(y0,y1,N,(seed^0x9e37)>>>0), worst=16, wp=null, k;
+    for(k=0;k<xs.length;k++){
+      var x = xs[k], y = ys[(k*7+3)%N];
+      if(guard && !guard(x,y)) continue;
+      var z = fn(C(x,0), C(y,0)), r = ref(x,y);
+      var d = (!isFinite(z.re) || Math.abs(z.im) > 1e-8*Math.max(1,Math.abs(z.re))) ? 0 : degrees(z.re, r);
+      if(d < worst){ worst=d; wp='('+x.toFixed(2)+', '+y.toFixed(2)+')'; }
+    }
+    return {D:worst, at:(wp===null?'—':wp)};
+  };
+}
+function vconst(getC, want){
+  return function(){ var z = getC(); return {D:degrees(z.re, want), at:'single value'}; };
+}
+function vprop_i(){
+  return function(){
+    var iC = F.i(), sq = cmulRaw(iC, iC);
+    var err = Math.hypot(sq.re + 1, sq.im);
+    var D = err<=0 ? 15.9 : Math.max(0, Math.min(15.9, -Math.log(err)/Math.LN10));
+    return {D:D, at:'i² vs −1'};
+  };
+}
+
+var NODES = [
+ {id:'eml', sym:'eml', name:'eml — the LUCA', fam:'luca', order:-2, arity:2,
+  ident:'eml(x, y) = exp(x) − ln(y)',
+  chain:'the axiom — nothing lowers it', srcs:[], direct:false, Kp:'—',
+  cav:'The single operator. Non-commutative; internally over ℂ (principal branch). The whole spiral is its descent.',
+  verify:vspec2(function(a,b){return EML(a,b);}, function(x,y){return Math.exp(x)-Math.log(y);}, -3,3, 0.2,6, 7, null)},
+ {id:'one', sym:'1', name:'1 — the terminal', fam:'one', order:-1, arity:0,
+  ident:'the distinguished constant',
+  chain:'the seed — ln(1) = 0 neutralizes the log term', srcs:[], direct:false, Kp:'K = 1',
+  cav:'Without 1, the logarithmic term cannot be silenced. Grammar: S → 1 | eml(S,S).',
+  verify:function(){ return {D:15.9, at:'axiomatic'}; }},
+
+ {id:'e', sym:'e', name:'e', fam:'konst', order:0, arity:0,
+  ident:'e = eml(1, 1) = e¹ − ln 1',
+  chain:'eml(1,1)', srcs:['eml','one'], direct:true, Kmine:2, Kp:'—',
+  cav:'The first descent the search found.',
+  verify:vconst(function(){return F.e();}, Math.E)},
+ {id:'exp', sym:'exp', name:'exp', fam:'core', order:1, arity:1,
+  ident:'eᶻ = eml(z, 1)',
+  chain:'eml(z,1)', srcs:['eml','one'], direct:true, Kmine:2, Kp:'depth 1 (paper)',
+  cav:'Sampled z ∈ [−3, 3].',
+  verify:vspec1(F.exp, Math.exp, -3,3, 11, null)},
+ {id:'ln', sym:'ln', name:'ln', fam:'core', order:2, arity:1,
+  ident:'ln z = eml(1, eml(eml(1,z), 1))  ≡  e − ln(eᵉ/z)',
+  chain:'eml(1, eml(eml(1,z), 1)) — Eq. (5), pure eml/1', srcs:['eml','one'], direct:true, Kmine:4, Kp:'K = 7 (paper Eq. 5)',
+  cav:'Sampled z ∈ (0.05, 20). On the negative real axis this chain sits exactly on the branch cut — see receipts.',
+  verify:vspec1(F.ln, Math.log, 0.05,20, 12, null)},
+ {id:'sub', sym:'−', name:'subtraction', fam:'core', order:3, arity:2,
+  ident:'x − y = eml(ln x, exp y)',
+  chain:'eml(ln x, exp y)', srcs:['eml','ln','exp'], direct:false, Kmine:6, Kp:'—',
+  cav:'exp∘ln and ln∘exp cancel on the principal strip. x = 0 rides the extended-reals lane ln 0 = −∞, e⁻∞ = 0. Sampled x, y ∈ [−4, 4].',
+  verify:vspec2(F.sub, function(x,y){return x-y;}, -4,4,-4,4, 13, function(x){return Math.abs(x)>1e-6;})},
+ {id:'minus', sym:'−z', name:'negation', fam:'core', order:4, arity:1,
+  ident:'−z = (1 − z) − 1 = sub(sub(1, z), 1)',
+  chain:'sub(sub(1,z), 1)', srcs:['sub','one'], direct:false, Kmine:11, Kp:'—',
+  cav:'At z = 1 the inner term is 0 and the chain survives via ln 0 = −∞ (measured: minus(1) = −1 exactly). Sampled z ∈ [−4, 4].',
+  verify:vspec1(F.minus, function(x){return -x;}, -4,4, 14, null)},
+ {id:'neg1', sym:'−1', name:'−1', fam:'konst', order:5, arity:0,
+  ident:'−1 = minus(1)',
+  chain:'minus(1)', srcs:['minus','one'], direct:false, Kmine:11, Kp:'K = 15 (search) / 17 (compiler)',
+  cav:'Paper Table 4. This chain lands at K = 21; different route, both shown, never merged.',
+  verify:vconst(function(){return F.neg1();}, -1)},
+ {id:'add', sym:'+', name:'addition', fam:'core', order:6, arity:2,
+  ident:'x + y = x − (−y) = sub(x, minus(y))',
+  chain:'sub(x, minus(y))', srcs:['sub','minus'], direct:false, Kmine:16, Kp:'—',
+  cav:'Sampled x, y ∈ [−4, 4]; x = 0 works through the extended-reals lane.',
+  verify:vspec2(F.add, function(x,y){return x+y;}, -4,4,-4,4, 15, function(x){return Math.abs(x)>1e-6;})},
+ {id:'two', sym:'2', name:'2', fam:'konst', order:7, arity:0,
+  ident:'2 = add(1, 1)',
+  chain:'add(1,1)', srcs:['add','one'], direct:false, Kmine:16, Kp:'K = 19 (search) / 27 (compiler)',
+  cav:'This chain: K = 31. All integers follow by repetition.',
+  verify:vconst(function(){return F.two();}, 2)},
+ {id:'inv', sym:'1/z', name:'reciprocal', fam:'core', order:8, arity:1,
+  ident:'1/z = e^(−ln z) = exp(minus(ln z))',
+  chain:'exp(minus(ln z))', srcs:['exp','minus','ln'], direct:false, Kmine:15, Kp:'—',
+  cav:'Sampled |z| ∈ (0.1, 5), both signs.',
+  verify:function(){
+    var a = vspec1(F.inv, function(x){return 1/x;}, 0.1,5, 16, null)();
+    var b = vspec1(F.inv, function(x){return 1/x;}, -5,-0.1, 161, null)();
+    return (a.D <= b.D) ? a : b;
+  }},
+ {id:'mul', sym:'×', name:'multiplication', fam:'core', order:9, arity:2,
+  ident:'x·y = e^(ln x + ln y)',
+  chain:'exp(add(ln x, ln y)) — the slide-rule identity, Eq. (1)', srcs:['exp','add','ln'], direct:false, Kmine:23, Kp:'depth 8 (paper)',
+  cav:'Exact on negative arguments too: the ±iπ from each log sums to a full turn that exp annihilates. Sampled x, y ∈ [−4, 4].',
+  verify:vspec2(F.mul, function(x,y){return x*y;}, -4,4,-4,4, 17, function(x,y){return Math.abs(x)>1e-6&&Math.abs(y)>1e-6;})},
+ {id:'div', sym:'÷', name:'division', fam:'core', order:10, arity:2,
+  ident:'x/y = e^(ln x − ln y)',
+  chain:'exp(sub(ln x, ln y))', srcs:['exp','sub','ln'], direct:false, Kmine:13, Kp:'—',
+  cav:'Sampled x ∈ [−4, 4], y ∈ (0.2, 4).',
+  verify:vspec2(F.div, function(x,y){return x/y;}, -4,4, 0.2,4, 18, function(x){return Math.abs(x)>1e-6;})},
+ {id:'sqr', sym:'z²', name:'square', fam:'core', order:11, arity:1,
+  ident:'z² = mul(z, z)',
+  chain:'mul(z,z)', srcs:['mul'], direct:false, Kmine:23, Kp:'—',
+  cav:'Sampled z ∈ [−4, 4].',
+  verify:vspec1(F.sqr, function(x){return x*x;}, -4,4, 19, null)},
+ {id:'half', sym:'z/2', name:'half', fam:'core', order:12, arity:1,
+  ident:'z/2 = div(z, 2)',
+  chain:'div(z, 2)', srcs:['div','two'], direct:false, Kmine:28, Kp:'1/2: K = 29 (search) / 91 (compiler)',
+  cav:'The constant 1/2 itself is inv(2). Sampled z ∈ [−6, 6].',
+  verify:vspec1(F.half, function(x){return x/2;}, -6,6, 20, null)},
+ {id:'avg', sym:'x+y⁄2', name:'average', fam:'core', order:13, arity:2,
+  ident:'avg(x,y) = half(add(x, y))',
+  chain:'half(add(x,y))', srcs:['half','add'], direct:false, Kmine:43, Kp:'—',
+  cav:'Sampled x, y ∈ [−4, 4].',
+  verify:vspec2(F.avg, function(x,y){return (x+y)/2;}, -4,4,-4,4, 21, function(x,y){return Math.abs(x)>1e-6&&Math.abs(x+y)>1e-6;})},
+ {id:'pow', sym:'xʸ', name:'exponentiation', fam:'core', order:14, arity:2,
+  ident:'xʸ = e^(y·ln x)',
+  chain:'exp(mul(y, ln x))', srcs:['exp','mul','ln'], direct:false, Kmine:27, Kp:'—',
+  cav:'Sampled x ∈ (0.2, 4), y ∈ [−3, 3]; negative bases live on the complex sheet.',
+  verify:vspec2(function(a,b){return F.pow(a,b);}, Math.pow, 0.2,4,-3,3, 22, null)},
+ {id:'sqrt', sym:'√z', name:'square root', fam:'core', order:15, arity:1,
+  ident:'√z = z^(1/2) = pow(z, inv(2))',
+  chain:'pow(z, inv(2))', srcs:['pow','inv','two'], direct:false, Kmine:56, Kp:'√2: K > 47 (search) / 165 (compiler)',
+  cav:'Sampled z ∈ (0.05, 9).',
+  verify:vspec1(F.sqrt, Math.sqrt, 0.05,9, 23, null)},
+ {id:'logb', sym:'log', name:'log base b', fam:'core', order:16, arity:2,
+  ident:'log_b x = ln x / ln b = div(ln x, ln b)',
+  chain:'div(ln x, ln b)', srcs:['div','ln'], direct:false, Kmine:19, Kp:'—',
+  cav:'Sampled b ∈ (0.3, 5) away from 1, x ∈ (0.3, 6). Inputs (b, x).',
+  verify:vspec2(function(b,x){return F.log(b,x);}, function(b,x){return Math.log(x)/Math.log(b);}, 0.3,5, 0.3,6, 24, function(b){return Math.abs(b-1)>0.05;})},
+ {id:'sigma', sym:'σ', name:'sigmoid', fam:'core', order:17, arity:1,
+  ident:'σ(z) = 1 / (1 + e⁻ᶻ) = inv(add(1, exp(minus z)))',
+  chain:'inv(add(1, exp(minus(z))))', srcs:['inv','add','exp','minus','one'], direct:false, Kmine:41, Kp:'—',
+  cav:'The neural-net gate is itself elementary — every conventional network is a special case of an EML tree (paper). Sampled z ∈ [−6, 6].',
+  verify:vspec1(F.sigma, function(x){return 1/(1+Math.exp(-x));}, -6,6, 25, null)},
+ {id:'hypot', sym:'hyp', name:'hypotenuse', fam:'core', order:18, arity:2,
+  ident:'hypot(x,y) = √(x² + y²)',
+  chain:'sqrt(add(sqr x, sqr y))', srcs:['sqrt','add','sqr'], direct:false, Kmine:115, Kp:'—',
+  cav:'Sampled x, y ∈ [−4, 4] away from the origin.',
+  verify:vspec2(F.hypot, function(x,y){return Math.hypot(x,y);}, -4,4,-4,4, 26, function(x,y){return Math.abs(x)>1e-6&&Math.abs(y)>1e-6;})},
+ {id:'cosh', sym:'cosh', name:'cosh', fam:'hyp', order:19, arity:1,
+  ident:'cosh z = (eᶻ + e⁻ᶻ)/2',
+  chain:'half(add(exp z, exp(minus z)))', srcs:['half','add','exp','minus'], direct:false, Kmine:55, Kp:'—',
+  cav:'The hyperbolic family needs no i. Sampled z ∈ [−3, 3].',
+  verify:vspec1(F.cosh, Math.cosh, -3,3, 27, null)},
+ {id:'sinh', sym:'sinh', name:'sinh', fam:'hyp', order:20, arity:1,
+  ident:'sinh z = (eᶻ − e⁻ᶻ)/2',
+  chain:'half(sub(exp z, exp(minus z)))', srcs:['half','sub','exp','minus'], direct:false, Kmine:45, Kp:'—',
+  cav:'Sampled z ∈ [−3, 3].',
+  verify:vspec1(F.sinh, Math.sinh, -3,3, 28, null)},
+ {id:'tanh', sym:'tanh', name:'tanh', fam:'hyp', order:21, arity:1,
+  ident:'tanh z = sinh z / cosh z',
+  chain:'div(sinh z, cosh z)', srcs:['div','sinh','cosh'], direct:false, Kmine:111, Kp:'—',
+  cav:'Sampled z ∈ [−3, 3].',
+  verify:vspec1(F.tanh, Math.tanh, -3,3, 29, null)},
+ {id:'arsinh', sym:'arsinh', name:'arsinh', fam:'hyp', order:22, arity:1,
+  ident:'arsinh z = ln(z + √(z² + 1))',
+  chain:'ln(add(z, sqrt(add(sqr z, 1))))', srcs:['ln','add','sqrt','sqr','one'], direct:false, Kmine:111, Kp:'—',
+  cav:'Sampled z ∈ [−4, 4].',
+  verify:vspec1(F.arsinh, Math.asinh, -4,4, 30, null)},
+ {id:'arcosh', sym:'arcosh', name:'arcosh', fam:'hyp', order:23, arity:1,
+  ident:'arcosh z = ln(z + √(z² − 1))',
+  chain:'ln(add(z, sqrt(sub(sqr z, 1))))', srcs:['ln','add','sqrt','sub','sqr','one'], direct:false, Kmine:101, Kp:'—',
+  cav:'Real domain z ≥ 1; sampled z ∈ (1.05, 6).',
+  verify:vspec1(F.arcosh, Math.acosh, 1.05,6, 31, null)},
+ {id:'artanh', sym:'artanh', name:'artanh', fam:'hyp', order:24, arity:1,
+  ident:'artanh z = ½ ln((1+z)/(1−z))',
+  chain:'half(ln(div(add(1,z), sub(1,z))))', srcs:['half','ln','div','add','sub','one'], direct:false, Kmine:63, Kp:'—',
+  cav:'Real domain |z| < 1; sampled z ∈ (−0.95, 0.95).',
+  verify:vspec1(F.artanh, Math.atanh, -0.95,0.95, 32, null)},
+ {id:'i', sym:'i', name:'i — the gate to ℂ', fam:'konst', order:25, arity:0,
+  ident:'i = (−1)^½ = pow(−1, inv(2))',
+  chain:'pow(neg1, inv(2))', srcs:['pow','neg1','inv','two'], direct:false, Kmine:66, Kp:'K > 55 (search) / 131 (compiler)',
+  cav:'Verified by its defining property: |i² + 1| measured, since both roots satisfy it. This chain lands on K = 131 — coincidentally the compiler\u2019s number. Which square root you get depends on the branch of ln(−1); see receipts.',
+  verify:vprop_i()},
+ {id:'pi', sym:'π', name:'π', fam:'konst', order:26, arity:0,
+  ident:'π = (−1)·i·ln(−1) = mul(minus(i), ln(−1))',
+  chain:'mul(minus(i), ln(neg1)) — paper Table 2 footnote', srcs:['mul','minus','i','ln','neg1'], direct:false, Kmine:111, Kp:'—',
+  cav:'Branch-robust: if the chain lands on the conjugate root of −1, both factors flip sign and π survives.',
+  verify:vconst(function(){return F.pi();}, Math.PI)},
+ {id:'cos', sym:'cos', name:'cos', fam:'circ', order:27, arity:1,
+  ident:'cos z = (e^{iz} + e^{−iz})/2 — Euler',
+  chain:'half(add(exp(mul(i,z)), exp(minus(mul(i,z)))))', srcs:['half','add','exp','mul','i','minus'], direct:false, Kmine:229, Kp:'—',
+  cav:'Wrapped intermediates (mod 2πi) are consumed only by exp, which is 2πi-periodic — so the chain holds far beyond |z| = π. Sampled z ∈ [−20, 20]; probed to |z| = 300 in receipts.',
+  verify:vspec1(F.cos, Math.cos, -20,20, 33, null)},
+ {id:'sin', sym:'sin', name:'sin', fam:'circ', order:28, arity:1,
+  ident:'sin z = (e^{iz} − e^{−iz})/(2i) — Euler',
+  chain:'div(sub(exp(mul(i,z)), exp(minus(mul(i,z)))), mul(2,i))', srcs:['div','sub','exp','mul','i','two','minus'], direct:false, Kmine:306, Kp:'—',
+  cav:'Odd in i: the conjugate root flips numerator and denominator together. Sampled z ∈ [−20, 20].',
+  verify:vspec1(F.sin, Math.sin, -20,20, 34, null)},
+ {id:'tan', sym:'tan', name:'tan', fam:'circ', order:29, arity:1,
+  ident:'tan z = sin z / cos z',
+  chain:'div(sin z, cos z)', srcs:['div','sin','cos'], direct:false, Kmine:546, Kp:'"trees too large to be shown in print" (paper)',
+  cav:'Sampled z ∈ (−1.3, 1.3), clear of the poles.',
+  verify:vspec1(F.tan, Math.tan, -1.3,1.3, 35, null)},
+ {id:'arcsin', sym:'arcsin', name:'arcsin', fam:'circ', order:30, arity:1,
+  ident:'arcsin z = −i · ln(iz + √(1 − z²))',
+  chain:'mul(minus(i), ln(add(mul(i,z), sqrt(sub(1, sqr z)))))', srcs:['mul','minus','i','ln','add','sqrt','sub','sqr','one'], direct:false, Kmine:285, Kp:'—',
+  cav:'Every imaginary intermediate stays inside |Im| ≤ 1 < π — no wrap. Sampled z ∈ (−0.95, 0.95).',
+  verify:vspec1(F.arcsin, Math.asin, -0.95,0.95, 37, null)},
+ {id:'arccos', sym:'arccos', name:'arccos', fam:'circ', order:31, arity:1,
+  ident:'arccos z = π/2 − arcsin z',
+  chain:'sub(half(pi), arcsin(z))', srcs:['sub','half','pi','arcsin'], direct:false, Kmine:427, Kp:'—',
+  cav:'Sampled z ∈ (−0.95, 0.95).',
+  verify:vspec1(F.arccos, Math.acos, -0.95,0.95, 38, null)},
+ {id:'arctan', sym:'arctan', name:'arctan', fam:'circ', order:32, arity:1,
+  ident:'arctan z = arcsin( z / √(1 + z²) )',
+  chain:'arcsin(div(z, sqrt(add(1, sqr z)))) — wrap-safe route', srcs:['arcsin','div','sqrt','add','sqr','one'], direct:false, Kmine:597, Kp:'—',
+  cav:'DESIGN: the textbook (1/2i)·ln((1+iz)/(1−iz)) route wraps in this chain for |z| > π; this route keeps every imaginary part ≤ 1. Isolated point at z = 0 exactly (ln 0 inside div) — shown as such, never patched over. Sampled z ∈ [−5, 5] \u2216 {0}.',
+  verify:vspec1(F.arctan, Math.atan, -5,5, 36, function(x){return Math.abs(x)>1e-3;})}
+];
+
+var BYID = {}; NODES.forEach(function(n){ BYID[n.id] = n; });
+var SPIRAL = NODES.filter(function(n){ return n.order >= 0; }).sort(function(a,b){ return a.order-b.order; });
+
+/* ================= VERIFY ALL (on load — compute is not motion) ================= */
+function runVerification(){
+  PRICE = 0;
+  var locked = 0, worst = {D:16, id:null};
+  NODES.forEach(function(n){
+    var r = n.verify();
+    n.D = r.D; n.at = r.at; n.locked = (r.D >= TOL);
+    if(n.id !== 'one' && n.locked) locked++;
+    if(n.id !== 'one' && r.D < worst.D){ worst = {D:r.D, id:n.id}; }
+  });
+  var total = NODES.length - 1; /* '1' is axiomatic */
+  document.getElementById('hDerived').textContent = SPIRAL.length + '/33';
+  document.getElementById('hLocked').textContent = locked + '/' + total;
+  var el = document.getElementById('hWorst');
+  el.textContent = 'D = ' + worst.D.toFixed(2) + ' (' + BYID[worst.id].sym + ')';
+  el.className = worst.D >= TOL ? 'grn' : 'fire';
+  document.getElementById('hErr').textContent = '≈ 10^−' + worst.D.toFixed(1);
+  document.getElementById('hPrice').textContent = PRICE.toLocaleString('en-US');
+  return worst;
+}
+
+/* ================= RECEIPTS (honest boundary, computed live) ================= */
+function fmtC(z, dp){
+  dp = dp || 12;
+  if(!isFinite(z.re) || !isFinite(z.im)) return 'isolated point (non-finite)';
+  var im = Math.abs(z.im) < 1e-13 ? '' : (' ' + (z.im<0?'−':'+') + ' ' + Math.abs(z.im).toFixed(dp) + 'i');
+  return z.re.toFixed(dp) + im;
+}
+function buildReceipts(worst){
+  var R = [];
+  var lnm1 = F.ln(C(-1,0));
+  R.push(['ln_chain(−1)  — measured this run', fmtC(lnm1), lnm1.im > 0 ? '' : 'warn']);
+  var iC = F.i();
+  R.push(['i_chain  — which root the branch lands on', fmtC(iC), '']);
+  var m1 = F.minus(C(1,0));
+  R.push(['minus(1)  — through the ln 0 = −∞ lane', fmtC(m1, 1), '']);
+  [3.2, 25, 300].forEach(function(x){
+    var d = degrees(F.sin(C(x,0)).re, Math.sin(x));
+    R.push(['sin_chain(' + x + ')  — beyond the naive |z| = π window', 'D = ' + d.toFixed(2), d>=TOL?'':'warn']);
+  });
+  var a0 = F.arctan(C(0,0));
+  R.push(['arctan_chain(0)', (isFinite(a0.re) ? fmtC(a0) : 'NaN — isolated point, shown as such'), 'warn']);
+  R.push(['worst node this run', BYID[worst.id].sym + '  ·  D = ' + worst.D.toFixed(2) + '  at  ' + BYID[worst.id].at, worst.D>=TOL?'':'warn']);
+  R.push(['price of this receipt', PRICE.toLocaleString('en-US') + ' eml applications', 'gold']);
+  var html = '';
+  R.forEach(function(r){
+    html += '<div class="rc"><span class="k">' + r[0] + '</span><span class="v ' + r[2] + '">' + r[1] + '</span></div>';
+  });
+  document.getElementById('receipts').innerHTML = html;
+  var bn = document.getElementById('branchnote');
+  bn.textContent = 'Branch, measured not narrated: in exact arithmetic, Eq. (5) jumps 2πi on the negative real axis '
+    + '(the paper\u2019s own warning, Sect. 4.1 — its compiler corrects the sign of i by hand). In this build, IEEE754 '
+    + 'rounding of sin(−π) lands on the −0 side of the cut and the chain returns the principal value '
+    + fmtC(lnm1, 6) + ' — hence i_chain = ' + fmtC(iC, 6) + '. Either root is a valid square root of −1; every '
+    + 'real-valued output downstream is invariant under conjugation, and π above is constructed branch-robustly.';
+}
+
+/* ================= THE SPIRAL (canvas) ================= */
+var canvas = document.getElementById('spiral'), ctx = canvas.getContext('2d');
+var rot = 0, spinning = false, lastT = 0, speed = 0.28;
+var unwind = 33, selected = null, dragging = false, dragA = 0, dragR = 0;
+var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+var SZ = 680, DPR = 1;
+
+function layout(){
+  var box = document.getElementById('stage');
+  var w = Math.min(box.clientWidth - 8, 680);
+  SZ = Math.max(300, w);
+  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  canvas.width = SZ*DPR; canvas.height = SZ*DPR;
+  canvas.style.width = SZ + 'px'; canvas.style.height = SZ + 'px';
+  var cx = SZ/2, cy = SZ/2, s = SZ/680;
+  var R0 = 74*s, Rmax = SZ/2 - 34*s, dth = 0.585, th0 = -Math.PI/2 + 0.35;
+  BYID.eml.x = 0; BYID.eml.y = 0; BYID.eml.r = 21*s;
+  BYID.one.x = 40*s*Math.cos(th0+0.9); BYID.one.y = 40*s*Math.sin(th0+0.9); BYID.one.r = 12*s;
+  SPIRAL.forEach(function(n, k){
+    var t = (k+1)/SPIRAL.length;
+    var rr = R0 + (Rmax-R0)*Math.pow(t, 0.94);
+    var th = th0 - (k+1)*dth;
+    n.x = rr*Math.cos(th); n.y = rr*Math.sin(th);
+    n.r = (n.fam==='konst' ? 13.5 : 15)*s;
+  });
+  draw();
+}
+
+function nodePos(n){
+  var c = Math.cos(rot), s = Math.sin(rot);
+  return { x: SZ/2 + n.x*c - n.y*s, y: SZ/2 + n.x*s + n.y*c };
+}
+function visible(n){
+  if(n.order < 0) return true;
+  return n.order < unwind;
+}
+function isAncestor(id, target){ /* is `id` in target's source closure */
+  var seen = {}, stack = [target];
+  while(stack.length){
+    var t = stack.pop();
+    if(seen[t]) continue; seen[t] = 1;
+    var nd = BYID[t]; if(!nd) continue;
+    for(var j=0;j<nd.srcs.length;j++){
+      if(nd.srcs[j] === id) return true;
+      stack.push(nd.srcs[j]);
+    }
+  }
+  return false;
+}
+
+function draw(){
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+  ctx.clearRect(0,0,SZ,SZ);
+  /* faint spiral guide */
+  ctx.strokeStyle = 'rgba(136,146,176,.07)'; ctx.lineWidth = 1;
+  ctx.beginPath();
+  for(var a=0; a<=SPIRAL.length; a+=0.1){
+    var s2 = SZ/680, R0 = 74*s2, Rmax = SZ/2 - 34*s2;
+    var t = a/SPIRAL.length, rr = R0 + (Rmax-R0)*Math.pow(Math.max(t,0.0001), 0.94);
+    var th = (-Math.PI/2 + 0.35) - a*0.585 + rot;
+    var px = SZ/2 + rr*Math.cos(th), py = SZ/2 + rr*Math.sin(th);
+    if(a===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
+  }
+  ctx.stroke();
+
+  /* arrows */
+  NODES.forEach(function(n){
+    if(n.order < 0 || !visible(n)) return;
+    var p2 = nodePos(n);
+    n.srcs.forEach(function(sid){
+      var sN = BYID[sid]; if(!sN || !visible(sN)) return;
+      var p1 = nodePos(sN);
+      var mx = (p1.x+p2.x)/2, my = (p1.y+p2.y)/2;
+      var pull = 0.28;
+      var qx = mx + (SZ/2 - mx)*pull, qy = my + (SZ/2 - my)*pull;
+      var selIn = selected && n.id === selected;
+      var selOut = selected && sid === selected;
+      ctx.beginPath(); ctx.moveTo(p1.x,p1.y); ctx.quadraticCurveTo(qx,qy,p2.x,p2.y);
+      if(selIn){ ctx.strokeStyle = FAM_COLOR[n.fam]; ctx.globalAlpha = 0.9; ctx.lineWidth = 1.8; }
+      else if(selOut){ ctx.strokeStyle = FAM_COLOR[sN.fam]; ctx.globalAlpha = 0.55; ctx.lineWidth = 1.4; }
+      else if(n.direct){ ctx.strokeStyle = '#ffd700'; ctx.globalAlpha = 0.5; ctx.lineWidth = 1.7; }
+      else { ctx.strokeStyle = '#8892b0'; ctx.globalAlpha = selected ? 0.08 : 0.16; ctx.lineWidth = 0.7; }
+      ctx.stroke(); ctx.globalAlpha = 1;
+    });
+  });
+
+  /* nodes */
+  NODES.forEach(function(n){
+    var p = nodePos(n), col = FAM_COLOR[n.fam];
+    var vis = visible(n);
+    ctx.globalAlpha = vis ? 1 : 0.13;
+    /* lock halo */
+    if(vis && n.locked && n.order >= -2){
+      ctx.beginPath(); ctx.arc(p.x, p.y, n.r + 3.5, 0, 6.2832);
+      ctx.strokeStyle = 'rgba(127,255,159,.5)'; ctx.lineWidth = 1; ctx.stroke();
+    }
+    if(selected === n.id){
+      ctx.beginPath(); ctx.arc(p.x, p.y, n.r + 6.5, 0, 6.2832);
+      ctx.strokeStyle = col; ctx.lineWidth = 1.2; ctx.globalAlpha = vis?0.9:0.2; ctx.stroke();
+      ctx.globalAlpha = vis ? 1 : 0.13;
+    }
+    ctx.beginPath(); ctx.arc(p.x, p.y, n.r, 0, 6.2832);
+    ctx.fillStyle = 'rgba(9,12,24,.92)'; ctx.fill();
+    ctx.beginPath(); ctx.arc(p.x, p.y, n.r, 0, 6.2832);
+    ctx.fillStyle = col; ctx.globalAlpha = (vis?1:0.13) * (n.fam==='luca' ? 0.30 : 0.14); ctx.fill();
+    ctx.globalAlpha = vis ? 1 : 0.13;
+    ctx.beginPath(); ctx.arc(p.x, p.y, n.r, 0, 6.2832);
+    ctx.strokeStyle = col; ctx.lineWidth = n.fam==='luca' ? 1.6 : 1.1; ctx.stroke();
+    /* label */
+    var fs = n.sym.length >= 6 ? 8 : (n.sym.length >= 4 ? 9 : 11);
+    ctx.font = '600 ' + (fs*(SZ/680)) + 'px ui-monospace, Menlo, monospace';
+    ctx.fillStyle = n.fam==='luca' ? '#ffb0c0' : '#dfe6f2';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(n.sym, p.x, p.y+0.5);
+    ctx.globalAlpha = 1;
+  });
+}
+
+/* spin loop — runs ONLY while the person has opted in (Curse 13) */
+function loop(t){
+  if(!spinning) return;
+  if(lastT) rot += speed * (t - lastT)/1000;
+  lastT = t;
+  draw();
+  requestAnimationFrame(loop);
+}
+var btnSpin = document.getElementById('btnSpin');
+btnSpin.addEventListener('click', function(){
+  spinning = !spinning;
+  btnSpin.textContent = 'Spin — ' + (spinning ? 'on' : 'off');
+  btnSpin.classList.toggle('on', spinning);
+  document.getElementById('hSpin').textContent = spinning ? 'on' : 'off';
+  document.getElementById('hSpin').className = spinning ? 'grn' : 'pink';
+  lastT = 0;
+  if(spinning) requestAnimationFrame(loop);
+});
+document.getElementById('rSpeed').addEventListener('input', function(e){
+  speed = e.target.value/100;
+});
+
+/* unwind + replay */
+var rUnwind = document.getElementById('rUnwind');
+rUnwind.addEventListener('input', function(e){
+  unwind = +e.target.value;
+  document.getElementById('unwindN').textContent = unwind;
+  draw();
+});
+document.getElementById('btnReplay').addEventListener('click', function(){
+  var k = 0;
+  unwind = 0; rUnwind.value = 0; document.getElementById('unwindN').textContent = 0; draw();
+  var step = function(){
+    k++;
+    unwind = k; rUnwind.value = k; document.getElementById('unwindN').textContent = k;
+    draw();
+    if(k < 33) setTimeout(step, reduced ? 420 : 190);
+  };
+  setTimeout(step, reduced ? 420 : 190);
+});
+
+/* drag to rotate */
+function angOf(ev){
+  var r = canvas.getBoundingClientRect();
+  var x = (ev.touches ? ev.touches[0].clientX : ev.clientX) - r.left - SZ/2;
+  var y = (ev.touches ? ev.touches[0].clientY : ev.clientY) - r.top - SZ/2;
+  return Math.atan2(y, x);
+}
+canvas.addEventListener('pointerdown', function(ev){
+  dragging = true; dragA = angOf(ev); dragR = rot; canvas.setPointerCapture(ev.pointerId);
+});
+canvas.addEventListener('pointermove', function(ev){
+  if(!dragging) return;
+  rot = dragR + (angOf(ev) - dragA);
+  draw();
+});
+canvas.addEventListener('pointerup', function(ev){
+  var moved = Math.abs(rot - dragR) > 0.02;
+  dragging = false;
+  if(!moved){ /* treat as click */
+    var r = canvas.getBoundingClientRect();
+    var x = ev.clientX - r.left, y = ev.clientY - r.top;
+    var best = null, bd = 1e9;
+    NODES.forEach(function(n){
+      if(!visible(n)) return;
+      var p = nodePos(n), d = Math.hypot(p.x-x, p.y-y);
+      if(d < n.r + 7 && d < bd){ bd = d; best = n; }
+    });
+    if(best){ select(best.id); }
+  }
+});
+
+/* ================= INSPECTOR ================= */
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
+function select(id){
+  selected = id;
+  var n = BYID[id];
+  document.getElementById('iHint').style.display = 'none';
+  document.getElementById('iBody').style.display = 'block';
+  document.getElementById('iName').textContent = n.name;
+  var famEl = document.getElementById('iFam');
+  famEl.textContent = FAM_NAME[n.fam];
+  famEl.className = 'fam';
+  famEl.style.color = FAM_COLOR[n.fam]; famEl.style.borderColor = FAM_COLOR[n.fam];
+  var st = '<span class="st exact">exact identity</span>';
+  if(n.id !== 'one') st += '<span class="st computed">computed live</span>';
+  if(n.id === 'arctan') st += '<span class="st design">design route</span>';
+  document.getElementById('iSt').innerHTML = st;
+  document.getElementById('iIdent').textContent = n.ident;
+  document.getElementById('iChain').innerHTML = 'lowers via: <b>' + esc(n.chain) + '</b>' +
+    (n.direct ? ' &nbsp;·&nbsp; <span style="color:#ffd700">direct from eml and 1 — thick arrow</span>' : '');
+  var m = '';
+  m += '<span><span class="k">target </span><span class="v cyan">D ≥ ' + TOL.toFixed(1) + '</span></span>';
+  m += '<span><span class="k">measured </span><span class="v' + (n.D>=TOL?'':' bad') + '">D = ' + n.D.toFixed(2) + '</span></span>';
+  m += '<span><span class="k">err </span><span class="v">≈ 10^−' + n.D.toFixed(1) + '</span></span>';
+  m += '<span><span class="k">worst at </span><span class="v">' + esc(n.at) + '</span></span>';
+  m += '<span><span class="k">N </span><span class="v">' + (n.arity===0 ? 1 : N) + '</span></span>';
+  if(n.Kmine) m += '<span><span class="k">K this chain </span><span class="v gold">' + (2*kOf(n)-1) + '</span></span>';
+  if(n.Kp && n.Kp !== '—') m += '<span><span class="k">paper </span><span class="v cyan">' + esc(n.Kp) + '</span></span>';
+  m += '<span class="badge' + (n.locked?'':' no') + '">' + (n.locked ? 'LOCKED' : 'NOT LOCKED') + '</span>';
+  document.getElementById('iMeter').innerHTML = m;
+  var s = n.srcs.length ? 'composed from: ' : 'axiom — composed from nothing.';
+  n.srcs.forEach(function(sid){ s += '<span data-go="' + sid + '">' + esc(BYID[sid] ? BYID[sid].sym : sid) + '</span>'; });
+  var srcsEl = document.getElementById('iSrcs');
+  srcsEl.innerHTML = s;
+  srcsEl.querySelectorAll('span[data-go]').forEach(function(el){
+    el.addEventListener('click', function(){ select(el.getAttribute('data-go')); });
+  });
+  buildProbe(n);
+  document.getElementById('iCav').textContent = n.cav;
+  document.getElementById('inspect').classList.toggle('locked', !!n.locked);
+  draw();
+}
+function kOf(n){ /* leaf count under this chain for the node applied to bare variables */
+  var f = LF[n.id === 'logb' ? 'log' : n.id];
+  if(!f) return n.Kmine;
+  try { return n.arity === 2 ? f(1,1) : (n.arity === 1 ? f(1) : f()); } catch(e){ return n.Kmine; }
+}
+function refOf(n, x, y){
+  switch(n.id){
+    case 'eml': return Math.exp(x) - Math.log(y);
+    case 'e': return Math.E; case 'neg1': return -1; case 'two': return 2; case 'pi': return Math.PI;
+    case 'exp': return Math.exp(x); case 'ln': return Math.log(x);
+    case 'sub': return x-y; case 'minus': return -x; case 'add': return x+y;
+    case 'inv': return 1/x; case 'mul': return x*y; case 'div': return x/y;
+    case 'sqr': return x*x; case 'half': return x/2; case 'avg': return (x+y)/2;
+    case 'pow': return Math.pow(x,y); case 'sqrt': return Math.sqrt(x); case 'logb': return Math.log(y)/Math.log(x);
+    case 'sigma': return 1/(1+Math.exp(-x)); case 'hypot': return Math.hypot(x,y);
+    case 'cosh': return Math.cosh(x); case 'sinh': return Math.sinh(x); case 'tanh': return Math.tanh(x);
+    case 'arsinh': return Math.asinh(x); case 'arcosh': return Math.acosh(x); case 'artanh': return Math.atanh(x);
+    case 'cos': return Math.cos(x); case 'sin': return Math.sin(x); case 'tan': return Math.tan(x);
+    case 'arcsin': return Math.asin(x); case 'arccos': return Math.acos(x); case 'arctan': return Math.atan(x);
+  }
+  return NaN;
+}
+function chainOf(n, x, y){
+  var X = C(x,0), Y = C(y,0);
+  switch(n.id){
+    case 'eml': return EML(X,Y);
+    case 'e': return F.e(); case 'neg1': return F.neg1(); case 'two': return F.two();
+    case 'pi': return F.pi(); case 'i': return F.i();
+    case 'logb': return F.log(X,Y);
+  }
+  var f = F[n.id];
+  if(!f) return C(NaN,0);
+  return n.arity === 2 ? f(X,Y) : f(X);
+}
+function buildProbe(n){
+  var p = document.getElementById('probe');
+  if(n.arity === 0 && n.id !== 'i'){
+    p.innerHTML = '<span style="color:rgba(223,230,242,.45)">probe:</span> <span class="out" id="pOut"></span>';
+    var z = chainOf(n,0,0);
+    document.getElementById('pOut').textContent = 'chain → ' + fmtC(z, 15) + '   ·   reference → ' + refOf(n,0,0);
+    return;
+  }
+  if(n.id === 'i'){
+    p.innerHTML = '<span style="color:rgba(223,230,242,.45)">probe:</span> <span class="out" id="pOut"></span>';
+    var iC = F.i(), sq = cmulRaw(iC, iC);
+    document.getElementById('pOut').textContent = 'chain → ' + fmtC(iC, 15) + '   ·   chain² → ' + fmtC(sq, 15);
+    return;
+  }
+  var two = n.arity === 2;
+  p.innerHTML = '<span style="color:rgba(223,230,242,.45)">probe:</span> ' +
+    (two ? 'x <input id="pX" value="1.7"> y <input id="pY" value="0.6">'
+         : 'z <input id="pX" value="1.7">') +
+    ' <span class="out" id="pOut"></span>';
+  var go = function(){
+    var x = parseFloat(document.getElementById('pX').value);
+    var y = two ? parseFloat(document.getElementById('pY').value) : 0;
+    var out = document.getElementById('pOut');
+    if(!isFinite(x) || (two && !isFinite(y))){ out.textContent = '—'; return; }
+    var z = chainOf(n, x, y), r = refOf(n, x, y);
+    if(!isFinite(z.re) || Math.abs(z.im) > 1e-6*Math.max(1,Math.abs(z.re))){
+      if(!isFinite(r)){ out.className = 'out'; out.textContent = 'chain → ' + fmtC(z,6) + ' · reference also undefined here'; }
+      else { out.className = 'out iso'; out.textContent = 'isolated point in this chain (cf. paper 4.1) — chain → ' + fmtC(z, 6) + ' · reference → ' + r.toPrecision(10); }
+      return;
+    }
+    out.className = 'out';
+    out.textContent = 'chain → ' + z.re.toPrecision(12) + '   ·   reference → ' + (isFinite(r)? r.toPrecision(12) : '—') + '   ·   D = ' + degrees(z.re, r).toFixed(2);
+  };
+  p.querySelectorAll('input').forEach(function(el){ el.addEventListener('input', go); });
+  go();
+}
+
+/* ================= THE TWO-BUTTON TAPE ================= */
+var TAPE_PROG = ['1','1','x','E','1','E','E']; /* Eq. (5): ln x — K = 7 */
+var tPos = 0, tStack = [];
+function tRender(){
+  var ph = '';
+  TAPE_PROG.forEach(function(tok, k){
+    ph += '<span class="' + (k < tPos ? 'done' : (k === tPos ? '' : '')) + '"' +
+          (k === tPos ? ' style="color:#ffd700"' : '') + '>' + tok + '</span> ';
+  });
+  document.getElementById('tProg').innerHTML = 'tape (ln x, K=7): ' + ph;
+  var sh = '';
+  if(!tStack.length) sh = '<span style="color:rgba(223,230,242,.3)">empty</span>';
+  tStack.forEach(function(z, k){
+    sh = '<div class="cell' + (k===tStack.length-1?' top':'') + '">[' + k + '] ' + fmtC(z, 9) + '</div>' + sh;
+  });
+  document.getElementById('tStack').innerHTML = sh;
+}
+function tExec(tok){
+  var xv = parseFloat(document.getElementById('tX').value);
+  if(tok === '1') tStack.push(C(1,0));
+  else if(tok === 'x') tStack.push(C(isFinite(xv)?xv:2.5, 0));
+  else if(tok === 'E'){
+    if(tStack.length < 2){ document.getElementById('tRes').textContent = 'eml needs two values on the stack.'; return false; }
+    var y = tStack.pop(), x = tStack.pop();
+    tStack.push(EML(x, y));
+  }
+  return true;
+}
+function tDone(){
+  var xv = parseFloat(document.getElementById('tX').value);
+  if(tPos >= TAPE_PROG.length && tStack.length){
+    var top = tStack[tStack.length-1], r = Math.log(xv);
+    document.getElementById('tRes').innerHTML = 'tape complete · top = <b>' + fmtC(top, 12) + '</b> · Math.log(x) = ' +
+      r.toPrecision(12) + ' · D = <b>' + degrees(top.re, r).toFixed(2) + '</b>';
+  }
+}
+document.getElementById('tStep').addEventListener('click', function(){
+  if(tPos >= TAPE_PROG.length) return;
+  if(tExec(TAPE_PROG[tPos])) tPos++;
+  tRender(); tDone();
+});
+document.getElementById('tRun').addEventListener('click', function(){
+  while(tPos < TAPE_PROG.length){ if(!tExec(TAPE_PROG[tPos])) break; tPos++; }
+  tRender(); tDone();
+});
+document.getElementById('tReset').addEventListener('click', function(){
+  tPos = 0; tStack = []; document.getElementById('tRes').textContent = ''; tRender();
+});
+document.getElementById('k1').addEventListener('click', function(){ tExec('1'); tRender(); });
+document.getElementById('kx').addEventListener('click', function(){ tExec('x'); tRender(); });
+document.getElementById('kE').addEventListener('click', function(){ tExec('E'); tRender(); });
+document.getElementById('tX').addEventListener('input', function(){ tDone(); });
+
+/* ================= SECTIONS ================= */
+document.querySelectorAll('.sec .head').forEach(function(h){
+  h.addEventListener('click', function(){ h.parentElement.classList.toggle('open'); });
+});
+
+/* ================= BOOT ================= */
+var worst = runVerification();
+buildReceipts(worst);
+layout();
+tRender();
+select('eml');
+window.addEventListener('resize', function(){ layout(); });
+</script>
+</body></html>

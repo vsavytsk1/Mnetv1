@@ -1,0 +1,416 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>LENS v0.5 BRAINIUM -- spini brain hierarchical-depth lens</title>
+<style>
+  :root{
+    --bg:#050508; --gold:#ffd700; --cyan:#00d4ff; --pink:#ff69b4; --green:#00ffd5;
+    --espresso:#c7894a; --purple:#cc44ff; --dim:#6a6a82; --txt:#e8e0d0;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;background:var(--bg);color:var(--txt);font-family:var(--mono);overflow:hidden}
+  #cv{position:fixed;inset:0;display:block}
+  #hud{position:fixed;top:0;left:0;right:0;padding:10px 14px;display:flex;gap:14px;align-items:flex-start;
+    pointer-events:none;font-size:11px;z-index:10;flex-wrap:wrap}
+  #hud > div{pointer-events:auto;background:rgba(8,8,16,0.78);border:1px solid #20202e;
+    border-radius:8px;padding:8px 11px;backdrop-filter:blur(3px)}
+  #ttl{color:var(--gold);font-size:14px;letter-spacing:0.06em}
+  #sub{color:var(--dim);font-size:10px;margin-top:1px;max-width:560px}
+  #note{color:var(--espresso);font-size:10px;margin-top:5px;max-width:560px;line-height:1.4}
+  #note b{color:var(--gold)}
+  #note .hyp{color:var(--purple)}
+  #still{color:var(--dim);font-size:10px;margin-top:4px}
+  #still b{color:var(--cyan)}
+  #side{margin-left:auto;max-width:280px;color:var(--dim);font-size:10px;line-height:1.5}
+  #side b{color:var(--cyan)} #side .l{color:var(--gold)}
+  #side .row{display:flex;align-items:center;gap:6px;margin:1px 0}
+  #side .sw{width:14px;height:8px;border-radius:2px;display:inline-block}
+
+  /* bottom stack: meters panel above the control bar -- DOM layout so the
+     readouts can never be occluded by the bar (v0.4 bug, chipBloom family) */
+  #stack{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:10;
+    display:flex;flex-direction:column;gap:8px;align-items:center;max-width:96vw}
+  #meters{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;
+    background:rgba(8,8,16,0.9);border:1px solid #20202e;border-radius:10px;padding:9px 12px;
+    font-size:10px;line-height:1.55}
+  .mcol{min-width:196px}
+  .mcol h4{font-size:10px;letter-spacing:0.08em;margin-bottom:2px;font-weight:bold}
+  .mcol.p h4{color:var(--cyan)} .mcol.h h4{color:var(--gold)} .mcol.c h4{color:var(--green)}
+  .mrow{display:flex;justify-content:space-between;gap:10px}
+  .mrow .k{color:var(--dim)} .mrow .v{color:var(--txt)}
+  .tag{color:var(--dim);font-size:9px}
+  .lockon{color:var(--green)} .lockoff{color:var(--espresso)}
+  .gram{color:var(--dim);font-size:9px;margin-top:4px;border-top:1px solid #1c1c28;padding-top:3px}
+
+  #bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:center;
+    background:rgba(8,8,16,0.88);border:1px solid #20202e;border-radius:10px;padding:8px 14px}
+  button{background:#14141f;border:1px solid #2a2a3a;border-radius:6px;color:var(--gold);
+    font:12px var(--mono);padding:6px 11px;cursor:pointer;transition:all .12s}
+  button:hover{border-color:var(--gold)}
+  button.cyan{color:var(--cyan)} button.cyan:hover{border-color:var(--cyan)}
+  button.espresso{color:var(--espresso)} button.espresso:hover{border-color:var(--espresso)}
+  button.pink{color:var(--pink)} button.pink:hover{border-color:var(--pink)}
+  input[type=range]{appearance:none;width:74px;height:4px;background:#2a2a3a;border-radius:3px;outline:none}
+  input[type=range]::-webkit-slider-thumb{appearance:none;width:13px;height:13px;border-radius:50%;background:var(--gold);cursor:pointer}
+  .sep{width:1px;height:22px;background:#2a2a3a;margin:0 3px}
+  .klbl{color:var(--dim);font-size:10px;letter-spacing:0.06em}
+  .klbl.p{color:#3f8ca6} .klbl.h{color:#a68f2e}
+  .val{color:var(--gold);font-size:11px;min-width:18px;text-align:right}
+
+  .wip{position:fixed;left:14px;bottom:14px;background:rgba(8,8,16,0.85);border:1px solid #c7894a;
+    border-radius:8px;padding:6px 10px;font-size:10px;color:var(--espresso);z-index:9;max-width:330px;line-height:1.4}
+  .wip b{color:var(--gold)}
+  @media (max-width:860px){ .wip{display:none} }
+</style>
+</head>
+<body>
+<canvas id="cv" width="1280" height="720"></canvas>
+
+<div id="hud">
+  <div>
+    <div id="ttl">LENS v0.5 BRAINIUM -- hierarchical-depth lens</div>
+    <div id="sub">left: <b style="color:var(--cyan)">PORTIA</b> jumping spider · right: <b style="color:var(--gold)">HUMAN</b> · same motif, different depth · width · serial passes</div>
+    <div id="note">claim under test <span class="hyp">[HYPOTHESIS]</span>: <b>"the diff is minimal complex fractality for different functions"</b> -- fractal = <b>HIERARCHY</b> (THEA sec 15, K2). NOT a neural sim. Qualitative lens; counts are EXACT integer sums.</div>
+    <div id="still">still on load -- <b>motion is opt-in</b> (Curse 13). press play.</div>
+  </div>
+  <div id="side">
+    each ring = one <span class="l">hierarchical level</span><br>
+    each dot = a <span class="l">circuit motif</span> (NOT a neuron)<br>
+    <div class="row"><span class="sw" style="background:#c7894a"></span>L0 sensory tile</div>
+    <div class="row"><span class="sw" style="background:#00d4ff"></span>L1 local integrator</div>
+    <div class="row"><span class="sw" style="background:#ffd700"></span>L2 column</div>
+    <div class="row"><span class="sw" style="background:#00ffd5"></span>L3 region planner</div>
+    <div class="row"><span class="sw" style="background:#ff69b4"></span>L4 cross-region</div>
+    <div class="row"><span class="sw" style="background:#cc44ff"></span>L5+ meta / global</div>
+    <br>
+    ripple = one pass through the levels<br>
+    PORTIA re-runs n passes per decision --<br>
+    <b>depth virtualized in time</b>
+  </div>
+</div>
+
+<div id="stack">
+  <div id="meters">
+    <div class="mcol p" id="mp-portia"></div>
+    <div class="mcol c" id="mp-core"></div>
+    <div class="mcol h" id="mp-human"></div>
+  </div>
+  <div id="bar">
+    <span class="klbl p">P depth</span><input id="dP" type="range" min="2" max="7" step="1" value="4"><span class="val" id="dPv">4</span>
+    <span class="klbl p">P branch</span><input id="bP" type="range" min="2" max="8" step="1" value="3"><span class="val" id="bPv">3</span>
+    <span class="klbl p">P passes</span><input id="nP" type="range" min="1" max="30" step="1" value="12"><span class="val" id="nPv">12</span>
+    <span class="sep"></span>
+    <span class="klbl h">H depth</span><input id="dH" type="range" min="3" max="12" step="1" value="7"><span class="val" id="dHv">7</span>
+    <span class="klbl h">H branch</span><input id="bH" type="range" min="2" max="8" step="1" value="3"><span class="val" id="bHv">3</span>
+    <span class="sep"></span>
+    <button id="play" class="cyan">play</button>
+    <button id="step" class="espresso">step</button>
+    <button id="reset" class="pink">reset</button>
+  </div>
+</div>
+
+<div class="wip">
+  <b>WIP -- seed dossier:</b> _private/grimoires/2026-06-17_brainium_spini_brain_pop.md<br>
+  audited against: KERNELIMAGIC (38 curses) · 12 PATHS · THEA v3.0 grammar<br>
+  <b>K1</b> no real spikes · <b>K2</b> fractal = hierarchy · <b>K3</b> single HTML, Genesis kernel · <b>K4</b> target != result: err shown, lock earned<br>
+  v0.4 frozen · v0.5 = copy + edit (Path X)
+</div>
+
+<script>
+  // ====== GENESIS KERNEL (L127) -- no DPR, no setTransform, no getBoundingClientRect ======
+  const cv = document.getElementById('cv');
+  const ctx = cv.getContext('2d');
+  let W = 0, H = 0;
+  function resize(){ W = cv.width = innerWidth; H = cv.height = innerHeight; }
+  resize();
+
+  // ====== CAVE PALETTE per level ======
+  const LEVEL_COLORS = [
+    '#c7894a', // L0 espresso  -- sensory tile
+    '#00d4ff', // L1 cyan      -- local integrator
+    '#ffd700', // L2 gold      -- column
+    '#00ffd5', // L3 green     -- region planner
+    '#ff69b4', // L4 pink      -- cross-region
+    '#cc44ff', // L5 purple    -- meta
+    '#9966ff', // L6
+    '#aa77ff', // L7
+    '#bb88ff', // L8
+    '#c599ff', // L9
+    '#cfaaff', // L10
+    '#d9bbff'  // L11
+  ];
+
+  // ====== EXTERNAL ANCHORS (literature values, not derived here) ======
+  const NEURONS_P = 6.0e5;      // EXTERNAL ~ jumping spider CNS, order of magnitude
+  const NEURONS_H = 8.6e10;     // EXTERNAL ~ Herculano-Houzel human count
+  const TARGET_RATIO = NEURONS_H / NEURONS_P;          // ~143,333x
+  const TARGET_LOG = Math.log(TARGET_RATIO) / Math.LN10;
+
+  // ====== DESIGN CHOICES (tolerances, caps, tempo -- chosen, not derived) ======
+  const TOL_LOG = 0.05;         // capacity lock tolerance, log10 units
+  const LOCK_FRAMES = 45;       // lock is EARNED: err<=tol held this many frames (Pattern D)
+  const MAX_DOTS = 220;         // render cap per ring; TRUE counts stay exact (K3 fence)
+  const STEPF = 18;             // frames per hierarchical level in the ripple
+  const GOLDEN_ANGLE = 2.399963229728653; // 2*pi*(1 - 1/phi) -- the real one this time
+
+  // ====== STATE ======
+  let dP = 4, bP = 3, nP = 12;  // Portia: depth, branch, serial passes per decision
+  let dH = 7, bH = 3;           // Human: depth, branch (one deep pass per decision)
+  let playing = false;          // Curse 13: motion is opt-in. The user starts still.
+  let t = 0;
+  let lockCount = 0;            // consecutive frames with err <= tol
+
+  // ====== EXACT INTEGER CORE (THEA Pattern A: BigInt first, floats only for ratios) ======
+  function bigPow(base, exp){
+    let r = 1n; const b = BigInt(base);
+    for (let i = 0; i < exp; i++) r *= b;
+    return r;
+  }
+  function motifTotal(branch, depth){        // sum_{i=0}^{depth-1} branch^i  (EXACT)
+    let s = 0n, term = 1n; const b = BigInt(branch);
+    for (let i = 0; i < depth; i++){ s += term; term *= b; }
+    return s;
+  }
+
+  // ====== HIERARCHY BUILD (deterministic per side) ======
+  function buildSide(depth, branch, cx, cy, maxR){
+    const rings = [];
+    let term = 1n; const bb = BigInt(branch);
+    for (let i = 0; i < depth; i++){
+      const trueCount = term;                          // EXACT b^i
+      const drawCount = Number(trueCount < BigInt(MAX_DOTS) ? trueCount : BigInt(MAX_DOTS));
+      const radius = maxR * (i + 1) / depth;
+      const dots = [];
+      const phase = i * GOLDEN_ANGLE;
+      for (let j = 0; j < drawCount; j++){
+        const a = (j / drawCount) * Math.PI * 2 + phase;
+        dots.push({ x: cx + Math.cos(a) * radius, y: cy + Math.sin(a) * radius });
+      }
+      rings.push({ level: i, radius, dots, trueCount });
+      term *= bb;
+    }
+    return { rings, depth, cx, cy, maxR, total: motifTotal(branch, depth) };
+  }
+
+  let portia = null, human = null;
+  function rebuild(){
+    const cy = H * 0.44;
+    const maxR = Math.max(84, Math.min(W * 0.20, H * 0.30) - 6);
+    portia = buildSide(dP, bP, W * 0.25, cy, maxR);
+    human  = buildSide(dH, bH, W * 0.75, cy, maxR);
+    lockCount = 0;                                     // config changed -> re-earn the lock
+  }
+
+  // ====== DRAW ======
+  function drawSide(side, label, accent, passes){
+    const { rings, cx, cy, maxR, depth } = side;
+
+    ctx.strokeStyle = '#1a1a26';
+    ctx.lineWidth = 1;
+    for (let i = 0; i < depth; i++){
+      ctx.beginPath();
+      ctx.arc(cx, cy, rings[i].radius, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    // edges: stride-sample parents around the WHOLE ring (v0.4 clustered the first 80)
+    for (let i = 0; i < depth - 1; i++){
+      const pa = rings[i], ch = rings[i + 1];
+      ctx.strokeStyle = LEVEL_COLORS[i] + '18';
+      ctx.lineWidth = 0.6;
+      const A = pa.dots.length, C = ch.dots.length;
+      const stride = Math.max(1, Math.ceil(A / 80));
+      for (let j = 0; j < A; j += stride){
+        const da = pa.dots[j];
+        const db = ch.dots[Math.min(C - 1, Math.round(j * C / A))];
+        ctx.beginPath();
+        ctx.moveTo(da.x, da.y);
+        ctx.lineTo(db.x, db.y);
+        ctx.stroke();
+      }
+    }
+
+    for (let i = 0; i < depth; i++){
+      ctx.fillStyle = LEVEL_COLORS[i % LEVEL_COLORS.length];
+      const r = i === 0 ? 4 : Math.max(1.5, 3.5 - i * 0.35);
+      for (const d of rings[i].dots){
+        ctx.beginPath();
+        ctx.arc(d.x, d.y, r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    // ripple: one pass = depth levels traversed. deeper = more steps (the point).
+    // METAPHOR: 1 level = 1 ripple-step. Nothing about real conduction times.
+    const passLen = depth * STEPF;
+    const full = passLen * passes;                     // frames per DECISION
+    const inPass = t % passLen;
+    const phase = inPass / passLen;
+    const passIdx = Math.floor((t % full) / passLen);
+    const rippleR = phase * maxR * 1.05;
+    ctx.strokeStyle = accent;
+    ctx.globalAlpha = 0.85 * (1 - phase * 0.6);
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(cx, cy, rippleR, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+
+    // decision flash: the moment the last pass completes
+    const sinceDecision = t % full;
+    if (t > 0 && sinceDecision < 14){
+      ctx.strokeStyle = accent;
+      ctx.globalAlpha = 0.9 * (1 - sinceDecision / 14);
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(cx, cy, maxR * 1.06, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+
+    const lvlIdx = Math.min(depth - 1, Math.floor(phase * depth));
+    ctx.fillStyle = LEVEL_COLORS[lvlIdx];
+    ctx.font = '11px ui-monospace,Consolas,monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('L' + lvlIdx, cx, cy - rippleR - 6);
+
+    ctx.fillStyle = accent;
+    ctx.font = 'bold 13px ui-monospace,Consolas,monospace';
+    ctx.fillText(label, cx, cy + maxR + 24);
+
+    ctx.fillStyle = '#9a93a8';
+    ctx.font = '10px ui-monospace,Consolas,monospace';
+    ctx.fillText(passes > 1 ? ('pass ' + (passIdx + 1) + '/' + passes) : 'one deep pass',
+                 cx, cy + maxR + 40);
+
+    return Math.floor(t / full);                       // decisions completed (EXACT count of a METAPHOR)
+  }
+
+  function frame(){
+    if (!portia || !human) rebuild();
+    ctx.fillStyle = '#050508';
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.strokeStyle = '#15151f';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(W / 2, 64);
+    ctx.lineTo(W / 2, H - 220);
+    ctx.stroke();
+
+    const decP = drawSide(portia, 'PORTIA', '#00d4ff', nP);
+    const decH = drawSide(human,  'HUMAN',  '#ffd700', 1);
+
+    // lock bookkeeping ticks every frame (a settle debounce, not motion)
+    const errLog = capacityErr();
+    if (errLog <= TOL_LOG){ lockCount = Math.min(LOCK_FRAMES, lockCount + 1); }
+    else { lockCount = 0; }
+
+    if (t % 6 === 0) renderMeters(decP, decH);
+
+    if (playing) t++;
+    requestAnimationFrame(frame);
+  }
+
+  // ====== METERS (Pattern D: target, current, err SEPARATE; lock EARNED; never averaged) ======
+  function capacityRatio(){ return Number(human.total) / Number(portia.total); }
+  function capacityErr(){
+    return Math.abs(Math.log(capacityRatio()) / Math.LN10 - TARGET_LOG);
+  }
+  function fmtRatio(r){
+    if (r >= 1000) return Math.round(r).toLocaleString('en-US') + 'x';
+    return r.toFixed(1) + 'x';
+  }
+  function row(k, v){
+    return '<div class="mrow"><span class="k">' + k + '</span><span class="v">' + v + '</span></div>';
+  }
+  function renderMeters(decP, decH){
+    const pEl = document.getElementById('mp-portia');
+    const cEl = document.getElementById('mp-core');
+    const hEl = document.getElementById('mp-human');
+    if (!pEl || !cEl || !hEl) return;
+
+    pEl.innerHTML =
+      '<h4>PORTIA</h4>' +
+      row('depth . branch', dP + ' . ' + bP) +
+      row('passes / decision', String(nP)) +
+      row('motifs &Sigma;b^i', Number(portia.total).toLocaleString('en-US')) +
+      row('decisions', String(decP)) +
+      '<div class="tag">~6.0e5 neurons real . few mg [EXTERNAL]</div>';
+
+    hEl.innerHTML =
+      '<h4>HUMAN</h4>' +
+      row('depth . branch', dH + ' . ' + bH) +
+      row('passes / decision', '1') +
+      row('motifs &Sigma;b^i', Number(human.total).toLocaleString('en-US')) +
+      row('decisions', String(decH)) +
+      '<div class="tag">~8.6e10 neurons real . ~1.4 kg [EXTERNAL]</div>';
+
+    const cur = capacityRatio();
+    const err = capacityErr();
+    const needD = Math.log(TARGET_RATIO * Number(portia.total) * (bH - 1) + 1) / Math.log(bH);
+    const locked = lockCount >= LOCK_FRAMES;
+    const lockLine = locked
+      ? '<span class="lockon">LOCKED . earned ' + LOCK_FRAMES + 'f . err ' + err.toFixed(3) + '</span>'
+      : '<span class="lockoff">NOT LOCKED at tol ' + TOL_LOG.toFixed(3) + ' (hold ' + LOCK_FRAMES + 'f to earn)</span>';
+
+    const stepsP = dP * nP;
+    const latRatio = stepsP / dH;
+    const latLine = latRatio >= 1
+      ? fmtRatio(latRatio).replace('x', 'x slower')
+      : (1 / latRatio).toFixed(1) + 'x faster';
+
+    cEl.innerHTML =
+      '<h4>CAPACITY -- motif ratio H/P</h4>' +
+      row('target', fmtRatio(TARGET_RATIO) + ' <span class="tag">(8.6e10/6.0e5)</span>') +
+      row('current', fmtRatio(cur)) +
+      row('log10 err', err.toFixed(3)) +
+      row('needs dH', '&asymp; ' + needD.toFixed(1) + ' at bH=' + bH) +
+      '<div>' + lockLine + '</div>' +
+      '<h4 style="margin-top:6px">LATENCY -- steps / decision</h4>' +
+      row('portia dP&times;n', dP + '&times;' + nP + ' = ' + stepsP) +
+      row('human dH', String(dH)) +
+      row('portia is', latLine + ' <span class="tag">OPEN -- no anchor</span>') +
+      '<div class="gram">two reports, never averaged (Pattern D) . counts EXACT . neurons EXTERNAL . tol/tempo DESIGN . claim HYPOTHESIS . ripple METAPHOR</div>';
+  }
+
+  // ====== CONTROLS ======
+  const dPS = document.getElementById('dP'), bPS = document.getElementById('bP'), nPS = document.getElementById('nP');
+  const dHS = document.getElementById('dH'), bHS = document.getElementById('bH');
+  const dPv = document.getElementById('dPv'), bPv = document.getElementById('bPv'), nPv = document.getElementById('nPv');
+  const dHv = document.getElementById('dHv'), bHv = document.getElementById('bHv');
+  const playBtn = document.getElementById('play');
+  const stepBtn = document.getElementById('step');
+  const resetBtn = document.getElementById('reset');
+
+  function apply(){
+    dP = +dPS.value; bP = +bPS.value; nP = +nPS.value;
+    dH = +dHS.value; bH = +bHS.value;
+    dPv.textContent = dP; bPv.textContent = bP; nPv.textContent = nP;
+    dHv.textContent = dH; bHv.textContent = bH;
+    rebuild();
+  }
+  dPS.addEventListener('input', apply);
+  bPS.addEventListener('input', apply);
+  nPS.addEventListener('input', apply);
+  dHS.addEventListener('input', apply);
+  bHS.addEventListener('input', apply);
+
+  playBtn.addEventListener('click', function(){
+    playing = !playing;
+    playBtn.textContent = playing ? 'pause' : 'play';
+  });
+  stepBtn.addEventListener('click', function(){ t += STEPF; });   // one level per press
+  resetBtn.addEventListener('click', function(){
+    dPS.value = 4; bPS.value = 3; nPS.value = 12;
+    dHS.value = 7; bHS.value = 3;
+    t = 0; playing = false; playBtn.textContent = 'play';         // still after reset too
+    apply();
+  });
+
+  addEventListener('resize', function(){ resize(); rebuild(); }); // one listener, both jobs
+  apply();
+  frame();
+</script>
+</body></html>

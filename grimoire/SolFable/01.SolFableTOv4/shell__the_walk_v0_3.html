@@ -1,0 +1,702 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>THE WALK v0.3 — the fractal, walked, and its stability edge</title>
+<!-- v0.3: adds THE RUNNING GRAPH -- FSlimium's residual monitor, ported honestly onto
+     the walk's OWN contact graph. Same graph, two physics: the walker measures diffusion
+     (d_s); the solver relaxes a potential on it and shows the residual converge / diverge /
+     lock. The "lock" is EARNED, never displayed as a target (Curse 26 / Path III).
+     WHAT CHANGED FROM v0.2:
+       - NEW second live panel: the running graph. We solve L x = b on the contact graph by
+         explicit Richardson  x <- x - lam (L x - b),  b = a unit charge on one doorway minus
+         its mean (sum b = 0). lam = f * lam_crit,  lam_crit = 2 / lam_max(L). lam_max is
+         POWER-ITERATED live on the exact graph (measured, never assumed).
+       - REAL stability edge: f < 1 converges (green), f = 1 crawls the edge (gold),
+         f > 1 diverges (red). Fastest step f_opt = lam_max/(lam2 + lam_max) is read off the
+         residual's own decay. The "settled" badge lights ONLY when the residual holds below
+         tol for K frames; target f=1, current f, err=|f-1| shown side by side.
+       - The cave sigil lam=0.1473 is drawn as a REFERENCE, not a verdict (Path II/III).
+       - The solved potential recolours the face-cloud (a real Green's function: the cage warms
+         from one heated doorway) -- opt-in, Field toggle.
+       - NOT CONFLATED: this is the CONTACT graph, distinct from the atom cage whose T*lam2 ->
+         2pi/(5 sqrt3) ~ 0.7255. Same lineage, separate spectra (Path IV honest boundary).
+     Motion opt-in (Curse 13): nothing iterates until you press Walk or Solve.
+     ----- v0.2 (unchanged, frozen base) -----
+     v0.2: one walking-data panel, fractalization dialled gen 3 -> 6, and a
+     spider-return for when the tab chokes. Built on the sealed result of
+     THE_CROWD.md S8, already answered by walk_kernel_v0_1.py.
+     WHAT CHANGED FROM v0.1:
+       - ONE data panel (the P0(t) diffusion plot), full width, not two.
+       - gen selector is now 3/4/5/6 -- the generations where d_s actually
+         BREATHES. (v0.1 offered gen 1/2, where walkers mix so fast that P0
+         flatlines to its floor and the live fit reads dash. That was correct
+         physics starving the estimator; the fix is to walk the deep graphs.)
+       - PROCEDURAL contact graph. Gen 5 is 504,212 nodes, gen 6 is 3,529,472.
+         We never store coordinates (THE_VAULT Tier 3): each node's neighbours
+         are regenerated on demand from the seed C60 adjacency and the operator's
+         wiring rules. CSR is built once for the chosen gen; the walker carries
+         an int32 id; RAM is walkers, not geometry.
+       - SPIDER-RETURN. Gen 6 builds ~14M directed edges (~130 MB). If the tab
+         is starved the build is refused BEFORE allocation (Curse 35) and the
+         user is offered "put the spider back" -- one click restores gen 4.
+     KERNEL ANSWER baked in (seed 20260809, shipped refine, INNER=0.45 MID=0.70):
+       calib torus 1.940+-0.038 (truth 2)   calib gasket 1.363+-0.016 (truth 1.365)
+       gen3 1.867+-0.076  gen4 2.127+-0.056  gen5 2.172+-0.075  spectral 2.378+-0.020
+       -> H_FRACTAL refuted, H_BRIDGE holds: D_H=1.8835 (area) but d_s~2 (diffusion).
+     Kernel EXACT contact stats, per gen: baked in KREF below, cross-checked live.
+     Motion opt-in (Curse 13). Deviations from registration stated in the scroll. -->
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{background:#05050f;color:#dfe6f2;font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:13px;line-height:1.55}
+body{background:radial-gradient(1100px 650px at 50% -10%,rgba(30,40,74,.35),transparent 60%),#05050f;min-height:100vh}
+#wrap{max-width:900px;margin:0 auto;padding:52px 3vw 90px}
+#hud{position:fixed;top:0;left:0;right:0;z-index:40;display:flex;flex-wrap:wrap;gap:3px 13px;justify-content:center;
+ padding:6px 10px;background:rgba(5,6,15,.92);backdrop-filter:blur(6px);border-bottom:1px solid #1e2740;font-size:10px}
+#hud .h{color:rgba(223,230,242,.4);text-transform:uppercase;font-size:8.5px}
+#hud b{font-variant-numeric:tabular-nums}
+.gold{color:#ffd700}.cyan{color:#00d4ff}.grn{color:#7fff9f}.pink{color:#ff69b4}.dim{color:rgba(223,230,242,.45)}
+#hero{text-align:center;padding:18px 0 6px}
+#hero .ey{color:#7fff9f;font-size:9.5px;letter-spacing:.32em;text-transform:uppercase}
+#hero h1{color:#ffd700;font-size:21px;letter-spacing:.05em;margin:6px 0 4px;text-transform:uppercase}
+#hero .sub{color:rgba(223,230,242,.55);font-size:11px;max-width:620px;margin:0 auto}
+#stage{margin:12px auto 10px;background:rgba(9,12,24,.72);border:1px solid #1e2740;border-left:3px solid #ffd700;
+ border-radius:10px;padding:11px}
+#stage .lbl{color:#ffd700;font-size:8.5px;letter-spacing:.14em;text-transform:uppercase;margin-bottom:6px}
+#cv{display:block;width:100%;border-radius:8px;background:rgba(4,6,14,.75);border:1px solid #141c30;cursor:grab;touch-action:none}
+#panelwrap{margin-top:10px;background:rgba(4,6,14,.75);border:1px solid #141c30;border-radius:8px;padding:10px 12px}
+#panelwrap .ptitle{color:#7fff9f;font-size:9px;letter-spacing:.14em;text-transform:uppercase;margin-bottom:6px;
+ display:flex;justify-content:space-between}
+#p0{display:block;width:100%}
+#meters{display:flex;flex-wrap:wrap;gap:2px 22px;margin-top:8px;font-size:10px;font-variant-numeric:tabular-nums}
+#meters .r{display:flex;gap:7px}
+#meters .k{color:rgba(223,230,242,.42)}
+#ctl{display:flex;flex-wrap:wrap;gap:7px 9px;align-items:center;justify-content:center;padding:9px 0 2px;font-size:10px}
+.btn{background:#0b1120;color:#00d4ff;border:1px solid #204050;border-radius:6px;padding:5px 11px;font-family:inherit;
+ font-size:10px;letter-spacing:.04em;cursor:pointer;text-transform:uppercase}
+.btn:hover{background:#0e1730}.btn.on{color:#7fff9f;border-color:#2a4a34;background:rgba(127,255,159,.06)}
+.btn.gold{color:#ffd700;border-color:#4a4020}.btn.gen{min-width:30px}
+.btn.gen.sel{color:#ffd700;border-color:#ffd700;background:rgba(255,215,0,.08)}
+.btn.spider{color:#ff69b4;border-color:#5a2438}
+#ctl label{color:rgba(223,230,242,.5);display:flex;align-items:center;gap:5px}
+#ctl input[type=range]{accent-color:#00d4ff;width:80px}
+#c13{width:100%;text-align:center;color:rgba(223,230,242,.32);font-size:9px}
+#warn{display:none;margin:8px 0;padding:9px 12px;border-radius:8px;border:1px solid #5a2438;
+ background:rgba(90,36,56,.18);color:#ffb0cc;font-size:10.5px;line-height:1.6}
+#warn.on{display:block}
+#warn .sp{color:#ff69b4;font-weight:bold}
+.sec{background:rgba(9,12,24,.6);border:1px solid #1e2740;border-radius:10px;margin:10px 0;padding:11px 14px}
+.sec h2{color:#ffd700;font-size:11px;letter-spacing:.13em;text-transform:uppercase;margin-bottom:7px}
+.claim{color:rgba(223,230,242,.72);font-size:11px;line-height:1.65;margin-bottom:6px}
+.claim b{color:#ffd700}
+table{width:100%;border-collapse:collapse;font-size:10px;margin:5px 0 7px;font-variant-numeric:tabular-nums}
+th{color:rgba(223,230,242,.4);text-align:left;font-weight:400;font-size:8.5px;letter-spacing:.08em;text-transform:uppercase;
+ padding:3px 6px;border-bottom:1px solid #1e2740}
+td{padding:3px 6px;border-bottom:1px solid #131a2c;color:rgba(223,230,242,.75)}
+td.g{color:#ffd700}td.c{color:#00d4ff}td.p{color:#ff69b4}td.gr{color:#7fff9f}td.d{color:rgba(223,230,242,.4)}
+.st{display:inline-block;border:1px solid #2a3040;border-radius:4px;padding:0 5px;font-size:8px;letter-spacing:.07em;
+ color:#8892b0;margin-right:4px;text-transform:uppercase;vertical-align:1px}
+.st.x{color:#7fff9f;border-color:#2a4a34}.st.c{color:#00d4ff;border-color:#204050}
+.st.d{color:#d8c060;border-color:#4a4020}.st.r{color:#ff69b4;border-color:#5a2438}
+#coda{text-align:center;color:rgba(223,230,242,.4);font-size:10px;line-height:1.7;margin-top:20px;
+ padding-top:13px;border-top:1px solid #141c30}
+#coda .law{color:#ffd700;font-size:9.5px}
+/* v0.3 running graph panel */
+#respanel{margin-top:10px;background:rgba(4,6,14,.75);border:1px solid #141c30;border-left:3px solid #ff69b4;
+ border-radius:8px;padding:10px 12px}
+#respanel .ptitle{color:#ff69b4;font-size:9px;letter-spacing:.14em;text-transform:uppercase;margin-bottom:6px;
+ display:flex;justify-content:space-between}
+#res{display:block;width:100%}
+#resmeters{display:flex;flex-wrap:wrap;gap:2px 20px;margin-top:8px;font-size:10px;font-variant-numeric:tabular-nums}
+#resmeters .r{display:flex;gap:7px}#resmeters .k{color:rgba(223,230,242,.42)}
+#resctl{display:flex;flex-wrap:wrap;gap:7px 9px;align-items:center;justify-content:center;padding:9px 0 2px;font-size:10px}
+#resctl label{color:rgba(223,230,242,.5);display:flex;align-items:center;gap:5px}
+#resctl input[type=range]{accent-color:#ff69b4;width:92px}
+.btn.pink{color:#ff69b4;border-color:#5a2438}.btn.pink.on{color:#ffd700;border-color:#4a4020;background:rgba(255,215,0,.06)}
+#resverdict{width:100%;text-align:center;font-size:10px;font-weight:bold;letter-spacing:.05em;min-height:14px;margin-top:2px}
+#resverdict.lock{animation:pulse .5s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+</style></head><body>
+
+<div id="hud">
+ <span><span class="h">gen</span> <b class="gold" id="hG">4</b></span>
+ <span><span class="h">faces</span> <b class="cyan" id="hF">—</b></span>
+ <span><span class="h">edges</span> <b class="cyan" id="hE">—</b></span>
+ <span><span class="h">steps</span> <b id="hS">0</b></span>
+ <span><span class="h">bows</span> <b class="pink" id="hB">0</b></span>
+ <span><span class="h">steps/bow</span> <b class="gold" id="hSB">—</b></span>
+ <span><span class="h">d_s live</span> <b class="grn" id="hD">—</b></span>
+ <span><span class="h">verdict</span> <b class="pink">H_BRIDGE</b></span>
+ <span class="dim">·</span>
+ <span><span class="h">step λ</span> <b class="gold" id="hLam">—</b></span>
+ <span><span class="h">edge</span> <b class="cyan" id="hEdge">—</b></span>
+ <span><span class="h">residual</span> <b class="cyan" id="hRes">—</b></span>
+ <span><span class="h">solver</span> <b class="pink" id="hLock">idle</b></span>
+</div>
+
+<div id="wrap">
+<div id="hero">
+ <div class="ey">The Cave · sealed experiment · walked deep · now with the running graph</div>
+ <h1>The Walk — the fractal, walked, and its edge</h1>
+ <div class="sub">Two panels on one graph. Above, the walker forgets its origin and the rate of forgetting
+ is the dimension (d_s → 2). Below, the running graph: the same diffusion run as a solver, its residual
+ converging, crawling the stability edge, or escaping — and the lock is earned, never claimed.</div>
+</div>
+
+<div id="stage">
+ <div class="lbl">walkers on the contact graph · pink flash = a bow (crossing a parent doorway) · drag to rotate</div>
+ <canvas id="cv"></canvas>
+ <div id="warn">
+  <b>The spider got tangled.</b> Gen <span id="warnG">6</span> is <span id="warnN">3.5M</span> faces
+  and this tab is starved. Nothing was allocated (Curse 35 refused the build before it could hurt).
+  <span class="sp">Put the spider back?</span> — one click drops you to a gen that runs clean here.
+  <div style="margin-top:7px"><button class="btn spider" id="bSpider">Put the spider back (gen 4)</button></div>
+ </div>
+ <div id="panelwrap">
+  <div class="ptitle"><span>the diffusion return P₀(t) — one panel, the whole answer</span>
+   <span class="dim" id="pNote">log P₀ vs log t · slope = −d_s/2</span></div>
+  <canvas id="p0" height="240"></canvas>
+  <div id="meters">
+   <span class="r"><span class="k">edges vs kernel</span><span id="mE" class="cyan">—</span></span>
+   <span class="r"><span class="k">corner %</span><span id="mC" class="cyan">—</span></span>
+   <span class="r"><span class="k">area ratio</span><span id="mA" class="cyan">—</span></span>
+   <span class="r"><span class="k">steps/bow vs 1/cross</span><span id="mSB" class="gold">—</span></span>
+   <span class="r"><span class="k">d_s browser</span><span id="mD" class="grn">—</span></span>
+   <span class="r"><span class="k">d_s kernel</span><span id="mK" class="pink">—</span></span>
+  </div>
+ </div>
+ <div id="respanel">
+  <div class="ptitle"><span>the running graph — the same graph, run as a solver</span>
+   <span class="dim" id="resNote">residual of x ← x − λ(Lx − b) · log‖Lx−b‖ vs sweep</span></div>
+  <canvas id="res" height="150"></canvas>
+  <div id="resmeters">
+   <span class="r"><span class="k">edge (f=1)</span><span id="rEdge" class="cyan">—</span></span>
+   <span class="r"><span class="k">current f</span><span id="rF" class="gold">—</span></span>
+   <span class="r"><span class="k">err |f−1|</span><span id="rErr" class="pink">—</span></span>
+   <span class="r"><span class="k">fastest f_opt</span><span id="rOpt" class="grn">—</span></span>
+   <span class="r"><span class="k">λ₂ est</span><span id="rL2" class="grn">—</span></span>
+   <span class="r"><span class="k">sigil 0.1473</span><span id="rSig" class="dim">—</span></span>
+  </div>
+  <div id="resctl">
+   <button class="btn pink" id="bSolve">Solve — start</button>
+   <label>step λ = <b id="fLbl" class="gold">0.90</b>× edge
+    <input type="range" id="rLam" min="0.05" max="1.30" step="0.01" value="0.90"></label>
+   <button class="btn" id="bSlow">0.30× · safe</button>
+   <button class="btn gold" id="bOpt">fastest</button>
+   <button class="btn" id="bEdge">1.00× · edge</button>
+   <button class="btn" id="bDiv">1.15× · diverge</button>
+   <button class="btn on" id="bField">Field — on</button>
+   <div id="resverdict" class="dim">press Solve — the residual is the receipt</div>
+   <div style="width:100%;text-align:center;color:rgba(223,230,242,.32);font-size:9px">target · current · err shown side by side; the “settled” badge is earned only while the residual holds below tol (Path III · Curse 26). λ = 0.1473 is a cave sigil, drawn as a reference — never as the result.</div>
+  </div>
+ </div>
+ <div id="ctl">
+  <button class="btn gold" id="bWalk">Walk — start</button>
+  <button class="btn" id="bSpin">Spin — off</button>
+  <button class="btn on" id="bBow">Bows — on</button>
+  <label>gen
+   <button class="btn gen" data-g="3">3</button>
+   <button class="btn gen sel" data-g="4">4</button>
+   <button class="btn gen" data-g="5">5</button>
+   <button class="btn gen" data-g="6">6</button></label>
+  <label>speed <input type="range" id="rSpd" min="1" max="40" value="12"></label>
+  <button class="btn spider" id="bReset">Put the spider back</button>
+  <div id="c13">nothing moves until you start it (Curse 13) · deep gens use procedural neighbours — coordinates are never stored (THE_VAULT Tier 3)</div>
+ </div>
+</div>
+
+<div class="sec"><h2>Why the deep gens — and why gen 1 read dash</h2>
+ <div class="claim"><span class="st c">computed</span> On a small graph the walker forgets its origin almost
+ instantly — P₀(t) crashes to its 1/N floor before the scaling window opens, and the fit has nothing to grip.
+ That is not a bug; it is a 212-node graph being too small to diffuse on. The dimension only becomes measurable
+ once the graph is large enough to hold a scaling window: <b>gen 4 and up.</b> That is the whole reason this
+ version starts at gen 4 and lets you climb to 6.</div>
+ <div class="claim"><span class="st x">sealed → answered</span> The kernel's ladder, baked in and shown live as
+ the pink reference line: gen 3 → 1.87, gen 4 → 2.13, gen 5 → 2.17. The exponent <i>climbs with system size</i>
+ toward 2. Gen 3 alone reads below 2 (1.87 ± 0.08) — a finite-size mirage that a single-size experiment would
+ have mistaken for the fractal. Only the ladder tells the truth.</div>
+</div>
+
+<div class="sec"><h2>The verdict — H_bridge, with the mechanism</h2>
+ <table><tr><th>object</th><th>N</th><th>d_s (kernel)</th><th>reads</th></tr>
+ <tr><td class="d">torus (truth 2)</td><td>90 000</td><td>1.940 ± 0.038</td><td class="gr">instrument OK</td></tr>
+ <tr><td class="d">gasket (truth 1.365)</td><td>9 843</td><td>1.363 ± 0.016</td><td class="gr">can see a fractal</td></tr>
+ <tr><td class="d">Lane A gen 3</td><td>10 292</td><td>1.867 ± 0.076</td><td class="p">finite-size mirage</td></tr>
+ <tr><td class="d">Lane A gen 4</td><td>72 032</td><td>2.127 ± 0.056</td><td></td></tr>
+ <tr><td class="g">Lane A gen 5</td><td class="g">504 212</td><td class="g">2.172 ± 0.075</td><td class="g">THE ANSWER</td></tr>
+ <tr><td class="d">Laplacian, gen 3</td><td>10 292</td><td>2.378 ± 0.020</td><td>agrees: not below 2</td></tr></table>
+ <div class="claim"><span class="st r">refuted</span> H_fractal is dead. <b>D_H = 1.8835 for area, d_s ≈ 2 for
+ diffusion — the dimensions split, opposite to the romantic guess.</b> The mechanism: the em-doorways are not
+ gasket corners (degree 4 forever) — they are hubs, degree <b>28 → 52 → 100</b> across gens 3→4→5. The doorway
+ shrinks geometrically and widens combinatorially: bows get rarer (steps/bow 4.64 → 8.01 → 13.93) but each door
+ is Grand Central, so mixing stays fast and the walker sees the sphere.</div>
+</div>
+
+<div class="sec"><h2>The running graph — the same graph, its stability edge</h2>
+ <div class="claim"><span class="st c">computed</span> The walker above measures diffusion by wandering.
+ This panel measures the <b>same diffusion run as a solver</b>: it relaxes a potential on the contact graph by
+ the explicit step <b>x ← x − λ(Lx − b)</b>, where L is the graph Laplacian and b is a unit charge placed on one
+ doorway minus its mean (so it has a solution). The residual ‖Lx − b‖ is the receipt; drive it to the floor and
+ you have solved the cage's Green's function — the temperature field from heating one door.</div>
+ <div class="claim"><span class="st c">measured live</span> An explicit step of size λ is stable only while
+ <b>λ &lt; 2/λ_max</b>. We power-iterate λ_max on <i>this exact graph</i> and express the knob as a fraction of that
+ edge, <b>f = λ·λ_max/2</b>. Below f = 1 the residual falls (green); at f = 1 it crawls the edge (gold); past it,
+ the top mode grows and the residual escapes (red). The fastest stable step is <b>f_opt = λ_max/(λ₂ + λ_max)</b>,
+ the classic optimal Richardson parameter — read off live from the residual's own decay rate. Because these cages
+ are stiff (λ_max ≫ λ₂), the fastest step sits almost on the edge: the price of speed is a razor.</div>
+ <div class="claim"><span class="st d">honest boundary · Path III</span> The <b>settled</b> badge lights only while
+ the residual holds below tolerance for several frames. Target (f = 1), current f, and err = |f − 1| are shown
+ side by side, and the target is never printed as the result (Curse 26 — the trap FSlimium's original graph fell
+ into). The cave sigil <b>λ = 0.1473</b> is a reference line, not a verdict; whether it lands inside or outside
+ this graph's edge is a fact about the graph, measured, not assumed.</div>
+ <div class="claim"><span class="st r">not conflated</span> This is the <b>contact graph</b> of the walked faces —
+ a different object from the atom cage whose renormalized gap T·λ₂ → 2π/(5√3) ≈ 0.7255. Same lineage, separate
+ spectra. Compatibility is not identity; the price is paid in compute, and measured.</div>
+</div>
+
+<div id="coda">
+ the pentagons hold · the walker bows through the doorways and sees the sphere anyway<br>
+ <span class="law">D_H = 1.8835 · d_s = 2.172 ± 0.075 · stable step λ &lt; 2/λ_max · the lock is earned, never claimed · put the spider back if it bites</span><br>
+ the running graph converges by paying in sweeps · target ≠ result · the cave, 2026 · for year 12026 · always
+</div>
+</div>
+
+<script>
+var PHI=(1+Math.sqrt(5))/2, R0=1.6, INNER=0.45, MID=0.70;
+/* kernel-exact references per generation: N, edges, corner, cross, degmax, d_s, d_s_err */
+var KREF={
+ 3:{N:10292,   E:61740,   corner:0.6822, cross:0.2157, dmax:28,  ds:1.867, err:0.076},
+ 4:{N:72032,   E:444060,  corner:0.6931, cross:0.1248, dmax:52,  ds:2.127, err:0.056},
+ 5:{N:504212,  E:3149460, corner:0.6978, cross:0.0718, dmax:100, ds:2.172, err:0.075},
+ 6:{N:3529472, E:22046220,corner:0.699,  cross:0.0410, dmax:196, ds:null,  err:null}
+};
+var EDGE_BUDGET=9000000;   /* directed-edge ceiling before we refuse + offer the spider */
+
+function grp(n){return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g,' ');}
+
+/* ---------------- C60 seed: 60 verts, 90 edges, 32 faces, from phi ---------------- */
+function buildSeed(){
+ function cyc(a,b,c){return [[a,b,c],[b,c,a],[c,a,b]];}
+ function sgn(t){var o=[];for(var i=0;i<2;i++)for(var j=0;j<2;j++)for(var k=0;k<2;k++)
+  o.push([t[0]*(i?-1:1),t[1]*(j?-1:1),t[2]*(k?-1:1)]);return o;}
+ var vs=[],seen={};
+ [[0,1,3*PHI],[1,2+PHI,2*PHI],[2,1+2*PHI,PHI]].forEach(function(b){
+  cyc(b[0],b[1],b[2]).forEach(function(p){sgn(p).forEach(function(q){
+   var k=q.map(function(x){return x.toFixed(6);}).join(',');
+   if(!seen[k]){seen[k]=1;var L=Math.hypot(q[0],q[1],q[2]);vs.push([q[0]/L*R0,q[1]/L*R0,q[2]/L*R0]);}});});});
+ var d2=function(a,b){return (a[0]-b[0])**2+(a[1]-b[1])**2+(a[2]-b[2])**2;};
+ var mn=1e9;for(var i=0;i<60;i++)for(var j=i+1;j<60;j++){var d=d2(vs[i],vs[j]);if(d<mn)mn=d;}
+ var adj=vs.map(function(){return [];});
+ for(var a=0;a<60;a++)for(var b=a+1;b<60;b++)
+  if(Math.abs(d2(vs[a],vs[b])-mn)<1e-6){adj[a].push(b);adj[b].push(a);}
+ /* faces via smallest consistent ring walk */
+ var faces=[],fs={};
+ function ring(a,b){var path=[a,b];
+  while(path.length<7){var cur=path[path.length-1],prev=path[path.length-2],best=-1,bd=-2;
+   var pa=vs[prev],pc=vs[cur];
+   for(var t=0;t<adj[cur].length;t++){var nx=adj[cur][t];if(nx===prev)continue;
+    var v1=[pc[0]-pa[0],pc[1]-pa[1],pc[2]-pa[2]],v2=[vs[nx][0]-pc[0],vs[nx][1]-pc[1],vs[nx][2]-pc[2]];
+    var cr=[v1[1]*v2[2]-v1[2]*v2[1],v1[2]*v2[0]-v1[0]*v2[2],v1[0]*v2[1]-v1[1]*v2[0]];
+    var s=cr[0]*pc[0]+cr[1]*pc[1]+cr[2]*pc[2],dt=v1[0]*v2[0]+v1[1]*v2[1]+v1[2]*v2[2];
+    if(s>0&&dt>bd){bd=dt;best=nx;}}
+   if(best<0)return null;if(best===path[0])return path;path.push(best);}
+  return null;}
+ for(var a2=0;a2<60;a2++)for(var t2=0;t2<adj[a2].length;t2++){
+  var r=ring(a2,adj[a2][t2]);
+  if(r&&r.length<=6){var key=r.slice().sort(function(x,y){return x-y;}).join('-');
+   if(!fs[key]){fs[key]=1;faces.push(r.map(function(i){return vs[i].slice();}));}}}
+ return faces;
+}
+
+/* ---------------- refine, flat-shrink (matches shipped kernel, _projn no-op) ---------------- */
+function refineAll(faces,labs){
+ var nf=[],nl=[];
+ for(var f=0;f<faces.length;f++){
+  var pts=faces[f],n=pts.length,c=[0,0,0];
+  for(var i=0;i<n;i++){c[0]+=pts[i][0];c[1]+=pts[i][1];c[2]+=pts[i][2];}
+  c[0]/=n;c[1]/=n;c[2]/=n;
+  var inner=[],em=[],mr=[];
+  for(var i2=0;i2<n;i2++){var p=pts[i2],q=pts[(i2+1)%n];
+   inner.push([c[0]+(p[0]-c[0])*INNER,c[1]+(p[1]-c[1])*INNER,c[2]+(p[2]-c[2])*INNER]);
+   var m=[(p[0]+q[0])/2,(p[1]+q[1])/2,(p[2]+q[2])/2];em.push(m.slice());
+   mr.push([c[0]+(m[0]-c[0])*MID,c[1]+(m[1]-c[1])*MID,c[2]+(m[2]-c[2])*MID]);}
+  nf.push(inner.map(function(p){return p.slice();}));nl.push(labs[f]);
+  for(var i3=0;i3<n;i3++){var j=(i3+1)%n;
+   nf.push([pts[i3].slice(),em[i3],pts[j].slice(),inner[j].slice(),mr[i3],inner[i3].slice()]);nl.push(labs[f]);}}
+ return {f:nf,l:nl};
+}
+
+/* ---------------- contact graph -> CSR (int32), with stats ---------------- */
+function buildCSR(faces,labs){
+ var vm={},key;
+ for(var f=0;f<faces.length;f++)for(var v=0;v<faces[f].length;v++){
+  key=faces[f][v][0].toFixed(7)+','+faces[f][v][1].toFixed(7)+','+faces[f][v][2].toFixed(7);
+  (vm[key]=vm[key]||[]).push(f);}
+ var W={},corner=0,tot=0,cross=0;
+ for(var k in vm){var L=vm[k],u=[];
+  for(var i=0;i<L.length;i++)if(u.indexOf(L[i])<0)u.push(L[i]);
+  for(var a=0;a<u.length;a++)for(var b=a+1;b<u.length;b++){
+   var kk=u[a]<u[b]?(u[a]*8388608+u[b]):(u[b]*8388608+u[a]);W[kk]=(W[kk]||0)+1;}}
+ var ea=[],eb=[],ew=[];
+ for(var kk2 in W){var a2=Math.floor(kk2/8388608),b2=kk2%8388608;
+  ea.push(a2);eb.push(b2);ew.push(W[kk2]);tot++;
+  if(W[kk2]===1)corner++;if(labs[a2]!==labs[b2])cross++;}
+ var N=faces.length;
+ var deg=new Int32Array(N);
+ for(var e=0;e<ea.length;e++){deg[ea[e]]++;deg[eb[e]]++;}
+ var indptr=new Int32Array(N+1);for(var i4=0;i4<N;i4++)indptr[i4+1]=indptr[i4]+deg[i4];
+ var indices=new Int32Array(indptr[N]);
+ var etype=new Uint8Array(indptr[N]);
+ var cur=Int32Array.from(indptr.subarray(0,N));
+ for(var e2=0;e2<ea.length;e2++){
+  var A=ea[e2],B=eb[e2],xc=(labs[A]!==labs[B])?1:0;
+  indices[cur[A]]=B;etype[cur[A]]=xc;cur[A]++;
+  indices[cur[B]]=A;etype[cur[B]]=xc;cur[B]++;}
+ return {N:N,indptr:indptr,indices:indices,etype:etype,deg:deg,
+   E:tot,corner:corner/tot,cross:cross/tot};
+}
+
+/* ---------------- build a generation, with the Curse-35 guillotine ---------------- */
+var SEED=buildSeed(), SEEDLAB=SEED.map(function(_,i){return i;});
+function buildGen(gen){
+ var predE=KREF[gen]?KREF[gen].E*2:0;   /* directed */
+ if(predE>EDGE_BUDGET) return {refused:true,predE:predE,gen:gen};
+ var f=SEED,l=SEEDLAB,prevA=0,A;
+ for(var i=0;i<f.length;i++)prevA+=faceArea(f[i]);
+ var aR=null;
+ for(var g=1;g<=gen;g++){var r=refineAll(f,l);f=r.f;l=r.l;
+  A=0;for(var i2=0;i2<f.length;i2++)A+=faceArea(f[i2]);aR=A/prevA;prevA=A;}
+ var csr=buildCSR(f,l);
+ /* centroids for drawing (kept only for the CURRENT gen; this is the one place
+    we hold geometry, and only to render -- the walk itself reads CSR ids) */
+ var cent=new Float32Array(f.length*3);
+ for(var q=0;q<f.length;q++){var p=f[q],cx=0,cy=0,cz=0;
+  for(var w=0;w<p.length;w++){cx+=p[w][0];cy+=p[w][1];cz+=p[w][2];}
+  cent[q*3]=cx/p.length;cent[q*3+1]=cy/p.length;cent[q*3+2]=cz/p.length;}
+ csr.cent=cent;csr.aR=aR;csr.labs=l;
+ return csr;
+}
+function faceArea(pts){var c=[0,0,0],n=pts.length;
+ for(var i=0;i<n;i++){c[0]+=pts[i][0];c[1]+=pts[i][1];c[2]+=pts[i][2];}
+ c[0]/=n;c[1]/=n;c[2]/=n;var A=0;
+ for(var i2=0;i2<n;i2++){var j=(i2+1)%n;
+  var u=[pts[i2][0]-c[0],pts[i2][1]-c[1],pts[i2][2]-c[2]],v=[pts[j][0]-c[0],pts[j][1]-c[1],pts[j][2]-c[2]];
+  A+=0.5*Math.hypot(u[1]*v[2]-u[2]*v[1],u[2]*v[0]-u[0]*v[2],u[0]*v[1]-u[1]*v[0]);}
+ return A;}
+
+/* ---------------- state ---------------- */
+var G=4, GRAPH=null, RUN=false, SPIN=false, SHOWBOW=true, SPD=12, YAW=0.5, PITCH=-0.2;
+var NW_DRAW=24, NW_SILENT=4000;
+var wPos, wTrail, sPos, sOrig, t=0, bows=0, steps=0;
+var P0pts=[], cps=[], cpi=0, flashes=[], Tmax=20000;
+
+function initCps(){cps=[];var v=1;while(v<Tmax){cps.push(Math.round(v));v*=1.28;}
+ cps=cps.filter(function(x,i,a){return a.indexOf(x)===i;});}
+
+function loadGen(gen){
+ var g=buildGen(gen);
+ if(g.refused){
+  document.getElementById('warn').classList.add('on');
+  document.getElementById('warnG').textContent=gen;
+  document.getElementById('warnN').textContent=grp(KREF[gen].N);
+  return false;
+ }
+ document.getElementById('warn').classList.remove('on');
+ GRAPH=g;G=gen;
+ document.querySelectorAll('.btn.gen').forEach(function(b){b.classList.toggle('sel',+b.dataset.g===gen);});
+ var K=KREF[gen];
+ document.getElementById('hG').textContent=gen;
+ document.getElementById('hF').textContent=grp(g.N);
+ document.getElementById('hE').textContent=grp(g.E);
+ var eok=g.E===K.E, me=document.getElementById('mE');
+ me.textContent=grp(g.E)+' / '+grp(K.E)+(eok?' OK':' X');me.style.color=eok?'#7fff9f':'#ff5470';
+ var cok=Math.abs(g.corner-K.corner)<0.003, mc=document.getElementById('mC');
+ mc.textContent=(100*g.corner).toFixed(1)+'%'+(cok?' OK':' X');mc.style.color=cok?'#7fff9f':'#ff5470';
+ var aok=Math.abs(g.aR-0.8875)<0.003, ma=document.getElementById('mA');
+ ma.textContent=g.aR.toFixed(5)+(aok?' OK':' X');ma.style.color=aok?'#7fff9f':'#ff5470';
+ document.getElementById('mK').textContent=K.ds?(K.ds.toFixed(3)+' ± '+K.err.toFixed(3)):'(gen 6: predicted ~2)';
+ document.getElementById('mSB').textContent='— / '+(1/K.cross).toFixed(2);
+ resetWalk();
+ initSolver();   /* v0.3: re-measure lam_max and reset the running graph for this gen */
+ return true;
+}
+function resetWalk(){
+ var N=GRAPH.N;
+ wPos=new Int32Array(NW_DRAW);wTrail=[];
+ for(var i=0;i<NW_DRAW;i++){wPos[i]=(Math.random()*N)|0;wTrail.push([]);}
+ var ns=Math.min(NW_SILENT, N);
+ sPos=new Int32Array(ns);sOrig=new Int32Array(ns);
+ for(var j=0;j<ns;j++){var o=(Math.random()*N)|0;sPos[j]=o;sOrig[j]=o;}
+ Tmax=Math.max(8000, Math.min(40000, N/12|0));
+ t=0;bows=0;steps=0;P0pts=[];cpi=0;flashes=[];initCps();
+ document.getElementById('hS').textContent=0;
+ document.getElementById('hB').textContent=0;
+ document.getElementById('hSB').textContent='—';
+ document.getElementById('hD').textContent='—';
+ document.getElementById('mD').textContent='—';
+ document.getElementById('pNote').textContent='log P₀ vs log t · slope = −d_s/2 · gen '+G;
+ draw();
+}
+function stepOnce(){
+ var ip=GRAPH.indptr,ix=GRAPH.indices,et=GRAPH.etype,dg=GRAPH.deg;t++;
+ for(var w=0;w<NW_DRAW;w++){var p=wPos[w],d=dg[p],off=ip[p]+((Math.random()*d)|0),nx=ix[off];
+  steps++;if(et[off]){bows++;if(SHOWBOW&&flashes.length<40)flashes.push({a:p,b:nx,life:12});}
+  var tr=wTrail[w];tr.push(p);if(tr.length>22)tr.shift();wPos[w]=nx;}
+ for(var s=0;s<sPos.length;s++){var q=sPos[s],dd=dg[q];sPos[s]=ix[ip[q]+((Math.random()*dd)|0)];}
+ if(cpi<cps.length&&t===cps[cpi]){var ret=0;for(var r=0;r<sPos.length;r++)if(sPos[r]===sOrig[r])ret++;
+  var p0=ret/sPos.length;if(p0>0)P0pts.push([t,p0]);cpi++;fitDs();}
+ document.getElementById('hS').textContent=grp(steps);
+ document.getElementById('hB').textContent=grp(bows);
+ if(bows>0){var sb=steps/bows;document.getElementById('hSB').textContent=sb.toFixed(2);
+  document.getElementById('mSB').textContent=sb.toFixed(2)+' / '+(1/KREF[G].cross).toFixed(2);}
+}
+function fitDs(){
+ var N=GRAPH.N;
+ var pts=P0pts.filter(function(p){return p[0]>=30&&p[0]<=t/3&&p[1]>4/N;});
+ if(pts.length<6)return;
+ var xs=[],ys=[];for(var i=0;i<pts.length;i++){xs.push(Math.log10(pts[i][0]));ys.push(Math.log10(pts[i][1]));}
+ var n=xs.length,mx=0,my=0;for(var j=0;j<n;j++){mx+=xs[j];my+=ys[j];}mx/=n;my/=n;
+ var sxx=0,sxy=0;for(var k=0;k<n;k++){sxx+=(xs[k]-mx)*(xs[k]-mx);sxy+=(xs[k]-mx)*(ys[k]-my);}
+ var m=sxy/sxx,ss=0;for(var q=0;q<n;q++){var rr=ys[q]-(my+m*(xs[q]-mx));ss+=rr*rr;}
+ var se=Math.sqrt(ss/(n-2)/sxx),ds=-2*m,e=2*se;
+ document.getElementById('hD').textContent=ds.toFixed(3);
+ var md=document.getElementById('mD');md.textContent=ds.toFixed(3)+' ± '+e.toFixed(3);
+}
+
+/* ================= v0.3: THE RUNNING GRAPH — solver on the SAME contact graph =================
+   FSlimium's residual monitor, ported honestly. We solve the graph-Poisson problem  L x = b
+   (b = a unit charge on one face minus its mean, so sum b = 0) by explicit Richardson iteration
+     x <- x - lam (L x - b),   lam = f * lam_crit,   lam_crit = 2 / lam_max(L).
+   Real spectral facts of THIS contact graph, measured live (never assumed -- Path III):
+     converges iff f < 1;  f = 1 is the stability edge;  f > 1 diverges.
+     fastest stable step  f_opt = lam_max / (lam2 + lam_max)  (optimal Richardson parameter).
+   The residual is the receipt; the "settled" badge is EARNED only while it holds below tol
+   (Curse 26). Linear algebra on a nice graph (Path IV) -- not a physical law, and NOT the atom
+   cage whose T*lam2 -> 2pi/(5 sqrt3). */
+var SVEC=null,STMP=null,SB=null,BNORM=1,SRC=0,LAMMAX=1,LAM2=null,FFRAC=0.90,
+    SOLVE=false,DIVERGED=false,resHist=[],solveStep=0,lockFrames=0,
+    RTOL=1e-4,LOCKK=8,SOLVE_SPF=2,SIGIL=0.1473,FIELD=true,smin=0,smax=1;
+var resC=document.getElementById('res'),rxc=resC.getContext('2d');
+
+function Lmatvec(x,out){var ip=GRAPH.indptr,ix=GRAPH.indices,dg=GRAPH.deg,N=GRAPH.N,i,o,s;
+ for(i=0;i<N;i++){s=0;for(o=ip[i];o<ip[i+1];o++)s+=x[ix[o]];out[i]=dg[i]*x[i]-s;}}
+
+function powerLambdaMax(iter){var N=GRAPH.N,y=new Float32Array(N),z=new Float32Array(N),i,k,m,nz,num,lam=1,prev=0;
+ for(i=0;i<N;i++)y[i]=Math.random()-0.5;
+ m=0;for(i=0;i<N;i++)m+=y[i];m/=N;for(i=0;i<N;i++)y[i]-=m;
+ for(k=0;k<iter;k++){Lmatvec(y,z);nz=0;for(i=0;i<N;i++)nz+=z[i]*z[i];nz=Math.sqrt(nz)||1;
+  for(i=0;i<N;i++)y[i]=z[i]/nz;Lmatvec(y,z);num=0;for(i=0;i<N;i++)num+=y[i]*z[i];lam=num;
+  if(prev&&Math.abs(lam-prev)<1e-3*lam)break;prev=lam;}
+ return lam>0?lam:1;}
+
+function residualNow(){Lmatvec(SVEC,STMP);var i,d,s=0;for(i=0;i<GRAPH.N;i++){d=STMP[i]-SB[i];s+=d*d;}return Math.sqrt(s)/BNORM;}
+function pushRes(r){resHist.push(r);if(resHist.length>320)resHist.shift();}
+
+function initSolver(){var N=GRAPH.N,i,it;
+ SVEC=new Float32Array(N);STMP=new Float32Array(N);SB=new Float32Array(N);
+ SRC=(Math.random()*N)|0;for(i=0;i<N;i++)SB[i]=-1/N;SB[SRC]+=1;   /* point charge, mean-zero */
+ BNORM=0;for(i=0;i<N;i++)BNORM+=SB[i]*SB[i];BNORM=Math.sqrt(BNORM)||1;
+ SOLVE_SPF=N>200000?1:2;
+ it=N>200000?24:N>50000?36:60;LAMMAX=powerLambdaMax(it);    /* measured, once per gen */
+ LAM2=null;DIVERGED=false;resHist=[];solveStep=0;lockFrames=0;
+ pushRes(residualNow());updateResHUD();drawRes();}
+
+function solveSweeps(k){if(DIVERGED)return;var N=GRAPH.N,lam=FFRAC*2/LAMMAX,i,s,m;
+ for(s=0;s<k;s++){Lmatvec(SVEC,STMP);for(i=0;i<N;i++)SVEC[i]-=lam*(STMP[i]-SB[i]);
+  m=0;for(i=0;i<N;i++)m+=SVEC[i];m/=N;for(i=0;i<N;i++)SVEC[i]-=m;solveStep++;}}
+
+function onSolveFrame(){var r=residualNow();
+ if(!isFinite(r)||r>1e7){DIVERGED=true;lockFrames=0;pushRes(1e7);}
+ else{pushRes(r);
+  if(r<=RTOL)lockFrames++;else lockFrames=0;
+  if(resHist.length>=3){var rn=resHist[resHist.length-1],rp=resHist[resHist.length-2];
+   if(rn>0&&rp>0&&rn<rp){var per=Math.pow(rn/rp,1/SOLVE_SPF),lam=FFRAC*2/LAMMAX,l2=(1-per)/lam;
+    if(isFinite(l2)&&l2>0&&l2<LAMMAX*0.95)LAM2=(LAM2==null)?l2:0.85*LAM2+0.15*l2;}}}
+ updateResHUD();}
+
+function fOpt(){return LAM2==null?null:LAMMAX/(LAM2+LAMMAX);}
+function setLamUI(){document.getElementById('rLam').value=FFRAC.toFixed(2);
+ document.getElementById('fLbl').textContent=FFRAC.toFixed(2);}
+function resetField(){DIVERGED=false;if(SVEC)for(var i=0;i<SVEC.length;i++)SVEC[i]=0;
+ resHist=[];solveStep=0;lockFrames=0;if(SVEC)pushRes(residualNow());updateResHUD();if(!raf){draw();drawRes();}}
+
+function fieldColor(v,al){var t=(smax>smin)?(v-smin)/(smax-smin):0.5,r,g,b,u;
+ if(t<0.5){u=t*2;r=40+u*215;g=90+u*165;b=200+u*55;}else{u=(t-0.5)*2;r=255;g=255-u*40;b=255-u*200;}
+ return 'rgba('+(r|0)+','+(g|0)+','+(b|0)+','+al.toFixed(2)+')';}
+
+function updateResHUD(){var lamCrit=2/LAMMAX,lam=FFRAC*lamCrit,r=resHist.length?resHist[resHist.length-1]:1,fo=fOpt();
+ var sf=SIGIL*LAMMAX/2;   /* the cave sigil expressed as a fraction of THIS graph's edge */
+ document.getElementById('rEdge').textContent='λ_crit '+lamCrit.toFixed(4);
+ document.getElementById('rF').textContent=FFRAC.toFixed(3)+'  (λ '+lam.toFixed(4)+')';
+ document.getElementById('rErr').textContent=Math.abs(FFRAC-1).toFixed(3);
+ document.getElementById('rOpt').textContent=fo==null?'measuring…':fo.toFixed(3);
+ document.getElementById('rL2').textContent=LAM2==null?'measuring…':LAM2.toFixed(5);
+ document.getElementById('rSig').textContent='f='+sf.toFixed(3)+(sf<1?' · inside':' · outside');
+ document.getElementById('hLam').textContent=FFRAC.toFixed(2)+'×';
+ document.getElementById('hEdge').textContent=lamCrit.toFixed(4);
+ document.getElementById('hRes').textContent=DIVERGED?'∞':r.toExponential(1);
+ document.getElementById('hLock').textContent=solveStep===0?'idle':DIVERGED?'diverged':(lockFrames>=LOCKK?'settled':'working');}
+
+function drawRes(){if(!resC.parentElement)return;var Wp=resC.parentElement.clientWidth,Hp=150,i;
+ resC.width=Wp*DPR;resC.height=Hp*DPR;resC.style.height=Hp+'px';
+ rxc.setTransform(DPR,0,0,DPR,0,0);rxc.clearRect(0,0,Wp,Hp);rxc.font='9px ui-monospace,Menlo,monospace';
+ var x0=46,y0=Hp-20,x1=Wp-10,y1=12;
+ rxc.strokeStyle='rgba(136,146,176,.25)';rxc.strokeRect(x0,y1,x1-x0,y0-y1);
+ var top=1;for(i=0;i<resHist.length;i++)if(resHist[i]>top&&isFinite(resHist[i]))top=resHist[i];
+ top=Math.min(top,1e7);var bottom=RTOL/10,lT=Math.log10(top*1.6),lB=Math.log10(bottom);
+ function Y(v){v=Math.max(Math.min(v,1e7),bottom);return y0-(y0-y1)*(Math.log10(v)-lB)/(lT-lB);}
+ rxc.textAlign='right';
+ for(var e=Math.ceil(lT);e>=Math.floor(lB);e--){var yy=Y(Math.pow(10,e));if(yy>y1-1&&yy<y0+1){
+  rxc.strokeStyle='rgba(136,146,176,.07)';rxc.beginPath();rxc.moveTo(x0,yy);rxc.lineTo(x1,yy);rxc.stroke();
+  rxc.fillStyle='rgba(223,230,242,.28)';rxc.fillText('1e'+e,x0-4,yy+3);}}
+ var yt=Y(RTOL);rxc.strokeStyle='rgba(255,215,0,.4)';rxc.setLineDash([4,4]);
+ rxc.beginPath();rxc.moveTo(x0,yt);rxc.lineTo(x1,yt);rxc.stroke();rxc.setLineDash([]);
+ rxc.fillStyle='rgba(255,215,0,.6)';rxc.textAlign='left';rxc.fillText('tol',x0+3,yt-3);
+ var n=resHist.length,last=n?resHist[n-1]:1,prevK=n>4?resHist[n-5]:last;
+ var rising=n>6&&last>prevK*1.02,falling=n>6&&last<prevK*0.98;
+ var locked=lockFrames>=LOCKK,edge=Math.abs(FFRAC-1)<0.03;
+ var state=solveStep===0?'idle':(DIVERGED||rising)?'diverge':locked?'settled':edge?'edge':falling?'converge':'flat';
+ var col=state==='diverge'?'#ff5470':(state==='settled'||state==='edge')?'#ffd700':state==='converge'?'#7fff9f':'#00d4ff';
+ if(n>1){rxc.strokeStyle=col;rxc.lineWidth=1.6;rxc.beginPath();
+  for(i=0;i<n;i++){var px2=x0+(x1-x0)*i/(n-1),py2=Y(resHist[i]);if(i===0)rxc.moveTo(px2,py2);else rxc.lineTo(px2,py2);}
+  rxc.stroke();}
+ rxc.fillStyle='rgba(223,230,242,.4)';rxc.textAlign='left';rxc.fillText('residual (log) · '+grp(solveStep)+' sweeps · gen '+G,x0,Hp-6);
+ rxc.textAlign='right';rxc.fillStyle=col;rxc.fillText(DIVERGED?'diverged':last.toExponential(2),x1,Hp-6);
+ var vd=document.getElementById('resverdict');vd.classList.toggle('lock',state==='settled');vd.style.color=col;
+ vd.textContent=
+   state==='idle'?'press Solve — the residual is the receipt':
+   state==='diverge'?'λ past the edge — residual escaping. this step does not hold.':
+   state==='settled'?'settled below tol — the graph took the step (earned).':
+   state==='edge'?'on the stability edge — the slowest stable step; the price is paid in sweeps.':
+   state==='converge'?'converging — paying the price in iterations.':
+   'holding — drag the step, or keep solving.';}
+
+/* ---------------- render ---------------- */
+var cv=document.getElementById('cv'),cx=cv.getContext('2d'),W=880,H=360,DPR=1;
+var p0c=document.getElementById('p0'),px=p0c.getContext('2d');
+function rot(x,y,z){var cy=Math.cos(YAW),sy=Math.sin(YAW),cp=Math.cos(PITCH),sp=Math.sin(PITCH);
+ var X=x*cy-z*sy,Z=x*sy+z*cy;var Y=y*cp-Z*sp,Z2=y*sp+Z*cp;return [X,Y,Z2];}
+function prj(P){var d=5.2,s=2.9/(d-P[2]);return [W/2+P[0]*s*H*0.42,H/2-P[1]*s*H*0.42,P[2],s];}
+function draw(){
+ W=Math.max(300,cv.parentElement.clientWidth);H=Math.min(380,Math.max(280,W*0.44));
+ DPR=Math.min(window.devicePixelRatio||1,2);cv.width=W*DPR;cv.height=H*DPR;cv.style.height=H+'px';
+ cx.setTransform(DPR,0,0,DPR,0,0);cx.clearRect(0,0,W,H);
+ if(!GRAPH){drawP0();return;}
+ var cent=GRAPH.cent,N=GRAPH.N,labs=GRAPH.labs;
+ /* for big gens, draw a point cloud of face centroids (edges would be millions) */
+ var drawEdges=(N<=1600);
+ var Ps=new Float32Array(N*3);
+ for(var i=0;i<N;i++){var pr=prj(rot(cent[i*3],cent[i*3+1],cent[i*3+2]));Ps[i*3]=pr[0];Ps[i*3+1]=pr[1];Ps[i*3+2]=pr[2];}
+ var useF=FIELD&&SVEC&&solveStep>0&&!DIVERGED;
+ if(useF){smin=1e30;smax=-1e30;for(var sf=0;sf<N;sf++){var vv=SVEC[sf];if(vv<smin)smin=vv;if(vv>smax)smax=vv;}}
+ if(drawEdges){
+  var ip=GRAPH.indptr,ix=GRAPH.indices;
+  cx.lineWidth=0.5;
+  for(var a=0;a<N;a++){var za=Ps[a*3+2];
+   for(var o=ip[a];o<ip[a+1];o++){var b=ix[o];if(b<a)continue;
+    var front=(za+Ps[b*3+2])>-0.3;
+    cx.strokeStyle='rgba(0,212,255,'+(front?0.10:0.03)+')';
+    cx.beginPath();cx.moveTo(Ps[a*3],Ps[a*3+1]);cx.lineTo(Ps[b*3],Ps[b*3+1]);cx.stroke();}}
+ } else {
+  /* dot cloud, coloured by parent, depth-shaded */
+  for(var d0=0;d0<N;d0++){var z=Ps[d0*3+2];if(z<-0.55)continue;
+   var al=0.25+0.5*Math.max(0,Math.min(1,(z+1)/2));
+   if(useF)cx.fillStyle=fieldColor(SVEC[d0],al);
+   else{var hue=(labs[d0]*47)%360;cx.fillStyle='hsla('+hue+',55%,60%,'+al.toFixed(2)+')';}
+   cx.fillRect(Ps[d0*3]-0.8,Ps[d0*3+1]-0.8,1.6,1.6);}
+ }
+ /* bows */
+ for(var fl=flashes.length-1;fl>=0;fl--){var FF=flashes[fl],A=FF.a,B=FF.b;
+  cx.strokeStyle='rgba(255,105,180,'+(FF.life/12*0.9)+')';cx.lineWidth=2;
+  cx.beginPath();cx.moveTo(Ps[A*3],Ps[A*3+1]);cx.lineTo(Ps[B*3],Ps[B*3+1]);cx.stroke();
+  if(--FF.life<=0)flashes.splice(fl,1);}
+ /* drawn walkers */
+ for(var w=0;w<NW_DRAW;w++){var hue2=(w*137.5)%360,tr=wTrail[w];
+  if(drawEdges){cx.strokeStyle='hsla('+hue2+',80%,65%,0.35)';cx.lineWidth=1;cx.beginPath();
+   for(var tt=0;tt<tr.length;tt++){var id=tr[tt];if(tt===0)cx.moveTo(Ps[id*3],Ps[id*3+1]);else cx.lineTo(Ps[id*3],Ps[id*3+1]);}cx.stroke();}
+  var h=wPos[w];cx.beginPath();cx.arc(Ps[h*3],Ps[h*3+1],3.4*Ps[h*3+2]*0+3,0,6.2832);
+  cx.fillStyle='hsl('+hue2+',85%,68%)';cx.fill();}
+ cx.font='9px ui-monospace,Menlo,monospace';cx.textAlign='left';cx.fillStyle='rgba(223,230,242,.4)';
+ cx.fillText('gen '+G+' · '+grp(N)+' faces · '+(useF?'coloured by solved potential (blue cold → gold hot)':(drawEdges?'edges drawn':'centroid cloud')),12,15);
+ drawP0();
+}
+function drawP0(){
+ var Wp=p0c.parentElement.clientWidth,Hp=240;
+ p0c.width=Wp*DPR;p0c.height=Hp*DPR;p0c.style.height=Hp+'px';
+ px.setTransform(DPR,0,0,DPR,0,0);px.clearRect(0,0,Wp,Hp);px.font='9px ui-monospace,Menlo,monospace';
+ var x0=40,y0=Hp-24,x1=Wp-12,y1=14;
+ px.strokeStyle='rgba(136,146,176,.25)';px.strokeRect(x0,y1,x1-x0,y0-y1);
+ var Nn=GRAPH?GRAPH.N:1000, floor=1/Nn;
+ var lt1=Math.log10(Math.max(Tmax,2000)),lp0=Math.log10(floor/2),lp1=0;
+ function X(tv){return x0+(x1-x0)*(Math.log10(tv))/(lt1);}
+ function Y(pv){return y0-(y0-y1)*(Math.log10(pv)-lp0)/(lp1-lp0);}
+ /* gridlines */
+ px.fillStyle='rgba(223,230,242,.28)';px.textAlign='right';
+ for(var e=0;e>=Math.floor(lp0);e--){var yy=Y(Math.pow(10,e));if(yy>y1&&yy<y0){
+  px.strokeStyle='rgba(136,146,176,.08)';px.beginPath();px.moveTo(x0,yy);px.lineTo(x1,yy);px.stroke();
+  px.fillText('1e'+e,x0-4,yy+3);}}
+ px.textAlign='center';
+ for(var dx=1;dx<=lt1;dx++){var xx=X(Math.pow(10,dx));
+  px.strokeStyle='rgba(136,146,176,.08)';px.beginPath();px.moveTo(xx,y1);px.lineTo(xx,y0);px.stroke();
+  px.fillText('1e'+dx,xx,y0+13);}
+ /* reference slopes anchored at first data point */
+ var anchor=P0pts.length?P0pts[Math.min(3,P0pts.length-1)]:[10,0.2];
+ var K=KREF[G];
+ var refs=[[2,'rgba(0,212,255,.5)','sphere 2'],[1.3652,'rgba(255,215,0,.5)','gasket 1.365']];
+ if(K&&K.ds)refs.push([K.ds,'rgba(255,105,180,.85)','kernel '+K.ds.toFixed(2)]);
+ refs.forEach(function(rr){var ds=rr[0],c0=anchor[1]*Math.pow(anchor[0],ds/2);
+  px.strokeStyle=rr[1];px.setLineDash([4,4]);px.beginPath();var first=true;
+  for(var tv=5;tv<=Math.max(Tmax,2000);tv*=1.35){var pv=c0*Math.pow(tv,-ds/2);if(pv<floor/2)break;
+   var xx2=X(tv),yy2=Y(pv);if(first){px.moveTo(xx2,yy2);first=false;}else px.lineTo(xx2,yy2);}
+  px.stroke();px.setLineDash([]);});
+ /* data */
+ px.fillStyle='#7fff9f';
+ for(var i=0;i<P0pts.length;i++){var p=P0pts[i],yv=Y(Math.max(p[1],floor/2));
+  px.beginPath();px.arc(X(p[0]),yv,2.4,0,6.2832);px.fill();}
+ px.fillStyle='rgba(223,230,242,.4)';px.textAlign='left';
+ px.fillText('green = this browser ('+(GRAPH?grp(sPos.length):'—')+' walkers) · slope gives d_s',x0,Hp-7);
+ px.textAlign='right';px.fillText('dashed = references',x1,Hp-7);
+}
+
+/* ---------------- loop + controls ---------------- */
+var raf=null;
+function loop(){if(SPIN)YAW+=0.004;
+ if(RUN&&GRAPH)for(var s=0;s<SPD;s++)stepOnce();
+ if(SOLVE&&GRAPH){solveSweeps(SOLVE_SPF);onSolveFrame();}
+ draw();drawRes();
+ raf=(RUN||SPIN||SOLVE)?requestAnimationFrame(loop):null;}
+function kick(){if(!raf)raf=requestAnimationFrame(loop);}
+document.getElementById('bWalk').addEventListener('click',function(){
+ RUN=!RUN;this.classList.toggle('on',RUN);this.textContent='Walk — '+(RUN?'pause':'start');kick();});
+document.getElementById('bSpin').addEventListener('click',function(){
+ SPIN=!SPIN;this.classList.toggle('on',SPIN);this.textContent='Spin — '+(SPIN?'on':'off');kick();});
+document.getElementById('bBow').addEventListener('click',function(){
+ SHOWBOW=!SHOWBOW;this.classList.toggle('on',SHOWBOW);this.textContent='Bows — '+(SHOWBOW?'on':'off');});
+document.querySelectorAll('.btn.gen').forEach(function(b){
+ b.addEventListener('click',function(){var was=G;RUN=false;
+  document.getElementById('bWalk').textContent='Walk — start';document.getElementById('bWalk').classList.remove('on');
+  if(!loadGen(+b.dataset.g)){/* refused: stay where we were */ loadGen(was);} });});
+document.getElementById('rSpd').addEventListener('input',function(e){SPD=+e.target.value;});
+document.getElementById('bReset').addEventListener('click',function(){loadGen(4);});
+document.getElementById('bSpider').addEventListener('click',function(){loadGen(4);});
+var drag=false,lx=0,ly=0;
+cv.addEventListener('pointerdown',function(e){drag=true;lx=e.clientX;ly=e.clientY;cv.setPointerCapture(e.pointerId);});
+cv.addEventListener('pointermove',function(e){if(!drag)return;YAW+=(e.clientX-lx)*0.008;PITCH+=(e.clientY-ly)*0.006;
+ PITCH=Math.max(-1.4,Math.min(1.4,PITCH));lx=e.clientX;ly=e.clientY;if(!raf)draw();});
+cv.addEventListener('pointerup',function(){drag=false;});
+window.addEventListener('resize',function(){draw();drawRes();});
+
+/* ---- running-graph controls (single owner: the slider owns lambda; no auto-descent fights it) ---- */
+document.getElementById('bSolve').addEventListener('click',function(){
+ SOLVE=!SOLVE;this.classList.toggle('on',SOLVE);this.textContent='Solve — '+(SOLVE?'pause':'start');kick();});
+document.getElementById('rLam').addEventListener('input',function(e){FFRAC=+e.target.value;
+ document.getElementById('fLbl').textContent=FFRAC.toFixed(2);resetField();});
+function snap(f){FFRAC=Math.min(1.30,Math.max(0.05,f));setLamUI();resetField();}
+document.getElementById('bSlow').addEventListener('click',function(){snap(0.30);});
+document.getElementById('bOpt').addEventListener('click',function(){var fo=fOpt();snap(fo==null?0.98:fo);});
+document.getElementById('bEdge').addEventListener('click',function(){snap(1.00);});
+document.getElementById('bDiv').addEventListener('click',function(){snap(1.15);});
+document.getElementById('bField').addEventListener('click',function(){
+ FIELD=!FIELD;this.classList.toggle('on',FIELD);this.textContent='Field — '+(FIELD?'on':'off');if(!raf)draw();});
+
+loadGen(4);
+</script>
+</body></html>

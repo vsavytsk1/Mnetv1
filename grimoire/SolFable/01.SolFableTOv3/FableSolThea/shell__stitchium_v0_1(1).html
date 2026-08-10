@@ -1,0 +1,840 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>STITCHIUM v0.1 — the 12 anchors stitch the hex fabric</title>
+<!--
+  STITCHIUM v0.1 — HOW THE FRACTAL PATTERN IS STITCHED        (Path X: frozen)
+  ===========================================================================
+  THE CLAIM (labelled, Thea status grammar):
+
+    EXACT     Euler forces P=12. The 12 pentagons sit on the 12 fivefold axes
+              of EVERY golden shell — they are the engine constraints, the
+              eigenvalue-1 mode. Growth adds hexes only: H = 10(T-1).
+    EXACT     The stitch order is GRAPH DEPTH: distance to the nearest anchor
+              vertex. No metric. No clock. "A space that is not a space, a
+              speed that is not a speed" — the growth is combinatorial; the
+              3D sphere and the animation are projections for the monkey brain.
+    EXACT     Each closure stitch closes exactly one independent cycle.
+              Counted live:  closures = E - V + S   and   cycles = E - V + 1
+              = F - 1.  Euler's formula, read off the thread itself.
+    EXACT     C20 and C60 are all-anchor shells (every vertex touches a
+              pentagon, depth field flat 0). The fabric begins at C140.
+    DESIGN    The colour rule is ALPHIUM's escape-time rule ported to the
+              graph: colour = steps-to-anchor through a palette. Same effect,
+              honest substrate: iterate until you touch the constraint,
+              paint the count.
+    COMPUTED  The optional LIGHT FLOW is the Fiedler mode of the stitched
+              net, solved live with an iteration/residual receipt shown.
+
+  CURSES HONOURED:
+    13  motion is OPT-IN — the shell boots still, spin defaults 0, the stitch
+        runs only when you press it, prefers-reduced-motion reveals instantly.
+    26  target is not result — every count in the HUD is measured from the
+        mesh; CLOSED VERIFIED is stamped by the live verifier, never assumed.
+    35  the loaded gun — the next shell's vertex count is PREDICTED from the
+        recurrence and refused loudly past the budget before any allocation.
+
+  RENDER LEDGER (we pay what we see):
+    - unique-vertex projection, trig hoisted, cached while the camera rests;
+    - the shell is convex and the projection orthographic, so front/back
+      two-pass painting is EXACT — zero per-frame sorting;
+    - all edges and faces live in Path2D banks keyed by (facing, class,
+      depth band); a frame is ~a few dozen stroke/fill calls, counted in
+      the HUD. The invisible is never painted.
+
+  LINEAGE: Goldberg constructor ported from shell__genesis_v8_5_1.html;
+  golden pairs and status grammar from Thea v3.0 / shell__thea_light_matrix;
+  the escape-time colour rule from shell__alphium_v1_1.html.
+  Kernel certified headless (node) across levels 0..6 before this file was
+  frozen: chi=2, P=12, deg3, edge-in-2-faces, closures=E-V+S, cycles=F-1,
+  formula counts — ALL PASS. No Math.random. Deterministic given (k,l).
+
+  P=12. chi=2. The price is always paid. Always.        Built 2026-08-02.
+-->
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#050508; --ink:#c8d8e8; --dim:#444; --line:#1a1f2e;
+  --cyan:#00d4ff; --teal:#00ffd5; --pink:#ff69b4; --gold:#ffd700; --grn:#7fff7f; --red:#ff5566;
+}
+body{background:var(--bg);color:var(--ink);font-family:'Courier New',monospace;overflow:hidden;touch-action:none}
+canvas{position:fixed;top:0;left:0;z-index:0}
+#title{position:fixed;top:8px;left:50%;transform:translateX(-50%);z-index:5;pointer-events:none;
+  font-family:'Orbitron';font-size:11px;letter-spacing:0.3em;color:rgba(0,180,255,0.35)}
+#euler{position:fixed;top:24px;left:50%;transform:translateX(-50%);z-index:5;pointer-events:none;
+  font-family:'Orbitron';font-size:16px;font-weight:900}
+#euler .ok{color:var(--teal)} #euler .bad{color:var(--red)}
+#boundary{position:fixed;left:50%;transform:translateX(-50%);bottom:46px;z-index:5;pointer-events:none;
+  font-size:9px;color:#5a6a7a;letter-spacing:0.06em;text-align:center;line-height:1.5}
+#boundary b{color:#8aa0b8;font-weight:normal}
+.hud{position:fixed;z-index:5;font-size:10px;line-height:1.65;background:rgba(5,5,8,0.82);
+  border:1px solid var(--line);border-radius:4px;padding:7px 9px}
+#hudL{top:10px;left:10px;cursor:pointer}
+#hudR{top:10px;right:10px;width:300px;max-height:52vh;overflow-y:auto;font-size:9px;cursor:pointer}
+.lbl{color:var(--dim)} .vc{color:var(--teal)} .vp{color:var(--pink)} .vg{color:var(--gold)}
+.vk{color:var(--cyan)} .vgr{color:var(--grn)} .vr{color:var(--red)}
+.sect{color:#6a7a8a;letter-spacing:0.15em;font-size:8px;margin-top:5px}
+#hudR div{margin:1px 0}
+.lg-inv{color:var(--grn);font-weight:bold} .lg-op{color:var(--cyan)} .lg-warn{color:#ff9040}
+.lg-dim{color:#556} .lg-gold{color:var(--gold)} .lg-pink{color:var(--pink)}
+#legend{position:fixed;left:10px;bottom:46px;z-index:5;font-size:8px;color:#5a6a7a;
+  background:rgba(5,5,8,0.82);border:1px solid var(--line);border-radius:4px;padding:6px 8px}
+#palbar{width:150px;height:8px;border:1px solid var(--line);margin:3px 0}
+#bar{position:fixed;bottom:0;left:0;right:0;z-index:10;background:rgba(5,5,8,0.95);
+  border-top:1px solid var(--line);padding:5px 8px;display:flex;gap:5px;align-items:center;
+  flex-wrap:wrap;justify-content:center}
+.btn{background:#0a0e18;border:1px solid #2a2a3a;color:#80d0ff;padding:4px 10px;font-family:inherit;
+  font-size:9px;cursor:pointer;border-radius:3px;white-space:nowrap;transition:all 0.15s}
+.btn:hover{border-color:#4a6a8a;color:#fff}
+.btn.gn{color:var(--grn);border-color:#1a3a1a}
+.btn.gd{color:var(--gold);border-color:#4a4020}
+.btn.pk{color:var(--pink);border-color:#3a1a2a}
+.btn.on{background:#132013;border-color:var(--grn)}
+.btn.flowon{background:#201a00;border-color:var(--gold)}
+.btn:disabled{opacity:0.35;cursor:default}
+.sep{width:1px;height:16px;background:var(--line)}
+.sl{display:flex;align-items:center;gap:4px;font-size:8px;color:#556}
+.sl input[type=range]{width:60px;accent-color:var(--teal)}
+.sl .sv{color:var(--teal);min-width:30px;font-size:8px}
+#toast{position:fixed;top:52px;left:50%;transform:translateX(-50%);z-index:20;background:rgba(20,8,8,0.95);
+  border:1px solid #663;color:#ffcf90;font-size:10px;padding:8px 14px;border-radius:4px;display:none;
+  max-width:80vw;text-align:center;line-height:1.5}
+</style></head><body>
+<canvas id="cv" width="1280" height="720"></canvas>
+<div id="title">STITCHIUM v0.1</div>
+<div id="euler"><span class="ok" id="eulerline">V−E+F=2 · P=12</span></div>
+<div id="hudL" class="hud" title="click to collapse">
+  <div class="sect">CLOSURE (live-counted)</div>
+  <div><span class="lbl">(k,ℓ) </span><span class="vg" id="h-kl">—</span><span class="lbl">  T </span><span class="vg" id="h-t">—</span></div>
+  <div><span class="lbl">V </span><span class="vc" id="h-v">—</span> <span class="lbl">E </span><span class="vc" id="h-e">—</span> <span class="lbl">F </span><span class="vc" id="h-f">—</span></div>
+  <div><span class="lbl">pent </span><span class="vp" id="h-p">—</span> <span class="lbl">hex </span><span class="vc" id="h-h">—</span> <span class="lbl">χ </span><span class="vg" id="h-chi">—</span></div>
+  <div><span class="lbl">deg3 </span><span id="h-d3">—</span> <span class="lbl">e∈2f </span><span id="h-e2f">—</span> <span class="lbl">verdict </span><span id="h-verd">—</span></div>
+  <div class="sect">GOLDEN (target ≠ result)</div>
+  <div><span class="lbl">target φ </span><span class="vg">1.6180339887</span></div>
+  <div><span class="lbl">k/ℓ </span><span class="vk" id="h-kol">—</span> <span class="lbl">err </span><span class="vk" id="h-kerr">—</span></div>
+  <div><span class="lbl">T/T′ </span><span class="vk" id="h-tr">—</span> <span class="lbl">vs φ² err </span><span class="vk" id="h-trerr">—</span></div>
+  <div class="sect">STITCH</div>
+  <div><span class="lbl">front d </span><span class="vg" id="h-step">—</span> <span class="lbl">edges </span><span class="vc" id="h-es">—</span></div>
+  <div><span class="lbl">tree </span><span class="vk" id="h-tree">—</span> <span class="lbl">closures </span><span class="vg" id="h-cl">—</span></div>
+  <div><span class="lbl">c=E−V+S </span><span id="h-id1">—</span> <span class="lbl">cyc=F−1 </span><span id="h-id2">—</span></div>
+  <div class="sect">PRICE (per shell / per frame)</div>
+  <div><span class="lbl">build </span><span class="vc" id="h-ms">—</span></div>
+  <div><span class="lbl">proj </span><span class="vc" id="h-proj">0</span> <span class="lbl">paths </span><span class="vc" id="h-paths">0</span> <span class="lbl">calls </span><span class="vc" id="h-calls">0</span></div>
+</div>
+<div id="hudR" class="hud" title="click to collapse"><div class="lg-inv">STITCHIUM: the anchors first, then the thread</div></div>
+<div id="legend">
+  <div><span style="color:var(--pink)">■</span> anchor (P=12, step 0) &nbsp; <span style="color:var(--cyan)">—</span> growth thread &nbsp; <span style="color:var(--gold)">—</span> closure stitch</div>
+  <canvas id="palbar" width="150" height="8"></canvas>
+  <div>face colour = <b>steps to anchor</b> (0 … <span id="lg-D">D</span>) · the ALPHIUM escape rule on the graph · DESIGN</div>
+</div>
+<div id="boundary"><b>BOUNDARY</b> · order = graph depth, dimensionless (EXACT) · the sphere &amp; the clock are a courtesy for the monkey brain (DESIGN) · counts are measured, never assumed (Curse 26)</div>
+<div id="bar">
+  <button class="btn gn" id="b-seed" onclick="doSeed()">SEED C20</button>
+  <button class="btn gd" id="b-next" onclick="doNext()">STITCH NEXT ▷</button>
+  <button class="btn" id="b-re" onclick="doRestitch()">RESTITCH</button>
+  <button class="btn" id="b-pause" onclick="doPause()">PAUSE</button>
+  <button class="btn" id="b-stepp" onclick="doStepPlus()">STEP +</button>
+  <button class="btn" id="b-inst" onclick="doInstant()">INSTANT: off</button>
+  <span class="sep"></span>
+  <button class="btn pk" id="b-flow" onclick="doFlow()" disabled>LIGHT FLOW: off</button>
+  <span class="sep"></span>
+  <span class="sl">SPIN <input type="range" id="sl-spin" min="0" max="20" value="0" oninput="setSpin(this.value)"><span class="sv" id="sv-spin">0.000</span></span>
+  <span class="sep"></span>
+  <button class="btn" onclick="doHide()">HIDE</button>
+</div>
+<div id="toast"></div>
+<script>
+/* eslint-disable */
+'use strict';
+/* ============================================================================
+   STITCHIUM KERNEL -- the exact machinery, testable headless (node) and in-browser.
+   Lineage: Goldberg constructor ported from shell__genesis_v8_5_1.html
+   (_icosahedron / _baryInt / _convexHull / GK.buildGoldberg), re-indexed here
+   into a fully indexed mesh (unique verts + faces-as-index-rings + edge list)
+   so the stitch BFS and the live verifier run on integers, not on floats.
+   No Math.random anywhere. Deterministic given (k,l).
+   ========================================================================= */
+var SK = {};
+(function(){
+  var PHI = (1 + Math.sqrt(5)) / 2;
+
+  function vsub(a,b){ return [a[0]-b[0], a[1]-b[1], a[2]-b[2]]; }
+  function vcross(a,b){ return [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]]; }
+  function vdot(a,b){ return a[0]*b[0]+a[1]*b[1]+a[2]*b[2]; }
+  function vlen(a){ return Math.sqrt(vdot(a,a)); }
+  function vnorm(a){ var L=vlen(a); return L>1e-12 ? [a[0]/L,a[1]/L,a[2]/L] : [0,0,0]; }
+  function toSphere(p){ return vnorm(p); }   // kernel radius = 1, dimensionless (DESIGN)
+
+  // -- icosahedron (12 verts, 20 CCW-out faces) --------------------------------
+  function icosahedron(){
+    var p = PHI, s = Math.sqrt(1 + p*p);
+    var raw = [
+      [-1, p, 0],[1, p, 0],[-1,-p, 0],[1,-p, 0],
+      [0,-1, p],[0, 1, p],[0,-1,-p],[0, 1,-p],
+      [p, 0,-1],[p, 0, 1],[-p, 0,-1],[-p, 0, 1]
+    ];
+    var verts = [], i;
+    for (i=0;i<12;i++) verts.push([raw[i][0]/s, raw[i][1]/s, raw[i][2]/s]);
+    var faces = [
+      [0,11,5],[0,5,1],[0,1,7],[0,7,10],[0,10,11],
+      [1,5,9],[5,11,4],[11,10,2],[10,7,6],[7,1,8],
+      [3,9,4],[3,4,2],[3,2,6],[3,6,8],[3,8,9],
+      [4,9,5],[2,4,11],[6,2,10],[8,6,7],[9,8,1]
+    ];
+    var out = [];
+    for (var f=0; f<20; f++){
+      var a=verts[faces[f][0]], b=verts[faces[f][1]], c=verts[faces[f][2]];
+      var nx=vcross(vsub(b,a), vsub(c,a));
+      var cen=[a[0]+b[0]+c[0], a[1]+b[1]+c[1], a[2]+b[2]+c[2]];
+      out.push(vdot(nx,cen) > 0 ? faces[f] : [faces[f][0],faces[f][2],faces[f][1]]);
+    }
+    return { verts: verts, faces: out };
+  }
+
+  // exact integer barycentric numerators (over T) of GC lattice point (i,j)
+  function baryInt(i, j, k, l){
+    var b1 = i*(k+l) + j*l;
+    var b2 = k*j - l*i;
+    var T  = k*k + k*l + l*l;
+    return [T - b1 - b2, b1, b2, T];
+  }
+
+  // incremental 3D convex hull of cospherical points -> outward CCW triangles
+  function convexHull(P){
+    var n = P.length, i;
+    function sub(a,b){ return [a[0]-b[0], a[1]-b[1], a[2]-b[2]]; }
+    function crs(a,b){ return [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]]; }
+    function dt(a,b){ return a[0]*b[0]+a[1]*b[1]+a[2]*b[2]; }
+    var i0=0, i1=-1, i2=-1, i3=-1;
+    for (i=1;i<n;i++){ var d=sub(P[i],P[i0]); if(dt(d,d)>1e-12){ i1=i; break; } }
+    for (i=1;i<n;i++){ if(i===i1) continue; var cr=crs(sub(P[i1],P[i0]),sub(P[i],P[i0])); if(dt(cr,cr)>1e-16){ i2=i; break; } }
+    var nrm=crs(sub(P[i1],P[i0]),sub(P[i2],P[i0]));
+    for (i=0;i<n;i++){ if(i===i0||i===i1||i===i2) continue; if(Math.abs(dt(nrm,sub(P[i],P[i0])))>1e-9){ i3=i; break; } }
+    var cen4=[(P[i0][0]+P[i1][0]+P[i2][0]+P[i3][0])/4,(P[i0][1]+P[i1][1]+P[i2][1]+P[i3][1])/4,(P[i0][2]+P[i1][2]+P[i2][2]+P[i3][2])/4];
+    var faces=[], seed=[[i0,i1,i2],[i0,i1,i3],[i0,i2,i3],[i1,i2,i3]];
+    for (var s=0;s<4;s++){ var t=seed[s]; var nx=crs(sub(P[t[1]],P[t[0]]),sub(P[t[2]],P[t[0]])); faces.push(dt(nx,sub(P[t[0]],cen4))>0 ? t : [t[0],t[2],t[1]]); }
+    var used={}; used[i0]=used[i1]=used[i2]=used[i3]=1;
+    for (var p=0;p<n;p++){
+      if(used[p]) continue;
+      var vp=P[p], visible=[];
+      for (var fi=0; fi<faces.length; fi++){
+        var f=faces[fi], a=P[f[0]]; var nx2=crs(sub(P[f[1]],a),sub(P[f[2]],a));
+        if(dt(nx2, sub(vp,a))>1e-12) visible.push(fi);
+      }
+      if(!visible.length) continue;
+      var ec={}, vis={};
+      for (var vi=0; vi<visible.length; vi++){
+        var ff=faces[visible[vi]]; vis[visible[vi]]=1;
+        var es=[[ff[0],ff[1]],[ff[1],ff[2]],[ff[2],ff[0]]];
+        for (var e=0;e<3;e++) ec[es[e][0]+'_'+es[e][1]]=1;
+      }
+      var horizon=[];
+      for (var key in ec){ var ab=key.split('_'); if(!ec[ab[1]+'_'+ab[0]]) horizon.push([+ab[0],+ab[1]]); }
+      var kept=[]; for (var fj=0; fj<faces.length; fj++){ if(!vis[fj]) kept.push(faces[fj]); }
+      faces=kept;
+      for (var h=0;h<horizon.length;h++) faces.push([horizon[h][0], horizon[h][1], p]);
+      used[p]=1;
+    }
+    return faces;
+  }
+
+  // -- Goldberg GP(k,l) as a fully indexed fullerene mesh ---------------------
+  // returns { k,l,T, verts:[[x,y,z]..] (20T), faces:[{ring:[vi..],type}] (10T+2),
+  //           edges:[[a,b]..] (30T), adj:[[..]..], pentFaces:[fi..], ms:{...} }
+  SK.buildGoldberg = function(k, l){
+    var t0 = (typeof performance!=='undefined'?performance:Date).now();
+    var ico = icosahedron();
+    var T = k*k + k*l + l*l;
+    var lo = -l - 2, hi = k + l + 2, i, j;
+
+    // lattice points inside-or-on the master triangle (exact integer test)
+    var latpts = [];
+    for (i=lo;i<=hi;i++) for (j=lo;j<=hi;j++){
+      var bb=baryInt(i,j,k,l);
+      if (bb[0]>=0 && bb[1]>=0 && bb[2]>=0) latpts.push([i,j]);
+    }
+
+    // map (face, lattice pt) -> unit sphere, weld duplicates across seams
+    var Q = 1e6, gmap = {}, gverts = [];
+    function gv(ij, face){
+      var bb=baryInt(ij[0],ij[1],k,l), w0=bb[0]/bb[3], w1=bb[1]/bb[3], w2=bb[2]/bb[3];
+      var pa=ico.verts[face[0]], pb=ico.verts[face[1]], pc=ico.verts[face[2]];
+      var p=toSphere([w0*pa[0]+w1*pb[0]+w2*pc[0],
+                      w0*pa[1]+w1*pb[1]+w2*pc[1],
+                      w0*pa[2]+w1*pb[2]+w2*pc[2]]);
+      var ky=Math.round(p[0]*Q)+'_'+Math.round(p[1]*Q)+'_'+Math.round(p[2]*Q);
+      var gi=gmap[ky];
+      if(gi===undefined){ gi=gverts.length; gmap[ky]=gi; gverts.push(p); }
+      return gi;
+    }
+    for (var fi=0; fi<20; fi++)
+      for (var pi=0; pi<latpts.length; pi++) gv(latpts[pi], ico.faces[fi]);
+    var tLat = (typeof performance!=='undefined'?performance:Date).now();
+
+    // geodesic triangulation = convex hull of the cospherical points
+    var gtris = convexHull(gverts);
+    var tHull = (typeof performance!=='undefined'?performance:Date).now();
+
+    // DUAL: fullerene vertex = geodesic triangle centroid (unique per triangle)
+    var verts = [];
+    for (var t=0; t<gtris.length; t++){
+      var a=gverts[gtris[t][0]], b=gverts[gtris[t][1]], c=gverts[gtris[t][2]];
+      verts.push(toSphere([(a[0]+b[0]+c[0])/3,(a[1]+b[1]+c[1])/3,(a[2]+b[2]+c[2])/3]));
+    }
+    // triangles around each geodesic vertex -> one fullerene face ring (CCW-out)
+    var around = []; for (var g2=0; g2<gverts.length; g2++) around.push([]);
+    for (var tt=0; tt<gtris.length; tt++){
+      around[gtris[tt][0]].push(tt); around[gtris[tt][1]].push(tt); around[gtris[tt][2]].push(tt);
+    }
+    var faces=[], pentFaces=[];
+    for (var g=0; g<gverts.length; g++){
+      var tlist=around[g]; if(!tlist.length) continue;
+      var nrm=gverts[g];                              // already unit
+      var ref=(Math.abs(nrm[0])<0.9)?[1,0,0]:[0,1,0];
+      var tan=vnorm(vcross(nrm, ref)), bit=vcross(nrm, tan);
+      var ring=tlist.slice().sort(function(ta, tb){
+        var da=vsub(verts[ta], nrm), db=vsub(verts[tb], nrm);
+        return Math.atan2(vdot(da,bit), vdot(da,tan)) - Math.atan2(vdot(db,bit), vdot(db,tan));
+      });
+      var type=(ring.length===5)?'pent':'hex';
+      if(type==='pent') pentFaces.push(faces.length);
+      faces.push({ ring: ring, type: type });
+    }
+
+    // indexed edges + adjacency + per-edge face count
+    var edges=[], adj=[], ek={}, efc=[];
+    for (i=0;i<verts.length;i++) adj.push([]);
+    for (var f2=0; f2<faces.length; f2++){
+      var r=faces[f2].ring, m=r.length;
+      for (var e2=0;e2<m;e2++){
+        var a2=r[e2], b2=r[(e2+1)%m];
+        var key2 = a2<b2 ? a2+'_'+b2 : b2+'_'+a2;
+        var ei = ek[key2];
+        if(ei===undefined){
+          ei=edges.length; ek[key2]=ei; edges.push([a2,b2]); efc.push(0);
+          adj[a2].push({v:b2, e:ei}); adj[b2].push({v:a2, e:ei});
+        }
+        efc[ei]++;
+      }
+    }
+    var t1 = (typeof performance!=='undefined'?performance:Date).now();
+    return { k:k, l:l, T:T, verts:verts, faces:faces, edges:edges, adj:adj,
+             pentFaces:pentFaces, edgeFaceCount:efc,
+             ms:{ lattice:Math.round(tLat-t0), hull:Math.round(tHull-tLat),
+                  dual:Math.round(t1-tHull), total:Math.round(t1-t0) } };
+  };
+
+  // -- THE STITCH: multi-source BFS from the 12 pentagon anchors --------------
+  // depth[v] = graph distance to the nearest pentagon vertex (dimensionless).
+  // Edge class: 'tree' extends the fabric to a new vertex; 'closure' joins two
+  // already-reached vertices (each closure closes exactly one independent cycle).
+  // Edge stitch step = max(depth[a], depth[b]). Face step = max depth on ring.
+  SK.stitch = function(mesh){
+    var t0 = (typeof performance!=='undefined'?performance:Date).now();
+    var n = mesh.verts.length, i;
+    var depth = new Int32Array(n); for(i=0;i<n;i++) depth[i]=-1;
+    var seedSet = {}, seeds = [];
+    for (i=0;i<mesh.pentFaces.length;i++){
+      var r = mesh.faces[mesh.pentFaces[i]].ring;
+      for (var s=0;s<r.length;s++){ if(!seedSet[r[s]]){ seedSet[r[s]]=1; seeds.push(r[s]); } }
+    }
+    var queue = new Int32Array(n), qh=0, qt=0;
+    for (i=0;i<seeds.length;i++){ depth[seeds[i]]=0; queue[qt++]=seeds[i]; }
+    var edgeClass = new Uint8Array(mesh.edges.length);  // 0 unseen, 1 tree, 2 closure
+    var treeCount = 0;
+    while(qh<qt){
+      var u=queue[qh++], du=depth[u], nb=mesh.adj[u];
+      for (var e=0;e<nb.length;e++){
+        var v=nb[e].v, ei=nb[e].e;
+        if(depth[v]<0){ depth[v]=du+1; queue[qt++]=v; edgeClass[ei]=1; treeCount++; }
+      }
+    }
+    var closures=0, maxStep=0;
+    var edgeStep = new Int32Array(mesh.edges.length);
+    for (i=0;i<mesh.edges.length;i++){
+      if(edgeClass[i]===0){ edgeClass[i]=2; closures++; }
+      var a=mesh.edges[i][0], b=mesh.edges[i][1];
+      edgeStep[i] = Math.max(depth[a], depth[b]);
+      if(edgeStep[i]>maxStep) maxStep=edgeStep[i];
+    }
+    var faceStep = new Int32Array(mesh.faces.length);
+    for (i=0;i<mesh.faces.length;i++){
+      var rr=mesh.faces[i].ring, mx=0;
+      for (var q2=0;q2<rr.length;q2++) if(depth[rr[q2]]>mx) mx=depth[rr[q2]];
+      faceStep[i]=mx;
+    }
+    var reached=0; for(i=0;i<n;i++) if(depth[i]>=0) reached++;
+    var t1 = (typeof performance!=='undefined'?performance:Date).now();
+    return { depth:depth, edgeClass:edgeClass, edgeStep:edgeStep, faceStep:faceStep,
+             seeds:seeds.length, treeEdges:treeCount, closures:closures,
+             maxStep:maxStep, reached:reached, ms:Math.round(t1-t0) };
+  };
+
+  // -- LIVE VERIFIER: every count from the mesh itself, never from the formula --
+  SK.verify = function(mesh, st){
+    var V=mesh.verts.length, E=mesh.edges.length, F=mesh.faces.length;
+    var P=0,H=0,i;
+    for(i=0;i<F;i++){ if(mesh.faces[i].ring.length===5)P++; else if(mesh.faces[i].ring.length===6)H++; }
+    var deg3=true; for(i=0;i<V;i++) if(mesh.adj[i].length!==3){ deg3=false; break; }
+    var e2f=true; for(i=0;i<E;i++) if(mesh.edgeFaceCount[i]!==2){ e2f=false; break; }
+    var chi=V-E+F;
+    var T=mesh.T;
+    var formulaOK = (V===20*T)&&(E===30*T)&&(F===10*T+2)&&(P===12)&&(H===10*(T-1));
+    var r = { V:V,E:E,F:F,P:P,H:H,chi:chi,deg3:deg3,edgeIn2Faces:e2f,
+              formulaOK:formulaOK,
+              pass: chi===2 && P===12 && deg3 && e2f && (P+H===F) };
+    if(st){
+      r.reachedAll   = (st.reached===V);
+      r.cycleRank    = E - V + 1;                 // EXACT: independent cycles
+      r.cycleIsFm1   = (E - V + 1) === (F - 1);   // Euler, read as cycles = F-1
+      r.closureIdent = st.closures === (E - V + st.seeds);  // live stitch identity
+      r.pass = r.pass && r.reachedAll && r.cycleIsFm1 && r.closureIdent;
+    }
+    return r;
+  };
+
+  SK.goldenPair = function(n){ var a=0,b=1; for(var i=0;i<n;i++){ var t=a+b; a=b; b=t; } return {k:b, l:a}; };
+  SK.PHI = PHI;
+})();
+if (typeof module!=='undefined') module.exports = SK;
+
+/* ===================== RENDERER + UI (the seen half) ====================== */
+var cv=document.getElementById('cv'), cx=cv.getContext('2d');
+var W=0,H=0;
+var cam={ ry:0.62, rx:-0.34, spin:0, zoom:1 };   /* spin 0: motion is opt-in (Curse 13) */
+var reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+var mesh=null, st=null, ver=null, level=-1, prevT=null;
+var phase='idle', front=0, sub=0, paused=false, instant=reduceMotion;
+var flowOn=false, flowData=null;
+var BUDGET_V=8000, STEPS_PER_SEC=1.6;            /* DESIGN levers, labelled */
+
+/* ---- per-mesh statics ---- */
+var D=0, faceCenN=null, edgeMidN=null, pentEdge=null, cumEdges=null;
+var bandColor=null;                               /* per step: [r,g,b] */
+var pentRGB=[255,105,180];
+
+/* ---- projection cache (rebuilt only when camDirty) ---- */
+var P2=null, faceFacing=null, edgeFacing=null, camDirty=true;
+var pentFacePaths=null, hexFacePaths=null, edgePaths=null;
+var projCount=0, pathCount=0, callCount=0;
+
+function SV(id,v){ var e=document.getElementById(id); if(e) e.textContent=v; }
+function log(msg,cls){
+  var el=document.getElementById('hudR'), d=document.createElement('div');
+  d.className=cls||'lg-dim'; d.textContent=msg; el.appendChild(d);
+  while(el.childNodes.length>220) el.removeChild(el.childNodes[1]);
+  el.scrollTop=el.scrollHeight;
+}
+var toastT=null;
+function toast(msg){
+  var t=document.getElementById('toast'); t.textContent=msg; t.style.display='block';
+  if(toastT) clearTimeout(toastT); toastT=setTimeout(function(){ t.style.display='none'; },5200);
+}
+
+/* ---- ALPHIUM escape palette on the graph (DESIGN) ---- */
+var PAL=[[0.00,26,18,66],[0.34,0,132,220],[0.62,0,255,213],[0.85,255,215,0],[1.00,255,250,230]];
+function palRGB(t){
+  if(t<=0) return [PAL[0][1],PAL[0][2],PAL[0][3]];
+  if(t>=1) return [PAL[PAL.length-1][1],PAL[PAL.length-1][2],PAL[PAL.length-1][3]];
+  var i=0; while(i<PAL.length-2 && PAL[i+1][0]<t) i++;
+  var a=PAL[i], b=PAL[i+1], f=(t-a[0])/(b[0]-a[0]);
+  return [Math.round(a[1]+(b[1]-a[1])*f), Math.round(a[2]+(b[2]-a[2])*f), Math.round(a[3]+(b[3]-a[3])*f)];
+}
+function drawPalbar(){
+  var pc=document.getElementById('palbar'), g=pc.getContext('2d');
+  for(var x=0;x<150;x++){ var c=palRGB(x/149); g.fillStyle='rgb('+c[0]+','+c[1]+','+c[2]+')'; g.fillRect(x,0,1,8); }
+  SV('lg-D', String(D));
+}
+
+/* ---- build statics for the current mesh ---- */
+function buildStatics(){
+  var i,F=mesh.faces.length,E=mesh.edges.length,V=mesh.verts.length;
+  D=st.maxStep;
+  faceCenN=new Float32Array(3*F);
+  for(i=0;i<F;i++){
+    var r=mesh.faces[i].ring, x=0,y=0,z=0;
+    for(var q=0;q<r.length;q++){ var p=mesh.verts[r[q]]; x+=p[0]; y+=p[1]; z+=p[2]; }
+    var L=Math.sqrt(x*x+y*y+z*z)||1; faceCenN[3*i]=x/L; faceCenN[3*i+1]=y/L; faceCenN[3*i+2]=z/L;
+  }
+  edgeMidN=new Float32Array(3*E);
+  for(i=0;i<E;i++){
+    var a=mesh.verts[mesh.edges[i][0]], b=mesh.verts[mesh.edges[i][1]];
+    var mx=a[0]+b[0], my=a[1]+b[1], mz=a[2]+b[2];
+    var L2=Math.sqrt(mx*mx+my*my+mz*mz)||1;
+    edgeMidN[3*i]=mx/L2; edgeMidN[3*i+1]=my/L2; edgeMidN[3*i+2]=mz/L2;
+  }
+  pentEdge=new Uint8Array(E);
+  for(i=0;i<mesh.pentFaces.length;i++){
+    var pr=mesh.faces[mesh.pentFaces[i]].ring;
+    for(var s=0;s<pr.length;s++){
+      var u=pr[s], v=pr[(s+1)%pr.length];
+      var nb=mesh.adj[u];
+      for(var e=0;e<nb.length;e++) if(nb[e].v===v){ pentEdge[nb[e].e]=1; break; }
+    }
+  }
+  cumEdges=new Int32Array(D+1);
+  for(i=0;i<E;i++) cumEdges[st.edgeStep[i]]++;
+  for(i=1;i<=D;i++) cumEdges[i]+=cumEdges[i-1];
+  bandColor=[];
+  for(i=0;i<=D;i++) bandColor.push(palRGB(D>0? i/D : 0));
+  P2=new Float32Array(2*V);
+  faceFacing=new Uint8Array(F); edgeFacing=new Uint8Array(E);
+  camDirty=true;
+  drawPalbar();
+}
+
+/* ---- projection: unique verts once, trig hoisted; two-pass facing is EXACT
+       for a convex shell under orthographic projection -> zero sorting ---- */
+function reproject(){
+  var i,V=mesh.verts.length,F=mesh.faces.length,E=mesh.edges.length;
+  var cy=Math.cos(cam.ry), sy=Math.sin(cam.ry), crx=Math.cos(cam.rx), srx=Math.sin(cam.rx);
+  var S=Math.min(W,H)*0.36*cam.zoom, cxp=W/2, cyp=H/2;
+  for(i=0;i<V;i++){
+    var p=mesh.verts[i], x=p[0],y=p[1],z=p[2];
+    var x1=x*cy-z*sy, z1=x*sy+z*cy, y1=y*crx-z1*srx;
+    P2[2*i]=cxp+x1*S; P2[2*i+1]=cyp-y1*S;
+  }
+  for(i=0;i<F;i++){
+    var fx=faceCenN[3*i],fy=faceCenN[3*i+1],fz=faceCenN[3*i+2];
+    var fz1=fx*sy+fz*cy, fz2=fy*srx+fz1*crx;
+    faceFacing[i]=fz2>0?1:0;
+  }
+  for(i=0;i<E;i++){
+    var ex=edgeMidN[3*i],ey=edgeMidN[3*i+1],ez=edgeMidN[3*i+2];
+    var ez1=ex*sy+ez*cy, ez2=ey*srx+ez1*crx;
+    edgeFacing[i]=ez2>0?1:0;
+  }
+  /* Path2D banks: [facing][step] faces (pent separate), [facing][class][step] edges */
+  pentFacePaths=[new Path2D(), new Path2D()];
+  hexFacePaths=[[],[]]; edgePaths=[[],[]];
+  var f2,c2,s2;
+  for(f2=0;f2<2;f2++){
+    for(s2=0;s2<=D;s2++) hexFacePaths[f2].push(new Path2D());
+    for(c2=0;c2<3;c2++){ edgePaths[f2].push([]); for(s2=0;s2<=D;s2++) edgePaths[f2][c2].push(new Path2D()); }
+  }
+  for(i=0;i<F;i++){
+    var ring=mesh.faces[i].ring, isP=mesh.faces[i].type==='pent';
+    var path=isP? pentFacePaths[faceFacing[i]] : hexFacePaths[faceFacing[i]][st.faceStep[i]];
+    path.moveTo(P2[2*ring[0]],P2[2*ring[0]+1]);
+    for(var k2=1;k2<ring.length;k2++) path.lineTo(P2[2*ring[k2]],P2[2*ring[k2]+1]);
+    path.closePath();
+  }
+  for(i=0;i<E;i++){
+    var cls=pentEdge[i]?2:(st.edgeClass[i]===1?0:1);   /* render class: 0 tree,1 closure,2 anchor */
+    var pp=edgePaths[edgeFacing[i]][cls][st.edgeStep[i]];
+    var a2=mesh.edges[i][0], b2=mesh.edges[i][1];
+    pp.moveTo(P2[2*a2],P2[2*a2+1]); pp.lineTo(P2[2*b2],P2[2*b2+1]);
+  }
+  projCount=V; pathCount=2*(1+(D+1))+2*3*(D+1);
+  camDirty=false;
+}
+
+/* ---- draw: a handful of fills/strokes over cached paths ---- */
+var CLASS_RGB=[[0,212,255],[255,215,0],[255,105,180]];  /* tree cyan, closure gold, anchor pink */
+function bandAlpha(step){
+  if(phase!=='stitching') return 1;
+  if(step<front) return 1;
+  if(step===front) return Math.max(0.06, sub*sub*(3-2*sub));
+  return 0;
+}
+function draw(){
+  callCount=0;
+  cx.fillStyle='#050508'; cx.fillRect(0,0,W,H); callCount++;
+  if(!mesh) return;
+  var pass,step,cls;
+  for(pass=0;pass<2;pass++){
+    var fA=pass?0.26:0.10, eA=pass?0.62:0.20, pA=pass?0.30:0.12, prA=pass?0.95:0.35;
+    /* hex fabric fills, banded by steps-to-anchor */
+    for(step=0;step<=D;step++){
+      var a=bandAlpha(step); if(a<=0.001) continue;
+      var c=bandColor[step];
+      cx.fillStyle='rgba('+c[0]+','+c[1]+','+c[2]+','+(fA*a).toFixed(3)+')';
+      cx.fill(hexFacePaths[pass][step]); callCount++;
+    }
+    /* anchors: the 12 pentagons PRECEDE the fabric -- no band gate, ever */
+    cx.fillStyle='rgba('+pentRGB[0]+','+pentRGB[1]+','+pentRGB[2]+','+pA+')';
+    cx.fill(pentFacePaths[pass]); callCount++;
+    /* edges by class and band */
+    cx.lineWidth=1;
+    for(cls=0;cls<2;cls++){
+      var cc=CLASS_RGB[cls];
+      for(step=0;step<=D;step++){
+        var a3=bandAlpha(step); if(a3<=0.001) continue;
+        var pulse=(phase==='stitching'&&step===front)?(0.45+0.55*a3):a3;
+        cx.strokeStyle='rgba('+cc[0]+','+cc[1]+','+cc[2]+','+(eA*pulse).toFixed(3)+')';
+        cx.stroke(edgePaths[pass][cls][step]); callCount++;
+      }
+    }
+    /* every class-2 edge joins two seeds, so it sits at step 0 (EXACT):
+       one stroke per pass, no gate, no empty-path padding of the ledger */
+    cx.lineWidth=1.5;
+    cx.strokeStyle='rgba('+CLASS_RGB[2][0]+','+CLASS_RGB[2][1]+','+CLASS_RGB[2][2]+','+prA+')';
+    cx.stroke(edgePaths[pass][2][0]); callCount++;
+  }
+  SV('h-proj',String(projCount)); SV('h-paths',String(pathCount)); SV('h-calls',String(callCount));
+  projCount=0;
+}
+
+/* ---- LIGHT FLOW (opt-in, after CLOSED VERIFIED): Fiedler mode + receipt ---- */
+function fiedlerMode(iters,tol){
+  var n=mesh.verts.length, adj=mesh.adj, i,e;
+  var dmax=0; for(i=0;i<n;i++) if(adj[i].length>dmax) dmax=adj[i].length;
+  var s=dmax+1, x=new Float64Array(n);
+  for(i=0;i<n;i++) x[i]=Math.sin(i*12.9898)*43758.5453%1-0.5;   /* deterministic */
+  function deflate(v){ var m=0; for(var j=0;j<n;j++)m+=v[j]; m/=n; for(var j2=0;j2<n;j2++)v[j2]-=m; }
+  function norm(v){ var s2=0; for(var j=0;j<n;j++)s2+=v[j]*v[j]; s2=Math.sqrt(s2)||1; for(var j2=0;j2<n;j2++)v[j2]/=s2; return s2; }
+  deflate(x); norm(x);
+  var y=new Float64Array(n), lam=0, prev=0, used=iters;
+  for(var it=0; it<iters; it++){
+    for(i=0;i<n;i++){
+      var di=adj[i].length, acc=(s-di)*x[i], nb=adj[i];
+      for(e=0;e<di;e++) acc+=x[nb[e].v];
+      y[i]=acc;
+    }
+    deflate(y); var mu=norm(y);
+    for(i=0;i<n;i++) x[i]=y[i];
+    lam=s-mu;
+    if(it>3 && Math.abs(lam-prev)<tol){ used=it+1; break; }
+    prev=lam;
+  }
+  var res=0;                                   /* receipt: ||Lv - lambda v||_inf */
+  for(i=0;i<n;i++){
+    var di2=adj[i].length, lx=di2*x[i], nb2=adj[i];
+    for(e=0;e<di2;e++) lx-=x[nb2[e].v];
+    var r=Math.abs(lx-lam*x[i]); if(r>res)res=r;
+  }
+  return {vec:x, lambda:lam, iters:used, budget:iters, residual:res, n:n};
+}
+var FLOW_BUCKETS=12;
+function flowDraw(tNow){
+  if(!flowOn||!flowData) return;
+  var t=(tNow-flowData.t0)/1000;
+  var swing=Math.cos(t*flowData.omega*2.2), sgn=swing>=0?1:-1;    /* 2.2: DESIGN tempo */
+  var travel=(t*0.6)%1, HALF=0.06, aswing=Math.abs(swing);
+  var paths=[], i; for(i=0;i<FLOW_BUCKETS;i++) paths.push(null);
+  var E=mesh.edges.length;
+  for(i=0;i<E;i++){
+    var g=flowData.grad[i], amp=Math.abs(g)/flowData.maxG;
+    if(amp<0.02) continue;
+    var dir=(g>=0?1:-1)*sgn;
+    var flow=(dir>=0)?travel:(1-travel);
+    var u0=flow-HALF, u1=flow+HALF;
+    var a=mesh.edges[i][0], b=mesh.edges[i][1];
+    var ax=P2[2*a],ay=P2[2*a+1],bx=P2[2*b],by=P2[2*b+1];
+    var segs=[[Math.max(0,u0),Math.min(1,u1)]];
+    if(u0<0) segs.push([u0+1,1]); if(u1>1) segs.push([0,u1-1]);
+    var alpha=amp*aswing; if(alpha<0.03) continue;
+    var bk=Math.min(FLOW_BUCKETS-1, (alpha*FLOW_BUCKETS)|0);
+    if(!paths[bk]) paths[bk]=new Path2D();
+    for(var s3=0;s3<segs.length;s3++){
+      var v0=segs[s3][0], v1=segs[s3][1]; if(v1<=v0) continue;
+      paths[bk].moveTo(ax+(bx-ax)*v0, ay+(by-ay)*v0);
+      paths[bk].lineTo(ax+(bx-ax)*v1, ay+(by-ay)*v1);
+    }
+  }
+  cx.globalCompositeOperation='lighter'; cx.lineWidth=1;
+  for(i=0;i<FLOW_BUCKETS;i++){
+    if(!paths[i]) continue;
+    cx.strokeStyle='rgba(0,180,255,'+((i+1)/FLOW_BUCKETS).toFixed(3)+')';
+    cx.stroke(paths[i]); callCount++;
+  }
+  cx.globalCompositeOperation='source-over';
+  SV('h-calls',String(callCount));
+}
+
+/* ---- HUD + receipts ---- */
+function fmtErr(x){ return x.toExponential(2); }
+function updateClosureHud(){
+  SV('h-kl','('+mesh.k+','+mesh.l+')'); SV('h-t',String(mesh.T));
+  SV('h-v',String(ver.V)); SV('h-e',String(ver.E)); SV('h-f',String(ver.F));
+  SV('h-p',String(ver.P)); SV('h-h',String(ver.H)); SV('h-chi',String(ver.chi));
+  var d3=document.getElementById('h-d3'); d3.textContent=ver.deg3?'ok':'BAD'; d3.className=ver.deg3?'vgr':'vr';
+  var e2=document.getElementById('h-e2f'); e2.textContent=ver.edgeIn2Faces?'ok':'BAD'; e2.className=ver.edgeIn2Faces?'vgr':'vr';
+  var vd=document.getElementById('h-verd'); vd.textContent=ver.pass?'CLOSED VERIFIED':'FAIL'; vd.className=ver.pass?'vgr':'vr';
+  var el=document.getElementById('eulerline');
+  el.textContent='V\u2212E+F='+ver.chi+' \u00b7 P='+ver.P+(ver.pass?' \u00b7 CLOSED VERIFIED':' \u00b7 FAIL');
+  el.className=ver.pass?'ok':'bad';
+  if(mesh.l>0){ SV('h-kol',(mesh.k/mesh.l).toFixed(8)); SV('h-kerr',fmtErr(Math.abs(mesh.k/mesh.l-SK.PHI))); }
+  else { SV('h-kol','\u2014'); SV('h-kerr','\u2014'); }
+  if(prevT){ SV('h-tr',(mesh.T/prevT).toFixed(6)); SV('h-trerr',fmtErr(Math.abs(mesh.T/prevT-SK.PHI*SK.PHI))); }
+  else { SV('h-tr','\u2014'); SV('h-trerr','\u2014'); }
+  SV('h-ms','lat '+mesh.ms.lattice+' hull '+mesh.ms.hull+' dual '+mesh.ms.dual+' bfs '+st.ms+' ms');
+  var id1=document.getElementById('h-id1'); id1.textContent=ver.closureIdent?'ok':'BAD'; id1.className=ver.closureIdent?'vgr':'vr';
+  var id2=document.getElementById('h-id2'); id2.textContent=ver.cycleIsFm1?'ok':'BAD'; id2.className=ver.cycleIsFm1?'vgr':'vr';
+  SV('h-tree',String(st.treeEdges)); SV('h-cl',String(st.closures));
+}
+function updateStitchHud(){
+  var shown = (phase==='stitching') ? (front<=D?cumEdges[Math.max(0,Math.min(front,D))]:mesh.edges.length)
+                                    : mesh.edges.length;
+  if(phase==='stitching'&&front===0&&sub<1) shown=cumEdges[0];
+  SV('h-step',(phase==='stitching'? front : D)+' / '+D);
+  SV('h-es',shown+' / '+mesh.edges.length);
+}
+
+/* ---- shell lifecycle ---- */
+function buildLevel(n){
+  var p=SK.goldenPair(n);
+  var predictV=20*(p.k*p.k+p.k*p.l+p.l*p.l);
+  if(predictV>BUDGET_V){
+    toast('CURSE 35 GATE: next shell predicts '+predictV+' vertices > budget '+BUDGET_V+'. Refused BEFORE allocation. The guillotine is built in.');
+    log('GATE: refused C'+predictV+' (budget '+BUDGET_V+')','lg-warn');
+    return false;
+  }
+  prevT = mesh ? mesh.T : null;
+  mesh=SK.buildGoldberg(p.k,p.l);
+  st=SK.stitch(mesh);
+  ver=SK.verify(mesh,st);
+  level=n;
+  buildStatics();
+  updateClosureHud();
+  flowOn=false; flowData=null;
+  var fb=document.getElementById('b-flow'); fb.disabled=!ver.pass; fb.textContent='LIGHT FLOW: off'; fb.classList.remove('flowon');
+  log('SHELL C'+ver.V+'  (k,l)=('+mesh.k+','+mesh.l+')  T='+mesh.T,'lg-inv');
+  log('V='+ver.V+' E='+ver.E+' F='+ver.F+' P='+ver.P+' H='+ver.H+' chi='+ver.chi+' deg3:'+(ver.deg3?'ok':'BAD')+' e2f:'+(ver.edgeIn2Faces?'ok':'BAD'),'lg-op');
+  log('stitch: seeds S='+st.seeds+' tree='+st.treeEdges+' closures='+st.closures+'  [c=E-V+S '+(ver.closureIdent?'ok':'BAD')+']  [cycles=F-1 '+(ver.cycleIsFm1?'ok':'BAD')+']  D='+st.maxStep,'lg-gold');
+  log('price: lattice '+mesh.ms.lattice+'ms hull '+mesh.ms.hull+'ms dual '+mesh.ms.dual+'ms bfs '+st.ms+'ms','lg-dim');
+  if(ver.pass) log('VERDICT: CLOSED VERIFIED (live checks, not formula)','lg-inv');
+  else log('VERDICT: FAIL - open candidate, seams unpaid','lg-warn');
+  if(D===0) log('all-anchor shell: every vertex touches a pentagon; depth field flat 0. The fabric begins at C140.','lg-pink');
+  return true;
+}
+function startStitch(){
+  if(D===0||instant){ phase='done'; front=D; sub=1; updateStitchHud(); return; }
+  phase='stitching'; front=0; sub=0; paused=false;
+  document.getElementById('b-pause').textContent='PAUSE';
+  updateStitchHud();
+  log('STITCHING: 12 fronts leave the anchors. Order = graph depth. The clock is a courtesy.','lg-op');
+}
+function finishStitch(){
+  phase='done'; front=D; sub=1; updateStitchHud();
+  log('STITCH COMPLETE: '+st.closures+' closure stitches shut '+(ver.F-1)+' cycles. chi=2 read off the thread.','lg-inv');
+}
+
+/* ---- controls ---- */
+function doSeed(){ if(buildLevel(0)){ phase='done'; front=0; sub=1; updateStitchHud(); } }
+function doNext(){
+  var n=level+1;
+  if(buildLevel(n)) startStitch();
+}
+function doRestitch(){
+  if(!mesh) return;
+  if(D===0){ toast('Nothing to stitch between anchors on an all-anchor shell. STITCH NEXT to grow the fabric.'); return; }
+  startStitch();
+}
+function doPause(){
+  if(phase!=='stitching') return;
+  paused=!paused;
+  document.getElementById('b-pause').textContent=paused?'RESUME':'PAUSE';
+}
+function doStepPlus(){
+  if(!mesh) return;
+  if(phase!=='stitching'){ doRestitch(); if(phase!=='stitching') return; paused=true; document.getElementById('b-pause').textContent='RESUME'; sub=1; updateStitchHud(); return; }
+  paused=true; document.getElementById('b-pause').textContent='RESUME';
+  if(front<D){ front++; sub=1; } else finishStitch();
+  updateStitchHud();
+}
+function doInstant(){
+  instant=!instant;
+  document.getElementById('b-inst').textContent='INSTANT: '+(instant?'on':'off');
+  document.getElementById('b-inst').classList.toggle('on',instant);
+  if(instant&&phase==='stitching') finishStitch();
+}
+function doFlow(){
+  if(phase!=='done'||!ver||!ver.pass) return;
+  flowOn=!flowOn;
+  var fb=document.getElementById('b-flow');
+  if(flowOn){
+    var budget=Math.max(1500,Math.min(20000,mesh.verts.length*3));
+    var t0=performance.now();
+    var res=fiedlerMode(budget,1e-11);
+    var ms=Math.round(performance.now()-t0);
+    var grad=new Float64Array(mesh.edges.length), mg=1e-9, i;
+    for(i=0;i<mesh.edges.length;i++){
+      var g=res.vec[mesh.edges[i][0]]-res.vec[mesh.edges[i][1]];
+      grad[i]=g; if(Math.abs(g)>mg)mg=Math.abs(g);
+    }
+    flowData={grad:grad,maxG:mg,omega:Math.sqrt(Math.max(0,res.lambda)),t0:performance.now()};
+    cam.spin=0; document.getElementById('sl-spin').value=0; SV('sv-spin','0.000');
+    fb.textContent='LIGHT FLOW: on'; fb.classList.add('flowon');
+    log('LIGHT FLOW: lambda2='+res.lambda.toFixed(8)+'  iters '+res.iters+'/'+res.budget+'  residual '+res.residual.toExponential(2)+'  '+ms+'ms','lg-gold');
+    log('tone w=sqrt(lambda2)='+flowData.omega.toFixed(5)+' -- brightness = modal current |va-vb| (COMPUTED)','lg-op');
+    if(res.iters>=res.budget) log('WARNING: iteration budget hit -- the mode may be under-converged. Target is not result.','lg-warn');
+  } else {
+    flowData=null; fb.textContent='LIGHT FLOW: off'; fb.classList.remove('flowon');
+    log('LIGHT FLOW: off','lg-dim');
+  }
+}
+function setSpin(v){ cam.spin=v*0.0004; SV('sv-spin',(v*0.0004).toFixed(4)); }
+var hidden=false;
+function doHide(){
+  hidden=!hidden;
+  var ids=['hudL','hudR','legend','boundary'];
+  for(var i=0;i<ids.length;i++) document.getElementById(ids[i]).style.display=hidden?'none':'';
+}
+document.getElementById('hudL').addEventListener('click',function(ev){ if(ev.target.tagName!=='BUTTON') this.style.opacity=this.style.opacity==='0.15'?'':'0.15'; });
+document.getElementById('hudR').addEventListener('click',function(){ this.style.opacity=this.style.opacity==='0.15'?'':'0.15'; });
+
+/* ---- pointer: drag rotate, wheel zoom, pinch ---- */
+var dragging=false,lastX=0,lastY=0,pts={},pinchD=0,pinchZ=1;
+cv.addEventListener('pointerdown',function(e){ cv.setPointerCapture(e.pointerId); pts[e.pointerId]=[e.clientX,e.clientY];
+  var n=Object.keys(pts).length;
+  if(n===1){ dragging=true; lastX=e.clientX; lastY=e.clientY; }
+  else if(n===2){ dragging=false; var k=Object.keys(pts); var a=pts[k[0]],b=pts[k[1]];
+    pinchD=Math.hypot(a[0]-b[0],a[1]-b[1]); pinchZ=cam.zoom; }
+});
+cv.addEventListener('pointermove',function(e){
+  if(pts[e.pointerId]) pts[e.pointerId]=[e.clientX,e.clientY];
+  var n=Object.keys(pts).length;
+  if(n===2&&pinchD>0){ var k=Object.keys(pts); var a=pts[k[0]],b=pts[k[1]];
+    var d=Math.hypot(a[0]-b[0],a[1]-b[1]);
+    cam.zoom=Math.max(0.4,Math.min(3,pinchZ*d/pinchD)); camDirty=true; return; }
+  if(dragging&&n===1){ cam.ry+=(e.clientX-lastX)*0.006; cam.rx+=(e.clientY-lastY)*0.006;
+    cam.rx=Math.max(-1.4,Math.min(1.4,cam.rx)); lastX=e.clientX; lastY=e.clientY; camDirty=true; }
+});
+function endP(e){ delete pts[e.pointerId]; if(Object.keys(pts).length===0){dragging=false;pinchD=0;} }
+cv.addEventListener('pointerup',endP); cv.addEventListener('pointercancel',endP);
+cv.addEventListener('wheel',function(e){ e.preventDefault();
+  cam.zoom=Math.max(0.4,Math.min(3,cam.zoom*(e.deltaY>0?0.92:1.08))); camDirty=true; },{passive:false});
+
+function resize(){ W=cv.width=innerWidth; H=cv.height=innerHeight; camDirty=true; }
+addEventListener('resize',resize);
+
+/* ---- the loop ---- */
+var lastT=performance.now();
+function animate(tNow){
+  var dt=Math.min(0.1,(tNow-lastT)/1000); lastT=tNow;
+  if(cam.spin>0){ cam.ry+=cam.spin; camDirty=true; }
+  if(mesh&&camDirty) reproject();
+  if(phase==='stitching'&&!paused){
+    sub+=dt*STEPS_PER_SEC;
+    if(sub>=1){ sub=0; front++; if(front>D) finishStitch(); updateStitchHud(); }
+  }
+  draw();
+  flowDraw(tNow);
+  requestAnimationFrame(animate);
+}
+
+/* ---- receipts (Path XII: inspectable) ---- */
+window.STITCH={
+  level:function(){ return level; },
+  mesh:function(){ return mesh; },
+  verify:function(){ return SK.verify(mesh,st); },
+  stitchLedger:function(){ return st?{seeds:st.seeds,tree:st.treeEdges,closures:st.closures,D:st.maxStep}:null; },
+  depthHistogram:function(){
+    if(!st) return null; var h={},i;
+    for(i=0;i<st.depth.length;i++) h[st.depth[i]]=(h[st.depth[i]]||0)+1;
+    return h;
+  },
+  budget:BUDGET_V
+};
+console.log('%cSTITCHIUM v0.1 -- the 12 anchors stitch the hex fabric','color:#ff69b4;font-weight:bold');
+console.log('%cP=12 forced by Euler. Order = graph depth. closures = E-V+S. cycles = F-1. All counted live.','color:#00ffd5');
+console.log('%cwindow.STITCH holds the receipts. Motion is opt-in. No Math.random anywhere.','color:#556');
+
+/* ---- boot: still, C20 revealed, nothing moves until asked (Curse 13) ---- */
+if(reduceMotion){ instant=true; document.getElementById('b-inst').textContent='INSTANT: on'; document.getElementById('b-inst').classList.add('on'); }
+resize();
+doSeed();
+requestAnimationFrame(animate);
+</script></body></html>

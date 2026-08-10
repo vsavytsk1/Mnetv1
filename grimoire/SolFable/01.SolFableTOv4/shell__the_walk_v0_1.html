@@ -1,0 +1,461 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>THE WALK — step step step, bow</title>
+<!-- v0.1: the spini spini sim of the SEALED experiment (THE_CROWD.md S8),
+     built AFTER the kernel answered. The registered question: does a random
+     walker on the Lane A contact graph see the fractal (d_s < 2) or the
+     sphere (d_s -> 2)? Sealed 2026-08-09, either answer publishes.
+     KERNEL ANSWER (walk_kernel_v0_1.py, seed 20260809, shipped refine of
+     genesis_wallpaper_v1_7.py, INNER=0.45 MID=0.70):
+       calibration  torus  d_s 1.9402+-0.0384 (truth 2)      instrument OK
+       calibration  gasket d_s 1.3625+-0.0159 (truth 1.3652) instrument OK
+       gen3 N=10292  d_s 1.867+-0.076   <- ALONE, WOULD HAVE LIED
+       gen4 N=72032  d_s 2.127+-0.056
+       gen5 N=504212 d_s 2.172+-0.075   -> H_FRACTAL REFUTED, H_BRIDGE STANDS
+       spectral (gen3, 146 modes)  d_s 2.378+-0.020  agrees: not below 2
+     THE MECHANISM: the em-corner doorways are not gasket corners -- they are
+     HUBS. Max degree 28 -> 52 -> 100 across gens: the doorway widens
+     combinatorially while shrinking geometrically. Sierpinski walls, Grand
+     Central doors. Steps/bow 4.64 -> 8.02 -> 13.95: bows get rarer, mixing
+     stays fast. The fractal (D_H = 1.8835) is visible to AREA, invisible to
+     DIFFUSION. Dimensions split -- opposite to the romantic hypothesis.
+     Deviations from registration, stated: T=3e4 not 1e5; calibration graphs
+     added as instrument check; spectral route run at gen3 not gen5.
+     Browser lane below is an INDEPENDENT JS implementation, cross-checked
+     live against the kernel's exact counts (Curse 40: two routes, one truth).
+     Motion opt-in (Curse 13). -->
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{background:#05050f;color:#dfe6f2;font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:13px;line-height:1.6}
+body{background:radial-gradient(1100px 650px at 50% -10%,rgba(30,40,74,.35),transparent 60%),#05050f;min-height:100vh}
+#wrap{max-width:900px;margin:0 auto;padding:56px 3vw 90px}
+#hud{position:fixed;top:0;left:0;right:0;z-index:40;display:flex;flex-wrap:wrap;gap:3px 14px;justify-content:center;
+ padding:6px 10px;background:rgba(5,6,15,.92);backdrop-filter:blur(6px);border-bottom:1px solid #1e2740;font-size:10px}
+#hud .h{color:rgba(223,230,242,.4);text-transform:uppercase;font-size:8.5px}
+#hud b{font-variant-numeric:tabular-nums}
+.gold{color:#ffd700}.cyan{color:#00d4ff}.grn{color:#7fff9f}.pink{color:#ff69b4}.dim{color:rgba(223,230,242,.45)}
+#hero{text-align:center;padding:20px 0 8px}
+#hero .ey{color:#7fff9f;font-size:9.5px;letter-spacing:.32em;text-transform:uppercase}
+#hero h1{color:#ffd700;font-size:22px;letter-spacing:.06em;margin:6px 0 4px;text-transform:uppercase}
+#hero .sub{color:rgba(223,230,242,.55);font-size:11.5px;max-width:640px;margin:0 auto}
+#stage{margin:14px auto 10px;background:rgba(9,12,24,.72);border:1px solid #1e2740;border-left:3px solid #ffd700;
+ border-radius:10px;padding:12px}
+#stage .lbl{color:#ffd700;font-size:8.5px;letter-spacing:.15em;text-transform:uppercase;margin-bottom:6px}
+#cv{display:block;width:100%;border-radius:8px;background:rgba(4,6,14,.75);border:1px solid #141c30;cursor:grab;touch-action:none}
+#row2{display:flex;gap:10px;margin-top:10px;flex-wrap:wrap}
+#p0box{flex:1 1 340px;min-width:280px}
+#p0{display:block;width:100%;border-radius:8px;background:rgba(4,6,14,.75);border:1px solid #141c30}
+#meters{flex:1 1 260px;min-width:250px;background:rgba(4,6,14,.75);border:1px solid #141c30;border-radius:8px;
+ padding:9px 11px;font-size:10.5px;font-variant-numeric:tabular-nums}
+#meters .r{display:flex;justify-content:space-between;gap:8px;padding:1.5px 0}
+#meters .k{color:rgba(223,230,242,.42)}
+#ctl{display:flex;flex-wrap:wrap;gap:7px 10px;align-items:center;justify-content:center;padding:10px 0 2px;font-size:10px}
+.btn{background:#0b1120;color:#00d4ff;border:1px solid #204050;border-radius:6px;padding:5px 12px;font-family:inherit;
+ font-size:10px;letter-spacing:.05em;cursor:pointer;text-transform:uppercase}
+.btn:hover{background:#0e1730}.btn.on{color:#7fff9f;border-color:#2a4a34;background:rgba(127,255,159,.06)}
+.btn.gold{color:#ffd700;border-color:#4a4020}
+#ctl label{color:rgba(223,230,242,.5);display:flex;align-items:center;gap:5px}
+#ctl input[type=range]{accent-color:#00d4ff;width:90px}
+#c13{width:100%;text-align:center;color:rgba(223,230,242,.32);font-size:9px}
+.sec{background:rgba(9,12,24,.6);border:1px solid #1e2740;border-radius:10px;margin:10px 0;padding:12px 14px}
+.sec h2{color:#ffd700;font-size:11px;letter-spacing:.14em;text-transform:uppercase;margin-bottom:7px}
+.claim{color:rgba(223,230,242,.72);font-size:11.5px;line-height:1.7;margin-bottom:7px}
+.claim b{color:#ffd700}
+table{width:100%;border-collapse:collapse;font-size:10.5px;margin:5px 0 8px;font-variant-numeric:tabular-nums}
+th{color:rgba(223,230,242,.4);text-align:left;font-weight:400;font-size:9px;letter-spacing:.1em;text-transform:uppercase;
+ padding:4px 7px;border-bottom:1px solid #1e2740}
+td{padding:3.5px 7px;border-bottom:1px solid #131a2c;color:rgba(223,230,242,.75)}
+td.g{color:#ffd700}td.c{color:#00d4ff}td.p{color:#ff69b4}td.gr{color:#7fff9f}td.d{color:rgba(223,230,242,.4)}
+.st{display:inline-block;border:1px solid #2a3040;border-radius:4px;padding:0 5px;font-size:8px;letter-spacing:.08em;
+ color:#8892b0;margin-right:4px;text-transform:uppercase;vertical-align:1px}
+.st.x{color:#7fff9f;border-color:#2a4a34}.st.c{color:#00d4ff;border-color:#204050}
+.st.d{color:#d8c060;border-color:#4a4020}.st.r{color:#ff69b4;border-color:#5a2438}
+#coda{text-align:center;color:rgba(223,230,242,.4);font-size:10.5px;line-height:1.8;margin-top:22px;
+ padding-top:14px;border-top:1px solid #141c30}
+#coda .law{color:#ffd700;font-size:10px}
+</style></head><body>
+
+<div id="hud">
+ <span><span class="h">gen</span> <b class="gold" id="hG">1</b></span>
+ <span><span class="h">faces</span> <b class="cyan" id="hF">212</b></span>
+ <span><span class="h">edges</span> <b class="cyan" id="hE">—</b></span>
+ <span><span class="h">steps</span> <b id="hS">0</b></span>
+ <span><span class="h">bows</span> <b class="pink" id="hB">0</b></span>
+ <span><span class="h">steps/bow</span> <b class="gold" id="hSB">—</b></span>
+ <span><span class="h">d_s live</span> <b class="grn" id="hD">—</b></span>
+ <span><span class="h">verdict</span> <b class="pink">H_BRIDGE</b></span>
+</div>
+
+<div id="wrap">
+<div id="hero">
+ <div class="ey">The Cave · sealed experiment · answered</div>
+ <h1>The Walk — step step step, bow</h1>
+ <div class="sub">The pre-registered question of THE_CROWD §8, executed and answered by kernel.
+ The browser lane below is the second, independent instrument — watch it agree.</div>
+</div>
+
+<div id="stage">
+ <div class="lbl">walkers on the contact graph · pink flash = a BOW (crossing a parent doorway) · drag to rotate</div>
+ <canvas id="cv"></canvas>
+ <div id="row2">
+  <div id="p0box"><canvas id="p0" height="190"></canvas></div>
+  <div id="meters">
+   <div class="r"><span class="k">browser edges vs kernel</span><span id="mE" class="cyan">—</span></div>
+   <div class="r"><span class="k">corner-contact % vs kernel</span><span id="mC" class="cyan">—</span></div>
+   <div class="r"><span class="k">area ratio vs 0.8875</span><span id="mA" class="cyan">—</span></div>
+   <div class="r"><span class="k">steps/bow vs kernel 1/cross</span><span id="mSB" class="gold">—</span></div>
+   <div class="r"><span class="k">d_s (browser, live)</span><span id="mD" class="grn">—</span></div>
+   <div class="r"><span class="k">d_s (kernel, gen 5)</span><span class="pink">2.172 ± 0.075</span></div>
+   <div class="r"><span class="k">gasket reference</span><span class="dim">1.3652</span></div>
+   <div class="r"><span class="k">sphere reference</span><span class="dim">2</span></div>
+  </div>
+ </div>
+ <div id="ctl">
+  <button class="btn gold" id="bWalk">Walk — start</button>
+  <button class="btn" id="bSpin">Spin — off</button>
+  <button class="btn on" id="bBow">Bows — on</button>
+  <label>gen <button class="btn on" id="bG1">1</button><button class="btn" id="bG2">2</button></label>
+  <label>speed <input type="range" id="rSpd" min="1" max="20" value="6"></label>
+  <button class="btn" id="bReset">Reset</button>
+  <div id="c13">nothing moves until you start it (Curse 13) · 24 drawn walkers + 2000 silent ones feeding the P₀(t) plot</div>
+ </div>
+</div>
+
+<div class="sec"><h2>The verdict — sealed first, answered second</h2>
+ <div class="claim"><span class="st x">sealed 2026-08-09</span> H_fractal: d_s &lt; 2 by &gt;3 s.e. (walker sees the
+ fractal). H_bridge: d_s consistent with 2 (walker sees the sphere). Either answer publishes.</div>
+ <table><tr><th>instrument</th><th>object</th><th>N</th><th>d_s</th><th>reads</th></tr>
+ <tr><td class="d">walk (calibration)</td><td>torus, truth 2</td><td>90 000</td><td>1.9402 ± 0.0384</td><td class="gr">instrument OK</td></tr>
+ <tr><td class="d">walk (calibration)</td><td>gasket, truth 1.3652</td><td>9 843</td><td>1.3625 ± 0.0159</td><td class="gr">instrument OK — it CAN see a fractal</td></tr>
+ <tr><td class="d">walk</td><td>Lane A gen 3</td><td>10 292</td><td>1.867 ± 0.076</td><td class="p">finite-size mirage — see below</td></tr>
+ <tr><td class="d">walk</td><td>Lane A gen 4</td><td>72 032</td><td>2.127 ± 0.056</td><td></td></tr>
+ <tr><td class="g">walk</td><td class="g">Lane A gen 5</td><td class="g">504 212</td><td class="g">2.172 ± 0.075</td><td class="g">THE ANSWER</td></tr>
+ <tr><td class="d">Laplacian modes</td><td>Lane A gen 3, 146 modes</td><td>10 292</td><td>2.378 ± 0.020</td><td>agrees: not below 2</td></tr></table>
+ <div class="claim"><span class="st r">refuted</span> <b>H_fractal is dead.</b> The walker sees the sphere. The object
+ whose area lane measures D_H = 1.8835 diffuses like a 2-dimensional surface. <b>The dimensions split — in the
+ opposite direction of the romantic hypothesis:</b> the fractal is visible to area and invisible to diffusion.
+ Seed 20260809, shipped refine(), one connected component at every gen, deviations from the registered protocol
+ stated in the source comment above.</div>
+</div>
+
+<div class="sec"><h2>The mechanism — Sierpiński walls, Grand Central doors</h2>
+ <div class="claim"><span class="st c">computed</span> Why the gasket throttles and this object does not: the gasket's
+ corner is <b>degree-4 forever</b>. Here, every generation the em-doorway collects more incident faces —
+ max degree <b>28 → 52 → 100</b> across gens 3→4→5. The doorway shrinks geometrically and widens combinatorially.
+ A walker rarely finds a door (<b>steps/bow: 4.64 → 8.02 → 13.95</b>), but every door is a hub.</div>
+ <div class="claim"><span class="st c">computed</span> And the gen-3 row is a standing lesson: at one size alone the walk
+ reads <b>1.867 ± 0.076</b> — nominally below 2, and a single-size experiment would have "confirmed" the fractal.
+ Only the ladder exposes it: the exponent <i>climbing</i> with system size was the real one; the low reading was the
+ boundary's shadow. Calibration is what let us say so — the same instrument nailed the gasket at 0.2σ.</div>
+</div>
+
+<div class="sec"><h2>Honest boundary</h2>
+ <div class="claim"><span class="st x">exact</span> Face counts (7F−12 recurrence), one connected component per gen,
+ the sealed hypotheses as registered in THE_CROWD.md §8.</div>
+ <div class="claim"><span class="st c">computed — kernel</span> Every number in the verdict table
+ (walk_kernel_v0_1.py, seed 20260809, ~230 s). <span class="st c">computed — browser</span> The live lane below it:
+ an independent JS implementation whose counts are checked against the kernel's on every rebuild — mismatch turns
+ the meter red (Curse 40: two routes, one truth).</div>
+ <div class="claim"><span class="st d">design</span> Walker colors, speeds, the drawn-walker count, the fit window
+ [20, t/5]. <span class="st r">refuted</span> H_fractal, above, with the same prominence a confirmation would have
+ received. That was the whole promise.</div>
+</div>
+
+<div id="coda">
+ the pentagons hold · the walker bows through the doorways and sees the sphere anyway<br>
+ <span class="law">D_H = 1.8835 · d_s = 2.172 ± 0.075 · steps/bow 13.95 · sealed first, answered second, published either way</span><br>
+ the cave, 2026 · for year 12026 · always
+</div>
+</div>
+
+<script>
+var PHI=(1+Math.sqrt(5))/2, R0=1.6, INNER=0.45, MID=0.70;
+var KERNEL={1:{N:212,E:990,corner:0.5455,inv:1.57},2:{N:1472,E:8280,corner:0.6522,inv:2.71}};
+function proj(p){var L=Math.hypot(p[0],p[1],p[2])||1;return [p[0]*R0/L,p[1]*R0/L,p[2]*R0/L];}
+/* ---- C60 seed, built from phi (independent of the kernel's builder) ---- */
+function seedC60(){
+ function cyc(a,b,c){return [[a,b,c],[b,c,a],[c,a,b]];}
+ function sgn(t){var o=[];for(var i=0;i<2;i++)for(var j=0;j<2;j++)for(var k=0;k<2;k++)
+  o.push([t[0]*(i?-1:1),t[1]*(j?-1:1),t[2]*(k?-1:1)]);return o;}
+ var vs=[],seen={};
+ [[0,1,3*PHI],[1,2+PHI,2*PHI],[2,1+2*PHI,PHI]].forEach(function(b){
+  cyc(b[0],b[1],b[2]).forEach(function(p){sgn(p).forEach(function(q){
+   var k=q.map(function(x){return x.toFixed(6);}).join(',');
+   if(!seen[k]){seen[k]=1;vs.push(proj(q));}});});});
+ var d2=function(a,b){return (a[0]-b[0])**2+(a[1]-b[1])**2+(a[2]-b[2])**2;};
+ var mn=1e9;
+ for(var i=0;i<60;i++)for(var j=i+1;j<60;j++){var d=d2(vs[i],vs[j]);if(d<mn)mn=d;}
+ var adj=vs.map(function(){return [];});
+ for(var a=0;a<60;a++)for(var b=a+1;b<60;b++)
+  if(Math.abs(d2(vs[a],vs[b])-mn)<1e-6){adj[a].push(b);adj[b].push(a);}
+ /* faces = cycles: 12 pentagons + 20 hexagons via smallest-ring walk */
+ var faces=[],fs={};
+ function ring(a,b){
+  var path=[a,b];
+  while(path.length<7){
+   var cur=path[path.length-1],prev=path[path.length-2],best=-1,bd=-2;
+   var pa=vs[prev],pc=vs[cur];
+   for(var t=0;t<adj[cur].length;t++){var nx=adj[cur][t];
+    if(nx===prev)continue;
+    /* pick the neighbour turning consistently: maximise angle continuity via cross with face normal */
+    var v1=[pc[0]-pa[0],pc[1]-pa[1],pc[2]-pa[2]],v2=[vs[nx][0]-pc[0],vs[nx][1]-pc[1],vs[nx][2]-pc[2]];
+    var cr=[v1[1]*v2[2]-v1[2]*v2[1],v1[2]*v2[0]-v1[0]*v2[2],v1[0]*v2[1]-v1[1]*v2[0]];
+    var s=cr[0]*pc[0]+cr[1]*pc[1]+cr[2]*pc[2];
+    var dt=v1[0]*v2[0]+v1[1]*v2[1]+v1[2]*v2[2];
+    if(s>0&&dt>bd){bd=dt;best=nx;}}
+   if(best<0)return null;
+   if(best===path[0])return path;
+   path.push(best);}
+  return null;}
+ for(var a2=0;a2<60;a2++)for(var t2=0;t2<adj[a2].length;t2++){
+  var r=ring(a2,adj[a2][t2]);
+  if(r&&r.length<=6){var key=r.slice().sort(function(x,y){return x-y;}).join('-');
+   if(!fs[key]){fs[key]=1;faces.push(r.map(function(i){return vs[i].slice();}));}}}
+ return faces;
+}
+/* ---- refine, matching the shipped math (independent implementation) ---- */
+function refineAll(faces,labs){
+ var nf=[],nl=[];
+ for(var f=0;f<faces.length;f++){
+  var pts=faces[f],n=pts.length,c=[0,0,0];
+  for(var i=0;i<n;i++){c[0]+=pts[i][0];c[1]+=pts[i][1];c[2]+=pts[i][2];}
+  c[0]/=n;c[1]/=n;c[2]/=n;
+  var inner=[],em=[],mr=[];
+  for(var i2=0;i2<n;i2++){
+   var p=pts[i2],q=pts[(i2+1)%n];
+   /* flat shrink, NO reprojection -- matching the shipped kernel, whose _projn
+      is a no-op in its default mode. That is exactly why aR is shape-independent
+      to nine digits; the browser must walk the same object the kernel walked. */
+   inner.push([c[0]+(p[0]-c[0])*INNER,c[1]+(p[1]-c[1])*INNER,c[2]+(p[2]-c[2])*INNER]);
+   var m=[(p[0]+q[0])/2,(p[1]+q[1])/2,(p[2]+q[2])/2];
+   em.push(m.slice());
+   mr.push([c[0]+(m[0]-c[0])*MID,c[1]+(m[1]-c[1])*MID,c[2]+(m[2]-c[2])*MID]);}
+  nf.push(inner.map(function(p){return p.slice();})); nl.push(labs[f]);
+  for(var i3=0;i3<n;i3++){
+   var j=(i3+1)%n;
+   nf.push([pts[i3].slice(),em[i3],pts[j].slice(),inner[j].slice(),mr[i3],inner[i3].slice()]);
+   nl.push(labs[f]);}}
+ return {f:nf,l:nl};
+}
+/* ---- contact graph + stats ---- */
+function contact(faces,labs){
+ var vm={},E={},key;
+ for(var f=0;f<faces.length;f++)for(var v=0;v<faces[f].length;v++){
+  key=faces[f][v].map(function(x){return x.toFixed(7);}).join(',');
+  (vm[key]=vm[key]||[]).push(f);}
+ var area0=0,areas=[];
+ for(var k in vm){var L=vm[k];
+  var u=[];for(var i=0;i<L.length;i++)if(u.indexOf(L[i])<0)u.push(L[i]);
+  for(var a=0;a<u.length;a++)for(var b=a+1;b<u.length;b++){
+   var kk=u[a]<u[b]?u[a]+'_'+u[b]:u[b]+'_'+u[a];E[kk]=(E[kk]||0)+1;}}
+ var adj=faces.map(function(){return [];}),corner=0,tot=0,cross=0,etype={};
+ for(var kk2 in E){var ab=kk2.split('_'),a2=+ab[0],b2=+ab[1];
+  adj[a2].push(b2);adj[b2].push(a2);tot++;
+  if(E[kk2]===1)corner++;
+  var xc=labs[a2]!==labs[b2];if(xc)cross++;
+  etype[kk2]=xc;}
+ return {adj:adj,E:tot,corner:corner/tot,cross:cross/tot,etype:etype};
+}
+function faceArea(pts){var c=[0,0,0],n=pts.length;
+ for(var i=0;i<n;i++){c[0]+=pts[i][0];c[1]+=pts[i][1];c[2]+=pts[i][2];}
+ c[0]/=n;c[1]/=n;c[2]/=n;var A=0;
+ for(var i2=0;i2<n;i2++){var j=(i2+1)%n;
+  var u=[pts[i2][0]-c[0],pts[i2][1]-c[1],pts[i2][2]-c[2]],
+      v=[pts[j][0]-c[0],pts[j][1]-c[1],pts[j][2]-c[2]];
+  A+=0.5*Math.hypot(u[1]*v[2]-u[2]*v[1],u[2]*v[0]-u[0]*v[2],u[0]*v[1]-u[1]*v[0]);}
+ return A;}
+
+/* ---- build gens ---- */
+var seed=seedC60(), labs0=seed.map(function(_,i){return i;});
+var GEN={}, AR={};
+(function(){
+ var f=seed,l=labs0,prevA=0;
+ for(var i=0;i<f.length;i++)prevA+=faceArea(f[i]);
+ for(var g=1;g<=2;g++){
+  var r=refineAll(f,l);f=r.f;l=r.l;
+  var A=0;for(var i2=0;i2<f.length;i2++)A+=faceArea(f[i2]);
+  AR[g]=A/prevA;prevA=A;
+  GEN[g]={faces:f,labs:l,cts:contact(f,l),
+   cent:f.map(function(p){var c=[0,0,0];for(var q=0;q<p.length;q++){c[0]+=p[q][0];c[1]+=p[q][1];c[2]+=p[q][2];}
+    return [c[0]/p.length,c[1]/p.length,c[2]/p.length];})};
+ }
+})();
+
+/* ---- state ---- */
+var G=1, RUN=false, SPIN=false, SHOWBOW=true, SPD=6;
+var YAW=0.5, PITCH=-0.2;
+var walkers=[], silent=[], sOrigin=[], t=0, bows=0, steps=0;
+var P0pts=[], cps=[], cpi=0, flashes=[];
+function initCps(){cps=[];var v=1;while(v<12000){cps.push(Math.round(v));v*=1.32;}
+ cps=cps.filter(function(x,i,a){return a.indexOf(x)===i;});}
+function reset(){
+ var g=GEN[G],N=g.faces.length;
+ walkers=[];for(var i=0;i<24;i++)walkers.push({p:Math.floor(Math.random()*N),trail:[]});
+ silent=new Array(2000);sOrigin=new Array(2000);
+ for(var j=0;j<2000;j++){sOrigin[j]=Math.floor(Math.random()*N);silent[j]=sOrigin[j];}
+ t=0;bows=0;steps=0;P0pts=[];cpi=0;flashes=[];initCps();
+ document.getElementById('hG').textContent=G;
+ document.getElementById('hF').textContent=N;
+ document.getElementById('hE').textContent=g.cts.E;
+ var K=KERNEL[G];
+ var eok=g.cts.E===K.E, cok=Math.abs(g.cts.corner-K.corner)<0.002;
+ var me=document.getElementById('mE');
+ me.textContent=g.cts.E+' / '+K.E+(eok?'  PASS':'  FAIL');me.style.color=eok?'#7fff9f':'#ff5470';
+ var mc=document.getElementById('mC');
+ mc.textContent=(100*g.cts.corner).toFixed(2)+'% / '+(100*K.corner).toFixed(2)+'%'+(cok?'  PASS':'  FAIL');
+ mc.style.color=cok?'#7fff9f':'#ff5470';
+ var aok=Math.abs(AR[G]-0.8875)<0.002, ma=document.getElementById('mA');
+ ma.textContent=AR[G].toFixed(6)+(aok?'  PASS':'  FAIL');ma.style.color=aok?'#7fff9f':'#ff5470';
+ document.getElementById('hS').textContent=0;
+ document.getElementById('hB').textContent=0;
+ document.getElementById('hSB').textContent='—';
+ document.getElementById('mSB').textContent='— / '+K.inv.toFixed(2);
+ document.getElementById('hD').textContent='—';
+ document.getElementById('mD').textContent='—';
+ drawAll();
+}
+function stepOnce(){
+ var g=GEN[G],adj=g.adj||g.cts.adj;
+ t++;
+ for(var w=0;w<walkers.length;w++){
+  var W=walkers[w],nb=g.cts.adj[W.p],nx=nb[Math.floor(Math.random()*nb.length)];
+  var kk=W.p<nx?W.p+'_'+nx:nx+'_'+W.p;
+  steps++;
+  if(g.cts.etype[kk]){bows++;if(SHOWBOW)flashes.push({a:W.p,b:nx,life:14});}
+  W.trail.push(W.p);if(W.trail.length>26)W.trail.shift();
+  W.p=nx;}
+ for(var s=0;s<silent.length;s++){
+  var nb2=g.cts.adj[silent[s]];
+  silent[s]=nb2[Math.floor(Math.random()*nb2.length)];}
+ if(cpi<cps.length&&t===cps[cpi]){
+  var ret=0;for(var q=0;q<silent.length;q++)if(silent[q]===sOrigin[q])ret++;
+  var p0=ret/silent.length;
+  if(p0>0)P0pts.push([t,p0]);cpi++;fitDs();}
+ document.getElementById('hS').textContent=steps;
+ document.getElementById('hB').textContent=bows;
+ if(bows>0){var sb=(steps/bows);
+  document.getElementById('hSB').textContent=sb.toFixed(2);
+  document.getElementById('mSB').textContent=sb.toFixed(2)+' / '+KERNEL[G].inv.toFixed(2);}
+}
+function fitDs(){
+ var N=GEN[G].faces.length;
+ var pts=P0pts.filter(function(p){return p[0]>=20&&p[0]<=t/3&&p[1]>3/N;});
+ if(pts.length<5)return;
+ var xs=pts.map(function(p){return Math.log10(p[0]);}),ys=pts.map(function(p){return Math.log10(p[1]);});
+ var n=xs.length,mx=0,my=0;for(var i=0;i<n;i++){mx+=xs[i];my+=ys[i];}mx/=n;my/=n;
+ var sxx=0,sxy=0;for(var j=0;j<n;j++){sxx+=(xs[j]-mx)*(xs[j]-mx);sxy+=(xs[j]-mx)*(ys[j]-my);}
+ var m=sxy/sxx,ss=0;
+ for(var k=0;k<n;k++){var r=ys[k]-(my+m*(xs[k]-mx));ss+=r*r;}
+ var se=Math.sqrt(ss/(n-2)/sxx),ds=-2*m,e=2*se;
+ document.getElementById('hD').textContent=ds.toFixed(3);
+ document.getElementById('mD').textContent=ds.toFixed(3)+' ± '+e.toFixed(3);
+}
+/* ---- render ---- */
+var cv=document.getElementById('cv'),cx=cv.getContext('2d'),W=880,H=380,DPR=1;
+var p0c=document.getElementById('p0'),px=p0c.getContext('2d');
+function rot(p){var cy=Math.cos(YAW),sy=Math.sin(YAW),cp=Math.cos(PITCH),sp=Math.sin(PITCH);
+ var x=p[0]*cy-p[2]*sy,z=p[0]*sy+p[2]*cy;var y=p[1]*cp-z*sp,z2=p[1]*sp+z*cp;return [x,y,z2];}
+function prj(p){var d=5.2,s=2.9/(d-p[2]);return [W/2+p[0]*s*H*0.42,H/2-p[1]*s*H*0.42,p[2],s];}
+function drawAll(){
+ var box=document.getElementById('stage');
+ W=Math.max(300,cv.parentElement.clientWidth-0);H=Math.min(400,Math.max(280,W*0.44));
+ DPR=Math.min(window.devicePixelRatio||1,2);
+ cv.width=W*DPR;cv.height=H*DPR;cv.style.height=H+'px';
+ cx.setTransform(DPR,0,0,DPR,0,0);cx.clearRect(0,0,W,H);
+ var g=GEN[G],F=g.faces,C=g.cent,L=g.labs;
+ var Ps=C.map(function(c){return prj(rot(c));});
+ var order=[];for(var i=0;i<F.length;i++)order.push(i);
+ order.sort(function(a,b){return Ps[a][2]-Ps[b][2];});
+ for(var o=0;o<order.length;o++){
+  var f=order[o],pp=F[f],front=Ps[f][2]>-0.15;
+  cx.beginPath();
+  for(var v=0;v<pp.length;v++){var q=prj(rot(pp[v]));
+   if(v===0)cx.moveTo(q[0],q[1]);else cx.lineTo(q[0],q[1]);}
+  cx.closePath();
+  var hue=(L[f]*47)%360;
+  cx.fillStyle='hsla('+hue+',48%,'+(front?26:12)+'%,'+(front?0.55:0.22)+')';
+  cx.fill();
+  cx.strokeStyle='rgba(0,212,255,'+(front?0.16:0.05)+')';cx.lineWidth=0.6;cx.stroke();}
+ /* bow flashes */
+ for(var fl=flashes.length-1;fl>=0;fl--){
+  var FF=flashes[fl],a=Ps[FF.a],b=Ps[FF.b];
+  cx.strokeStyle='rgba(255,105,180,'+(FF.life/14*0.9)+')';cx.lineWidth=2;
+  cx.beginPath();cx.moveTo(a[0],a[1]);cx.lineTo(b[0],b[1]);cx.stroke();
+  if(--FF.life<=0)flashes.splice(fl,1);}
+ /* walkers */
+ for(var w=0;w<walkers.length;w++){
+  var Wk=walkers[w],hue2=(w*137.5)%360;
+  cx.strokeStyle='hsla('+hue2+',80%,65%,0.35)';cx.lineWidth=1;cx.beginPath();
+  for(var tt=0;tt<Wk.trail.length;tt++){var q2=Ps[Wk.trail[tt]];
+   if(tt===0)cx.moveTo(q2[0],q2[1]);else cx.lineTo(q2[0],q2[1]);}
+  cx.stroke();
+  var h=Ps[Wk.p];
+  cx.beginPath();cx.arc(h[0],h[1],3.6*h[3],0,6.2832);
+  cx.fillStyle='hsl('+hue2+',85%,68%)';cx.fill();}
+ cx.font='9px ui-monospace,Menlo,monospace';cx.textAlign='left';
+ cx.fillStyle='rgba(223,230,242,.4)';
+ cx.fillText('gen '+G+' contact graph — colours = the 32 top parents',12,16);
+ drawP0();
+}
+function drawP0(){
+ var Wp=p0c.parentElement.clientWidth,Hp=190;
+ p0c.width=Wp*DPR;p0c.height=Hp*DPR;p0c.style.height=Hp+'px';
+ px.setTransform(DPR,0,0,DPR,0,0);px.clearRect(0,0,Wp,Hp);
+ px.font='8.5px ui-monospace,Menlo,monospace';
+ var x0=34,y0=Hp-22,x1=Wp-10,y1=12;
+ px.strokeStyle='rgba(136,146,176,.25)';px.strokeRect(x0,y1,x1-x0,y0-y1);
+ var lt0=0,lt1=Math.log10(12000),lp0=Math.log10(1/2500),lp1=0;
+ function X(tv){return x0+(x1-x0)*(Math.log10(tv)-lt0)/(lt1-lt0);}
+ function Y(pv){return y0-(y0-y1)*(Math.log10(pv)-lp0)/(lp1-lp0);}
+ /* reference slopes through (10, P0(10)) */
+ var anchor=P0pts.length?P0pts[Math.min(4,P0pts.length-1)]:[10,0.25];
+ [[2,'rgba(0,212,255,.55)','sphere 2'],[1.3652,'rgba(255,215,0,.55)','gasket 1.365'],
+  [2.172,'rgba(255,105,180,.8)','kernel 2.172']].forEach(function(rr){
+  var ds=rr[0],c0=anchor[1]*Math.pow(anchor[0],ds/2);
+  px.strokeStyle=rr[1];px.setLineDash([4,4]);px.beginPath();
+  var first=true;
+  for(var tv=3;tv<=12000;tv*=1.4){var pv=c0*Math.pow(tv,-ds/2);
+   if(pv<1/2500)break;
+   var xx=X(tv),yy=Y(pv);
+   if(first){px.moveTo(xx,yy);first=false;}else px.lineTo(xx,yy);}
+  px.stroke();px.setLineDash([]);
+  px.fillStyle=rr[1];px.fillText(rr[2],x1-70,Y(c0*Math.pow(2000,-ds/2))-3);});
+ /* data */
+ px.fillStyle='#7fff9f';
+ for(var i=0;i<P0pts.length;i++){
+  var p=P0pts[i];px.beginPath();px.arc(X(p[0]),Y(Math.max(p[1],1/2500)),2.2,0,6.2832);px.fill();}
+ px.fillStyle='rgba(223,230,242,.45)';
+ px.fillText('log P0(t) vs log t — green = this browser, 2000 walkers',x0,Hp-6);
+}
+/* ---- loop + controls ---- */
+var raf=null;
+function loop(){
+ if(SPIN)YAW+=0.004;
+ if(RUN)for(var s=0;s<SPD;s++)stepOnce();
+ drawAll();
+ raf=(RUN||SPIN)?requestAnimationFrame(loop):null;
+}
+function kick(){if(!raf)raf=requestAnimationFrame(loop);}
+document.getElementById('bWalk').addEventListener('click',function(){
+ RUN=!RUN;this.classList.toggle('on',RUN);this.textContent='Walk — '+(RUN?'pause':'start');kick();});
+document.getElementById('bSpin').addEventListener('click',function(){
+ SPIN=!SPIN;this.classList.toggle('on',SPIN);this.textContent='Spin — '+(SPIN?'on':'off');kick();});
+document.getElementById('bBow').addEventListener('click',function(){
+ SHOWBOW=!SHOWBOW;this.classList.toggle('on',SHOWBOW);this.textContent='Bows — '+(SHOWBOW?'on':'off');});
+document.getElementById('bG1').addEventListener('click',function(){
+ G=1;this.classList.add('on');document.getElementById('bG2').classList.remove('on');reset();});
+document.getElementById('bG2').addEventListener('click',function(){
+ G=2;this.classList.add('on');document.getElementById('bG1').classList.remove('on');reset();});
+document.getElementById('rSpd').addEventListener('input',function(e){SPD=+e.target.value;});
+document.getElementById('bReset').addEventListener('click',reset);
+var drag=false,lx=0,ly=0;
+cv.addEventListener('pointerdown',function(e){drag=true;lx=e.clientX;ly=e.clientY;cv.setPointerCapture(e.pointerId);});
+cv.addEventListener('pointermove',function(e){if(!drag)return;
+ YAW+=(e.clientX-lx)*0.008;PITCH+=(e.clientY-ly)*0.006;
+ PITCH=Math.max(-1.4,Math.min(1.4,PITCH));lx=e.clientX;ly=e.clientY;
+ if(!raf)drawAll();});
+cv.addEventListener('pointerup',function(){drag=false;});
+window.addEventListener('resize',function(){drawAll();});
+reset();
+</script>
+</body></html>

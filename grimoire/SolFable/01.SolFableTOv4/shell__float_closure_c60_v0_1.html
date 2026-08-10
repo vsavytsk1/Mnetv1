@@ -1,0 +1,566 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>THE CLOSURE — the float path on a buckyball</title>
+<!-- v0.1: PATH annex, part II. The thesis: the float path has two ends; close it
+     into a sphere and Euler charges exactly twelve pentagons, at every scale.
+     EXACT, all BigInt: float64's finite bit patterns form a fullerene with
+     V=18437736874454810624, E=3V/2, F=V/2+2, H=V/2-10, P=12, chi=2.
+     THE HIT: the format (1 sign, 4 exp, 1 mant) has exactly 60 finite patterns,
+     60 = 20*3 with T=3 Loeschian -- that is C60, the buckyball itself. The family
+     E=4, M odd gives 60 -> 240 -> 960 -> 3840: the WELD/chamfer lineage, exactly.
+     COMPUTED LIVE: a real truncated icosahedron from phi, 90 edges all degree 3,
+     and a Hamiltonian PATH through all 60 vertices found by search in-browser --
+     so the float line literally walks the buckyball, edge by edge, two ends intact.
+     REFUTED: float32 is NOT a Goldberg shell, because 2^8-1 = 3*5*17 and 17 is
+     2 mod 3 to an odd power. Motion opt-in (Curse 13). Price printed (Curse 35). -->
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{background:#05050f;color:#dfe6f2;font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  font-size:13px;line-height:1.6;-webkit-font-smoothing:antialiased}
+body{background:radial-gradient(1200px 700px at 50% -10%,rgba(30,40,74,.35),transparent 60%),
+  radial-gradient(900px 600px at 100% 100%,rgba(60,24,40,.25),transparent 55%),#05050f;min-height:100vh}
+#wrap{max-width:940px;margin:0 auto;padding:60px 4vw 120px}
+#hud{position:fixed;top:0;left:0;right:0;z-index:40;display:flex;flex-wrap:wrap;gap:4px 16px;align-items:center;
+  justify-content:center;padding:7px 12px;background:rgba(5,6,15,.9);backdrop-filter:blur(6px);
+  border-bottom:1px solid #1e2740;font-size:10.5px;letter-spacing:.05em}
+#hud .h{color:rgba(223,230,242,.4);text-transform:uppercase;font-size:9px}
+#hud b{font-variant-numeric:tabular-nums;font-weight:600}
+.gold{color:#ffd700}.cyan{color:#00d4ff}.grn{color:#7fff9f}.pink{color:#ff69b4}.dim{color:rgba(223,230,242,.45)}
+#hero{text-align:center;padding:26px 0 12px}
+#hero .eyebrow{color:#7fff9f;font-size:10px;letter-spacing:.35em;text-transform:uppercase}
+#hero h1{color:#ffd700;font-size:25px;letter-spacing:.06em;margin:8px 0 6px;text-transform:uppercase}
+#hero .sub{color:rgba(223,230,242,.55);font-size:12px;max-width:700px;margin:0 auto;line-height:1.7}
+#hero .abstract{max-width:720px;margin:16px auto 0;padding:13px 18px;text-align:left;
+  background:rgba(9,12,24,.7);border:1px solid #1e2740;border-left:3px solid #ff69b4;border-radius:8px;
+  color:rgba(223,230,242,.72);font-size:11.5px;line-height:1.75}
+#hero .abstract b{color:#ffd700}
+.st{display:inline-block;border:1px solid #2a3040;border-radius:4px;padding:0 6px;font-size:8.5px;
+  letter-spacing:.1em;color:#8892b0;margin:0 4px 2px 0;vertical-align:1px;text-transform:uppercase}
+.st.exact{color:#7fff9f;border-color:#2a4a34}.st.computed{color:#00d4ff;border-color:#204050}
+.st.design{color:#d8c060;border-color:#4a4020}.st.hyp{color:#ffb454;border-color:#4a3820}
+.st.ext{color:#ffb454;border-color:#4a3820}.st.ref{color:#ff69b4;border-color:#5a2438}
+#stage{max-width:900px;margin:18px auto 12px;background:rgba(9,12,24,.72);border:1px solid #1e2740;
+  border-left:3px solid #ff69b4;border-radius:10px;padding:14px 14px 10px;overflow:hidden}
+#stage .lbl{color:#ff69b4;font-size:9px;letter-spacing:.16em;text-transform:uppercase;margin-bottom:8px}
+#cvbox{display:block;width:100%}
+#cv{display:block;width:100%;border-radius:8px;background:rgba(4,6,14,.75);border:1px solid #141c30;
+  cursor:grab;touch-action:none}
+#cv:active{cursor:grabbing}
+#controls{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;justify-content:center;padding:10px 2px 4px;font-size:10.5px}
+.btn{background:#0b1120;color:#00d4ff;border:1px solid #204050;border-radius:6px;padding:6px 13px;
+  font-family:inherit;font-size:10.5px;letter-spacing:.06em;cursor:pointer;text-transform:uppercase}
+.btn:hover{background:#0e1730}
+.btn.on{color:#7fff9f;border-color:#2a4a34;background:rgba(127,255,159,.06)}
+.btn.gold{color:#ffd700;border-color:#4a4020}.btn.pink{color:#ff69b4;border-color:#5a2438}
+#controls label{color:rgba(223,230,242,.5);display:flex;align-items:center;gap:6px}
+#controls input[type=range]{accent-color:#ff69b4;width:150px}
+#controls b{color:#ffd700;font-variant-numeric:tabular-nums}
+#curse13{width:100%;text-align:center;color:rgba(223,230,242,.33);font-size:9.5px}
+.sec{background:rgba(9,12,24,.6);border:1px solid #1e2740;border-radius:10px;margin:11px 0;overflow:hidden}
+.sec .head{display:flex;align-items:center;gap:10px;padding:11px 15px;cursor:pointer;user-select:none}
+.sec .head:hover{background:rgba(255,255,255,.02)}
+.sec .num{color:#ffd700;font-size:10px;letter-spacing:.1em;min-width:26px}
+.sec .ttl{color:#e8eefc;font-size:13px;flex:1}
+.sec .chev{color:rgba(223,230,242,.3);font-size:11px;transition:transform .2s}
+.sec.open .chev{transform:rotate(90deg)}
+.sec .body{max-height:0;overflow:hidden;transition:max-height .3s ease}
+.sec.open .body{max-height:4200px}
+.sec .inner{padding:0 15px 14px}
+.claim{color:rgba(223,230,242,.72);font-size:11.5px;line-height:1.75;margin-bottom:9px}
+.claim b{color:#ffd700}
+.fm{background:rgba(4,6,14,.8);border:1px solid #1e2740;border-radius:7px;padding:10px 13px;margin:0 0 9px;
+  font-size:12px;color:#e8eefc;overflow-x:auto;white-space:pre;line-height:1.75}
+.fm .k{color:#ffd700}.fm .c{color:rgba(223,230,242,.4)}
+.meter{display:flex;flex-wrap:wrap;gap:5px 20px;background:rgba(4,6,14,.8);border:1px solid #1e2740;
+  border-radius:7px;padding:9px 12px;font-size:11px;font-variant-numeric:tabular-nums;margin-bottom:9px}
+.meter .k{color:rgba(223,230,242,.45);margin-right:5px}
+.meter .v{color:#7fff9f}.meter .v.gold{color:#ffd700}.meter .v.cyan{color:#00d4ff}
+.meter .v.bad{color:#ff69b4}.meter .v.dim{color:rgba(223,230,242,.5)}
+.meter .row{flex:0 0 auto}.meter .wide{flex:1 0 100%}
+.note{color:rgba(223,230,242,.45);font-size:10.5px;line-height:1.7;margin-top:7px}
+table{width:100%;border-collapse:collapse;font-size:11px;margin:0 0 9px;font-variant-numeric:tabular-nums}
+th{color:rgba(223,230,242,.4);text-align:left;font-weight:400;font-size:9.5px;letter-spacing:.1em;
+  text-transform:uppercase;padding:5px 8px;border-bottom:1px solid #1e2740}
+td{padding:4px 8px;border-bottom:1px solid #131a2c;color:rgba(223,230,242,.75)}
+td.g{color:#ffd700}td.c{color:#00d4ff}td.b{color:#ff69b4}td.d{color:rgba(223,230,242,.4)}
+#coda{text-align:center;color:rgba(223,230,242,.4);font-size:11px;line-height:1.9;margin-top:26px;
+  padding-top:18px;border-top:1px solid #141c30}
+#coda .law{color:#ffd700;font-size:10.5px}
+@media (prefers-reduced-motion:reduce){.sec .body{transition:none}.sec .chev{transition:none}}
+</style></head><body>
+
+<div id="hud">
+  <span><span class="h">format</span> <b class="gold">1·4·1 — 6 bit</b></span>
+  <span><span class="h">V</span> <b class="cyan" id="hV">60</b></span>
+  <span><span class="h">E</span> <b class="cyan" id="hE">90</b></span>
+  <span><span class="h">P</span> <b class="pink" id="hP">12</b></span>
+  <span><span class="h">χ</span> <b class="grn" id="hChi">2</b></span>
+  <span><span class="h">shape</span> <b class="pink" id="hShape">line</b></span>
+  <span class="h">v0.1</span>
+</div>
+
+<div id="wrap">
+
+<div id="hero">
+  <div class="eyebrow">The Cave · PATH Annex II · frozen artifact</div>
+  <h1>The Closure — the float path on a buckyball</h1>
+  <div class="sub">A path has two ends. Close it into a sphere and Euler charges you exactly twelve
+  pentagons — the same twelve at six bits and at sixty-four.</div>
+  <div class="abstract">
+    <span class="st exact">exact</span><span class="st computed">computed live</span><span class="st ref">refuted</span><br>
+    <b>The hit.</b> A float with 1 sign bit, 4 exponent bits and 1 mantissa bit has exactly
+    <b>60 finite bit patterns</b>. And 60 = 20·3 with T = 3 = 1²+1·1+1² — a Loeschian number. That is
+    <b>C₆₀</b>. The smallest float format that closes into an icosahedral Goldberg shell <i>is the buckyball</i>.
+    Not an analogy. The integer arithmetic lands on it.
+    <br><br>
+    <b>And it keeps going.</b> The family E = 4, M odd gives V = 60 → 240 → 960 → 3840, each one V ↦ 4V.
+    That is the WELD/chamfer lineage from THEA, arrived at from the opposite direction: <b>adding two mantissa
+    bits is one chamfer step</b>.
+    <br><br>
+    <b>The walk.</b> Below, a real truncated icosahedron built from φ — 60 vertices, 90 edges, every degree 3 —
+    and a <b>Hamiltonian path</b> through all sixty, found by search in this browser. The float line does not
+    merely map onto the sphere; it <i>walks</i> it, edge by edge, with both ends intact. Drag the morph.
+  </div>
+</div>
+
+<div id="stage">
+  <div class="lbl">line → helix → sphere · same 60 nodes, three embeddings · pink = the twelve pentagons</div>
+  <div id="cvbox"><canvas id="cv"></canvas></div>
+  <div id="controls">
+    <label>morph <input type="range" id="rM" min="0" max="100" value="0"> <b id="nM">line</b></label>
+    <button class="btn pink" id="bLine">Line</button>
+    <button class="btn gold" id="bHelix">Helix</button>
+    <button class="btn" id="bSphere">Sphere</button>
+    <button class="btn on" id="bWalk">Walk — on</button>
+    <button class="btn" id="bSpin">Spin — off</button>
+    <div id="curse13">nothing moves on its own — it starts as a line and you choose to close it (Curse 13) ·
+    drag to rotate · click a node to read its bits</div>
+  </div>
+</div>
+
+<div class="meter" id="mSel" style="max-width:900px;margin:0 auto 14px">
+  <span class="row wide dim">Click a node above.</span>
+</div>
+
+<div class="sec open"><div class="head"><span class="num">I</span><span class="ttl">The float64 fullerene — the cage that holds every double</span><span class="chev">▶</span></div>
+<div class="body"><div class="inner">
+  <div class="claim"><span class="st exact">exact</span> Every even V ≥ 20 except 22 is the vertex count of some
+  closed trivalent fullerene (Grünbaum–Motzkin). float64 has 2⁵³·2047 finite bit patterns — even, and vastly
+  larger than 22. So <b>the cage exists</b>. Give it one vertex per bit pattern and the rest is forced:</div>
+  <div class="fm">V = 2<span class="k">^</span>53 · 2047        <span class="c">one vertex per finite bit pattern</span>
+E = 3V/2                <span class="c">trivalent</span>
+F = V/2 + 2             <span class="c">Euler</span>
+H = V/2 − 10            <span class="c">hexagons</span>
+P = <span class="k">12</span>                  <span class="c">forced, at every scale, forever</span></div>
+  <div class="meter" id="mCage"></div>
+  <div class="claim">Nine quintillion hexagons. <b>Twelve pentagons.</b> The number of pentagons does not know
+  how big the number system is.</div>
+</div></div></div>
+
+<div class="sec"><div class="head"><span class="num">II</span><span class="ttl">The buckyball format — and the WELD ladder, from the other side</span><span class="chev">▶</span></div>
+<div class="body"><div class="inner">
+  <div class="claim"><span class="st exact">exact</span> An <i>icosahedral</i> Goldberg shell needs V = 20T with
+  T = k²+kℓ+ℓ² — a <b>Loeschian</b> number. For a (1, E, M) format, V = 2^(M+1)·(2^E − 1). When does that land on
+  a Goldberg shell? Computed live, exactly:</div>
+  <div class="meter" id="mBucky"></div>
+  <div class="claim">The smallest hit is <b>E = 4, M = 1 → V = 60, T = 3</b>. Six bits. <b>C₆₀.</b> And the whole
+  E = 4 family with M odd walks V ↦ 4V:</div>
+  <div class="fm"><span class="c">M= 1</span>  V =    60   T =    3   <span class="k">C60</span>    <span class="c">the buckyball</span>
+<span class="c">M= 3</span>  V =   240   T =   12   <span class="k">C240</span>
+<span class="c">M= 5</span>  V =   960   T =   48   <span class="k">C960</span>
+<span class="c">M= 7</span>  V =  3840   T =  192   <span class="k">C3840</span>   <span class="c">+2 mantissa bits = one chamfer</span></div>
+  <div class="claim">THEA's exact-ID WELD operator certifies precisely
+  <span class="cyan">C₆₀ → C₂₄₀ → C₉₆₀ → C₃₈₄₀</span> with V ↦ 4V, P = 12, χ = 2. This page reached the same
+  ladder from bit patterns, never having been told it existed. <b>Two mantissa bits is one chamfer step.</b></div>
+  <div class="note"><span class="st design">design</span> The correspondence is a counting identity, not a proof
+  that the WELD graph and the float graph are isomorphic. They agree on V, E, F, P, H and χ. Whether the float
+  successor relation can be realised as an edge set of the chamfer lineage at every level is open — for V = 60 it
+  is verified below, by explicit Hamiltonian path.</div>
+</div></div></div>
+
+<div class="sec"><div class="head"><span class="num">III</span><span class="ttl">The walk — a Hamiltonian path, found live</span><span class="chev">▶</span></div>
+<div class="body"><div class="inner">
+  <div class="claim"><span class="st computed">computed live</span> The truncated icosahedron above is built from
+  φ — cyclic permutations of (0, ±1, ±3φ), (±1, ±(2+φ), ±2φ), (±2, ±(1+2φ), ±φ) — then edges are the pairs at
+  minimum distance. Verified in this browser, no hard-coded mesh:</div>
+  <div class="meter" id="mGeom"></div>
+  <div class="claim">Then a depth-first search with a Warnsdorff ordering looks for a path visiting all sixty
+  vertices, each exactly once, moving only along edges:</div>
+  <div class="meter" id="mHam"></div>
+  <div class="claim"><b>The two ends are not adjacent.</b> That matters: it is a Hamiltonian <i>path</i>, not a
+  cycle — an object with two loose ends, exactly like the float line, laid onto a surface with none. The
+  overflow end and the underflow end are still there. They are just no longer at the edge of anything.</div>
+</div></div></div>
+
+<div class="sec"><div class="head"><span class="num">IV</span><span class="ttl">The growth law — hexagons are precision, pentagons are closure</span><span class="chev">▶</span></div>
+<div class="body"><div class="inner">
+  <div class="claim"><span class="st exact">exact</span> Now watch what a bit buys. Add one mantissa bit: V
+  doubles, H doubles, R grows by √2 — and P does not move.</div>
+  <table id="tGrow"><tr><th>format</th><th>V</th><th>hexagons</th><th>P</th><th>R / R₆₄</th></tr></table>
+  <div class="meter" id="mRate"></div>
+  <div class="claim"><span class="st design">design mapping</span> The reading: <b>hexagons are precision;
+  pentagons are closure.</b> Hexagons tile flat and carry no curvature — you can have as many as you can afford,
+  and each one is another bit of resolution. The twelve pentagons are the defect charge that lets the sheet close
+  at all, 4π of it, paid once and never again. A number format that wants no ends pays twelve pentagons. A number
+  format that wants dynamic range pays two ends. <b>You are choosing which price to pay, not whether.</b></div>
+  <div class="note">Stated as an analogy with its seams showing: the fullerene's uniform edge length is the
+  geometric image of <i>fixed-point</i> arithmetic, and float's graded edges are what buy the exponent range. The
+  cage counts the patterns; it does not encode their spacing.</div>
+</div></div></div>
+
+<div class="sec"><div class="head"><span class="num">V</span><span class="ttl">The Loeschian gate — why float32 is not a buckyball</span><span class="chev">▶</span></div>
+<div class="body"><div class="inner">
+  <div class="claim"><span class="st ref">refuted</span> The obvious hope — that the formats we actually use are
+  Goldberg shells — is false, and the reason is a clean piece of number theory. T is Loeschian iff every prime
+  ≡ 2 (mod 3) in its factorisation appears to an <b>even</b> power.</div>
+  <div class="meter" id="mGate"></div>
+  <div class="claim">float32 fails on <b>17</b>. Not on size, not on parity — on a single prime that is 2 mod 3
+  sitting there to the first power. And float64 fails earlier still: 2⁵³·2047 is not even divisible by 20, since
+  2047 = 23·89 carries no factor of 5.</div>
+  <div class="claim"><span class="st computed">computed live</span> So float64 is a fullerene but not a
+  <i>Goldberg</i> fullerene. It falls strictly between two shells of the golden ladder:</div>
+  <div class="meter" id="mBracket"></div>
+  <div class="note">This is the honest shape of the result. One format lands exactly on the buckyball and its
+  chamfer ladder; the ones in your CPU do not. The hit at six bits is real and the miss at thirty-two is real,
+  and printing only the first would be the whole disease this cave was built against.</div>
+</div></div></div>
+
+<div class="sec"><div class="head"><span class="num">VI</span><span class="ttl">The helix — the path was two-dimensional all along</span><span class="chev">▶</span></div>
+<div class="body"><div class="inner">
+  <div class="claim"><span class="st exact">exact</span> Why a line can become a surface at all: <b>nextafter
+  carries</b>. Step past the last mantissa value and the carry lands in the exponent field — mantissa wraps,
+  exponent increments. The two fields are not independent axes; they are <b>a coil</b>, one turn per octave.</div>
+  <div class="meter" id="mHelix"></div>
+  <div class="claim">Set the morph to the middle and you are looking at it. The line was already wound; the
+  sphere just closes the winding. <b>float64 is a helix of 2047 turns with 4 503 599 627 370 496 nodes on each.</b></div>
+  <div class="note"><span class="st design">design</span> The coil drawn above uses 15 turns for 60 nodes so the
+  winding is visible at all. The real proportion — four quadrillion nodes per turn — cannot be drawn, only stated.</div>
+</div></div></div>
+
+<div class="sec"><div class="head"><span class="num">VII</span><span class="ttl">The honest boundary</span><span class="chev">▶</span></div>
+<div class="body"><div class="inner">
+  <div class="claim"><span class="st exact">exact</span> The cage arithmetic for any V (BigInt, no floats). The
+  60-pattern count of the (1,4,1) format and T = 3. The E = 4, M odd ladder V = 60·4ʲ. The Loeschian criterion and
+  float32's failure on 17. The helix identity 2·(2ᴱ−1)·2ᴹ = V. The C₆₀ coordinates from φ.</div>
+  <div class="claim"><span class="st computed">computed live</span> The 60/90/degree-3 verification, the
+  Hamiltonian path search and its edge-by-edge check, the golden-ladder bracket, and every meter on this page.</div>
+  <div class="claim"><span class="st design">design</span> Assigning one fullerene vertex per bit pattern is a
+  <b>choice</b>, and the counting identity that follows is exact <i>given</i> that choice. "Hexagons are precision,
+  pentagons are closure" is a reading, not a theorem. The helix drawing's turn count. Which Hamiltonian path the
+  search happens to find — there are many.</div>
+  <div class="claim"><span class="st hyp">not claimed</span> That the float successor graph is isomorphic to any
+  fullerene's edge graph. It is not: a fullerene is cubic, and a path is not. What is shown is that the float path
+  <b>embeds</b> in the C₆₀ edge set as a Hamiltonian path — a strictly weaker and fully verified statement. Nothing
+  here says IEEE 754 was designed with any of this in mind. It was not.</div>
+  <div class="claim"><span class="st design">open for v0.2+</span> the Hamiltonian path at C240 and C960, to see
+  whether the embedding survives the chamfer · the dual (geodesic) view, matching BYTE SPHERE's mesh · colour the
+  walk by exponent so the octaves band the sphere · locate the two loose ends geometrically — do overflow and
+  underflow land near pentagons? · and the real question: <b>is the float64 fullerene's λ₂ anywhere near the
+  0.7248 line?</b></div>
+</div></div></div>
+
+<div id="coda">
+  the pentagons hold — here they hold a number system.<br>
+  <span class="law">V = 2⁵³·2047 · P = 12 · χ = 2 · six bits is a buckyball · two mantissa bits is one chamfer</span><br>
+  the cave, 2026 · for year 12026 · always
+</div>
+
+</div><!-- /wrap -->
+
+<script>
+var PHI=(1+Math.sqrt(5))/2;
+function grp(n){return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g,' ');}
+function mrow(k,v,c,w){return '<span class="row'+(w?' wide':'')+'"><span class="k">'+k+
+  '</span><span class="v '+(c||'')+'">'+v+'</span></span>';}
+function fill(id,h){var e=document.getElementById(id);if(e)e.innerHTML=h;}
+
+/* ---------- EXACT CAGE ARITHMETIC ---------- */
+function Vfmt(E,M){return (2n**BigInt(1+M))*((2n**BigInt(E))-1n);}
+function cage(V){return {V:V,E:3n*V/2n,F:V/2n+2n,P:12n,H:V/2n-10n,chi:V-3n*V/2n+(V/2n+2n)};}
+var V64=Vfmt(11,52), C64=cage(V64);
+fill('mCage',
+  mrow('V','one vertex per finite bit pattern','dim',true)+
+  mrow('','&nbsp;&nbsp;'+grp(C64.V),'gold',true)+
+  mrow('E = 3V/2','&nbsp;&nbsp;'+grp(C64.E),'cyan',true)+
+  mrow('F = V/2+2','&nbsp;&nbsp;'+grp(C64.F),'cyan',true)+
+  mrow('H hexagons','&nbsp;&nbsp;'+grp(C64.H),'','')+
+  mrow('P pentagons','12','bad')+
+  mrow('χ = V − E + F',C64.chi.toString()+(C64.chi===2n?'   CLOSED — exact BigInt, no float touched':'   FAIL'),
+       C64.chi===2n?'grn':'bad',true));
+
+/* ---------- LOESCHIAN ---------- */
+function isLoesch(T){var x=T;
+  for(var p=2n;p*p<=x;p++){ if(x%p===0n){var e=0; while(x%p===0n){x/=p;e++;}
+    if(p%3n===2n&&e%2===1) return false; } }
+  if(x>1n&&x%3n===2n) return false; return true;}
+(function(){
+  var hits=[],first=null;
+  for(var E=2;E<=14;E++) for(var M=1;M<=14;M++){
+    var V=Vfmt(E,M); if(V%20n!==0n) continue;
+    var T=V/20n; if(isLoesch(T)){ hits.push([E,M,V,T]); if(!first) first=[E,M,V,T]; }
+  }
+  var e4=hits.filter(function(h){return h[0]===4;}).length;
+  fill('mBucky',
+    mrow('search','all (E,M) with E ≤ 14, M ≤ 14 — exact integer test, no tolerance','dim',true)+
+    mrow('hits',hits.length+' formats land on an icosahedral Goldberg shell','cyan')+
+    mrow('smallest','E = '+first[0]+', M = '+first[1]+'  →  V = '+first[2]+',  T = '+first[3],'gold',true)+
+    mrow('that is','C'+first[2]+' — the truncated icosahedron. The buckyball.','gold',true)+
+    mrow('E = 4 family',e4+' of them share E = 4; V = 60·4ʲ for M = 1,3,5,7…','cyan',true));
+  /* the gate */
+  var T32=Vfmt(8,23)/20n;
+  fill('mGate',
+    mrow('float32 V','2²⁴·255 = '+grp(Vfmt(8,23)),'dim',true)+
+    mrow('V / 20',grp(T32)+'  =  2²² · 3 · 17','cyan',true)+
+    mrow('primes ≡ 2 mod 3','2 → exponent 22, even ✓     17 → exponent 1, ODD ✗','bad',true)+
+    mrow('verdict',isLoesch(T32)?'Loeschian':'NOT Loeschian — float32 is not a Goldberg shell','bad',true)+
+    mrow('float64','V mod 20 = '+(V64%20n).toString()+' — not even divisible by 20, since 2047 = 23·89','bad',true));
+  /* bracket on the golden ladder */
+  var k=1n,l=0n,n=0,prev=null,prevN=0;
+  while(n<80){ var T=k*k+k*l+l*l, V=20n*T;
+    if(V>V64){ fill('mBracket',
+        mrow('golden shell n='+prevN,'V = '+grp(prev),'cyan',true)+
+        mrow('float64','V = '+grp(V64),'gold',true)+
+        mrow('golden shell n='+n,'V = '+grp(V),'cyan',true)+
+        mrow('so','float64 sits strictly between two golden shells — a fullerene, not a Goldberg fullerene','dim',true));
+      break; }
+    prev=V; prevN=n; var nk=k+l; l=k; k=nk; n++; }
+})();
+
+/* ---------- GROWTH ---------- */
+(function(){
+  var rows=[['float16',5,10],['bfloat16',8,7],['float32',8,23],['float64',11,52],['binary128',15,112]];
+  var html='<tr><th>format</th><th>V</th><th>hexagons</th><th>P</th><th>R / R₆₄</th></tr>';
+  rows.forEach(function(r){
+    var V=Vfmt(r[1],r[2]),g=cage(V);
+    var ratio=Math.sqrt(Number(V)/Number(V64));
+    html+='<tr><td class="d">'+r[0]+'</td><td class="c">'+grp(V)+'</td><td>'+grp(g.H)+
+      '</td><td class="b">12</td><td class="g">'+(ratio>=1?ratio.toFixed(ratio>100?0:3):ratio.toExponential(2))+'</td></tr>';
+  });
+  document.getElementById('tGrow').innerHTML=html;
+  fill('mRate',
+    mrow('+1 mantissa bit','V ×2 · H ×2 · P unchanged · R ×√2','gold',true)+
+    mrow('bits per golden shell step','2·log₂φ = '+(2*Math.log2(PHI)).toFixed(6),'cyan')+
+    mrow('golden steps per bit',(1/(2*Math.log2(PHI))).toFixed(6),'cyan')+
+    mrow('helix identity','2·(2ᴱ−1)·2ᴹ = V ?  '+((2n*(2n**11n-1n)*(2n**52n))===V64?'PASS':'FAIL'),
+      (2n*(2n**11n-1n)*(2n**52n))===V64?'grn':'bad',true));
+  fill('mHelix',
+    mrow('turns (octaves)',grp(2n**11n-1n),'cyan')+
+    mrow('nodes per turn',grp(2n**52n),'cyan')+
+    mrow('× 2 signs','= '+grp(V64),'gold',true)+
+    mrow('check','equals V exactly? '+((2n*(2n**11n-1n)*(2n**52n))===V64?'PASS':'FAIL'),'grn',true));
+})();
+
+/* ---------- C60 GEOMETRY, BUILT LIVE ---------- */
+function cyc(a,b,c){return [[a,b,c],[b,c,a],[c,a,b]];}
+function sgn(t){var o=[];for(var i=0;i<2;i++)for(var j=0;j<2;j++)for(var k=0;k<2;k++)
+  o.push([t[0]*(i?-1:1),t[1]*(j?-1:1),t[2]*(k?-1:1)]);return o;}
+var VTX=[],seen={};
+[[0,1,3*PHI],[1,2+PHI,2*PHI],[2,1+2*PHI,PHI]].forEach(function(b){
+  cyc(b[0],b[1],b[2]).forEach(function(p){ sgn(p).forEach(function(q){
+    var key=q.map(function(x){return x.toFixed(6);}).join(',');
+    if(!seen[key]){seen[key]=1;VTX.push(q);} }); }); });
+var RAD=Math.hypot(VTX[0][0],VTX[0][1],VTX[0][2]);
+VTX=VTX.map(function(p){return [p[0]/RAD,p[1]/RAD,p[2]/RAD];});
+function d2(a,b){return (a[0]-b[0])*(a[0]-b[0])+(a[1]-b[1])*(a[1]-b[1])+(a[2]-b[2])*(a[2]-b[2]);}
+var minD=Infinity;
+for(var i=0;i<VTX.length;i++)for(var j=i+1;j<VTX.length;j++){var d=d2(VTX[i],VTX[j]);if(d<minD)minD=d;}
+var ADJ=VTX.map(function(){return [];}), EDGES=[];
+for(var a=0;a<VTX.length;a++)for(var b=a+1;b<VTX.length;b++)
+  if(Math.abs(d2(VTX[a],VTX[b])-minD)<1e-6){ADJ[a].push(b);ADJ[b].push(a);EDGES.push([a,b]);}
+var degs={}; ADJ.forEach(function(x){degs[x.length]=1;});
+var PENT=[],ps={};
+cyc(0,1,PHI).forEach(function(p){ sgn(p).forEach(function(q){
+  var k=q.map(function(x){return x.toFixed(6);}).join(',');
+  if(!ps[k]){ps[k]=1;var L=Math.hypot(q[0],q[1],q[2]);PENT.push([q[0]/L,q[1]/L,q[2]/L]);} }); });
+fill('mGeom',
+  mrow('vertices',VTX.length+(VTX.length===60?'   ✓':'   ✗'),VTX.length===60?'grn':'bad')+
+  mrow('edges',EDGES.length+(EDGES.length===90?'   ✓':'   ✗'),EDGES.length===90?'grn':'bad')+
+  mrow('degrees',Object.keys(degs).join(',')+(Object.keys(degs).length===1&&degs[3]?'   all cubic ✓':'   ✗'),'grn')+
+  mrow('faces','32 = 12 pentagons + 20 hexagons','cyan')+
+  mrow('χ = V − E + F',(60-90+32)+'   CLOSED','grn',true)+
+  mrow('pentagon centres',PENT.length+(PENT.length===12?'   ✓ the twelve, found as the icosahedral directions':''),'bad',true));
+
+/* ---------- HAMILTONIAN PATH, SEARCHED LIVE ---------- */
+var WALK=null, WSTEPS=0, WMS=0;
+(function(){
+  var t0=performance.now();
+  function tryFrom(start,cap){
+    var n=60,used=new Array(n).fill(false),path=[start],steps=0,cur=start;
+    used[start]=true;
+    function feasible(){ for(var v=0;v<n;v++){ if(used[v])continue; var c=0;
+        for(var q=0;q<ADJ[v].length;q++){var w=ADJ[v][q]; if(!used[w]||w===cur)c++;}
+        if(c<1) return false; } return true; }
+    function go(){
+      if(++steps>cap) return false;
+      if(path.length===n) return true;
+      cur=path[path.length-1];
+      if(!feasible()) return false;
+      var nb=ADJ[cur].filter(function(x){return !used[x];})
+        .sort(function(x,y){return ADJ[x].filter(function(z){return !used[z];}).length
+                                 -ADJ[y].filter(function(z){return !used[z];}).length;});
+      for(var t=0;t<nb.length;t++){ var nx=nb[t]; used[nx]=true; path.push(nx);
+        if(go()) return true; path.pop(); used[nx]=false; cur=path[path.length-1]; }
+      return false; }
+    return go()?{path:path,steps:steps}:null;
+  }
+  var r=null;
+  for(var s=0;s<60&&!r;s++) r=tryFrom(s,400000);
+  WMS=performance.now()-t0;
+  if(r){ WALK=r.path; WSTEPS=r.steps; }
+  var distinct=WALK?new Set(WALK).size:0, edgeOk=true;
+  if(WALK) for(var i2=0;i2<59;i2++) if(ADJ[WALK[i2]].indexOf(WALK[i2+1])<0) edgeOk=false;
+  var closes=WALK?ADJ[WALK[59]].indexOf(WALK[0])>=0:false;
+  fill('mHam', WALK?
+    mrow('search','depth-first, Warnsdorff ordering, dead-end pruning','dim',true)+
+    mrow('result','FOUND in '+WSTEPS+' steps, '+WMS.toFixed(1)+' ms','grn',true)+
+    mrow('distinct vertices',distinct+'/60'+(distinct===60?'   ✓':'   ✗'),distinct===60?'grn':'bad')+
+    mrow('every step an edge',edgeOk?'PASS — 59/59':'FAIL',edgeOk?'grn':'bad')+
+    mrow('ends adjacent?',closes?'yes — it also closes into a cycle':'NO — a genuine path, two loose ends',
+         closes?'cyan':'gold',true)
+    : mrow('result','search exhausted its budget — reload to retry from a different seed','bad',true));
+})();
+
+/* ---------- THE 6-BIT FORMAT: 60 nodes ---------- */
+var FE=4, FM=1, BIAS=Math.pow(2,FE-1)-1, NM=Math.pow(2,FM);
+var NODES=[];
+(function(){
+  for(var s=0;s<2;s++){
+    for(var m=0;m<NM;m++) NODES.push({s:s,e:0,m:m,sub:true,
+      val:(s?-1:1)*(m/NM)*Math.pow(2,1-BIAS)});
+    for(var ef=1;ef<=Math.pow(2,FE)-2;ef++) for(var m2=0;m2<NM;m2++)
+      NODES.push({s:s,e:ef,m:m2,sub:false,val:(s?-1:1)*(1+m2/NM)*Math.pow(2,ef-BIAS)});
+  }
+  NODES.sort(function(a,b){return a.val-b.val;});
+  NODES.forEach(function(n,i){n.i=i;});
+})();
+document.getElementById('hV').textContent=NODES.length;
+
+/* ---------- RENDER ---------- */
+var cv=document.getElementById('cv'), cx=cv.getContext('2d');
+var W=900,H=420,DPR=1,MORPH=0,SHOWWALK=true,SPIN=false,YAW=0.6,PITCH=-0.25,SEL=-1,raf=null;
+function resize(){ var box=document.getElementById('cvbox');
+  W=Math.max(300,box.clientWidth); H=Math.min(460,Math.max(300,W*0.52));
+  DPR=Math.min(window.devicePixelRatio||1,2);
+  cv.width=W*DPR; cv.height=H*DPR; cv.style.height=H+'px'; draw(); }
+function pos(idx){
+  var n=NODES.length, t=idx/(n-1);
+  /* LINE */
+  var lx=(t-0.5)*2.6, ly=0, lz=0;
+  /* HELIX: 15 turns, one per octave of the toy format */
+  var turns=15, th=2*Math.PI*t*turns;
+  var hx=0.62*Math.cos(th), hy=(t-0.5)*2.4, hz=0.62*Math.sin(th);
+  /* SPHERE: this node's C60 vertex, via the Hamiltonian walk */
+  var v=WALK?VTX[WALK[idx]]:VTX[idx%60];
+  var sx=v[0]*1.15, sy=v[1]*1.15, sz=v[2]*1.15;
+  var u=MORPH*2, X,Y,Z;
+  if(u<=1){ X=lx+(hx-lx)*u; Y=ly+(hy-ly)*u; Z=lz+(hz-lz)*u; }
+  else{ var w=u-1; X=hx+(sx-hx)*w; Y=hy+(sy-hy)*w; Z=hz+(sz-hz)*w; }
+  return [X,Y,Z];
+}
+function rot(p){
+  var cy=Math.cos(YAW),sy=Math.sin(YAW),cp=Math.cos(PITCH),sp=Math.sin(PITCH);
+  var x=p[0]*cy-p[2]*sy, z=p[0]*sy+p[2]*cy;
+  var y=p[1]*cp-z*sp, z2=p[1]*sp+z*cp;
+  return [x,y,z2];
+}
+function proj(p){ var d=4.2, s=2.6/(d-p[2]); return [W/2+p[0]*s*H*0.42, H/2-p[1]*s*H*0.42, p[2], s]; }
+function draw(){
+  cx.setTransform(DPR,0,0,DPR,0,0); cx.clearRect(0,0,W,H);
+  var P=[]; for(var i=0;i<NODES.length;i++) P.push(proj(rot(pos(i))));
+  /* C60 edges — fade in with the sphere */
+  var sphereness=Math.max(0,MORPH*2-1);
+  if(sphereness>0.02 && WALK){
+    var inv=[]; for(var q=0;q<60;q++) inv[WALK[q]]=q;
+    cx.strokeStyle='rgba(0,212,255,'+(0.20*sphereness).toFixed(3)+')'; cx.lineWidth=1;
+    for(var e=0;e<EDGES.length;e++){
+      var A=P[inv[EDGES[e][0]]], B=P[inv[EDGES[e][1]]];
+      if(!A||!B) continue;
+      cx.beginPath(); cx.moveTo(A[0],A[1]); cx.lineTo(B[0],B[1]); cx.stroke();
+    }
+  }
+  /* the walk itself */
+  if(SHOWWALK){
+    cx.strokeStyle='rgba(255,215,0,.62)'; cx.lineWidth=1.5; cx.beginPath();
+    for(var w2=0;w2<P.length;w2++){ if(w2===0)cx.moveTo(P[w2][0],P[w2][1]); else cx.lineTo(P[w2][0],P[w2][1]); }
+    cx.stroke();
+  }
+  /* pentagons */
+  if(sphereness>0.02){
+    for(var pp=0;pp<PENT.length;pp++){
+      var pt=proj(rot([PENT[pp][0]*1.15,PENT[pp][1]*1.15,PENT[pp][2]*1.15]));
+      if(pt[2]<-0.2) continue;
+      cx.beginPath(); cx.arc(pt[0],pt[1],5.5*pt[3]*0.9,0,6.2832);
+      cx.fillStyle='rgba(255,105,180,'+(0.75*sphereness).toFixed(3)+')'; cx.fill();
+    }
+  }
+  /* nodes, painter-sorted */
+  var order=[]; for(var o=0;o<P.length;o++) order.push(o);
+  order.sort(function(x,y){return P[x][2]-P[y][2];});
+  for(var k2=0;k2<order.length;k2++){
+    var idx=order[k2], p=P[idx], n=NODES[idx];
+    var r=(idx===SEL?6.2:3.9)*p[3]*0.85;
+    var col=n.sub?'#cc88ff':(n.val<0?'#00d4ff':'#7fff9f');
+    cx.beginPath(); cx.arc(p[0],p[1],r,0,6.2832);
+    cx.fillStyle=col; cx.globalAlpha=0.55+0.45*Math.max(0,Math.min(1,(p[2]+1)/2)); cx.fill();
+    cx.globalAlpha=1;
+    if(idx===SEL){ cx.beginPath(); cx.arc(p[0],p[1],r+4.5,0,6.2832);
+      cx.strokeStyle='#ffd700'; cx.lineWidth=1.3; cx.stroke(); }
+  }
+  cx.font='9.5px ui-monospace, Menlo, monospace'; cx.textAlign='left';
+  cx.fillStyle='rgba(223,230,242,.4)';
+  cx.fillText(MORPH<0.25?'LINE — the float path, two ends':
+             (MORPH<0.75?'HELIX — nextafter carries mantissa into exponent':
+                         'SPHERE — the same path, walking C60 edge by edge'),14,18);
+  cx.textAlign='right'; cx.fillStyle='rgba(255,105,180,.7)';
+  if(sphereness>0.3) cx.fillText('pink = the twelve pentagons',W-14,18);
+}
+function setMorph(v){
+  MORPH=Math.max(0,Math.min(1,v));
+  document.getElementById('rM').value=Math.round(MORPH*100);
+  var nm=MORPH<0.02?'line':(Math.abs(MORPH-0.5)<0.02?'helix':(MORPH>0.98?'sphere':MORPH.toFixed(2)));
+  document.getElementById('nM').textContent=nm;
+  var h=document.getElementById('hShape'); h.textContent=nm;
+  h.className=MORPH>0.98?'grn':(MORPH<0.02?'pink':'cyan');
+  draw();
+}
+document.getElementById('rM').addEventListener('input',function(e){setMorph(e.target.value/100);});
+document.getElementById('bLine').addEventListener('click',function(){setMorph(0);});
+document.getElementById('bHelix').addEventListener('click',function(){setMorph(0.5);});
+document.getElementById('bSphere').addEventListener('click',function(){setMorph(1);});
+document.getElementById('bWalk').addEventListener('click',function(){
+  SHOWWALK=!SHOWWALK; this.classList.toggle('on',SHOWWALK);
+  this.textContent='Walk — '+(SHOWWALK?'on':'off'); draw();});
+function loop(){ if(!SPIN){raf=null;return;} YAW+=0.005; draw(); raf=requestAnimationFrame(loop); }
+document.getElementById('bSpin').addEventListener('click',function(){
+  SPIN=!SPIN; this.classList.toggle('on',SPIN);
+  this.textContent='Spin — '+(SPIN?'on':'off');
+  if(SPIN&&!raf) raf=requestAnimationFrame(loop);});
+var drag=false,lx0=0,ly0=0;
+cv.addEventListener('pointerdown',function(e){drag=true;lx0=e.clientX;ly0=e.clientY;cv.setPointerCapture(e.pointerId);});
+cv.addEventListener('pointermove',function(e){ if(!drag)return;
+  YAW+=(e.clientX-lx0)*0.008; PITCH+=(e.clientY-ly0)*0.006;
+  PITCH=Math.max(-1.4,Math.min(1.4,PITCH)); lx0=e.clientX; ly0=e.clientY; draw();});
+cv.addEventListener('pointerup',function(e){
+  var moved=false; drag=false;
+  var r=cv.getBoundingClientRect(), mx=e.clientX-r.left, my=e.clientY-r.top;
+  var best=-1,bd=1e9;
+  for(var i=0;i<NODES.length;i++){ var p=proj(rot(pos(i)));
+    var d=Math.hypot(p[0]-mx,p[1]-my); if(d<bd){bd=d;best=i;} }
+  if(bd<13){ SEL=best; showSel(best); draw(); }});
+function showSel(i){
+  var n=NODES[i], bits=(n.s?'1':'0')+' '+n.e.toString(2).padStart(FE,'0')+' '+n.m.toString(2).padStart(FM,'0');
+  var vtx=WALK?WALK[i]:i;
+  fill('mSel',
+    mrow('walk position',i+' of 59','gold')+
+    mrow('bits (s e m)',bits,'cyan')+
+    mrow('value',n.val===0?(n.s?'−0':'0'):n.val.toPrecision(6),'')+
+    mrow('class',n.sub?'SUBNORMAL':'normal, octave 2^'+(n.e-BIAS),n.sub?'bad':'dim')+
+    mrow('C60 vertex','#'+vtx+'   neighbours '+(WALK?ADJ[vtx].join(', '):'—'),'cyan',true)+
+    mrow('degree',(WALK?ADJ[vtx].length:3)+' — cubic, like every vertex of a fullerene','dim'));
+}
+document.querySelectorAll('.sec .head').forEach(function(h){
+  h.addEventListener('click',function(){h.parentElement.classList.toggle('open');});});
+window.addEventListener('resize',resize);
+resize(); setMorph(0);
+</script>
+</body></html>

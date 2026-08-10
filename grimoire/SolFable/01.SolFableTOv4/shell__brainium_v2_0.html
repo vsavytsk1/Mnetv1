@@ -1,0 +1,864 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>LENS v2.0 BRAINIUM -- spini brain hierarchical-depth lens -- THE SPARK</title>
+<style>
+  :root{
+    --bg:#050508; --gold:#ffd700; --cyan:#00d4ff; --pink:#ff69b4; --green:#00ffd5;
+    --espresso:#c7894a; --purple:#cc44ff; --dim:#6a6a82; --txt:#e8e0d0;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;background:var(--bg);color:var(--txt);font-family:var(--mono);overflow:hidden}
+  #cv{position:fixed;inset:0;display:block}
+  #hud{position:fixed;top:0;left:0;right:0;padding:10px 14px;display:flex;gap:14px;align-items:flex-start;
+    pointer-events:none;font-size:11px;z-index:10;flex-wrap:wrap}
+  #hud > div{pointer-events:auto;background:rgba(8,8,16,0.78);border:1px solid #20202e;
+    border-radius:8px;padding:8px 11px;backdrop-filter:blur(3px)}
+  #ttl{color:var(--gold);font-size:14px;letter-spacing:0.06em}
+  #sub{color:var(--dim);font-size:10px;margin-top:1px;max-width:580px}
+  #note{color:var(--espresso);font-size:10px;margin-top:5px;max-width:580px;line-height:1.4}
+  #note b{color:var(--gold)}
+  #note .hyp{color:var(--purple)}
+  #note .ret{color:var(--pink);text-decoration:line-through}
+  #note .spk{color:var(--green)}
+  #still{color:var(--dim);font-size:10px;margin-top:4px}
+  #still b{color:var(--cyan)}
+  #side{margin-left:auto;max-width:280px;color:var(--dim);font-size:10px;line-height:1.5}
+  #side b{color:var(--cyan)} #side .l{color:var(--gold)}
+  #side .row{display:flex;align-items:center;gap:6px;margin:1px 0}
+  #side .sw{width:14px;height:8px;border-radius:2px;display:inline-block}
+
+  #stack{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:10;
+    display:flex;flex-direction:column;gap:8px;align-items:center;max-width:97vw}
+  #meters{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;
+    background:rgba(8,8,16,0.9);border:1px solid #20202e;border-radius:10px;padding:9px 12px;
+    font-size:10px;line-height:1.5}
+  .mcol{min-width:192px;max-width:236px}
+  .mcol h4{font-size:10px;letter-spacing:0.08em;margin-bottom:2px;font-weight:bold}
+  .mcol.p h4{color:var(--cyan)} .mcol.h h4{color:var(--gold)}
+  .mcol.cap h4{color:var(--green)} .mcol.lat h4{color:var(--pink)}
+  .mrow{display:flex;justify-content:space-between;gap:8px}
+  .mrow .k{color:var(--dim)} .mrow .v{color:var(--txt);text-align:right}
+  .tag{color:var(--dim);font-size:9px;line-height:1.45}
+  .lit{color:var(--gold)}
+  .ret{color:var(--pink);font-size:9px}
+  .ret s{opacity:0.85}
+  .lockon{color:var(--green)} .lockoff{color:var(--espresso)}
+  #mspark{flex-basis:100%;font-size:10px;line-height:1.55;
+    border-top:1px solid #1c1c28;padding-top:4px;margin-top:2px}
+  #mspark h4{color:var(--green);font-size:10px;letter-spacing:0.08em;font-weight:bold}
+  #mspark .sP{color:var(--cyan)} #mspark .sH{color:var(--gold)}
+  #mspark .g{color:var(--green)} #mspark .warn{color:var(--pink)}
+  #mspark .tag{color:var(--dim);font-size:9px}
+  #mfoot{flex-basis:100%;color:var(--dim);font-size:9px;line-height:1.5;
+    border-top:1px solid #1c1c28;padding-top:4px;margin-top:2px}
+  #mfoot b{color:var(--purple)}
+
+  #bar{display:flex;flex-wrap:wrap;gap:9px;align-items:center;justify-content:center;
+    background:rgba(8,8,16,0.88);border:1px solid #20202e;border-radius:10px;padding:8px 13px}
+  button{background:#14141f;border:1px solid #2a2a3a;border-radius:6px;color:var(--gold);
+    font:12px var(--mono);padding:6px 10px;cursor:pointer;transition:all .12s}
+  button:hover{border-color:var(--gold)}
+  button.cyan{color:var(--cyan)} button.cyan:hover{border-color:var(--cyan)}
+  button.espresso{color:var(--espresso)} button.espresso:hover{border-color:var(--espresso)}
+  button.pink{color:var(--pink)} button.pink:hover{border-color:var(--pink)}
+  button.green{color:var(--green)} button.green:hover{border-color:var(--green)}
+  input[type=range]{appearance:none;width:64px;height:4px;background:#2a2a3a;border-radius:3px;outline:none}
+  input[type=range]::-webkit-slider-thumb{appearance:none;width:13px;height:13px;border-radius:50%;background:var(--gold);cursor:pointer}
+  .sep{width:1px;height:22px;background:#2a2a3a;margin:0 2px}
+  .klbl{color:var(--dim);font-size:10px;letter-spacing:0.06em}
+  .klbl.p{color:#3f8ca6} .klbl.h{color:#a68f2e} .klbl.s{color:#2e9e88}
+  .val{color:var(--gold);font-size:11px;min-width:18px;text-align:right}
+
+  .wip{position:fixed;left:14px;bottom:14px;background:rgba(8,8,16,0.85);border:1px solid #c7894a;
+    border-radius:8px;padding:6px 10px;font-size:10px;color:var(--espresso);z-index:9;max-width:330px;line-height:1.4}
+  .wip b{color:var(--gold)}
+  @media (max-width:1150px){ .wip{display:none} }
+
+  #tback{position:fixed;inset:0;background:rgba(3,3,6,0.72);z-index:19;display:none}
+  #titans{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:20;display:none;
+    width:min(760px,94vw);max-height:80vh;overflow:auto;background:rgba(8,8,16,0.97);
+    border:1px solid var(--gold);border-radius:12px;padding:16px 18px;font-size:11px;line-height:1.55}
+  #titans h2{color:var(--gold);font-size:13px;letter-spacing:0.08em;margin-bottom:6px}
+  #titans h3{color:var(--green);font-size:11px;letter-spacing:0.08em;margin:12px 0 4px}
+  #titans .t{margin:5px 0}
+  #titans .t b{color:var(--cyan)}
+  #titans .t .m{color:var(--gold)}
+  #titans .t .c{color:var(--dim);font-size:10px}
+  #titans .r{color:var(--dim);font-size:10px;margin:3px 0}
+  #titans .r b{color:var(--espresso)}
+  #tclose{position:sticky;top:0;float:right;margin-left:10px}
+</style>
+</head>
+<body>
+<canvas id="cv" width="1280" height="720"></canvas>
+
+<div id="hud">
+  <div>
+    <div id="ttl">LENS v2.0 BRAINIUM -- hierarchical-depth lens -- THE SPARK</div>
+    <div id="sub">left: <b style="color:var(--cyan)">PORTIA</b> (3 lit relays) · right: <b style="color:var(--gold)">HUMAN</b> (~10 lit levels) · same motif family, different depth · width · serial passes</div>
+    <div id="note">claim v1.0 <span class="hyp">[HYPOTHESIS]</span>: <b>same recursive hierarchy + shared action-selection motif (CX&harr;BG, contested), tuned across ~5-6 orders of magnitude and ~3x explicit depth; small brains trade serial time for parallel depth.</b> <span class="ret">600k</span> RETIRED. <span class="spk">v2.0 asks the math directly: can hierarchy ALONE spark the light? lambda2 [Fiedler] of the drawn graphs, computed live.</span></div>
+    <div id="still">still on load -- <b>motion is opt-in</b> (Curse 13). press play. the spark computes regardless -- it is measurement, not motion.</div>
+  </div>
+  <div id="side">
+    each ring = one <span class="l">hierarchical level</span><br>
+    each dot = a <span class="l">circuit motif</span> (NOT a neuron)<br>
+    <div class="row"><span class="sw" style="background:#c7894a"></span>L0 sensory tile</div>
+    <div class="row"><span class="sw" style="background:#00d4ff"></span>L1 local integrator</div>
+    <div class="row"><span class="sw" style="background:#ffd700"></span>L2 column</div>
+    <div class="row"><span class="sw" style="background:#00ffd5"></span>L3 region planner</div>
+    <div class="row"><span class="sw" style="background:#ff69b4"></span>L4 cross-region</div>
+    <div class="row"><span class="sw" style="background:#cc44ff"></span>L5+ meta / global</div>
+    <br>
+    ripple = one pass [METAPHOR]<br>
+    <span style="color:var(--purple)">&#9670;</span> arcuate body: 3rd relay + motif site<br>
+    <span style="color:var(--green)">loops</span> = S extra edges, 0-512 [DESIGN, seeded]<br>(drawing caps at 96 chords)<br>
+    center glow = CERTIFIED lambda2 only<br>(log-mapped [DESIGN]; bounds never glow)
+  </div>
+</div>
+
+<div id="stack">
+  <div id="meters">
+    <div class="mcol p" id="mp-portia"></div>
+    <div class="mcol cap" id="mp-cap"></div>
+    <div class="mcol lat" id="mp-lat"></div>
+    <div class="mcol h" id="mp-human"></div>
+    <div id="mspark"></div>
+    <div id="mfoot"></div>
+  </div>
+  <div id="bar">
+    <span class="klbl p">P depth</span><input id="dP" type="range" min="2" max="7" step="1" value="3"><span class="val" id="dPv">3</span>
+    <span class="klbl p">P branch</span><input id="bP" type="range" min="2" max="8" step="1" value="3"><span class="val" id="bPv">3</span>
+    <span class="klbl p">P passes</span><input id="nP" type="range" min="1" max="30" step="1" value="12"><span class="val" id="nPv">12</span>
+    <span class="sep"></span>
+    <span class="klbl h">H depth</span><input id="dH" type="range" min="3" max="12" step="1" value="10"><span class="val" id="dHv">10</span>
+    <span class="klbl h">H branch</span><input id="bH" type="range" min="2" max="8" step="1" value="3"><span class="val" id="bHv">3</span>
+    <span class="sep"></span>
+    <span class="klbl s">S loops</span><input id="sL" type="range" min="0" max="512" step="8" value="0"><span class="val" id="sLv">0</span>
+    <span class="sep"></span>
+    <button id="anchor" class="green">anchor: CORTEX</button>
+    <span class="sep"></span>
+    <button id="play" class="cyan">play</button>
+    <button id="step" class="espresso">step</button>
+    <button id="reset" class="pink">reset</button>
+    <button id="bow">titans</button>
+  </div>
+</div>
+
+<div class="wip">
+  <b>WIP -- seeds:</b> brainium dossiers + light_matrix v1.3.1 + aequalium v2.4.7<br>
+  <b>K1</b> no real spikes · <b>K2</b> fractal = hierarchy · <b>K3</b> single HTML · <b>K4</b> err shown, lock earned · <b>K5</b> denominator is a BAND · <b>K6</b> lambda2 is COMPUTED live -- lanczos ported from light_matrix, lapMV generalized cubic&rarr;any degree [seam marked]<br>
+  v0.4-v1.0 frozen · v2.0 = copy + edit (Path X)
+</div>
+
+<div id="tback"></div>
+<div id="titans">
+  <button id="tclose" class="pink">close</button>
+  <h2>THE TITANS -- points and lines, bowed to</h2>
+  <div class="t"><b>Leonhard Euler</b> (1707-1783) -- <span class="m">Koenigsberg 1736: the first points-and-lines proof. V-E+F=2 forces exactly 12 pentagons</span> -- the fixed topological mode this whole cave counts against. <span class="c">Productive even blind.</span></div>
+  <div class="t"><b>Fibonacci &rarr; the golden lineage</b> -- <span class="m">phi = [1;1,1,1,...]; golden angle 137.508&deg;</span> -- the exact ring-phase offset in this lens. <span class="c">Bravais 1837; Vogel 1979; Douady-Couder 1992.</span></div>
+  <div class="t"><b>Michael Goldberg &amp; H.S.M. Coxeter</b> -- <span class="m">T = k&sup2;+kl+l&sup2;, the icosahedral refinement lattice</span> -- the tower THEA's spectra climb. <span class="c">Caspar-Klug carried T into virus capsids.</span></div>
+  <div class="t"><b>Miroslav Fiedler</b> (1926-2015) -- <span class="m">lambda2, algebraic connectivity (1973)</span> -- in v2.0 his eigenvalue is computed LIVE on the drawn brain graphs; it is the spark meter itself. <span class="c">Cheeger bounds the bottleneck; Chung carried the torch.</span></div>
+  <div class="t"><b>Benoit Mandelbrot</b> (1924-2010) -- <span class="m">coined "fractal"; hoped Purkinje cells were</span> -- K2 keeps his dimension honest. <span class="c">The Fractal Geometry of Nature, 1982.</span></div>
+  <div class="t"><b>Santiago Ramon y Cajal</b> (1852-1934) -- <span class="m">laws of economy of time, space, material (1899)</span> -- the S-loops slider IS his trade: pay long wire, buy integration. <span class="c">Nobel 1906. Cherniak 1994; long-range hubs break pure wire-minimality.</span></div>
+  <div class="t"><b>Suzana Herculano-Houzel</b> -- <span class="m">isotropic fractionator; 86.1&plusmn;8.1 billion</span> -- slew the 100-billion myth, as this lens retires 600k. <span class="c">Azevedo et al. 2009.</span></div>
+  <div class="t"><b>Felleman &amp; Van Essen</b> -- <span class="m">32 areas, 305 connections, ~10 levels (1991)</span> -- the human depth anchor.</div>
+  <div class="t"><b>Douglas &amp; Martin</b> -- <span class="m">the canonical cortical microcircuit</span> -- the repeated motif, vertebrate side.</div>
+  <div class="t"><b>Nicholas Strausfeld (&amp; Frank Hirth)</b> -- <span class="m">central complex &harr; basal ganglia deep homology (Science 2013)</span> -- contested; in salticids the arcuate body is BOTH 3rd-order visual AND the motif site.</div>
+  <div class="t"><b>Jackson, Cross, Tarsitano, Harland</b> -- <span class="m">Portia school: detours 139 cm / 77.5 cm with prey out of view; expectancy-violation memory</span> -- the serial-time side. <span class="c">Eight-legged cats.</span></div>
+  <div class="t"><b>Michael Land</b> -- <span class="m">movable boomerang retinas (1969): ~2 s lateral, ~5-10 s torsional scans</span> -- the pass clock.</div>
+  <div class="t"><b>Watts &amp; Strogatz; Bullmore, Sporns, Bassett</b> -- <span class="m">small worlds; hierarchical modularity</span> -- v2.0's S-loops are the Watts-Strogatz move performed on a brain tree, with lambda2 as the referee. <span class="c">Atasoy 2016 ran the same referee on the human connectome.</span></div>
+  <div class="t"><b>Chittka &amp; Niven</b> -- <span class="m">"Are bigger brains better?" (2009)</span> -- the caution rail under every ratio here.</div>
+  <h3>THE RECEIPTS -- every anchor, labelled</h3>
+  <div class="r"><b>EXACT</b> V-E+F=2; P=12 · T=k&sup2;+kl+l&sup2; · golden angle 137.508&deg; · motif sums &Sigma;b^i (BigInt) · tree edges N-1 · adding an edge cannot decrease any Laplacian eigenvalue (the interval FLOOR) · smallest Ritz value on a subspace of 1&perp; is an upper bound for lambda2 (Courant-Fischer -- the CEILING)</div>
+  <div class="r"><b>COMPUTED</b> lambda2 via Lanczos (full reorth, constant projected) ported from shell__thea_light_matrix_v1_3_1; lapMV generalized from cubic to arbitrary degree [the marked seam, Path V] · Ritz checkpoints m=40/72/112/176; CERT only when successive checkpoints agree to 2%, else a certified INTERVAL is shown · dense jacobiEig reference when N&le;90 with digits-of-agreement [aequalium meter] · no hard-coded prize</div>
+  <div class="r"><b>EXTERNAL</b> human 86.1&plusmn;8.1e9; cortex 16.3e9 [Azevedo '09] · ~10 levels [F&amp;VE '91] · 3 salticid relays [Steinhoff '20] · ~7k syn/neuron [DeFelipe] · 150 ms sweep [Thorpe '96] · scans 2 s / 5-10 s [Land '69] · arbor D 1.1-1.9 limited-range [Smith '21] · scale-free rare [Broido-Clauset '19] · connectome harmonics [Atasoy '16]</div>
+  <div class="r"><b>HYPOTHESIS</b> Portia neurons 1e4-2e5 band (600k = folklore) · depth virtualized in time · 1 pass &asymp; 1 torsional scan · same motif across phyla</div>
+  <div class="r"><b>DESIGN</b> level colors · MAX_DOTS 220 · tempo 18 f/level · lock earn 45 f · band-as-tolerance · S loop edges uniform-random seeded (mulberry32) · glow log-mapping of lambda2 · spectral budget N&le;40,000 [Curse 35]</div>
+</div>
+
+<script>
+  // ====== GENESIS KERNEL (L127) -- no DPR, no setTransform, no getBoundingClientRect ======
+  const cv = document.getElementById('cv');
+  const ctx = cv.getContext('2d');
+  let W = 0, H = 0;
+  function resize(){ W = cv.width = innerWidth; H = cv.height = innerHeight; }
+  resize();
+
+  const LEVEL_COLORS = [
+    '#c7894a','#00d4ff','#ffd700','#00ffd5','#ff69b4','#cc44ff',
+    '#9966ff','#aa77ff','#bb88ff','#c599ff','#cfaaff','#d9bbff'
+  ];
+
+  // ====== EXTERNAL ANCHORS ======
+  const H_ALL = 86.1e9, H_CTX = 16.3e9;
+  const P_LO = 4.0e4, P_HI = 2.0e5;              // Portia denominator BAND; 600k RETIRED
+  const LIT_DEPTH_P = 3, LIT_DEPTH_H = 10;
+  const SWEEP_MS = 150, MS_PER_LVL = SWEEP_MS / LIT_DEPTH_H;
+  const PASS_S = 7;
+  const ANCHORS = {
+    CORTEX: { num: H_CTX, name: 'CORTEX' },
+    WHOLE:  { num: H_ALL, name: 'WHOLE-BRAIN' }
+  };
+
+  // ====== DESIGN CHOICES ======
+  const LOCK_FRAMES = 45, MAX_DOTS = 220, STEPF = 18;
+  const GOLDEN_ANGLE = 2.399963229728653;
+  const SPEC_BUDGET = 40000;                     // Curse 35: predict, then gate
+  const M_CHECKS = [40, 72, 112, 176];           // Lanczos checkpoint depths
+  const CERT_RTOL = 0.02;                        // certify when successive checkpoints agree
+  const DENSE_N = 90;                            // dense jacobiEig reference ceiling
+
+  // ====== STATE ======
+  let dP = 3, bP = 3, nP = 12, dH = 10, bH = 3, sL = 0;
+  let anchorKey = 'CORTEX';
+  let playing = false;                           // Curse 13
+  let t = 0, lockCount = 0;
+
+  // ====== EXACT INTEGER CORE ======
+  function motifTotal(branch, depth){
+    let s = 0n, term = 1n; const b = BigInt(branch);
+    for (let i = 0; i < depth; i++){ s += term; term *= b; }
+    return s;
+  }
+
+  // ====== RENDER-SIDE HIERARCHY ======
+  function buildSide(depth, branch, cx, cy, maxR){
+    const rings = [];
+    let term = 1n; const bb = BigInt(branch);
+    for (let i = 0; i < depth; i++){
+      const trueCount = term;
+      const drawCount = Number(trueCount < BigInt(MAX_DOTS) ? trueCount : BigInt(MAX_DOTS));
+      const radius = maxR * (i + 1) / depth;
+      const dots = [];
+      const phase = i * GOLDEN_ANGLE;
+      for (let j = 0; j < drawCount; j++){
+        const a = (j / drawCount) * Math.PI * 2 + phase;
+        dots.push({ x: cx + Math.cos(a) * radius, y: cy + Math.sin(a) * radius });
+      }
+      rings.push({ level: i, radius, dots, trueCount });
+      term *= bb;
+    }
+    return { rings, depth, branch, cx, cy, maxR, total: motifTotal(branch, depth) };
+  }
+
+  let portia = null, human = null;
+  function rebuild(){
+    const cy = H * 0.42;
+    const maxR = Math.max(80, Math.min(W * 0.18, H * 0.42 - 168, H * 0.58 - 306));
+    portia = buildSide(dP, bP, W * 0.25, cy, maxR);
+    human  = buildSide(dH, bH, W * 0.75, cy, maxR);
+    lockCount = 0;
+    scheduleSpectral();
+  }
+
+  // ====== CAPACITY ======
+  function band(){
+    const num = ANCHORS[anchorKey].num;
+    return { lo: num / P_HI, hi: num / P_LO };
+  }
+  function capacityRatio(){ return Number(human.total) / Number(portia.total); }
+  function gapLog(){
+    const b = band(), cur = capacityRatio();
+    if (cur >= b.lo && cur <= b.hi) return 0;
+    if (cur < b.lo) return Math.log(b.lo / cur) / Math.LN10;
+    return Math.log(cur / b.hi) / Math.LN10;
+  }
+
+  // =====================================================================
+  // THE SPARK -- Fiedler lambda2 of the DRAWN graphs, computed live.
+  // Lanczos ported from shell__thea_light_matrix_v1_3_1 (lanczosLow /
+  // jacobiEig). SEAM [Path V]: their lapMV hardcodes degree 3 (cubic
+  // fullerenes); lapMVgen below generalizes to arbitrary degree.
+  // degrees() agreement meter ported from THEA / aequalium.
+  // =====================================================================
+  function mulberry32(a){
+    return function(){
+      a |= 0; a = (a + 0x6D2B79F5) | 0;
+      let x = Math.imul(a ^ (a >>> 15), 1 | a);
+      x = (x + Math.imul(x ^ (x >>> 7), 61 | x)) ^ x;
+      return ((x ^ (x >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  function treeGraph(branch, depth, loops, seed){
+    // BFS-indexed balanced tree: level i offset O_i, node (i,j) parent O_{i-1}+floor(j/b)
+    let N = 0; const levelOff = [], levelCnt = [];
+    let c = 1;
+    for (let i = 0; i < depth; i++){ levelOff.push(N); levelCnt.push(c); N += c; c *= branch; }
+    const par = new Int32Array(N); par[0] = -1;
+    const deg = new Int32Array(N);
+    for (let i = 1; i < depth; i++){
+      const off = levelOff[i], pOff = levelOff[i - 1], cnt = levelCnt[i];
+      for (let j = 0; j < cnt; j++){
+        const u = off + j, p = pOff + Math.floor(j / branch);
+        par[u] = p; deg[u]++; deg[p]++;
+      }
+    }
+    const shortcuts = [];
+    if (loops > 0){
+      const rng = mulberry32(seed);
+      let guard = 0;
+      while (shortcuts.length < loops && guard < loops * 30){
+        guard++;
+        const u = Math.floor(rng() * N), v = Math.floor(rng() * N);
+        if (u === v) continue;
+        shortcuts.push([u, v]); deg[u]++; deg[v]++;
+      }
+    }
+    return { N, E: (N - 1) + shortcuts.length, par, deg, shortcuts, levelOff, levelCnt };
+  }
+  function lapMVgen(g, x, out){                  // generalized-degree Laplacian matvec
+    const N = g.N, par = g.par, deg = g.deg, sc = g.shortcuts;
+    let i;
+    for (i = 0; i < N; i++) out[i] = deg[i] * x[i];
+    for (i = 1; i < N; i++){ out[i] -= x[par[i]]; out[par[i]] -= x[i]; }
+    for (i = 0; i < sc.length; i++){
+      const u = sc[i][0], v = sc[i][1];
+      out[u] -= x[v]; out[v] -= x[u];
+    }
+  }
+  function jacobiEig(A){                         // ported verbatim from light_matrix v1.3.1
+    var n = A.length, a = [], i, j;
+    for (i = 0; i < n; i++){ a.push(A[i].slice()); }
+    for (var sweep = 0; sweep < 100; sweep++){
+      var off = 0; for (i = 0; i < n; i++) for (j = i + 1; j < n; j++) off += a[i][j] * a[i][j];
+      if (off < 1e-24) break;
+      for (i = 0; i < n; i++) for (j = i + 1; j < n; j++){
+        if (Math.abs(a[i][j]) < 1e-18) continue;
+        var th = (a[j][j] - a[i][i]) / (2 * a[i][j]);
+        var tt = (th >= 0 ? 1 : -1) / (Math.abs(th) + Math.sqrt(th * th + 1));
+        var cc = 1 / Math.sqrt(tt * tt + 1), ss = tt * cc, k2;
+        for (k2 = 0; k2 < n; k2++){ var aik = a[i][k2], ajk = a[j][k2]; a[i][k2] = cc * aik - ss * ajk; a[j][k2] = ss * aik + cc * ajk; }
+        for (k2 = 0; k2 < n; k2++){ var aki = a[k2][i], akj = a[k2][j]; a[k2][i] = cc * aki - ss * akj; a[k2][j] = ss * aki + cc * akj; }
+      }
+    }
+    var ev = []; for (i = 0; i < n; i++) ev.push(a[i][i]); ev.sort(function(x, y){ return x - y; }); return ev;
+  }
+  // Lanczos, full reorth, constant vector projected -- structure kept from lanczosLow;
+  // written as a stepper so the browser can chunk it (Curse 34: setTimeout, never rIC).
+  function lanczosMake(g, m){
+    const N = g.N;
+    const st = { g: g, m: Math.min(m, N - 2), k: 0, Vv: [], al: [], be: [], w: new Float64Array(N), done: false };
+    const v = new Float64Array(N);
+    let i, mn = 0, s = 0;
+    for (i = 0; i < N; i++) v[i] = Math.sin(1.234 * i) + Math.cos(0.567 * i * i);
+    for (i = 0; i < N; i++) mn += v[i]; mn /= N;
+    for (i = 0; i < N; i++) v[i] -= mn;
+    for (i = 0; i < N; i++) s += v[i] * v[i]; s = Math.sqrt(s);
+    for (i = 0; i < N; i++) v[i] /= s;
+    st.Vv.push(Float64Array.from(v));
+    return st;
+  }
+  function lanczosStep(st){
+    if (st.done) return true;
+    const N = st.g.N, k = st.k, w = st.w;
+    let i, j;
+    lapMVgen(st.g, st.Vv[k], w);
+    let a = 0; for (i = 0; i < N; i++) a += w[i] * st.Vv[k][i]; st.al.push(a);
+    for (i = 0; i < N; i++) w[i] -= a * st.Vv[k][i];
+    if (k > 0){ const b0 = st.be[k - 1]; for (i = 0; i < N; i++) w[i] -= b0 * st.Vv[k - 1][i]; }
+    for (j = 0; j <= k; j++){
+      let d = 0; for (i = 0; i < N; i++) d += w[i] * st.Vv[j][i];
+      for (i = 0; i < N; i++) w[i] -= d * st.Vv[j][i];
+    }
+    let m2 = 0; for (i = 0; i < N; i++) m2 += w[i]; m2 /= N;
+    for (i = 0; i < N; i++) w[i] -= m2;
+    let b = 0; for (i = 0; i < N; i++) b += w[i] * w[i]; b = Math.sqrt(b);
+    st.k++;
+    if (b < 1e-13 || st.k >= st.m){ st.done = true; return true; }
+    st.be.push(b);
+    const nv = new Float64Array(N);
+    for (i = 0; i < N; i++) nv[i] = w[i] / b;
+    st.Vv.push(nv);
+    return false;
+  }
+  function sturmCountTri(al, be, x){            // # eigenvalues of tridiag(al,be) below x
+    let cnt = 0, d = 1;
+    for (let i = 0; i < al.length; i++){
+      const off = i > 0 ? (be[i - 1] * be[i - 1]) / d : 0;
+      d = (al[i] - x) - off;
+      if (d === 0) d = -1e-300;
+      if (d < 0) cnt++;
+    }
+    return cnt;
+  }
+  function sturmLambda2Tri(al, be){             // smallest eigenvalue > 1e-9 by bisection
+    let hi = 0;
+    for (let i = 0; i < al.length; i++){
+      const g = al[i] + (i > 0 ? Math.abs(be[i - 1]) : 0) + (i < be.length ? Math.abs(be[i]) : 0);
+      if (g > hi) hi = g;
+    }
+    const k = sturmCountTri(al, be, 1e-9);      // eigenvalues below threshold (zero-mode remnants)
+    let lo = 1e-9;
+    for (let it = 0; it < 80 && hi - lo > 1e-14 * Math.max(1, hi); it++){
+      const mid = 0.5 * (lo + hi);
+      if (sturmCountTri(al, be, mid) > k) hi = mid; else lo = mid;
+    }
+    return 0.5 * (lo + hi);
+  }
+  function lanczosRitz(st){ return sturmLambda2Tri(st.al, st.be); }
+  function denseLambda2(g){                      // exact reference for N<=DENSE_N
+    const N = g.N, A = [];
+    let i;
+    for (i = 0; i < N; i++) A.push(new Array(N).fill(0));
+    for (i = 0; i < N; i++) A[i][i] = g.deg[i];
+    for (i = 1; i < N; i++){ A[i][g.par[i]] -= 1; A[g.par[i]][i] -= 1; }
+    for (i = 0; i < g.shortcuts.length; i++){
+      const u = g.shortcuts[i][0], v = g.shortcuts[i][1];
+      A[u][v] -= 1; A[v][u] -= 1;
+    }
+    const ev = jacobiEig(A);
+    for (let q = 0; q < ev.length; q++) if (ev[q] > 1e-9) return ev[q];
+    return NaN;
+  }
+  function degreesAgree(approx, exact){          // ported from THEA / aequalium (the agreement meter)
+    if (!isFinite(approx)) return 0;
+    var e = Math.abs(exact) > 1e-300 ? Math.abs((approx - exact) / exact) : Math.abs(approx - exact);
+    if (e <= 0) return 15.9;
+    return Math.max(0, Math.min(15.9, -Math.log(e) / Math.LN10));
+  }
+
+  // ---- spectral job queue (chunked with setTimeout; results gated by generation) ----
+  let specGen = 0, specTimer = null, specJobs = [], specBusy = false;
+  const spark = { P: null, H: null };            // {N,E,tree:{...},loop:{...},refused,computing}
+  function specSeed(side){ return (side === 'P' ? 101 : 202) + bP * 7 + dP * 13 + bH * 17 + dH * 19 + sL * 23; }
+  function scheduleSpectral(){
+    if (specTimer) clearTimeout(specTimer);
+    specTimer = setTimeout(startSpectral, 250);  // debounce slider drags
+  }
+  function startSpectral(){
+    specGen++;
+    const gen = specGen;
+    specJobs = [];
+    spark.P = planSide('P', bP, dP);
+    spark.H = planSide('H', bH, dH);
+    function planSide(side, b, d){
+      let N = 0, c = 1;
+      for (let i = 0; i < d; i++){ N += c; c *= b; }   // predict BEFORE allocating (Curse 35)
+      if (N > SPEC_BUDGET) return { refused: true, N: N };
+      const rec = { refused: false, N: N, E: N - 1 + sL, tree: null, loop: null, computing: true };
+      specJobs.push({ side: side, kind: 'tree', b: b, d: d, S: 0, gen: gen });
+      if (sL > 0) specJobs.push({ side: side, kind: 'loop', b: b, d: d, S: sL, gen: gen });
+      // (jobs run one growing Lanczos each; Ritz snapshots at M_CHECKS certify or bound)
+      return rec;
+    }
+    if (!specBusy) pump();
+  }
+  function pump(){
+    if (specJobs.length === 0){ specBusy = false; return; }
+    specBusy = true;
+    const job = specJobs[0];
+    if (job.gen !== specGen){ specJobs.shift(); setTimeout(pump, 0); return; }
+    if (!job.st){
+      job.g = treeGraph(job.b, job.d, job.S, specSeed(job.side));
+      job.lz = lanczosMake(job.g, M_CHECKS[M_CHECKS.length - 1]);
+      job.ritz = [];
+      job.ci = 0;
+      job.st = true;
+      job.prog = 0;
+    }
+    const t0 = Date.now();
+    let finished = false;
+    while (Date.now() - t0 < 10){
+      finished = lanczosStep(job.lz);
+      job.prog = job.lz.k;
+      if (job.ci < M_CHECKS.length && (job.lz.k === M_CHECKS[job.ci] || finished)){
+        job.ritz.push(lanczosRitz(job.lz));
+        while (job.ci < M_CHECKS.length && M_CHECKS[job.ci] <= job.lz.k) job.ci++;
+      }
+      if (finished) break;
+    }
+    if (finished){
+      const R = job.ritz, nR = R.length;
+      const lamUB = R[nR - 1];                                 // EXACT upper bound (Courant-Fischer on 1-perp)
+      const delta = nR > 1 ? Math.abs(R[nR - 1] - R[nR - 2]) : NaN;
+      const res = { lamUB: lamUB, mUsed: job.lz.k, delta: delta,
+                    cert: nR > 1 && delta <= CERT_RTOL * lamUB,
+                    lam: lamUB, dense: false, D: NaN };
+      if (job.g.N <= DENSE_N){
+        res.lam = denseLambda2(job.g);                          // dense primary at small N
+        res.D = degreesAgree(lamUB, res.lam);                   // lanczos as the cross-check
+        res.cert = true; res.dense = true;
+      }
+      if (job.gen === specGen){
+        const rec = spark[job.side];
+        if (rec && !rec.refused){
+          rec[job.kind] = res;
+          rec.computing = specJobs.some(function(j){ return j !== job && j.side === job.side && j.gen === specGen; });
+        }
+      }
+      specJobs.shift();
+    }
+    renderSpark();
+    setTimeout(pump, 0);
+  }
+
+  // ====== DRAW ======
+  function nodePos(side, idx){
+    // node index -> canvas position (exists even for undrawn dots on capped rings)
+    const g = side === 'P' ? portia : human;
+    const rec = spark[side];
+    if (!rec || rec.refused) return null;
+    // recompute level from ring counts
+    let i = 0, off = 0, c = 1;
+    const b = g.branch;
+    while (idx >= off + c){ off += c; c *= b; i++; }
+    const j = idx - off;
+    const ring = g.rings[i];
+    const a = (j / c) * Math.PI * 2 + i * GOLDEN_ANGLE;
+    return { x: g.cx + Math.cos(a) * ring.radius, y: g.cy + Math.sin(a) * ring.radius };
+  }
+  function drawSide(side, g, label, accent, passes, litDepth, motifRing){
+    const { rings, cx, cy, maxR, depth } = g;
+
+    // center glow: COMPUTED lambda2 only -- no glow before the compute pays (Curse 26)
+    const rec = spark[side];
+    let shown = null;
+    if (rec && !rec.refused){
+      if (sL > 0 && rec.loop && (rec.loop.cert || rec.loop.dense)) shown = rec.loop;
+      else if (rec.tree && (rec.tree.cert || rec.tree.dense)) shown = rec.tree;   // certified floor only
+    }
+    if (shown && isFinite(shown.lam)){
+      const gl = Math.max(0, Math.min(1, (Math.log(shown.lam) / Math.LN10 + 4) / 4));
+      const alpha = 0.06 + 0.38 * gl;
+      const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, maxR * 0.9);
+      grad.addColorStop(0, 'rgba(0,255,213,' + alpha.toFixed(3) + ')');
+      grad.addColorStop(1, 'rgba(0,255,213,0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(cx, cy, maxR * 0.9, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    ctx.strokeStyle = '#1a1a26';
+    ctx.lineWidth = 1;
+    for (let i = 0; i < depth; i++){
+      ctx.beginPath();
+      ctx.arc(cx, cy, rings[i].radius, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    if (litDepth <= depth){
+      ctx.strokeStyle = '#ffd70044';
+      ctx.setLineDash([4, 5]);
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(cx, cy, rings[litDepth - 1].radius + 4, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = '#ffd70088';
+      ctx.font = '9px ui-monospace,Consolas,monospace';
+      ctx.textAlign = 'left';
+      ctx.fillText('lit ' + litDepth, cx + rings[litDepth - 1].radius + 8, cy - 3);
+    }
+
+    for (let i = 0; i < depth - 1; i++){
+      const pa = rings[i], ch = rings[i + 1];
+      ctx.strokeStyle = LEVEL_COLORS[i] + '18';
+      ctx.lineWidth = 0.6;
+      const A = pa.dots.length, C = ch.dots.length;
+      const stride = Math.max(1, Math.ceil(A / 80));
+      for (let j = 0; j < A; j += stride){
+        const da = pa.dots[j];
+        const db = ch.dots[Math.min(C - 1, Math.round(j * C / A))];
+        ctx.beginPath();
+        ctx.moveTo(da.x, da.y);
+        ctx.lineTo(db.x, db.y);
+        ctx.stroke();
+      }
+    }
+
+    // shortcut loops: the ACTUAL extra edges of the spectral graph, drawn as chords
+    if (sL > 0 && rec && !rec.refused){
+      const gph = treeShortcutsCache(side);
+      if (gph){
+        ctx.strokeStyle = '#00ffd54a';
+        ctx.lineWidth = 0.9;
+        const CAP = Math.min(gph.length, 96);
+        for (let s = 0; s < CAP; s++){
+          const pu = nodePos(side, gph[s][0]);
+          const pv = nodePos(side, gph[s][1]);
+          if (!pu || !pv) continue;
+          ctx.beginPath();
+          ctx.moveTo(pu.x, pu.y);
+          ctx.quadraticCurveTo(cx, cy, pv.x, pv.y);
+          ctx.stroke();
+        }
+      }
+    }
+
+    for (let i = 0; i < depth; i++){
+      ctx.fillStyle = LEVEL_COLORS[i % LEVEL_COLORS.length];
+      const r = i === 0 ? 4 : Math.max(1.5, 3.5 - i * 0.35);
+      for (const d of rings[i].dots){
+        ctx.beginPath();
+        ctx.arc(d.x, d.y, r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    if (motifRing !== null && motifRing < depth){
+      const rr = rings[motifRing].radius;
+      const mx = cx + rr * Math.cos(-Math.PI / 2);
+      const my = cy + rr * Math.sin(-Math.PI / 2);
+      ctx.fillStyle = '#cc44ff';
+      ctx.beginPath();
+      ctx.moveTo(mx, my - 6); ctx.lineTo(mx + 5, my); ctx.lineTo(mx, my + 6); ctx.lineTo(mx - 5, my);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    const passLen = depth * STEPF;
+    const full = passLen * passes;
+    const phase = (t % passLen) / passLen;
+    const passIdx = Math.floor((t % full) / passLen);
+    const rippleR = phase * maxR * 1.05;
+    ctx.strokeStyle = accent;
+    ctx.globalAlpha = 0.85 * (1 - phase * 0.6);
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(cx, cy, rippleR, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+
+    const sinceDecision = t % full;
+    if (t > 0 && sinceDecision < 14){
+      ctx.strokeStyle = accent;
+      ctx.globalAlpha = 0.9 * (1 - sinceDecision / 14);
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(cx, cy, maxR * 1.06, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+
+    const lvlIdx = Math.min(depth - 1, Math.floor(phase * depth));
+    ctx.fillStyle = LEVEL_COLORS[lvlIdx];
+    ctx.font = '11px ui-monospace,Consolas,monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('L' + lvlIdx, cx, cy - rippleR - 6);
+
+    ctx.fillStyle = accent;
+    ctx.font = 'bold 13px ui-monospace,Consolas,monospace';
+    ctx.fillText(label, cx, cy + maxR + 18);
+    ctx.fillStyle = '#9a93a8';
+    ctx.font = '10px ui-monospace,Consolas,monospace';
+    ctx.fillText(passes > 1 ? ('pass ' + (passIdx + 1) + '/' + passes) : 'one deep pass',
+                 cx, cy + maxR + 32);
+
+    return Math.floor(t / full);
+  }
+  const scCache = { key: '', P: null, H: null };
+  function treeShortcutsCache(side){
+    const key = bP + '.' + dP + '.' + bH + '.' + dH + '.' + sL;
+    if (scCache.key !== key){
+      scCache.key = key;
+      scCache.P = null; scCache.H = null;
+      if (sL > 0){
+        if (spark.P && !spark.P.refused) scCache.P = treeGraph(bP, dP, sL, specSeed('P')).shortcuts;
+        if (spark.H && !spark.H.refused) scCache.H = treeGraph(bH, dH, sL, specSeed('H')).shortcuts;
+      }
+    }
+    return side === 'P' ? scCache.P : scCache.H;
+  }
+
+  function frame(){
+    if (!portia || !human) rebuild();
+    ctx.fillStyle = '#050508';
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.strokeStyle = '#15151f';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(W / 2, 64);
+    ctx.lineTo(W / 2, H - 306);
+    ctx.stroke();
+
+    const decP = drawSide('P', portia, 'PORTIA', '#00d4ff', nP, LIT_DEPTH_P, 2);
+    const decH = drawSide('H', human,  'HUMAN',  '#ffd700', 1,  LIT_DEPTH_H, null);
+
+    if (gapLog() === 0){ lockCount = Math.min(LOCK_FRAMES, lockCount + 1); }
+    else { lockCount = 0; }
+
+    if (t % 6 === 0) renderMeters(decP, decH);
+
+    if (playing) t++;
+    requestAnimationFrame(frame);
+  }
+
+  // ====== METERS ======
+  function fmtRatio(r){
+    if (r >= 1000) return Math.round(r).toLocaleString('en-US') + 'x';
+    return r.toFixed(1) + 'x';
+  }
+  function fmtE(x){
+    if (!isFinite(x)) return '--';
+    return x.toExponential(3);
+  }
+  function row(k, v){
+    return '<div class="mrow"><span class="k">' + k + '</span><span class="v">' + v + '</span></div>';
+  }
+  function litChip(cur, lit){
+    return cur === lit ? ' <span class="lit">= lit</span>' : ' <span class="tag">(lit ' + lit + ')</span>';
+  }
+  function sparkLine(side, cls){
+    const rec = spark[side];
+    if (!rec) return '<span class="tag">planning...</span>';
+    if (rec.refused) return '<span class="warn">REFUSED: predicted N = ' + rec.N.toLocaleString('en-US') + ' &gt; budget ' + SPEC_BUDGET.toLocaleString('en-US') + ' [Curse 35 -- the guillotine is built in]</span>';
+    let s = '<span class="' + cls + '">' + (side === 'P' ? 'PORTIA' : 'HUMAN') + '</span> N=' + rec.N.toLocaleString('en-US') + ' E=' + (rec.N - 1) + '+' + sL + ' . ';
+    if (!rec.tree) return s + '<span class="tag">computing tree...</span>';
+    const tr = rec.tree;
+    if (tr.dense) s += 'tree lambda2 <span class="g">' + fmtE(tr.lam) + '</span> [dense, lanczos D=' + tr.D.toFixed(1) + ']';
+    else if (tr.cert) s += 'tree lambda2 <span class="g">' + fmtE(tr.lam) + '</span> [m' + tr.mUsed + ', &Delta;=' + fmtE(tr.delta) + ', CERT]';
+    else s += 'tree lambda2 &le; <span class="warn">' + fmtE(tr.lamUB) + '</span> [m' + tr.mUsed + ' UNCONVERGED -- UB only]';
+    if (sL > 0){
+      if (!rec.loop) s += ' . <span class="tag">+loops computing...</span>';
+      else {
+        const lp = rec.loop;
+        if (lp.dense || lp.cert){
+          const gain = lp.lam / tr.lam;
+          s += ' . +' + sL + ' loops &rarr; <span class="g">' + fmtE(lp.lam) + '</span> (<span class="g">x' + (gain >= 100 ? Math.round(gain) : gain.toFixed(1)) + '</span>)' + (lp.dense ? ' [dense]' : ' [CERT]');
+        } else {
+          const lb = tr.cert || tr.dense ? tr.lam : 0;
+          const gLo = lb > 0 ? 1 : 0, gHi = lp.lamUB / (lb > 0 ? lb : lp.lamUB);
+          s += ' . +' + sL + ' loops &rarr; lambda2 &isin; [<span class="g">' + fmtE(lb) + '</span>, <span class="warn">' + fmtE(lp.lamUB) + '</span>] . gain &isin; [x' + gLo.toFixed(1) + ', x' + gHi.toFixed(1) + '] <span class="tag">[bounds EXACT: monotonicity floor / Courant-Fischer ceiling; m' + lp.mUsed + ' did not certify]</span>';
+        }
+      }
+    }
+    return s;
+  }
+  function renderSpark(){
+    const el = document.getElementById('mspark');
+    if (!el) return;
+    el.innerHTML =
+      '<h4>THE SPARK -- can hierarchy alone light the graph? lambda2 [Fiedler \u201973], computed live on the drawn graphs</h4>' +
+      '<div>' + sparkLine('P', 'sP') + '</div>' +
+      '<div>' + sparkLine('H', 'sH') + '</div>' +
+      '<div class="tag">solver: lanczos ported from light_matrix v1.3.1 (full reorth, constant projected; lapMV generalized cubic&rarr;any degree -- the marked seam) . Ritz checkpoints m=40/72/112/176; CERT needs 2% agreement, else certified interval . deep H-side bounds take seconds -- the price is paid in visible steps . dense jacobiEig primary when N&le;' + DENSE_N + ' . glow = computed lambda2, log-mapped [DESIGN] . loops = seeded uniform extra edges [DESIGN] . Cajal\u2019s trade: pay wire, buy integration . no lambda2 is ever typed -- every value on this row was measured this session</div>';
+  }
+  function renderMeters(decP, decH){
+    const pEl = document.getElementById('mp-portia');
+    const cEl = document.getElementById('mp-cap');
+    const lEl = document.getElementById('mp-lat');
+    const hEl = document.getElementById('mp-human');
+    const fEl = document.getElementById('mfoot');
+    if (!pEl || !cEl || !lEl || !hEl || !fEl) return;
+
+    pEl.innerHTML =
+      '<h4>PORTIA</h4>' +
+      row('depth', dP + litChip(dP, LIT_DEPTH_P)) +
+      row('branch . passes', bP + ' . ' + nP) +
+      row('motifs &Sigma;b^i', Number(portia.total).toLocaleString('en-US')) +
+      row('decisions', String(decP)) +
+      '<div class="tag">neurons 1e4-2e5 BAND [HYP] -- no spider census exists</div>' +
+      '<div class="ret"><s>600,000</s> RETIRED: folklore, no primary source</div>' +
+      '<div class="tag">retina&rarr;AM1&rarr;AM2&rarr;arcuate [Steinhoff \u201920]</div>';
+
+    hEl.innerHTML =
+      '<h4>HUMAN</h4>' +
+      row('depth', dH + litChip(dH, LIT_DEPTH_H)) +
+      row('branch . passes', bH + ' . 1') +
+      row('motifs &Sigma;b^i', Number(human.total).toLocaleString('en-US')) +
+      row('decisions', String(decH)) +
+      '<div class="tag">86.1&plusmn;8.1e9 neurons; cortex 16.3e9 (19%) [Azevedo \u201909]</div>' +
+      '<div class="tag">cerebellum ~69e9 -- most human neurons live there</div>' +
+      '<div class="tag">~10 levels V1&rarr;...&rarr;PFC [F&amp;VE \u201991] . ~7k syn/neuron [DeFelipe]</div>';
+
+    const b = band();
+    const cur = capacityRatio();
+    const gap = gapLog();
+    const needD = Math.log((b.lo / cur) * (Math.pow(bH, dH) - 1) + 1) / Math.log(bH);
+    const locked = lockCount >= LOCK_FRAMES;
+    let gapLine;
+    if (locked) gapLine = '<span class="lockon">IN BAND . earned ' + LOCK_FRAMES + 'f</span>';
+    else if (gap === 0) gapLine = '<span class="lockoff">in band . holding ' + lockCount + '/' + LOCK_FRAMES + 'f</span>';
+    else if (cur < b.lo) gapLine = '<span class="lockoff">NOT IN BAND . log10 gap ' + gap.toFixed(3) + ' below</span>';
+    else gapLine = '<span class="lockoff">NOT IN BAND . over by ' + gap.toFixed(3) + ' dex</span>';
+
+    cEl.innerHTML =
+      '<h4>CAPACITY -- H/P ratio [' + ANCHORS[anchorKey].name + ']</h4>' +
+      row('band', fmtRatio(b.lo) + ' - ' + fmtRatio(b.hi)) +
+      row('current', fmtRatio(cur)) +
+      row('needs dH', cur < b.lo ? ('&asymp; ' + needD.toFixed(1) + ' at bH=' + bH) : '--') +
+      '<div>' + gapLine + '</div>' +
+      '<div class="tag">numerator EXTERNAL / denominator BAND [HYP]. the band IS the tolerance.</div>';
+
+    const stepsP = dP * nP;
+    const wallP = nP * PASS_S;
+    const wallH = dH * MS_PER_LVL / 1000;
+    lEl.innerHTML =
+      '<h4>LATENCY -- per decision</h4>' +
+      row('model steps', dP + '&times;' + nP + ' = ' + stepsP + ' vs ' + dH) +
+      row('virtualized depth', stepsP + ' vs ' + dH + ' <span class="tag">[HYP]</span>') +
+      row('wall clock', wallP.toFixed(0) + ' s vs ' + wallH.toFixed(2) + ' s') +
+      row('portia is', fmtRatio(wallP / wallH).replace('x', 'x slower')) +
+      '<div class="tag">1 pass &asymp; 1 torsional scan ~' + PASS_S + ' s [Land \u201969, HYP] . human ' + SWEEP_MS + ' ms sweep &asymp; ' + MS_PER_LVL.toFixed(0) + ' ms/level [Thorpe \u201996 / DESIGN]</div>';
+
+    renderSpark();
+
+    fEl.innerHTML =
+      '<b>MOTIF</b> central complex &harr; basal ganglia, shared action-selection [Strausfeld-Hirth \u201913] -- CONTESTED: convergence argument. ' +
+      '<b>K2</b> arbor D 1.1-1.9 limited-range [Smith \u201921] . scale-free rare [Broido-Clauset \u201919] . Laplacian eigenmodes real on human connectome [Atasoy \u201916]. ' +
+      'reports never averaged (Pattern D) . counts EXACT . lambda2 COMPUTED . anchors EXTERNAL . bands/tempo/loops/glow DESIGN . claim HYPOTHESIS . ripple METAPHOR';
+  }
+
+  // ====== CONTROLS ======
+  const dPS = document.getElementById('dP'), bPS = document.getElementById('bP'), nPS = document.getElementById('nP');
+  const dHS = document.getElementById('dH'), bHS = document.getElementById('bH'), sLS = document.getElementById('sL');
+  const dPv = document.getElementById('dPv'), bPv = document.getElementById('bPv'), nPv = document.getElementById('nPv');
+  const dHv = document.getElementById('dHv'), bHv = document.getElementById('bHv'), sLv = document.getElementById('sLv');
+  const anchorBtn = document.getElementById('anchor');
+  const playBtn = document.getElementById('play');
+  const stepBtn = document.getElementById('step');
+  const resetBtn = document.getElementById('reset');
+  const bowBtn = document.getElementById('bow');
+  const tPanel = document.getElementById('titans');
+  const tBack = document.getElementById('tback');
+  const tClose = document.getElementById('tclose');
+
+  function apply(){
+    dP = +dPS.value; bP = +bPS.value; nP = +nPS.value;
+    dH = +dHS.value; bH = +bHS.value; sL = +sLS.value;
+    dPv.textContent = dP; bPv.textContent = bP; nPv.textContent = nP;
+    dHv.textContent = dH; bHv.textContent = bH; sLv.textContent = sL;
+    rebuild();
+  }
+  dPS.addEventListener('input', apply);
+  bPS.addEventListener('input', apply);
+  nPS.addEventListener('input', apply);
+  dHS.addEventListener('input', apply);
+  bHS.addEventListener('input', apply);
+  sLS.addEventListener('input', apply);
+
+  anchorBtn.addEventListener('click', function(){
+    anchorKey = anchorKey === 'CORTEX' ? 'WHOLE' : 'CORTEX';
+    anchorBtn.textContent = 'anchor: ' + ANCHORS[anchorKey].name;
+    lockCount = 0;
+  });
+  playBtn.addEventListener('click', function(){
+    playing = !playing;
+    playBtn.textContent = playing ? 'pause' : 'play';
+  });
+  stepBtn.addEventListener('click', function(){ t += STEPF; });
+  resetBtn.addEventListener('click', function(){
+    dPS.value = 3; bPS.value = 3; nPS.value = 12;
+    dHS.value = 10; bHS.value = 3; sLS.value = 0;
+    anchorKey = 'CORTEX'; anchorBtn.textContent = 'anchor: CORTEX';
+    t = 0; playing = false; playBtn.textContent = 'play';
+    hideTitans();
+    apply();
+  });
+
+  function showTitans(){ tPanel.style.display = 'block'; tBack.style.display = 'block'; }
+  function hideTitans(){ tPanel.style.display = 'none'; tBack.style.display = 'none'; }
+  bowBtn.addEventListener('click', showTitans);
+  tClose.addEventListener('click', hideTitans);
+  tBack.addEventListener('click', hideTitans);
+  addEventListener('keydown', function(e){ if (e.key === 'Escape') hideTitans(); });
+
+  addEventListener('resize', function(){ resize(); rebuild(); });
+  apply();
+  frame();
+</script>
+</body></html>

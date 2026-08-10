@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0A0F1C">
+<title>THE KORINTHOS LINE · ΚΤΕΛ Κορινθίας · Korinthos ⇄ Archaia Korinthos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+  :root{
+    --void:#0A0F1C;--void-2:#0E1526;--panel:rgba(255,255,255,0.022);
+    --cesium:#EDC65A;--cesium-glow:rgba(237,198,90,0.55);--cesium-hi:#FFF0C0;
+    --signal:#58E0D0;--slate:#7C88A1;--slate-dim:#495271;--hair:rgba(255,255,255,0.075);
+    --moon:#DCE4F2;--alert:#FF6B5E;
+    --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    --disp:"Space Grotesk",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:
+      radial-gradient(1200px 700px at 50% -10%, #12203a 0%, rgba(18,32,58,0) 60%),
+      radial-gradient(900px 900px at 85% 120%, #101a30 0%, rgba(16,26,48,0) 55%),
+      var(--void);
+    color:var(--slate);font-family:var(--mono);min-height:100%;
+    display:flex;align-items:flex-start;justify-content:center;
+    padding:calc(40px + env(safe-area-inset-top)) 20px calc(56px + env(safe-area-inset-bottom));
+    -webkit-font-smoothing:antialiased;overflow-x:hidden;
+  }
+  .stage{width:100%;max-width:720px;display:flex;flex-direction:column;gap:30px}
+  a{color:var(--cesium)}
+  :focus-visible{outline:1px solid var(--signal);outline-offset:3px;border-radius:3px}
+
+  /* ── eyebrow ─────────────────────────────── */
+  .eyebrow{display:flex;align-items:center;gap:12px;font-size:11px;letter-spacing:0.28em;text-transform:uppercase;color:var(--slate-dim);flex-wrap:wrap}
+  .eyebrow .dot{width:6px;height:6px;border-radius:50%;background:var(--signal);box-shadow:0 0 10px var(--signal);animation:pulse 3s ease-in-out infinite;flex:none}
+  .eyebrow .rule{flex:1;height:1px;background:var(--hair);min-width:20px}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+
+  /* ── headline ────────────────────────────── */
+  .headline h1{font-family:var(--disp);font-weight:500;font-size:clamp(28px,5.4vw,44px);line-height:1.04;color:#EAF0FB;letter-spacing:-0.015em}
+  .headline p{margin-top:12px;font-size:13px;line-height:1.6;color:var(--slate);max-width:58ch}
+  .headline b{color:var(--cesium);font-weight:400}
+  .headline i{color:var(--moon);font-style:normal}
+
+  /* ── direction switch ────────────────────── */
+  .dirsw{display:flex;gap:8px}
+  .dirsw button{
+    flex:1;font-family:var(--mono);font-size:11px;letter-spacing:0.12em;text-transform:uppercase;
+    padding:12px 8px;border:1px solid var(--hair);background:var(--panel);color:var(--slate-dim);
+    border-radius:10px;cursor:pointer;line-height:1.35;transition:color .15s,border-color .15s;
+  }
+  .dirsw button:hover{color:var(--slate)}
+  .dirsw button[aria-pressed="true"]{color:var(--cesium);border-color:rgba(237,198,90,0.4);background:rgba(237,198,90,0.05)}
+
+  /* ── hero countdown ──────────────────────── */
+  .hero{position:relative;border:1px solid var(--hair);border-radius:14px;background:linear-gradient(180deg,var(--panel),rgba(255,255,255,0));padding:34px 28px 26px;text-align:center;overflow:hidden}
+  .hero .cap{font-size:10.5px;letter-spacing:0.34em;text-transform:uppercase;color:var(--slate-dim)}
+  .hero .secs{font-weight:300;font-size:clamp(44px,12.5vw,100px);line-height:1;color:var(--cesium);letter-spacing:0.01em;margin:14px 0 6px;text-shadow:0 0 26px var(--cesium-glow);font-variant-numeric:tabular-nums;word-break:break-word}
+  .hero .unit{font-size:12px;letter-spacing:0.18em;text-transform:uppercase;color:var(--slate)}
+  .hero .brk{margin-top:18px;padding-top:16px;border-top:1px dashed var(--hair);font-size:clamp(16px,4.4vw,22px);color:#C9D3E6;letter-spacing:0.06em;font-variant-numeric:tabular-nums}
+  .hero .brk .ms{color:var(--signal);font-size:0.8em}
+  .hero .msline{margin-top:10px;font-size:11px;color:var(--slate-dim);letter-spacing:0.05em;font-variant-numeric:tabular-nums}
+  body.nobus .hero .secs{color:var(--alert);text-shadow:0 0 26px rgba(255,107,94,0.4)}
+  body.boarding .hero .secs{color:var(--signal);text-shadow:0 0 26px rgba(88,224,208,0.5)}
+
+  /* ── leave-now strip ─────────────────────── */
+  .leave{border:1px solid var(--hair);border-radius:12px;background:var(--panel);padding:16px 20px;display:flex;flex-direction:column;gap:12px}
+  .leave .top{display:flex;align-items:baseline;justify-content:space-between;gap:14px;flex-wrap:wrap}
+  .leave .k{font-size:10.5px;letter-spacing:0.28em;text-transform:uppercase;color:var(--slate-dim)}
+  .leave .v{font-size:clamp(18px,5vw,26px);color:var(--signal);font-variant-numeric:tabular-nums;letter-spacing:0.03em}
+  .leave .v.go{color:var(--alert)}
+  .leave .ctrl{display:flex;align-items:center;gap:12px;font-size:11px;color:var(--slate-dim);letter-spacing:0.04em}
+  .leave input[type=range]{flex:1;accent-color:var(--cesium);height:2px;background:var(--hair)}
+  .leave .ctrl b{color:var(--cesium);font-weight:500;min-width:52px;text-align:right;font-variant-numeric:tabular-nums}
+
+  /* ── canvases ────────────────────────────── */
+  .sig{display:flex;flex-direction:column;gap:10px}
+  .line-wrap{height:132px;border:1px solid var(--hair);border-radius:12px;background:linear-gradient(180deg,rgba(88,224,208,0.03),rgba(0,0,0,0)),var(--void-2);overflow:hidden}
+  .wave-wrap{height:70px;border:1px solid var(--hair);border-radius:12px;background:var(--void-2);overflow:hidden}
+  #line,#wave{display:block;width:100%;height:100%}
+  .sig .lbl{display:flex;justify-content:space-between;align-items:baseline;gap:14px;font-size:11px;color:var(--slate-dim);letter-spacing:0.05em}
+  .sig .lbl b{font-weight:500;color:var(--signal);letter-spacing:0.02em}
+
+  /* ── unix now ────────────────────────────── */
+  .now{display:flex;align-items:baseline;justify-content:space-between;gap:16px;padding:16px 20px;border:1px solid var(--hair);border-radius:12px;background:var(--panel);flex-wrap:wrap}
+  .now .k{font-size:10.5px;letter-spacing:0.28em;text-transform:uppercase;color:var(--slate-dim)}
+  .now .v{font-size:clamp(18px,5vw,26px);color:#C9D3E6;font-variant-numeric:tabular-nums;letter-spacing:0.03em}
+  .now .v .tick{color:var(--signal)}
+
+  /* ── target table ────────────────────────── */
+  .target{border:1px solid var(--hair);border-radius:12px;overflow:hidden}
+  .target .thead{padding:11px 18px;font-size:10.5px;letter-spacing:0.3em;text-transform:uppercase;color:var(--slate-dim);border-bottom:1px solid var(--hair);background:rgba(255,255,255,0.015)}
+  .row{display:grid;grid-template-columns:116px 1fr auto;align-items:baseline;gap:14px;padding:13px 18px;font-size:13px}
+  .row + .row{border-top:1px solid var(--hair)}
+  .row .z{color:var(--slate);letter-spacing:0.14em;text-transform:uppercase;font-size:10.5px}
+  .row .stamp{color:#DCE4F2;font-variant-numeric:tabular-nums;letter-spacing:0.04em}
+  .row .off{color:var(--slate-dim);font-size:11px;letter-spacing:0.05em;text-align:right}
+  .row.home .stamp,.row.home .z{color:var(--cesium)}
+  .tai{padding:11px 18px;border-top:1px dashed var(--hair);font-size:11px;color:var(--slate-dim);letter-spacing:0.04em;line-height:1.55}
+  .tai + .tai{border-top:1px solid var(--hair)}
+  .tai b{color:var(--signal);font-weight:500}
+  .tai .go{color:var(--cesium);font-weight:500}
+  .tai .mo{color:var(--moon);font-weight:500}
+  .tai .al{color:var(--alert);font-weight:500}
+
+  /* ── timetable ───────────────────────────── */
+  .tt{border:1px solid var(--hair);border-radius:12px;overflow:hidden}
+  .tt .thead{padding:11px 18px;font-size:10.5px;letter-spacing:0.3em;text-transform:uppercase;color:var(--slate-dim);border-bottom:1px solid var(--hair);background:rgba(255,255,255,0.015);display:flex;justify-content:space-between;gap:10px}
+  .ttbody{padding:16px 18px}
+  .ttbody h4{font-family:var(--disp);font-size:13px;font-weight:500;color:#C9D3E6;letter-spacing:0.02em;margin-bottom:2px}
+  .ttbody .gk{font-size:10px;color:var(--slate-dim);letter-spacing:0.1em;margin-bottom:12px}
+  .chips{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  @media(min-width:480px){.chips{grid-template-columns:repeat(6,1fr)}}
+  .chip{border:1px solid var(--hair);border-radius:8px;padding:10px 4px 8px;text-align:center;background:rgba(255,255,255,0.012)}
+  .chip .t{display:block;font-size:16px;color:#DCE4F2;font-variant-numeric:tabular-nums;letter-spacing:-0.01em}
+  .chip .d{display:block;font-size:8.5px;letter-spacing:0.08em;color:var(--slate-dim);margin-top:4px}
+  .chip.gone{opacity:.3}
+  .chip.gone .t{text-decoration:line-through;text-decoration-thickness:1px}
+  .chip.next{border-color:rgba(237,198,90,0.5);background:rgba(237,198,90,0.06)}
+  .chip.next .t{color:var(--cesium)}
+  .chip.next .d{color:var(--cesium)}
+  .chip.live{border-color:rgba(88,224,208,0.55);background:rgba(88,224,208,0.07)}
+  .chip.live .t{color:var(--signal)}
+  .ttsplit{margin-top:20px;padding-top:18px;border-top:1px dashed var(--hair)}
+  .legend{margin-top:14px;font-size:10.5px;color:var(--slate-dim);letter-spacing:0.05em;line-height:1.6}
+  .legend b{color:var(--slate)}
+
+  /* ── map ─────────────────────────────────── */
+  .mapwrap{border:1px solid var(--hair);border-radius:12px;overflow:hidden;position:relative}
+  #map{height:340px;background:var(--void-2)}
+  .leaflet-container{background:var(--void-2);font-family:var(--mono)}
+  .leaflet-control-attribution{background:rgba(10,15,28,.8)!important;color:var(--slate-dim)!important;font-size:8px!important}
+  .leaflet-control-attribution a{color:var(--slate)!important}
+  .leaflet-tile{filter:saturate(.7) brightness(.85)}
+  .pin{position:relative;width:20px;height:20px;display:flex;align-items:center;justify-content:center}
+  .pin .core{width:8px;height:8px;border-radius:50%;background:var(--pc,#58E0D0);box-shadow:0 0 0 2px #0A0F1C,0 0 10px var(--pc)}
+  .pin .ring{position:absolute;inset:1px;border-radius:50%;border:1px solid var(--pc,#58E0D0);opacity:.5;animation:ping 2.8s ease-out infinite}
+  @keyframes ping{0%{transform:scale(.55);opacity:.6}100%{transform:scale(2.1);opacity:0}}
+  .leaflet-tooltip.lbl{background:transparent;border:none;box-shadow:none;color:var(--pc,#58E0D0);font:10px var(--mono);text-shadow:0 0 6px #000,0 0 6px #000;padding:0;white-space:nowrap}
+  .leaflet-tooltip.lbl::before{display:none}
+  .busdot{width:9px;height:9px;border-radius:50%;background:var(--signal);box-shadow:0 0 12px var(--signal);pointer-events:none}
+  #mapwarn{position:absolute;inset:0;display:none;align-items:center;justify-content:center;text-align:center;padding:24px;font-size:11.5px;color:var(--slate-dim);line-height:1.7;letter-spacing:.04em;background:var(--void-2)}
+  #mapwarn.on{display:flex}
+
+  /* ── links ───────────────────────────────── */
+  .links{display:grid;gap:8px}
+  .links a{display:flex;justify-content:space-between;align-items:center;gap:12px;border:1px solid var(--hair);border-radius:10px;background:var(--panel);padding:14px 18px;text-decoration:none;font-size:12.5px;color:#C9D3E6;letter-spacing:0.03em;transition:border-color .15s}
+  .links a:hover{border-color:rgba(237,198,90,0.35)}
+  .links a small{display:block;font-size:10px;color:var(--slate-dim);margin-top:3px;letter-spacing:0.06em}
+  .links a .go{color:var(--cesium);flex:none;font-size:14px}
+
+  .foot{font-size:12px;line-height:1.65;color:var(--slate-dim);letter-spacing:0.02em;max-width:60ch}
+  .foot em{color:var(--cesium);font-style:normal}
+  .foot i{color:var(--moon);font-style:normal}
+
+  @media (max-width:520px){
+    body{padding-left:14px;padding-right:14px}
+    .row{grid-template-columns:1fr auto;row-gap:4px}
+    .row .off{grid-column:1/-1;text-align:left}
+    .hero{padding:28px 18px 22px}
+  }
+  @media (prefers-reduced-motion:reduce){
+    .eyebrow .dot,.pin .ring{animation:none}
+  }
+</style>
+</head>
+<body>
+<main class="stage">
+
+  <div class="eyebrow">
+    <span class="dot"></span>
+    <span>ΚΤΕΛ Κορινθίας · τοπικό</span>
+    <span class="rule"></span>
+    <span id="statusword">acquiring</span>
+  </div>
+
+  <header class="headline">
+    <h1>You will not be late.</h1>
+    <p>The village bus between <b>Κόρινθος</b> and <b>Αρχαία Κόρινθος</b> — six departures out, five back, <b>none on Sunday</b>. Counted to the millisecond off your machine's clock, pinned to <b>Europe/Athens</b> so it stays right whatever your phone thinks the time is. <i>Summer timetable, valid 1 July – 10 September 2026.</i></p>
+  </header>
+
+  <div class="dirsw" role="group" aria-label="Direction">
+    <button id="btnA" aria-pressed="true">Κόρινθος → Αρχαία<br><span style="opacity:.6">town → ruins</span></button>
+    <button id="btnB" aria-pressed="false">Αρχαία → Κόρινθος<br><span style="opacity:.6">ruins → town</span></button>
+  </div>
+
+  <section class="hero">
+    <div class="cap" id="cap">Time to departure · Κόρινθος</div>
+    <div class="secs" id="secs">—</div>
+    <div class="unit" id="unit">seconds until the doors close</div>
+    <div class="brk" id="brk">—</div>
+    <div class="msline" id="msline">—</div>
+  </section>
+
+  <section class="leave">
+    <div class="top">
+      <span class="k">Leave for the stop in</span>
+      <span class="v" id="leaveval">—</span>
+    </div>
+    <div class="ctrl">
+      <label for="walk">walk to stop</label>
+      <input id="walk" type="range" min="0" max="30" step="1" value="8">
+      <b id="walkv">8 min</b>
+    </div>
+  </section>
+
+  <section class="sig">
+    <div class="line-wrap"><canvas id="line"></canvas></div>
+    <div class="lbl">
+      <span id="linelbl">The corridor · ≈7 km by road · ~15 min door to door</span>
+      <b id="linestate">—</b>
+    </div>
+  </section>
+
+  <section class="sig">
+    <div class="wave-wrap"><canvas id="wave"></canvas></div>
+    <div class="lbl">
+      <span>Cesium-133 hyperfine transition · the ruler doing the counting</span>
+      <b>9,192,631,770 Hz</b>
+    </div>
+  </section>
+
+  <section class="now">
+    <span class="k">Unix now · machine heartbeat</span>
+    <span class="v"><span class="tick" id="unixnow">—</span></span>
+  </section>
+
+  <section class="target">
+    <div class="thead">Target instant · one departure, three faces</div>
+    <div class="row home">
+      <span class="z" id="tz1">Korinthos</span>
+      <span class="stamp" id="stampLocal">—</span>
+      <span class="off" id="offLocal">EEST · UTC+3</span>
+    </div>
+    <div class="row">
+      <span class="z">UTC</span>
+      <span class="stamp" id="stampUTC">—</span>
+      <span class="off">the timetable, absolute</span>
+    </div>
+    <div class="row">
+      <span class="z">Unix ms</span>
+      <span class="stamp" id="stampUnix">—</span>
+      <span class="off">machine-readable</span>
+    </div>
+    <div class="tai">The countdown is <span class="go">exact to the millisecond</span>. The bus is not. A rural KTEL run carries a real-world jitter of roughly <b>±10 minutes</b> — early is as likely as late, and an early bus is the one that strands you. Treat the number above as the <span class="al">latest</span> you may arrive, not the moment to leave. <span class="mo">Honest, not hidden.</span></div>
+    <div class="tai"><span class="al">Nothing runs on Sunday</span>, either direction, either end. A taxi between the two runs about <b>€10–15</b>; from the railway station to the ruins, about <b>€7–10</b>.</div>
+    <div class="tai">Last bus back from the village is <span class="go">17:30</span>. A bus leaves Κόρινθος at 21:00 but <b>does not return that evening</b> — it sleeps in Αρχαία Κόρινθος. Take the 21:00 out only if you are sleeping out there too.</div>
+    <div class="tai">Saturdays thin out to three each way. Sundays are zero. And on <span class="mo">11 September</span> the winter timetable takes over from the summer one — the day you leave. Call <b>27410 75410</b> (ext. 1) before you count on the last leg.</div>
+    <div class="tai">One that isn't on the bus map: <span class="go">Acrocorinth</span> — the fortress, the Upper Peirene spring — has <b>no bus at all</b>, and the gate shuts at <span class="al">15:30</span>. It's a taxi or a 45-minute climb from the village. Plan the moon around the gate, not the other way round.</div>
+  </section>
+
+  <section class="tt">
+    <div class="thead"><span>Full timetable</span><span id="ttday">—</span></div>
+    <div class="ttbody">
+      <h4>Κόρινθος → Αρχαία Κόρινθος</h4>
+      <div class="gk">town → ruins</div>
+      <div class="chips" id="chipsA"></div>
+      <div class="ttsplit">
+        <h4>Αρχαία Κόρινθος → Κόρινθος</h4>
+        <div class="gk">ruins → town</div>
+        <div class="chips" id="chipsB"></div>
+      </div>
+      <div class="legend">
+        <b>ΔΕΥ–ΠΑΡ</b> Mon–Fri · <b>ΔΕΥ–ΣΑΒ</b> Mon–Sat · no <b>Κυριακή</b> service<br>
+        Struck through = gone today · gold = next · teal = in motion right now
+      </div>
+    </div>
+  </section>
+
+  <section class="mapwrap">
+    <div id="map"></div>
+    <div id="mapwarn">Map engine offline.<br>Everything else on this page still runs — the clock is local.</div>
+  </section>
+
+  <section class="links">
+    <a href="https://www.google.com/maps/search/?api=1&query=37.9388688%2C22.9391950&query_place_id=ChIJCRdTED8UoBQRQSpaANQEjcs">
+      <span>KTEL terminal · Κόρινθος<small>Dimokratias 4 · 37.93887, 22.93920</small></span><span class="go">▸</span></a>
+    <a href="https://www.google.com/maps/search/?api=1&query=37.9068790%2C22.8802402&query_place_id=ChIJ64pRRgARoBQRKenc734HkMc">
+      <span>Πλατεία · village square, Αρχαία Κόρινθος<small>where the bus turns around · 37.90688, 22.88024</small></span><span class="go">▸</span></a>
+    <a href="https://www.google.com/maps/search/?api=1&query=37.9057436%2C22.8778733&query_place_id=ChIJj3i6MhQRoBQRw8nqw5X139s">
+      <span>Archaeological site · Temple of Apollo<small>Argous 105 · 37.90574, 22.87787</small></span><span class="go">▸</span></a>
+    <a href="https://www.google.com/maps/search/?api=1&query=37.8910041%2C22.8704154&query_place_id=ChIJRQbhmz8UoBQRafTYz5p-t2Y">
+      <span>Acrocorinth · the spring<small>gate 08:30–15:30 · no bus · 37.89100, 22.87042</small></span><span class="go">▸</span></a>
+    <a href="https://www.google.com/maps/dir/?api=1&origin=37.9388688%2C22.9391950&destination=37.9068790%2C22.8802402&travelmode=driving">
+      <span>Directions · terminal → village<small>travelmode=driving · taxi fallback</small></span><span class="go">▸</span></a>
+    <a href="tel:+302741075410">
+      <span>Call ΚΤΕΛ Κορινθίας<small>27410 75410 · ext. 1 for schedules</small></span><span class="go">▸</span></a>
+  </section>
+
+  <p class="foot">This clock runs on <em>your</em> machine, which — unlike the timetable that fed it — knows exactly what <i>now</i> is. Times transcribed from ktelkorinthias.gr on 6 Aug 2026; coordinates real. The <em>±10 minutes</em> is the honest part. Be early, take the earlier one, and keep the number for the last bus back where your thumb can find it. 🚌</p>
+
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+(function(){
+  "use strict";
+
+  /* ── the timetable · ΚΤΕΛ Κορινθίας, summer, 01/07–10/09/2026 ────────── */
+  const MF=[1,2,3,4,5], MS=[1,2,3,4,5,6];
+  const DIR={
+    A:{ from:'Κόρινθος', to:'Αρχαία Κόρινθος', fromEn:'Korinthos', toEn:'Archaia Korinthos',
+        times:[['07:00',MF],['08:30',MS],['11:00',MS],['14:00',MS],['17:00',MF],['21:00',MF]] },
+    B:{ from:'Αρχαία Κόρινθος', to:'Κόρινθος', fromEn:'Archaia Korinthos', toEn:'Korinthos',
+        times:[['07:30',MF],['09:00',MS],['11:30',MS],['14:30',MS],['17:30',MF]] }
+  };
+  const RIDE_MIN = 15;
+  const DAY_EN=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+
+  const $=id=>document.getElementById(id);
+  const g=n=>n.toLocaleString('en-US');
+  const pad=(n,w=2)=>String(n).padStart(w,'0');
+
+  let dir='A', walkMin=8;
+  try{ const s=localStorage.getItem('kor_dir'); if(s==='A'||s==='B') dir=s;
+       const w=parseInt(localStorage.getItem('kor_walk'),10); if(w>=0&&w<=30) walkMin=w; }catch(e){}
+
+  /* ── Athens wall clock, independent of device timezone ───────────────── */
+  const FMT=new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Athens',hour12:false,
+    year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  function athens(ms){
+    const p={};
+    for(const x of FMT.formatToParts(new Date(ms))) if(x.type!=='literal') p[x.type]=x.value;
+    let H=+p.hour; if(H===24) H=0;
+    const y=+p.year,mo=+p.month,d=+p.day,mi=+p.minute,se=+p.second;
+    const asUTC=Date.UTC(y,mo-1,d,H,mi,se);
+    const offset=asUTC-Math.floor(ms/1000)*1000;           // ms to add to epoch → Athens-as-UTC
+    const dow=new Date(Date.UTC(y,mo-1,d)).getUTCDay();
+    return {y,mo,d,h:H,mi,s:se,dow,offset};
+  }
+  const mins=t=>{const[a,b]=t.split(':');return +a*60+ +b;};
+  const runs=(days,dow)=>days.indexOf(dow)!==-1;
+
+  /* ── next departure (absolute epoch ms) ──────────────────────────────── */
+  function nextDep(key,now,A){
+    const list=DIR[key].times;
+    for(let off=0;off<8;off++){
+      const probe=new Date(Date.UTC(A.y,A.mo-1,A.d+off));
+      const dow=probe.getUTCDay();
+      for(const [t,days] of list){
+        if(!runs(days,dow)) continue;
+        const [hh,mm]=t.split(':').map(Number);
+        const epoch=Date.UTC(probe.getUTCFullYear(),probe.getUTCMonth(),probe.getUTCDate(),hh,mm,0)-A.offset;
+        if(epoch>now) return {epoch,t,off,dow};
+      }
+    }
+    return null;
+  }
+  /* bus currently rolling? */
+  function inMotion(key,A){
+    const nowM=A.h*60+A.mi+A.s/60;
+    for(const [t,days] of DIR[key].times){
+      if(!runs(days,A.dow)) continue;
+      const dep=mins(t);
+      if(nowM>=dep && nowM<dep+RIDE_MIN) return {t,frac:(nowM-dep)/RIDE_MIN};
+    }
+    return null;
+  }
+  const whenWord=(off,dow)=>off===0?'today':off===1?'tomorrow':DAY_EN[dow];
+
+  /* ── main tick ───────────────────────────────────────────────────────── */
+  let cur=null, motion=null;
+  function tick(){
+    const now=Date.now(), A=athens(now);
+    const D=DIR[dir];
+    const nd=nextDep(dir,now,A);
+    cur=nd; motion=inMotion(dir,A);
+
+    const noneToday=!D.times.some(([,days])=>runs(days,A.dow));
+    document.body.classList.toggle('nobus',noneToday);
+
+    $('cap').textContent='Time to departure · '+D.from;
+    $('tz1').textContent=D.fromEn;
+    $('statusword').textContent = motion ? 'bus in motion'
+      : noneToday ? 'no service · '+DAY_EN[A.dow]
+      : nd ? 'next '+nd.t+' · '+whenWord(nd.off,nd.dow) : 'standby';
+
+    if(!nd){ $('secs').textContent='—'; return; }
+
+    const rem=nd.epoch-now;
+    const totS=Math.max(0,Math.floor(rem/1000));
+    document.body.classList.toggle('boarding', rem>0 && rem<=5*60000);
+
+    $('secs').textContent=g(totS);
+    let s=totS;
+    const d=Math.floor(s/86400); s-=d*86400;
+    const h=Math.floor(s/3600);  s-=h*3600;
+    const m=Math.floor(s/60);    s-=m*60;
+    const ms=Math.max(0,rem%1000);
+    $('brk').innerHTML=`${d}d ${pad(h)}h ${pad(m)}m ${pad(s)}s <span class="ms">.${pad(ms,3)}</span>`;
+    $('msline').textContent=g(Math.max(0,rem))+' ms · departure '+nd.t+' '+whenWord(nd.off,nd.dow);
+    $('unit').textContent = noneToday
+      ? 'seconds until service resumes' : 'seconds until the doors close';
+    $('unixnow').textContent=g(Math.floor(now/1000));
+
+    /* leave-now */
+    const leaveMs=rem-walkMin*60000;
+    const lv=$('leaveval');
+    if(leaveMs<=0){ lv.textContent='GO NOW'; lv.classList.add('go'); }
+    else{
+      lv.classList.remove('go');
+      const ls=Math.floor(leaveMs/1000), lh=Math.floor(ls/3600), lm=Math.floor((ls%3600)/60), lsec=ls%60;
+      lv.textContent=(lh?lh+'h ':'')+pad(lm)+'m '+pad(lsec)+'s';
+    }
+
+    /* target stamps */
+    const T=athens(nd.epoch);
+    const offH=T.offset/3600000;
+    $('stampLocal').innerHTML=`${T.y}-${pad(T.mo)}-${pad(T.d)}&nbsp;&nbsp;${pad(T.h)}:${pad(T.mi)}:00.000`;
+    $('offLocal').textContent=(offH===3?'EEST':'EET')+' · UTC+'+offH+' · '+DAY_EN[T.dow];
+    const U=new Date(nd.epoch);
+    $('stampUTC').innerHTML=`${U.getUTCFullYear()}-${pad(U.getUTCMonth()+1)}-${pad(U.getUTCDate())}&nbsp;&nbsp;${pad(U.getUTCHours())}:${pad(U.getUTCMinutes())}:00.000`;
+    $('stampUnix').textContent=g(nd.epoch);
+    $('ttday').textContent=DAY_EN[A.dow]+' · '+pad(A.h)+':'+pad(A.mi);
+    $('linestate').textContent = motion ? Math.round(motion.frac*100)+'% en route' : (noneToday?'idle':'awaiting '+nd.t);
+
+    renderChips(A);
+  }
+
+  /* ── timetable chips ─────────────────────────────────────────────────── */
+  function renderChips(A){
+    const nowM=A.h*60+A.mi;
+    ['A','B'].forEach(key=>{
+      const box=$('chips'+key); box.innerHTML='';
+      const mo=inMotion(key,A);
+      const nd=nextDep(key,Date.now(),A);
+      DIR[key].times.forEach(([t,days])=>{
+        const c=document.createElement('div'); c.className='chip';
+        const today=runs(days,A.dow);
+        if(!today||mins(t)<=nowM) c.className='chip gone';
+        if(key===dir&&nd&&nd.off===0&&nd.t===t) c.className='chip next';
+        if(mo&&mo.t===t) c.className='chip live';
+        c.innerHTML='<span class="t">'+t+'</span><span class="d">'+(days.length===6?'ΔΕΥ–ΣΑΒ':'ΔΕΥ–ΠΑΡ')+'</span>';
+        box.appendChild(c);
+      });
+    });
+  }
+
+  /* ── controls ────────────────────────────────────────────────────────── */
+  function setDir(k){
+    dir=k;
+    $('btnA').setAttribute('aria-pressed',k==='A');
+    $('btnB').setAttribute('aria-pressed',k==='B');
+    try{localStorage.setItem('kor_dir',k);}catch(e){}
+    drawRouteDir(); tick();
+  }
+  $('btnA').onclick=()=>setDir('A');
+  $('btnB').onclick=()=>setDir('B');
+  $('walk').value=walkMin; $('walkv').textContent=walkMin+' min';
+  $('walk').addEventListener('input',e=>{
+    walkMin=+e.target.value; $('walkv').textContent=walkMin+' min';
+    try{localStorage.setItem('kor_walk',walkMin);}catch(e){}
+    tick();
+  });
+
+  /* ── canvas: the corridor ────────────────────────────────────────────── */
+  const GOLD='#EDC65A', MOON='#DCE4F2', TEAL='#58E0D0', DIMC='rgba(124,136,161,0.45)';
+  const lc=$('line'), lx=lc.getContext('2d');
+  let LW=0,LH=0;
+  function lresize(){
+    const dpr=Math.min(window.devicePixelRatio||1,2), r=lc.getBoundingClientRect();
+    LW=r.width; LH=r.height; lc.width=Math.round(LW*dpr); lc.height=Math.round(LH*dpr);
+    lx.setTransform(dpr,0,0,dpr,0,0);
+  }
+  function drawLine(t){
+    lx.clearRect(0,0,LW,LH);
+    const cy=LH/2, padX=Math.max(46,LW*0.11), ax=padX, bx=LW-padX;
+    const D=DIR[dir];
+    lx.font='9px '+getComputedStyle(document.body).fontFamily;
+    /* road */
+    lx.strokeStyle='rgba(237,198,90,0.22)'; lx.lineWidth=1.4; lx.setLineDash([]);
+    lx.beginPath(); lx.moveTo(ax,cy); lx.lineTo(bx,cy); lx.stroke();
+    /* km ticks */
+    lx.strokeStyle='rgba(124,136,161,0.22)'; lx.lineWidth=1;
+    for(let i=1;i<7;i++){const x=ax+(bx-ax)*(i/7);lx.beginPath();lx.moveTo(x,cy-4);lx.lineTo(x,cy+4);lx.stroke();}
+    lx.fillStyle=DIMC; lx.textAlign='center'; lx.fillText('≈7 km · ~15 min',(ax+bx)/2,cy+30);
+    /* endpoints */
+    lx.fillStyle=GOLD; lx.shadowColor=GOLD; lx.shadowBlur=12;
+    lx.beginPath(); lx.arc(ax,cy,7,0,6.2832); lx.fill(); lx.shadowBlur=0;
+    lx.fillStyle=MOON; lx.shadowColor=MOON; lx.shadowBlur=10;
+    lx.beginPath(); lx.arc(bx,cy,6,0,6.2832); lx.fill(); lx.shadowBlur=0;
+    lx.fillStyle='rgba(237,198,90,0.85)'; lx.textAlign='center'; lx.fillText(D.from,ax,cy-18);
+    lx.fillStyle='rgba(220,228,242,0.85)'; lx.fillText(D.to,bx,cy-18);
+    lx.fillStyle=DIMC; lx.fillText('departs',ax,cy+16); lx.fillText('arrives',bx,cy+16);
+    /* the bus */
+    if(motion){
+      const x=ax+(bx-ax)*Math.min(1,motion.frac);
+      const p=0.5+0.5*Math.sin(t*3);
+      lx.fillStyle=TEAL; lx.shadowColor=TEAL; lx.shadowBlur=10+p*10;
+      lx.beginPath(); lx.arc(x,cy,5.5,0,6.2832); lx.fill(); lx.shadowBlur=0;
+      lx.fillStyle='rgba(88,224,208,0.9)'; lx.fillText('▸ '+motion.t,x,cy-16);
+    }else{
+      lx.setLineDash([3,6]); lx.strokeStyle='rgba(124,136,161,0.25)'; lx.lineWidth=1;
+      lx.beginPath(); lx.moveTo(ax,cy); lx.lineTo(bx,cy); lx.stroke(); lx.setLineDash([]);
+    }
+    lx.textAlign='left';
+  }
+
+  /* ── canvas: cesium ──────────────────────────────────────────────────── */
+  const cv=$('wave'), ctx=cv.getContext('2d');
+  const reduce=matchMedia('(prefers-reduced-motion:reduce)').matches;
+  let W=0,H=0;
+  function resize(){
+    const dpr=Math.min(window.devicePixelRatio||1,2), r=cv.getBoundingClientRect();
+    W=r.width;H=r.height;cv.width=Math.round(W*dpr);cv.height=Math.round(H*dpr);
+    ctx.setTransform(dpr,0,0,dpr,0,0); lresize();
+    if(reduce){drawWave(0);drawLine(0);}
+  }
+  function drawWave(t){
+    ctx.clearRect(0,0,W,H);
+    const mid=H/2, amp=H*0.30, cycles=6.5;
+    ctx.strokeStyle='rgba(255,255,255,0.06)';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(0,mid);ctx.lineTo(W,mid);ctx.stroke();
+    ctx.strokeStyle=GOLD;ctx.lineWidth=1.6;ctx.shadowColor='rgba(237,198,90,0.55)';ctx.shadowBlur=12;
+    ctx.beginPath();
+    for(let x=0;x<=W;x++){
+      const ph=(x/W)*cycles*Math.PI*2-t*2.1, env=0.72+0.28*Math.sin((x/W)*Math.PI);
+      const y=mid+Math.sin(ph)*amp*env; x===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    }
+    ctx.stroke();ctx.shadowBlur=0;
+  }
+
+  /* ── map ─────────────────────────────────────────────────────────────── */
+  const TERMINAL=[37.9388688,22.9391950], SQUARE=[37.9068790,22.8802402];
+  const CORRIDOR=[TERMINAL,[37.9330,22.9268],[37.9268,22.9186],[37.9209,22.9098],
+                  [37.9152,22.8998],[37.9106,22.8892],SQUARE];
+  const NODES=[
+    {n:'ΚΤΕΛ · terminal',ll:TERMINAL,c:GOLD,lbl:1},
+    {n:'Πλατεία · village stop',ll:SQUARE,c:GOLD,lbl:1},
+    {n:'Temple of Apollo',ll:[37.9057436,22.8778733],c:TEAL,lbl:1},
+    {n:'Museum',ll:[37.9052212,22.8783685],c:TEAL,lbl:0},
+    {n:'Acrocorinth · the spring',ll:[37.8910041,22.8704154],c:MOON,lbl:1},
+    {n:'Rail · Korinthos',ll:[37.9208909,22.9325648],c:'#7C88A1',lbl:0}
+  ];
+  let busMarker=null, mapOK=false;
+  function initMap(){
+    if(typeof L==='undefined'||!L.map){ $('mapwarn').className='on'; return; }
+    const map=L.map('map',{zoomControl:false,attributionControl:true,scrollWheelZoom:false});
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+      {subdomains:'abcd',maxZoom:19,detectRetina:true,
+       attribution:'© OpenStreetMap · © CARTO · ΚΤΕΛ Κορινθίας'}).addTo(map);
+    L.polyline(CORRIDOR,{color:GOLD,weight:1.6,opacity:.5,dashArray:'5 7'}).addTo(map);
+    NODES.forEach(nd=>{
+      const m=L.marker(nd.ll,{icon:L.divIcon({className:'',iconSize:[20,20],iconAnchor:[10,10],
+        html:'<div class="pin" style="--pc:'+nd.c+'"><span class="ring"></span><span class="core"></span></div>'})}).addTo(map);
+      m.bindTooltip(nd.n,{permanent:!!nd.lbl,direction:'top',offset:[0,-9],className:'lbl'});
+      m.on('add',()=>{const el=m.getTooltip()&&m.getTooltip().getElement();if(el)el.style.setProperty('--pc',nd.c);});
+    });
+    busMarker=L.marker(TERMINAL,{interactive:false,opacity:0,
+      icon:L.divIcon({className:'',html:'<div class="busdot"></div>',iconSize:[9,9],iconAnchor:[4,4]})}).addTo(map);
+    map.fitBounds(L.latLngBounds(NODES.map(n=>n.ll)),{padding:[42,42]});
+    mapOK=true; window._map=map;
+  }
+  function corridorAt(f){
+    const fwd=(dir==='A'), pts=fwd?CORRIDOR:CORRIDOR.slice().reverse();
+    const seg=pts.length-1, x=Math.min(0.9999,Math.max(0,f))*seg, i=Math.floor(x), t=x-i;
+    const a=pts[i], b=pts[i+1];
+    return [a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t];
+  }
+  function drawRouteDir(){ if(busMarker) busMarker.setOpacity(0); }
+  function syncBus(){
+    if(!mapOK||!busMarker) return;
+    if(motion){ busMarker.setOpacity(1); busMarker.setLatLng(corridorAt(motion.frac)); }
+    else busMarker.setOpacity(0);
+  }
+
+  /* ── boot ────────────────────────────────────────────────────────────── */
+  $('btnA').setAttribute('aria-pressed',dir==='A');
+  $('btnB').setAttribute('aria-pressed',dir==='B');
+  initMap(); resize(); window.addEventListener('resize',resize);
+  tick(); setInterval(()=>{tick();syncBus();},43);
+  if(!reduce){
+    const t0=performance.now();
+    (function loop(now){const t=(now-t0)/1000;drawWave(t);drawLine(t);requestAnimationFrame(loop);})(t0);
+  }
+})();
+</script>
+</body>
+</html>

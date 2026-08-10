@@ -1,0 +1,63 @@
+THEA v3.0 LIGHT MATRIX -- INDEPENDENT VERIFICATION REPORT
+Verifier: Fable (Claude) -- 2026-07-31 -- zero code shared with the generator
+The pinned kernel (sha256 bec6299f...) was absent from the bundle; it was
+reimplemented from certificate + results + tests alone, then the author's own
+test suite was run against the reimplementation.
+========================================================================
+
+[1] AUTHOR'S TEST SUITE vs INDEPENDENT KERNEL: 8/8 PASS
+    (test_light_matrix_v3.py, unmodified, importing the independent kernel)
+    All 12 golden shells match the certificate; Planck counts reproduce to
+    every printed digit; ideal C60 radius matches float-for-float.
+
+[2] EXACT C60 CHARPOLY -- 61-POINT INTEGER PROOF
+C60 built: 60 vertices, 90 edges, 3-regular. OK
+claimed factorization degree: 60 (must be 60)
+  ... 20/61 points checked, mismatches so far: 0
+  ... 40/61 points checked, mismatches so far: 0
+  ... 60/61 points checked, mismatches so far: 0
+EXACT PROOF COMPLETE: det(xI - A) == claimed factorization at all 61
+integer points x = -30..30. Both are monic of degree 60, therefore
+they are THE SAME POLYNOMIAL. The certificate's charpoly is EXACT.
+
+least eigenvalue: -2.618033988749894   -phi^2 = -2.618033988749895
+|least + phi^2| = 4.441e-16   multiplicity within 1e-9: 3 (claimed 3)
+
+central gap: smallest positive 0.618033988749895 (1/phi = 0.618033988749895)
+             largest negative  -0.138564265110173
+             gap = 0.7565982538600672   certificate: 0.7565982538600667
+
+largest root of the quartic factor: 2.756598253860068
+3 - root = 0.24340174613993160
+certificate spectral-tower level-1 lambda2 = 0.24340174613993026
+agreement: 1.332e-15
+=> the EXACT charpoly and the COMPUTED tower lock together at C60.
+
+[3] LEAPFROG SPECTRAL TOWER -- INDEPENDENT CONSTRUCTION
+LEAPFROG TOWER -- independent construction vs certificate
+lvl       N     T        lambda2 (mine)         lambda2 (his)     |diff|          T*lam2
+  0      20     1     0.763932022500209     0.763932022500209   0.00e+00     0.763932023
+  1      60     3     0.243401746139931     0.243401746139930   4.44e-16     0.730205238
+  2     180     9     0.080562674902700     0.080562674902711   1.07e-14     0.725064074
+  3     540    27     0.026835383239943     0.026835383239955   1.20e-14     0.724555347
+  4    1620    81     0.008946119207326     0.008946119207323   2.22e-15     0.724635656
+  5    4860   243     0.002982425495827     0.002982425495851   2.40e-14     0.724729395
+  6   14580   729     0.000994208740436     0.000994208740443   6.66e-15     0.724778172
+  7   43740  2187     0.000331412496652     0.000331412496816   1.64e-13     0.724799130
+
+LOW LAPLACIAN BANDS at level 7 (N=43740), renormalized by T=2187:
+     mine: value  mult          his: value  mult
+     0.724799130     3         0.724799130     3
+     2.167654166     5         2.167654166     5
+     4.026433004     3         4.026433004     3
+     4.596940196     4         4.596940196     4
+second/first = 2.990696423   (sphere l(l+1) target: 3)
+split-7 center/first = 6.005025300   (sphere target: 6)
+
+CENTRAL ADJACENCY GAP (dense, levels 1-4) vs certificate:
+  level 1: mine 0.756598253860067   his 0.756598253860067   |diff| 2.22e-16   sqrt(T)*gap 1.310466617
+  level 2: mine 0.579490297452249   his 0.579490297452253   |diff| 4.11e-15   sqrt(T)*gap 1.738470892
+  level 3: mine 0.357771576199216   his 0.357771576199216   |diff| 6.66e-16   sqrt(T)*gap 1.859035642
+  level 4: mine 0.219612230699637   his 0.219612230699643   |diff| 5.58e-15   sqrt(T)*gap 1.976510076
+
+DONE. Same numbers, different hands.

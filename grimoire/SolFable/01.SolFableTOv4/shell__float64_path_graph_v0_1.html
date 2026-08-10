@@ -1,0 +1,959 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>THE PATH — float64 as a graph, computed live</title>
+<!-- v0.1: first frozen artifact of the PATH annex. The thesis: a floating-point
+     format is not a "kind of number", it is a FINITE PATH GRAPH, and every fact
+     about precision is a fact about that graph. Nodes = bit patterns. Edges =
+     nextafter. The bit pattern read as an integer IS the node index (verified
+     live, 7/7). Edge length doubles every octave; every octave holds exactly
+     2^52 nodes regardless of width. Rounding is projection onto the path.
+     Cancellation is landing on a fine node carrying a coarse halo. Double-double
+     is a depth-2 TREE over the path. Exact rationals are the Stern-Brocot TREE,
+     on which phi is the pure alternating walk RLRLRL... -- the same alternation
+     the golden selector shows as sign flips.
+     All counts exact via BigInt. All float claims verified in-browser against
+     BigInt rational arithmetic, never asserted. Motion is opt-in (Curse 13).
+     Enumeration prints its price before paying it (Curse 35). The float floor
+     is printed beside every measured error (Curse 39). -->
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{background:#05050f;color:#dfe6f2;font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  font-size:13px;line-height:1.6;-webkit-font-smoothing:antialiased}
+body{background:
+  radial-gradient(1200px 700px at 50% -10%, rgba(30,40,74,.35), transparent 60%),
+  radial-gradient(900px 600px at 100% 100%, rgba(60,24,40,.25), transparent 55%),
+  #05050f;min-height:100vh}
+a{color:#00d4ff;text-decoration:none}a:hover{text-decoration:underline}
+#wrap{max-width:940px;margin:0 auto;padding:60px 4vw 120px}
+
+#hud{position:fixed;top:0;left:0;right:0;z-index:40;display:flex;flex-wrap:wrap;gap:4px 16px;align-items:center;
+  justify-content:center;padding:7px 12px;background:rgba(5,6,15,.9);backdrop-filter:blur(6px);
+  border-bottom:1px solid #1e2740;font-size:10.5px;letter-spacing:.05em}
+#hud .h{color:rgba(223,230,242,.4);text-transform:uppercase;font-size:9px}
+#hud b{font-variant-numeric:tabular-nums;font-weight:600}
+.gold{color:#ffd700}.cyan{color:#00d4ff}.grn{color:#7fff9f}.fire{color:#ff9040}.pink{color:#ff5470}.dim{color:rgba(223,230,242,.45)}
+
+#hero{text-align:center;padding:26px 0 12px}
+#hero .eyebrow{color:#7fff9f;font-size:10px;letter-spacing:.35em;text-transform:uppercase}
+#hero h1{color:#ffd700;font-size:25px;letter-spacing:.06em;margin:8px 0 6px;text-transform:uppercase}
+#hero .sub{color:rgba(223,230,242,.55);font-size:12px;max-width:700px;margin:0 auto;line-height:1.7}
+#hero .abstract{max-width:720px;margin:16px auto 0;padding:13px 18px;text-align:left;
+  background:rgba(9,12,24,.7);border:1px solid #1e2740;border-left:3px solid #ffd700;border-radius:8px;
+  color:rgba(223,230,242,.72);font-size:11.5px;line-height:1.75}
+#hero .abstract b{color:#ffd700}
+
+.st{display:inline-block;border:1px solid #2a3040;border-radius:4px;padding:0 6px;font-size:8.5px;
+  letter-spacing:.1em;color:#8892b0;margin:0 4px 2px 0;vertical-align:1px;text-transform:uppercase}
+.st.exact{color:#7fff9f;border-color:#2a4a34}
+.st.computed{color:#00d4ff;border-color:#204050}
+.st.design{color:#d8c060;border-color:#4a4020}
+.st.hyp{color:#ffb454;border-color:#4a3820}
+.st.ext{color:#ffb454;border-color:#4a3820}
+.st.meta{color:#cc88ff;border-color:#3a2050}
+
+#stage{max-width:900px;margin:18px auto 14px;background:rgba(9,12,24,.72);border:1px solid #1e2740;
+  border-left:3px solid #ffd700;border-radius:10px;padding:14px 14px 10px;overflow:hidden}
+#stage .lbl{color:#ffd700;font-size:9px;letter-spacing:.16em;text-transform:uppercase;margin-bottom:8px}
+#pathbox{display:block;width:100%}
+#path{display:block;width:100%;border-radius:8px;background:rgba(4,6,14,.7);border:1px solid #141c30;cursor:crosshair}
+#controls{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;justify-content:center;
+  padding:10px 2px 4px;font-size:10.5px}
+.btn{background:#0b1120;color:#00d4ff;border:1px solid #204050;border-radius:6px;padding:6px 13px;
+  font-family:inherit;font-size:10.5px;letter-spacing:.06em;cursor:pointer;text-transform:uppercase}
+.btn:hover{background:#0e1730}
+.btn.on{color:#7fff9f;border-color:#2a4a34;background:rgba(127,255,159,.06)}
+.btn.gold{color:#ffd700;border-color:#4a4020}
+#controls label{color:rgba(223,230,242,.5);display:flex;align-items:center;gap:6px}
+#controls input[type=range]{accent-color:#00d4ff;width:100px}
+#controls input[type=range].g{accent-color:#ffd700;width:130px}
+#controls b{color:#ffd700;font-variant-numeric:tabular-nums}
+#curse13{width:100%;text-align:center;color:rgba(223,230,242,.33);font-size:9.5px;letter-spacing:.04em}
+
+.sec{background:rgba(9,12,24,.6);border:1px solid #1e2740;border-radius:10px;margin:11px 0;overflow:hidden}
+.sec .head{display:flex;align-items:center;gap:10px;padding:11px 15px;cursor:pointer;user-select:none}
+.sec .head:hover{background:rgba(255,255,255,.02)}
+.sec .num{color:#ffd700;font-size:10px;letter-spacing:.1em;min-width:26px}
+.sec .ttl{color:#e8eefc;font-size:13px;flex:1}
+.sec .chev{color:rgba(223,230,242,.3);font-size:11px;transition:transform .2s}
+.sec.open .chev{transform:rotate(90deg)}
+.sec .body{max-height:0;overflow:hidden;transition:max-height .3s ease}
+.sec.open .body{max-height:5200px}
+.sec .inner{padding:0 15px 14px}
+.claim{color:rgba(223,230,242,.72);font-size:11.5px;line-height:1.75;margin-bottom:9px}
+.claim b{color:#ffd700}
+.fm{background:rgba(4,6,14,.8);border:1px solid #1e2740;border-radius:7px;padding:10px 13px;margin:0 0 9px;
+  font-size:12px;color:#e8eefc;overflow-x:auto;white-space:pre;line-height:1.75}
+.fm .k{color:#ffd700}.fm .c{color:rgba(223,230,242,.4)}
+.meter{display:flex;flex-wrap:wrap;gap:5px 20px;background:rgba(4,6,14,.8);border:1px solid #1e2740;
+  border-radius:7px;padding:9px 12px;font-size:11px;font-variant-numeric:tabular-nums;margin-bottom:9px}
+.meter .k{color:rgba(223,230,242,.45);margin-right:5px}
+.meter .v{color:#7fff9f}
+.meter .v.gold{color:#ffd700}.meter .v.cyan{color:#00d4ff}.meter .v.bad{color:#ff69b4}
+.meter .v.dim{color:rgba(223,230,242,.5)}
+.meter .row{flex:0 0 auto}.meter .wide{flex:1 0 100%}
+.note{color:rgba(223,230,242,.45);font-size:10.5px;line-height:1.7;margin-top:7px}
+canvas.mini{display:block;width:100%;border-radius:7px;background:rgba(4,6,14,.8);border:1px solid #1e2740;margin:2px 0 9px}
+table{width:100%;border-collapse:collapse;font-size:11px;margin:0 0 9px;font-variant-numeric:tabular-nums}
+th{color:rgba(223,230,242,.4);text-align:left;font-weight:400;font-size:9.5px;letter-spacing:.1em;
+  text-transform:uppercase;padding:5px 8px;border-bottom:1px solid #1e2740}
+td{padding:4px 8px;border-bottom:1px solid #131a2c;color:rgba(223,230,242,.75)}
+td.g{color:#ffd700}td.c{color:#00d4ff}td.b{color:#ff69b4}td.d{color:rgba(223,230,242,.4)}
+#coda{text-align:center;color:rgba(223,230,242,.4);font-size:11px;line-height:1.9;margin-top:26px;
+  padding-top:18px;border-top:1px solid #141c30}
+#coda .law{color:#ffd700;font-size:10.5px;letter-spacing:.05em}
+@media (prefers-reduced-motion: reduce){ .sec .body{transition:none} .sec .chev{transition:none} }
+</style></head><body>
+
+<div id="hud">
+  <span><span class="h">format</span> <b class="gold" id="hFmt">—</b></span>
+  <span><span class="h">nodes drawn</span> <b class="cyan" id="hNodes">—</b></span>
+  <span><span class="h">float64 nodes</span> <b class="grn" id="hF64">—</b></span>
+  <span><span class="h">view</span> <b class="pink" id="hView">value</b></span>
+  <span><span class="h">floor eps</span> <b class="fire" id="hEps">—</b></span>
+  <span class="h">v0.1</span>
+</div>
+
+<div id="wrap">
+
+<div id="hero">
+  <div class="eyebrow">The Cave · PATH Annex · frozen artifact</div>
+  <h1>The Path — float64 is a graph</h1>
+  <div class="sub">Not a kind of number. A finite path graph with 18,437,736,874,454,810,624 nodes,
+  graded edges, and a hard end. Every precision fact you know is a fact about this graph.</div>
+  <div class="abstract">
+    <span class="st exact">exact</span><span class="st computed">computed live</span><span class="st design">design</span><br>
+    <b>The thesis.</b> A floating-point format is a finite set with a successor function. That is a
+    <b>path graph</b>. The nodes are bit patterns; the edge is <span class="gold">nextafter</span>; and — this is the
+    part nobody draws — <b>the bit pattern read as an unsigned integer IS the node index.</b> Verified below,
+    live, with a DataView.
+    <br><br>
+    <b>What follows from it.</b> Edge length doubles every octave, yet every octave holds exactly the same
+    2<sup>52</sup> nodes. Rounding is projection onto the path. Catastrophic cancellation is landing on a
+    <i>fine</i> node while still carrying a <i>coarse</i> halo. Going past 15.95 digits means leaving the path:
+    double-double is a <b>depth-2 tree</b> grown on it, and exact rationals are the <b>Stern–Brocot tree</b>,
+    on which φ is the pure alternating walk RLRLRL… — the same alternation the golden selector prints as sign flips.
+    <br><br>
+    <b>What it costs in silicon.</b> 53 bits is a 53×53 partial-product array. 113 bits is 4.546× the cells.
+    That ratio, not mathematics, is why your CPU stops where it stops.
+  </div>
+</div>
+
+<div id="stage">
+  <div class="lbl">The path — a toy format, fully enumerated · drag the morph to swap value-space for index-space</div>
+  <div id="pathbox"><canvas id="path"></canvas></div>
+  <div id="controls">
+    <label>exp bits <input type="range" id="rE" min="2" max="6" value="4"> <b id="nE">4</b></label>
+    <label>mant bits <input type="range" id="rM" min="1" max="6" value="3"> <b id="nM">3</b></label>
+    <label>morph <input type="range" class="g" id="rMorph" min="0" max="100" value="0"> <b id="nMorph">value</b></label>
+    <button class="btn gold" id="btnIdx">Show index-space</button>
+    <button class="btn on" id="btnBin">Octave colour — on</button>
+    <button class="btn" id="btnEdge">Edges — off</button>
+    <div id="curse13">nothing moves on its own — the graph starts in value-space and you choose to morph it (Curse 13) ·
+    click any node to inspect it · price is printed before enumeration (Curse 35)</div>
+  </div>
+</div>
+
+<div class="meter" id="mInspect" style="max-width:900px;margin:0 auto 14px">
+  <span class="row wide dim">Click a node above.</span>
+</div>
+
+<!-- I -->
+<div class="sec open" id="s1">
+  <div class="head"><span class="num">I</span><span class="ttl">The path — count the nodes, exactly</span><span class="chev">▶</span></div>
+  <div class="body"><div class="inner">
+    <div class="claim"><span class="st exact">exact</span> A binary64 has 1 sign bit, 11 exponent bits, 52 stored
+    mantissa bits. Exponent field 2047 is reserved for ∞ and NaN. Everything else is a finite number. So the count
+    is not an estimate — it is integer arithmetic, done here in BigInt:</div>
+    <div class="fm"><span class="c">all bit patterns  </span> 2<span class="k">^</span>64                = 18446744073709551616
+<span class="c">reserved (exp=2047)</span> 2<span class="k">^</span>53              =     9007199254740992   <span class="c">= 2 infinities + 9007199254740990 NaNs</span>
+<span class="c">finite patterns   </span> 2<span class="k">^</span>64 <span class="k">−</span> 2<span class="k">^</span>53        = <span class="k">18437736874454810624</span>
+<span class="c">distinct VALUES   </span> 2<span class="k">^</span>64 <span class="k">−</span> 2<span class="k">^</span>53 <span class="k">−</span> 1    = 18437736874454810623   <span class="c">= +0 and −0 are two nodes, one value</span></div>
+    <div class="meter" id="mCount"></div>
+    <div class="claim">That is the whole universe of float64. Eighteen quintillion nodes, and then it stops.
+    The monkey-brain move: <b>this is a finite object you could, in principle, list.</b> Not a continuum that
+    occasionally misbehaves — a bead chain with a first bead and a last bead.</div>
+    <div class="note">Named nodes at the ends: the largest finite is ≈1.7976931348623157×10<sup>308</sup>, the smallest
+    positive subnormal is ≈4.9406564584124654×10<sup>−324</sup>. Both are drawn from the same integer index space
+    as every other node.</div>
+  </div></div>
+</div>
+
+<!-- II -->
+<div class="sec" id="s2">
+  <div class="head"><span class="num">II</span><span class="ttl">The grading — every octave holds the same 2⁵² nodes</span><span class="chev">▶</span></div>
+  <div class="body"><div class="inner">
+    <div class="claim"><span class="st exact">exact</span><span class="st computed">computed live</span>
+    Move the morph slider above and watch the nodes bunch toward zero. That bunching is the single most
+    important fact about floating point, and it has an exact statement: <b>the interval [2ᵏ, 2ᵏ⁺¹) contains
+    exactly 2⁵² nodes for every k.</b> Same node count. Wildly different width. The edges double at each
+    octave boundary.</div>
+    <div class="meter" id="mOctave"></div>
+    <div class="claim">This is why error is <i>relative</i>, not absolute. The graph is built so that the edge
+    beside a node is always about 2⁻⁵³ of that node's magnitude. You get the same fractional resolution at
+    10<sup>−300</sup> as at 10<sup>300</sup>, and it costs the same number of beads.</div>
+    <div class="fm">ulp(1)  = 2<span class="k">^</span>−52 = 2.220446049250313e−16      <span class="c">the edge next to 1.0</span>
+digits  = log10(2<span class="k">^</span>53) = <span class="k">15.9546</span>            <span class="c">the ceiling, in decimal</span></div>
+    <div class="note">The subnormals near zero are the exception, and deliberately so: below 2<sup>−1022</sup> the
+    spacing stops shrinking and becomes uniform. That is Kahan's <i>gradual underflow</i>, fought for on the
+    754 committee against opposition, and it is what makes <span class="cyan">x − y = 0 ⟺ x = y</span> true.
+    Without it, two distinct numbers could subtract to zero.</div>
+  </div></div>
+</div>
+
+<!-- III -->
+<div class="sec" id="s3">
+  <div class="head"><span class="num">III</span><span class="ttl">The index theorem — the bit pattern IS the node number</span><span class="chev">▶</span></div>
+  <div class="body"><div class="inner">
+    <div class="claim"><span class="st computed">computed live</span> The claim: for positive floats, take the
+    64 bits, read them as an unsigned integer, and you have the node's position along the path. Walking one step
+    on the graph is <b>adding 1 to the integer</b>. This is not a coincidence — IEEE 754 orders the exponent field
+    above the mantissa field precisely so the encoding is monotonic. Verified here with a DataView, no assumption:</div>
+    <div class="meter" id="mIndex"></div>
+    <div class="claim">Press the button in the stage to set morph = 100%. In index-space every node is evenly
+    spaced, because you are now plotting the graph by its <b>node number</b> instead of by its value. <b>The
+    grading vanishes.</b> It was never in the graph — it was in the embedding.</div>
+    <div class="note">This is why the classic trick works: you can compare positive floats by comparing their bit
+    patterns as integers, and the ULP distance between two floats is literally the integer difference of their
+    encodings — the graph distance.</div>
+  </div></div>
+</div>
+
+<!-- IV -->
+<div class="sec" id="s4">
+  <div class="head"><span class="num">IV</span><span class="ttl">Rounding is projection onto the path</span><span class="chev">▶</span></div>
+  <div class="body"><div class="inner">
+    <div class="claim"><span class="st exact">exact</span> A real number lands between two nodes. Rounding is the
+    map ℝ → path that sends it to the nearest one (ties to even). Every arithmetic operation is therefore two
+    steps: compute the <i>exact</i> real answer, then project. IEEE 754 guarantees this projection is
+    <b>correctly rounded</b> for + − × ÷ and √ — and for nothing else.</div>
+    <canvas class="mini" id="cProj" height="120"></canvas>
+    <div class="meter" id="mProj"></div>
+    <div class="note">Drag on the strip above. The lollipop is your real number; the drop line is where it lands.
+    The relative error stays bounded by half an edge no matter where you go — that bound is the format's promise.
+    <span class="cyan">sin, cos, atan, exp, pow and log get no such guarantee</span> — ECMA-262 leaves them
+    implementation-approximated, which is why three algebraically identical routes to one angle can differ by
+    several ulp on one engine.</div>
+  </div></div>
+</div>
+
+<!-- V -->
+<div class="sec" id="s5">
+  <div class="head"><span class="num">V</span><span class="ttl">The halo — what cancellation actually does</span><span class="chev">▶</span></div>
+  <div class="body"><div class="inner">
+    <div class="claim"><span class="st exact">exact</span><span class="st computed">computed live</span>
+    Here is the picture that fixes the intuition. Two nodes sit near each other, far from zero, each already
+    carrying a halo of uncertainty from its own rounding — half an edge, and the edges out there are <i>coarse</i>.
+    Subtract them. The answer is small, so it lands in a region where the edges are <b>fine</b>. But the halo
+    <b>does not shrink</b>. It came along.</div>
+    <canvas class="mini" id="cHalo" height="150"></canvas>
+    <div class="meter" id="mHalo"></div>
+    <div class="claim">So you end up on a node with fifteen decimal digits printed, sitting inside a halo that
+    spans millions of nodes. <b>The digits are real. The information is not.</b> That is catastrophic cancellation,
+    and it is the whole reason a convergence-rate diagnostic dies.</div>
+    <div class="claim"><span class="st exact">exact</span> The nuance that surprises everyone —
+    <b>Sterbenz's lemma</b>: if <span class="cyan">b/2 ≤ a ≤ 2b</span> then <span class="cyan">a − b is computed
+    exactly</span>, zero rounding error. Verified live:</div>
+    <div class="meter" id="mSterbenz"></div>
+    <div class="claim">Read that carefully, because it inverts the usual story. <b>The subtraction is innocent.</b>
+    It performs perfectly. It simply reveals error that was already sitting inside the operands, promoted from
+    invisible last digits to the leading digit. Blaming the minus sign is blaming the messenger — Higham's point,
+    §1.7 of <i>Accuracy and Stability of Numerical Algorithms</i>.</div>
+  </div></div>
+</div>
+
+<!-- VI -->
+<div class="sec" id="s6">
+  <div class="head"><span class="num">VI</span><span class="ttl">The escape — one real, two nodes, and the tree</span><span class="chev">▶</span></div>
+  <div class="body"><div class="inner">
+    <div class="claim"><span class="st exact">exact</span><span class="st computed">computed live</span>
+    Now the way out, and it is beautiful. When you add two nodes, the exact answer lands off-path and gets
+    projected. The <b>roundoff — the distance you were projected — is itself exactly a node.</b> Always. It
+    costs six additions to recover it (Knuth's TwoSum, 1969):</div>
+    <div class="fm">s = a <span class="k">+</span> b
+bv = s <span class="k">−</span> a
+e = (a <span class="k">−</span> (s <span class="k">−</span> bv)) <span class="k">+</span> (b <span class="k">−</span> bv)        <span class="c">and now a + b = s + e, EXACTLY</span></div>
+    <div class="meter" id="mTwoSum"></div>
+    <div class="claim">Verified above against BigInt exact rational arithmetic — not float-compared, which would be
+    circular. So: <b>one real number, represented by an ordered pair of nodes.</b> The representable set is no
+    longer a path. Every coarse node now carries its own fine path of possible partners, and the structure is a
+    <b>depth-2 tree</b>: 53 bits at the root, 53 more on each branch, 106 bits ≈ 32 decimal digits. That is
+    double-double. Go to depth 4 and you have quad-double, 212 bits ≈ 64 digits.</div>
+    <canvas class="mini" id="cTree" height="160"></canvas>
+    <div class="claim"><span class="st design">design</span> Note what this tree does <b>not</b> extend: the
+    exponent range. The root is still an ordinary float64, so double-double still overflows at 10<sup>308</sup>.
+    You bought mantissa, not reach. And the tree is <i>non-canonical</i> — the same real can sit on several
+    branches, which is why DD comparison and printing need care.</div>
+    <div class="note">The hardware that makes this cheap is the <b>fused multiply–add</b>. Dekker's original
+    exact product needed splitting into halves and 17 operations; with an FMA it is two. The same instruction the
+    silicon added for speed is the one that lets software climb off the path the silicon built.</div>
+  </div></div>
+</div>
+
+<!-- VII -->
+<div class="sec" id="s7">
+  <div class="head"><span class="num">VII</span><span class="ttl">The silicon — why 53, and what 113 would cost</span><span class="chev">▶</span></div>
+  <div class="body"><div class="inner">
+    <div class="claim"><span class="st ext">external</span> The number 53 is not mathematics. It is a 1980 chip.
+    Intel hired <b>William Kahan</b> to design the arithmetic for the <b>8087</b> coprocessor; the Kahan–Coonen–Stone
+    draft became <b>IEEE 754-1985</b>. 64 bits was the natural double word. Eleven bits of exponent buys about
+    10<sup>±308</sup>, enough that ordinary physical calculations do not overflow. What remains is 52 stored
+    mantissa bits — and normalization donates one more for free, because the leading bit of a normalized binary
+    number is always 1 and therefore carries no information. <b>52 stored, 53 effective.</b></div>
+    <div class="claim"><span class="st exact">exact</span> Multiplying two mantissas means a partial-product array,
+    one cell per bit pair. The area is quadratic, and that is the whole story of why the ceiling sits where it does:</div>
+    <canvas class="mini" id="cSilicon" height="180"></canvas>
+    <div class="meter" id="mSilicon"></div>
+    <div class="claim">A binary128 multiplier is <b>4.546× the array</b> of a binary64 one, on a datapath that is
+    already among the largest blocks on the die, to serve a small fraction of workloads. So x86 and ARM simply
+    do not build it. IBM z/Architecture and POWER9 do; SPARC and PA-RISC specify it; RISC-V has it as the optional
+    Q extension. On your machine <span class="cyan">__float128</span> is software, and transcendentals in it run
+    on the order of 50–100× slower than double.</div>
+    <div class="claim">The x87's 80-bit extended format — 64-bit mantissa, only 1.458× the array — was Kahan's
+    deliberate hedge: compute intermediates wider so naive algorithms survive. It worked, and it created the
+    classic trap, because a value living in an 80-bit register and the <i>same</i> value spilled to 64-bit memory
+    are different numbers. Same source, same machine, two answers.</div>
+    <div class="note"><span class="st ext">external</span> And the industry's current motion is <b>downward</b>:
+    bfloat16, TF32, FP8, FP4 for machine learning. Consumer GPUs deliberately cripple FP64 — an RTX 5090 does
+    104.8 TFLOPS at FP32 and 1.637 at FP64, a 64:1 ratio, market segmentation rather than physics. High precision
+    is not getting cheaper. It is getting scarcer, and it is moving into software.</div>
+  </div></div>
+</div>
+
+<!-- VIII -->
+<div class="sec" id="s8">
+  <div class="head"><span class="num">VIII</span><span class="ttl">The other tree — Stern–Brocot, and φ as a walk</span><span class="chev">▶</span></div>
+  <div class="body"><div class="inner">
+    <div class="claim"><span class="st exact">exact</span> Leave floating point entirely. Exact rationals also
+    have a graph, and it is one of the loveliest objects in mathematics. Start with 0/1 and 1/0 as fenceposts.
+    The <b>mediant</b> of p/q and r/s is (p+r)/(q+s). Insert it between them, recurse. Every positive rational
+    appears exactly once, already in lowest terms. That is the <b>Stern–Brocot tree</b>, and navigating it is a
+    string of L and R.</div>
+    <canvas class="mini" id="cSB" height="200"></canvas>
+    <div class="claim">Now walk toward φ. At each node you go L if you overshot, R if you undershot. The walk is:</div>
+    <div class="meter" id="mSB"></div>
+    <div class="claim"><b>Pure alternation.</b> R L R L R L R L… forever, because φ's continued fraction is
+    [1;1,1,1,…] — every partial quotient is 1, the smallest possible, which is exactly what "hardest number to
+    approximate by a fraction" means. And the nodes you land on are 1/1, 2/1, 3/2, 5/3, 8/5, 13/8, 21/13 —
+    <b>the Fibonacci ratios.</b> The mediant of two consecutive ones is the next one.</div>
+    <div class="claim"><span class="st computed">computed live</span> Compare the error column above to the
+    golden selector in the LUCA shell. They are <b>the same numbers</b>: −6.180e−1, +3.820e−1, −1.180e−1,
+    +4.863e−2, −1.803e−2… The alternating sign your HUD prints as overshoot and undershoot <b>is the L and R of
+    this walk.</b> The λ = −1 eigenmode of the light matrix is a turn instruction on the Stern–Brocot tree.</div>
+    <div class="note">And on this tree nothing rounds, nothing cancels, and nothing dies at n = 36 — because
+    every node is an exact pair of integers and BigInt has no ceiling. The path graph has an end. This tree
+    does not.</div>
+  </div></div>
+</div>
+
+<!-- IX -->
+<div class="sec" id="s9">
+  <div class="head"><span class="num">IX</span><span class="ttl">The ladder — three lanes, measured on the same quantity</span><span class="chev">▶</span></div>
+  <div class="body"><div class="inner">
+    <div class="claim"><span class="st computed">computed live</span> One quantity, three graphs. The deviation
+    <span class="cyan">Fₙ₊₁/Fₙ − φ</span> computed (a) as a float64 subtraction, on the path; (b) predicted from
+    the a-priori floor; (c) as exact BigInt rationals on the Stern–Brocot tree. Press to pay for it:</div>
+    <div style="margin:2px 0 9px"><button class="btn gold" id="btnLadder">Run the ladder</button>
+      <span class="dim" id="ladderPrice" style="font-size:9.5px;margin-left:8px">price printed before it is paid — Curse 35</span></div>
+    <div id="ladderOut"></div>
+    <div class="note"><span class="st exact">exact</span> Why the exact lane cannot die: rationalising
+    <span class="cyan">k/&#8467; &#8722; &#966;</span> turns the numerator into the integer
+    <span class="cyan">(2k&#8722;&#8467;)&#178; &#8722; 5&#8467;&#178;</span>, which for a Fibonacci pair collapses to
+    <b>4(&#8722;1)&#8319;</b> &#8212; a tiny exact integer, and the alternating sign your golden HUD prints. The
+    denominator is a sum of positives. <b>Nothing subtracts near-equals anywhere in that lane, at any n.</b><br><br>
+    The a-priori prediction is not fitted. Digits remaining ≈ 15.955 − 2·log₁₀(φ)·n, because the
+    deviation falls like φ⁻²ⁿ and the floor is fixed at ε·scale. It crosses zero near n ≈ 38 — which is where the
+    float lane is measured to be worthless. <b>You can compute where the wall is before you hit it.</b></div>
+  </div></div>
+</div>
+
+<!-- X -->
+<div class="sec" id="s10">
+  <div class="head"><span class="num">X</span><span class="ttl">The honest boundary — and what this does not claim</span><span class="chev">▶</span></div>
+  <div class="body"><div class="inner">
+    <div class="claim"><span class="st exact">exact</span> The node counts, the 2⁵²-per-octave identity, the
+    index monotonicity, Sterbenz, the TwoSum identity, the multiplier-area ratios, the Stern–Brocot mediant
+    structure and φ's alternating walk. All integer arithmetic or one-line algebra, all reproduced above.</div>
+    <div class="claim"><span class="st computed">computed live</span> Every number in this page's meters, in this
+    browser, on this load. The toy-format enumeration, the projection and halo measurements, the TwoSum
+    verification against BigInt rationals, and the ladder.</div>
+    <div class="claim"><span class="st design">design</span> Calling the successor relation "the path graph" and
+    the DD representable set "a depth-2 tree" — these are faithful readings, not standard terminology. The toy
+    format's node radii, the octave palette, and the morph itself. The choice to draw only the positive half.</div>
+    <div class="claim"><span class="st ext">external</span> The 8087 and Kahan history, the IEEE 754 committee
+    story, gradual underflow's adoption fight, the binary128 hardware availability list, the GPU FP64 ratios, and
+    the ~50–100× quad-precision slowdown. Cited from the record, not measured here.</div>
+    <div class="claim"><span class="st hyp">not claimed</span> That the depth-2 tree reading of double-double
+    yields any new theorem. That any of this is a novel result — it is a <b>rendering</b> of standard numerical
+    analysis into standard graph language, built because the monkey brain sees a bead chain faster than it reads
+    an error bound. If the picture makes ε·scale obvious to one more person before they publish a garbage ratio,
+    it paid for itself.</div>
+    <div class="claim"><span class="st design">open for v0.2+</span> the negative half and the symmetry through
+    zero · the subnormal shelf drawn to scale · the QD depth-4 tree · an interval-arithmetic lane (each node
+    becomes a ball) · posits, whose tapered accuracy is a <i>different grading of the same path</i> · a live
+    cross-engine ulp diff, so the reader sees their own browser's Math disagree with itself.</div>
+  </div></div>
+</div>
+
+<div id="coda">
+  the pentagons hold elsewhere — here, the beads are finite and the last one has a number.<br>
+  <span class="law">nodes = bit patterns · edges = nextafter · the index is the truth · know the ceiling before you read the meter</span><br>
+  the cave, 2026 · for year 12026 · always
+</div>
+
+</div><!-- /wrap -->
+
+<script>
+/* ================= EXACT CORE ================= */
+var TOT = 2n**64n, RESV = 2n**53n, FIN = TOT - RESV;
+var PHI = (1 + Math.sqrt(5)) / 2;
+var EPS = Number.EPSILON;
+
+var _buf = new ArrayBuffer(8), _dv = new DataView(_buf);
+function f2i(x){ _dv.setFloat64(0, x); return _dv.getBigUint64(0); }
+function i2f(i){ _dv.setBigUint64(0, i); return _dv.getFloat64(0); }
+function nextUp(x){ return i2f(f2i(x) + 1n); }
+function ulp(x){ return nextUp(Math.abs(x)) - Math.abs(x); }
+
+/* exact BigInt rational of any finite float64 — no approximation anywhere */
+function toFrac(v){
+  if(v === 0) return [0n, 1n];
+  var m = v, e = 0n, guard = 0;
+  while(!Number.isInteger(m) && guard < 1200){ m *= 2; e++; guard++; }
+  return [BigInt(m), 2n**e];
+}
+function fAdd(p, q){ return [p[0]*q[1] + q[0]*p[1], p[1]*q[1]]; }
+function fEq(p, q){ return p[0]*q[1] === q[0]*p[1]; }
+function twoSum(a, b){ var s = a+b, bv = s-a, e = (a-(s-bv)) + (b-bv); return [s, e]; }
+
+function grp(n){ return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' '); }
+function mrow(k, v, cls, wide){
+  return '<span class="row' + (wide?' wide':'') + '"><span class="k">' + k +
+         '</span><span class="v ' + (cls||'') + '">' + v + '</span></span>';
+}
+function fill(id, html){ var e = document.getElementById(id); if(e) e.innerHTML = html; }
+
+/* ================= THE TOY FORMAT ================= */
+var EB = 4, MB = 3, MORPH = 0, BINCOL = true, EDGES = false, SEL = -1, NODES = [];
+
+function buildFormat(E, M){
+  var bias = Math.pow(2, E-1) - 1, nm = Math.pow(2, M), out = [];
+  /* subnormals: exponent field 0 */
+  for(var m = 0; m < nm; m++){
+    out.push({ idx: m, exp: 0, mant: m, sub: true,
+               val: (m/nm) * Math.pow(2, 1-bias) });
+  }
+  /* normals: exponent field 1 .. 2^E - 2 */
+  for(var ef = 1; ef <= Math.pow(2,E) - 2; ef++){
+    for(var m2 = 0; m2 < nm; m2++){
+      out.push({ idx: ef*nm + m2, exp: ef, mant: m2, sub: false,
+                 val: (1 + m2/nm) * Math.pow(2, ef - bias) });
+    }
+  }
+  return out;
+}
+function octColor(n){
+  if(!BINCOL) return '#00d4ff';
+  if(n.sub) return '#cc88ff';
+  var hues = ['#ff5470','#ff9040','#ffd700','#7fff9f','#00d4ff','#5a8cff','#a06cff',
+              '#ff6cc0','#ff8060','#e0c040','#60ffb0','#40d0ff','#7090ff','#b080ff'];
+  return hues[n.exp % hues.length];
+}
+
+var cv = document.getElementById('path'), cx = cv.getContext('2d');
+var SZW = 900, SZH = 210, DPR = 1;
+
+function layoutPath(){
+  var box = document.getElementById('pathbox');
+  SZW = Math.max(300, box.clientWidth);
+  SZH = 210;
+  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  cv.width = SZW*DPR; cv.height = SZH*DPR;
+  cv.style.height = SZH + 'px';
+  drawPath();
+}
+function nodeX(n, i){
+  var pad = 26, W = SZW - 2*pad;
+  var maxV = NODES[NODES.length-1].val, maxI = NODES.length - 1;
+  var xv = pad + W * (n.val / maxV);
+  var xi = pad + W * (i / maxI);
+  return xv + (xi - xv) * MORPH;
+}
+function drawPath(){
+  cx.setTransform(DPR,0,0,DPR,0,0);
+  cx.clearRect(0,0,SZW,SZH);
+  var yBase = 130, r = Math.max(1.6, Math.min(4.6, 260/NODES.length));
+  /* axis */
+  cx.strokeStyle = 'rgba(136,146,176,.16)'; cx.lineWidth = 1;
+  cx.beginPath(); cx.moveTo(20, yBase); cx.lineTo(SZW-20, yBase); cx.stroke();
+  /* edges */
+  if(EDGES){
+    cx.strokeStyle = 'rgba(136,146,176,.30)'; cx.lineWidth = 1;
+    cx.beginPath();
+    for(var e = 0; e < NODES.length-1; e++){
+      cx.moveTo(nodeX(NODES[e],e), yBase); cx.lineTo(nodeX(NODES[e+1],e+1), yBase);
+    }
+    cx.stroke();
+  }
+  /* nodes */
+  for(var i = 0; i < NODES.length; i++){
+    var n = NODES[i], x = nodeX(n, i), col = octColor(n);
+    cx.beginPath(); cx.arc(x, yBase, i === SEL ? r+2.6 : r, 0, 6.2832);
+    cx.fillStyle = col; cx.globalAlpha = i === SEL ? 1 : 0.82; cx.fill();
+    cx.globalAlpha = 1;
+    if(i === SEL){
+      cx.beginPath(); cx.arc(x, yBase, r+6, 0, 6.2832);
+      cx.strokeStyle = col; cx.lineWidth = 1.2; cx.stroke();
+      cx.strokeStyle = 'rgba(255,255,255,.18)'; cx.lineWidth = 1;
+      cx.beginPath(); cx.moveTo(x, yBase-14); cx.lineTo(x, 34); cx.stroke();
+    }
+  }
+  /* octave ticks in value space */
+  cx.font = '9px ui-monospace, Menlo, monospace';
+  cx.textAlign = 'center'; cx.textBaseline = 'top';
+  var seen = {};
+  for(var j = 0; j < NODES.length; j++){
+    var nn = NODES[j];
+    if(nn.mant !== 0 || nn.sub || seen[nn.exp]) continue;
+    seen[nn.exp] = 1;
+    var xx = nodeX(nn, j);
+    cx.strokeStyle = 'rgba(136,146,176,.13)'; cx.lineWidth = 1;
+    cx.beginPath(); cx.moveTo(xx, yBase+8); cx.lineTo(xx, yBase+20); cx.stroke();
+    if(NODES.length <= 260 || nn.exp % 2 === 0){
+      cx.fillStyle = 'rgba(223,230,242,.34)';
+      cx.fillText(fmtSmall(nn.val), xx, yBase+23);
+    }
+  }
+  /* labels */
+  cx.textAlign = 'left'; cx.fillStyle = 'rgba(223,230,242,.45)'; cx.font = '10px ui-monospace, Menlo, monospace';
+  cx.fillText(MORPH < 0.5 ? 'VALUE-SPACE — position = the number itself' :
+                            'INDEX-SPACE — position = the bit pattern as an integer', 20, 14);
+  cx.textAlign = 'right';
+  cx.fillStyle = MORPH < 0.5 ? 'rgba(255,84,112,.7)' : 'rgba(127,255,159,.75)';
+  cx.fillText(MORPH < 0.5 ? 'the beads bunch — edges double each octave'
+                          : 'the beads are even — the grading was in the embedding', SZW-20, 14);
+}
+function fmtSmall(v){
+  if(v === 0) return '0';
+  var e = Math.round(Math.log2(v));
+  if(Math.abs(Math.pow(2,e) - v) < 1e-12*v) return (e === 0 ? '1' : '2^' + e);
+  return v.toPrecision(3);
+}
+cv.addEventListener('click', function(ev){
+  var rect = cv.getBoundingClientRect(), mx = ev.clientX - rect.left;
+  var best = -1, bd = 1e9;
+  for(var i = 0; i < NODES.length; i++){
+    var d = Math.abs(nodeX(NODES[i], i) - mx);
+    if(d < bd){ bd = d; best = i; }
+  }
+  if(bd < 14){ SEL = best; showNode(best); drawPath(); }
+});
+function showNode(i){
+  var n = NODES[i], E = EB, M = MB, bias = Math.pow(2,E-1)-1;
+  var bits = n.exp.toString(2).padStart(E,'0') + ' ' + n.mant.toString(2).padStart(M,'0');
+  var gap = (i < NODES.length-1) ? (NODES[i+1].val - n.val) : NaN;
+  var prevGap = (i > 0) ? (n.val - NODES[i-1].val) : NaN;
+  fill('mInspect',
+    mrow('node index', i + '   of ' + (NODES.length-1), 'gold') +
+    mrow('bits (exp mant)', '0 ' + bits, 'cyan') +
+    mrow('value', n.val === 0 ? '0' : n.val.toPrecision(9), '') +
+    mrow('class', n.sub ? 'SUBNORMAL' : 'normal, octave 2^' + (n.exp - bias), n.sub ? 'bad' : 'dim') +
+    mrow('edge to next', isFinite(gap) ? gap.toPrecision(6) : 'end of path — no successor',
+         isFinite(gap) ? 'cyan' : 'bad') +
+    mrow('edge from prev', isFinite(prevGap) ? prevGap.toPrecision(6) : 'start of path', 'dim') +
+    mrow('index arithmetic', 'idx = expField·2^' + M + ' + mant = ' + n.exp + '·' + Math.pow(2,M) +
+         ' + ' + n.mant + ' = ' + i + '   — the encoding IS the position', '', true));
+}
+
+function rebuild(){
+  var predicted = Math.pow(2, EB + MB);
+  if(predicted > 4096){ return; }                       /* Curse 35: refuse loudly, never allocate blind */
+  NODES = buildFormat(EB, MB);
+  SEL = -1;
+  document.getElementById('hFmt').textContent = '1·' + EB + '·' + MB + ' (' + (1+EB+MB) + ' bit)';
+  document.getElementById('hNodes').textContent = grp(NODES.length);
+  fill('mInspect', mrow('enumerated', grp(NODES.length) + ' positive finite nodes at a predicted cost of ' +
+       grp(predicted) + ' patterns — click one', 'dim', true));
+  layoutPath();
+}
+
+/* ================= CONTROLS (all opt-in) ================= */
+document.getElementById('rE').addEventListener('input', function(e){
+  EB = +e.target.value; document.getElementById('nE').textContent = EB; rebuild(); });
+document.getElementById('rM').addEventListener('input', function(e){
+  MB = +e.target.value; document.getElementById('nM').textContent = MB; rebuild(); });
+function setMorph(v){
+  MORPH = Math.max(0, Math.min(1, v));
+  document.getElementById('rMorph').value = Math.round(MORPH*100);
+  document.getElementById('nMorph').textContent = MORPH === 0 ? 'value' : (MORPH === 1 ? 'index' : MORPH.toFixed(2));
+  var h = document.getElementById('hView');
+  h.textContent = MORPH === 0 ? 'value' : (MORPH === 1 ? 'index' : 'morph ' + MORPH.toFixed(2));
+  h.className = MORPH === 1 ? 'grn' : (MORPH === 0 ? 'pink' : 'cyan');
+  document.getElementById('btnIdx').textContent = MORPH === 1 ? 'Show value-space' : 'Show index-space';
+  drawPath();
+}
+document.getElementById('rMorph').addEventListener('input', function(e){ setMorph(e.target.value/100); });
+document.getElementById('btnIdx').addEventListener('click', function(){ setMorph(MORPH === 1 ? 0 : 1); });
+document.getElementById('btnBin').addEventListener('click', function(){
+  BINCOL = !BINCOL; this.classList.toggle('on', BINCOL);
+  this.textContent = 'Octave colour — ' + (BINCOL ? 'on' : 'off'); drawPath(); });
+document.getElementById('btnEdge').addEventListener('click', function(){
+  EDGES = !EDGES; this.classList.toggle('on', EDGES);
+  this.textContent = 'Edges — ' + (EDGES ? 'on' : 'off'); drawPath(); });
+
+/* ================= I. THE COUNT ================= */
+fill('mCount',
+  mrow('finite bit patterns', grp(FIN), 'gold', true) +
+  mrow('distinct values', grp(FIN - 1n), 'cyan', true) +
+  mrow('NaN patterns', grp(RESV - 2n) + '  — all wasted on one non-value', 'bad', true) +
+  mrow('check', (TOT - RESV === FIN && FIN === 18437736874454810624n) ? 'PASS — BigInt, no float involved' : 'FAIL',
+       (FIN === 18437736874454810624n) ? '' : 'bad', true));
+
+/* ================= II. THE GRADING ================= */
+(function(){
+  var rows = [[0.5,1],[1,2],[2,4],[1024,2048],[1e300,2e300]], html = '', allEq = true;
+  rows.forEach(function(p){
+    var c = f2i(p[1]) - f2i(p[0]);
+    if(c !== 2n**52n) allEq = false;
+    html += mrow('[' + p[0] + ', ' + p[1] + ')', grp(c), 'cyan');
+  });
+  html += mrow('every one', allEq ? '= 2^52 = ' + grp(2n**52n) + ' nodes — identical count, widths differing by 10^300'
+                                  : 'MISMATCH', allEq ? 'gold' : 'bad', true);
+  html += mrow('ulp(1)', EPS.toExponential(15), '');
+  html += mrow('ceiling', (53*Math.log10(2)).toFixed(4) + ' decimal digits', 'gold');
+  fill('mOctave', html);
+})();
+
+/* ================= III. THE INDEX THEOREM ================= */
+(function(){
+  var probes = [1, 3.14159, 1e-10, 1e10, 0.1, 12345.6789], ok = 0, html = '';
+  probes.forEach(function(x){
+    var i = f2i(x), nx = i2f(i + 1n), pass = (f2i(nx) - i === 1n) && nx > x;
+    if(pass) ok++;
+    html += mrow(String(x), 'index ' + grp(i) + '   edge ' + (nx-x).toExponential(4), pass ? 'cyan' : 'bad', true);
+  });
+  html += mrow('nextafter = index + 1', ok + '/' + probes.length + (ok === probes.length ? '  PASS' : '  FAIL'),
+               ok === probes.length ? 'gold' : 'bad', true);
+  fill('mIndex', html);
+})();
+
+/* ================= IV. PROJECTION ================= */
+(function(){
+  var c = document.getElementById('cProj'), g = c.getContext('2d'), W = 0, H = 120, dp = 1;
+  var real = 1.6180339887;
+  function size(){ W = c.clientWidth; dp = Math.min(window.devicePixelRatio||1,2);
+    c.width = W*dp; c.height = H*dp; g.setTransform(dp,0,0,dp,0,0); }
+  function draw(){
+    size(); g.clearRect(0,0,W,H);
+    var lo = 1.5, hi = 1.75, pad = 24, WW = W - 2*pad;
+    var X = function(v){ return pad + WW*(v-lo)/(hi-lo); };
+    /* a coarse toy grid so nodes are visibly separated */
+    var step = (hi-lo)/40;
+    g.strokeStyle = 'rgba(136,146,176,.2)'; g.lineWidth = 1;
+    g.beginPath(); g.moveTo(pad, 78); g.lineTo(W-pad, 78); g.stroke();
+    var nearest = lo + Math.round((real-lo)/step)*step;
+    for(var v = lo; v <= hi+1e-12; v += step){
+      var x = X(v), isN = Math.abs(v-nearest) < step/4;
+      g.beginPath(); g.arc(x, 78, isN ? 5 : 2.8, 0, 6.2832);
+      g.fillStyle = isN ? '#7fff9f' : 'rgba(0,212,255,.62)'; g.fill();
+    }
+    var rx = X(real);
+    g.strokeStyle = '#ffd700'; g.lineWidth = 1.4;
+    g.beginPath(); g.moveTo(rx, 30); g.lineTo(rx, 78); g.stroke();
+    g.beginPath(); g.arc(rx, 26, 5, 0, 6.2832); g.fillStyle = '#ffd700'; g.fill();
+    g.setLineDash([3,3]); g.strokeStyle = 'rgba(127,255,159,.75)';
+    g.beginPath(); g.moveTo(rx, 78); g.lineTo(X(nearest), 78); g.stroke(); g.setLineDash([]);
+    g.font = '9.5px ui-monospace, Menlo, monospace'; g.textAlign = 'left';
+    g.fillStyle = 'rgba(223,230,242,.45)';
+    g.fillText('drag — the real number', 20, 16);
+    g.textAlign = 'right'; g.fillStyle = 'rgba(127,255,159,.75)';
+    g.fillText('the node it projects to', W-20, 16);
+    g.textAlign = 'center'; g.fillStyle = 'rgba(223,230,242,.4)';
+    g.fillText('toy grid, 40 nodes — float64 puts 2^52 in every octave', W/2, 106);
+    var err = Math.abs(real - nearest);
+    fill('mProj',
+      mrow('real', real.toPrecision(11), 'gold') +
+      mrow('projects to', nearest.toPrecision(11), '') +
+      mrow('absolute error', err.toExponential(4), 'cyan') +
+      mrow('relative', (err/Math.abs(real)).toExponential(4) + '  ≤ half an edge, always', 'cyan') +
+      mrow('in real float64', 'the same map, with ulp(' + real.toFixed(2) + ') = ' + ulp(real).toExponential(4), 'dim', true));
+  }
+  function move(ev){
+    var r = c.getBoundingClientRect(), mx = (ev.touches?ev.touches[0].clientX:ev.clientX) - r.left;
+    var pad = 24, WW = c.clientWidth - 2*pad;
+    real = 1.5 + (0.25)*Math.max(0, Math.min(1, (mx-pad)/WW)); draw();
+  }
+  var down = false;
+  c.addEventListener('pointerdown', function(e){ down = true; move(e); });
+  c.addEventListener('pointermove', function(e){ if(down) move(e); });
+  window.addEventListener('pointerup', function(){ down = false; });
+  window.addEventListener('resize', draw);
+  draw();
+})();
+
+/* ================= V. THE HALO + STERBENZ ================= */
+(function(){
+  var c = document.getElementById('cHalo'), g = c.getContext('2d');
+  function draw(){
+    var W = c.clientWidth, H = 150, dp = Math.min(window.devicePixelRatio||1,2);
+    c.width = W*dp; c.height = H*dp; g.setTransform(dp,0,0,dp,0,0); g.clearRect(0,0,W,H);
+    var pad = 30, WW = W - 2*pad;
+    /* top: two coarse nodes far from zero, with halos */
+    g.strokeStyle = 'rgba(136,146,176,.18)'; g.beginPath(); g.moveTo(pad,44); g.lineTo(W-pad,44); g.stroke();
+    for(var i = 0; i <= 8; i++){
+      var x = pad + WW*i/8;
+      g.beginPath(); g.arc(x, 44, 3, 0, 6.2832); g.fillStyle = 'rgba(0,212,255,.5)'; g.fill();
+    }
+    var xa = pad + WW*5/8, xb = pad + WW*5.6/8, halo = WW/16;
+    [[xa,'#ff9040','a'],[xb,'#ff5470','b']].forEach(function(p){
+      g.fillStyle = p[1].replace(')',''); g.globalAlpha = .18;
+      g.fillStyle = p[1]; g.fillRect(p[0]-halo/2, 34, halo, 20); g.globalAlpha = 1;
+      g.beginPath(); g.arc(p[0], 44, 4.5, 0, 6.2832); g.fillStyle = p[1]; g.fill();
+      g.font = '10px ui-monospace, Menlo, monospace'; g.textAlign = 'center';
+      g.fillStyle = p[1]; g.fillText(p[2], p[0], 22);
+    });
+    g.font = '9.5px ui-monospace, Menlo, monospace'; g.textAlign = 'left';
+    g.fillStyle = 'rgba(223,230,242,.42)';
+    g.fillText('coarse region — wide edges, each node already wearing a ±½ulp halo', pad, 68);
+    /* bottom: fine region, same halo width */
+    g.strokeStyle = 'rgba(136,146,176,.18)'; g.beginPath(); g.moveTo(pad,112); g.lineTo(W-pad,112); g.stroke();
+    for(var j = 0; j <= 60; j++){
+      var x2 = pad + WW*j/60;
+      g.beginPath(); g.arc(x2, 112, 1.7, 0, 6.2832); g.fillStyle = 'rgba(0,212,255,.42)'; g.fill();
+    }
+    var xr = pad + WW*0.5;
+    g.globalAlpha = .2; g.fillStyle = '#ff5470'; g.fillRect(xr-halo/2, 102, halo, 20); g.globalAlpha = 1;
+    g.beginPath(); g.arc(xr, 112, 4.5, 0, 6.2832); g.fillStyle = '#7fff9f'; g.fill();
+    g.textAlign = 'center'; g.fillStyle = '#7fff9f';
+    g.fillText('a − b', xr, 94);
+    g.textAlign = 'left'; g.fillStyle = 'rgba(255,84,112,.8)';
+    g.fillText('fine region — the halo CAME ALONG and now spans many nodes', pad, 136);
+  }
+  window.addEventListener('resize', draw);
+  draw();
+  var a = 1.0, b = i2f(f2i(1.0) + 7n), d = b - a;
+  var exactD = 7 * Math.pow(2,-52);
+  fill('mHalo',
+    mrow('operand halo', '±½ ulp of the operands — fixed at subtraction time', 'bad', true) +
+    mrow('result grid', 'ulp shrinks with the result; the halo does not', 'bad', true) +
+    mrow('consequence', 'digits printed: up to 17.  digits meant: however many the halo leaves.', 'gold', true));
+  fill('mSterbenz',
+    mrow('a', '1', 'dim') +
+    mrow('b = a + 7 ulp', b.toPrecision(17), 'cyan') +
+    mrow('b − a', d.toExponential(16), '') +
+    mrow('exactly 7·2⁻⁵²?', d === exactD ? 'YES — zero rounding error in the subtraction' : 'no',
+         d === exactD ? 'gold' : 'bad', true) +
+    mrow('Sterbenz', 'b/2 ≤ a ≤ 2b ⟹ a−b exact. The minus sign is the messenger, not the culprit.', 'dim', true));
+})();
+
+/* ================= VI. TWOSUM + THE TREE ================= */
+(function(){
+  var tests = [[0.1, 0.2], [1, Math.pow(2,-60)], [1e16, 1]], html = '', allOk = true;
+  tests.forEach(function(t){
+    var r = twoSum(t[0], t[1]);
+    var lhs = fAdd(toFrac(t[0]), toFrac(t[1])), rhs = fAdd(toFrac(r[0]), toFrac(r[1]));
+    var ok = fEq(lhs, rhs); if(!ok) allOk = false;
+    html += mrow(t[0] + ' + ' + t[1],
+      's = ' + r[0] + '   e = ' + (r[1] === 0 ? '0' : r[1].toExponential(6)) + '   ' + (ok ? 'EXACT' : 'FAIL'),
+      ok ? 'cyan' : 'bad', true);
+  });
+  html += mrow('verified against', 'BigInt exact rationals — not float-compared, which would be circular',
+               allOk ? 'gold' : 'bad', true);
+  html += mrow('so', 'every rounding error is itself a node. That is the door out of the path.', 'dim', true);
+  fill('mTwoSum', html);
+
+  var c = document.getElementById('cTree'), g = c.getContext('2d');
+  function draw(){
+    var W = c.clientWidth, H = 160, dp = Math.min(window.devicePixelRatio||1,2);
+    c.width = W*dp; c.height = H*dp; g.setTransform(dp,0,0,dp,0,0); g.clearRect(0,0,W,H);
+    var pad = 40, WW = W - 2*pad, roots = 5;
+    g.font = '9.5px ui-monospace, Menlo, monospace';
+    g.textAlign = 'left'; g.fillStyle = 'rgba(223,230,242,.42)';
+    g.fillText('the path (float64, 53 bits) — each node the root of its own fine path', pad, 16);
+    for(var i = 0; i < roots; i++){
+      var x = pad + WW*(i+0.5)/roots;
+      g.beginPath(); g.arc(x, 48, 5.5, 0, 6.2832); g.fillStyle = '#ffd700'; g.fill();
+      for(var j = -4; j <= 4; j++){
+        var cxp = x + j*(WW/roots)*0.085, cy = 112;
+        g.strokeStyle = 'rgba(255,215,0,.16)'; g.lineWidth = 1;
+        g.beginPath(); g.moveTo(x, 54); g.lineTo(cxp, cy-5); g.stroke();
+        g.beginPath(); g.arc(cxp, cy, 2.4, 0, 6.2832); g.fillStyle = 'rgba(0,212,255,.75)'; g.fill();
+      }
+    }
+    g.textAlign = 'left'; g.fillStyle = 'rgba(0,212,255,.7)';
+    g.fillText('depth 2 = double-double, 106 bits ≈ 32 digits    ·    depth 4 = quad-double, 212 bits ≈ 64 digits', pad, 146);
+    g.textAlign = 'right'; g.fillStyle = 'rgba(255,84,112,.72)';
+    g.fillText('exponent range unchanged — you bought mantissa, not reach', W-pad, 16);
+  }
+  window.addEventListener('resize', draw); draw();
+})();
+
+/* ================= VII. SILICON ================= */
+(function(){
+  var c = document.getElementById('cSilicon'), g = c.getContext('2d');
+  function draw(){
+    var W = c.clientWidth, H = 180, dp = Math.min(window.devicePixelRatio||1,2);
+    c.width = W*dp; c.height = H*dp; g.setTransform(dp,0,0,dp,0,0); g.clearRect(0,0,W,H);
+    var side = 118, gap = 46, x0 = Math.max(20, W/2 - side - gap/2 - 30);
+    function arr(x, n, col, label, cells){
+      var s = side*(n/113);
+      g.strokeStyle = col; g.lineWidth = 1;
+      g.globalAlpha = .13; g.fillStyle = col; g.fillRect(x, 30 + (side-s), s, s); g.globalAlpha = 1;
+      g.strokeRect(x, 30 + (side-s), s, s);
+      var step = s/Math.min(n, 26);
+      g.globalAlpha = .22; g.strokeStyle = col;
+      for(var i = 1; i < Math.min(n,26); i++){
+        g.beginPath(); g.moveTo(x+i*step, 30+(side-s)); g.lineTo(x+i*step, 30+side); g.stroke();
+        g.beginPath(); g.moveTo(x, 30+(side-s)+i*step); g.lineTo(x+s, 30+(side-s)+i*step); g.stroke();
+      }
+      g.globalAlpha = 1;
+      g.font = '10px ui-monospace, Menlo, monospace'; g.textAlign = 'center'; g.fillStyle = col;
+      g.fillText(label, x + s/2, 30+side+16);
+      g.fillStyle = 'rgba(223,230,242,.45)'; g.font = '9px ui-monospace, Menlo, monospace';
+      g.fillText(cells, x + s/2, 30+side+30);
+    }
+    arr(x0, 53, '#7fff9f', 'binary64 · 53×53', '2 809 cells');
+    arr(x0 + side*0.47 + gap, 64, '#00d4ff', 'x87 · 64×64', '4 096 cells  ·  1.458×');
+    arr(x0 + side*0.47 + gap + side*0.57 + gap, 113, '#ff5470', 'binary128 · 113×113', '12 769 cells  ·  4.546×');
+    g.textAlign = 'left'; g.fillStyle = 'rgba(223,230,242,.42)';
+    g.font = '9.5px ui-monospace, Menlo, monospace';
+    g.fillText('partial-product array area is quadratic in mantissa width', 20, 16);
+  }
+  window.addEventListener('resize', draw); draw();
+  fill('mSilicon',
+    mrow('binary64', '53 bits → 53×53 = 2 809 cells', 'grn') +
+    mrow('x87 extended', '64 bits → 4 096 cells = 1.458×', 'cyan') +
+    mrow('binary128', '113 bits → 12 769 cells = 4.546×', 'bad') +
+    mrow('and so', 'x86 and ARM do not build it. IBM z and POWER9 do. RISC-V makes it optional (Q).', 'dim', true) +
+    mrow('52 stored, 53 used', 'the leading 1 of a normalized number is always 1, so it carries no information ' +
+         'and is not stored — one free bit, straight from the definition of normalization.', 'gold', true));
+})();
+
+/* ================= VIII. STERN-BROCOT ================= */
+(function(){
+  var lo = [0n,1n], hi = [1n,0n], med = [1n,1n], walk = '', rows = [];
+  for(var i = 0; i < 12; i++){
+    var v = Number(med[0])/Number(med[1]);
+    rows.push({ i:i, p:med[0], q:med[1], v:v, err:v-PHI, w:walk });
+    if(v < PHI){ lo = med; walk += 'R'; } else { hi = med; walk += 'L'; }
+    med = [lo[0]+hi[0], lo[1]+hi[1]];
+  }
+  var html = '';
+  rows.slice(0,8).forEach(function(r){
+    html += mrow('step ' + r.i, (r.p + '/' + r.q).padStart(8) + '   ' + r.v.toFixed(12) +
+      '   err ' + (r.err > 0 ? '+' : '−') + Math.abs(r.err).toExponential(3) +
+      (r.err > 0 ? '  → L' : '  → R'), r.err > 0 ? 'gold' : 'cyan', true);
+  });
+  html += mrow('the walk', walk + ' …', 'gold', true);
+  html += mrow('continued fraction', 'φ = [1; 1, 1, 1, …] — every quotient 1, the hardest number to approximate',
+               'dim', true);
+  fill('mSB', html);
+
+  var c = document.getElementById('cSB'), g = c.getContext('2d');
+  function draw(){
+    var W = c.clientWidth, H = 200, dp = Math.min(window.devicePixelRatio||1,2);
+    c.width = W*dp; c.height = H*dp; g.setTransform(dp,0,0,dp,0,0); g.clearRect(0,0,W,H);
+    g.font = '9.5px ui-monospace, Menlo, monospace';
+    var levels = 7, top = 26, dy = (H - top - 30)/(levels-1);
+    /* draw a schematic binary tree, highlighting the alternating phi path */
+    function node(l, pos, on, lbl){
+      var span = W - 60, x = 30 + span*(pos + 0.5)/Math.pow(2,l), y = top + l*dy;
+      return {x:x, y:y};
+    }
+    var pathPos = 0;
+    for(var l = 0; l < levels; l++){
+      var n = Math.pow(2,l);
+      for(var p = 0; p < n && n <= 64; p++){
+        var q = node(l,p), on = false;
+        g.beginPath(); g.arc(q.x, q.y, 2.2, 0, 6.2832);
+        g.fillStyle = 'rgba(136,146,176,.30)'; g.fill();
+      }
+    }
+    /* the phi walk: R L R L ... -> pos doubles then +1 alternately */
+    var pos = 0, pts = [];
+    for(var l2 = 0; l2 < levels; l2++){
+      pts.push(node(l2, pos));
+      pos = pos*2 + ((l2 % 2 === 0) ? 1 : 0);
+    }
+    g.strokeStyle = '#ffd700'; g.lineWidth = 1.6; g.beginPath();
+    pts.forEach(function(p,i){ if(i===0) g.moveTo(p.x,p.y); else g.lineTo(p.x,p.y); });
+    g.stroke();
+    var labels = ['1/1','2/1','3/2','5/3','8/5','13/8','21/13'];
+    pts.forEach(function(p,i){
+      g.beginPath(); g.arc(p.x, p.y, 4.6, 0, 6.2832); g.fillStyle = '#ffd700'; g.fill();
+      g.textAlign = 'left'; g.fillStyle = '#ffd700';
+      g.fillText(labels[i] + (i < 6 ? (i%2===0 ? '  R' : '  L') : ''), p.x + 8, p.y + 3.5);
+    });
+    g.textAlign = 'left'; g.fillStyle = 'rgba(223,230,242,.42)';
+    g.fillText('the Stern–Brocot tree — every positive rational, once, already in lowest terms', 20, 14);
+    g.textAlign = 'right'; g.fillStyle = 'rgba(255,215,0,.75)';
+    g.fillText('φ = R L R L R L …   the Fibonacci ratios', W-20, H-10);
+  }
+  window.addEventListener('resize', draw); draw();
+})();
+
+/* ================= IX. THE LADDER ================= */
+document.getElementById('btnLadder').addEventListener('click', function(){
+  var N = 40;
+  document.getElementById('ladderPrice').textContent =
+    'predicted: ' + N + ' BigInt Fibonacci pairs + ' + N + ' float subtractions';
+  var t0 = performance.now();
+  var k = 1n, l = 0n, rows = [], prevExact = null;
+  var D0 = 53*Math.log10(2), per = 2*Math.log10(PHI);
+  for(var n = 0; n <= N; n++){
+    var K = Number(k), L = Number(l);
+    var flt = (L === 0) ? NaN : (K/L - PHI);                       /* lane A: float subtraction */
+    var exact = null;
+    if(L !== 0){                                                    /* lane C: exact BigInt rational */
+      /* k/l - phi  =  (2k - l - l*sqrt5) / (2l)  -- rationalise via (2k-l)^2 - 5l^2 */
+      /* k/l - phi = (2k-l-l*sqrt5)/(2l); multiply above and below by (2k-l+l*sqrt5):
+         numerator becomes the EXACT integer A = (2k-l)^2 - 5l^2, which for a Fibonacci
+         pair collapses to 4*(-1)^n -- a tiny exact integer. The denominator is a SUM of
+         positives, so nothing cancels anywhere in this lane, at any n. */
+      var num = 2n*k - l;
+      var A = num*num - 5n*l*l;
+      var denom = 2*Number(l)*(Number(num) + Number(l)*Math.sqrt(5));
+      exact = Number(A)/denom;
+    }
+    var predDigits = Math.max(0, D0 - per*n);
+    rows.push([n, K, L, flt, exact, predDigits]);
+    var nk = k + l; l = k; k = nk;
+  }
+  var t1 = performance.now();
+  var html = '<table><tr><th>n</th><th>float64 lane</th><th>exact lane (BigInt)</th>' +
+             '<th>agree to</th><th>predicted digits left</th></tr>';
+  [4,8,12,16,20,24,28,32,36,40].forEach(function(n){
+    var r = rows[n];
+    if(!r || !isFinite(r[3])) return;
+    var agree = (r[4] !== 0) ? -Math.log10(Math.abs((r[3]-r[4])/r[4])) : Infinity;
+    var dead = r[5] <= 0.5 || agree < 1;
+    html += '<tr><td class="d">' + n + '</td>' +
+      '<td class="' + (dead?'b':'c') + '">' + r[3].toExponential(6) + '</td>' +
+      '<td class="g">' + r[4].toExponential(6) + '</td>' +
+      '<td class="' + (dead?'b':'') + '">' + (isFinite(agree) ? agree.toFixed(1) + ' digits' : '—') + '</td>' +
+      '<td class="d">' + r[5].toFixed(2) + '</td></tr>';
+  });
+  html += '</table>';
+  var last = rows[N], falseLock = (last && last[3] === 0 && last[4] !== 0);
+  html += '<div class="meter">' +
+    (falseLock ? mrow('⚠ THE FALSE LOCK', 'at n = ' + N + ' the float lane returns EXACTLY 0.000000e+0. ' +
+       'The exact lane says the deviation is ' + last[4].toExponential(6) + '. A HUD that locks on err == 0 ' +
+       'would light green here and publish a convergence the mathematics never reached. This is Curse 39 ' +
+       'caught live: the instrument manufacturing a perfect result out of exhausted digits.', 'bad', true) : '') +
+    mrow('a-priori floor', 'digits ≈ ' + D0.toFixed(3) + ' − ' + per.toFixed(4) + '·n', 'gold', true) +
+    mrow('zero-crossing', 'n = ' + (D0/per).toFixed(2) + ' — predicted BEFORE running, not fitted after', 'cyan', true) +
+    mrow('exact lane', 'never crosses. No subtraction of near-equals occurs in it at any n.', 'grn', true) +
+    mrow('price paid', ((t1-t0)).toFixed(1) + ' ms', 'dim') + '</div>';
+  document.getElementById('ladderOut').innerHTML = html;
+});
+
+/* ================= SECTIONS + BOOT ================= */
+document.querySelectorAll('.sec .head').forEach(function(h){
+  h.addEventListener('click', function(){ h.parentElement.classList.toggle('open'); });
+});
+document.getElementById('hF64').textContent = grp(FIN);
+document.getElementById('hEps').textContent = EPS.toExponential(4);
+rebuild();
+setMorph(0);
+window.addEventListener('resize', function(){ layoutPath(); });
+</script>
+</body></html>

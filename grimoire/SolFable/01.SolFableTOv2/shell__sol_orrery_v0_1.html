@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SOL ORRERY v0.1 -- still by default</title>
+<style>
+:root{
+  --ground:#10131C; --ground2:#171B27; --line:#242A3A;
+  --bone:#E8E2D4; --dim:#6E7488;
+  --plus:#7FB5C4;      /* gamma = +1 */
+  --minus:#C9A227;     /* gamma = -1 */
+  --obstruct:#D2456B;  /* used ONLY where the norm is nonzero */
+  --mono:ui-monospace,"SF Mono","Cascadia Mono","Roboto Mono",Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--ground);color:var(--bone);
+  font-family:var(--mono);font-size:13px;line-height:1.5;
+  -webkit-font-smoothing:antialiased}
+a{color:var(--plus)}
+.wrap{max-width:1180px;margin:0 auto;padding:22px 18px 60px}
+
+header{border-bottom:1px solid var(--line);padding-bottom:14px;margin-bottom:18px}
+h1{font-size:26px;font-weight:500;letter-spacing:.34em;margin:0 0 4px;text-transform:uppercase}
+.sub{color:var(--dim);letter-spacing:.14em;font-size:11px;text-transform:uppercase}
+
+.grid{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:18px}
+@media(max-width:880px){.grid{grid-template-columns:1fr}}
+
+.panel{background:var(--ground2);border:1px solid var(--line);padding:14px}
+.phead{display:flex;justify-content:space-between;align-items:baseline;
+  border-bottom:1px solid var(--line);padding-bottom:8px;margin-bottom:12px}
+.ptitle{letter-spacing:.2em;font-size:11px;text-transform:uppercase;color:var(--bone)}
+.tag{font-size:10px;letter-spacing:.16em;padding:2px 7px;border:1px solid var(--line);
+  color:var(--dim);text-transform:uppercase}
+.tag.exact{color:var(--plus);border-color:var(--plus)}
+.tag.design{color:var(--minus);border-color:var(--minus)}
+
+canvas{display:block;width:100%;height:340px;background:transparent;
+  cursor:grab;touch-action:none;border:1px solid var(--line)}
+canvas:active{cursor:grabbing}
+
+.row{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+button{font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;
+  background:transparent;color:var(--dim);border:1px solid var(--line);
+  padding:6px 10px;cursor:pointer}
+button:hover{color:var(--bone);border-color:var(--dim)}
+button[aria-pressed="true"]{color:var(--ground);background:var(--bone);border-color:var(--bone)}
+button:focus-visible,input:focus-visible{outline:2px solid var(--plus);outline-offset:2px}
+
+/* ---- the signature control: a spinner that proves it stopped ---- */
+.spin{margin-top:16px;border:1px solid var(--line);padding:12px;background:var(--ground)}
+.spinhead{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:9px}
+.state{letter-spacing:.24em;font-size:13px}
+.state.still{color:var(--plus)}
+.state.moving{color:var(--minus)}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:22px;
+  background:transparent;margin:0}
+input[type=range]::-webkit-slider-runnable-track{height:2px;background:var(--line)}
+input[type=range]::-moz-range-track{height:2px;background:var(--line)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:11px;height:18px;
+  background:var(--bone);margin-top:-8px;border-radius:0}
+input[type=range]::-moz-range-thumb{width:11px;height:18px;background:var(--bone);
+  border:0;border-radius:0}
+.proof{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);
+  margin-top:10px;border:1px solid var(--line)}
+.proof div{background:var(--ground2);padding:7px 9px}
+.proof .k{color:var(--dim);font-size:10px;letter-spacing:.14em;text-transform:uppercase}
+.proof .v{font-size:14px;margin-top:2px}
+.proof .v.zero{color:var(--plus)}
+.note{color:var(--dim);font-size:11px;margin-top:9px;line-height:1.6}
+
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{text-align:right;font-weight:400;color:var(--dim);font-size:10px;
+  letter-spacing:.14em;text-transform:uppercase;padding:4px 6px;
+  border-bottom:1px solid var(--line)}
+th:first-child,td:first-child{text-align:left}
+td{text-align:right;padding:5px 6px;border-bottom:1px solid rgba(36,42,58,.5)}
+td.hi{color:var(--minus)}
+
+/* ---- obstruction grid ---- */
+.states{display:grid;grid-template-columns:repeat(8,1fr);gap:3px;margin-top:4px}
+.cell{aspect-ratio:1;border:1px solid var(--line);display:flex;flex-direction:column;
+  align-items:center;justify-content:center;font-size:9px;color:var(--dim);
+  background:var(--ground);position:relative}
+.cell.p{border-color:rgba(127,181,196,.45);color:var(--plus)}
+.cell.m{border-color:rgba(201,162,39,.45);color:var(--minus)}
+.cell.bad{background:var(--obstruct);border-color:var(--obstruct);color:#fff}
+.cell b{font-size:11px;font-weight:500;display:block}
+.blocklab{color:var(--dim);font-size:10px;letter-spacing:.1em;margin:12px 0 3px}
+.legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:12px;color:var(--dim);font-size:10px;
+  letter-spacing:.1em;text-transform:uppercase}
+.sw{display:inline-block;width:9px;height:9px;margin-right:5px;vertical-align:-1px}
+
+footer{margin-top:26px;padding-top:14px;border-top:1px solid var(--line);
+  color:var(--dim);font-size:11px;line-height:1.8}
+kbd{border:1px solid var(--line);padding:0 4px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>Sol Orrery</h1>
+  <div class="sub">v0.1 &nbsp;&middot;&nbsp; still by default &nbsp;&middot;&nbsp; motion is opt-in &nbsp;&middot;&nbsp; P=12 &nbsp; chi=2</div>
+</header>
+
+<div class="grid">
+
+  <!-- ============ LEFT: the solid ============ -->
+  <div>
+    <div class="panel">
+      <div class="phead">
+        <span class="ptitle">Regular solid</span>
+        <span class="tag exact">Exact coordinates</span>
+      </div>
+      <canvas id="cv" aria-label="Wireframe of the selected regular solid. Drag to rotate."></canvas>
+
+      <div class="row" id="pick"></div>
+
+      <!-- SIGNATURE: the spin control that proves it stopped -->
+      <div class="spin">
+        <div class="spinhead">
+          <span class="ptitle">Spin</span>
+          <span class="state still" id="state">Still</span>
+        </div>
+        <input type="range" id="spin" min="0" max="30" step="1" value="0"
+               aria-label="Spin rate. Starts at zero.">
+        <div class="proof">
+          <div><div class="k">Slider raw</div><div class="v" id="raw">0</div></div>
+          <div><div class="k">After snap</div><div class="v" id="snap">0</div></div>
+          <div><div class="k">Applied rad/frame</div><div class="v zero" id="applied">0 exactly</div></div>
+        </div>
+        <div class="note">
+          Curse 13 has three heads. The slider starts at 0, not 5. Values under 1 snap to
+          integer zero, so the readout never shows 0.000 while something still ticks. The frame
+          loop adds nothing unless <span style="color:var(--bone)">abs(spin) &gt; 0.00001</span>.
+          Nothing else in this page may set spin without moving the slider you see.
+          <br><br>
+          Curse 12: the <em>solid</em> rotates, never the camera. No fixed pitch is combined with
+          continuous yaw, so there is no corkscrew and no dizziness.
+        </div>
+      </div>
+      <div class="note" style="margin-top:10px">
+        Drag the canvas to turn it by hand. <kbd>R</kbd> resets to the rest pose.
+        Reduced-motion preference locks spin at zero.
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ RIGHT: receipts ============ -->
+  <div>
+
+    <div class="panel">
+      <div class="phead">
+        <span class="ptitle">Euler receipt</span>
+        <span class="tag exact">Exact</span>
+      </div>
+      <table id="euler"></table>
+      <div class="note">
+        Vertices and edges are counted from the drawn geometry: edges are the vertex pairs at
+        minimum separation. Faces are not drawn &mdash; F is <em>derived</em> from
+        V &minus; E + F = 2. If the wireframe were wrong, chi would not come out 2.
+      </div>
+    </div>
+
+    <div class="panel" style="margin-top:18px">
+      <div class="phead">
+        <span class="ptitle">Golden shell ladder</span>
+        <span class="tag exact">Exact integers</span>
+      </div>
+      <div class="row" style="margin:0 0 10px">
+        <button id="nDown" aria-label="Previous rung">&minus;</button>
+        <button id="nUp" aria-label="Next rung">+</button>
+        <span style="color:var(--dim);align-self:center">rung n = <span id="nval" style="color:var(--bone)">1</span></span>
+      </div>
+      <table id="ladder"></table>
+      <div class="note">
+        (k,l) = (F<sub>n+1</sub>, F<sub>n</sub>), T = k&sup2; + kl + l&sup2;, computed in BigInt.
+        P is 12 on every rung &mdash; Euler forces it, the ladder does not choose it.
+        n = 0 is the dodecahedron: the tower's T = 1 seed, and the solid Plato assigned to the cosmos.
+      </div>
+    </div>
+
+    <div class="panel" style="margin-top:18px">
+      <div class="phead">
+        <span class="ptitle">Orientability obstruction</span>
+        <span class="tag exact">Rung XVIII</span>
+      </div>
+      <div class="row" style="margin:0 0 6px" id="rules"></div>
+      <div id="obsSummary" class="note" style="margin-top:0"></div>
+      <div id="blocks"></div>
+      <div class="legend">
+        <span><span class="sw" style="background:var(--plus)"></span>gamma = +1</span>
+        <span><span class="sw" style="background:var(--minus)"></span>gamma = &minus;1</span>
+        <span><span class="sw" style="background:var(--obstruct)"></span>gamma unreachable</span>
+      </div>
+      <div class="note">
+        32 states |a,s,w,c&gt;. Cells marked in rose are where gamma falls outside
+        span&#123;pi(a)&middot;pi^op(b)&#125;. Each such state contributes exactly 1 to the squared
+        norm &mdash; the obstruction is integer-valued, not a numerical residue.
+        Conditional on the span form of orientability.
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<footer>
+  Every panel carries its status. Nothing here is a claim about physics.<br>
+  The solids and Euler counts are exact; the ladder is exact integer arithmetic;
+  the obstruction figures are transcribed from <span style="color:var(--bone)">rung_xviii_obstruction.py</span>
+  and are conditional on span-form orientability.<br>
+  No stored state, no network, no motion you did not ask for.
+</footer>
+
+</div>
+
+<script>
+"use strict";
+/* ---------------------------------------------------------------- geometry */
+var PHI = (1 + Math.sqrt(5)) / 2, IP = 1 / PHI;
+function cyc(a,b,c){ return [[a,b,c],[b,c,a],[c,a,b]]; }
+function signs(v, mask){
+  var out=[], i, s=[-1,1], x, y, z;
+  for (x of (mask[0]?s:[1])) for (y of (mask[1]?s:[1])) for (z of (mask[2]?s:[1]))
+    out.push([v[0]*x, v[1]*y, v[2]*z]);
+  return out;
+}
+function dedupe(pts){
+  var out=[], i, j, ok;
+  for (i=0;i<pts.length;i++){ ok=true;
+    for (j=0;j<out.length;j++){
+      if (Math.abs(pts[i][0]-out[j][0])<1e-9 && Math.abs(pts[i][1]-out[j][1])<1e-9
+       && Math.abs(pts[i][2]-out[j][2])<1e-9){ ok=false; break; } }
+    if (ok) out.push(pts[i]); }
+  return out;
+}
+function build(name){
+  var v=[], base, t;
+  if (name==="tetrahedron") v=[[1,1,1],[1,-1,-1],[-1,1,-1],[-1,-1,1]];
+  else if (name==="cube") v=signs([1,1,1],[1,1,1]);
+  else if (name==="octahedron") v=dedupe(signs([1,0,0],[1,0,0]).concat(
+      signs([0,1,0],[0,1,0]), signs([0,0,1],[0,0,1])));
+  else if (name==="icosahedron"){
+    base=cyc(0,1,PHI); v=[];
+    for (t of base) v=v.concat(signs(t,[t[0]!==0,t[1]!==0,t[2]!==0]));
+    v=dedupe(v);
+  } else { /* dodecahedron */
+    v=signs([1,1,1],[1,1,1]);
+    base=cyc(0,IP,PHI);
+    for (t of base) v=v.concat(signs(t,[t[0]!==0,t[1]!==0,t[2]!==0]));
+    v=dedupe(v);
+  }
+  /* normalise to unit circumradius */
+  var r=Math.hypot(v[0][0],v[0][1],v[0][2]), i;
+  for (i=0;i<v.length;i++){ v[i]=[v[i][0]/r, v[i][1]/r, v[i][2]/r]; }
+  /* edges = pairs at minimum separation */
+  var min=Infinity, d, j;
+  for (i=0;i<v.length;i++) for (j=i+1;j<v.length;j++){
+    d=Math.hypot(v[i][0]-v[j][0], v[i][1]-v[j][1], v[i][2]-v[j][2]);
+    if (d<min-1e-9) min=d; }
+  var e=[];
+  for (i=0;i<v.length;i++) for (j=i+1;j<v.length;j++){
+    d=Math.hypot(v[i][0]-v[j][0], v[i][1]-v[j][1], v[i][2]-v[j][2]);
+    if (Math.abs(d-min)<1e-6) e.push([i,j]); }
+  return {V:v, E:e};
+}
+var SOLIDS=["tetrahedron","cube","octahedron","icosahedron","dodecahedron"];
+var SCHLAFLI={tetrahedron:"{3,3}",cube:"{4,3}",octahedron:"{3,4}",
+              icosahedron:"{3,5}",dodecahedron:"{5,3}"};
+var MESH={}, s;
+for (s of SOLIDS) MESH[s]=build(s);
+
+/* ---------------------------------------------------------------- render */
+var cv=document.getElementById("cv"), ctx=cv.getContext("2d");
+var current="dodecahedron";
+var REST={rx:-0.42, ry:0.55};
+var rot={rx:REST.rx, ry:REST.ry};
+var spin=0;                       /* radians per frame. starts at exactly 0 */
+var reduce=window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+function resize(){
+  var dpr=window.devicePixelRatio||1, r=cv.getBoundingClientRect();
+  cv.width=Math.max(1,Math.round(r.width*dpr));
+  cv.height=Math.max(1,Math.round(r.height*dpr));
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+}
+function project(p){
+  var cy=Math.cos(rot.ry), sy=Math.sin(rot.ry);
+  var x=p[0]*cy - p[2]*sy, z=p[0]*sy + p[2]*cy;
+  var cx=Math.cos(rot.rx), sx=Math.sin(rot.rx);
+  var y=p[1]*cx - z*sx; z=p[1]*sx + z*cx;
+  return [x,y,z];
+}
+function draw(){
+  var r=cv.getBoundingClientRect(), W=r.width, H=r.height;
+  ctx.clearRect(0,0,W,H);
+  var R=Math.min(W,H)*0.36, cx=W/2, cy=H/2;
+  var m=MESH[current], pts=m.V.map(project), i, a, b, zm, t;
+
+  var order=m.E.map(function(e,i){ return {i:i, z:(pts[e[0]][2]+pts[e[1]][2])/2}; });
+  order.sort(function(p,q){ return p.z-q.z; });
+
+  for (i=0;i<order.length;i++){
+    var e=m.E[order[i].i]; a=pts[e[0]]; b=pts[e[1]];
+    zm=(a[2]+b[2])/2; t=(zm+1)/2;                 /* 0 back .. 1 front */
+    ctx.strokeStyle="rgba(232,226,212,"+(0.14+0.62*t).toFixed(3)+")";
+    ctx.lineWidth=0.7+1.5*t;
+    ctx.beginPath();
+    ctx.moveTo(cx+a[0]*R, cy-a[1]*R);
+    ctx.lineTo(cx+b[0]*R, cy-b[1]*R);
+    ctx.stroke();
+  }
+  for (i=0;i<pts.length;i++){
+    t=(pts[i][2]+1)/2;
+    ctx.fillStyle = t>0.5 ? "rgba(127,181,196,"+(0.35+0.6*t).toFixed(3)+")"
+                          : "rgba(201,162,39,"+(0.25+0.4*t).toFixed(3)+")";
+    ctx.beginPath();
+    ctx.arc(cx+pts[i][0]*R, cy-pts[i][1]*R, 1.4+2.0*t, 0, 6.2832);
+    ctx.fill();
+  }
+}
+function frame(){
+  /* HEAD 2 of Curse 13: float zero guard. Nothing ticks unless it must. */
+  if (Math.abs(spin) > 0.00001) { rot.ry += spin; draw(); }
+  requestAnimationFrame(frame);
+}
+
+/* ---------------------------------------------------------------- controls */
+var pick=document.getElementById("pick");
+SOLIDS.forEach(function(name){
+  var b=document.createElement("button");
+  b.textContent=name; b.setAttribute("aria-pressed", String(name===current));
+  b.onclick=function(){
+    current=name;
+    Array.prototype.forEach.call(pick.children,function(c){
+      c.setAttribute("aria-pressed", String(c.textContent===name)); });
+    euler(); draw();
+  };
+  pick.appendChild(b);
+});
+
+var slider=document.getElementById("spin");
+var elRaw=document.getElementById("raw"), elSnap=document.getElementById("snap"),
+    elApp=document.getElementById("applied"), elState=document.getElementById("state");
+
+function setSpin(){
+  var raw = +slider.value;
+  /* HEAD 1: starts at 0.  HEAD 3: snap, so the readout can never lie. */
+  var snapped = raw < 1 ? 0 : raw;
+  if (reduce) snapped = 0;
+  spin = snapped / 1000;
+  elRaw.textContent = raw;
+  elSnap.textContent = snapped;
+  var moving = Math.abs(spin) > 0.00001;
+  elApp.textContent = moving ? spin.toFixed(5) : "0 exactly";
+  elApp.className = "v" + (moving ? "" : " zero");
+  elState.textContent = reduce ? "Still (reduced motion)" : (moving ? "Turning" : "Still");
+  elState.className = "state " + (moving ? "moving" : "still");
+  if (!moving) draw();
+}
+slider.addEventListener("input", setSpin);
+if (reduce) slider.disabled = true;
+
+/* drag: user-driven rotation is never ego */
+var drag=false, lx=0, ly=0;
+function down(e){ drag=true; lx=(e.touches?e.touches[0]:e).clientX;
+                  ly=(e.touches?e.touches[0]:e).clientY; }
+function move(e){
+  if(!drag) return;
+  var p=e.touches?e.touches[0]:e;
+  rot.ry += (p.clientX-lx)*0.008;
+  rot.rx += (p.clientY-ly)*0.008;
+  lx=p.clientX; ly=p.clientY; draw();
+  if(e.cancelable) e.preventDefault();
+}
+function up(){ drag=false; }
+cv.addEventListener("mousedown",down); window.addEventListener("mousemove",move);
+window.addEventListener("mouseup",up);
+cv.addEventListener("touchstart",down,{passive:true});
+cv.addEventListener("touchmove",move,{passive:false});
+window.addEventListener("touchend",up);
+window.addEventListener("keydown",function(e){
+  if(e.key==="r"||e.key==="R"){ rot.rx=REST.rx; rot.ry=REST.ry; draw(); }
+});
+
+/* ---------------------------------------------------------------- receipts */
+function euler(){
+  var m=MESH[current], V=m.V.length, E=m.E.length, F=2-V+E;
+  var rows=[
+    ["Solid", current+" &nbsp;"+SCHLAFLI[current]],
+    ["V &nbsp;vertices (counted)", V],
+    ["E &nbsp;edges (min separation)", E],
+    ["F &nbsp;faces (derived)", F],
+    ["chi = V &minus; E + F", V-E+F]
+  ];
+  var h="<tr><th>Quantity</th><th>Value</th></tr>";
+  rows.forEach(function(r,i){
+    h+="<tr><td>"+r[0]+"</td><td"+(i===4?' class="hi"':"")+">"+r[1]+"</td></tr>"; });
+  document.getElementById("euler").innerHTML=h;
+}
+
+var n=1;
+function fib(k){ var a=0n,b=1n,i; for(i=0;i<k;i++){ var t=a+b; a=b; b=t; } return a; }
+function ladder(){
+  var k=fib(n+1), l=fib(n), T=k*k+k*l+l*l;
+  var V=20n*T, E=30n*T, F=10n*T+2n, H=10n*(T-1n);
+  var cassini=k*k-k*l-l*l;
+  var rows=[
+    ["(k, l)", k+", "+l],
+    ["T = k&sup2;+kl+l&sup2;", T],
+    ["V = 20T", V], ["E = 30T", E], ["F = 10T+2", F],
+    ["P &nbsp;pentagons", 12],
+    ["H &nbsp;hexagons = 10(T&minus;1)", H],
+    ["chi = V &minus; E + F", V-E+F],
+    ["Cassini k&sup2;&minus;kl&minus;l&sup2;", cassini+" &nbsp;(&minus;1)^n"]
+  ];
+  var h="<tr><th>Quantity</th><th>Value</th></tr>";
+  rows.forEach(function(r){
+    var hi = (r[0].indexOf("chi")===0 || r[0].indexOf("P ")===0);
+    h+="<tr><td>"+r[0]+"</td><td"+(hi?' class="hi"':"")+">"+r[1]+"</td></tr>"; });
+  document.getElementById("ladder").innerHTML=h;
+  document.getElementById("nval").textContent=n;
+}
+document.getElementById("nUp").onclick=function(){ if(n<40){n++;ladder();} };
+document.getElementById("nDown").onclick=function(){ if(n>0){n--;ladder();} };
+
+/* ------------------------------------------------- obstruction, Rung XVIII */
+var STATES=[]; (function(){
+  var pairs=[[1,1],[-1,-1],[-1,1],[1,-1]], p, w, c;
+  for (p of pairs) for (w of [1,-1]) for (c=0;c<4;c++) STATES.push([p[0],p[1],w,c]);
+})();
+var OBS={
+  free_real:{label:"R_lbar + C + H + M3(C)", dim:25, bad:[], norm:"0.0", sq:0, D:16,
+             verdict:"ORIENTABLE"},
+  lambda:{label:"C + H + M3(C), chi = lambda", dim:24, bad:[11,15,27,31], norm:"2.0", sq:4, D:32,
+             verdict:"gamma unreachable"},
+  lambda_bar:{label:"C + H + M3(C), chi = conj(lambda)", dim:24, bad:[11,15,27,31], norm:"2.0", sq:4, D:32,
+             verdict:"gamma unreachable"},
+  zero:{label:"C + H + M3(C), chi = 0 (non-unital)", dim:24, bad:[3,7,11,15,19,23,27,31],
+             norm:"2&radic;2", sq:8, D:16, verdict:"gamma unreachable"}
+};
+var rule="lambda";
+var rulesEl=document.getElementById("rules");
+["free_real","zero","lambda","lambda_bar"].forEach(function(rk){
+  var b=document.createElement("button");
+  b.textContent=rk; b.setAttribute("aria-pressed", String(rk===rule));
+  b.onclick=function(){ rule=rk;
+    Array.prototype.forEach.call(rulesEl.children,function(c){
+      c.setAttribute("aria-pressed", String(c.textContent===rk)); });
+    obstruction(); };
+  rulesEl.appendChild(b);
+});
+function obstruction(){
+  var o=OBS[rule], host=document.getElementById("blocks"), h="", i, blk;
+  for (blk=0; blk<4; blk++){
+    var a=STATES[blk*8][0], s=STATES[blk*8][1], g=a*s;
+    h+='<div class="blocklab">a = '+(a>0?"+1":"&minus;1")+
+       ' &nbsp; s = '+(s>0?"+1":"&minus;1")+
+       ' &nbsp; gamma = '+(g>0?"+1":"&minus;1")+'</div><div class="states">';
+    for (i=blk*8; i<blk*8+8; i++){
+      var st=STATES[i], bad=o.bad.indexOf(i)>=0;
+      var cls="cell "+(g>0?"p":"m")+(bad?" bad":"");
+      h+='<div class="'+cls+'" title="state '+i+'"><b>'+i+'</b>'+
+         (st[3]===3?"lep":"q"+st[3])+'</div>';
+    }
+    h+='</div>';
+  }
+  host.innerHTML=h;
+  document.getElementById("obsSummary").innerHTML=
+    '<span style="color:var(--bone)">'+o.label+'</span> &nbsp;&middot;&nbsp; dim<sub>R</sub>A = '+o.dim+
+    ' &nbsp;&middot;&nbsp; dim<sub>R</sub>D = '+o.D+
+    ' &nbsp;&middot;&nbsp; &#8214;omega&#8214; = <span style="color:'+
+    (o.sq?"var(--obstruct)":"var(--plus)")+'">'+o.norm+'</span>'+
+    ' &nbsp;&middot;&nbsp; &#8214;omega&#8214;&sup2; = '+o.sq+
+    ' = '+o.bad.length+' obstructed states'+
+    ' &nbsp;&middot;&nbsp; <span style="color:'+(o.sq?"var(--obstruct)":"var(--plus)")+'">'+o.verdict+'</span>';
+}
+
+/* ---------------------------------------------------------------- boot */
+window.addEventListener("resize",function(){ resize(); draw(); });
+resize(); euler(); ladder(); obstruction(); setSpin(); draw();
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

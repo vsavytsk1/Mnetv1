@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#D9E0DE">
+<title>Archaia Korinthos ⇄ Korinthos — local bus</title>
+<style>
+  :root{
+    --stock:#D9E0DE;      /* limestone ticket stock — page */
+    --card:#F2F4F1;       /* card surface */
+    --ink:#14262E;        /* ink */
+    --ink-soft:#5C7078;
+    --patina:#1E6B58;     /* verdigris — live / next departure */
+    --amber:#B07A12;      /* no service warning */
+    --rule:#AFBDBA;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Roboto Mono",monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:var(--stock);
+    color:var(--ink);
+    font-family:var(--sans);
+    -webkit-text-size-adjust:100%;
+    padding:0 16px calc(48px + env(safe-area-inset-bottom));
+    max-width:560px;margin:0 auto;
+    line-height:1.45;
+  }
+  a{color:inherit}
+  :focus-visible{outline:2px solid var(--patina);outline-offset:3px;border-radius:2px}
+
+  /* ── masthead ─────────────────────────────── */
+  header{padding:calc(28px + env(safe-area-inset-top)) 0 20px}
+  .eyebrow{
+    font-family:var(--mono);font-size:11px;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--ink-soft);margin:0 0 10px;
+  }
+  h1{
+    margin:0;font-size:clamp(30px,9.5vw,42px);line-height:.94;
+    font-weight:800;letter-spacing:-.035em;text-transform:uppercase;
+  }
+  h1 .swap{color:var(--patina);font-weight:600}
+  .sub{margin:12px 0 0;font-size:13.5px;color:var(--ink-soft);max-width:38ch}
+
+  /* ── signature: live departure panel ──────── */
+  .panel{
+    margin:20px 0 8px;padding:18px 18px 16px;
+    background:var(--ink);color:var(--card);border-radius:3px;
+    position:relative;overflow:hidden;
+  }
+  .panel::after{ /* roll-sign seam */
+    content:"";position:absolute;inset:0;pointer-events:none;
+    background:repeating-linear-gradient(to bottom,rgba(255,255,255,.045) 0 1px,transparent 1px 4px);
+  }
+  .panel-head{
+    display:flex;justify-content:space-between;align-items:baseline;gap:12px;
+    font-family:var(--mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;
+    color:#8FA9A2;margin-bottom:14px;
+  }
+  .dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--patina);
+       margin-right:6px;vertical-align:middle}
+  @media (prefers-reduced-motion:no-preference){
+    .dot{animation:pulse 2.4s ease-in-out infinite}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+  }
+  .clock{
+    font-family:var(--mono);font-size:clamp(46px,15vw,64px);line-height:1;
+    font-weight:600;letter-spacing:-.02em;font-variant-numeric:tabular-nums;
+  }
+  .countdown{font-family:var(--mono);font-size:13px;color:#9FC4B8;margin-top:8px;letter-spacing:.02em}
+  .panel .route{font-size:14px;margin-top:12px;color:#C6D3CF}
+  .panel.dead .clock{font-size:clamp(22px,6.5vw,28px);letter-spacing:-.01em;color:#F0C874}
+  .panel.dead .dot{background:var(--amber);animation:none}
+
+  .switch{display:flex;gap:6px;margin:0 0 26px}
+  .switch button{
+    flex:1;font-family:var(--sans);font-size:12.5px;font-weight:600;
+    padding:11px 8px;border:1px solid var(--rule);background:transparent;
+    color:var(--ink-soft);border-radius:2px;cursor:pointer;line-height:1.25;
+  }
+  .switch button[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--card)}
+
+  /* ── ticket stubs ─────────────────────────── */
+  h2{
+    font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--ink-soft);font-weight:500;margin:34px 0 12px;
+  }
+  .stub{
+    position:relative;background:var(--card);border-radius:3px;
+    padding:22px 16px 16px;margin-bottom:14px;
+  }
+  .stub::before{ /* perforation */
+    content:"";position:absolute;top:-1px;left:0;right:0;height:10px;
+    background:radial-gradient(circle at 7px 0,var(--stock) 5px,transparent 5.5px);
+    background-size:14px 10px;
+  }
+  .stub h3{
+    margin:0 0 2px;font-size:15px;font-weight:700;letter-spacing:-.01em;
+  }
+  .stub .greek{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.04em;margin:0 0 14px}
+  .times{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+  @media (min-width:420px){.times{grid-template-columns:repeat(4,1fr)}}
+  .chip{
+    border:1px solid var(--rule);border-radius:2px;padding:9px 4px 7px;text-align:center;
+    background:#fff;
+  }
+  .chip .t{font-family:var(--mono);font-size:17px;font-weight:600;letter-spacing:-.02em;
+           font-variant-numeric:tabular-nums;display:block}
+  .chip .d{font-family:var(--mono);font-size:9.5px;letter-spacing:.06em;color:var(--ink-soft);
+           display:block;margin-top:3px}
+  .chip.gone{opacity:.38}
+  .chip.gone .t{text-decoration:line-through;text-decoration-thickness:1px}
+  .chip.next{border-color:var(--patina);box-shadow:inset 0 0 0 1px var(--patina)}
+  .chip.next .d{color:var(--patina)}
+  .legend{margin:14px 0 0;font-size:11.5px;color:var(--ink-soft);line-height:1.5}
+
+  /* ── maps ─────────────────────────────────── */
+  .maps{display:grid;gap:7px}
+  .maps a{
+    display:flex;justify-content:space-between;align-items:center;gap:10px;
+    background:var(--card);border-radius:3px;padding:14px 15px;
+    text-decoration:none;font-size:14px;font-weight:600;
+  }
+  .maps a small{
+    display:block;font-weight:400;font-size:11.5px;color:var(--ink-soft);
+    margin-top:2px;font-family:var(--mono);letter-spacing:.02em;
+  }
+  .maps a .go{font-family:var(--mono);font-size:16px;color:var(--patina);flex:none}
+
+  /* ── notes ────────────────────────────────── */
+  ul.notes{list-style:none;padding:0;margin:0}
+  ul.notes li{
+    background:var(--card);border-radius:3px;padding:13px 15px;margin-bottom:7px;
+    font-size:13.5px;border-left:3px solid var(--rule);
+  }
+  ul.notes li b{display:block;font-size:12px;letter-spacing:.02em;margin-bottom:3px}
+  ul.notes li.warn{border-left-color:var(--amber)}
+  ul.notes li.warn b{color:var(--amber)}
+
+  .stale{
+    display:none;background:#F6E9CB;border-left:3px solid var(--amber);
+    padding:13px 15px;border-radius:3px;font-size:13px;margin:20px 0 0;
+  }
+  .stale.on{display:block}
+
+  footer{margin-top:34px;font-family:var(--mono);font-size:10.5px;letter-spacing:.05em;
+         color:var(--ink-soft);line-height:1.7;text-transform:uppercase}
+</style>
+</head>
+<body>
+
+<header>
+  <p class="eyebrow">ΚΤΕΛ Κορινθίας · τοπικό δρομολόγιο</p>
+  <h1>Archaia<br>Korinthos <span class="swap">⇄</span><br>Korinthos</h1>
+  <p class="sub">The village bus. About 15 minutes each way. Summer timetable, valid 1 July – 10 September 2026.</p>
+</header>
+
+<!-- live panel -->
+<section class="panel" id="panel" aria-live="polite">
+  <div class="panel-head">
+    <span><span class="dot"></span><span id="panelLabel">Next bus</span></span>
+    <span id="panelDay">—</span>
+  </div>
+  <div class="clock" id="clock">—</div>
+  <div class="countdown" id="countdown"></div>
+  <div class="route" id="routeLine"></div>
+</section>
+
+<div class="switch" role="group" aria-label="Choose direction">
+  <button id="btnA" aria-pressed="true">Korinthos → Archaia</button>
+  <button id="btnB" aria-pressed="false">Archaia → Korinthos</button>
+</div>
+
+<div class="stale" id="stale">
+  <b>Heads up —</b> it's past 10 September, so the winter timetable is now in force and these times may have changed. Call 27410 75410 (ext. 1) to check.
+</div>
+
+<h2>Full timetable</h2>
+
+<div class="stub">
+  <h3>Korinthos → Archaia Korinthos</h3>
+  <p class="greek">ΚΟΡΙΝΘΟΣ – ΑΡΧΑΙΑ ΚΟΡΙΝΘΟΣ</p>
+  <div class="times" id="gridA"></div>
+</div>
+
+<div class="stub">
+  <h3>Archaia Korinthos → Korinthos</h3>
+  <p class="greek">ΑΡΧΑΙΑ ΚΟΡΙΝΘΟΣ – ΚΟΡΙΝΘΟΣ</p>
+  <div class="times" id="gridB"></div>
+  <p class="legend">
+    <b>ΔΕΥ–ΠΑΡ</b> Mon–Fri &nbsp;·&nbsp; <b>ΔΕΥ–ΣΑΒ</b> Mon–Sat<br>
+    No <b>Κυριακή</b> (Sunday) service in either direction.
+  </p>
+</div>
+
+<h2>Open in Maps</h2>
+<div class="maps">
+  <a href="https://www.google.com/maps/search/?api=1&query=37.9388688%2C22.9391950&query_place_id=ChIJCRdTED8UoBQRQSpaANQEjcs">
+    <span>KTEL terminal, Korinthos<small>Dimokratias 4 · 37.93887, 22.93920</small></span><span class="go">↗</span>
+  </a>
+  <a href="https://www.google.com/maps/search/?api=1&query=37.9057436%2C22.8778733&query_place_id=ChIJj3i6MhQRoBQRw8nqw5X139s">
+    <span>Ancient Corinth site<small>Argous 105 · 37.90574, 22.87787</small></span><span class="go">↗</span>
+  </a>
+  <a href="https://www.google.com/maps/dir/?api=1&origin=37.9388688%2C22.9391950&destination=37.9057436%2C22.8778733&travelmode=transit">
+    <span>Directions: town → ruins<small>travelmode=transit</small></span><span class="go">↗</span>
+  </a>
+  <a href="https://www.google.com/maps/dir/?api=1&origin=37.9057436%2C22.8778733&destination=37.9388688%2C22.9391950&travelmode=driving">
+    <span>Directions: ruins → town<small>travelmode=driving · taxi fallback</small></span><span class="go">↗</span>
+  </a>
+  <a href="tel:+302741075410">
+    <span>Call KTEL Korinthias<small>27410 75410 · ext. 1 for schedules</small></span><span class="go">↗</span>
+  </a>
+</div>
+
+<h2>Before you go</h2>
+<ul class="notes">
+  <li class="warn"><b>Nothing runs on Sunday</b>Neither direction. A taxi between the two is roughly €10–15.</li>
+  <li class="warn"><b>Last bus back is 17:30</b>A bus leaves Korinthos at 21:00 but does not return the same evening. Don't get stuck at the ruins.</li>
+  <li><b>Saturdays are thinner</b>Out at 08:30, 11:00, 14:00 only. Back at 09:00, 11:30, 14:30 only.</li>
+  <li><b>Check which bay</b>The local bus doesn't always leave from the same spot as the Athens coaches. Ask at the ticket window when you buy.</li>
+  <li><b>Timetables change 11 September</b>Winter service starts that day and runs to 30 June.</li>
+</ul>
+
+<footer>
+  Times from ktelkorinthias.gr, checked 6 Aug 2026<br>
+  Uses your phone's clock · works offline
+</footer>
+
+<script>
+(function(){
+  "use strict";
+
+  // days use JS getDay(): 0=Sun … 6=Sat
+  var WEEKDAYS = [1,2,3,4,5];
+  var MONSAT   = [1,2,3,4,5,6];
+
+  var ROUTES = {
+    A: {
+      name: "Korinthos → Archaia Korinthos",
+      times: [
+        {t:"07:00", d:WEEKDAYS}, {t:"08:30", d:MONSAT}, {t:"11:00", d:MONSAT},
+        {t:"14:00", d:MONSAT},   {t:"17:00", d:WEEKDAYS}, {t:"21:00", d:WEEKDAYS}
+      ]
+    },
+    B: {
+      name: "Archaia Korinthos → Korinthos",
+      times: [
+        {t:"07:30", d:WEEKDAYS}, {t:"09:00", d:MONSAT}, {t:"11:30", d:MONSAT},
+        {t:"14:30", d:MONSAT},   {t:"17:30", d:WEEKDAYS}
+      ]
+    }
+  };
+
+  var DAY_EN = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+  var current = "A";
+
+  function mins(hhmm){
+    var p = hhmm.split(":");
+    return parseInt(p[0],10)*60 + parseInt(p[1],10);
+  }
+  function label(days){ return days.length === 6 ? "ΔΕΥ–ΣΑΒ" : "ΔΕΥ–ΠΑΡ"; }
+  function runsOn(entry, dayIdx){ return entry.d.indexOf(dayIdx) !== -1; }
+
+  /* Find the next departure from `now`, looking up to 7 days ahead. */
+  function nextDeparture(routeKey, now){
+    var nowMins = now.getHours()*60 + now.getMinutes();
+    var times = ROUTES[routeKey].times;
+    for (var offset = 0; offset < 8; offset++){
+      var probe = new Date(now.getTime());
+      probe.setDate(probe.getDate() + offset);
+      var dayIdx = probe.getDay();
+      for (var i = 0; i < times.length; i++){
+        if (!runsOn(times[i], dayIdx)) continue;
+        if (offset === 0 && mins(times[i].t) <= nowMins) continue;
+        return { time: times[i].t, offset: offset, dayIdx: dayIdx,
+                 minsAway: offset*1440 + mins(times[i].t) - nowMins };
+      }
+    }
+    return null;
+  }
+
+  function humanGap(m){
+    if (m < 1)  return "leaving now";
+    if (m < 60) return "in " + m + " min";
+    var h = Math.floor(m/60), r = m % 60;
+    if (h < 24) return "in " + h + "h " + (r ? r + "m" : "");
+    return "in " + Math.round(h/24) + " days";
+  }
+
+  function whenWord(offset, dayIdx){
+    if (offset === 0) return "today";
+    if (offset === 1) return "tomorrow";
+    return DAY_EN[dayIdx];
+  }
+
+  function renderGrid(routeKey, el, now){
+    var dayIdx = now.getDay();
+    var nowMins = now.getHours()*60 + now.getMinutes();
+    var next = nextDeparture(routeKey, now);
+    var isNextToday = next && next.offset === 0;
+    el.innerHTML = "";
+    ROUTES[routeKey].times.forEach(function(entry){
+      var chip = document.createElement("div");
+      chip.className = "chip";
+      var runsToday = runsOn(entry, dayIdx);
+      if (!runsToday || mins(entry.t) <= nowMins) chip.className += " gone";
+      if (isNextToday && next.time === entry.t) chip.className = "chip next";
+      chip.innerHTML = '<span class="t">' + entry.t + '</span>' +
+                       '<span class="d">' + label(entry.d) + '</span>';
+      el.appendChild(chip);
+    });
+  }
+
+  function render(){
+    var now = new Date();
+
+    // panel
+    var next = nextDeparture(current, now);
+    var panel = document.getElementById("panel");
+    var noServiceToday = ROUTES[current].times.every(function(e){ return !runsOn(e, now.getDay()); });
+
+    document.getElementById("panelDay").textContent =
+      DAY_EN[now.getDay()] + " " + String(now.getHours()).padStart(2,"0") + ":" +
+      String(now.getMinutes()).padStart(2,"0");
+
+    if (noServiceToday){
+      panel.className = "panel dead";
+      document.getElementById("panelLabel").textContent = "No service";
+      document.getElementById("clock").textContent = "Sunday — take a taxi";
+      document.getElementById("countdown").textContent =
+        next ? "Buses resume " + whenWord(next.offset, next.dayIdx) + " at " + next.time : "";
+      document.getElementById("routeLine").textContent = "Roughly €10–15 between the two.";
+    } else if (next){
+      panel.className = "panel";
+      document.getElementById("panelLabel").textContent =
+        next.offset === 0 ? "Next bus" : "Next bus " + whenWord(next.offset, next.dayIdx);
+      document.getElementById("clock").textContent = next.time;
+      document.getElementById("countdown").textContent = humanGap(next.minsAway);
+      document.getElementById("routeLine").textContent = ROUTES[current].name;
+    } else {
+      panel.className = "panel dead";
+      document.getElementById("clock").textContent = "Nothing scheduled";
+      document.getElementById("countdown").textContent = "";
+      document.getElementById("routeLine").textContent = "";
+    }
+
+    renderGrid("A", document.getElementById("gridA"), now);
+    renderGrid("B", document.getElementById("gridB"), now);
+
+    // summer timetable expires 10 Sept
+    if (now > new Date(2026, 8, 10, 23, 59)) {
+      document.getElementById("stale").className = "stale on";
+    }
+  }
+
+  function pick(key){
+    current = key;
+    document.getElementById("btnA").setAttribute("aria-pressed", key === "A");
+    document.getElementById("btnB").setAttribute("aria-pressed", key === "B");
+    render();
+  }
+
+  document.getElementById("btnA").addEventListener("click", function(){ pick("A"); });
+  document.getElementById("btnB").addEventListener("click", function(){ pick("B"); });
+  document.addEventListener("visibilitychange", function(){ if (!document.hidden) render(); });
+
+  render();
+  setInterval(render, 20000);
+})();
+</script>
+</body>
+</html>

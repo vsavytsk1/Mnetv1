@@ -1,0 +1,535 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>LENS v1.0 BRAINIUM -- spini brain hierarchical-depth lens</title>
+<style>
+  :root{
+    --bg:#050508; --gold:#ffd700; --cyan:#00d4ff; --pink:#ff69b4; --green:#00ffd5;
+    --espresso:#c7894a; --purple:#cc44ff; --dim:#6a6a82; --txt:#e8e0d0;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;background:var(--bg);color:var(--txt);font-family:var(--mono);overflow:hidden}
+  #cv{position:fixed;inset:0;display:block}
+  #hud{position:fixed;top:0;left:0;right:0;padding:10px 14px;display:flex;gap:14px;align-items:flex-start;
+    pointer-events:none;font-size:11px;z-index:10;flex-wrap:wrap}
+  #hud > div{pointer-events:auto;background:rgba(8,8,16,0.78);border:1px solid #20202e;
+    border-radius:8px;padding:8px 11px;backdrop-filter:blur(3px)}
+  #ttl{color:var(--gold);font-size:14px;letter-spacing:0.06em}
+  #sub{color:var(--dim);font-size:10px;margin-top:1px;max-width:580px}
+  #note{color:var(--espresso);font-size:10px;margin-top:5px;max-width:580px;line-height:1.4}
+  #note b{color:var(--gold)}
+  #note .hyp{color:var(--purple)}
+  #note .ret{color:var(--pink);text-decoration:line-through}
+  #still{color:var(--dim);font-size:10px;margin-top:4px}
+  #still b{color:var(--cyan)}
+  #side{margin-left:auto;max-width:280px;color:var(--dim);font-size:10px;line-height:1.5}
+  #side b{color:var(--cyan)} #side .l{color:var(--gold)}
+  #side .row{display:flex;align-items:center;gap:6px;margin:1px 0}
+  #side .sw{width:14px;height:8px;border-radius:2px;display:inline-block}
+
+  /* bottom stack: meters panel above the control bar -- DOM layout, cannot be occluded */
+  #stack{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:10;
+    display:flex;flex-direction:column;gap:8px;align-items:center;max-width:97vw}
+  #meters{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;
+    background:rgba(8,8,16,0.9);border:1px solid #20202e;border-radius:10px;padding:9px 12px;
+    font-size:10px;line-height:1.5}
+  .mcol{min-width:192px;max-width:236px}
+  .mcol h4{font-size:10px;letter-spacing:0.08em;margin-bottom:2px;font-weight:bold}
+  .mcol.p h4{color:var(--cyan)} .mcol.h h4{color:var(--gold)}
+  .mcol.cap h4{color:var(--green)} .mcol.lat h4{color:var(--pink)}
+  .mrow{display:flex;justify-content:space-between;gap:8px}
+  .mrow .k{color:var(--dim)} .mrow .v{color:var(--txt);text-align:right}
+  .tag{color:var(--dim);font-size:9px;line-height:1.45}
+  .lit{color:var(--gold)}
+  .ret{color:var(--pink);font-size:9px}
+  .ret s{opacity:0.85}
+  .lockon{color:var(--green)} .lockoff{color:var(--espresso)}
+  #mfoot{flex-basis:100%;color:var(--dim);font-size:9px;line-height:1.5;
+    border-top:1px solid #1c1c28;padding-top:4px;margin-top:2px}
+  #mfoot b{color:var(--purple)}
+
+  #bar{display:flex;flex-wrap:wrap;gap:9px;align-items:center;justify-content:center;
+    background:rgba(8,8,16,0.88);border:1px solid #20202e;border-radius:10px;padding:8px 13px}
+  button{background:#14141f;border:1px solid #2a2a3a;border-radius:6px;color:var(--gold);
+    font:12px var(--mono);padding:6px 10px;cursor:pointer;transition:all .12s}
+  button:hover{border-color:var(--gold)}
+  button.cyan{color:var(--cyan)} button.cyan:hover{border-color:var(--cyan)}
+  button.espresso{color:var(--espresso)} button.espresso:hover{border-color:var(--espresso)}
+  button.pink{color:var(--pink)} button.pink:hover{border-color:var(--pink)}
+  button.green{color:var(--green)} button.green:hover{border-color:var(--green)}
+  input[type=range]{appearance:none;width:68px;height:4px;background:#2a2a3a;border-radius:3px;outline:none}
+  input[type=range]::-webkit-slider-thumb{appearance:none;width:13px;height:13px;border-radius:50%;background:var(--gold);cursor:pointer}
+  .sep{width:1px;height:22px;background:#2a2a3a;margin:0 2px}
+  .klbl{color:var(--dim);font-size:10px;letter-spacing:0.06em}
+  .klbl.p{color:#3f8ca6} .klbl.h{color:#a68f2e}
+  .val{color:var(--gold);font-size:11px;min-width:18px;text-align:right}
+
+  .wip{position:fixed;left:14px;bottom:14px;background:rgba(8,8,16,0.85);border:1px solid #c7894a;
+    border-radius:8px;padding:6px 10px;font-size:10px;color:var(--espresso);z-index:9;max-width:330px;line-height:1.4}
+  .wip b{color:var(--gold)}
+  @media (max-width:1150px){ .wip{display:none} }
+
+  /* TITANS overlay -- opt-in (Curse 13 spirit), always escapable (K4) */
+  #tback{position:fixed;inset:0;background:rgba(3,3,6,0.72);z-index:19;display:none}
+  #titans{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:20;display:none;
+    width:min(760px,94vw);max-height:80vh;overflow:auto;background:rgba(8,8,16,0.97);
+    border:1px solid var(--gold);border-radius:12px;padding:16px 18px;font-size:11px;line-height:1.55}
+  #titans h2{color:var(--gold);font-size:13px;letter-spacing:0.08em;margin-bottom:6px}
+  #titans h3{color:var(--green);font-size:11px;letter-spacing:0.08em;margin:12px 0 4px}
+  #titans .t{margin:5px 0}
+  #titans .t b{color:var(--cyan)}
+  #titans .t .m{color:var(--gold)}
+  #titans .t .c{color:var(--dim);font-size:10px}
+  #titans .r{color:var(--dim);font-size:10px;margin:3px 0}
+  #titans .r b{color:var(--espresso)}
+  #tclose{position:sticky;top:0;float:right;margin-left:10px}
+</style>
+</head>
+<body>
+<canvas id="cv" width="1280" height="720"></canvas>
+
+<div id="hud">
+  <div>
+    <div id="ttl">LENS v1.0 BRAINIUM -- hierarchical-depth lens</div>
+    <div id="sub">left: <b style="color:var(--cyan)">PORTIA</b> (3 lit relays) · right: <b style="color:var(--gold)">HUMAN</b> (~10 lit levels) · same motif family, different depth · width · serial passes</div>
+    <div id="note">claim v1.0 <span class="hyp">[HYPOTHESIS]</span>: <b>same recursive hierarchy + shared action-selection motif (CX&harr;BG, contested), tuned across ~5-6 orders of magnitude and ~3x explicit depth; small brains trade serial time for parallel depth.</b> fractal = <b>HIERARCHY</b> (K2). counts EXACT · anchors EXTERNAL · <span class="ret">600k</span> RETIRED (folklore).</div>
+    <div id="still">still on load -- <b>motion is opt-in</b> (Curse 13). press play. press titans to bow.</div>
+  </div>
+  <div id="side">
+    each ring = one <span class="l">hierarchical level</span><br>
+    each dot = a <span class="l">circuit motif</span> (NOT a neuron)<br>
+    <div class="row"><span class="sw" style="background:#c7894a"></span>L0 sensory tile</div>
+    <div class="row"><span class="sw" style="background:#00d4ff"></span>L1 local integrator</div>
+    <div class="row"><span class="sw" style="background:#ffd700"></span>L2 column</div>
+    <div class="row"><span class="sw" style="background:#00ffd5"></span>L3 region planner</div>
+    <div class="row"><span class="sw" style="background:#ff69b4"></span>L4 cross-region</div>
+    <div class="row"><span class="sw" style="background:#cc44ff"></span>L5+ meta / global</div>
+    <br>
+    ripple = one pass through the levels<br>
+    PORTIA re-runs n passes per decision --<br>
+    <b>depth virtualized in time</b> [HYP]<br>
+    <span style="color:var(--purple)">&#9670;</span> arcuate body: 3rd relay + motif site
+  </div>
+</div>
+
+<div id="stack">
+  <div id="meters">
+    <div class="mcol p" id="mp-portia"></div>
+    <div class="mcol cap" id="mp-cap"></div>
+    <div class="mcol lat" id="mp-lat"></div>
+    <div class="mcol h" id="mp-human"></div>
+    <div id="mfoot"></div>
+  </div>
+  <div id="bar">
+    <span class="klbl p">P depth</span><input id="dP" type="range" min="2" max="7" step="1" value="3"><span class="val" id="dPv">3</span>
+    <span class="klbl p">P branch</span><input id="bP" type="range" min="2" max="8" step="1" value="3"><span class="val" id="bPv">3</span>
+    <span class="klbl p">P passes</span><input id="nP" type="range" min="1" max="30" step="1" value="12"><span class="val" id="nPv">12</span>
+    <span class="sep"></span>
+    <span class="klbl h">H depth</span><input id="dH" type="range" min="3" max="12" step="1" value="10"><span class="val" id="dHv">10</span>
+    <span class="klbl h">H branch</span><input id="bH" type="range" min="2" max="8" step="1" value="3"><span class="val" id="bHv">3</span>
+    <span class="sep"></span>
+    <button id="anchor" class="green">anchor: CORTEX</button>
+    <span class="sep"></span>
+    <button id="play" class="cyan">play</button>
+    <button id="step" class="espresso">step</button>
+    <button id="reset" class="pink">reset</button>
+    <button id="bow">titans</button>
+  </div>
+</div>
+
+<div class="wip">
+  <b>WIP -- seeds:</b> 2026-06-17_brainium_spini_brain_pop.md + 2026-08-08 research dossier<br>
+  audited against: KERNELIMAGIC (38 curses) · 12 PATHS · THEA v3.0<br>
+  <b>K1</b> no real spikes · <b>K2</b> fractal = hierarchy (verdict upheld: Smith '21, Broido-Clauset '19) · <b>K3</b> single HTML · <b>K4</b> err shown, lock earned · <b>K5</b> no salticid neuron census exists -- denominator is a BAND<br>
+  v0.4, v0.5 frozen · v1.0 = copy + edit (Path X)
+</div>
+
+<div id="tback"></div>
+<div id="titans">
+  <button id="tclose" class="pink">close</button>
+  <h2>THE TITANS -- points and lines, bowed to</h2>
+  <div class="t"><b>Leonhard Euler</b> (1707-1783) -- <span class="m">Koenigsberg 1736: the first points-and-lines proof. V-E+F=2 forces exactly 12 pentagons</span> -- the fixed topological mode this whole cave counts against. <span class="c">Productive even blind.</span></div>
+  <div class="t"><b>Fibonacci &rarr; the golden lineage</b> -- <span class="m">phi = [1;1,1,1,...], the slowest-approximated number; golden angle 137.508&deg;</span> -- the exact ring-phase offset in this lens. <span class="c">Bravais brothers 1837; Vogel 1979; Douady-Couder 1992: the angle is an attractor, no plant knows the math.</span></div>
+  <div class="t"><b>Michael Goldberg &amp; H.S.M. Coxeter</b> -- <span class="m">T = k&sup2;+kl+l&sup2;, the icosahedral refinement lattice</span> -- the tower THEA's spectra climb. <span class="c">Caspar-Klug carried T into virus capsids.</span></div>
+  <div class="t"><b>Miroslav Fiedler</b> (1926-2015) -- <span class="m">lambda2, algebraic connectivity (1973)</span> -- the eigenvalue the renormalized Laplacian tower stabilizes (T&middot;lambda2 &rarr; ~0.7248). <span class="c">Cheeger's inequality bounds the bottleneck; Chung carried the torch.</span></div>
+  <div class="t"><b>Benoit Mandelbrot</b> (1924-2010) -- <span class="m">coined "fractal"; hoped Purkinje cells were</span> -- K2 keeps his dimension honest: hierarchy is not non-integer dimension until measured. <span class="c">The Fractal Geometry of Nature, 1982.</span></div>
+  <div class="t"><b>Santiago Ramon y Cajal</b> (1852-1934) -- <span class="m">neuron doctrine; laws of economy of time, space, material (1899)</span> -- the real constraint behind these sliders; he noted time may beat material. <span class="c">Nobel 1906. Cherniak 1994 formalized; long-range hubs show brains are not strictly wire-minimal.</span></div>
+  <div class="t"><b>Suzana Herculano-Houzel</b> -- <span class="m">isotropic fractionator ("brain soup"); 86.1&plusmn;8.1 billion</span> -- slew the 100-billion myth, exactly as this lens retires 600k. <span class="c">Herculano-Houzel &amp; Lent 2005; Azevedo et al. 2009.</span></div>
+  <div class="t"><b>Felleman &amp; Van Essen</b> -- <span class="m">32 areas, 305 connections, ~10 hierarchical levels (1991)</span> -- the human depth anchor on the H slider. <span class="c">Cerebral Cortex 1(1):1-47.</span></div>
+  <div class="t"><b>Douglas &amp; Martin</b> -- <span class="m">the canonical cortical microcircuit</span> -- the repeated motif on the vertebrate side of "same motif".</div>
+  <div class="t"><b>Nicholas Strausfeld (&amp; Frank Hirth)</b> -- <span class="m">arthropod brain architecture; central complex &harr; basal ganglia deep homology (Science 2013)</span> -- the shared action-selection motif; genuinely contested (convergence argument). <span class="c">In salticids the arcuate body is BOTH 3rd-order visual neuropil AND the putative motif site.</span></div>
+  <div class="t"><b>Jackson, Cross, Tarsitano, Harland</b> -- <span class="m">the Portia school: detours 139 cm ('97) and 77.5 cm ('16) with prey out of view; expectancy-violation memory; 1-2-many numerosity</span> -- the serial-time side of the lens. <span class="c">Eight-legged cats.</span></div>
+  <div class="t"><b>Michael Land</b> -- <span class="m">movable boomerang retinas (1969): ~2 s lateral, ~5-10 s torsional scan periods</span> -- the pass clock this lens's n-passes ride on.</div>
+  <div class="t"><b>Watts &amp; Strogatz; Bullmore, Sporns, Bassett</b> -- <span class="m">small worlds; hierarchical modularity; the economy of brain networks</span> -- why hierarchy is the honest word.</div>
+  <div class="t"><b>Chittka &amp; Niven</b> -- <span class="m">"Are bigger brains better?" (2009)</span> -- bigger may be more hard drive, not better processor; the caution rail under every ratio here.</div>
+  <h3>THE RECEIPTS -- every HUD anchor, labelled</h3>
+  <div class="r"><b>EXACT</b> V-E+F=2; P=12 · T=k&sup2;+kl+l&sup2; · golden angle 137.508&deg; · all motif sums &Sigma;b^i (BigInt)</div>
+  <div class="r"><b>EXTERNAL</b> human 86.1&plusmn;8.1e9 neurons; cortex 16.3e9 (19%); cerebellum ~69e9 [Azevedo '09] · ~10 cortical levels [Felleman-Van Essen '91] · salticid principal-eye path: retina&rarr;AM1&rarr;AM2&rarr;arcuate = 3 relays [Strausfeld '93; Steinhoff '20] · ~7,000 synapses/neuron human cortex [DeFelipe] · ~150 ms feedforward sweep [Thorpe '96] · retinal scan 2 s / 5-10 s [Land '69] · arbor D 1.1-1.9 limited-range [Caserta '95; Smith '21] · scale-free rare [Broido-Clauset '19] · connectome harmonics = Laplacian eigenmodes on human data [Atasoy '16]</div>
+  <div class="r"><b>HYPOTHESIS</b> Portia neurons 1e4-2e5 band (NO census exists for ANY spider; 600k = folklore, no primary source -- cf. the 100-billion myth) · depth virtualized in time · 1 pass &asymp; 1 torsional scan (~7 s) · same motif across phyla (strong for action selection, contested elsewhere)</div>
+  <div class="r"><b>DESIGN</b> level colors/names · MAX_DOTS 220 render cap · 18 frames/level tempo · 45-frame lock earn · 15 ms/level split of Thorpe's sweep · band edges as lock tolerance</div>
+</div>
+
+<script>
+  // ====== GENESIS KERNEL (L127) -- no DPR, no setTransform, no getBoundingClientRect ======
+  const cv = document.getElementById('cv');
+  const ctx = cv.getContext('2d');
+  let W = 0, H = 0;
+  function resize(){ W = cv.width = innerWidth; H = cv.height = innerHeight; }
+  resize();
+
+  // ====== CAVE PALETTE per level ======
+  const LEVEL_COLORS = [
+    '#c7894a','#00d4ff','#ffd700','#00ffd5','#ff69b4','#cc44ff',
+    '#9966ff','#aa77ff','#bb88ff','#c599ff','#cfaaff','#d9bbff'
+  ];
+
+  // ====== EXTERNAL ANCHORS (literature; see TITANS overlay for receipts) ======
+  const H_ALL = 86.1e9;                 // Azevedo et al. 2009, +/- 8.1e9
+  const H_CTX = 16.3e9;                 // cortex only (19% of neurons, 82% of mass)
+  const P_LO  = 4.0e4;                  // Portia denominator BAND: no census exists;
+  const P_HI  = 2.0e5;                  //   "tens of thousands".."~1e5 informal". 600k RETIRED.
+  const LIT_DEPTH_P = 3;                // retina->AM1->AM2->arcuate (Steinhoff 2020)
+  const LIT_DEPTH_H = 10;               // Felleman & Van Essen 1991
+  const SWEEP_MS = 150;                 // Thorpe 1996 feedforward categorization
+  const MS_PER_LVL = SWEEP_MS / LIT_DEPTH_H;   // DESIGN split of an EXTERNAL number
+  const PASS_S = 7;                     // 1 pass ~ 1 torsional scan, mid of Land '69 5-10 s [HYP]
+
+  // anchor modes: numerator + its ratio band (band = numerator / [P_HI..P_LO])
+  const ANCHORS = {
+    CORTEX: { num: H_CTX, name: 'CORTEX',     note: '16.3e9 / band' },
+    WHOLE:  { num: H_ALL, name: 'WHOLE-BRAIN', note: '86.1e9 / band' }
+  };
+
+  // ====== DESIGN CHOICES ======
+  const LOCK_FRAMES = 45;
+  const MAX_DOTS = 220;
+  const STEPF = 18;
+  const GOLDEN_ANGLE = 2.399963229728653;
+
+  // ====== STATE ======
+  let dP = 3, bP = 3, nP = 12;          // defaults = literature depth anchors
+  let dH = 10, bH = 3;
+  let anchorKey = 'CORTEX';
+  let playing = false;                  // Curse 13: the user starts still
+  let t = 0;
+  let lockCount = 0;
+
+  // ====== EXACT INTEGER CORE (THEA Pattern A) ======
+  function motifTotal(branch, depth){
+    let s = 0n, term = 1n; const b = BigInt(branch);
+    for (let i = 0; i < depth; i++){ s += term; term *= b; }
+    return s;
+  }
+
+  // ====== HIERARCHY BUILD ======
+  function buildSide(depth, branch, cx, cy, maxR){
+    const rings = [];
+    let term = 1n; const bb = BigInt(branch);
+    for (let i = 0; i < depth; i++){
+      const trueCount = term;
+      const drawCount = Number(trueCount < BigInt(MAX_DOTS) ? trueCount : BigInt(MAX_DOTS));
+      const radius = maxR * (i + 1) / depth;
+      const dots = [];
+      const phase = i * GOLDEN_ANGLE;
+      for (let j = 0; j < drawCount; j++){
+        const a = (j / drawCount) * Math.PI * 2 + phase;
+        dots.push({ x: cx + Math.cos(a) * radius, y: cy + Math.sin(a) * radius });
+      }
+      rings.push({ level: i, radius, dots, trueCount });
+      term *= bb;
+    }
+    return { rings, depth, cx, cy, maxR, total: motifTotal(branch, depth) };
+  }
+
+  let portia = null, human = null;
+  function rebuild(){
+    const cy = H * 0.42;
+    const maxR = Math.max(80, Math.min(W * 0.18, H * 0.42 - 168, H * 0.58 - 260));
+    portia = buildSide(dP, bP, W * 0.25, cy, maxR);
+    human  = buildSide(dH, bH, W * 0.75, cy, maxR);
+    lockCount = 0;
+  }
+
+  // ====== CAPACITY (band lock: the band IS the tolerance -- the denominator uncertainty) ======
+  function band(){
+    const num = ANCHORS[anchorKey].num;
+    return { lo: num / P_HI, hi: num / P_LO };
+  }
+  function capacityRatio(){ return Number(human.total) / Number(portia.total); }
+  function gapLog(){
+    const b = band(), cur = capacityRatio();
+    if (cur >= b.lo && cur <= b.hi) return 0;
+    if (cur < b.lo) return Math.log(b.lo / cur) / Math.LN10;
+    return Math.log(cur / b.hi) / Math.LN10;
+  }
+
+  // ====== DRAW ======
+  function drawSide(side, label, accent, passes, litDepth, motifRing){
+    const { rings, cx, cy, maxR, depth } = side;
+
+    ctx.strokeStyle = '#1a1a26';
+    ctx.lineWidth = 1;
+    for (let i = 0; i < depth; i++){
+      ctx.beginPath();
+      ctx.arc(cx, cy, rings[i].radius, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    // literature-depth reference: dashed ring at the lit level (if within current depth)
+    if (litDepth <= depth){
+      ctx.strokeStyle = '#ffd70044';
+      ctx.setLineDash([4, 5]);
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(cx, cy, rings[litDepth - 1].radius + 4, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = '#ffd70088';
+      ctx.font = '9px ui-monospace,Consolas,monospace';
+      ctx.textAlign = 'left';
+      ctx.fillText('lit ' + litDepth, cx + rings[litDepth - 1].radius + 8, cy - 3);
+    }
+
+    // edges: stride-sampled around the whole ring
+    for (let i = 0; i < depth - 1; i++){
+      const pa = rings[i], ch = rings[i + 1];
+      ctx.strokeStyle = LEVEL_COLORS[i] + '18';
+      ctx.lineWidth = 0.6;
+      const A = pa.dots.length, C = ch.dots.length;
+      const stride = Math.max(1, Math.ceil(A / 80));
+      for (let j = 0; j < A; j += stride){
+        const da = pa.dots[j];
+        const db = ch.dots[Math.min(C - 1, Math.round(j * C / A))];
+        ctx.beginPath();
+        ctx.moveTo(da.x, da.y);
+        ctx.lineTo(db.x, db.y);
+        ctx.stroke();
+      }
+    }
+
+    for (let i = 0; i < depth; i++){
+      ctx.fillStyle = LEVEL_COLORS[i % LEVEL_COLORS.length];
+      const r = i === 0 ? 4 : Math.max(1.5, 3.5 - i * 0.35);
+      for (const d of rings[i].dots){
+        ctx.beginPath();
+        ctx.arc(d.x, d.y, r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    // motif site marker: purple diamond on the given ring (arcuate body on PORTIA)
+    if (motifRing !== null && motifRing < depth){
+      const rr = rings[motifRing].radius;
+      const mx = cx + rr * Math.cos(-Math.PI / 2);
+      const my = cy + rr * Math.sin(-Math.PI / 2);
+      ctx.fillStyle = '#cc44ff';
+      ctx.beginPath();
+      ctx.moveTo(mx, my - 6); ctx.lineTo(mx + 5, my); ctx.lineTo(mx, my + 6); ctx.lineTo(mx - 5, my);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    // ripple: one pass = depth levels traversed [METAPHOR: 1 level = 1 ripple-step]
+    const passLen = depth * STEPF;
+    const full = passLen * passes;
+    const inPass = t % passLen;
+    const phase = inPass / passLen;
+    const passIdx = Math.floor((t % full) / passLen);
+    const rippleR = phase * maxR * 1.05;
+    ctx.strokeStyle = accent;
+    ctx.globalAlpha = 0.85 * (1 - phase * 0.6);
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(cx, cy, rippleR, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+
+    const sinceDecision = t % full;
+    if (t > 0 && sinceDecision < 14){
+      ctx.strokeStyle = accent;
+      ctx.globalAlpha = 0.9 * (1 - sinceDecision / 14);
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(cx, cy, maxR * 1.06, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+
+    const lvlIdx = Math.min(depth - 1, Math.floor(phase * depth));
+    ctx.fillStyle = LEVEL_COLORS[lvlIdx];
+    ctx.font = '11px ui-monospace,Consolas,monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('L' + lvlIdx, cx, cy - rippleR - 6);
+
+    ctx.fillStyle = accent;
+    ctx.font = 'bold 13px ui-monospace,Consolas,monospace';
+    ctx.fillText(label, cx, cy + maxR + 18);
+
+    ctx.fillStyle = '#9a93a8';
+    ctx.font = '10px ui-monospace,Consolas,monospace';
+    ctx.fillText(passes > 1 ? ('pass ' + (passIdx + 1) + '/' + passes) : 'one deep pass',
+                 cx, cy + maxR + 32);
+
+    return Math.floor(t / full);
+  }
+
+  function frame(){
+    if (!portia || !human) rebuild();
+    ctx.fillStyle = '#050508';
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.strokeStyle = '#15151f';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(W / 2, 64);
+    ctx.lineTo(W / 2, H - 264);
+    ctx.stroke();
+
+    const decP = drawSide(portia, 'PORTIA', '#00d4ff', nP, LIT_DEPTH_P, 2);
+    const decH = drawSide(human,  'HUMAN',  '#ffd700', 1,  LIT_DEPTH_H, null);
+
+    if (gapLog() === 0){ lockCount = Math.min(LOCK_FRAMES, lockCount + 1); }
+    else { lockCount = 0; }
+
+    if (t % 6 === 0) renderMeters(decP, decH);
+
+    if (playing) t++;
+    requestAnimationFrame(frame);
+  }
+
+  // ====== METERS (Pattern D: separate reports, never averaged; lock EARNED) ======
+  function fmtRatio(r){
+    if (r >= 1000) return Math.round(r).toLocaleString('en-US') + 'x';
+    return r.toFixed(1) + 'x';
+  }
+  function row(k, v){
+    return '<div class="mrow"><span class="k">' + k + '</span><span class="v">' + v + '</span></div>';
+  }
+  function litChip(cur, lit){
+    return cur === lit ? ' <span class="lit">= lit</span>' : ' <span class="tag">(lit ' + lit + ')</span>';
+  }
+  function renderMeters(decP, decH){
+    const pEl = document.getElementById('mp-portia');
+    const cEl = document.getElementById('mp-cap');
+    const lEl = document.getElementById('mp-lat');
+    const hEl = document.getElementById('mp-human');
+    const fEl = document.getElementById('mfoot');
+    if (!pEl || !cEl || !lEl || !hEl || !fEl) return;
+
+    pEl.innerHTML =
+      '<h4>PORTIA</h4>' +
+      row('depth', dP + litChip(dP, LIT_DEPTH_P)) +
+      row('branch . passes', bP + ' . ' + nP) +
+      row('motifs &Sigma;b^i', Number(portia.total).toLocaleString('en-US')) +
+      row('decisions', String(decP)) +
+      '<div class="tag">neurons 1e4-2e5 BAND [HYP] -- no spider census exists</div>' +
+      '<div class="ret"><s>600,000</s> RETIRED: folklore, no primary source</div>' +
+      '<div class="tag">retina&rarr;AM1&rarr;AM2&rarr;arcuate [Steinhoff \u201920]</div>';
+
+    hEl.innerHTML =
+      '<h4>HUMAN</h4>' +
+      row('depth', dH + litChip(dH, LIT_DEPTH_H)) +
+      row('branch . passes', bH + ' . 1') +
+      row('motifs &Sigma;b^i', Number(human.total).toLocaleString('en-US')) +
+      row('decisions', String(decH)) +
+      '<div class="tag">86.1&plusmn;8.1e9 neurons; cortex 16.3e9 (19%) [Azevedo \u201909]</div>' +
+      '<div class="tag">cerebellum ~69e9 -- most human neurons live there</div>' +
+      '<div class="tag">~10 levels V1&rarr;...&rarr;PFC [F&amp;VE \u201991] . ~7k syn/neuron [DeFelipe]</div>';
+
+    const b = band();
+    const cur = capacityRatio();
+    const gap = gapLog();
+    const needD = Math.log((b.lo / cur) * (Math.pow(bH, dH) - 1) + 1) / Math.log(bH);
+    const locked = lockCount >= LOCK_FRAMES;
+    let gapLine;
+    if (locked) gapLine = '<span class="lockon">IN BAND . earned ' + LOCK_FRAMES + 'f</span>';
+    else if (gap === 0) gapLine = '<span class="lockoff">in band . holding ' + lockCount + '/' + LOCK_FRAMES + 'f</span>';
+    else if (cur < b.lo) gapLine = '<span class="lockoff">NOT IN BAND . log10 gap ' + gap.toFixed(3) + ' below</span>';
+    else gapLine = '<span class="lockoff">NOT IN BAND . over by ' + gap.toFixed(3) + ' dex</span>';
+
+    cEl.innerHTML =
+      '<h4>CAPACITY -- H/P ratio [' + ANCHORS[anchorKey].name + ']</h4>' +
+      row('band', fmtRatio(b.lo) + ' - ' + fmtRatio(b.hi)) +
+      row('current', fmtRatio(cur)) +
+      row('needs dH', cur < b.lo ? ('&asymp; ' + needD.toFixed(1) + ' at bH=' + bH) : '--') +
+      '<div>' + gapLine + '</div>' +
+      '<div class="tag">band = numerator [EXTERNAL] / denominator BAND [HYP]. the band IS the tolerance.</div>';
+
+    const stepsP = dP * nP;
+    const wallP = nP * PASS_S;
+    const wallH = dH * MS_PER_LVL / 1000;
+    lEl.innerHTML =
+      '<h4>LATENCY -- per decision</h4>' +
+      row('model steps', dP + '&times;' + nP + ' = ' + stepsP + ' vs ' + dH) +
+      row('virtualized depth', stepsP + ' vs ' + dH + ' <span class="tag">[HYP]</span>') +
+      row('wall clock', wallP.toFixed(0) + ' s vs ' + wallH.toFixed(2) + ' s') +
+      row('portia is', fmtRatio(wallP / wallH).replace('x', 'x slower')) +
+      '<div class="tag">1 pass &asymp; 1 torsional scan ~' + PASS_S + ' s [Land \u201969, HYP] . human ' + SWEEP_MS + ' ms sweep &asymp; ' + MS_PER_LVL.toFixed(0) + ' ms/level [Thorpe \u201996 / DESIGN]</div>';
+
+    fEl.innerHTML =
+      '<b>MOTIF</b> central complex &harr; basal ganglia, shared action-selection [Strausfeld-Hirth \u201913] -- CONTESTED: absence across most phyla favors convergence. ' +
+      '<b>K2</b> arbor D 1.1-1.9 limited-range [Smith \u201921] . scale-free rare [Broido-Clauset \u201919] . Laplacian eigenmodes real on human connectome [Atasoy \u201916]. ' +
+      'two reports, never averaged (Pattern D) . counts EXACT . anchors EXTERNAL . bands/tempo DESIGN . claim HYPOTHESIS . ripple METAPHOR';
+  }
+
+  // ====== CONTROLS ======
+  const dPS = document.getElementById('dP'), bPS = document.getElementById('bP'), nPS = document.getElementById('nP');
+  const dHS = document.getElementById('dH'), bHS = document.getElementById('bH');
+  const dPv = document.getElementById('dPv'), bPv = document.getElementById('bPv'), nPv = document.getElementById('nPv');
+  const dHv = document.getElementById('dHv'), bHv = document.getElementById('bHv');
+  const anchorBtn = document.getElementById('anchor');
+  const playBtn = document.getElementById('play');
+  const stepBtn = document.getElementById('step');
+  const resetBtn = document.getElementById('reset');
+  const bowBtn = document.getElementById('bow');
+  const tPanel = document.getElementById('titans');
+  const tBack = document.getElementById('tback');
+  const tClose = document.getElementById('tclose');
+
+  function apply(){
+    dP = +dPS.value; bP = +bPS.value; nP = +nPS.value;
+    dH = +dHS.value; bH = +bHS.value;
+    dPv.textContent = dP; bPv.textContent = bP; nPv.textContent = nP;
+    dHv.textContent = dH; bHv.textContent = bH;
+    rebuild();
+  }
+  dPS.addEventListener('input', apply);
+  bPS.addEventListener('input', apply);
+  nPS.addEventListener('input', apply);
+  dHS.addEventListener('input', apply);
+  bHS.addEventListener('input', apply);
+
+  anchorBtn.addEventListener('click', function(){
+    anchorKey = anchorKey === 'CORTEX' ? 'WHOLE' : 'CORTEX';
+    anchorBtn.textContent = 'anchor: ' + ANCHORS[anchorKey].name;
+    lockCount = 0;
+  });
+
+  playBtn.addEventListener('click', function(){
+    playing = !playing;
+    playBtn.textContent = playing ? 'pause' : 'play';
+  });
+  stepBtn.addEventListener('click', function(){ t += STEPF; });
+  resetBtn.addEventListener('click', function(){
+    dPS.value = 3; bPS.value = 3; nPS.value = 12;
+    dHS.value = 10; bHS.value = 3;
+    anchorKey = 'CORTEX'; anchorBtn.textContent = 'anchor: CORTEX';
+    t = 0; playing = false; playBtn.textContent = 'play';
+    hideTitans();
+    apply();
+  });
+
+  // titans overlay: opt-in, always escapable
+  function showTitans(){ tPanel.style.display = 'block'; tBack.style.display = 'block'; }
+  function hideTitans(){ tPanel.style.display = 'none'; tBack.style.display = 'none'; }
+  bowBtn.addEventListener('click', showTitans);
+  tClose.addEventListener('click', hideTitans);
+  tBack.addEventListener('click', hideTitans);
+  addEventListener('keydown', function(e){ if (e.key === 'Escape') hideTitans(); });
+
+  addEventListener('resize', function(){ resize(); rebuild(); });
+  apply();
+  frame();
+</script>
+</body></html>

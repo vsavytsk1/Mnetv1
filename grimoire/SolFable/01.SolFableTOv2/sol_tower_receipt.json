@@ -1,0 +1,320 @@
+{
+  "architecture": {
+    "cpu_model": "Intel(R) Xeon(R) Processor @ 2.80GHz",
+    "float64_mantissa_bits": 53,
+    "int64_max": 9223372036854775807,
+    "machine": "x86_64",
+    "pointer_bits": 64,
+    "prime_ceiling_for_int64_rank": 3037000499,
+    "python": "3.12.3",
+    "simd": [
+      "sse2",
+      "avx",
+      "avx2",
+      "avx512f",
+      "fma",
+      "bmi2"
+    ]
+  },
+  "artifact": "SOL_TOWER_OPENED",
+  "blocks": [
+    {
+      "cost_ms": 0.099,
+      "detail": "P=12 and chi=2 on 40 golden rungs; sum (6-p)f_p = 12",
+      "domain": "Z",
+      "failure_condition": "any rung where P != 12 or chi != 2",
+      "invariants": [
+        "3V = 2E",
+        "F = V/2 + 2",
+        "sum (6-p) f_p = 12",
+        "chi = 2"
+      ],
+      "passed": true,
+      "representation": "T -> (V,E,F,P,H) as Python ints; golden rungs from fast doubling.",
+      "residual": null,
+      "rung": "III  Euler closure",
+      "specification": "Every closed trivalent 5/6 tiling of S^2 has P=12 and chi=2.",
+      "status": "EXACT",
+      "values": {
+        "curvature_defect": 12,
+        "failures": 0,
+        "rungs_checked": 40
+      }
+    },
+    {
+      "cost_ms": 17.982,
+      "detail": "N(xy)=N(x)N(y) on 28561 pairs, worst integer deviation 0",
+      "domain": "Z",
+      "failure_condition": "any nonzero integer deviation",
+      "invariants": [
+        "N(xy) - N(x)N(y) == 0 for every pair in the block"
+      ],
+      "passed": true,
+      "representation": "lattice points as (k,l) int pairs; omega^2 = omega - 1 folded into eis_mul.",
+      "residual": null,
+      "rung": "IV   Eisenstein norm",
+      "specification": "N(xy) = N(x)N(y) on Z[omega]; T = N(k + l omega).",
+      "status": "EXACT",
+      "values": {
+        "pairs": 28561,
+        "worst_integer_deviation": 0
+      }
+    },
+    {
+      "cost_ms": 0.006,
+      "detail": "N(w^2+c)=13 vs N(w)^2=9 -- the translation breaks multiplicativity",
+      "domain": "Z",
+      "failure_condition": "if these ever coincide the refutation is void",
+      "invariants": [
+        "N(w^2+c) == 13",
+        "N(w)^2 == 9"
+      ],
+      "passed": true,
+      "representation": "same integer pairs; the single counterexample w = 1 + omega, c = 1.",
+      "residual": null,
+      "rung": "IV*  the fence 13 != 9",
+      "specification": "A shifted power w^2 + c does NOT evolve the triangulation number.",
+      "status": "EXACT",
+      "values": {
+        "N_shifted": 13,
+        "N_w": 3,
+        "N_w_squared": 9,
+        "w_squared": [
+          0,
+          3
+        ]
+      }
+    },
+    {
+      "cost_ms": 0.132,
+      "detail": "charpoly = [1, -3, 0, 3, -1] (want [1, -3, 0, 3, -1]); M advances (k,l) shell data exactly",
+      "domain": "Z",
+      "failure_condition": "any coefficient off by one, or a shell that does not land",
+      "invariants": [
+        "M[:3,:3] == Sym^2(Q_F)",
+        "charpoly == [1,-3,0,3,-1]",
+        "M advances real shell data exactly"
+      ],
+      "passed": true,
+      "representation": "4x4 integer matrix; Faddeev-LeVerrier for the characteristic polynomial.",
+      "residual": null,
+      "rung": "V    Light Matrix",
+      "specification": "M = Sym^2(Q_F) (+) [1]; charpoly (x-1)(x+1)(x^2-3x+1).",
+      "status": "EXACT",
+      "values": {
+        "advance_matches": 1,
+        "charpoly": [
+          1,
+          -3,
+          0,
+          3,
+          -1
+        ],
+        "sym2_matches": 1
+      }
+    },
+    {
+      "cost_ms": 0.423,
+      "detail": "M^T G M = G; det = -3; signature = (3,1) by minors; s^T G s = 145 on 80 rungs; q = (-1)^n",
+      "domain": "Z",
+      "failure_condition": "a vanishing leading minor voids Jacobi; any interval != 145",
+      "invariants": [
+        "M^T G M == G",
+        "det G == -3",
+        "inertia == (3,1)",
+        "Q_F^T (2J) Q_F == -(2J)",
+        "s^T G s == 145 on every rung",
+        "q(k,l) == (-1)^n"
+      ],
+      "passed": true,
+      "representation": "integer matrices; signature by Jacobi leading-minor criterion -- NOT eigenvalues.",
+      "residual": null,
+      "rung": "V*   the integral Lorentz metric",
+      "specification": "M^T Gamma M = Gamma; det = -3; signature (3,1); s^T Gamma s = 145.",
+      "status": "EXACT",
+      "values": {
+        "cassini_ok": 1,
+        "det_Gamma": -3,
+        "interval": 145,
+        "rungs": 80,
+        "sig_neg": 1,
+        "sig_pos": 3
+      }
+    },
+    {
+      "cost_ms": 0.488,
+      "detail": "recurrence exact on 197 steps; GF (1+x-x^2)/(1-2x-2x^2+x^3) reproduces 200 terms",
+      "domain": "Z",
+      "failure_condition": "a non-integral series coefficient, or any mismatch",
+      "invariants": [
+        "recurrence residual == 0",
+        "series coefficients == T_n"
+      ],
+      "passed": true,
+      "representation": "exact integer long division of the rational generating function.",
+      "residual": null,
+      "rung": "V**  triangulation sequence",
+      "specification": "T_{n+3} = 2T_{n+2} + 2T_{n+1} - T_n; GF = (1+x-x^2)/(1-2x-2x^2+x^3).",
+      "status": "EXACT",
+      "values": {
+        "first_eight": [
+          1,
+          3,
+          7,
+          19,
+          49,
+          129,
+          337,
+          883
+        ],
+        "gf_matches": 1,
+        "recurrence_failures": 0,
+        "terms": 200
+      }
+    },
+    {
+      "cost_ms": 0.009,
+      "detail": "dim R[C14]=14, dim R[D14]=28, dim R[Q8]=8, dim A_F=24; neither planar algebra carries an H or M3(C) block",
+      "domain": "Z",
+      "failure_condition": "an H or M3(C) block appearing in a cyclic or dihedral algebra",
+      "invariants": [
+        "dim R[C14] == 14",
+        "dim R[D14] == 28",
+        "no H block in either",
+        "dim A_F == 24"
+      ],
+      "passed": true,
+      "representation": "Wedderburn block counts as integers; no matrices constructed.",
+      "residual": null,
+      "rung": "VI   planar no-go",
+      "specification": "No finite planar point-group algebra equals A_F = C + H + M3(C).",
+      "status": "EXACT",
+      "values": {
+        "H_blocks_in_C14": 0,
+        "H_blocks_in_D14": 0,
+        "dim_AF": 24,
+        "dim_RC14": 14,
+        "dim_RD14": 28,
+        "dim_RQ8": 8
+      }
+    },
+    {
+      "cost_ms": 0.04,
+      "detail": "complex symmetric 16x16 has 136 free entries; 272 real directions, 272 distinct supports",
+      "domain": "Z",
+      "failure_condition": "a duplicate support would mean the basis is dependent",
+      "invariants": [
+        "16*17/2 == 136",
+        "2*136 == 272",
+        "272 distinct supports"
+      ],
+      "passed": true,
+      "representation": "combinatorial count over (p<=q, unit) supports. No SVD, no allocation.",
+      "residual": null,
+      "rung": "VIII base Dirac dimension",
+      "specification": "dim_R D_base = 272, by counting free entries of a complex symmetric 16x16.",
+      "status": "EXACT",
+      "values": {
+        "complex_entries": 136,
+        "distinct_supports": 272,
+        "real_dimension": 272
+      }
+    },
+    {
+      "cost_ms": 0.497,
+      "detail": "p=65521: int64 rank 4 == python rank 4. p=4000000007 (> 3037000499): int64 4 vs python 4 -> still agrees (headroom)",
+      "domain": "F_p",
+      "failure_condition": "above the ceiling the int64 rank is wrong, not slow, and says nothing",
+      "invariants": [
+        "p <= isqrt(2^63) = 3037000499 for the int64 path",
+        "Python-int path has no width fence"
+      ],
+      "passed": true,
+      "representation": "one small matrix of known rank, ranked twice: numpy int64 vs Python int.",
+      "residual": null,
+      "rung": "X*   the int64 fence",
+      "specification": "Modular rank in numpy int64 is exact only while p^2 < 2^63.",
+      "status": "EXACT",
+      "values": {
+        "diverges_above_ceiling": 0,
+        "over_prime": 4000000007,
+        "prime_ceiling_int64": 3037000499,
+        "rank_int64_over": 4,
+        "rank_int64_safe": 4,
+        "rank_python_over": 4,
+        "rank_python_safe": 4,
+        "safe_prime": 65521
+      }
+    },
+    {
+      "cost_ms": 0.453,
+      "detail": "T_n exact in binary64 to n=38; V=20T to n=36; E=30T to n=35; chi==2 only to n=35 (at n=36 it returns 0.0). The invariant dies 3 rungs before its parts. T_147 needs 205 bits.",
+      "domain": "R64",
+      "failure_condition": "if the composite outlived its parts the model of the fence is wrong",
+      "invariants": [
+        "chi breaks strictly before T_n does"
+      ],
+      "passed": true,
+      "representation": "exact int ladder vs its float64 image; chi recomputed in float.",
+      "residual": 1.0,
+      "rung": "XIII float64 fence",
+      "specification": "Where binary64 stops holding the exact ladder -- measured per quantity.",
+      "status": "COMPUTED",
+      "values": {
+        "bits_for_T147": 205,
+        "first_broken_chi": 0.0,
+        "n_E_exact": 35,
+        "n_T_exact": 38,
+        "n_V_exact": 36,
+        "n_chi_exact": 35
+      }
+    },
+    {
+      "cost_ms": 50.447,
+      "detail": "N=2000: recurrence 0.58ms vs fast-doubling 0.005ms (x111.8 cheaper), decimal render 0.01ms; N=4000: recurrence 1.93ms vs fast-doubling 0.013ms (x147.2 cheaper), decimal render 0.04ms; N=8000: recurrence 7.23ms vs fast-doubling 0.033ms (x216.1 cheaper), decimal render 0.17ms; doubling N multiplies recurrence cost by 3.75 (quadratic ~ 4)",
+      "domain": "t",
+      "failure_condition": "if the recurrence ever wins, the asymptotics are being masked by constants",
+      "invariants": [
+        "fast doubling strictly faster than the recurrence at every depth"
+      ],
+      "passed": true,
+      "representation": "three depths, best-of-5 wall clock, same host, same process.",
+      "residual": 0.29811844257779546,
+      "rung": "XIII* the cost split",
+      "specification": "The O(M(N) log N) cross-check is cheaper than the O(N^2) computation.",
+      "status": "COMPUTED",
+      "values": {
+        "repeats": 5,
+        "rows": [
+          {
+            "N": 2000,
+            "decimal_render_ms": 0.01,
+            "digits": 836,
+            "fast_doubling_ms": 0.005,
+            "recurrence_ms": 0.58,
+            "speedup": 111.8
+          },
+          {
+            "N": 4000,
+            "decimal_render_ms": 0.04,
+            "digits": 1672,
+            "fast_doubling_ms": 0.013,
+            "recurrence_ms": 1.93,
+            "speedup": 147.2
+          },
+          {
+            "N": 8000,
+            "decimal_render_ms": 0.17,
+            "digits": 3344,
+            "fast_doubling_ms": 0.033,
+            "recurrence_ms": 7.23,
+            "speedup": 216.1
+          }
+        ],
+        "scaling_factor_on_doubling": 3.75
+      }
+    }
+  ],
+  "generated_unix": 1785916046,
+  "math_sha256": "f301c0540eadbdbb037f076442e7f03613658f87ce03e5f30a5618199dfbada0"
+}

@@ -1,0 +1,1208 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>PENROSIUM v0.2 — the collapse: matter removes the mirror</title>
+<!--
+  PENROSIUM v0.2 — THE COLLAPSE                                (Path X: frozen)
+  ===========================================================================
+  v0.1 tried the eternal chart. v0.2 lets MATTER testify. Oppenheimer-Snyder
+  dust, released from rest at R0: the star's surface IS v0.1's certified
+  cycloid, and the seam is EXACT (a(eta)sin(chi0) == (R0/2)(1+cos eta),
+  comoving tau == exterior geodesic tau, identically -- zero surface stress).
+  Interior: closed dust FRW in double-null coords (light at 45 deg natively),
+  glued by F(eta-chi0)=Ut_surf, G(eta+chi0)=Vt_surf. Consequences, certified:
+    EXACT   the EVENT HORIZON is born at the CENTRE of the star, at
+            eta_b = eta_H - chi0, before anything locally dramatic happens
+            there, and runs as ONE straight 45-degree line (Ut = 0) out
+            through the surface's r=2M crossing and on to i+.
+    EXACT   regions III, IV and the white hole DO NOT EXIST here. The mirror
+            was scaffolding of the eternal idealization; dust removes it.
+            The GHOST toggle shows exactly what died.
+    EXACT   the centre r=0 is a REGULAR place until eta=pi; then the whole
+            star reaches r=0 in one shared comoving moment. Its diagram line
+            is spacelike throughout (margin printed; the centre end runs
+            asymptotically null in this gauge -- gauge, not physics).
+    DESIGN  F beyond pi-chi0 and G below chi0 are C1 linear continuations
+            (rays that never exit / initial-data rays): the diagram's gauge
+            freedom, stated. t0 centres the crossing at (pi/8, pi/8).
+  Below the initial slice the exterior is drawn as Schwarzschild vacuum;
+  the star's earlier history is not modeled (dust cannot hover) -- DESIGN.
+  ---------------------------------------------------------------------------
+  (v0.1 doctrine, still in force:)
+  ===========================================================================
+  Schwarzschild, maximally extended. Units 2M = 1 (G = c = 1).
+  The chart every popular book waves at you — here it must EARN every line.
+
+  THE VERDICTS (labelled, Thea status grammar; each one certified headless
+  in node against this file's own kernel before freezing):
+
+    EXACT     The horizon is ACQUITTED: Kretschmann K = 48M²/r⁶ = 12/r⁶ is
+              finite (12) at r = 2M. Nothing diverges there but a bad chart.
+              Schwarzschild t climbs ~ln10 per decade of approach — measured
+              live — while proper time τ stays finite. Coordinate, not physics.
+    EXACT     The singularity is CONVICTED: K → ∞ at r = 0 and only there.
+              And in this gauge it is a STRAIGHT line: tan Ũ · tan Ṽ = 1
+              forces Ũ+Ṽ = π/2, so T = ±π/4 to machine epsilon. Straightness
+              is gauge; its SPACELIKE character is invariant: inside, r = 0
+              is a moment in your future, not a place in your path.
+    EXACT     Light moves at slope ±1 everywhere — that is the entire purpose
+              of the conformal gauge. The outgoing-ray trichotomy is exact:
+              escape iff U < 0; ride the horizon iff U = 0; end on r = 0
+              iff U > 0. The one-way door, computed, not asserted.
+    EXACT     Infall from rest at r₀: the cycloid. τ→r=0 = (π/2) r₀^{3/2}.
+              Integrated through the horizon in the cancellation-free form
+              dv/dτ = 1/(E + √(E²−f)) — finite at f = 0, no coordinate drama.
+    COMPUTED  The ingoing-v quadrature (Simpson; self-converges to 9e-13 by
+              step-doubling; agrees with an independent quadrature to 2e-7,
+              endpoint √-kink limiting the order — stated, not hidden).
+    DESIGN    The arctan compactification itself. ALPHIUM rents infinity by
+              finite ITER; PENROSIUM prices it into the frame by gauge. The
+              causal order the chart displays is the invariant content.
+
+  HONEST BOUNDARY: this is the ETERNAL Schwarzschild solution. Regions III
+  and IV (the parallel exterior, the white hole) belong to the idealized
+  maximal extension, not to a star that collapsed. The collapse diagram is
+  a different scroll.
+
+  CURSES HONOURED:
+    13  motion is OPT-IN — boots still; the probe drops on your click, the
+        pulses fire on your press, PLAY τ is a button; prefers-reduced-motion
+        keeps everything fully drawn and skips the animation.
+    26  target is not result — the hover readout inverts r(UV) live with the
+        iteration count and residual PRINTED; verdicts come from the kernel.
+    35  the loaded gun — probe integration budget fixed (N = 4000) and shown;
+        zoom clamped; nothing allocates unbounded.
+
+  RENDER LEDGER: all static geometry lives in Path2D banks rebuilt only when
+  the camera moves; a frame is a few dozen fills/strokes, counted in the HUD.
+
+  LINEAGE: render discipline from shell__stitchium_v0_1; status grammar from
+  Thea v3.0; the honesty-about-infinity from shell__alphium_v1_1.
+  Kernel certified headless before freezing: inversion roundtrip 1.1e-13,
+  singularity straightness 1.1e-16, U-crossing 1.9e-12, t-decade climb
+  2.3040 vs ln10 = 2.3026, null trichotomy — ALL PASS. No Math.random.
+
+  P=12 elsewhere; here the invariant is χ of a chart that finally tells the
+  truth. The price is always paid. Always.            Built 2026-08-02.
+-->
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#050508; --ink:#c8d8e8; --dim:#444; --line:#1a1f2e;
+  --cyan:#00d4ff; --teal:#00ffd5; --pink:#ff69b4; --gold:#ffd700; --grn:#7fff7f; --red:#ff5566;
+}
+body{background:var(--bg);color:var(--ink);font-family:'Courier New',monospace;overflow:hidden;touch-action:none}
+canvas{position:fixed;top:0;left:0;z-index:0}
+#title{position:fixed;top:8px;left:50%;transform:translateX(-50%);z-index:5;pointer-events:none;
+  font-family:'Orbitron';font-size:11px;letter-spacing:0.3em;color:rgba(0,180,255,0.35)}
+#verdict{position:fixed;top:24px;left:50%;transform:translateX(-50%);z-index:5;pointer-events:none;
+  font-family:'Orbitron';font-size:13px;font-weight:900;color:var(--teal)}
+.hud{position:fixed;z-index:5;font-size:10px;line-height:1.65;background:rgba(5,5,8,0.84);
+  border:1px solid var(--line);border-radius:4px;padding:7px 9px}
+#hudL{top:10px;left:10px;min-width:230px}
+#hudR{top:10px;right:10px;width:305px;max-height:52vh;overflow-y:auto;font-size:9px;cursor:pointer}
+.lbl{color:var(--dim)} .vc{color:var(--teal)} .vp{color:var(--pink)} .vg{color:var(--gold)}
+.vk{color:var(--cyan)} .vgr{color:var(--grn)} .vr{color:var(--red)}
+.sect{color:#6a7a8a;letter-spacing:0.15em;font-size:8px;margin-top:5px}
+#hudR div{margin:1px 0}
+.lg-inv{color:var(--grn);font-weight:bold} .lg-op{color:var(--cyan)} .lg-warn{color:#ff9040}
+.lg-dim{color:#556} .lg-gold{color:var(--gold)} .lg-pink{color:var(--pink)}
+#legend{position:fixed;left:10px;bottom:46px;z-index:5;font-size:8px;color:#5a6a7a;
+  background:rgba(5,5,8,0.84);border:1px solid var(--line);border-radius:4px;padding:6px 8px;line-height:1.7}
+#boundary{position:fixed;left:50%;transform:translateX(-50%);bottom:46px;z-index:5;pointer-events:none;
+  font-size:9px;color:#5a6a7a;letter-spacing:0.05em;text-align:center;line-height:1.5;max-width:64vw}
+#boundary b{color:#8aa0b8;font-weight:normal}
+#bar{position:fixed;bottom:0;left:0;right:0;z-index:10;background:rgba(5,5,8,0.95);
+  border-top:1px solid var(--line);padding:5px 8px;display:flex;gap:5px;align-items:center;
+  flex-wrap:wrap;justify-content:center}
+.btn{background:#0a0e18;border:1px solid #2a2a3a;color:#80d0ff;padding:4px 10px;font-family:inherit;
+  font-size:9px;cursor:pointer;border-radius:3px;white-space:nowrap;transition:all 0.15s}
+.btn:hover{border-color:#4a6a8a;color:#fff}
+.btn.gn{color:var(--grn);border-color:#1a3a1a}
+.btn.gd{color:var(--gold);border-color:#4a4020}
+.btn.pk{color:var(--pink);border-color:#3a1a2a}
+.btn.on{background:#132013;border-color:var(--grn)}
+.btn.armed{background:#241020;border-color:var(--pink)}
+.btn:disabled{opacity:0.35;cursor:default}
+.sep{width:1px;height:16px;background:var(--line)}
+#toast{position:fixed;top:52px;left:50%;transform:translateX(-50%);z-index:20;background:rgba(20,8,8,0.95);
+  border:1px solid #663;color:#ffcf90;font-size:10px;padding:8px 14px;border-radius:4px;display:none;
+  max-width:80vw;text-align:center;line-height:1.5}
+</style></head><body>
+<canvas id="cv" width="1280" height="720"></canvas>
+<div id="title">PENROSIUM v0.2</div>
+<div id="verdict">matter removes the mirror · horizon born at the centre · K(2M)=12</div>
+<div id="hudL" class="hud">
+  <div class="sect">CHART (hover — inverted live)</div>
+  <div><span class="lbl">region </span><span class="vg" id="c-reg">—</span></div>
+  <div><span class="lbl">r/2M </span><span class="vc" id="c-r">—</span> <span class="lbl">r* </span><span class="vc" id="c-rs">—</span></div>
+  <div><span class="lbl">t </span><span class="vk" id="c-t">—</span></div>
+  <div><span class="lbl">K </span><span class="vp" id="c-k">—</span> <span class="lbl">1+z </span><span class="vc" id="c-z">—</span></div>
+  <div><span class="lbl">invert </span><span class="lbl" id="c-inv">—</span></div>
+  <div id="c-doom" class="vp" style="display:none">both light edges end on r=0 — it is your future, not your location</div>
+  <div class="sect">STAR (R₀ from rest)</div>
+  <div><span class="lbl">R₀ </span><span class="vc" id="s-r0">6.0</span> <span class="lbl">χ₀ </span><span class="vc" id="s-chi">—</span> <span class="lbl">η_b </span><span class="vg" id="s-etab">—</span></div>
+  <div class="sect">PROBE (drop from rest)</div>
+  <div><span class="lbl">r₀ </span><span class="vc" id="p-r0">—</span> <span class="lbl">t₀ </span><span class="vc" id="p-t0">—</span> <span class="lbl">E </span><span class="vc" id="p-e">—</span></div>
+  <div><span class="lbl">τ→H </span><span class="vg" id="p-tauh">—</span> <span class="lbl">τ→r=0 </span><span class="vg" id="p-taus">—</span> <span class="lbl">EXACT</span></div>
+  <div><span class="lbl">v(H) </span><span class="vgr" id="p-vh">—</span> <span class="lbl">finite · U-cross </span><span class="vgr" id="p-ux">—</span></div>
+  <div><span class="lbl">t(H) </span><span class="vr" id="p-th">—</span> <span class="lbl">← coordinate, not physics</span></div>
+  <div><span class="lbl">pulses </span><span class="vk" id="p-pulse">—</span></div>
+  <div class="sect">PRICE</div>
+  <div><span class="lbl">probe </span><span class="vc" id="pr-ms">—</span> <span class="lbl">N </span><span class="vc" id="pr-n">4000</span></div>
+  <div><span class="lbl">paths </span><span class="vc" id="pr-paths">0</span> <span class="lbl">calls </span><span class="vc" id="pr-calls">0</span> <span class="lbl">texts </span><span class="vc" id="pr-txt">0</span></div>
+</div>
+<div id="hudR" class="hud" title="click to dim"><div class="lg-inv">PENROSIUM: the courtroom is open</div></div>
+<div id="legend">
+  <div><span style="color:var(--pink)">━</span> r=0 (straight in this gauge, EXACT) &nbsp; <span style="color:var(--gold)">╱</span> horizons U·V=0</div>
+  <div><span style="color:var(--cyan)">╲</span> scri± (null infinity) &nbsp; <span style="color:#5a7a9a">〰</span> r-grid &nbsp; <span style="color:#44566a">〰</span> t-grid (all t-lines meet i0)</div>
+  <div><span style="color:var(--teal)">●</span> probe / <b style="color:var(--teal)">star surface</b> (both are the same cycloid) &nbsp; <span style="color:var(--cyan)">→</span> escaped &nbsp; <span style="color:var(--red)">→</span> trapped</div>
+  <div><span style="color:var(--grn)">│</span> centre r=0 (regular — a place, not a fate, until η=π) &nbsp; <span style="color:#c9a15a">〰</span> dust shells (comoving)</div>
+  <div id="lg-cone" style="display:none">every cone is the identical 45° wedge — that is the entire point of the gauge</div>
+</div>
+<div id="boundary"><b>BOUNDARY</b> · Oppenheimer–Snyder dust from rest (pressureless — real stars push back) · below the initial slice: vacuum exterior only, prior history unmodeled (DESIGN) · F,G continuations = gauge (DESIGN) · seam &amp; causal order = EXACT · units 2M=1</div>
+<div id="bar">
+  <button class="btn on" id="b-view" onclick="doView()">VIEW: collapse</button>
+  <button class="btn" id="b-ghost" onclick="doGhost()">GHOST: off</button>
+  <span class="sl">R₀ <input type="range" id="sl-r0" min="25" max="120" value="60" oninput="setR0(this.value)"><span class="sv" id="sv-r0">6.0</span></span>
+  <span class="sep"></span>
+  <button class="btn gn" id="b-drop" onclick="doArm()">DROP PROBE</button>
+  <button class="btn gd" id="b-pulse" onclick="doPulses()" disabled>EMIT PULSES</button>
+  <button class="btn pk" id="b-play" onclick="doPlay()" disabled>PLAY τ</button>
+  <span class="sep"></span>
+  <button class="btn on" id="b-grid" onclick="doGrid()">GRID: on</button>
+  <button class="btn" id="b-cones" onclick="doCones()">CONES: off</button>
+  <span class="sep"></span>
+  <button class="btn" id="b-clear" onclick="doClear()">CLEAR</button>
+  <button class="btn" onclick="doHide()">HIDE</button>
+</div>
+<div id="toast"></div>
+<script>
+/* eslint-disable */
+'use strict';
+/* ============================================================================
+   PENROSIUM KERNEL -- Schwarzschild, maximally extended, units 2M = 1 (G=c=1).
+   Everything the diagram draws is computed here; testable headless (node) and
+   run verbatim in-browser. No Math.random. Deterministic.
+
+   Map:  r* = r + ln|r-1|          u = t - r*      v = t + r*
+         region I:  U = -e^(-u/2)  V = e^(v/2)     =>  U V = (1-r) e^r  (all regions)
+         compactify: Ut = atan(U), Vt = atan(V);  X = (Vt-Ut)/2, T = (Vt+Ut)/2
+   EXACT: r=0  <=>  UV=1  <=>  tan(Ut)tan(Vt)=1  <=>  Ut+Vt = +-pi/2
+          =>  T = +-pi/4 : the singularity is a STRAIGHT spacelike line in this
+          gauge (straightness is gauge; spacelikeness is invariant).
+   EXACT: horizons UV=0 are the diagonals T=+-X. Light moves at slope +-1.
+   EXACT: Kretschmann K = 48 M^2 / r^6 = 12 / r^6 : finite (12) at r=1,
+          divergent only at r=0. Horizon: coordinate. Singularity: curvature.
+   ========================================================================= */
+var PK = {};
+(function(){
+  var PI = Math.PI, HPI = Math.PI/2, QPI = Math.PI/4;
+
+  PK.f      = function(r){ return 1 - 1/r; };
+  PK.rstar  = function(r){ return r + Math.log(Math.abs(r - 1)); };
+  PK.K      = function(r){ return 12/Math.pow(r,6); };            /* Kretschmann, 2M=1 */
+  PK.zshift = function(r){ return 1/Math.sqrt(PK.f(r)) - 1; };    /* static emitter, r>1 */
+  PK.guv    = function(r){ return (1 - r)*Math.exp(r); };         /* UV(r), monotone dec */
+
+  /* robust inverse r(UV): g(r)=(1-r)e^r strictly decreasing on (0,inf),
+     g(0)=1, g(1)=0, g -> -inf. Bisection bracket + safeguarded Newton. */
+  PK.rFromUV = function(uv){
+    if (uv >= 1) return { r: 0, iters: 0, resid: Math.abs(uv - 1) };
+    var lo, hi;
+    if (uv >= 0){ lo = 0; hi = 1; } else { lo = 1; hi = 2; while (PK.guv(hi) > uv) hi *= 2; }
+    var r = 0.5*(lo+hi), it;
+    for (it = 0; it < 90; it++){
+      var g = PK.guv(r) - uv;
+      if (g > 0) lo = r; else hi = r;
+      var gp = -r*Math.exp(r);
+      var rn = (gp !== 0) ? r - g/gp : 0.5*(lo+hi);
+      r = (rn > lo && rn < hi) ? rn : 0.5*(lo+hi);
+      if (hi - lo < 1e-15*(1+r)) break;
+    }
+    return { r: r, iters: it+1, resid: Math.abs(PK.guv(r) - uv) };
+  };
+
+  PK.compact   = function(U,V){ var a=Math.atan(U), b=Math.atan(V);
+                                return { Ut:a, Vt:b, X:(b-a)/2, T:(b+a)/2 }; };
+  PK.uncompact = function(X,T){ var a=T-X, b=T+X;
+                                return { Ut:a, Vt:b, U:Math.tan(a), V:Math.tan(b) }; };
+
+  /* classify a diagram point; returns region + physical readout */
+  PK.classify = function(X,T){
+    var w = PK.uncompact(X,T);
+    if (Math.abs(w.Ut) >= HPI-1e-12 || Math.abs(w.Vt) >= HPI-1e-12)
+      return { region:'beyond-scri' };
+    var uv = w.U * w.V;
+    if (uv > 1) return { region: (T>0?'beyond-singularity-future':'beyond-singularity-past') };
+    var inv = PK.rFromUV(uv);
+    var reg;
+    if (Math.abs(uv) < 1e-14) reg = 'horizon';
+    else if (w.U < 0 && w.V > 0) reg = 'I';
+    else if (w.U > 0 && w.V > 0) reg = 'II';
+    else if (w.U > 0 && w.V < 0) reg = 'III';
+    else reg = 'IV';
+    var t = null;
+    if (reg==='I')   t =  Math.log(-w.V/w.U);
+    if (reg==='III') t =  Math.log(-w.U/w.V);
+    if (reg==='II')  t =  Math.log( w.V/w.U);   /* interior: t is SPACELIKE */
+    if (reg==='IV')  t =  Math.log( w.U/w.V);
+    return { region:reg, U:w.U, V:w.V, uv:uv, r:inv.r, t:t,
+             rstar:(inv.r>0? PK.rstar(inv.r) : -Infinity),
+             K:PK.K(Math.max(inv.r,1e-9)), invIters:inv.iters, invResid:inv.resid };
+  };
+
+  /* EXACT frame of the maximally extended diagram (corners, in (X,T)) */
+  PK.frame = function(){
+    return {
+      i0R:[ HPI,0], i0L:[-HPI,0],
+      ipR:[ QPI, QPI], ipL:[-QPI, QPI], imR:[ QPI,-QPI], imL:[-QPI,-QPI],
+      B:[0,0],
+      singFuture:[[-QPI,QPI],[QPI,QPI]], singPast:[[-QPI,-QPI],[QPI,-QPI]]
+    };
+  };
+
+  /* sampled const-r and const-t curves, compactified (COMPUTED).
+     Symmetric boost parametrization U,V = (+-)sqrt|uv| e^(-+sigma): at every
+     sample the LARGER of |U|,|V| is as small as possible, so the atan pole
+     never amplifies double-precision noise. Cap C = tan(pi/2 - 5e-4). */
+  var POLE_MARGIN = 5e-4, TANCAP = Math.tan(HPI - 5e-4);
+  PK.constR = function(r, n){
+    var uv = PK.guv(r), out = [], i, a=[], b=[];
+    if (r > 1){                      /* regions I and III: uv < 0 */
+      var s = Math.sqrt(-uv), sc = Math.log(TANCAP/s);
+      for (i=0;i<n;i++){
+        var sig = -sc + 2*sc*(i/(n-1));
+        var U = -s*Math.exp(-sig), V = s*Math.exp(sig);
+        a.push(PK.compact(U,V));
+        b.push(PK.compact(-U,-V));   /* region III mirror */
+      }
+      out.push(a); out.push(b);
+    } else if (r > 0 && r < 1){      /* regions II and IV: 0 < uv < 1 */
+      var s2 = Math.sqrt(uv), sc2 = Math.log(TANCAP/s2);
+      for (i=0;i<n;i++){
+        var sig2 = -sc2 + 2*sc2*(i/(n-1));
+        var U2 = s2*Math.exp(-sig2), V2 = s2*Math.exp(sig2);
+        a.push(PK.compact(U2,V2));
+        b.push(PK.compact(-U2,-V2));
+      }
+      out.push(a); out.push(b);
+    }
+    return out;
+  };
+  PK.constT = function(t, n){        /* region I line V = -U e^t ; III mirror.
+    t = ln(-V/U) is RELATIVE-error conditioned, so a large private cap is safe:
+    endpoint gap to i0 ~ e^|t|/CT. sigMax stops short of the |uv|<1e-14
+    bifurcation band (uv = -e^{t-2sig}), where classify rightly says horizon. */
+    var CT = 1e6, out=[], a=[], b=[], i;
+    var sigMin = Math.max(-Math.log(CT), t - Math.log(CT));
+    var sigMax = (t + 27)/2;
+    for (i=0;i<n;i++){
+      var sig = sigMin + (sigMax - sigMin)*(i/(n-1));
+      var U = -Math.exp(-sig), V = Math.exp(t - sig);
+      a.push(PK.compact(U,V));
+      b.push(PK.compact(-U,-V));
+    }
+    out.push(a); out.push(b);
+    return out;
+  };
+
+  /* --- RADIAL INFALL from rest at (r0, t0), r0 > 1 ---------------------------
+     EXACT cycloid: r = (r0/2)(1+cos eta), tau = (r0^{3/2}/2)(eta+sin eta),
+     tau_total = (pi/2) r0^{3/2}, horizon at cos eta_h = 2/r0 - 1.
+     Ingoing EF v integrated in the cancellation-free form (finite at r=1):
+       dv/dtau = 1/( E + sqrt(E^2 - f) ),  E = sqrt(1 - 1/r0)     (EXACT algebra)
+     then V = e^{v/2}, U = (1-r) e^r / V  -- smooth through the horizon.
+     dv/deta depends on eta only, so RK4 here is Simpson quadrature (k3=k2). */
+  PK.probe = function(r0, t0, N){
+    N = N || 4000;
+    var E = Math.sqrt(1 - 1/r0);
+    var c32 = Math.pow(r0,1.5)/2;
+    function rOf(eta){ return (r0/2)*(1+Math.cos(eta)); }
+    function dtaudeta(eta){ return c32*(1+Math.cos(eta)); }
+    function dvdtau(r){
+      var f = 1 - 1/r, disc = E*E - f;
+      return 1/(E + Math.sqrt(Math.max(disc,0)));
+    }
+    function Uof(eta_, v_){ return PK.guv(rOf(eta_)) / Math.exp(v_/2); }
+    var etaEnd = PI - 1e-4;
+    var h = etaEnd/N, v = t0 + PK.rstar(r0);
+    var pts = [], eta = 0, i;
+    var etaH = Math.acos(2/r0 - 1);
+    var vAtH = null, UcrossResid = null;
+    function push(eta_, v_){
+      var r = rOf(eta_), V = Math.exp(v_/2), U = PK.guv(r)/V;
+      var cpt = PK.compact(U,V);
+      pts.push({ eta:eta_, r:r, tau:c32*(eta_+Math.sin(eta_)), v:v_, U:U, V:V,
+                 X:cpt.X, T:cpt.T,
+                 t:(r>1 ? v_ - PK.rstar(r) : null), K:PK.K(Math.max(r,1e-9)) });
+    }
+    push(0, v);
+    for (i=0;i<N;i++){
+      var k1 = dvdtau(rOf(eta))     * dtaudeta(eta);
+      var k2 = dvdtau(rOf(eta+h/2)) * dtaudeta(eta+h/2);
+      var k4 = dvdtau(rOf(eta+h))   * dtaudeta(eta+h);
+      var vn = v + (h/6)*(k1 + 4*k2 + k4);           /* Simpson (RK4, k3=k2) */
+      var etan = eta + h;
+      if (eta < etaH && etan >= etaH){
+        var fH = (etaH - eta)/h;
+        vAtH = v + fH*(vn - v);
+        /* honest crossing receipt: interpolate the INTEGRATED U through zero */
+        var Ulo = Uof(eta, v), Uhi = Uof(etan, vn);
+        UcrossResid = Math.abs(Ulo + fH*(Uhi - Ulo));
+      }
+      eta = etan; v = vn;
+      if (i % 8 === 0 || i === N-1) push(eta, v);
+    }
+    var last = pts[pts.length-1];
+    return {
+      r0:r0, t0:t0, E:E, N:N,
+      tauHorizon: c32*(etaH + Math.sin(etaH)),        /* EXACT */
+      tauSing:    (PI/2)*Math.pow(r0,1.5),            /* EXACT */
+      vHorizon: vAtH, UcrossResid: UcrossResid,
+      vSing: last.v, Tend: last.T, rEnd: last.r,
+      pts: pts
+    };
+  };
+
+  /* radial null ray from (U0,V0): dir +1 outgoing (U const, V up),
+     dir -1 ingoing (V const, U up). EXACT trichotomy for outgoing:
+     escapes to scri+ iff U0 < 0; rides horizon iff U0 = 0; hits r=0 iff U0 > 0. */
+  PK.nullRay = function(U0, V0, dir){
+    if (dir >= 0){
+      if (U0 < 0)   return { fate:'escape',      endV: Infinity, hit:null };
+      if (U0 === 0) return { fate:'horizon',     endV: Infinity, hit:null };
+      return { fate:'singularity', endV: 1/U0, hit:[U0, 1/U0] };
+    } else {
+      if (V0 < 0)   return { fate:'escape-past-left', endU: Infinity, hit:null };
+      if (V0 === 0) return { fate:'horizon',     endU: Infinity, hit:null };
+      return { fate:'singularity', endU: 1/V0, hit:[1/V0, V0] };
+    }
+  };
+
+  PK.PI = PI; PK.HPI = HPI; PK.QPI = QPI;
+})();
+if (typeof module!=='undefined') module.exports = PK;
+/* ============================================================================
+   PK2 -- OPPENHEIMER-SNYDER COLLAPSE, glued to PK's exterior. Units 2M = 1.
+   Interior: closed dust FRW, a(eta) = (a_m/2)(1+cos eta), a_m = R0^{3/2},
+   comoving radius chi in [0, chi0], sin(chi0) = 1/sqrt(R0)  (so 2M = R0 sin^2chi0).
+   EXACT seam: the surface areal radius a(eta) sin chi0 = (R0/2)(1+cos eta)
+   -- the SAME cycloid PK.probe certifies -- and comoving proper time
+   (a_m/2)(eta+sin eta) equals the exterior geodesic tau IDENTICALLY.
+   Zero surface stress: the Israel glue is seamless, and we assert it.
+
+   Global conformal coordinates by DOUBLE-NULL MATCHING:
+     interior null coords are eta -+ chi (light at 45 degrees natively);
+     define F(x) so F(eta - chi0) = Ut_surf(eta)  (outgoing rays exit),
+            G(y) so G(eta + chi0) = Vt_surf(eta)  (ingoing rays entered).
+   Then Ut = F(eta-chi), Vt = G(eta+chi) agree with the exterior on the seam,
+   and the EVENT HORIZON is globally the straight line Ut = 0: born at the
+   CENTRE at eta_b = eta_H - chi0, exiting the star exactly where the surface
+   crosses r = 2M (U crosses 0 -- certified in PK), then up to i+.
+   F beyond pi - chi0 (rays that never exit) and G below chi0 (initial-data
+   rays) are linear C1 continuations: DESIGN, the diagram's gauge freedom.
+   ========================================================================= */
+var PK2 = {};
+(function(){
+  var PI = Math.PI, QPI = Math.PI/4;
+
+  function interpU(xs0, h, arr, x){            /* uniform-grid linear interp */
+    var u = (x - xs0)/h;
+    if (u <= 0) return arr[0];
+    var n = arr.length - 1;
+    if (u >= n) return arr[n];
+    var i = Math.floor(u), f = u - i;
+    return arr[i] + (arr[i+1] - arr[i])*f;
+  }
+  function invMono(xs0, h, arr, val){          /* inverse of increasing table */
+    var n = arr.length - 1;
+    if (val <= arr[0]) return { x: xs0, below: val < arr[0] - 1e-12, above: false };
+    if (val >= arr[n]) return { x: xs0 + n*h, below: false, above: val > arr[n] + 1e-12 };
+    var lo = 0, hi = n;
+    while (hi - lo > 1){ var m = (lo + hi) >> 1; if (arr[m] <= val) lo = m; else hi = m; }
+    var f = (val - arr[lo]) / (arr[hi] - arr[lo]);
+    return { x: xs0 + (lo + f)*h, below: false, above: false };
+  }
+
+  PK2.star = function(R0, N){
+    N = N || 6000;
+    var chi0 = Math.asin(1/Math.sqrt(R0));
+    var am = Math.pow(R0, 1.5);
+    var E = Math.sqrt(1 - 1/R0), c32 = am/2;
+    var etaH = Math.acos(2/R0 - 1);
+    function rOf(e){ return (R0/2)*(1 + Math.cos(e)); }
+    function dtaudeta(e){ return c32*(1 + Math.cos(e)); }
+    function dvdtau(r){ var f = 1 - 1/r, d = E*E - f; return 1/(E + Math.sqrt(Math.max(d, 0))); }
+    var etaEnd = PI - 1e-6, h = etaEnd/N;
+    /* pass 1: t0-independent vRel(eta) = rstar(R0) + integral (Simpson) */
+    var vRel = new Float64Array(N + 1);
+    vRel[0] = PK.rstar(R0);
+    var eta = 0, i;
+    for (i = 0; i < N; i++){
+      var k1 = dvdtau(rOf(eta))       * dtaudeta(eta);
+      var k2 = dvdtau(rOf(eta + h/2)) * dtaudeta(eta + h/2);
+      var k4 = dvdtau(rOf(eta + h))   * dtaudeta(eta + h);
+      vRel[i+1] = vRel[i] + (h/6)*(k1 + 4*k2 + k4);
+      eta += h;
+    }
+    /* centre the composition: t0 chosen so v(etaH) = 0 => the horizon crossing
+       lands at (X,T) = (pi/8, pi/8). DESIGN, stated. */
+    var vH = interpU(0, h, vRel, etaH);
+    var t0 = -vH;
+    var etaA = new Float64Array(N + 1), rA = new Float64Array(N + 1),
+        tauA = new Float64Array(N + 1), UtS = new Float64Array(N + 1),
+        VtS = new Float64Array(N + 1);
+    for (i = 0; i <= N; i++){
+      var e2 = i*h, r = rOf(e2), v = t0 + vRel[i];
+      var V = Math.exp(v/2), U = PK.guv(r)/V;
+      etaA[i] = e2; rA[i] = r; tauA[i] = c32*(e2 + Math.sin(e2));
+      UtS[i] = Math.atan(U); VtS[i] = Math.atan(V);
+    }
+    /* F over x in [-chi0, pi]; pinned x <= pi - chi0 */
+    var M = 3000, xs0 = -chi0, hx = (PI - xs0)/M;
+    var F = new Float64Array(M + 1);
+    var xPin = PI - chi0, iPin = M;
+    for (i = 0; i <= M; i++){
+      var x = xs0 + i*hx;
+      if (x <= xPin + 1e-12){ F[i] = interpU(0, h, UtS, x + chi0); iPin = i; }
+      else break;
+    }
+    var slF = (F[iPin] - F[iPin-1])/hx;
+    for (i = iPin + 1; i <= M; i++) F[i] = F[iPin] + slF*hx*(i - iPin);
+    /* G over y in [0, pi + chi0]; pinned y >= chi0 */
+    var ys0 = 0, hy = (PI + chi0 - ys0)/M;
+    var G = new Float64Array(M + 1), jPin = 0;
+    for (i = M; i >= 0; i--){
+      var y = ys0 + i*hy;
+      if (y >= chi0 - 1e-12){ G[i] = interpU(0, h, VtS, y - chi0); jPin = i; }
+      else break;
+    }
+    var slG = (G[jPin+1] - G[jPin])/hy;
+    for (i = jPin - 1; i >= 0; i--) G[i] = G[jPin] - slG*hy*(jPin - i);
+    return { R0:R0, chi0:chi0, am:am, E:E, etaH:etaH, etaB:etaH - chi0, t0:t0, N:N,
+             h:h, etaA:etaA, rA:rA, tauA:tauA, UtS:UtS, VtS:VtS,
+             M:M, xs0:xs0, hx:hx, F:F, ys0:ys0, hy:hy, G:G,
+             vHraw:vH };
+  };
+
+  /* forward F,G: DIRECT single-interp from the surface table in the pinned
+     ranges (the M-tables would add a second interpolation layer -- the
+     certification caught that at ~8e-6); linear C1 continuations outside. */
+  PK2.Fof = function(st, x){
+    var xPin = Math.PI - st.chi0;
+    if (x <= xPin) return interpU(0, st.h, st.UtS, x + st.chi0);
+    var f0 = interpU(0, st.h, st.UtS, Math.PI - 1e-9);
+    var sl = (st.UtS[st.N] - st.UtS[st.N-1]) / st.h;
+    return f0 + sl*(x - xPin);
+  };
+  PK2.Gof = function(st, y){
+    if (y >= st.chi0) return interpU(0, st.h, st.VtS, y - st.chi0);
+    var g0 = st.VtS[0];
+    var sl = (st.VtS[1] - st.VtS[0]) / st.h;
+    return g0 + sl*(y - st.chi0);
+  };
+  PK2.surfUt = function(st, eta){ return interpU(0, st.h, st.UtS, eta); };
+  PK2.surfVt = function(st, eta){ return interpU(0, st.h, st.VtS, eta); };
+  PK2.aOf = function(st, eta){ return (st.am/2)*(1 + Math.cos(eta)); };
+
+  PK2.intMap = function(st, chi, eta){
+    var Ut = PK2.Fof(st, eta - chi), Vt = PK2.Gof(st, eta + chi);
+    return { Ut:Ut, Vt:Vt, X:(Vt - Ut)/2, T:(Vt + Ut)/2 };
+  };
+  /* invert (Ut,Vt) -> (chi,eta); range-aware for the physicality verdict */
+  PK2.inv = function(st, Ut, Vt){
+    var ix = invMono(st.xs0, st.hx, st.F, Ut);
+    var iy = invMono(st.ys0, st.hy, st.G, Vt);
+    if (ix.below) return { where:'ext-past' };          /* retarded before release */
+    if (iy.below) return { where:'ext-past' };          /* advanced before any seam ray: exterior past */
+    var chi = (iy.x - ix.x)/2, eta = (iy.x + ix.x)/2;
+    if (ix.above || iy.above){
+      if (chi >= st.chi0) return { where:'exterior', chi:chi, eta:eta };
+      return { where:'post-sing' };
+    }
+    if (chi < -1e-9) return { where:'removed', chi:chi, eta:eta };
+    if (chi <= st.chi0 + 1e-9){
+      if (eta <= PI + 1e-9) return { where:'star', chi:Math.max(0,chi), eta:eta };
+      return { where:'post-sing' };
+    }
+    return { where:'exterior', chi:chi, eta:eta };
+  };
+  /* full verdict for a diagram point in the collapse spacetime */
+  PK2.physical = function(st, X, T){
+    var c = PK.classify(X, T);
+    if (c.region === 'beyond-scri') return { where:'beyond-scri', cls:c };
+    var iv = PK2.inv(st, T - X, T + X);
+    if (iv.where === 'star'){
+      var a = PK2.aOf(st, iv.eta);
+      return { where:'star', chi:iv.chi, eta:iv.eta, a:a,
+               rLocal: a*Math.sin(iv.chi),
+               rho: Math.pow(st.am/Math.max(a,1e-12), 3),   /* rho/rho(eta=0) */
+               tauCom: (st.am/2)*(iv.eta + Math.sin(iv.eta)), cls:c };
+    }
+    if (iv.where === 'removed') return { where:'removed', cls:c };
+    if (iv.where === 'post-sing') return { where:'post-sing', cls:c };
+    /* exterior candidate: must be Schwarzschild regions I/II/horizon */
+    if (c.region === 'I' || c.region === 'II' || c.region === 'horizon')
+      return { where:'exterior', cls:c };
+    if (c.region === 'beyond-singularity-future') return { where:'post-sing', cls:c };
+    return { where:'removed', cls:c };                  /* III, IV, past-sing side */
+  };
+
+  /* drawable geometry of the star, in diagram (X,T) */
+  PK2.geom = function(st, n){
+    n = n || 240;
+    var i, out = { surface:[], center:[], dust:[], initSlice:[], intSing:[],
+                   horizon:[], extSing:[], starPoly:[] };
+    for (i = 0; i <= n; i++){
+      var eta = PI*(i/n);
+      var Ut = PK2.surfUt(st, eta), Vt = PK2.surfVt(st, eta);
+      out.surface.push({ X:(Vt-Ut)/2, T:(Vt+Ut)/2 });
+      out.center.push(PK2.intMap(st, 0, eta));
+    }
+    [0.25, 0.5, 0.75].forEach(function(f){
+      var line = [];
+      for (i = 0; i <= n; i++) line.push(PK2.intMap(st, f*st.chi0, PI*(i/n)));
+      out.dust.push(line);
+    });
+    for (i = 0; i <= 60; i++){
+      var ch = st.chi0*(i/60);
+      out.initSlice.push(PK2.intMap(st, ch, 0));
+      out.intSing.push(PK2.intMap(st, st.chi0*(1 - i/60), PI));
+    }
+    var born = PK2.intMap(st, 0, st.etaB);
+    out.horizon = [ { X: born.X, T: born.T }, { X: QPI, T: QPI } ];
+    var se = out.surface[n];
+    out.extSing = [ { X: se.X, T: se.T }, { X: QPI, T: QPI } ];
+    out.starPoly = out.center.concat(out.intSing.slice().reverse().slice(0,0));
+    /* closed star region: center up, singularity across, surface down, initial back */
+    var poly = [];
+    for (i = 0; i <= n; i++) poly.push(out.center[i]);
+    for (i = 0; i <= 60; i++) poly.push(PK2.intMap(st, st.chi0*(i/60), PI));
+    for (i = n; i >= 0; i--) poly.push(out.surface[i]);
+    for (i = 60; i >= 0; i--) poly.push(PK2.intMap(st, st.chi0*(i/60), 0));
+    out.starPoly = poly;
+    return out;
+  };
+
+  /* clip an (X,T) polyline to the physical collapse exterior */
+  PK2.clipExterior = function(st, polys){
+    var out = [], p, i;
+    for (p = 0; p < polys.length; p++){
+      var run = [], poly = polys[p];
+      for (i = 0; i < poly.length; i++){
+        var pt = poly[i];
+        var ph = PK2.physical(st, pt.X, pt.T);
+        if (ph.where === 'exterior'){ run.push(pt); }
+        else { if (run.length > 1) out.push(run); run = []; }
+      }
+      if (run.length > 1) out.push(run);
+    }
+    return out;
+  };
+})();
+if (typeof module !== 'undefined' && module.exports) module.exports = PK2;
+
+/* ===================== RENDERER + UI (the seen half) ====================== */
+var cv=document.getElementById('cv'), cx=cv.getContext('2d');
+var W=0,H=0,S=1;
+var cam={panX:0,panT:0,zoom:1};
+var camDirty=true;
+var reduceMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
+var gridOn=true, conesOn=false, armed=false, hidden=false;
+var viewMode='collapse', ghost=false, R0=6, star=null, SGEO=null, SW=null;
+var DOOM_II='both light edges end on r=0 \u2014 it is your future, not your location';
+var DOOM_STAR='every dust shell reaches r=0 at \u03b7=\u03c0 \u2014 one shared comoving moment';
+var probe=null, pulses=null, playing=false, playTau=0, playIdx=0;
+var hover=null;
+var pathCount=0, callCount=0, textCount=0;
+var TAU='\u03c4';
+var PI=PK.PI, HPI=PK.HPI, QPI=PK.QPI;
+
+function SV(id,v){ var e=document.getElementById(id); if(e) e.textContent=v; }
+function log(msg,cls){
+  var el=document.getElementById('hudR'), d=document.createElement('div');
+  d.className=cls||'lg-dim'; d.textContent=msg; el.appendChild(d);
+  while(el.childNodes.length>220) el.removeChild(el.childNodes[1]);
+  el.scrollTop=el.scrollHeight;
+}
+var toastT=null;
+function toast(msg){
+  var t=document.getElementById('toast'); t.textContent=msg; t.style.display='block';
+  if(toastT) clearTimeout(toastT); toastT=setTimeout(function(){ t.style.display='none'; },5200);
+}
+
+/* ---- static world geometry: computed ONCE from the kernel ---- */
+var WORLD=null;
+var RVALS_EXT=[1.05,1.2,1.5,2,3,5,9], RVALS_IN=[0.2,0.4,0.6,0.8,0.95], TVALS=[-3,-2,-1,1,2,3];
+function buildWorld(){
+  WORLD={ regions:[
+      [[0,0],[QPI,-QPI],[HPI,0],[QPI,QPI]],          /* I   */
+      [[0,0],[QPI,QPI],[-QPI,QPI]],                  /* II  */
+      [[0,0],[-QPI,QPI],[-HPI,0],[-QPI,-QPI]],       /* III */
+      [[0,0],[-QPI,-QPI],[QPI,-QPI]]                 /* IV  */
+    ],
+    gridRExt:[], gridRIn:[], gridT:[],
+    axis:[[[-HPI,0],[HPI,0]]],
+    hor:[[[-QPI,-QPI],[QPI,QPI]],[[QPI,-QPI],[-QPI,QPI]]],
+    sing:[[[-QPI,QPI],[QPI,QPI]],[[-QPI,-QPI],[QPI,-QPI]]],
+    scri:[[[HPI,0],[QPI,QPI]],[[HPI,0],[QPI,-QPI]],[[-HPI,0],[-QPI,QPI]],[[-HPI,0],[-QPI,-QPI]]],
+    coneF:[], coneP:[],
+    probe:null, pulseEsc:[], pulseTrap:[], pulseHor:[],
+    labels:[], rLab:[] };
+  var i,j;
+  for(i=0;i<RVALS_EXT.length;i++){
+    var polys=PK.constR(RVALS_EXT[i],180);
+    for(j=0;j<polys.length;j++) WORLD.gridRExt.push(polys[j]);
+  }
+  for(i=0;i<RVALS_IN.length;i++){
+    var polys2=PK.constR(RVALS_IN[i],140);
+    for(j=0;j<polys2.length;j++) WORLD.gridRIn.push(polys2[j]);
+  }
+  for(i=0;i<TVALS.length;i++){
+    var polys3=PK.constT(TVALS[i],140);
+    for(j=0;j<polys3.length;j++) WORLD.gridT.push(polys3[j]);
+  }
+  /* light-cone glyph field: identical 45-degree wedges, that is the point */
+  var g=0.09, gx, gt;
+  for(gx=-1.35; gx<=1.351; gx+=0.27) for(gt=-0.54; gt<=0.541; gt+=0.27){
+    var c=PK.classify(gx,gt);
+    var okReg=(c.region==='I'||c.region==='III') ? (c.uv< -1e-3)
+             :(c.region==='II'||c.region==='IV') ? (c.uv>1e-3 && c.uv<0.97) : false;
+    if(!okReg) continue;
+    WORLD.coneF.push([[gx,gt],[gx+g,gt+g]]); WORLD.coneF.push([[gx,gt],[gx-g,gt+g]]);
+    WORLD.coneP.push([[gx,gt],[gx+g,gt-g]]); WORLD.coneP.push([[gx,gt],[gx-g,gt-g]]);
+  }
+  WORLD.labels=[
+    [HPI+0.05,-0.01,'i0','#00d4ff'], [-HPI-0.12,-0.01,'i0','#00d4ff'],
+    [QPI+0.04,QPI+0.04,'i+','#00d4ff'], [-QPI-0.10,QPI+0.04,'i+','#00d4ff'],
+    [QPI+0.04,-QPI-0.08,'i-','#00d4ff'], [-QPI-0.10,-QPI-0.08,'i-','#00d4ff'],
+    [1.16,0.46,'scri+','#00d4ff'], [-1.32,0.46,'scri+','#00d4ff'],
+    [1.16,-0.50,'scri-','#00d4ff'], [-1.32,-0.50,'scri-','#00d4ff'],
+    [-0.06,QPI+0.05,'r = 0','#ff69b4'], [-0.06,-QPI-0.09,'r = 0','#ff69b4'],
+    [0.30,0.24,'H+','#ffd700'], [-0.36,0.24,'H+','#ffd700'],
+    [0.30,-0.28,'H-','#ffd700'], [-0.36,-0.28,'H-','#ffd700'],
+    [0.82,-0.02,'I','#7a92aa'], [-0.02,0.52,'II','#aa7a92'],
+    [-0.86,-0.02,'III','#7aaaa0'], [-0.03,-0.56,'IV','#aa9a7a'],
+    [0.02,-0.06,'B','#667']
+  ];
+  for(i=0;i<RVALS_EXT.length;i++){
+    var xr=Math.atan(Math.sqrt(-PK.guv(RVALS_EXT[i])));
+    WORLD.rLab.push([xr-0.02,-0.045,String(RVALS_EXT[i]),'#4a657f']);
+  }
+  for(i=0;i<RVALS_IN.length;i++){
+    var tr=Math.atan(Math.sqrt(PK.guv(RVALS_IN[i])));
+    WORLD.rLab.push([0.025,tr+0.012,String(RVALS_IN[i]),'#6a4a5a']);
+  }
+}
+
+/* ---- the star: OS collapse geometry + exterior clipped to the physical ---- */
+function buildStar(){
+  var t0=performance.now();
+  star=PK2.star(R0);
+  SGEO=PK2.geom(star, 240);
+  function XT(polys){ return polys.map(function(pl){ return pl.map(function(q){ return {X:q.X,T:q.T}; }); }); }
+  SW={
+    gridRE: PK2.clipExterior(star, XT(WORLD.gridRExt)),
+    gridRI: PK2.clipExterior(star, XT(WORLD.gridRIn)),
+    gridT:  PK2.clipExterior(star, XT(WORLD.gridT)),
+    axis:   PK2.clipExterior(star, WORLD.axis.map(function(seg){ return seg.map(function(q){ return {X:q[0],T:q[1]}; }); })),
+    scri:   [ WORLD.scri[0].map(function(q){return {X:q[0],T:q[1]};}), WORLD.scri[1].map(function(q){return {X:q[0],T:q[1]};}) ],
+    labels: WORLD.labels.filter(function(L){
+      if(['i0','i+','i-','scri+','scri-'].indexOf(L[2])>=0) return L[0]>0;
+      if(L[2]==='r = 0') return L[1]>0;
+      if(L[2]==='H+') return L[0]>0;
+      if(L[2]==='I') return true;
+      if(L[2]==='II') return PK2.physical(star,L[0],L[1]).where==='exterior';
+      return false;                       /* III, IV, H-, B: gone with the mirror */
+    }).concat([
+      [SGEO.center[110].X-0.16, SGEO.center[110].T, 'star', '#e0a080'],
+      [SGEO.center[40].X-0.30, SGEO.center[40].T, 'r=0 regular', '#7fff7f'],
+      [SGEO.horizon[0].X-0.06, SGEO.horizon[0].T-0.05, 'H born', '#ffd700']
+    ]),
+    rLab: WORLD.rLab.filter(function(R){ return PK2.physical(star,R[0],R[1]).where==='exterior'; })
+  };
+  SV('s-r0',R0.toFixed(1)); SV('s-chi',star.chi0.toFixed(4)); SV('s-etab',star.etaB.toFixed(4));
+  camDirty=true;
+  return Math.round(performance.now()-t0);
+}
+
+/* ---- screen mapping + Path2D banks (rebuilt only on camDirty) ---- */
+function computeS(){ S=Math.min(W/(PI*1.12), H/(PI*1.24))*cam.zoom; }
+function sx(X){ return W/2+(X-cam.panX)*S; }
+function sy(T){ return H/2-(T-cam.panT)*S; }
+var pReg=[], pGridRE=null,pGridRI=null,pGridT=null,pAxis=null,pHor=null,pSing=null,pScri=null,
+    pConeF=null,pConeP=null,pProbe=null,pPulseE=null,pPulseT=null,pPulseH=null;
+var cGridRE=null,cGridRI=null,cGridT=null,cAxis=null,cScri=null,cHor=null,cSing=null,
+    cSurf=null,cCenter=null,cDust=null,cInit=null,cStar=null;
+function polyPath(list, close){
+  var p=new Path2D(), i, j;
+  for(i=0;i<list.length;i++){
+    var seg=list[i]; if(!seg.length) continue;
+    var a=seg[0];
+    p.moveTo(sx(a.X!==undefined?a.X:a[0]), sy(a.T!==undefined?a.T:a[1]));
+    for(j=1;j<seg.length;j++){
+      var q=seg[j];
+      p.lineTo(sx(q.X!==undefined?q.X:q[0]), sy(q.T!==undefined?q.T:q[1]));
+    }
+    if(close) p.closePath();
+  }
+  return p;
+}
+function buildPaths(){
+  computeS();
+  pReg=[]; var i;
+  for(i=0;i<4;i++) pReg.push(polyPath([WORLD.regions[i]], true));
+  pGridRE=polyPath(WORLD.gridRExt); pGridRI=polyPath(WORLD.gridRIn);
+  pGridT=polyPath(WORLD.gridT);     pAxis=polyPath(WORLD.axis);
+  pHor=polyPath(WORLD.hor);         pSing=polyPath(WORLD.sing);
+  pScri=polyPath(WORLD.scri);
+  pConeF=polyPath(WORLD.coneF);     pConeP=polyPath(WORLD.coneP);
+  pProbe = WORLD.probe ? polyPath([WORLD.probe]) : null;
+  pPulseE=polyPath(WORLD.pulseEsc); pPulseT=polyPath(WORLD.pulseTrap); pPulseH=polyPath(WORLD.pulseHor);
+  pathCount = 4+9 + (pProbe?1:0) + 3;
+  if(star){
+    cGridRE=polyPath(SW.gridRE); cGridRI=polyPath(SW.gridRI); cGridT=polyPath(SW.gridT);
+    cAxis=polyPath(SW.axis); cScri=polyPath(SW.scri);
+    cHor=polyPath([SGEO.horizon]);
+    cSing=polyPath([SGEO.intSing, SGEO.extSing]);
+    cSurf=polyPath([SGEO.surface]); cCenter=polyPath([SGEO.center]);
+    cDust=polyPath(SGEO.dust); cInit=polyPath([SGEO.initSlice]);
+    cStar=polyPath([SGEO.starPoly], true);
+    pathCount += 12;
+  }
+  camDirty=false;
+}
+
+/* ---- hover: invert the chart live, show the causal fate ---- */
+var REGNAME={ I:'I (exterior)', II:'II (interior)', III:'III (parallel exterior)',
+  IV:'IV (white hole)', horizon:'HORIZON (U\u00b7V = 0)', 'beyond-scri':'beyond scri',
+  'beyond-singularity-future':'beyond r=0 \u2014 no "there" there',
+  'beyond-singularity-past':'beyond r=0 (past)' };
+function updateHover(X,T){
+  var c=PK.classify(X,T);
+  hover={X:X,T:T,c:c};
+  var doomEl=document.getElementById('c-doom');
+  if(viewMode==='collapse' && star){
+    var ph=PK2.physical(star,X,T);
+    hover.ph=ph;
+    if(ph.where==='star'){
+      SV('c-reg','STAR \u00b7 OS dust');
+      SV('c-r', ph.rLocal.toFixed(6));
+      SV('c-rs','\u03c7/\u03c7\u2080 '+(ph.chi/star.chi0).toFixed(3));
+      SV('c-t','\u03b7 '+ph.eta.toFixed(4));
+      SV('c-k','\u03c1/\u03c1\u2080 '+(ph.rho>=1e4?ph.rho.toExponential(2):ph.rho.toFixed(3)));
+      SV('c-z','--');
+      SV('c-inv','\u03c4_com '+ph.tauCom.toFixed(4));
+      doomEl.textContent=DOOM_STAR; doomEl.style.display='';
+      return;
+    }
+    if(ph.where==='removed'){
+      SV('c-reg','REMOVED BY MATTER (eternal idealization)');
+      SV('c-r','--');SV('c-rs','--');SV('c-t','--');SV('c-k','--');SV('c-z','--');SV('c-inv','--');
+      doomEl.style.display='none';
+      return;
+    }
+    if(ph.where==='post-sing'){
+      SV('c-reg','beyond r=0 \u2014 no "there" there');
+      SV('c-r','--');SV('c-rs','--');SV('c-t','--');SV('c-k','--');SV('c-z','--');SV('c-inv','--');
+      doomEl.style.display='none';
+      return;
+    }
+  }
+  SV('c-reg', REGNAME[c.region]||c.region);
+  if(c.r!==undefined){
+    SV('c-r', c.r.toFixed(6));
+    SV('c-rs', isFinite(c.rstar)? c.rstar.toFixed(4) : '-inf');
+    var tl=(c.t===null||!isFinite(c.t))?'--':c.t.toFixed(4);
+    if(c.region==='II'||c.region==='IV') tl+=' (SPACELIKE here)';
+    SV('c-t', tl);
+    SV('c-k', c.K>=1e5? c.K.toExponential(2) : c.K.toFixed(4));
+    SV('c-z', (c.region==='I'&&c.r>1)? (1+PK.zshift(c.r)).toFixed(4) : '--');
+    SV('c-inv', c.invIters+' iters, resid '+c.invResid.toExponential(1));
+  } else {
+    SV('c-r','--'); SV('c-rs','--'); SV('c-t','--'); SV('c-k','--'); SV('c-z','--'); SV('c-inv','--');
+  }
+  if(c.region==='II'){ doomEl.textContent=DOOM_II; doomEl.style.display=''; }
+  else doomEl.style.display='none';
+}
+function drawHoverCone(){
+  if(!hover) return;
+  var c=hover.c, X=hover.X, T=hover.T;
+  var inReg=(c.region==='I'||c.region==='II'||c.region==='III'||c.region==='IV');
+  if(!inReg && c.region!=='horizon') return;
+  var phw=null;
+  if(viewMode==='collapse' && star && hover.ph){
+    phw=hover.ph.where;
+    if(phw==='removed'||phw==='post-sing') return;
+  }
+  var w=0.075;
+  cx.lineWidth=1.4;
+  cx.strokeStyle='rgba(220,240,255,0.9)';
+  cx.beginPath();
+  cx.moveTo(sx(X),sy(T)); cx.lineTo(sx(X+w),sy(T+w));
+  cx.moveTo(sx(X),sy(T)); cx.lineTo(sx(X-w),sy(T+w));
+  cx.stroke(); callCount++;
+  cx.strokeStyle='rgba(220,240,255,0.22)';
+  cx.beginPath();
+  cx.moveTo(sx(X),sy(T)); cx.lineTo(sx(X+w),sy(T-w));
+  cx.moveTo(sx(X),sy(T)); cx.lineTo(sx(X-w),sy(T-w));
+  cx.stroke(); callCount++;
+  if(phw==='star') return;              /* dust: wedge yes, vacuum fate edges no */
+  if(c.region!=='I' && c.region!=='II') return;
+  /* EXACT causal fate of the two FUTURE light edges from this event */
+  var ut=T-X, vt=T+X;
+  cx.setLineDash([5,4]); cx.lineWidth=1.1;
+  var rayA=PK.nullRay(c.U,c.V,1);                    /* outgoing: U const */
+  if(rayA.fate==='escape'){
+    var ve=HPI-1e-4;
+    cx.strokeStyle='rgba(0,212,255,0.8)';
+    cx.beginPath(); cx.moveTo(sx(X),sy(T)); cx.lineTo(sx((ve-ut)/2),sy((ve+ut)/2)); cx.stroke(); callCount++;
+  } else if(rayA.fate==='singularity'){
+    var ve2=Math.atan(1/c.U);                        /* T_end = pi/4 EXACT */
+    cx.strokeStyle='rgba(255,85,140,0.85)';
+    cx.beginPath(); cx.moveTo(sx(X),sy(T)); cx.lineTo(sx((ve2-ut)/2),sy((ve2+ut)/2)); cx.stroke(); callCount++;
+  }
+  var rayB=PK.nullRay(c.U,c.V,-1);                   /* ingoing: V const */
+  if(rayB.fate==='singularity'){
+    var ue=Math.atan(1/c.V);                         /* T_end = pi/4 EXACT */
+    cx.strokeStyle='rgba(255,85,140,0.85)';
+    cx.beginPath(); cx.moveTo(sx(X),sy(T)); cx.lineTo(sx((vt-ue)/2),sy((vt+ue)/2)); cx.stroke(); callCount++;
+  }
+  cx.setLineDash([]);
+}
+
+/* ---- draw: a few dozen strokes over cached banks ---- */
+var REG_TINT=['rgba(0,120,190,0.045)','rgba(255,80,150,0.05)','rgba(0,190,150,0.035)','rgba(255,180,60,0.04)'];
+function drawEternal(alpha){
+  var i;
+  cx.globalAlpha=alpha;
+  for(i=0;i<4;i++){ cx.fillStyle=REG_TINT[i]; cx.fill(pReg[i]); callCount++; }
+  if(gridOn){
+    cx.lineWidth=1;
+    cx.strokeStyle='rgba(38,49,63,0.9)';  cx.stroke(pGridT); callCount++;
+    cx.strokeStyle='rgba(74,101,127,0.85)'; cx.stroke(pGridRE); callCount++;
+    cx.strokeStyle='rgba(106,74,90,0.85)';  cx.stroke(pGridRI); callCount++;
+    cx.strokeStyle='rgba(60,76,92,0.9)';  cx.stroke(pAxis); callCount++;
+  }
+  cx.strokeStyle='rgba(0,212,255,0.75)'; cx.lineWidth=1.4; cx.stroke(pScri); callCount++;
+  cx.strokeStyle='rgba(255,215,0,0.12)'; cx.lineWidth=5;   cx.stroke(pHor); callCount++;
+  cx.strokeStyle='rgba(255,215,0,0.9)';  cx.lineWidth=1.6; cx.stroke(pHor); callCount++;
+  cx.strokeStyle='rgba(255,105,180,0.14)'; cx.lineWidth=7;   cx.stroke(pSing); callCount++;
+  cx.strokeStyle='rgba(255,105,180,0.95)'; cx.lineWidth=2.4; cx.stroke(pSing); callCount++;
+  cx.globalAlpha=1;
+}
+function drawCollapse(){
+  if(ghost) drawEternal(0.15);
+  cx.globalAlpha=1;
+  cx.fillStyle='rgba(230,150,110,0.07)'; cx.fill(cStar); callCount++;
+  if(gridOn){
+    cx.lineWidth=1;
+    cx.strokeStyle='rgba(38,49,63,0.9)';    cx.stroke(cGridT); callCount++;
+    cx.strokeStyle='rgba(74,101,127,0.85)'; cx.stroke(cGridRE); callCount++;
+    cx.strokeStyle='rgba(106,74,90,0.85)';  cx.stroke(cGridRI); callCount++;
+    cx.strokeStyle='rgba(60,76,92,0.9)';    cx.stroke(cAxis); callCount++;
+    cx.strokeStyle='rgba(201,161,90,0.5)';  cx.stroke(cDust); callCount++;
+    cx.strokeStyle='rgba(120,140,160,0.45)';cx.stroke(cInit); callCount++;
+  }
+  cx.strokeStyle='rgba(0,212,255,0.75)'; cx.lineWidth=1.4; cx.stroke(cScri); callCount++;
+  cx.strokeStyle='rgba(255,215,0,0.12)'; cx.lineWidth=5;   cx.stroke(cHor); callCount++;
+  cx.strokeStyle='rgba(255,215,0,0.9)';  cx.lineWidth=1.6; cx.stroke(cHor); callCount++;
+  cx.strokeStyle='rgba(255,105,180,0.14)'; cx.lineWidth=7;   cx.stroke(cSing); callCount++;
+  cx.strokeStyle='rgba(255,105,180,0.95)'; cx.lineWidth=2.4; cx.stroke(cSing); callCount++;
+  cx.strokeStyle='rgba(127,255,127,0.9)';  cx.lineWidth=1.6; cx.stroke(cCenter); callCount++;
+  cx.strokeStyle='rgba(0,255,213,0.12)';   cx.lineWidth=6;   cx.stroke(cSurf); callCount++;
+  cx.strokeStyle='rgba(0,255,213,0.95)';   cx.lineWidth=2.0; cx.stroke(cSurf); callCount++;
+}
+function draw(){
+  callCount=0; textCount=0;
+  cx.fillStyle='#050508'; cx.fillRect(0,0,W,H); callCount++;
+  var i;
+  if(viewMode==='collapse' && star){ drawCollapse(); }
+  else { drawEternal(1); }
+  if(conesOn){
+    cx.lineWidth=1;
+    cx.strokeStyle='rgba(190,225,255,0.55)'; cx.stroke(pConeF); callCount++;
+    cx.strokeStyle='rgba(190,225,255,0.16)'; cx.stroke(pConeP); callCount++;
+  }
+  if(pPulseE){ cx.lineWidth=1.1;
+    cx.strokeStyle='rgba(0,212,255,0.8)';  cx.stroke(pPulseE); callCount++;
+    cx.strokeStyle='rgba(255,85,102,0.85)';cx.stroke(pPulseT); callCount++;
+    cx.strokeStyle='rgba(255,215,0,0.8)';  cx.stroke(pPulseH); callCount++;
+  }
+  if(pProbe){
+    cx.strokeStyle='rgba(0,255,213,0.12)'; cx.lineWidth=5;   cx.stroke(pProbe); callCount++;
+    cx.strokeStyle='rgba(0,255,213,0.95)'; cx.lineWidth=1.8; cx.stroke(pProbe); callCount++;
+    var lastPt=WORLD.probe[WORLD.probe.length-1];
+    cx.fillStyle='#ff69b4'; cx.font='bold 11px Courier New';
+    cx.fillText('x', sx(lastPt.X)-3, sy(lastPt.T)+4); textCount++;
+  }
+  if(probe && (playing||playTau>0)){
+    while(playIdx<probe.pts.length-2 && probe.pts[playIdx+1].tau<=playTau) playIdx++;
+    while(playIdx>0 && probe.pts[playIdx].tau>playTau) playIdx--;
+    var a=probe.pts[playIdx], b=probe.pts[Math.min(playIdx+1,probe.pts.length-1)];
+    var f=(b.tau>a.tau)? (playTau-a.tau)/(b.tau-a.tau) : 0;
+    var mX=a.X+(b.X-a.X)*Math.max(0,Math.min(1,f)), mT=a.T+(b.T-a.T)*Math.max(0,Math.min(1,f));
+    cx.fillStyle='rgba(0,255,213,1)'; cx.beginPath(); cx.arc(sx(mX),sy(mT),3.4,0,2*PI); cx.fill(); callCount++;
+    cx.strokeStyle='rgba(0,255,213,0.4)'; cx.lineWidth=1; cx.beginPath(); cx.arc(sx(mX),sy(mT),7,0,2*PI); cx.stroke(); callCount++;
+  }
+  drawHoverCone();
+  var LBL=(viewMode==='collapse'&&SW)?SW.labels:WORLD.labels;
+  var RLB=(viewMode==='collapse'&&SW)?SW.rLab:WORLD.rLab;
+  cx.font='10px Courier New';
+  for(i=0;i<LBL.length;i++){
+    var L=LBL[i]; cx.fillStyle=L[3]; cx.fillText(L[2], sx(L[0]), sy(L[1])); textCount++;
+  }
+  cx.font='8px Courier New';
+  for(i=0;i<RLB.length;i++){
+    var R=RLB[i]; cx.fillStyle=R[3]; cx.fillText(R[2], sx(R[0]), sy(R[1])); textCount++;
+  }
+  SV('pr-paths',String(pathCount)); SV('pr-calls',String(callCount)); SV('pr-txt',String(textCount));
+}
+
+/* ---- probe lifecycle ---- */
+function dropProbeAt(X,T){
+  if(viewMode==='collapse' && star){
+    var phD=PK2.physical(star,X,T);
+    if(phD.where==='star'){
+      toast('That is dust, not vacuum \u2014 the probe would be inside the star. Drop in the exterior.');
+      return false;
+    }
+    if(phD.where==='removed'){
+      toast('That region was removed by matter. The mirror is gone. Drop right of the star.');
+      return false;
+    }
+  }
+  var c=PK.classify(X,T);
+  if(c.region!=='I' || !(c.r>1.02)){
+    toast('Drop from region I with r > 1.02 \u2014 the probe begins AT REST outside.');
+    return false;
+  }
+  var t0=performance.now();
+  probe=PK.probe(c.r, c.t, 4000);
+  var ms=Math.round(performance.now()-t0);
+  WORLD.probe=probe.pts.map(function(p){ return {X:p.X, T:p.T}; });
+  WORLD.pulseEsc=[]; WORLD.pulseTrap=[]; WORLD.pulseHor=[]; pulses=null;
+  playing=false; playTau=0; playIdx=0;
+  camDirty=true;
+  SV('p-r0',probe.r0.toFixed(4)); SV('p-t0',probe.t0.toFixed(3)); SV('p-e',probe.E.toFixed(6));
+  SV('p-tauh',probe.tauHorizon.toFixed(4)); SV('p-taus',probe.tauSing.toFixed(4));
+  SV('p-vh',probe.vHorizon.toFixed(4)); SV('p-ux',probe.UcrossResid.toExponential(1));
+  var bt=null,i;
+  for(i=0;i<probe.pts.length;i++){ if(probe.pts[i].r>1) bt=probe.pts[i]; }
+  SV('p-th', bt? bt.t.toFixed(2)+' @ r-1='+(bt.r-1).toExponential(1)+' \u2192 \u221e' : '--');
+  SV('p-pulse','--');
+  SV('pr-ms', ms+' ms');
+  document.getElementById('b-pulse').disabled=false;
+  document.getElementById('b-play').disabled=false;
+  var bp=document.getElementById('b-play'); bp.textContent='PLAY '+TAU; bp.classList.remove('on');
+  log('DROP: r0='+probe.r0.toFixed(4)+'  t0='+probe.t0.toFixed(3)+'  E='+probe.E.toFixed(6),'lg-inv');
+  log('EXACT: '+TAU+'\u2192H = '+probe.tauHorizon.toFixed(4)+'   '+TAU+'\u2192r=0 = '+probe.tauSing.toFixed(4)+' = (\u03c0/2) r0^{3/2}','lg-gold');
+  log('crossing: v(H)='+probe.vHorizon.toFixed(4)+' finite \u00b7 integrated U crosses 0, |U|='+probe.UcrossResid.toExponential(1),'lg-op');
+  log('coordinate lie: t='+(bt?bt.t.toFixed(2):'?')+' already at r-1='+(bt?(bt.r-1).toExponential(1):'?')+', climbing ~ln10/decade \u00b7 K(2M)=12 stays put','lg-warn');
+  armed=false;
+  var bd=document.getElementById('b-drop'); bd.classList.remove('armed'); bd.textContent='DROP PROBE';
+  return true;
+}
+function doArm(){
+  armed=!armed;
+  var b=document.getElementById('b-drop');
+  b.classList.toggle('armed',armed);
+  b.textContent=armed?'CLICK REGION I\u2026':'DROP PROBE';
+  if(armed) toast('Click in region I (right exterior), r > 1.02. The probe falls from rest.');
+}
+function doPulses(){
+  if(!probe) return;
+  var fr=[0.06,0.18,0.30,0.42,0.54,0.66,0.78,0.88,0.97];
+  var esc=0,trap=0,hor=0,lastEscTau=null,i,j;
+  WORLD.pulseEsc=[]; WORLD.pulseTrap=[]; WORLD.pulseHor=[];
+  for(i=0;i<fr.length;i++){
+    var target=fr[i]*probe.tauSing, best=probe.pts[0], bd=1e18;
+    for(j=0;j<probe.pts.length;j++){ var d=Math.abs(probe.pts[j].tau-target); if(d<bd){bd=d;best=probe.pts[j];} }
+    var ut=Math.atan(best.U), vt=Math.atan(best.V);
+    var ray=PK.nullRay(best.U,best.V,1);
+    if(ray.fate==='escape'){ esc++; lastEscTau=best.tau;
+      var ve=HPI-1e-4;
+      WORLD.pulseEsc.push([{X:(vt-ut)/2,T:(vt+ut)/2},{X:(ve-ut)/2,T:(ve+ut)/2}]);
+    } else if(ray.fate==='horizon'){ hor++;
+      var vh=HPI-1e-4;
+      WORLD.pulseHor.push([{X:(vt-ut)/2,T:(vt+ut)/2},{X:vh/2,T:vh/2}]);
+    } else { trap++;
+      var vs=Math.atan(1/best.U);
+      WORLD.pulseTrap.push([{X:(vt-ut)/2,T:(vt+ut)/2},{X:(vs-ut)/2,T:(vs+ut)/2}]);
+    }
+  }
+  pulses={esc:esc,trap:trap,hor:hor};
+  camDirty=true;
+  SV('p-pulse', esc+' escaped / '+trap+' trapped (U<0 EXACT)');
+  log('PULSES: 9 outgoing rays \u2014 '+esc+' escaped to scri+, '+trap+' end on r=0'+(hor?(', '+hor+' ride H+'):'')+'. Criterion: sign(U), nothing else. Last escaper left at '+TAU+'='+(lastEscTau!==null?lastEscTau.toFixed(3):'--'),'lg-op');
+}
+function doPlay(){
+  if(!probe) return;
+  if(reduceMotion){
+    toast('prefers-reduced-motion honoured \u2014 the worldline is already fully drawn. Its clock is '+TAU+', an honest one.');
+    return;
+  }
+  playing=!playing;
+  var end=probe.pts[probe.pts.length-1].tau;
+  if(playing && playTau>=end){ playTau=0; playIdx=0; }
+  var b=document.getElementById('b-play');
+  b.textContent=playing?'STOP':'PLAY '+TAU;
+  b.classList.toggle('on',playing);
+}
+function doGrid(){
+  gridOn=!gridOn;
+  var b=document.getElementById('b-grid');
+  b.textContent='GRID: '+(gridOn?'on':'off'); b.classList.toggle('on',gridOn);
+}
+function doCones(){
+  conesOn=!conesOn;
+  var b=document.getElementById('b-cones');
+  b.textContent='CONES: '+(conesOn?'on':'off'); b.classList.toggle('on',conesOn);
+  document.getElementById('lg-cone').style.display=conesOn?'':'none';
+}
+function doClear(){
+  probe=null; pulses=null; playing=false; playTau=0; playIdx=0;
+  WORLD.probe=null; WORLD.pulseEsc=[]; WORLD.pulseTrap=[]; WORLD.pulseHor=[];
+  ['p-r0','p-t0','p-e','p-tauh','p-taus','p-vh','p-ux','p-th','p-pulse','pr-ms'].forEach(function(id){ SV(id,'--'); });
+  document.getElementById('b-pulse').disabled=true;
+  var bp=document.getElementById('b-play'); bp.disabled=true; bp.textContent='PLAY '+TAU; bp.classList.remove('on');
+  camDirty=true;
+  log('CLEAR: the chart stands empty again','lg-dim');
+}
+function doView(){
+  viewMode = viewMode==='collapse' ? 'eternal' : 'collapse';
+  var b=document.getElementById('b-view');
+  b.textContent='VIEW: '+viewMode; b.classList.toggle('on', viewMode==='collapse');
+  document.getElementById('b-ghost').disabled=(viewMode!=='collapse');
+  camDirty=true;
+  log(viewMode==='collapse' ? 'COLLAPSE: the physical chart \u2014 matter has removed the mirror'
+                            : 'ETERNAL: the idealized extension \u2014 v0.1\'s courtroom, unchanged','lg-dim');
+}
+function doGhost(){
+  ghost=!ghost;
+  var b=document.getElementById('b-ghost');
+  b.textContent='GHOST: '+(ghost?'on':'off'); b.classList.toggle('on',ghost);
+  if(ghost) log('GHOST: the eternal chart at 15% \u2014 regions III, IV, the white hole: what the dust removed','lg-dim');
+}
+function setR0(v){
+  R0=v/10;
+  SV('sv-r0',R0.toFixed(1));
+  var ms=buildStar();
+  log('STAR: R0='+R0.toFixed(1)+'  \u03c7\u2080='+star.chi0.toFixed(4)+'  horizon born at centre \u03b7_b='+star.etaB.toFixed(4)+'  ('+ms+' ms)','lg-op');
+}
+var hidden2=false;
+function doHide(){
+  hidden2=!hidden2;
+  ['hudL','hudR','legend','boundary'].forEach(function(id){
+    document.getElementById(id).style.display=hidden2?'none':'';
+  });
+}
+document.getElementById('hudR').addEventListener('click',function(){ this.style.opacity=this.style.opacity==='0.15'?'':'0.15'; });
+
+/* ---- pointer: hover, drag pan, wheel/pinch zoom, click drops ---- */
+var pdown={}, dragging=false, lastPX=0, lastPY=0, movedPx=0, pinchD=0, pinchZ=1;
+function screenWorld(mx,my){ return { X: cam.panX+(mx-W/2)/S, T: cam.panT-(my-H/2)/S }; }
+function zoomAt(mx,my,k){
+  var w=screenWorld(mx,my);
+  cam.zoom=Math.max(0.6,Math.min(12,cam.zoom*k));
+  computeS();
+  cam.panX=w.X-(mx-W/2)/S; cam.panT=w.T+(my-H/2)/S;
+  camDirty=true;
+}
+cv.addEventListener('pointerdown',function(e){
+  cv.setPointerCapture(e.pointerId); pdown[e.pointerId]=[e.clientX,e.clientY];
+  var n=Object.keys(pdown).length;
+  if(n===1){ dragging=true; lastPX=e.clientX; lastPY=e.clientY; movedPx=0; }
+  else if(n===2){ dragging=false;
+    var k=Object.keys(pdown), a=pdown[k[0]], b=pdown[k[1]];
+    pinchD=Math.hypot(a[0]-b[0],a[1]-b[1]); pinchZ=cam.zoom;
+  }
+});
+cv.addEventListener('pointermove',function(e){
+  if(pdown[e.pointerId]) pdown[e.pointerId]=[e.clientX,e.clientY];
+  var n=Object.keys(pdown).length;
+  if(n===2 && pinchD>0){
+    var k=Object.keys(pdown), a=pdown[k[0]], b=pdown[k[1]];
+    var d=Math.hypot(a[0]-b[0],a[1]-b[1]);
+    var mx=(a[0]+b[0])/2, my=(a[1]+b[1])/2;
+    var target=Math.max(0.6,Math.min(12,pinchZ*d/pinchD));
+    zoomAt(mx,my,target/cam.zoom);
+    return;
+  }
+  if(dragging && n===1){
+    var dx=e.clientX-lastPX, dy=e.clientY-lastPY;
+    movedPx+=Math.abs(dx)+Math.abs(dy);
+    if(movedPx>6){ cam.panX-=dx/S; cam.panT+=dy/S; camDirty=true; }
+    lastPX=e.clientX; lastPY=e.clientY;
+  }
+  var w=screenWorld(e.clientX,e.clientY);
+  updateHover(w.X,w.T);
+});
+function endPointer(e){
+  var wasDrag=dragging, moved=movedPx;
+  delete pdown[e.pointerId];
+  if(Object.keys(pdown).length===0){ dragging=false; pinchD=0; }
+  if(wasDrag && moved<=6 && armed){
+    var w=screenWorld(e.clientX,e.clientY);
+    dropProbeAt(w.X,w.T);
+  }
+}
+cv.addEventListener('pointerup',endPointer);
+cv.addEventListener('pointercancel',function(e){ delete pdown[e.pointerId]; if(Object.keys(pdown).length===0){dragging=false;pinchD=0;} });
+cv.addEventListener('wheel',function(e){ e.preventDefault(); zoomAt(e.clientX,e.clientY, e.deltaY>0?0.92:1.08); },{passive:false});
+
+function resize(){ W=cv.width=innerWidth; H=cv.height=innerHeight; camDirty=true; }
+addEventListener('resize',resize);
+
+/* ---- the loop ---- */
+var lastT=performance.now();
+function animate(now){
+  var dt=Math.min(0.1,(now-lastT)/1000); lastT=now;
+  if(playing && probe){
+    playTau+=dt*(probe.tauSing/8);          /* rate: DESIGN; the clock: tau, EXACT */
+    var end=probe.pts[probe.pts.length-1].tau;
+    if(playTau>=end){
+      playTau=end; playing=false;
+      var b=document.getElementById('b-play');
+      b.textContent='PLAY '+TAU; b.classList.remove('on');
+      log('marker reached r=0 at '+TAU+'='+end.toFixed(4)+' \u2014 finite, exactly as the cycloid promised','lg-pink');
+    }
+  }
+  if(camDirty) buildPaths();
+  draw();
+  requestAnimationFrame(animate);
+}
+
+/* ---- receipts (inspectable) ---- */
+window.PENROSE={
+  classify:function(X,T){ return PK.classify(X,T); },
+  probe:function(){ return probe; },
+  frame:PK.frame(),
+  kernel:PK
+};
+window.PENROSE2={
+  star:function(){ return star; },
+  physical:function(X,T){ return PK2.physical(star,X,T); },
+  geom:function(){ return SGEO; },
+  kernel2:PK2
+};
+console.log('%cPENROSIUM v0.2 \u2014 the collapse: matter removes the mirror','color:#ff69b4;font-weight:bold');
+console.log('%cOS dust from rest \u00b7 seam EXACT \u00b7 horizon born at the CENTRE \u00b7 no III, no IV, no white hole','color:#ffd700');
+console.log('%cK(2M)=12 finite \u00b7 K(0) diverges \u00b7 r=0 straight at T=\u03c0/4 in this gauge \u00b7 light at 45\u00b0 always','color:#00ffd5');
+console.log('%cwindow.PENROSE holds the receipts \u00b7 hover to invert the chart live \u00b7 no Math.random anywhere','color:#556');
+
+/* ---- boot: still, empty, honest (Curse 13) ---- */
+resize();
+buildWorld();
+var msStar=buildStar();
+camDirty=true;
+log('OS STAR: R0='+R0.toFixed(1)+' from rest \u00b7 seam EXACT (same cycloid, same \u03c4) \u00b7 built in '+msStar+' ms','lg-gold');
+log('HORIZON born at the CENTRE at \u03b7_b='+star.etaB.toFixed(4)+' \u2014 before anything locally dramatic \u2014 one straight line to i+','lg-op');
+log('no region III \u00b7 no region IV \u00b7 no white hole \u2014 GHOST shows what the matter removed','lg-pink');
+log('FRAME: i0=(\u03c0/2,0), i\u00b1=(\u00b1\u03c0/4,\u00b1\u03c0/4) \u2014 EXACT corners, certified headless','lg-op');
+log('r=0 is STRAIGHT here: tan\u0168\u00b7tan\u1e7c=1 \u21d2 T=\u03c0/4 to machine eps \u2014 straightness is gauge, spacelikeness is physics','lg-gold');
+log('the horizon is coordinate: t climbs ~ln10 per decade while K holds at 12 \u2014 drop a probe and watch','lg-dim');
+log('hover anywhere to invert the chart live \u00b7 in region II both light edges end on r=0','lg-dim');
+requestAnimationFrame(animate);
+</script></body></html>
