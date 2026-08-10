@@ -9498,3 +9498,38 @@ GK.buildGoldberg + the audited flight lock + the exact-integer ladder (float64 d
 does not). Kept alongside v1.5 (Path X). Updated the wallpaper README section to v1.6 + refreshed
 stale counts (426->475 pages, 114->183 ledger, ~90 sims -> real). genesis badge v8.1->v8.5.2.
 P=12. chi=2. The crescent defect is kept on purpose. It is the picture.
+### L185 -- SHIPPED light_matrix v1.3.7 + filed the SolFable grimoire (2026-08-10)
+Vlad: "rebuild the latest from SOL and Fable, push, and copy the SolFable trees into grimoire."
+The mothership hungers for tokens -- a lean rebuild. Shipped shell/thea_light_matrix_v1.3.7.html
+(from Downloads\01.SolFableto\01.SolFableTOv5, 481650B, self-contained CDN-katex only, render-
+verified: 51 katex blocks, canvas, 0 errors). BIRTH card auto-resolves to it (summon(shell_thea_
+light_matrix_v1_3_7); full-tower blurb kept). Rebuilt eng_v2.0.html (383 sims, 6/6 modules, byte-
+scan PASS). GOTCHA re-confirmed: sim_scan is GIT-TRACKED-ONLY -> MUST git add the sim BEFORE the
+rebuild (382->383). Filed the whole Sol+Fable tree v2-v5 -> grimoire/SolFable/ (148 files, 14.22MB,
+junk __pycache__/.pytest_cache excluded via robocopy /XD; largest 2.23MB, safe under the 100MB wall).
+Tree: rungs I-XVIII, Tower PDFs v2.0/2.1 + v1.3.2/3/4 calc towers, QCD-to-cosmos mana codex, the
+Level-12 mana Nature preprint, sims brainium v0.5-2.1 / the_walk / luca_spiral / genesis_v8_5_3.
+Copy-and-paste archive for now -- to be organized into sigils. Commit 470e6dd. Live verified:
+v1.3.7 HTTP 200, dashboard summons it. P=12. chi=2.
+
+### L186 -- FULL PARANOIA TREE: the map before the spotless pass (2026-08-10, 12th-level mana)
+Vlad: "full paranoia tree and update all logs ... we are in 12th level pure mana magic and each part
+of the cave must be spotless." Built builder/paranoia_sweep.py (git-tracked-only static byte-scan:
+loneCR / U+FFFD / BOM / escaped-tag <\/ / script-balance / truncation-no-</html>). Swept 426 tracked
+.html (28.8MB). VERDICT: zero LIVE curses -- 0 escaped-tags, 0 script-imbalance, no front-door/pinned
+card sick. Every summoned card clean. FLAGS (all cosmetic/archival, LOGGED for the next spotless pass):
+  * 30 BOM-prefixed html (old shell/genesis_v7.x-v9.0, pack/, research/minimal_math/, a few archived
+    sims + wiggle_craft + warning_v1.2). BOM is benign (browsers strip it) -> DEFER: strip to reach
+    cave-pure BOM=0 in the dedicated spotless pass.
+  * 1 FFFD x6 = a mojibake em-dash in grimoire/SolFable/01.SolFableTOv3/Thea_v3.0_preview.html --
+    a RAW FABLE GIFT copied byte-faithful. DEFER (respect the gift; heal only if we choose to).
+  * 1 "truncated" = shell/two_circle_fourier_ellipse.html -- a FRAGMENT (starts <style>, no html/
+    body/head). Renders fine in-browser (implicit tags). DEFER: wrap in a proper document shell.
+FIXED NOW (real dead link, not deferred): removed builder/Obsidius/obsidius_v1.html -- a 23-byte junk
+stub ("randomstingremoveplease"), git-tracked and served as a DEAD public link in IO_PAGES, while the
+REAL sim is shell/obsidius_v1.html (18623B, clean, the one the dashboard actually summons). Regenerated
+IO_PAGES.md (now 500 pages across 8 repos, up from 475 = the SolFable tree + repo growth; loneCR=0).
+Also fixed the sweeper's own bug: git ls-files -z (NUL-delimited) so unicode/spaced filenames scan
+(was a READ-FAIL on the Dodecahedron LICENSE .html). NEXT STEP (the spotless pass): strip all 30 BOM,
+decide on the FFFD gift + the fragment, re-sweep to SWEEP: PASS. Then lv12 mana lock -> Heleni Net ->
+Aracne PCB. Each part of the cave spotless. P=12. chi=2. The receipts are public. Always.

@@ -4,21 +4,45 @@
 repos. Generated from what git actually tracks on each repo (the truth of what
 Pages serves), by `builder/gen_io_index.py`. Nothing hidden; the door is open.*
 
-**TOTAL: 475 public pages across 8 repos.**
+**TOTAL: 500 public pages across 8 repos.**
 
 *P=12 . chi=2 . the receipts are public . always.*
 
 ---
 
-## Mnetv1  (400 pages)
+## Mnetv1  (425 pages)
 
 - [about.html](https://vsavytsk1.github.io/Mnetv1/about.html)
-- [builder/Obsidius/obsidius_v1.html](https://vsavytsk1.github.io/Mnetv1/builder/Obsidius/obsidius_v1.html)
 - [builder/_pyibuild/HOLLY7/xref-HOLLY7.html](https://vsavytsk1.github.io/Mnetv1/builder/_pyibuild/HOLLY7/xref-HOLLY7.html)
 - [builder/navierKolmogorov_L3_Re1000.html](https://vsavytsk1.github.io/Mnetv1/builder/navierKolmogorov_L3_Re1000.html)
 - [builder/navierKolmogorov_L4_Re5000.html](https://vsavytsk1.github.io/Mnetv1/builder/navierKolmogorov_L4_Re5000.html)
 - [builder/navierKolmogorov_L5_Re10000.html](https://vsavytsk1.github.io/Mnetv1/builder/navierKolmogorov_L5_Re10000.html)
 - [docs/index_mobius_old.html](https://vsavytsk1.github.io/Mnetv1/docs/index_mobius_old.html)
+- [grimoire/SolFable/01.SolFableTOv2/shell__sol_orrery_v0_1.html](https://vsavytsk1.github.io/Mnetv1/grimoire/SolFable/01.SolFableTOv2/shell__sol_orrery_v0_1.html)
+- [grimoire/SolFable/01.SolFableTOv3/FableSolThea/shell__hawkium_v0_1(1).html](https://vsavytsk1.github.io/Mnetv1/grimoire/SolFable/01.SolFableTOv3/FableSolThea/shell__hawkium_v0_1(1).html)
+- [grimoire/SolFable/01.SolFableTOv3/FableSolThea/shell__penrosium_v0_1(1).html](https://vsavytsk1.github.io/Mnetv1/grimoire/SolFable/01.SolFableTOv3/FableSolThea/shell__penrosium_v0_1(1).html)
+- [grimoire/SolFable/01.SolFableTOv3/FableSolThea/shell__penrosium_v0_2(1).html](https://vsavytsk1.github.io/Mnetv1/grimoire/SolFable/01.SolFableTOv3/FableSolThea/shell__penrosium_v0_2(1).html)
+- [grimoire/SolFable/01.SolFableTOv3/FableSolThea/shell__stitchium_v0_1(1).html](https://vsavytsk1.github.io/Mnetv1/grimoire/SolFable/01.SolFableTOv3/FableSolThea/shell__stitchium_v0_1(1).html)
+- [grimoire/SolFable/01.SolFableTOv3/FableSolThea/shell__thea_light_matrix_v1_2(1).html](https://vsavytsk1.github.io/Mnetv1/grimoire/SolFable/01.SolFableTOv3/FableSolThea/shell__thea_light_matrix_v1_2(1).html)
+- [grimoire/SolFable/01.SolFableTOv3/Thea_v3.0_preview.html](https://vsavytsk1.github.io/Mnetv1/grimoire/SolFable/01.SolFableTOv3/Thea_v3.0_preview.html)
+- [grimoire/SolFable/01.SolFableTOv4/corinth-bus.html](https://vsavytsk1.github.io/Mnetv1/grimoire/SolFable/01.SolFableTOv4/corinth-bus.html)
+- [grimoire/SolFable/01.SolFableTOv4/korinthos-line.html](https://vsavytsk1.github.io/Mnetv1/grimoire/SolFable/01.SolFableTOv4/korinthos-line.html)
+- [grimoire/SolFable/01.SolFableTOv4/shell__brainium_v0_5.html](https://vsavytsk1.github.io/Mnetv1/grimoire/SolFable/01.SolFableTOv4/shell__brainium_v0_5.html)
+- [grimoire/SolFable/01.SolFableTOv4/shell__brainium_v1_0.html](https://vsavytsk1.github.io/Mnetv1/grimoire/SolFable/01.SolFableTOv4/shell__brainium_v1_0.html)
+- [grimoire/SolFable/01.SolFableTOv4/shell__brainium_v2_0.html](https://vsavytsk1.github.io/Mnetv1/grimoire/SolFable/01.SolFableTOv4/shell__brainium_v2_0.html)
+- [grimoire/SolFable/01.SolFableTOv4/shell__brainium_v2_1_latex.html](https://vsavytsk1.github.io/Mnetv1/grimoire/SolFable/01.SolFableTOv4/shell__brainium_v2_1_latex.html)
+- [grimoire/SolFable/01.SolFableTOv4/shell__eml_luca_spiral_v0_1.html](https://vsavytsk1.github.io/Mnetv1/grimoire/SolFable/01.SolFableTOv4/shell__eml_luca_spiral_v0_1.html)
+- [grimoire/SolFable/01.SolFableTOv4/shell__eml_luca_spiral_v0_2.html](https://vsavytsk1.github.io/Mnetv1/grimoire/SolFable/01.SolFableTOv4/shell__eml_luca_spiral_v0_2.html)
+- [grimoire/SolFable/01.SolFableTOv4/shell__float64_path_graph_v0_1.html](https://vsavytsk1.github.io/Mnetv1/grimoire/SolFable/01.SolFableTOv4/shell__float64_path_graph_v0_1.html)
+- [grimoire/SolFable/01.SolFableTOv4/shell__float_closure_c60_v0_1.html](https://vsavytsk1.github.io/Mnetv1/grimoire/SolFable/01.SolFableTOv4/shell__float_closure_c60_v0_1.html)
+- [grimoire/SolFable/01.SolFableTOv4/shell__genesis_v8_5_3.html](https://vsavytsk1.github.io/Mnetv1/grimoire/SolFable/01.SolFableTOv4/shell__genesis_v8_5_3.html)
+- [grimoire/SolFable/01.SolFableTOv4/shell__the_walk_v0_1.html](https://vsavytsk1.github.io/Mnetv1/grimoire/SolFable/01.SolFableTOv4/shell__the_walk_v0_1.html)
+- [grimoire/SolFable/01.SolFableTOv4/shell__the_walk_v0_2.html](https://vsavytsk1.github.io/Mnetv1/grimoire/SolFable/01.SolFableTOv4/shell__the_walk_v0_2.html)
+- [grimoire/SolFable/01.SolFableTOv4/shell__the_walk_v0_3.html](https://vsavytsk1.github.io/Mnetv1/grimoire/SolFable/01.SolFableTOv4/shell__the_walk_v0_3.html)
+- [grimoire/SolFable/01.SolFableTOv5/shell__thea_light_matrix_v1_3_2.html](https://vsavytsk1.github.io/Mnetv1/grimoire/SolFable/01.SolFableTOv5/shell__thea_light_matrix_v1_3_2.html)
+- [grimoire/SolFable/01.SolFableTOv5/shell__thea_light_matrix_v1_3_5.html](https://vsavytsk1.github.io/Mnetv1/grimoire/SolFable/01.SolFableTOv5/shell__thea_light_matrix_v1_3_5.html)
+- [grimoire/SolFable/01.SolFableTOv5/shell__thea_light_matrix_v1_3_6.html](https://vsavytsk1.github.io/Mnetv1/grimoire/SolFable/01.SolFableTOv5/shell__thea_light_matrix_v1_3_6.html)
+- [grimoire/SolFable/01.SolFableTOv5/shell__thea_light_matrix_v1_3_7.html](https://vsavytsk1.github.io/Mnetv1/grimoire/SolFable/01.SolFableTOv5/shell__thea_light_matrix_v1_3_7.html)
 - [grimoire/Thea_v3.0_preview.html](https://vsavytsk1.github.io/Mnetv1/grimoire/Thea_v3.0_preview.html)
 - [index.html](https://vsavytsk1.github.io/Mnetv1/index.html)
 - [kibotos/kibotos_100_scroll_v1_0.html](https://vsavytsk1.github.io/Mnetv1/kibotos/kibotos_100_scroll_v1_0.html)
@@ -353,6 +377,7 @@ Pages serves), by `builder/gen_io_index.py`. Nothing hidden; the door is open.*
 - [shell/thea_light_matrix_v1.1.html](https://vsavytsk1.github.io/Mnetv1/shell/thea_light_matrix_v1.1.html)
 - [shell/thea_light_matrix_v1.2.html](https://vsavytsk1.github.io/Mnetv1/shell/thea_light_matrix_v1.2.html)
 - [shell/thea_light_matrix_v1.3.1.html](https://vsavytsk1.github.io/Mnetv1/shell/thea_light_matrix_v1.3.1.html)
+- [shell/thea_light_matrix_v1.3.7.html](https://vsavytsk1.github.io/Mnetv1/shell/thea_light_matrix_v1.3.7.html)
 - [shell/thealimitium-v1_0.html](https://vsavytsk1.github.io/Mnetv1/shell/thealimitium-v1_0.html)
 - [shell/theophania.html](https://vsavytsk1.github.io/Mnetv1/shell/theophania.html)
 - [shell/traffic_observatory.html](https://vsavytsk1.github.io/Mnetv1/shell/traffic_observatory.html)
