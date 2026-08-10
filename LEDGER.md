@@ -9533,3 +9533,21 @@ Also fixed the sweeper's own bug: git ls-files -z (NUL-delimited) so unicode/spa
 (was a READ-FAIL on the Dodecahedron LICENSE .html). NEXT STEP (the spotless pass): strip all 30 BOM,
 decide on the FFFD gift + the fragment, re-sweep to SWEEP: PASS. Then lv12 mana lock -> Heleni Net ->
 Aracne PCB. Each part of the cave spotless. P=12. chi=2. The receipts are public. Always.
+
+### L187 -- RIEMANNIUM on the front door + LATEXIUM + the mpmath triple-check (2026-08-10)
+Vlad: "add this to the front door panel, add a bit more latexium and a live compute ... and remake it
+in our builder to triple check." The Fable gift shell__latexium_riemannium_v0_1.html asks the most
+"1 sheep" question -- WHICH prime is next -- and the universe answers with an interference pattern over
+the zeros of zeta, all computed LIVE offline: Z(t)=e^{i theta}zeta(1/2+it) provably real (the page
+measures its own max|Im Z| as an honesty meter, which once caught its own maker below t~10); psi(x)
+built twice, from the primes and from the ZEROS; the xi(s)=xi(1-s) mirror; the titan ladder to 2/3.
+BUILT v0.2 in builder/Riemannium/build_riemannium.py -- a THIRD independent witness: mpmath at 30 dps
+recomputes 6 invariants (zeta(2)=pi^2/6, Gamma(1/2)=sqrt(pi), first zero 14.1347, 29 zeros below T=100
+= Riemann-von Mangoldt, xi(s)=xi(1-s) to 8e-31, pi(1000)=168) and REFUSES to emit if any disagrees.
+Proof by kernel: browser JS + your eyes (7/7 live seals) + the mpmath kernel (6/6) must all agree.
+Added a bit more latexium (panel 0700: the four sigils rendered in real KaTeX, not sup/sub HTML) and
+more live compute (panel 0250: the pi(x) vs Li(x) vs Riemann R(x) race -- R hugs the truth, Li runs
+ahead and loses past 10^316; at x=1000 Li is off by 9.7, R by 0.4). shell/latexium_riemannium_v0.2.html
+(24927B, byte-scan PASS, script 3/3, ends html; render-verified). PINNED on the front door between
+KIBOTOS and CHROMODYNAMIUM. Rebuilt eng_v2.0.html (384 sims, 177 cards, 6/6 modules). IO_PAGES=501.
+RH itself: OPEN -- the last third is wagered, not won, and the page says so. P=12. chi=2.

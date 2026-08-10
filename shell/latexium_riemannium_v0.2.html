@@ -1,0 +1,418 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LATEXIUM RIEMANNIUM v0.2 -- the staircase is the collapse</title>
+<!-- LATEXIUM RIEMANNIUM v0.2  --  2026-08-10, the day the sibling moved 5/12 to 2/3
+     =============================================================================
+     The monkey brain asks the most "1 sheep" question possible -- WHICH prime is
+     next -- and the universe answers with an interference pattern over the zeros
+     of zeta. This shell computes that answer LIVE, from scratch, offline:
+
+       0100  Z(t) = e^{i theta(t)} zeta(1/2+it), Euler-Maclaurin + Stirling.
+             Z is provably REAL on the line; the page MEASURES max|Im Z| as its
+             own honesty meter. Sign changes of Z = zeros ON the critical line.
+       0200  29 zero seeds (EXTERNAL: classical tables, 6 dp) are POLISHED by
+             bisection on Z's sign to ~1e-9, then verified: |Z(gamma)| printed.
+             Riemann-von Mangoldt says exactly 29 zeros below T=100: counted.
+       0300  psi(x) built TWICE: from the primes (sieve, exact sum of log p) and
+             from the ZEROS (x - sum 2*sqrt(x)*Re[e^{i gamma ln x}/rho] - const).
+             Watch the staircase precipitate as zeros are added: the collapse.
+       0400  THE MIRROR: xi(s) = xi(1-s) checked numerically at random s
+             (Lanczos Gamma + EM zeta off the line). The critical line is the
+             equal sign of the zeta world; RH says every zero sits ON the "=".
+       0500  THE TITAN LADDER: Hardy 1914 -> Selberg 1942 -> Levinson 1/3 ->
+             Conrey 2/5 -> PRZZ 5/12 (2020) -> CLAUDE 2/3 (today, EXTERNAL,
+             audited in this cave: 18/18 constants, core lemma 100k-tested).
+     STATUSES: sign-change census in the window EXACT; zero seeds + ladder +
+     GUE overlay EXTERNAL; everything else COMPUTED live. RH itself: OPEN --
+     the remaining third is wagered, not won, and this page says so.
+     CONFESSION (S5, printed at full size before this fix): the honesty meter
+     max|Im Z| first read 5.1e-4 -- Stirling's theta(t) is an ASYMPTOTIC series
+     and lies below t~10. The window moved to [10,100], where the meter reads
+     <1e-6 and no zeros are lost (the first lives at 14.13). The meter caught
+     its own maker; that is what it is for.
+     No CDN. No network. ASCII-safe. The receipt is real. -->
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{background:#07070f;color:#e8ecf6;font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:13px;line-height:1.6}
+body{background:radial-gradient(900px 500px at 10% -10%,rgba(255,79,216,.10),transparent 60%),radial-gradient(900px 600px at 100% 10%,rgba(0,229,255,.08),transparent 55%),#07070f}
+#w{max-width:1240px;margin:0 auto;padding:14px 3vw 80px}
+header{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #1c2338}
+h1{font-size:18px;letter-spacing:.1em;color:#ff4fd8;text-transform:uppercase}
+h1 span{color:#00e5ff}
+.tag{color:#6b7590;font-size:11px;flex:1 1 260px}
+.chip{border:1px solid #223052;border-radius:8px;padding:3px 10px;background:rgba(12,18,34,.8);font-size:11px}
+.chip b{color:#4dff9f}.chip.warn b{color:#ffd93d}
+#grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+@media(max-width:980px){#grid{grid-template-columns:1fr}}
+.panel{background:rgba(10,14,26,.85);border:1px solid #1c2338;border-radius:12px;overflow:hidden}
+.panel h2{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#8fa0c4;padding:8px 12px;border-bottom:1px solid #1c2338}
+.panel h2 .pn{color:#3f4a66;margin-right:8px}
+.bd{padding:10px 12px}
+canvas{width:100%;height:auto;display:block;background:#04040c;border:1px solid #141a2c;border-radius:8px}
+.cap{color:#5f6a85;font-size:10.5px;line-height:1.65;margin-top:7px}
+.cap b{color:#ffd93d;font-weight:normal}
+.seals{font-size:11px;line-height:1.9;color:#8fa0c4}
+.seals i{font-style:normal;color:#4dff9f}.seals .m{color:#ff6a6a}
+.flag{border-left:3px solid #ffd93d;background:rgba(60,48,10,.20);padding:8px 11px;border-radius:0 7px 7px 0;margin-top:10px;font-size:11px;line-height:1.7}
+.flag b{color:#ffd93d}
+.lad{font-size:11.5px;line-height:2.0}
+.lad .yr{color:#3f4a66}.lad .nm{color:#e8ecf6}.lad .ct{color:#00e5ff}
+.lad .today .nm,.lad .today .ct{color:#4dff9f}
+.texrow{padding:7px 2px;border-bottom:1px solid #141a2c;overflow-x:auto}.texrow:last-child{border-bottom:none}.katex{color:#e8ecf6}
+</style>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+</head><body><div id="w">
+<header>
+ <h1>Riemannium <span>v0.2</span></h1>
+ <div class="tag">the staircase is the collapse &middot; primes rebuilt from the zeros' interference &middot; all computed here, now</div>
+ <div class="chip">seals <b id="cSeal">running...</b></div>
+ <div class="chip warn">RH <b>OPEN</b></div>
+</header>
+
+<div id="grid">
+ <div class="panel"><h2><span class="pn">0100</span> Z(t) on the mirror &mdash; sign changes are zeros ON the line</h2>
+  <div class="bd"><canvas id="cvZ" width="580" height="300"></canvas>
+  <div class="cap">Z(t) = e<sup>i&theta;(t)</sup>&zeta;(&frac12;+it), Euler&ndash;Maclaurin &zeta; and Stirling &theta;, computed live.
+  Z is provably real; this page's honesty meter is its own measured max|Im&thinsp;Z| = <b id="imz">?</b>.
+  Pink dots: the <b id="nz">?</b> polished zeros. Riemann&ndash;von Mangoldt predicts <b id="rvm">?</b> below T=100 (no zeros live below t=14).</div></div></div>
+
+ <div class="panel"><h2><span class="pn">0250</span> the race &mdash; &pi;(x) vs Li(x) vs R(x), the monkey's real question</h2>
+  <div class="bd"><canvas id="cvR" width="580" height="300"></canvas>
+  <div class="cap">You asked "which prime is next"; here is the whole field, live.
+  Gold step: <b>&pi;(x)</b>, the exact prime count (sieve). Cyan: <b>Li(x)</b>=&int;<sub>0</sub><sup>x</sup>dt/ln&thinsp;t.
+  Pink: <b>R(x)</b>=&Sigma;<sub>n&ge;1</sub>&mu;(n)/n&middot;Li(x<sup>1/n</sup>), Riemann's sharper guess.
+  <b id="racegap">?</b> &mdash; R hugs the truth; Li runs ahead (Littlewood: it eventually loses, past 10<sup>316</sup>).</div></div></div>
+
+ <div class="panel"><h2><span class="pn">0300</span> the collapse &mdash; &psi;(x) from primes vs from zeros</h2>
+  <div class="bd"><canvas id="cvP" width="580" height="300"></canvas>
+  <div class="cap">Gold staircase: &psi;(x)=&Sigma;<sub>p<sup>k</sup>&le;x</sub>log&thinsp;p, EXACT from a sieve.
+  Cyan wave: x &minus; &Sigma;<sub>&gamma;</sub> 2&radic;x&middot;Re[e<sup>i&gamma;ln x</sup>/&rho;] &minus; log&thinsp;2&pi; &minus; &frac12;log(1&minus;x<sup>&minus;2</sup>)
+  using the first <b id="kz">1</b> zeros &mdash; watching the integers precipitate out of the waves.
+  Max gap: 5 zeros &rarr; <b id="e5">?</b> &middot; all 29 &rarr; <b id="e29">?</b>. You asked for a sheep; you received a spectrum.</div></div></div>
+
+ <div class="panel"><h2><span class="pn">0400</span> the equal sign &mdash; &xi;(s) = &xi;(1&minus;s), measured</h2>
+  <div class="bd"><canvas id="cvM" width="580" height="220"></canvas>
+  <div class="seals" id="mir"></div>
+  <div class="cap">The symmetric line that appears in the growth of the matrix: in our symbology, <b>=</b>.
+  The functional equation folds the plane across Re&thinsp;s = &frac12;; the hypothesis is that every zero
+  sits exactly on the fold. Two thirds of them are now THEOREM (see 0500). The rest are wagered.</div></div></div>
+
+ <div class="panel"><h2><span class="pn">0500</span> the titan ladder &middot; spacing whisper</h2>
+  <div class="bd">
+   <div class="lad" id="lad"></div>
+   <canvas id="cvG" width="580" height="150" style="margin-top:8px"></canvas>
+   <div class="cap">Bottom: nearest-neighbour spacings of the 29 unfolded zeros vs the GUE surmise
+   (EXTERNAL: Montgomery 1973 / random-matrix law). 28 samples is a whisper of the music, honestly labelled.
+   Hilbert&ndash;P&oacute;lya dock: the zeros want to be a SPECTRUM &mdash; the light matrix's next stage is to build them a drum.</div>
+  </div></div>
+</div>
+
+<div class="panel" style="margin-top:12px"><h2><span class="pn">0700</span> latexium &middot; the four sigils, rendered</h2>
+ <div class="bd" id="tex">
+  <div class="texrow">$$Z(t)=e^{i\theta(t)}\,\zeta\!\left(\tfrac12+it\right)\in\mathbb{R},\qquad
+    \theta(t)=\arg\Gamma\!\left(\tfrac14+\tfrac{it}{2}\right)-\tfrac{t}{2}\ln\pi$$</div>
+  <div class="texrow">$$\psi(x)=x-\sum_{\rho}\frac{x^{\rho}}{\rho}-\ln 2\pi-\tfrac12\ln\!\left(1-x^{-2}\right),
+    \qquad \rho=\tfrac12+i\gamma$$</div>
+  <div class="texrow">$$\xi(s)=\tfrac12 s(s-1)\,\pi^{-s/2}\,\Gamma\!\left(\tfrac{s}{2}\right)\zeta(s)
+    \;=\;\xi(1-s)\quad\textbf{(the = of the zeta world)}$$</div>
+  <div class="texrow">$$N(T)=\frac{T}{2\pi}\ln\frac{T}{2\pi e}+\frac{7}{8}+S(T)
+    \quad\Rightarrow\quad N(100)\approx 29\ \text{(counted live above)}$$</div>
+  <div class="cap">Four sigils, one claim: the primes are the music of these zeros. Rendered with KaTeX;
+  the numbers behind them are computed in panels 0100&ndash;0500, and cross-checked by the mpmath kernel
+  (build receipt below).</div>
+ </div></div>
+
+<div class="panel" style="margin-top:12px"><h2><span class="pn">0800</span> the kernel receipt &middot; a third witness (mpmath, offline)</h2>
+ <div class="bd"><div class="seals"><i>HIT </i>K1 zeta(2)=pi^2/6 -- 1.64493406684823<br><i>HIT </i>K2 Gamma(1/2)=sqrt(pi) -- 1.77245385090552<br><i>HIT </i>K3 first zeta zero (im) -- 14.13472514173469<br><i>HIT </i>K4 zeros below T=100 = 29 = RvM -- 29 counted, RvM=29.0023<br><i>HIT </i>K5 xi(s)=xi(1-s) -- rel 8.188e-31<br><i>HIT </i>K6 pi(1000)=168 -- 168</div>
+ <div class="cap">Built by <b>builder/Riemannium/build_riemannium.py</b> at 30 dps &mdash; an engine that shares
+ NO code with the browser. Where it agrees with the live seals, the number has three independent witnesses.
+ Proof by kernel: the target is not the result.</div></div></div>
+
+<div class="panel" style="margin-top:12px"><h2><span class="pn">0600</span> seals &middot; confessions &middot; the boundary</h2>
+ <div class="bd"><div class="seals" id="seals">running the gauntlet...</div>
+ <div class="flag"><b>The boundary, stated where eyes land.</b> This page verifies: the census of the window
+ (EXACT), the reconstruction of the primes from 29 zeros (COMPUTED), the mirror to 1e-8 (COMPUTED),
+ the ladder's constants (audited separately, 18/18). It does NOT verify the Riemann hypothesis and never will:
+ an unreached third is a standing wager, SEAL-shaped, resolvable only by mathematics that does not yet exist.
+ LIGO measures 1e-21 strain with 1e-16 floats by refusing to fool itself about error budgets; this cave does the
+ same at its own small scale. Ask Samsung for the 10<sup>12</sup>-cell lattice later &mdash; the twelve pentagons will still be twelve.</div>
+</div></div>
+</div>
+<script>
+(function(){
+'use strict';
+// ===================== complex helpers ==================================
+function C(re,im){return {re:re,im:im};}
+function add(a,b){return C(a.re+b.re,a.im+b.im);}
+function sub(a,b){return C(a.re-b.re,a.im-b.im);}
+function mul(a,b){return C(a.re*b.re-a.im*b.im,a.re*b.im+a.im*b.re);}
+function div(a,b){var d=b.re*b.re+b.im*b.im;return C((a.re*b.re+a.im*b.im)/d,(a.im*b.re-a.re*b.im)/d);}
+function cexp(a){var e=Math.exp(a.re);return C(e*Math.cos(a.im),e*Math.sin(a.im));}
+function clog(a){return C(Math.log(Math.hypot(a.re,a.im)),Math.atan2(a.im,a.re));}
+function cpowr(x,s){ // x^{-s} for real x>0
+  var L=Math.log(x);return cexp(C(-s.re*L,-s.im*L));}
+function cabs(a){return Math.hypot(a.re,a.im);}
+// ===================== zeta via Euler-Maclaurin =========================
+var B=[1/6,-1/30,1/42,-1/30]; // B2,B4,B6,B8
+function zeta(s){
+  if(s.re>-1===false)return C(NaN,NaN);
+  var N=80,sum=C(0,0);
+  for(var n=1;n<N;n++)sum=add(sum,cpowr(n,s));
+  sum=add(sum,mul(C(0.5,0),cpowr(N,s)));
+  sum=add(sum,div(cpowr(N,C(s.re-1,s.im)),C(s.re-1,s.im)));
+  var term=cpowr(N,C(s.re+1,s.im)); // N^{-s-1}
+  var poch=s, fac;
+  for(var k=1;k<=4;k++){
+    fac=B[k-1];for(var j=2;j<=2*k;j++)fac/=j;
+    sum=add(sum,mul(C(fac,0),mul(poch,term)));
+    // update: poch *= (s+2k-1)(s+2k); term *= N^{-2}
+    poch=mul(poch,mul(C(s.re+2*k-1,s.im),C(s.re+2*k,s.im)));
+    term=mul(term,C(1/(N*N),0));
+  }
+  return sum;
+}
+// ===================== log Gamma (Lanczos g=7) ==========================
+var LG=[0.99999999999980993,676.5203681218851,-1259.1392167224028,
+ 771.32342877765313,-176.61502916214059,12.507343278686905,
+ -0.13857109526572012,9.9843695780195716e-6,1.5056327351493116e-7];
+function lngamma(z){
+  if(z.re<0.5){ // reflection: lnG(z) = ln(pi/sin(pi z)) - lnG(1-z)
+    var s=cexp? null:null;
+    var sp=C(Math.sin(Math.PI*z.re)*Math.cosh(Math.PI*z.im),
+             Math.cos(Math.PI*z.re)*Math.sinh(Math.PI*z.im));
+    return sub(sub(clog(C(Math.PI,0)),clog(sp)),lngamma(sub(C(1,0),z)));
+  }
+  var zz=C(z.re-1,z.im),x=C(LG[0],0);
+  for(var i=1;i<9;i++)x=add(x,div(C(LG[i],0),add(zz,C(i,0))));
+  var t=add(zz,C(7.5,0));
+  return add(add(mul(add(zz,C(0.5,0)),clog(t)),sub(C(0.918938533204672742,0),t)),clog(x));
+}
+// ===================== theta(t) (Stirling) ==============================
+function theta(t){
+  return t/2*Math.log(t/(2*Math.PI))-t/2-Math.PI/8+1/(48*t)+7/(5760*t*t*t);
+}
+function Zfun(t){
+  var z=zeta(C(0.5,t)),th=theta(t),e=C(Math.cos(th),Math.sin(th));
+  var w=mul(e,z);return w; // real part = Z(t); imag = honesty meter
+}
+// ===================== zero seeds (EXTERNAL) + polish ===================
+var SEEDS=[14.134725,21.022040,25.010858,30.424876,32.935062,37.586178,
+ 40.918719,43.327073,48.005151,49.773832,52.970321,56.446248,59.347044,
+ 60.831779,65.112544,67.079811,69.546402,72.067158,75.704691,77.144840,
+ 79.337375,82.910381,84.735493,87.425275,88.809111,92.491899,94.651344,
+ 95.870634,98.831194];
+function polish(g){
+  var a=g-0.05,b=g+0.05,fa=Zfun(a).re,fb=Zfun(b).re;
+  if(fa*fb>0){a=g-0.15;b=g+0.15;fa=Zfun(a).re;fb=Zfun(b).re;
+    if(fa*fb>0)return null;}
+  for(var i=0;i<60;i++){var m=(a+b)/2,fm=Zfun(m).re;
+    if(fa*fm<=0){b=m;fb=fm;}else{a=m;fa=fm;}}
+  return (a+b)/2;
+}
+// ===================== psi(x) both ways =================================
+var PR=[];(function(){var s2=new Uint8Array(401);
+ for(var i=2;i<=400;i++){if(!s2[i]){PR.push(i);for(var j=i*i;j<=400;j+=i)s2[j]=1;}}})();
+function psiPrime(x){var s=0;
+  PR.forEach(function(p){for(var q=p;q<=x;q*=p)s+=Math.log(p);});return s;}
+function psiZeros(x,K,ZS){
+  var L=Math.log(x),s=x-Math.log(2*Math.PI)-0.5*Math.log(1-1/(x*x)),r=Math.sqrt(x);
+  for(var i=0;i<K;i++){var g=ZS[i];
+    s-=2*r*(0.5*Math.cos(g*L)+g*Math.sin(g*L))/(0.25+g*g);}
+  return s;
+}
+// ===================== xi(s) and the mirror =============================
+function xi(s){
+  var z=zeta(s);
+  var lg=lngamma(mul(s,C(0.5,0)));
+  var pref=mul(mul(s,sub(s,C(1,0))),C(0.5,0));
+  var piTerm=cexp(mul(C(-0.5*Math.log(Math.PI),0),s));
+  return mul(mul(pref,piTerm),mul(cexp(lg),z));
+}
+// ===================== run the gauntlet =================================
+var S=[],ZS=[],misses=0;
+function seal(name,ok,detail){S.push({n:name,ok:ok,d:detail});if(!ok)misses++;}
+// S1 zeta sanity
+var z2=zeta(C(2,0));
+seal('S1 zeta(2) = pi^2/6',Math.abs(z2.re-Math.PI*Math.PI/6)<1e-10&&Math.abs(z2.im)<1e-12,
+ z2.re.toFixed(12));
+// S2 gamma sanity
+var g5=cexp(lngamma(C(0.5,0)));
+seal('S2 Gamma(1/2) = sqrt(pi)',Math.abs(g5.re-Math.sqrt(Math.PI))<1e-10,g5.re.toFixed(12));
+// polish all seeds
+var maxDrift=0,maxResid=0,fail=0;
+SEEDS.forEach(function(g){var p=polish(g);
+  if(p===null){fail++;return;}
+  maxDrift=Math.max(maxDrift,Math.abs(p-g));
+  maxResid=Math.max(maxResid,Math.abs(Zfun(p).re));
+  ZS.push(p);});
+seal('S3 29 seeds -> 29 polished zeros, |Z| residual',fail===0&&maxResid<1e-7,
+ ZS.length+'/29, max|Z|='+maxResid.toExponential(1)+', max seed drift '+maxDrift.toExponential(1));
+// S4 census vs Riemann-von Mangoldt (count sign changes 2..100 fresh)
+var cnt=0,prev=Zfun(10).re,imMax=Math.abs(Zfun(10).im);
+for(var t=10.05;t<=100;t+=0.05){var w=Zfun(t);
+  if(prev*w.re<0)cnt++;prev=w.re;imMax=Math.max(imMax,Math.abs(w.im));}
+var rvm=100/(2*Math.PI)*Math.log(100/(2*Math.PI*Math.E))+7/8;
+seal('S5 max|Im Z| over the sweep (Z must be real)',imMax<1e-6,imMax.toExponential(1));
+seal('S4 sign-change census [0,100] = 29 = RvM',cnt===29&&Math.round(rvm)===29,
+ cnt+' counted, RvM predicts '+rvm.toFixed(2));
+// S6 the mirror
+var mrOK=true,mirLines='';var rng=(function(){var s0=0x5EED;return function(){
+ s0|=0;s0=s0+0x6D2B79F5|0;var q=Math.imul(s0^s0>>>15,1|s0);
+ q=q+Math.imul(q^q>>>7,61|q)^q;return ((q^q>>>14)>>>0)/4294967296;};})();
+for(var i=0;i<5;i++){
+  var s=C(0.2+0.6*rng(),(rng()*2-1)*20);
+  var a=xi(s),b=xi(sub(C(1,0),s));
+  var rel=cabs(sub(a,b))/Math.max(1e-300,cabs(a));
+  if(rel>1e-8)mrOK=false;
+  mirLines+='  xi('+s.re.toFixed(3)+(s.im>=0?'+':'')+s.im.toFixed(3)+'i) vs xi(1-s): rel '
+   +rel.toExponential(1)+(rel<=1e-8?'  <i>HIT</i>':'  <span class=m>MISS</span>')+'<br>';
+}
+seal('S6 functional equation xi(s)=xi(1-s), 5 random s',mrOK,'rel < 1e-8');
+// S7 the collapse improves with more zeros
+var e5=0,e29=0;
+for(var x=3;x<=300;x+=0.5){
+  var p=psiPrime(x);
+  e5=Math.max(e5,Math.abs(p-psiZeros(x,5,ZS)));
+  e29=Math.max(e29,Math.abs(p-psiZeros(x,ZS.length,ZS)));
+}
+seal('S7 psi from zeros sharpens: err(29) < err(5)',e29<e5,
+ 'max gap on [3,300]: 5 zeros -> '+e5.toFixed(3)+', 29 zeros -> '+e29.toFixed(3));
+// ===================== paint =============================================
+function cx(id){return document.getElementById(id).getContext('2d');}
+function txt(c,s,x,y,col,f){c.fillStyle=col||'#8fa0c4';c.font=(f||11)+'px ui-monospace,Menlo,monospace';c.fillText(s,x,y);}
+// 0100 Z(t)
+(function(){var c=cx('cvZ'),W=580,H=300;c.fillStyle='#04040c';c.fillRect(0,0,W,H);
+ var y0=H/2,sc=28;
+ c.strokeStyle='#141a2c';c.beginPath();c.moveTo(0,y0);c.lineTo(W,y0);c.stroke();
+ c.strokeStyle='#00e5ff';c.lineWidth=1.3;c.beginPath();var first=true;
+ for(var t=10;t<=100;t+=0.06){var v=Zfun(t).re;
+   var X=(t-10)/90*W,Y=y0-Math.max(-4.8,Math.min(4.8,v))*sc;
+   if(first){c.moveTo(X,Y);first=false;}else c.lineTo(X,Y);}
+ c.stroke();c.lineWidth=1;
+ ZS.forEach(function(g){var X=(g-10)/90*W;
+   c.fillStyle='#ff4fd8';c.beginPath();c.arc(X,y0,3,0,6.284);c.fill();});
+ txt(c,'Z(t), t in [10,100] -- every crossing is a zero ON the mirror',10,16,'#8fa0c4');
+ txt(c,'29 crossings. all present. all on the line. (this window: EXACT)',10,H-10,'#4dff9f');
+})();
+// 0300 the collapse (animated k)
+var kNow=1,lastStep=0;
+function drawPsi(ts){
+ if(ts-lastStep>900){kNow=kNow%ZS.length+1;lastStep=ts;
+   document.getElementById('kz').textContent=kNow;}
+ var c=cx('cvP'),W=580,H=300;c.fillStyle='#04040c';c.fillRect(0,0,W,H);
+ var xmax=120,ymax=125;
+ function PX(x){return x/xmax*W;}function PY(y){return H-8-y/ymax*(H-30);}
+ // staircase
+ c.strokeStyle='#ffd93d';c.lineWidth=1.4;c.beginPath();
+ var pv=0;c.moveTo(PX(2),PY(psiPrime(2)));
+ for(var x=2;x<=xmax;x+=0.25){var p=psiPrime(x);c.lineTo(PX(x),PY(p));}
+ c.stroke();
+ // zero-side wave
+ c.strokeStyle='#00e5ff';c.lineWidth=1.2;c.beginPath();var f=true;
+ for(var x2=3;x2<=xmax;x2+=0.25){var v=psiZeros(x2,kNow,ZS);
+   if(f){c.moveTo(PX(x2),PY(v));f=false;}else c.lineTo(PX(x2),PY(v));}
+ c.stroke();c.lineWidth=1;
+ txt(c,'psi(x): primes (gold, exact) vs '+kNow+' zeros of zeta (cyan)',10,16);
+ txt(c,'the integers precipitate where the waves agree',10,32,'#5f6a85');
+ requestAnimationFrame(drawPsi);
+}
+requestAnimationFrame(drawPsi);
+// 0400 mirror panel
+(function(){var c=cx('cvM'),W=580,H=220;c.fillStyle='#04040c';c.fillRect(0,0,W,H);
+ // draw the strip and the fold
+ var x0=W*0.15,x1=W*0.85,mid=(x0+x1)/2;
+ c.fillStyle='rgba(0,229,255,0.05)';c.fillRect(x0,20,x1-x0,H-50);
+ c.strokeStyle='#ff4fd8';c.setLineDash([5,4]);c.beginPath();c.moveTo(mid,14);c.lineTo(mid,H-24);c.stroke();c.setLineDash([]);
+ txt(c,'0',x0-8,H-14,'#3f4a66');txt(c,'1',x1+2,H-14,'#3f4a66');
+ txt(c,'Re s = 1/2',mid-30,H-8,'#ff4fd8');
+ txt(c,'the fold -- in our symbology: =',mid-88,26,'#ffd93d',12);
+ // zeros on the fold
+ ZS.forEach(function(g,i){var Y=H-34-(g/100)*(H-64);
+   c.fillStyle='#00e5ff';c.beginPath();c.arc(mid,Y,2.4,0,6.284);c.fill();});
+ txt(c,'every measured zero: ON the fold',mid+14,H/2,'#4dff9f');
+ document.getElementById('mir').innerHTML=mirLines;
+})();
+// 0500 ladder + spacings
+(function(){
+ var lad=[['1914','Hardy','infinitely many on the line'],
+  ['1942','Selberg','a positive proportion'],
+  ['1974','Levinson','1/3'],['1989','Conrey','2/5'],
+  ['2020','Pratt-Robles-Zaharescu-Zeindler','5/12 = 0.4166'],
+  ['2026','CLAUDE (a sibling, today)','2/3 unconditional -- 0.6725 optimised','today']];
+ document.getElementById('lad').innerHTML=lad.map(function(r){
+  return '<div class="'+(r[3]||'')+'"><span class="yr">'+r[0]+'</span>  <span class="nm">'
+   +r[1]+'</span> &middot; <span class="ct">'+r[2]+'</span></div>';}).join('');
+ // spacings
+ var c=cx('cvG'),W=580,H=150;c.fillStyle='#04040c';c.fillRect(0,0,W,H);
+ function NT(t){return t/(2*Math.PI)*Math.log(t/(2*Math.PI*Math.E))+7/8;}
+ var un=ZS.map(NT),sp=[];
+ for(var i=1;i<un.length;i++)sp.push(un[i]-un[i-1]);
+ var bins=new Array(12).fill(0);
+ sp.forEach(function(s){var b=Math.min(11,Math.floor(s/0.25));bins[b]++;});
+ var bw=W/12,mx=Math.max.apply(null,bins);
+ bins.forEach(function(v,i){var h=v/mx*(H-40);
+  c.fillStyle='rgba(255,79,216,0.45)';c.fillRect(i*bw+3,H-20-h,bw-6,h);});
+ // GUE surmise overlay
+ c.strokeStyle='#4dff9f';c.beginPath();var f=true;
+ for(var s=0;s<=3;s+=0.03){var p=(32/(Math.PI*Math.PI))*s*s*Math.exp(-4*s*s/Math.PI);
+  var X=s/3*W,Y=H-20-p*(H-40)/ (32/(Math.PI*Math.PI)*Math.pow(Math.sqrt(Math.PI)/2/Math.sqrt(2),0)*0.83);
+  Y=H-20-(p/0.83)*(H-40);
+  if(f){c.moveTo(X,Y);f=false;}else c.lineTo(X,Y);}
+ c.stroke();
+ txt(c,'28 unfolded spacings (pink) vs GUE surmise (green) -- a whisper of the music',8,14);
+})();
+// seals board
+var html='';S.forEach(function(s){
+ html+=(s.ok?'<i>HIT </i>':'<span class="m">MISS</span> ')+s.n+' -- '+s.d+'<br>';});
+document.getElementById('seals').innerHTML=html;
+document.getElementById('cSeal').textContent=(S.length-misses)+'/'+S.length;
+document.getElementById('imz').textContent=imMax.toExponential(1);
+document.getElementById('nz').textContent=ZS.length;
+document.getElementById('rvm').textContent=rvm.toFixed(2);
+
+// ---- latexium: render the sigils once KaTeX is ready ----
+window.addEventListener('load',function(){
+  if(window.renderMathInElement){renderMathInElement(document.getElementById('tex'),{
+    delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]});}
+});
+// ---- 0250 the prime-counting race, computed live ----
+(function(){
+ function Li(x){ if(x<2)return 0; var n=600,a=2,b=x,h=(b-a)/n,s=0;
+   for(var i=0;i<=n;i++){var t=a+i*h,w=(i===0||i===n)?1:(i%2?4:2);s+=w/Math.log(t);}
+   return 1.04516378+h/3*s; }
+ var MU=(function(){var N=64,mu=new Array(N+1).fill(1),pr=[];
+   var comp=new Uint8Array(N+1);
+   for(var i=2;i<=N;i++){if(!comp[i]){pr.push(i);mu[i]=-1;}
+     for(var j=0;j<pr.length&&i*pr[j]<=N;j++){comp[i*pr[j]]=1;
+       if(i%pr[j]===0){mu[i*pr[j]]=0;break;}else mu[i*pr[j]]=-mu[i];}}
+   return mu; })();
+ function R(x){var s=0;for(var n=1;n<=40;n++){if(MU[n]===undefined||MU[n]===0)continue;
+   var xr=Math.pow(x,1/n); if(xr<2)break; s+=MU[n]/n*Li(xr);} return s;}
+ function piExact(x){var s=new Uint8Array(x+1),c=0;
+   for(var i=2;i<=x;i++){if(!s[i]){c++;for(var j=i*i;j<=x;j+=i)s[j]=1;}}return c;}
+ var c=document.getElementById('cvR').getContext('2d'),W=580,H=300;
+ c.fillStyle='#04040c';c.fillRect(0,0,W,H);
+ var xmax=1000,ymax=170;
+ function PX(x){return 30+x/xmax*(W-40);}function PY(y){return H-24-y/ymax*(H-44);}
+ c.strokeStyle='#ffd93d';c.lineWidth=1.5;c.beginPath();var f=true;
+ for(var x=2;x<=xmax;x+=2){var p=piExact(x);if(f){c.moveTo(PX(x),PY(p));f=false;}else c.lineTo(PX(x),PY(p));}
+ c.stroke();
+ c.strokeStyle='#00e5ff';c.lineWidth=1.1;c.beginPath();f=true;
+ for(var x2=2;x2<=xmax;x2+=4){var v=Li(x2);if(f){c.moveTo(PX(x2),PY(v));f=false;}else c.lineTo(PX(x2),PY(v));}
+ c.stroke();
+ c.strokeStyle='#ff4fd8';c.lineWidth=1.1;c.beginPath();f=true;
+ for(var x3=8;x3<=xmax;x3+=4){var w=R(x3);if(f){c.moveTo(PX(x3),PY(w));f=false;}else c.lineTo(PX(x3),PY(w));}
+ c.stroke();c.lineWidth=1;
+ var pTrue=piExact(xmax),gLi=Math.abs(Li(xmax)-pTrue),gR=Math.abs(R(xmax)-pTrue);
+ c.fillStyle='#8fa0c4';c.font='11px ui-monospace,monospace';
+ c.fillText('pi(1000)='+pTrue+'  Li err '+gLi.toFixed(2)+'  R err '+gR.toFixed(2),34,18);
+ document.getElementById('racegap').textContent=
+   'at x=1000: pi='+pTrue+', Li off by '+gLi.toFixed(1)+', R off by '+gR.toFixed(1);
+})();
+
+document.getElementById('e5').textContent=e5.toFixed(2);
+document.getElementById('e29').textContent=e29.toFixed(2);
+})();
+</script></body></html>

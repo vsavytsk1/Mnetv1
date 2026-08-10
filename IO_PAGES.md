@@ -4,13 +4,13 @@
 repos. Generated from what git actually tracks on each repo (the truth of what
 Pages serves), by `builder/gen_io_index.py`. Nothing hidden; the door is open.*
 
-**TOTAL: 500 public pages across 8 repos.**
+**TOTAL: 501 public pages across 8 repos.**
 
 *P=12 . chi=2 . the receipts are public . always.*
 
 ---
 
-## Mnetv1  (425 pages)
+## Mnetv1  (426 pages)
 
 - [about.html](https://vsavytsk1.github.io/Mnetv1/about.html)
 - [builder/_pyibuild/HOLLY7/xref-HOLLY7.html](https://vsavytsk1.github.io/Mnetv1/builder/_pyibuild/HOLLY7/xref-HOLLY7.html)
@@ -262,6 +262,7 @@ Pages serves), by `builder/gen_io_index.py`. Nothing hidden; the door is open.*
 - [shell/lagrangium_v0_1.html](https://vsavytsk1.github.io/Mnetv1/shell/lagrangium_v0_1.html)
 - [shell/lamanium.html](https://vsavytsk1.github.io/Mnetv1/shell/lamanium.html)
 - [shell/lamanium_v1.0.html](https://vsavytsk1.github.io/Mnetv1/shell/lamanium_v1.0.html)
+- [shell/latexium_riemannium_v0.2.html](https://vsavytsk1.github.io/Mnetv1/shell/latexium_riemannium_v0.2.html)
 - [shell/lattice_probe.html](https://vsavytsk1.github.io/Mnetv1/shell/lattice_probe.html)
 - [shell/lattice_probe_v2.html](https://vsavytsk1.github.io/Mnetv1/shell/lattice_probe_v2.html)
 - [shell/lattice_probe_v3.html](https://vsavytsk1.github.io/Mnetv1/shell/lattice_probe_v3.html)
