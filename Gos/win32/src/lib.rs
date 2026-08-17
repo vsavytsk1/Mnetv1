@@ -5,9 +5,15 @@
 //! `[dependencies]` empty even here, in the untrusted layer, so RULE 0's fourth
 //! row survives the whole program.
 //!
-//! This is the ONLY `unsafe` in the project, and it is confined to one file
-//! that does one thing: put a rectangle of our pixels on the screen and tell us
-//! where the mouse was clicked. Nothing here computes anything.
+//! This is the ONLY `unsafe` in the project, and it is confined to one crate
+//! that does one thing: put a rectangle of our pixels on the screen and report
+//! input. **Nothing here computes anything.**
+//!
+//! It became its own crate the moment a SECOND binary needed a window
+//! (`gos_viewer` and `gos_orb`). Copying the file would have been faster and
+//! would have quietly doubled the project's unsafe surface -- and RUSTIUM
+//! states in print that there is exactly one such file. A claim in a scroll is
+//! a constraint on the code, not a description of it.
 
 #![allow(non_snake_case, non_camel_case_types, dead_code)]
 // Every type below carries Win32's OWN name -- `HWND`, `LPARAM`, `BITMAPINFOHEADER`.
@@ -46,6 +52,8 @@ pub const WM_CLOSE: UINT = 0x0010;
 pub const WM_KEYDOWN: UINT = 0x0100;
 pub const WM_LBUTTONDOWN: UINT = 0x0201;
 pub const WM_MOUSEMOVE: UINT = 0x0200;
+/// the spin tick -- `SetTimer` drives "spini spini" without a render thread
+pub const WM_TIMER: UINT = 0x0113;
 
 // ---- window styles --------------------------------------------------------
 pub const WS_OVERLAPPED: DWORD = 0x0000_0000;
@@ -177,6 +185,8 @@ extern "system" {
     pub fn ShowWindow(hWnd: HWND, nCmdShow: i32) -> BOOL;
     pub fn SetWindowTextW(hWnd: HWND, lpString: *const u16) -> BOOL;
     pub fn GetClientRect(hWnd: HWND, lpRect: *mut RECT) -> BOOL;
+    pub fn SetTimer(hWnd: HWND, nIDEvent: usize, uElapse: UINT, lpTimerFunc: usize) -> usize;
+    pub fn KillTimer(hWnd: HWND, nIDEvent: usize) -> BOOL;
 }
 
 #[link(name = "gdi32")]

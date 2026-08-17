@@ -9817,3 +9817,78 @@ the dashboard and the topology of the current code can be toggled side by side. 
 own crate first, because two binaries duplicating it would break RUSTIUM's claim that this project has
 exactly ONE unsafe file. Incomplete is fine. Fake is not.
 P=12 . chi=2 . E/V=3/2 . the ledger is permanent . the price is always paid . always
+
+### L191 -- TWO PROGRAMS, AND THE JUDGE COUNTS CHI ON A REFINED MESH (2026-08-17)
+Vlad: "we always open 2 programs that we can toggele the main dashboard and the spini spini topology of
+the current code....lets focus now on the other programm". Then, seeing byte_sphere live: "we must map
+the 1 and 0s that rust generates into this..lets dissect the byte_sphere.html and this is the way to
+check the grow of our rust code".
+FIRST, THE UNSAFE STAYED SINGULAR. A second binary needed a window, and copying viewer/src/win32.rs
+would have been faster and would have quietly DOUBLED the project's unsafe surface -- while RUSTIUM says
+in print that this project contains exactly ONE unsafe file. A claim in a scroll is a constraint on the
+code, not a description of it. So win32 became its own crate (git mv, history followed): Gos/win32/ is
+gos_win32, zero dependencies, every symbol an extern "system" declaration against the DLLs Windows
+already loads, and BOTH binaries share it. Added WM_TIMER + SetTimer/KillTimer so "spini spini" runs off
+the message loop with no render thread. The workspace is now: Gos/ the TRUSTED base (integers, no
+unsafe, judged), Gos/win32/ the ONLY unsafe crate (computes nothing), Gos/viewer/ the dashboard .exe,
+Gos/orb/ the topology .exe.
+GOS ORB v0.1.0 -- the second program, 541,354 B, zero deps. Takes any byte stream (a file argument, or
+its own machine code by default), lays it on the certified closed shell, spins it, and writes a PNG at
+startup. Measured on its own binary: 8,459 blocks at 64B granularity, 8,357 unique, 102 REPEATED = 1.21%
+duplication; entropy 6.4602 bits/byte; ones 36.15%. And the rung it would need at one bit per node:
+Class I k=466, T=217,156, V=20T=4,343,120 nodes. Duplication is the finding, so a repeated block is
+painted in the ALARM colour rather than a shade of the ink ramp -- a signal must not hide inside a
+gradient (Curse 26). The twelve pentagons are outlined at all times because Euler forces them. It also
+carries the honest note in its own HUD: C60 has 32 FACES, the shell shows SHAPE not DETAIL, and the
+duplication numbers are exact over the whole stream even though the painting is coarse.
+THEN VLAD SAW THE GAP, AND HE WAS RIGHT. byte_sphere.html reaches ONE FACE PER BYTE: its own HUD reads
+L0 faces 20 one face 1200 B, L4 faces 5,120 one face 4 B, L5 faces 20,480 one face 1 B, L6 faces 81,920.
+The orb was at 32 faces and ~17 KB per face. So we dissected byte_sphere, and the thing that matters is
+its subdivide(): the midpoint of edge (a,b) is keyed by the SORTED INDEX PAIR --
+"const k=a<b?a+'_'+b:b+'_'+a" -- an integer key, never a distance. Two triangles sharing an edge ask for
+the same key and receive the same vertex, so the weld is COMBINATORIALLY EXACT AT EVERY DEPTH. RUSTIUM
+R7 measured the float-threshold lane dying at C380 because the edge-length spread (1.2156) outgrew the
+1.15 tolerance; there is no tolerance here to outgrow. This lane subdivides as far as memory allows.
+src/sphere.rs -- ported. Ico::base() (12 verts, 20 faces, byte_sphere's own order so "the twelve" mean
+the same twelve in both programs), subdivide() by index weld, Ico::level(l) with the guillotine, counts()
+returning F=20*4^L V=10*4^L+2 E=30*4^L via checked_* (R3's lesson: a bound implemented as checked
+arithmetic is true by construction), defects() for the twelve five-valent vertices, rotation_system() for
+the judge, and curve_order() -- byte_sphere's spherical Hilbert curveKey, ported, order 7.
+THIS IS Mesh::refine() IN THE TRIANGULATED LANE -- owed since L188, now delivered.
+AND THE HEADLINE: THE JUDGE COUNTS CHI ON EVERY REFINED LEVEL. test
+the_judge_counts_chi_on_every_refined_level builds levels 0..4 by exact subdivision, hands each to
+judge::check, and asserts chi=2 COUNTED FROM ORBIT CYCLES plus V and E matching the formula
+independently, plus genus=Some(0). Sitting deliberately beside it:
+the_formula_is_an_identity_and_therefore_proves_nothing, which asserts formula_chi(L)==2 for L=0..20 --
+not a certification, but the PROOF THAT THE FORMULA CANNOT CERTIFY. byte_sphere's HUD prints chi:2 from
+{F:20*4**L,E:30*4**L,V:10*4**L+2}, and V-E+F on those three expressions is an exact algebraic identity:
+it returns 2 for every L whether or not a mesh was ever built, so a duplicated vertex or an unwelded seam
+would still read "chi = 2" in green. The two tests together state exactly what is earned and what is not.
+ONE THING byte_sphere GETS AWAY WITH AND WE CANNOT: its base icosahedron is NOT consistently wound -- it
+repairs winding per frame inside faceData() for backface culling. Fine for drawing, fatal for the judge,
+which needs each DIRECTED edge exactly once. Ico::base() now orients outward at the source. Orientability
+is what makes chi=2 mean anything, so it cannot be a render-time detail.
+ALSO PROVEN: subdivision_welds_exactly_and_stays_on_the_sphere -- at L4 every undirected edge is shared
+by EXACTLY two faces (no seam, no duplicate) and the worst radius error is under 1e-12.
+twelve_defects_at_every_depth -- exactly 12 five-valent vertices at L0..L5, the twelve pentagons OF THE
+DUAL, Euler forcing them at every depth. level_for_bytes_reaches_one_byte_per_face -- 24,000 bytes lands
+one byte per face and the level below is provably too small, so the choice is tight.
+refinement_refuses_loudly_past_the_budget -- level 12 returns HALT with the predicted face count, because
+growth is 4x per level and Curse 35 says predict from the recurrence before allocating.
+hilbert_key_is_a_bijection_on_its_grid -- 128x128, zero collisions.
+FINAL: 60 tests + 7 doctests, 0 failures. clippy --workspace back to the 5 pre-existing warnings;
+sphere.rs, the orb and the win32 crate add none. Two exes: gos_viewer.exe 556,460 B, gos_orb.exe
+541,354 B, both zero-dependency.
+STILL OWED, and named plainly: THE ORB IS NOT YET WIRED TO THE NEW LANE. The certified subdivision
+exists and is tested, but the orb still renders C60's 32 faces -- swapping Mesh::c60() for
+Ico::level(level_for_bytes(n)) and mapping bytes through curve_order() is the next edit, and only then
+does its HUD read one byte per face like byte_sphere's. Also still owed: sigma from the integer
+barycentric lattice for the TRIVALENT lane (the icosphere is the triangulation; its dual carries
+pentagons as FACES), content-driven card height (both dashboard descriptions still truncate
+mid-sentence), letter-spacing, the mini C60 canvas, the real 384-card list, the pixel diff against the
+.io screenshot, the 60-vertex hex diff, cargo fmt, and the trusted base back under 41 lines.
+NEXT, and Vlad was emphatic: EVERY version of the dashboard must CHECK THE CLOSED TOPOLOGY and LOG IT,
+because each sim and each integration updates the core kernel. That is AXIOM 01 clauses 1-2 turned into
+a per-version receipt trail rather than a runtime print.
+Incomplete is fine. Fake is not. The formula is an identity; the judge is a witness.
+P=12 . chi=2 . counted not recited . the price is always paid . always

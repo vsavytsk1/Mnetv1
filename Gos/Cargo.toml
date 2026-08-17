@@ -16,10 +16,16 @@ license = "MIT"
 # needs `unsafe`. That constraint is a feature: it forces the Titans split.
 #
 #   Gos/         the TRUSTED base. integers, no unsafe, no deps. judged.
-#   Gos/viewer/  UNTRUSTED surgery. raw Win32 FFI, unsafe allowed, no deps.
-#                It may only ASK the kernel for pixels; it cannot change them.
+#   Gos/win32/   the ONLY unsafe crate. FFI declarations, computes nothing.
+#   Gos/viewer/  the dashboard .exe   -- untrusted surgery.
+#   Gos/orb/     the topology .exe    -- untrusted surgery.
+#
+# Two binaries share ONE win32 crate. Copying the FFI file into each would have
+# been faster and would have doubled the unsafe surface -- and RUSTIUM says in
+# print that this project has exactly one such file. A claim in a scroll is a
+# constraint on the code, not a description of it.
 [workspace]
-members = ["viewer"]
+members = ["win32", "viewer", "orb"]
 
 [profile.release]
 opt-level = 3

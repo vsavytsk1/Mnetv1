@@ -626,6 +626,139 @@ fn face_sizes_come_from_orbit_lengths_not_geometry() {
 }
 
 // ===========================================================================
+// THE ICOSPHERE LANE -- exact index subdivision, chi COUNTED not recited
+// ===========================================================================
+
+use goldberg_kernel::sphere::{self, Ico};
+
+#[test]
+fn subdivision_counts_match_the_exact_formula() {
+    for l in 0..=5u32 {
+        let ico = Ico::level(l).expect("within budget");
+        let (v, e, f) = sphere::counts(l).unwrap();
+        assert_eq!(ico.faces.len(), f, "F = 20*4^{l}");
+        assert_eq!(ico.verts.len(), v, "V = 10*4^{l} + 2");
+        assert_eq!(f, 20 * 4usize.pow(l));
+        assert_eq!(v, 10 * 4usize.pow(l) + 2);
+        assert_eq!(e, 30 * 4usize.pow(l));
+    }
+}
+
+/// The whole point of this lane over `byte_sphere.html`.
+///
+/// Its HUD prints `chi:2` as a typed literal from `{F:20*4**L, E:30*4**L,
+/// V:10*4**L+2}` -- an exact algebraic identity that returns 2 for every L
+/// whether or not a mesh exists. Here the built mesh is handed to the judge,
+/// which counts orbits of a permutation and CAN say something else.
+#[test]
+fn the_judge_counts_chi_on_every_refined_level() {
+    for l in 0..=4u32 {
+        let ico = Ico::level(l).expect("within budget");
+        let sigma = ico
+            .rotation_system()
+            .unwrap_or_else(|| panic!("level {l} must present each directed edge exactly once"));
+        let v = judge::check(&sigma).unwrap_or_else(|e| panic!("level {l}: {e}"));
+
+        let (cv, ce, cf) = sphere::counts(l).unwrap();
+        assert_eq!(v.v, cv, "level {l}: V counted vs formula");
+        assert_eq!(v.e, ce, "level {l}: E counted vs formula");
+        assert_eq!(v.f, cf, "level {l}: F counted vs formula");
+        assert_eq!(v.chi, 2, "level {l}: chi COUNTED, not recited");
+        assert_eq!(v.genus, Some(0), "level {l}: a sphere");
+    }
+}
+
+/// Euler forces exactly twelve five-valent vertices at EVERY depth. Those are
+/// the twelve pentagons of the dual -- the constraint, in the triangulated lane.
+#[test]
+fn twelve_defects_at_every_depth() {
+    for l in 0..=5u32 {
+        let ico = Ico::level(l).expect("within budget");
+        assert_eq!(
+            ico.defects().len(),
+            12,
+            "level {l}: Euler forces twelve five-valent vertices"
+        );
+    }
+}
+
+/// R7 cannot happen here: the weld is an index map, so a subdivided edge is
+/// shared exactly, and every vertex stays exactly on the unit sphere.
+#[test]
+fn subdivision_welds_exactly_and_stays_on_the_sphere() {
+    let ico = Ico::level(4).expect("within budget");
+    let worst = ico
+        .verts
+        .iter()
+        .map(|v| (vlen(*v) - 1.0).abs())
+        .fold(0.0f64, f64::max);
+    assert!(worst < 1e-12, "worst radius error {worst:e}");
+
+    // every undirected edge shared by exactly two faces == no seam, no dup
+    let mut count: std::collections::HashMap<(usize, usize), usize> = Default::default();
+    for f in &ico.faces {
+        for i in 0..3 {
+            let (a, b) = (f[i], f[(i + 1) % 3]);
+            *count.entry((a.min(b), a.max(b))).or_insert(0) += 1;
+        }
+    }
+    assert_eq!(count.len(), sphere::counts(4).unwrap().1, "E");
+    assert!(
+        count.values().all(|&c| c == 2),
+        "every edge must be shared by exactly two faces"
+    );
+}
+
+/// One face per byte is the resolution `byte_sphere` reaches at L5 for 24 KB.
+#[test]
+fn level_for_bytes_reaches_one_byte_per_face() {
+    assert_eq!(sphere::level_for_bytes(20), 0, "20 faces hold 20 bytes");
+    let l = sphere::level_for_bytes(24_000);
+    let ico = Ico::level(l).expect("within budget");
+    assert!(
+        ico.faces.len() >= 24_000,
+        "level {l} gives {} faces for 24,000 bytes",
+        ico.faces.len()
+    );
+    assert_eq!(ico.bytes_per_face(24_000), 1, "one byte per face");
+    // and the level below must NOT be enough -- the choice is tight
+    if l > 0 {
+        assert!(sphere::counts(l - 1).unwrap().2 < 24_000);
+    }
+}
+
+/// Curse 35: growth is 4x per level, so the guillotine must refuse with a number.
+#[test]
+fn refinement_refuses_loudly_past_the_budget() {
+    let e = Ico::level(12).expect_err("level 12 must be refused");
+    assert!(e.predicted_faces > sphere::FACE_BUDGET);
+    assert!(format!("{e}").contains("HALT"), "must refuse out loud");
+}
+
+/// The formula ALWAYS says 2 -- which is why it is not a certification.
+#[test]
+fn the_formula_is_an_identity_and_therefore_proves_nothing() {
+    for l in 0..=20u32 {
+        assert_eq!(
+            sphere::formula_chi(l),
+            Some(2),
+            "the formula returns 2 for every L, mesh or no mesh"
+        );
+    }
+}
+
+#[test]
+fn hilbert_key_is_a_bijection_on_its_grid() {
+    let mut seen = std::collections::HashSet::new();
+    for y in 0..128u32 {
+        for x in 0..128u32 {
+            assert!(seen.insert(sphere::hilbert_xy(7, x, y)), "collision at {x},{y}");
+        }
+    }
+    assert_eq!(seen.len(), 128 * 128);
+}
+
+// ===========================================================================
 // THE LEDGER -- the logger must enforce, not merely print
 // ===========================================================================
 

@@ -57,6 +57,7 @@ pub mod ledger;
 pub mod palette;
 pub mod raster;
 pub mod rng;
+pub mod sphere;
 
 use std::collections::HashSet;
 use std::fmt;

@@ -17,8 +17,6 @@
 //! cargo +stable-x86_64-pc-windows-gnu run -p gos_viewer --release
 //! ```
 
-mod win32;
-
 use std::cell::RefCell;
 use std::ffi::c_void;
 use std::fs;
@@ -33,7 +31,7 @@ use goldberg_kernel::palette::{Palette, ALL};
 use goldberg_kernel::raster::{project, Canvas};
 use goldberg_kernel::{certify, judge, Mesh};
 
-use win32::*;
+use gos_win32::*;
 
 const W: usize = 900;
 const H: usize = 700;
