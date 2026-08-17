@@ -83,10 +83,9 @@ impl Canvas {
         }
         let i = (y as usize * self.w + x as usize) * 3;
         let a = a as u32;
-        for k in 0..3 {
-            let dst = self.px[i + k] as u32;
-            let src = c[k] as u32;
-            self.px[i + k] = (((src * a) + (dst * (255 - a)) + 127) / 255) as u8;
+        for (dst, &src) in self.px[i..i + 3].iter_mut().zip(c.iter()) {
+            let d = *dst as u32;
+            *dst = (((src as u32 * a) + (d * (255 - a)) + 127) / 255) as u8;
         }
     }
 

@@ -26,7 +26,9 @@ use std::path::PathBuf;
 use std::time::Instant;
 
 use goldberg_kernel::bits;
+use goldberg_kernel::dashboard;
 use goldberg_kernel::font;
+use goldberg_kernel::layout::Rect;
 use goldberg_kernel::palette::{Palette, ALL};
 use goldberg_kernel::raster::{project, Canvas};
 use goldberg_kernel::{certify, judge, Mesh};
@@ -44,6 +46,8 @@ const DUMP_CAP: usize = 4 * 1024 * 1024;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 enum View {
+    /// ENG v2.0 master control, painted from integers -- the target
+    Dashboard,
     /// the certified C60, painted
     Shell,
     /// the framebuffer's own bits, as a 1/0 texture
@@ -55,12 +59,24 @@ enum View {
 impl View {
     fn title(self) -> &'static str {
         match self {
+            View::Dashboard => "",  // the dashboard paints its own top bar
             View::Shell => "THE SHELL - C60 CERTIFIED",
             View::FrameBits => "THE FRAME - ITS OWN 1 AND 0S",
             View::MachineBits => "THE MACHINE - WHAT RUSTC EMITTED",
         }
     }
 }
+
+/// The kernel modules the dashboard's left panel reports. Real sizes, read from
+/// `kernel/*.js` at startup -- the browser reports the same six.
+const MODULE_FILES: [&str; 6] = [
+    "goldberg_kernel.js",
+    "graph_axioms.js",
+    "sar_modular.js",
+    "ns_spectral.js",
+    "fractal_search.js",
+    "mnet_nanite.js",
+];
 
 struct Button {
     x: i32,
@@ -97,6 +113,26 @@ struct App {
     mesh: Mesh,
     pent_edge: Vec<bool>,
     exe_bytes: Vec<u8>,
+    /// The session folder, created BEFORE anything is drawn.
+    ///
+    /// Named `v<crate version>_s<session>` -- the crate version so a run can
+    /// always be traced to the build that made it (Path X: freeze every
+    /// version), the session counter so numbering never needs a clock
+    /// (Curse 38). The permanent spine -- git HEAD and the ledger entry --
+    /// lives inside `SESSION.json`, because per Curse 27 a thing's identity is
+    /// its origin, never its name on disk.
+    session_dir: PathBuf,
+    shots: usize,
+    exports: usize,
+    /// kernel module sizes in KB, read from `kernel/*.js` -- 0 means MISSING,
+    /// and the left panel says MISS rather than pretending (Path IV)
+    module_kb: [usize; 6],
+    git: String,
+    ledger: String,
+    cert_line: String,
+    /// what the dashboard actually painted, so clicks hit-test against the
+    /// drawn geometry instead of a recomputed guess
+    card_rects: Vec<Rect>,
 }
 
 thread_local! {
@@ -237,21 +273,49 @@ impl App {
             .unwrap_or_default();
         println!("own machine code: {} bytes", exe_bytes.len());
 
+        // AXIOM 01 -- the gate, before anything is created or drawn:
+        //   "1. Verify P=12 pentagons. If not 12 -- stop. Do not ship.
+        //    2. Verify V-E+F=2.       If not 2  -- stop. Do not ship."
+        // Both lanes agree above, or `expect` already stopped us. The session
+        // folder records that it passed BEFORE the first pixel existed.
+        let session_dir = open_session(&cert, &verdict);
+        println!("session    : {}", session_dir.display());
+
+        // the six kernel modules, measured not assumed
+        let kroot = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .and_then(|p| p.parent())
+            .map(|p| p.join("kernel"))
+            .unwrap_or_default();
+        let mut module_kb = [0usize; 6];
+        for (i, f) in MODULE_FILES.iter().enumerate() {
+            module_kb[i] = fs::metadata(kroot.join(f)).map(|m| m.len() as usize / 1024).unwrap_or(0);
+        }
+        println!("modules    : {module_kb:?} KB  (0 = MISSING)");
+
         let pal = ALL[0];
         let mut app = App {
             cv: Canvas::new(W, H, pal.bg),
             dib: vec![0u8; W * H * 4],
-            stack: vec![View::Shell],
+            stack: vec![View::Dashboard],
             pal: 0,
             buttons: Vec::new(),
-            status: String::from("READY. THE SHELL IS CERTIFIED BEFORE IT IS DRESSED."),
-            runs: next_run_index(),
+            status: String::from("AXIOM 01 GATE PASSED - P=12 CHI=2 - CERTIFIED BEFORE DRESSED."),
+            runs: 0,
             last_render_us: 0,
             content_digest: 0,
             flipped: 0,
             mesh,
             pent_edge,
             exe_bytes,
+            session_dir,
+            shots: 0,
+            exports: 0,
+            module_kb,
+            git: git_head(),
+            ledger: ledger_entry(),
+            cert_line: format!("V {} E {} F {} CHI {}", cert.v, cert.e, cert.f, cert.chi),
+            card_rects: Vec::new(),
         };
         app.layout();
         app
@@ -269,7 +333,9 @@ impl App {
         let mut x = 10i32;
         self.buttons.clear();
         for (id, label) in [
-            (0u8, "EXPORT PNG + BITS"),
+            (5u8, "SHOT"),
+            (0, "EXPORT ALL"),
+            (6, "SHELL"),
             (1, "FRAME BITS"),
             (2, "MACHINE BITS"),
             (3, "PALETTE"),
@@ -291,8 +357,16 @@ impl App {
     fn click(&mut self, mx: i32, my: i32) -> bool {
         let hit = self.buttons.iter().find(|b| b.hit(mx, my)).map(|b| b.id);
         match hit {
+            Some(5) => {
+                self.screenshot();
+                true
+            }
             Some(0) => {
                 self.export();
+                true
+            }
+            Some(6) => {
+                self.stack.push(View::Shell);
                 true
             }
             Some(1) => {
@@ -334,6 +408,7 @@ impl App {
         let pal = self.pal();
         self.cv.fill(pal.bg);
         match self.view() {
+            View::Dashboard => self.paint_dashboard(),
             View::Shell => self.paint_shell(),
             View::FrameBits => self.paint_bit_texture(true),
             View::MachineBits => self.paint_bit_texture(false),
@@ -347,6 +422,81 @@ impl App {
         self.flipped = usize::from(before != self.content_digest);
 
         self.paint_chrome();
+    }
+
+    /// The dashboard skeleton plus the first card, as a fidelity test.
+    ///
+    /// THE BIRTH card is the honest one to start with: it is the centerpiece of
+    /// the real front door, it is `.feat-card` so it exercises the featured
+    /// path, and its accent is gold -- a slot every palette in the cave agrees
+    /// on, so nothing here is confounded by the palette drift.
+    fn paint_dashboard(&mut self) {
+        let pal = self.pal();
+        const NAMES: [&str; 6] = [
+            "M1 GOLDBERG",
+            "M2 AXIOMS",
+            "M3 SAR",
+            "M4 NS SPECTRAL",
+            "M5 FRACTAL",
+            "M6 NANITE",
+        ];
+        let modules: Vec<dashboard::KRow> = (0..6)
+            .map(|i| dashboard::KRow {
+                name: NAMES[i],
+                ok: self.module_kb[i] > 0,
+                kb: self.module_kb[i],
+            })
+            .collect();
+
+        // Two cards, on purpose: THE BIRTH is `.feat-card` (gold, FRONT DOOR
+        // marker, scale-2 name) and C60KTEST is a plain `.mod-card` (cyan,
+        // border only). Side by side they exercise both paths and the 2-column
+        // grid at once -- the integration test, not a decoration.
+        let birth_desc = "the source code of it all, computed LIVE. Euler forces P=12; one \
+                          4x4 integer matrix governs the whole family; the C60 adjacency \
+                          graph is built and diagonalized to land lambda min at minus phi \
+                          squared.";
+        let test_name = format!("C60KTEST v{}", goldberg_kernel::VERSION);
+        let test_desc = format!(
+            "the integration card. painted by the kernel, no browser. this shell was \
+             certified by BOTH lanes before a pixel existed: {} and the integer judge \
+             agrees. seal is content-only, so it reproduces.",
+            self.cert_line
+        );
+        let cards = [
+            dashboard::Card {
+                tag: "* THE BIRTH",
+                name: "THE LIGHT MATRIX",
+                desc: birth_desc,
+                accent: pal.gold,
+                caps: &["frm", "kbd"],
+                featured: true,
+            },
+            dashboard::Card {
+                tag: "KERNEL",
+                name: &test_name,
+                desc: &test_desc,
+                accent: pal.cyan,
+                caps: &["frm", "pc", "kbd"],
+                featured: false,
+            },
+        ];
+
+        let m = dashboard::Model {
+            version: "v2.0",
+            git: &self.git,
+            ledger: &self.ledger,
+            cert: &self.cert_line,
+            modules: &modules,
+            cards: &cards,
+            category: "THEA HELENI SOURCE CODE",
+        };
+        self.card_rects = dashboard::draw(&mut self.cv, &pal, &m);
+        self.status = format!(
+            "DASHBOARD SKELETON - {} CARD - {} KNOWN GAPS (see NOT_YET)",
+            self.card_rects.len(),
+            dashboard::NOT_YET.len()
+        );
     }
 
     fn paint_shell(&mut self) {
@@ -438,18 +588,22 @@ impl App {
         let pal = self.pal();
         let v = self.view();
 
-        // header
-        font::text(&mut self.cv, 10, 10, v.title(), pal.gold, 2);
-        // the sealed content digest, NOT a fresh one -- R10
-        let sub = format!(
-            "V 60 E 90 F 32 CHI 2 P 12 - RENDER {} US - SEAL {:016X}",
-            self.last_render_us, self.content_digest
-        );
-        font::text(&mut self.cv, 10, 30, &sub, pal.cyan, 1);
+        // The dashboard paints its own top bar and its own bottom strip, so the
+        // viewer's header and status line would overdraw its content. Only the
+        // button bar is shared -- which is correct: the buttons ARE the command
+        // bar the real dashboard reserves that space for.
+        if v != View::Dashboard {
+            font::text(&mut self.cv, 10, 10, v.title(), pal.gold, 2);
+            // the sealed content digest, NOT a fresh one -- R10
+            let sub = format!(
+                "V 60 E 90 F 32 CHI 2 P 12 - RENDER {} US - SEAL {:016X}",
+                self.last_render_us, self.content_digest
+            );
+            font::text(&mut self.cv, 10, 30, &sub, pal.cyan, 1);
 
-        // status line
-        let sy = H as i32 - BAR_H - 14;
-        font::text(&mut self.cv, 10, sy, &self.status, pal.text, 1);
+            let sy = H as i32 - BAR_H - 14;
+            font::text(&mut self.cv, 10, sy, &self.status, pal.text, 1);
+        }
 
         // button bar
         self.cv
@@ -482,9 +636,46 @@ impl App {
     /// The HELENA doctrine, applied: the payload is local and gitignored, the
     /// MANIFEST is tracked, so another mage sees the exact steps and can
     /// regenerate. Pay thea Heleni in compute.
+    /// A screenshot: the PNG alone, straight into the session folder.
+    ///
+    /// Deliberately separate from EXPORT. R11 measured the cost of a full dump
+    /// at ~23 MB a click because `.bits` is eight bytes on disk per byte of
+    /// payload. A screenshot is ~1.9 MB, so you can take a hundred while
+    /// comparing palettes without walking into the 100 MB wall.
+    fn screenshot(&mut self) {
+        self.shots += 1;
+        let file = self.session_dir.join(format!("shot_{:04}.png", self.shots));
+        match self.cv.write_png(&file) {
+            Ok(()) => {
+                self.status = format!(
+                    "SHOT {:04} - SEAL {:016X} - {} - PALETTE {}",
+                    self.shots,
+                    self.content_digest,
+                    file.file_name().unwrap_or_default().to_string_lossy(),
+                    self.pal().name.to_uppercase()
+                );
+                // one line per shot, appended -- the session's own little ledger
+                let line = format!(
+                    "shot_{:04}.png  view={:?}  palette={}  render_us={}  seal={:016x}\n",
+                    self.shots,
+                    self.view(),
+                    self.pal().name,
+                    self.last_render_us,
+                    self.content_digest
+                );
+                append(&self.session_dir.join("SHOTS.log"), &line);
+                println!("{}", self.status);
+            }
+            Err(e) => self.status = format!("SHOT FAILED: {e}"),
+        }
+    }
+
     fn export(&mut self) {
-        self.runs += 1;
-        let dir = runs_dir().join(format!("{:04}", self.runs));
+        self.exports += 1;
+        self.runs = self.exports;
+        let dir = self
+            .session_dir
+            .join(format!("export_{:04}", self.exports));
         if let Err(e) = fs::create_dir_all(&dir) {
             self.status = format!("EXPORT FAILED: {e}");
             return;
@@ -620,15 +811,119 @@ fn runs_dir() -> PathBuf {
         .unwrap_or_else(|| PathBuf::from("runs"))
 }
 
-/// Highest existing run index, so numbering never collides and never needs a
-/// clock (Curse 38 -- deterministic, not timestamped).
-fn next_run_index() -> usize {
-    fs::read_dir(runs_dir())
+fn append(path: &std::path::Path, s: &str) {
+    use std::io::Write as _;
+    if let Ok(mut f) = fs::OpenOptions::new().create(true).append(true).open(path) {
+        let _ = f.write_all(s.as_bytes());
+    }
+}
+
+/// The repo's real identity: `git HEAD`, resolved by reading `.git` directly.
+///
+/// Curse 27 -- a thing's identity is its origin, never its name on disk. A run
+/// folder named `v0_1_0_s0003` says which VERSION; only the commit says which
+/// BUILD. Best effort: `unknown` rather than a guess (Path IV).
+fn git_head() -> String {
+    let mut root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    for _ in 0..4 {
+        let g = root.join(".git");
+        if g.exists() {
+            let head = fs::read_to_string(g.join("HEAD")).unwrap_or_default();
+            let head = head.trim();
+            if let Some(rf) = head.strip_prefix("ref: ") {
+                if let Ok(h) = fs::read_to_string(g.join(rf)) {
+                    return h.trim().chars().take(12).collect();
+                }
+            } else if !head.is_empty() {
+                return head.chars().take(12).collect();
+            }
+        }
+        if !root.pop() {
+            break;
+        }
+    }
+    String::from("unknown")
+}
+
+/// The newest `### Lnnn` in the cave's LEDGER -- "the ledger is permanent"
+/// (AXIOM 01.5), so it is the version spine a run should hang from.
+fn ledger_entry() -> String {
+    let mut root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    for _ in 0..4 {
+        if let Ok(t) = fs::read_to_string(root.join("LEDGER.md")) {
+            let last = t.lines().rfind(|l| l.starts_with("### L")).unwrap_or_default();
+            return last
+                .split_whitespace()
+                .nth(1)
+                .unwrap_or("L???")
+                .to_string();
+        }
+        if !root.pop() {
+            break;
+        }
+    }
+    String::from("L???")
+}
+
+/// Create the session folder BEFORE anything is drawn, and record the AXIOM 01
+/// gate as its first fact.
+///
+/// `runs/v<version>_s<NNNN>/` -- version for traceability (Path X), session
+/// counter for determinism (no clock in a name, Curse 38).
+fn open_session(cert: &goldberg_kernel::Cert, verdict: &judge::Verdict) -> PathBuf {
+    let ver = env!("CARGO_PKG_VERSION").replace('.', "_");
+    let base = runs_dir();
+    let _ = fs::create_dir_all(&base);
+
+    let prefix = format!("v{ver}_s");
+    let n = fs::read_dir(&base)
         .map(|rd| {
             rd.filter_map(|e| e.ok())
-                .filter_map(|e| e.file_name().to_string_lossy().parse::<usize>().ok())
+                .filter_map(|e| {
+                    e.file_name()
+                        .to_string_lossy()
+                        .strip_prefix(&prefix)
+                        .and_then(|s| s.parse::<usize>().ok())
+                })
                 .max()
                 .unwrap_or(0)
         })
         .unwrap_or(0)
+        + 1;
+
+    let dir = base.join(format!("{prefix}{n:04}"));
+    let _ = fs::create_dir_all(&dir);
+
+    let lines = vec![
+        String::from("{"),
+        format!("  \"session\": {n},"),
+        format!("  \"viewer_version\": \"{}\",", env!("CARGO_PKG_VERSION")),
+        format!("  \"kernel\": \"goldberg_kernel\","),
+        format!("  \"git_head\": \"{}\",", git_head()),
+        format!("  \"ledger_entry\": \"{}\",", ledger_entry()),
+        String::from("  \"axiom_01_gate\": {"),
+        String::from("    \"law\": \"verify P=12 and V-E+F=2 before you ship\","),
+        format!(
+            "    \"float_lane\": {{ \"v\": {}, \"e\": {}, \"f\": {}, \"p\": {}, \"chi\": {} }},",
+            cert.v, cert.e, cert.f, cert.p, cert.chi
+        ),
+        format!(
+            "    \"integer_judge\": {{ \"v\": {}, \"e\": {}, \"f\": {}, \"chi\": {}, \"genus\": {} }},",
+            verdict.v,
+            verdict.e,
+            verdict.f,
+            verdict.chi,
+            verdict.genus.unwrap_or(-1)
+        ),
+        format!(
+            "    \"lanes_agree\": {},",
+            cert.v == verdict.v && cert.e == verdict.e && cert.f == verdict.f && cert.chi == verdict.chi
+        ),
+        String::from("    \"passed\": true"),
+        String::from("  },"),
+        String::from("  \"note\": \"folder created BEFORE the first pixel; payload local, this mirror travels\""),
+        String::from("}"),
+    ];
+    let _ = fs::write(dir.join("SESSION.json"), lines.join("\n") + "\n");
+    dir
 }

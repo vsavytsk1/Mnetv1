@@ -48,9 +48,11 @@
 
 pub mod bits;
 pub mod complex;
+pub mod dashboard;
 pub mod font;
 pub mod judge;
 pub mod ladder;
+pub mod layout;
 pub mod ledger;
 pub mod palette;
 pub mod raster;
@@ -58,6 +60,9 @@ pub mod rng;
 
 use std::collections::HashSet;
 use std::fmt;
+
+/// This crate's version, so a render can name the kernel that made it.
+pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 /// The golden ratio. The seed of the whole construction.
 pub const PHI: f64 = 1.618_033_988_749_894_8;

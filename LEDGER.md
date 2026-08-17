@@ -9732,3 +9732,88 @@ diff, cargo fmt, and the trusted base back under 41 lines (check() is 54). NEXT:
 dashboard, rebuilding the builder abstraction in Rust -- and that is where the next step for Heleni
 becomes visible. Incomplete is fine. Fake is not. Asserted is not executed. Ruthless is cheap.
 P=12 . chi=2 . E/V=3/2 . hash the math not the moment . the price is always paid . always
+
+### L190 -- THE DASHBOARD SKELETON IN RUST: five regions, two cards, no browser (2026-08-17)
+Vlad: "first we focus on the main dasboard parts..bit by bit...lets add the skeleton and put the first
+card as a test", then "lets see the integration lets first put a new card called C60Ktest and the
+version and lets run the full program". Both done and it renders. THE ENG v2.0 DASHBOARD, PAINTED FROM
+INTEGERS. src/layout.rs -- just enough box model: Rect with split_top/bottom/left/right, inset, pad,
+columns. The browser reaches this layout through flexbox, which is a general constraint solver; the
+dashboard needs none of it, because every division in it is "take a fixed strip off one edge, the rest
+is the remainder" -- four functions, no solver. Dash::split() divides a canvas into the five regions at
+the CSS's own numbers (#top-bar 36px, #left 180px, bottom 34, right 260) and Dash::covers() ASSERTS the
+five tile the canvas exactly: measured 1280x720, top 1280x36, left 180x650, center 840x650, right
+260x650, bottom 1280x34, tiles exactly TRUE. A layout you can put in a test.
+src/dashboard.rs -- the skeleton: top bar (logo, ENG version, git hash, KERNEL 6/6, ledger right-aligned
+at margin-left:auto), left panel (six .k-row module rows + the C60 MINI slot), right panel (build log +
+the AXIOM 01 gate), bottom command bar, and #center with a .cat-header and the 2-column .mod-grid.
+Every colour and dimension traceable to a line in builder/build_eng_v2.py. The dim structural greys the
+dashboard uses that are NOT semantic palette slots (#2a3a4a build, #1a2a1a git, #1a2a3a dim, #3a4a5a
+cat-header, #0a0a14 hairline, #10101e rule, #4a5a6a desc, #ff4444 bad) are collected in one CHROME
+struct so nothing is a magic number at the call site.
+TWO CARDS, AND THAT IS THE INTEGRATION TEST. THE BIRTH is .feat-card -- gold, the FRONT DOOR marker,
+scale-2 name, accent border. C60KTEST v0.2.0 is a plain .mod-card -- cyan, dim border, scale-1 name,
+three caps. Side by side in the 2-column grid at x196 and x605, both 399x104, they exercise the featured
+path, the regular path, the accent colour, the hand wrap and the caps row at once. Gold was chosen for
+the featured card deliberately: it is the ONE slot every palette in the cave agrees on, so nothing in
+the render is confounded by the palette drift. Card<'a> took a lifetime so cards can carry RUNTIME
+strings -- C60KTEST pulls its version from goldberg_kernel::VERSION and its description from the live
+certificate, so the card REPORTS rather than asserts. A struct that only accepts literals cannot hold
+the real dashboard, whose 384 cards come from sim_scan at runtime.
+THE LEFT PANEL NUMBERS ARE MEASURED, NOT MIMICKED: module sizes read from kernel/*.js at startup --
+[24, 14, 28, 14, 14, 25] KB -- so "KERNEL 6/6 OK" is a fact. A missing module reads MISS in red rather
+than quietly showing OK (Path IV).
+NOT_YET -- the gaps are DATA, printed beside every render: border-radius (CSS says 4px, ours are
+square), the box-shadow glow on featured cards, the linear-gradient card background, the hover bloom,
+antialiased text, letter-spacing (CSS tracks 0.12em-0.32em, ours is a fixed 6px advance -- the biggest
+single fidelity gap and why our top bar reads tighter), the birthGlow animation, proportional metrics.
+Eight of them, stated. A fidelity claim needs its exceptions named or it is not a claim.
+THE VIEWER GREW: Dashboard is now the ROOT view, SHELL pushes the buckyball, BACK returns. A SHOT button
+separate from EXPORT ALL, which is R11's lesson turned into a workflow -- a shot is ~1.9 MB, a full
+export ~23 MB, so palettes can be compared forty times for the price of two dumps. Session folders
+created BEFORE the first pixel: runs/v<version>_s<NNNN>/ with SESSION.json recording the AXIOM 01 gate
+as the session's first fact, plus git_head and ledger_entry (Curse 27 -- the folder name says which
+VERSION, only the commit says which BUILD). SHOTS.log is the session's own little ledger, one line per
+shot carrying view, palette, render_us and seal.
+AND IT PAID OFF ON ITS FIRST SESSION. Two shots came back with the same palette and different seals --
+which looked like R10 recurring. It was not: SHOTS.log recorded view=MachineBits for one and
+view=Dashboard for the other. Different content, correctly different seals. I only knew that BECAUSE
+the log records the view next to the seal. Measured: dashboard renders in 751 us (faster than the
+shell's 241-us-plus-90-depth-sorted-lines only because flat rects are cheaper than lines; both are far
+past any monitor).
+GALACTIC LAW, CHECKED AGAINST THE VERSIONING as Vlad asked. GALACTIC_LAW.md has 11 axioms and does not
+number a version scheme -- but AXIOM 01 already LEGISLATES the pre-build closure gate: "BY GALACTIC LAW
+-- every build of this software must: 1. Verify P=12 pentagons. If not 12 -- stop. Do not ship. 2.
+Verify V-E+F=2. If not 2 -- stop. Do not ship. ... 5. The builder owns the shell. The kernel is
+absolute. The ledger is permanent." The gate written into RUSTIUM is not a new idea, it is AXIOM 01
+clauses 1-2, and gos_viewer already honours it. And "the ledger is permanent" is why runs hang off Lnnn
+rather than a bare counter. Four version axes now coexist without conflict: ledger Lnnn (time,
+permanent), logs vMAJOR.MINOR_phase (experiment), sims name_vX_Y_Z (frozen artifacts, Path X), crates
+semver. The run folder carries crate version + session in its name and ledger + commit inside. Nothing
+renamed, nothing unified; the axes stay separate and the link is recorded. FLAGGED for Vlad's eye: what
+was built is an INTERPRETATION of AXIOM 01.5, not a quotation.
+HOUSEKEEPING: removed the three generated c60_*.png from the Gos root (regenerable by cargo run
+--example paint_c60). Added examples/paint_dashboard.rs so the dashboard renders to a PNG with no
+window -- the same code path the .exe uses, so the image is diffable against a screenshot of the real
+.io page. clippy --WORKSPACE (not just the root package -- it silently only checked goldberg_kernel
+before) now runs the viewer too: fixed a needless index loop in raster.rs, an empty format string in
+the example, and a filter().next_back() that wanted rfind(). The 24 upper_case_acronyms lints on
+win32.rs are ALLOWED with a written reason: those types carry Win32's OWN names, and the whole value of
+a hand-written FFI layer is that a reader can diff it line-by-line against the Microsoft docs --
+renaming them to suit a style lint would make the one unsafe file in this project HARDER to audit.
+Back to the 5 pre-existing warnings; layout.rs, dashboard.rs, raster.rs and the examples add none.
+ONE MORE OF MINE, logged not carved: .gitignore written by NAME. "c60_*.png" missed
+"dashboard_skeleton.png" within the hour -- R11's shape exactly, a rule that must be extended per
+artifact is not a rule. Now /*.png /*.ppm /*.bits /*.bin as a CLASS. Verified: runs/ is 206.9 MB on disk
+and 1,847 bytes in git; a full `git add -A` stages only SESSION.json, SHOTS.log and the export
+MANIFESTs. The heavy payload never enters git. Pay thea Heleni in compute.
+STILL OWED and named: content-driven card height (both descriptions truncate mid-sentence -- "TO LAND",
+"SEAL IS" -- because the card is a hardcoded 104px while the browser grows it), letter-spacing, the
+mini C60 canvas in the left panel, the real 384-card list from sim_scan, scrolling instead of clipping,
+and the pixel diff against the .io screenshot that turns "indistinguishable" into a number. Also still
+owed from L188/L189: sigma from the integer lattice, Mesh::refine(), the 60-vertex hex diff, cargo fmt,
+and the trusted base back under 41 lines. NEXT: the second program -- the spini spini byte topology, so
+the dashboard and the topology of the current code can be toggled side by side. win32.rs becomes its
+own crate first, because two binaries duplicating it would break RUSTIUM's claim that this project has
+exactly ONE unsafe file. Incomplete is fine. Fake is not.
+P=12 . chi=2 . E/V=3/2 . the ledger is permanent . the price is always paid . always

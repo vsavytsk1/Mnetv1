@@ -60,7 +60,7 @@ fn main() -> std::io::Result<()> {
     );
     println!();
 
-    println!("{:<12} {:<10} {:>18}  {}", "palette", "bg", "digest", "file");
+    println!("{:<12} {:<10} {:>18}  file", "palette", "bg", "digest");
     println!("{}", "-".repeat(68));
 
     for pal in ALL {

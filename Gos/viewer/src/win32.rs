@@ -10,6 +10,13 @@
 //! where the mouse was clicked. Nothing here computes anything.
 
 #![allow(non_snake_case, non_camel_case_types, dead_code)]
+// Every type below carries Win32's OWN name -- `HWND`, `LPARAM`, `BITMAPINFOHEADER`.
+// clippy would rather they were `Hwnd`, `Lparam`, `BitmapInfoHeader`. Declined on
+// purpose: the whole value of a hand-written FFI layer is that a reader can diff
+// it line-by-line against the Microsoft documentation. Renaming the types to suit
+// a style lint would make the one `unsafe` file in this project HARDER to audit,
+// which is the opposite of why it is written out by hand.
+#![allow(clippy::upper_case_acronyms)]
 
 use std::ffi::c_void;
 
