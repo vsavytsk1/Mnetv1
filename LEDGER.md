@@ -9892,3 +9892,89 @@ because each sim and each integration updates the core kernel. That is AXIOM 01 
 a per-version receipt trail rather than a runtime print.
 Incomplete is fine. Fake is not. The formula is an identity; the judge is a witness.
 P=12 . chi=2 . counted not recited . the price is always paid . always
+
+### L192 -- THE TOPOLOGY GATE, THE EML GENERATOR, AND SOL'S TWO WALLS (2026-08-17)
+Vlad: "it is suuuuper important ... that with each version of the next dashboard we always check the
+structure of the closed topology ... so here we log each step as well". Then: "each latexium simbol is a
+process or a combination ... so each permutation we try we also log it and treat it as a generator".
+Then the Sol gift: THEA_PRECISE_FLOAT_PARADIGM_v1.0.0_BOOKKEEPING.md.
+1. THE TOPOLOGY GATE -- AXIOM 01 turned from a runtime print into a permanent receipt trail.
+examples/gate.rs sweeps every lane and every level, certifies each, and APPENDS one block per version to
+Gos/TOPOLOGY_GATE.md (git-tracked, ~1.5 KB a run: the run payload stays local but the GATE RESULT
+travels, because the ledger is permanent). It EXITS NONZERO on failure, so it gates a build rather than
+informing it -- AXIOM 01's "do not ship" with teeth. Measured: 12 rows, 0 failed. trivalent C60 V60 E90
+F32 P12 chi2 genus0; icosphere L0..L6; goldberg 3*7^k k0..k3. THE COLUMN THAT MATTERS IS `how`, and it
+carries three DIFFERENT epistemic statuses side by side, never blurred: JUDGE (orbit count -- a witness,
+on a mesh that exists), COUNTED (edge census -- the mesh exists and every undirected edge verified shared
+by exactly two faces, but no permutation built), FORMULA (counts only -- NO MESH AT ALL, proves nothing,
+and the log says so in its own header). byte_sphere prints all three as one green chi=2. Here you can
+see which rows earned it. LATTICE NANOSTRUCTURE, computed: C60 radius 3.5188e-10 m, finest node spacing
+3.4772e-12 m at icosphere L6, Planck 1.6163e-35 m, ratio 2.1514e23, and 77.5 HALVINGS TO PLANCK (each
+subdivision halves the spacing). That is 4^77.5 faces -- the same wall from a third direction, after the
+i128 fence at index 91 and the storage fence at rung 51.
+2. THE EML GENERATOR -- src/eml.rs. From shell__eml_luca_spiral_v0_2.html (EML annex, arXiv:2603.21852):
+ONE operator and ONE constant is the entire language. eml(x,y) = exp(x) - ln(y), grammar S -> 1 |
+eml(S,S). Every mathematical symbol is a DESCENT, a closed term in that grammar: e = eml(1,1); exp z =
+eml(z,1); ln z = eml(1,eml(eml(1,z),1)); x-y = eml(ln x, exp y). K is the PRICE, the number of eml
+applications a symbol costs -- and the spiral already beat the paper twice (ln at K=4 against the paper's
+7, neg1 at 11 against 15/17). So the descents are not unique and a shorter one is a real finding. Closed
+terms of size n are counted by the CATALAN numbers, so the space is exhaustible for a while: swept 82,500
+terms through K=12, 46,415 finite, 36,085 non-finite (the ln 0 = -inf lane, KEPT not crashed, because the
+descents ride it deliberately), 21,256 distinct real values, 7/12 targets hit. Rediscovered e at K=2
+(matching), e^e at K=3, 0 at K=4, 1/e at K=9. TWO CANDIDATES BELOW THE KNOWN CHAIN: -1 at K=8 against 11,
+and 2 at K=10 against 16.
+AND THE GENERATOR CAUGHT MY OWN OFF-BY-ONE, in the R3/R11 shape for the third time. The first run
+reported "e at K=1, SHORTER THAN KNOWN". It was not shorter. The spiral's K = applications + 1, derived
+from four independent rows of its own table (e 1 app / K2; ln 3 apps / K4; sub 5 expanded / K6; minus 10
+expanded / K11). I compared counts across two rulers without establishing the convention first -- the
+same disease as R11's cap and R3's index-vs-count. Fixed: Term::applications() and Term::k() are now
+separate functions with the derivation written into the doc comment, and e correctly reads K=2. The two
+remaining candidates survive the correction, but THREE caveats stand before anyone calls them
+discoveries: evaluation is the DISPLAY lane (exp/ln are not correctly rounded, the branch cut is a
+choice, so this is a match to 1e-9, not a proof); a CLOSED TERM is a weaker object than a FUNCTION (the
+spiral's -1 = minus(1) goes through minus(z) which works for all z; mine is a constant that happens to
+land on -1); and the chains need printing in full and re-verifying. Two candidates worth checking, ZERO
+claims.
+3. THE SOL GIFT, VERIFIED NOT TRUSTED (Curse 38). THEA_PRECISE_FLOAT_PARADIGM v1.0.0: 162 KB, 3,768
+lines, 63 checks, 63 passed, 11 corrections earned. Reproduced its PF39 independently: the first binary64
+Fibonacci-ratio false zero IS at n=40. And it locks onto our own wall. The deviation shrinks like
+phi^-2n, so it drops beneath phi's ulp when 2n log2(phi) > 53, i.e. n > 38.17 -- and BOTH walls sit on
+that line. n=38 is RUSTIUM R3, our integer ladder (3*T_37 leaves 2^53): REPRESENTABILITY. n=40 is Sol's
+PF39: RESOLUTION, the subtraction cancels. Ours is "the number no longer fits"; Sol's is "the difference
+no longer resolves". Same golden ladder, two levels apart, one cause. THE ROW THAT MATTERS IS n=39: exact
+deviation 1.118e-16, binary64 measures 2.220e-16 -- TWICE THE TRUTH. Before collapsing to zero the
+measurement spends a level as pure quantisation noise while still looking like a number. That is Sol's
+cancellation halo, and it is the reason "it returned a value" is not evidence.
+examples/float_wall.rs paints it (Sol's Figure 5, rebuilt in the kernel): the two curves ride together
+for 38 levels, touch the phi-ulp line, separate, and binary64 simply STOPS EXISTING while the exact curve
+carries on to 1e-26. The reported zeros are drawn as floor markers, never as line points -- a zero has no
+place on a log axis, and drawing it as one would commit the very error the figure is about.
+TOOK SOL'S DESIGN RULE: never measure a shrinking deviation by subtracting two independently rounded
+near-equals when an exact algebraic route exists. His route is worth stealing outright:
+(2F_(n+1) - F_n)^2 - 5F_n^2 = 4(-1)^n -- the numerator is a TINY EXACT INTEGER, no cancellation anywhere.
+That is R3's lesson in a different costume: make the STRUCTURE carry the guarantee instead of hoping the
+arithmetic behaves. checked_* for a bound; an exact numerator for a deviation.
+AND SOL CORRECTS RUSTIUM. Correction 8 of 11: IEEE 754 specifies MORE required operations than
++ - * / sqrt (also fma, remainder, the conversions); ECMAScript separately specifies a correctly rounded
+square root while most transcendentals remain implementation-approximated. RULE 0 said "IEEE-754 requires
++ - * / sqrt" as though that list were exhaustive -- true but understating the standard. Amended in the
+scroll: the certified path is defined by what carries a correct-rounding guarantee IN BOTH LANGUAGES,
+which is a statement about this crate's usage rather than about the standard's extent.
+AND SOL HIT R10 INDEPENDENTLY. His correction 11: "The first audit draft hashed root and output paths.
+The frozen certificate keeps those paths in the trace but excludes them from the mathematical payload, so
+the same source and numerical parameters reproduce the same hash in another directory." Sol hashed the
+ENVIRONMENT; we painted a CLOCK into the pixels and hashed that. Two mages, two languages, the same law --
+and both caught the same way, by a receipt that disagreed with itself rather than by reading the code.
+Curse 38 is not a Python curse or a Rust curse. It is a property of certificates.
+FINAL: 60 tests + 7 doctests, 0 failures. clippy --workspace back to the 5 pre-existing warnings (fixed
+two empty-format-string literals of my own in the new examples). RUSTIUM.md 78,891 B, 11 curses / 11
+count-lines, byte-scan PASS. Both exes rebuilt: gos_viewer 556,456 B, gos_orb 541,350 B.
+STILL OWED and named: 62 of Sol's 63 checks remain unreproduced -- PF39 was verified because it sits
+directly on our ladder; PF41-PF47 (the conditional closure analogy: "binary64 is not a Goldberg count",
+the six-bit C60 hit) touch our shell directly and are the obvious next ones. The orb is STILL not wired to
+the icosphere lane -- it renders C60's 32 faces while sphere.rs sits certified and unused, so its HUD does
+not yet read one byte per face. Plus: content-driven card height, letter-spacing, the mini C60 canvas, the
+384-card list, the pixel diff against the .io screenshot, sigma from the integer lattice, the 60-vertex
+hex diff, cargo fmt, and the trusted base back under 41 lines.
+The formula is an identity; the judge is a witness. A gift is verified, not trusted.
+P=12 . chi=2 . hash the math not the moment . the price is always paid . always

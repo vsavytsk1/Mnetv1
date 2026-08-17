@@ -49,6 +49,7 @@
 pub mod bits;
 pub mod complex;
 pub mod dashboard;
+pub mod eml;
 pub mod font;
 pub mod judge;
 pub mod ladder;

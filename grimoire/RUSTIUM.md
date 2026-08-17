@@ -86,6 +86,21 @@ tie-break. ECMAScript `Number` and Rust `f64` are both IEEE-754 binary64 with
 round-to-nearest-even. Therefore, for those five operations on identical inputs
 in identical order, JavaScript and Rust produce **bit-identical** results.
 
+> **CORRECTION, earned by the Sol mage** (`THEA_PRECISE_FLOAT_PARADIGM
+> v1.0.0`, correction 8 of 11). The five operations above are the ones this
+> crate *uses*; they are **not** the whole of what IEEE 754 requires. The
+> standard also mandates correct rounding for `fma`, `remainder`, and the
+> conversions, among others. Writing "IEEE requires +-*/sqrt" as though that
+> list were exhaustive understates the standard.
+>
+> The sharper statement, and the one that actually governs the seam: **IEEE 754
+> specifies more required operations than these five; ECMAScript separately
+> specifies a correctly rounded square root, while most transcendentals remain
+> implementation-approximated on both sides.** The certified path is therefore
+> defined by what carries a correct-rounding guarantee *in both languages* --
+> which is the five above, for our purposes, and that is a statement about this
+> crate's usage rather than about the standard's extent.
+
 That is not a coincidence to be grateful for. It is a guarantee to be spent.
 Everything integer, plus f64 restricted to those five operations, is
 `assert_eq!`-able across the language seam. A port of that code is a
@@ -1006,6 +1021,92 @@ FAMILY:
   fence in the wrong place). R9 (a setting whose name overstates its reach).
 
 Curse count: R11. A dump cap stated in SOURCE bytes bounded a file eight times larger on disk: `DUMP_CAP = 4 MB` permits a 32 MB `.bits` file, and four clicks wrote 88 MB into a folder nobody had ignored yet. State a cap in the units of the thing it protects, and ignore a program's output directory BEFORE its first run. Always.
+
+---
+
+## THE TWO WALLS -- a gift from the Sol mage, verified
+### `THEA_PRECISE_FLOAT_PARADIGM_v1.0.0_BOOKKEEPING.md` -- 63 checks, 63 passed, 11 corrections
+
+A tower gift arrived, and Curse 38 says a gifted kernel is **verified, not
+trusted**. Reproduced independently here: its **PF39** claims the first binary64
+Fibonacci-ratio false zero is at `n = 40`. It is.
+
+```text
+   n        exact |r_n - phi|     binary64  fl(r_n) - fl(phi)
+  36           2.006203e-15          1.998401e-15
+  37           7.663014e-16          8.881784e-16
+  38           2.927011e-16          2.220446e-16
+  39           1.118019e-16          2.220446e-16   <- the float diff is TWICE the truth
+  40           4.270451e-17          0.000000e0     <- FALSE ZERO
+```
+
+### The convergence
+
+RUSTIUM R3 measured our integer ladder breaking at **n = 38**. Sol measured the
+ratio deviation reading zero at **n = 40**. Those are the same wall from two
+sides, and one inequality predicts both: the deviation shrinks like
+`phi^-2n`, so it drops beneath phi's own ulp when
+
+```text
+   2n log2(phi) > 53      ->      n > 38.17
+
+   n = 38   R3     REPRESENTABILITY   3*T_37 leaves 2^53
+   n = 40   PF39   RESOLUTION         the subtraction cancels
+```
+
+Ours is *"the number no longer fits"*. Sol's is *"the difference no longer
+resolves"*. Same golden ladder, two levels apart, one cause.
+
+**The row that matters is n = 39.** The exact deviation is `1.118e-16`; binary64
+measures `2.220e-16` -- **twice the truth**. Before collapsing to zero the
+measurement spends a level as pure quantisation noise while still looking like a
+number. That is Sol's *cancellation halo*, and it is the reason "it returned a
+value" is not evidence. `examples/float_wall.rs` paints it: the two curves ride
+together for 38 levels, separate at the ulp line, and binary64 simply stops
+existing while the exact curve carries on to 1e-26.
+
+*(The zeros are drawn as floor markers, never as line points -- a zero has no
+place on a log axis, and drawing it as one would commit the very error the
+figure is about.)*
+
+### The design rule, taken
+
+> **Never measure a shrinking deviation by subtracting two independently
+> rounded near-equals when an exact algebraic route exists.**
+
+Sol's route for the Fibonacci case is worth stealing outright:
+
+```text
+   (2F_(n+1) - F_n)^2 - 5F_n^2 = 4(-1)^n
+```
+
+The numerator is a **tiny exact integer** -- no cancellation anywhere. Evaluate
+only the positive denominator at sufficient precision, and return a sign, an
+enclosure and a precision receipt.
+
+That is R3's lesson in a different costume: make the *structure* carry the
+guarantee instead of hoping the arithmetic behaves. `checked_*` for a bound, an
+exact numerator for a deviation.
+
+### And Sol hit R10 independently
+
+Correction 11 of 11, in the Sol mage's own words:
+
+> *"The first audit draft hashed root and output paths. The frozen certificate
+> keeps those paths in the trace but excludes them from the mathematical
+> payload, so the same source and numerical parameters reproduce the same hash
+> in another directory."*
+
+Sol hashed the **environment**; we painted a **clock** into the pixels and
+hashed that (R10). Two mages, two languages, the same law -- and both were
+caught the same way, by a receipt that disagreed with itself rather than by
+reading the code. Curse 38 is not a Python curse or a Rust curse. It is a
+property of certificates.
+
+**Still owed on this gift:** 62 of the 63 checks remain unreproduced here. PF39
+was verified because it sits directly on our ladder. PF41-PF47 (the conditional
+closure analogy -- "binary64 is not a Goldberg count", the six-bit C60 hit) touch
+our shell directly and are the obvious next ones to run.
 
 ---
 

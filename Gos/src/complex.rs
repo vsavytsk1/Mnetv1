@@ -110,6 +110,19 @@ impl C {
         C::new(e * self.im.cos(), e * self.im.sin())
     }
 
+    /// DISPLAY. Principal `ln z`, branch cut on the negative real axis.
+    ///
+    /// `ln 0 = -inf` is returned rather than NaN: the EML descents ride that
+    /// "extended reals lane" deliberately -- `minus(1)` reaches `-1` exactly by
+    /// passing through `ln 0`, and a NaN there would kill a chain that the
+    /// mathematics says is fine.
+    pub fn ln(self) -> C {
+        if self.re == 0.0 && self.im == 0.0 {
+            return C::new(f64::NEG_INFINITY, 0.0);
+        }
+        C::new(self.abs().ln(), self.arg())
+    }
+
     /// DISPLAY. `z^w` for real `w`, via polar form.
     pub fn powf(self, w: f64) -> C {
         let r = self.abs();
