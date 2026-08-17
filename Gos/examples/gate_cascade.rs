@@ -189,8 +189,8 @@ fn main() -> std::io::Result<()> {
     println!("  THE CASCADE -- 'A' to the gates");
     println!("{}", "=".repeat(94));
     println!(
-        "  {:<18} {:<18} {:>10} {:>14}  {}",
-        "layer", "what", "NAND", "transistors", "status"
+        "  {:<18} {:<18} {:>10} {:>14}  status",
+        "layer", "what", "NAND", "transistors"
     );
     println!("  {}", "-".repeat(90));
     for r in &rungs {
@@ -350,7 +350,7 @@ fn thresholds(cv: &mut Canvas, pal: &Palette, r: Rect, byte_add: u64) {
         font::text(cv, r.x + 12, y, title, c, 1);
         y += 14;
         for l in lines {
-            font::text(cv, r.x + 12, y, l, if l.is_empty() { pal.text } else { [0x6a, 0x7a, 0x8a] }, 1);
+            if !l.is_empty() { font::text(cv, r.x + 12, y, l, [0x6a, 0x7a, 0x8a], 1); }
             y += 10;
         }
         y += 10;
