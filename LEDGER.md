@@ -9978,3 +9978,63 @@ not yet read one byte per face. Plus: content-driven card height, letter-spacing
 hex diff, cargo fmt, and the trusted base back under 41 lines.
 The formula is an identity; the judge is a witness. A gift is verified, not trusted.
 P=12 . chi=2 . hash the math not the moment . the price is always paid . always
+
+### L193 -- THE GROWTH: judge every level, and a capped dedup that reported no number at all (2026-08-17)
+Vlad: "lets see what the powers of the algebraic and monkey brain can do together", then "step by step
+even if wrong we must juge it all so let me see both panles".
+examples/orb_growth.rs -- ONE byte stream, SIX subdivision levels, side by side. The algebraic side and
+the monkey brain doing the same job at once: each shell built by exact index weld (no float decides
+adjacency, R7 cannot happen) with chi COUNTED by the integer judge; the same bytes painted on every
+shell so structure invisible at 80 faces becomes texture at 81,920. Measured on its own 468,005-byte
+binary: L1 80 faces 5,939 B/face 0 repeats; L2 320 faces 0 repeats; L3 1,280 faces 6; L4 5,120 faces 38;
+L5 20,480 faces 936; L6 81,920 faces at 6 B/face -- 22,371 REPEAT FACES, 27 PERCENT OF THE SHELL. The
+duplication is INVISIBLE at low resolution and forms a coherent BAND at high. Same bytes throughout;
+only resolution changed. The structure was always there and 80 faces could not hold it.
+AND THE HONEST NUMBER UNDERNEATH: global duplication at 64B blocks is 1.02 PCT; face duplication at L6's
+6 B/face is 27 PCT. Same file, same question, twenty-fold different answer -- because "duplication" is
+meaningless without a block size. Six bytes is small enough that x86 opcode encodings collide constantly.
+Both numbers are honest and they measure different things; the big one was nearly reported as the
+headline. The orange band is PROBABLY .text against sparser data -- probably, because the PE headers were
+never parsed. A hypothesis with a pretty picture attached is not a finding.
+TWO CORRECTIONS EARNED BY "JUDGE IT ALL EVEN IF WRONG":
+(1) THE JUDGE AT L6 COSTS 124 MILLISECONDS. The first version labelled L5/L6 "COUNTED (edge census)"
+    rather than JUDGE -- not because the permutation was too expensive, but because I ASSUMED it was
+    without measuring. Measured: L1 61us, L2 246us, L3 958us, L4 5,426us, L5 25,543us, L6 123,896us --
+    clean 4x scaling, exactly as the dart count does. Every level now says JUDGE, chi counted from orbit
+    cycles on 245,760 darts. Assuming a cost is not the same as paying it, and the two most interesting
+    panels carried the weaker certificate for no reason at all.
+(2) A CAPPED DEDUP REPORTED NO NUMBER AT ALL. Face-repeat detection used a Vec capped at 200,000 hashes
+    with O(n) contains. Three runs reported 22,080 / 22,094 / 22,371 repeats and three different seals.
+    Not noise around a value -- the answer depended on where the cap fell, while printing an exact-looking
+    integer the whole time. R11 in new clothes. Replaced with an uncapped HashSet: seal now
+    c49e9e67dbabdaa3 on both runs, deterministic.
+BOTH PANELS RUN TOGETHER, and both were judged rather than trusted. gos_viewer: gate passed before pixel
+one, modules [24,14,28,14,14,25] KB measured from kernel/*.js, 5 shots across 4 views and 2 palettes,
+dashboard 771us, shell 229us. gos_orb: gate passed, its own 541,350 bytes at 1.24 PCT duplication,
+entropy 6.4599, ones 36.14 PCT, rung needed Class I k=466 T=217,156 V=4,343,120; spun through 4.38 rad,
+9 shots, bit dump reproduced identically twice (FNV 057CA50DEF0866B3).
+FOUR DASHBOARD SHOTS CAME BACK WITH FOUR DIFFERENT SEALS, which looked exactly like R10 returning. It was
+not: SHOTS.log records the VIEW, and they were Dashboard / Shell / FrameBits / MachineBits. Shots 4 and 5
+share a view and differ only by palette. Every varying seal is explained by a logged variable. THIRD TIME
+this session SHOTS.log has settled a "same input, different seal" question -- and the reason it keeps
+looking like a bug is that the viewer's STDOUT line prints palette but not view, while the FILE that
+matters carries both. Fix the stdout line or it will keep raising false alarms.
+FULL BUILD FROM THE TOP, step by step, as asked: cargo clean removed 155.2 MB; Cargo.lock resolves to
+exactly 4 packages and ALL FOUR ARE OURS -- RULE 0's fourth row is now proven by the lockfile, not
+asserted; cold build 5.6s debug / 9.1s release with byte-identical exe sizes to the pre-clean build;
+60 tests + 7 doctests exit 0 in debug, release AND -C target-cpu=native; clippy --workspace exit 0 with
+the 5 pre-existing warnings; the Python third witness 33/33 with a seal STABLE across two runs
+(5ce50e6d...); the topology gate 12 rows 0 failed; and the dashboard and float_wall render seals both
+reproduced exactly. FOUR independent seals, all stable.
+AND ONE MORE OF MINE: step 3 first reported "failures 1" in all three profiles. PowerShell's Select-String
+is CASE-INSENSITIVE by default, so "FAILED" matched the word "failed" inside "0 failed". Every failure I
+counted was the line reporting zero failures. The authority was LASTEXITCODE=0 the whole time. Same shape
+as R3 and R11 -- a comparison against the wrong thing because the convention was never checked. Three of
+the eleven curses are now this exact disease.
+STILL OWED: the orb STILL renders C60's 32 faces while sphere.rs proves one byte per face works and
+orb_growth uses it -- the live spinning program does not. Plus the viewer's stdout view line, the PE
+header parse before claiming the band is .text, 62 of Sol's 63 checks, content-driven card height,
+letter-spacing, the mini C60 canvas, the 384-card list, the pixel diff, sigma from the integer lattice,
+cargo fmt, and the trusted base back under 41 lines.
+Assuming a cost is not paying it. A capped count is not a count.
+P=12 . chi=2 . counted not recited . the price is always paid . always
