@@ -29,8 +29,8 @@ use goldberg_kernel::palette::{Palette, Rgb, DASHBOARD};
 use goldberg_kernel::raster::{project, Canvas};
 use goldberg_kernel::sphere::{self, Ico};
 
-const W: usize = 1680;
-const H: usize = 980;
+const W: usize = 3840;
+const H: usize = 2160;
 /// levels shown, left to right
 const LEVELS: [u32; 6] = [1, 2, 3, 4, 5, 6];
 /// duplication granularity over the whole stream
@@ -94,11 +94,11 @@ fn main() -> std::io::Result<()> {
     let mut cv = Canvas::new(W, H, pal.bg);
 
     // ---- header -----------------------------------------------------------
-    font::text(&mut cv, 24, 20, "THE GROWTH", pal.gold, 2);
+    font::text(&mut cv, 24, 20, "THE GROWTH", pal.gold, 5);
     font::text(
         &mut cv,
-        24 + font::width("THE GROWTH", 2) + 18,
-        26,
+        24 + font::width("THE GROWTH", 5) + 18,
+        52,
         "ONE STREAM, EVERY SUBDIVISION. EXACT INDEX WELD, CHI COUNTED.",
         pal.pink,
         1,
@@ -106,7 +106,7 @@ fn main() -> std::io::Result<()> {
     font::text(
         &mut cv,
         24,
-        44,
+        96,
         &format!(
             "{}  {} BYTES  .  DUP {}/{} BLOCKS AT {}B = {:.2} PCT  .  ENTROPY {:.4} B/B  .  ONES {:.2} PCT",
             label.to_uppercase(),
@@ -123,15 +123,15 @@ fn main() -> std::io::Result<()> {
     );
 
     // ---- panels -----------------------------------------------------------
-    let grid = Rect::new(16, 70, W as i32 - 32, H as i32 - 130);
-    let cols = grid.columns(3, 14);
-    let panel_h = (grid.h - 14) / 2;
+    let grid = Rect::new(40, 140, W as i32 - 80, H as i32 - 300);
+    let cols = grid.columns(3, 32);
+    let panel_h = (grid.h - 32) / 2;
     let mut panels = Vec::new();
 
     for (i, &l) in LEVELS.iter().enumerate() {
         let col = &cols[i % 3];
         let row = i / 3;
-        let r = Rect::new(col.x, grid.y + row as i32 * (panel_h + 14), col.w, panel_h);
+        let r = Rect::new(col.x, grid.y + row as i32 * (panel_h + 32), col.w, panel_h);
 
         let ico = match Ico::level(l) {
             Ok(x) => x,
@@ -161,7 +161,7 @@ fn main() -> std::io::Result<()> {
     }
 
     // ---- footer -----------------------------------------------------------
-    let fy = H as i32 - 52;
+    let fy = H as i32 - 120;
     font::text(
         &mut cv,
         24,
@@ -173,7 +173,7 @@ fn main() -> std::io::Result<()> {
     font::text(
         &mut cv,
         24,
-        fy + 12,
+        fy + 26,
         "MONKEY BRAIN: THE SAME BYTES ON EVERY SHELL. WHAT IS ONE FLAT COLOUR AT 80 FACES IS TEXTURE AT 81,920.",
         pal.pink,
         1,
@@ -181,7 +181,7 @@ fn main() -> std::io::Result<()> {
     font::text(
         &mut cv,
         24,
-        fy + 24,
+        fy + 52,
         "ORANGE = A FACE WHOSE BYTE BLOCK REPEATS AN EARLIER ONE. DUPLICATION IS THE FINDING, SO IT DOES NOT HIDE IN THE RAMP.",
         pal.orange,
         1,
@@ -189,7 +189,7 @@ fn main() -> std::io::Result<()> {
     font::text(
         &mut cv,
         24,
-        fy + 36,
+        fy + 78,
         "TWELVE PINK VERTICES AT EVERY DEPTH -- EULER FORCES THEM. THEY ARE THE TWELVE PENTAGONS OF THE DUAL.",
         [0x4a, 0x5a, 0x6a],
         1,
@@ -215,7 +215,7 @@ fn paint_panel(
     cv.fill_rect(r.x, r.y, r.w, r.h, [0x05, 0x05, 0x0c]);
     cv.rect(r.x, r.y, r.w, r.h, pal.border);
 
-    let cap_h = 46;
+    let cap_h = 110;
     let view = Rect::new(r.x, r.y, r.w, r.h - cap_h);
     let (rx, ry) = (0.34_f64, 0.62_f64);
     let zoom = (view.w.min(view.h) as f64) * 0.40;
@@ -297,7 +297,7 @@ fn paint_panel(
     for &d in &ico.defects() {
         let (x, y, z) = pts[d];
         if z > 0.0 {
-            cv.disc(x, y, 3, pal.pink, 255);
+            cv.disc(x, y, 7, pal.pink, 255);
         }
     }
 

@@ -118,8 +118,8 @@ fn main() -> std::io::Result<()> {
     header(&mut cv, &pal, ffz);
     legend(&mut cv, &pal, plot);
 
-    cv.write_png("float_wall.png")?;
-    println!("\nwrote float_wall.png   seal {:016x}", cv.digest());
+    let (kw, kh, kn) = cv.write_png_4k("float_wall.png")?;
+    println!("\nwrote float_wall.png + _4k.png  {kw}x{kh}  ({kn}x exact)   seal {:016x}", cv.digest());
     Ok(())
 }
 

@@ -238,8 +238,8 @@ fn main() -> std::io::Result<()> {
     thresholds(&mut cv, &pal, Rect::new(960, 96, W as i32 - 990, H as i32 - 190), byte_add);
     footer(&mut cv, &pal);
 
-    cv.write_png("gate_cascade.png")?;
-    println!("\nwrote gate_cascade.png   seal {:016x}", cv.digest());
+    let (kw, kh, kn) = cv.write_png_4k("gate_cascade.png")?;
+    println!("\nwrote gate_cascade.png + _4k.png  {kw}x{kh}  ({kn}x exact)   seal {:016x}", cv.digest());
     Ok(())
 }
 

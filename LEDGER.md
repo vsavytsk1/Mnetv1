@@ -10038,3 +10038,24 @@ letter-spacing, the mini C60 canvas, the 384-card list, the pixel diff, sigma fr
 cargo fmt, and the trusted base back under 41 lines.
 Assuming a cost is not paying it. A capped count is not a count.
 P=12 . chi=2 . counted not recited . the price is always paid . always
+
+### L193d -- 4K: exact integer upscale, and one native render (2026-08-17)
+Vlad: "now last change and log lets push the gen of the images to 4k".
+Canvas::upscale(n) in src/raster.rs -- nearest-neighbour integer replication, every pixel becomes an
+n x n block. NO INTERPOLATION AND NO NEW COLOURS: the output histogram is the input histogram with every
+count multiplied by n^2. For THIS renderer that is not a compromise but the CORRECT operation -- a 5x7
+bitmap font and integer Bresenham lines carry no sub-pixel information, so any smooth filter would be
+INVENTING DETAIL THAT WAS NEVER COMPUTED (Path IV: incomplete is fine, fake is not). Plus fit_scale() and
+write_png_4k(), which emits the native PNG and the largest exact upscale that fits 3840x2160 beside it.
+THE SEALS PROVE THE UPSCALE IS HONEST. dashboard_skeleton 3840x2160 at 3x, float_wall 3540x2160 at 3x,
+gate_cascade 3000x2080 at 2x -- and all three native seals are UNCHANGED (e5170a87434609d7,
+7175530d23f1b739, 48af700dfa06a08b). The upscale altered no source data. orb_growth's seal DID change to
+39b7467366b43136, correctly, because that one was re-rendered NATIVELY at 3840x2160 with its fonts,
+paddings, panel gaps and defect discs scaled to match -- its 81,920-face shells have real geometry to
+resolve, so replication would have wasted it.
+HONEST CAVEATS, both stated rather than rounded away: float_wall lands at 3540 wide and gate_cascade at
+3000, NOT 3840 -- an integer upscale cannot reach 3840 from a 1180 or 1500 base, and a fractional scale
+would interpolate, which is the one thing this operation refuses to do. 4K-class height, not 4K width.
+And the native 4K orb_growth was verified to re-render and to parse as a valid PNG, but was NOT
+eyeballed; only its numbers were checked.
+P=12 . chi=2 . replication is not interpolation . the price is always paid . always

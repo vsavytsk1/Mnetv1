@@ -111,7 +111,7 @@ fn main() -> std::io::Result<()> {
         println!("  - {g}");
     }
 
-    cv.write_png("dashboard_skeleton.png")?;
-    println!("\nwrote dashboard_skeleton.png");
+    let (kw, kh, kn) = cv.write_png_4k("dashboard_skeleton.png")?;
+    println!("\nwrote dashboard_skeleton.png + _4k.png  {kw}x{kh}  (exact {kn}x integer upscale)");
     Ok(())
 }

@@ -173,6 +173,63 @@ impl Canvas {
         h
     }
 
+    /// Exact integer upscale: every pixel becomes an `n` x `n` block.
+    ///
+    /// Nearest-neighbour, no interpolation, **no new colours introduced** -- the
+    /// output histogram is the input histogram with every count multiplied by
+    /// `n^2`. For this renderer that is not a compromise but the correct
+    /// operation: a 5x7 bitmap font and integer Bresenham lines carry no
+    /// sub-pixel information, so any smooth filter would be **inventing
+    /// detail that was never computed** (Path IV -- incomplete is fine, fake
+    /// is not).
+    ///
+    /// Where genuine detail exists -- a shell with 81,920 faces -- render at the
+    /// larger size natively instead. This is for the hard-pixel figures.
+    pub fn upscale(&self, n: usize) -> Canvas {
+        let n = n.max(1);
+        let (w, h) = (self.w * n, self.h * n);
+        let mut out = Canvas {
+            w,
+            h,
+            px: vec![0u8; w * h * 3],
+        };
+        for y in 0..self.h {
+            for x in 0..self.w {
+                let c = self.get(x, y);
+                for dy in 0..n {
+                    let row = (y * n + dy) * w;
+                    for dx in 0..n {
+                        let i = (row + x * n + dx) * 3;
+                        out.px[i..i + 3].copy_from_slice(&c);
+                    }
+                }
+            }
+        }
+        out
+    }
+
+    /// The largest integer `n` with `w*n <= tw` and `h*n <= th`. At least 1.
+    pub fn fit_scale(&self, tw: usize, th: usize) -> usize {
+        ((tw / self.w.max(1)).min(th / self.h.max(1))).max(1)
+    }
+
+    /// Write the native PNG and an exact 4K-class upscale beside it.
+    ///
+    /// Returns `(native_path, k4_path, scale)`. The seal of the upscale is a
+    /// pure function of the native seal and `n`, so the receipt still holds.
+    pub fn write_png_4k(&self, path: impl AsRef<Path>) -> io::Result<(usize, usize, usize)> {
+        let p = path.as_ref();
+        self.write_png(p)?;
+        let n = self.fit_scale(3840, 2160);
+        let big = self.upscale(n);
+        let k4 = p.with_file_name(format!(
+            "{}_4k.png",
+            p.file_stem().unwrap_or_default().to_string_lossy()
+        ));
+        big.write_png(k4)?;
+        Ok((big.w, big.h, n))
+    }
+
     pub fn write_png(&self, path: impl AsRef<Path>) -> io::Result<()> {
         std::fs::write(path, self.to_png())
     }
