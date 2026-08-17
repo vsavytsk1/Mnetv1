@@ -426,7 +426,7 @@ The buckyball and the math tree are the same idea: **a graph of knowledge with c
 ## Big files: the 100MB rule (Helena deep builds)
 
 > **The math is absolute. The compute is not.** Store the math in git; regenerate the
-> expensive render on your own machine. See `GIT_INCIDENT_001.md` for the full receipt.
+> expensive render on your own machine. See `GIT_INCIDENTS.md` for the full receipt.
 
 GitHub hard-rejects any single file **>= 100 MB** (private repos too), and a push is
 atomic -- one oversized file bounces the *whole* push. The Helena vault stores every

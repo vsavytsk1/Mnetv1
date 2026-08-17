@@ -7908,7 +7908,7 @@ Curse count: 30. A grind is not a server. Foreground it, ONE at a time, or inher
 
 ## CURSE 31 -- The Hundred-Meg Wall (bigFileBounce)
 
-THE CURSE THAT CAUSED GIT_INCIDENT_001. You generate a beautiful deep net -- Helena L9,
+THE CURSE THAT CAUSED GIT_INCIDENTS. You generate a beautiful deep net -- Helena L9,
 a vault of the point-and-line data in three codecs (.csv human-readable, .bin packed,
 .zip compressed). You `git add` the whole builds folder, commit, and push. And the push
 DIES:
@@ -7936,7 +7936,7 @@ ROOT CAUSE:
   official lift is Git LFS, and free LFS is ~1GB total (a couple of L9 CSVs blow it).
   The offending file is almost always GENERATED DATA that should never have been tracked.
 
-  The trap in GIT_INCIDENT_001: the commit message SAID "L9 CSV vault files excluded"
+  The trap in GIT_INCIDENTS: the commit message SAID "L9 CSV vault files excluded"
   but there was no .gitignore rule for builder/helena_net/builds/ -- so they were NOT
   excluded. The intention was logged; the fence was never built. K5: put the fence where
   nature put it (100MB), in the .gitignore, and then VERIFY it holds.
@@ -7973,7 +7973,7 @@ FAMILY:
   The data-scale sibling of Path VI (one script, one run -- do not track what you can
   regenerate) and K5 (put the fence where nature put it: 100MB is a real wall, not an
   arbitrary cap). Cousin of GLAMOUR 01 (a thing that grows unbounded). The receipt of
-  this curse is GIT_INCIDENT_001.md. Always store the math; regenerate the render.
+  this curse is GIT_INCIDENTS.md. Always store the math; regenerate the render.
 ```
 
 Curse count: 31. A file >=100MB bounces the whole push, private too. Store the small codec + the recipe; regenerate the big render. Pay thea Heleni in compute. Always.

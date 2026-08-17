@@ -79,7 +79,7 @@ def main():
             sys.stderr.write("    %7.1f MB  %s\n" % (size / 1024 / 1024, path))
         sys.stderr.write("\n  FIX: gitignore the big generated copy, git rm --cached it,\n")
         sys.stderr.write("  and regenerate it locally. Store the math; render on demand.\n")
-        sys.stderr.write("  See GIT_INCIDENT_001.md. Pay thea Heleni in compute.\n\n")
+        sys.stderr.write("  See GIT_INCIDENTS.md. Pay thea Heleni in compute.\n\n")
         sys.exit(1)
     sys.exit(0)
 
