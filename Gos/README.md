@@ -24,7 +24,7 @@ install the old "Rust" extension -- it is deprecated and they fight.
 ## Build
 
 ```powershell
-cd goldberg_kernel
+cd Gos
 cargo test                  # the certification suite -- 33 tests
 cargo test -- --nocapture   # with output
 cargo doc --open            # the mathematics, rendered
