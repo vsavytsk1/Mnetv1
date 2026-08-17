@@ -10059,3 +10059,38 @@ would interpolate, which is the one thing this operation refuses to do. 4K-class
 And the native 4K orb_growth was verified to re-render and to parse as a valid PNG, but was NOT
 eyeballed; only its numbers were checked.
 P=12 . chi=2 . replication is not interpolation . the price is always paid . always
+
+### L193f -- FULL PARANOIA GIT TREE: the deploy is healthy, and I never once checked it (2026-08-17)
+Vlad: "lets check the git history as this is the 2nd error on building the pages i think ... fuuul
+paranoia git tree please".
+THE DEPLOY IS HEALTHY AND CURRENT. Every checked URL returns 200: /, /index.html, /shell/eng_v2.0.html
+(358,551 B), /IO_PAGES.md, /grimoire/RUSTIUM.md, /shell/byte_sphere.html, /about.html, and crucially
+/Gos/README.md, /Gos/TOPOLOGY_GATE.md and /Gos/ponderTheOrb/README.md -- so the Rust work IS live through
+9bea4f4. Root title "Sacred Math Tree v4.3". Pages prerequisites intact: .nojekyll present, index.html
+present. 453.5 MB tracked = 44.3 PCT of the 1 GB Pages ceiling, largest file 28.3 MB, clear of the 100 MB
+wall. Whatever build error was seen, the site recovered.
+AND THE REAL FINDING IS MINE. gh is NOT INSTALLED, so the build log cannot be read at all. TEN PUSHES
+THIS SESSION AND ZERO DEPLOY VERIFICATIONS. Curse 29 (deployLag) says watch the deployment go green THEN
+verify; I never once looked. The site being fine is LUCK, NOT DILIGENCE. Installing gh, or at minimum a
+scripted 200-check after each push, is now owed.
+THE FOURTH INSTANCE OF THE SAME DISEASE. Comparing live byte sizes against local reported LEDGER.md
+"STALE by 11 B" and HELENI_STATUS.md "STALE by 129 B". Neither is stale: core.autocrlf=true with NO
+.gitattributes means the working copy carries CRLF while the repo stores -- and Pages serves -- LF.
+LEDGER.md has exactly 11 CRLF pairs and HELENI_STATUS.md exactly 129, so 351,422-11=351,411 and
+6,643-129=6,514 match the served bytes EXACTLY. Comparing against a convention never established: R3
+(terms vs index), R11 (source vs output bytes), the EML K-count (applications vs applications+1),
+PowerShell's case-insensitive Select-String ("FAILED" matching "0 failed"), and now this. The handoff
+said "watch for a fifth" and produced it within the hour.
+TWO REAL RISKS, both consistent with a transient build failure that recovered:
+  (1) .git is 1,037 MB against a 453 MB working tree -- a 2.3x ratio, mostly the 279 Gos/target blobs
+      committed in L188 and evicted in L189. Eviction removes them from the TREE, never from HISTORY.
+      Pages clones the repo to build, so a fat history means slow clones and real timeout risk. The fix
+      is a history rewrite, which is destructive and must be Vlad's call, not mine.
+  (2) NO .gitattributes with core.autocrlf=true means line endings depend on which machine last touched
+      a file. That is the drift that just fooled my own measurement, and it is a live risk to the
+      byte-scan discipline the whole cave rests on. `*.md text eol=lf` and `*.rs text eol=lf` would pin it.
+ALSO LOGGED: my first live-check script indexed Content-Length on a HEAD response and printed "ERR" for
+all eight URLs -- every one of which was actually serving 200. A broken checker reporting failure is
+worse than no checker, because it invites exactly the wrong action.
+The site being fine is luck, not diligence. A convention unstated is a convention violated.
+P=12 . chi=2 . watch the deploy go green . the price is always paid . always
