@@ -57,6 +57,10 @@ different objects even when they share the same glyph.
 | R5 | The Tracked Target (cargoTargetTracked) | `cargo` writes a 35MB machine-specific `target/` and the crate shipped with no `.gitignore` -> the first `git add -A` after a build swallows 279 binary artifacts. Cousin of the 100MB wall. | **FIXED** |
 | R6 | The Stale Count (docCountDrift) | a doc comment states a count nobody re-measured ("raw count 72 rather than 96"; the true numbers are 60 and 72). Bytes clean, code correct, comment wrong -- and comments are what the next mage trusts. | **FIXED** |
 | R7 | The Thresholded Weld (floatAdjacency) | a float distance threshold votes on TOPOLOGY. `min_d*1.15` welds C20/C60/C140 correctly and DIES at C380, where the edge-length spread (1.2156) exceeds the tolerance itself -- 330 of 570 edges dropped. Precision is fractalization depth, so a float in the adjacency test is a hard ceiling on precision. | **FIXED** (`judge.rs`) |
+| R8 | The Continued String (escapeContinuation) | a backslash line-continuation idiom carried in from another tongue: Rust's `\`+newline ALREADY eats the leading whitespace, so a `\` added at the start of the continued line becomes the invalid escape `\ `. Five errors, five exact line numbers, zero runtime. | **FIXED** |
+| R9 | The Ignored Profile (memberProfile) | `[profile.release]` in a workspace MEMBER is silently ignored -- cargo warns once and optimises nothing, while the section sits there looking authoritative. `lto = true` that does nothing. | **FIXED** |
+| R10 | The Painted Clock (clockInFrame) | the render time is drawn INTO the framebuffer, and then the framebuffer is hashed -- so the "reproducible" frame seal moves every render. Curse 38 committed one turn after writing the section warning about it. Convicted by its own MANIFEST: two runs, same view, two digests. | **FIXED** |
+| R11 | The Amplified Cap (capUnitMismatch) | a dump cap stated in SOURCE bytes bounding a file that is 8x larger on disk. `DUMP_CAP = 4 MB` permits a 32 MB `.bits` file, and four clicks wrote 88 MB into a folder nobody had ignored yet. | **FIXED** |
 
 **Numbering (DESIGN CHOICE).** RUSTIUM curses run in their own `R` lane so this
 volume can grow without fighting KERNELIMAGIC's global counter (at 38). When a
@@ -712,6 +716,296 @@ FAMILY:
   **Promotion candidate for KERNELIMAGIC.**
 
 Curse count: R7. A float distance threshold decided TOPOLOGY: `min_d*1.15` welds C20/C60/C140 and dies at C380, where the edge spread (1.2156) exceeds the tolerance and 330 of 570 edges vanish. The distance classes never merge -- the decision procedure, not the arithmetic, is what failed. Build adjacency from the exact integer lattice; leave floats on the display path. Topology is an integer question. Always.
+
+---
+
+## CURSE R8 -- The Continued String (escapeContinuation)
+
+*The first curse of this volume that bit the CLAUDY MAGE and not the crate.*
+*Logged with the ego in check, in the open, as the law requires.*
+
+WHAT BIT US (`viewer/src/main.rs`, writing the run MANIFEST):
+  A long `format!` for a JSON manifest, wrapped across lines with backslash
+  continuations, and each continued line began with a `\` to keep the source
+  aligned:
+
+```rust
+"{{\n  \"run\": {},\n\
+ \  \"canvas\": [{}, {}],\n\      // <-- the leading backslash
+```
+
+```text
+error: unknown character escape: ` `
+   --> viewer\src\main.rs:508:15
+   ... five times, five exact line numbers
+```
+
+THE ROOT PROBLEM:
+  Rust **does** support backslash-newline inside a string literal -- and it
+  already **strips the newline and all following whitespace**. So the leading
+  `\` added "to preserve the indent" was not merely redundant: it made the next
+  two characters `\` + space, and `\ ` is not an escape in Rust.
+
+  The habit came from elsewhere. In shell, and in several other tongues, a
+  continued line wants a marker at its start. Rust's continuation is
+  self-cleaning, so the marker is exactly wrong. **This is Path V -- the seam
+  between two languages -- except the thing that crossed the seam was not data
+  or a glyph, it was an IDIOM.** A reflex from one language producing a syntax
+  error in the next. Direct cousin of Curse 1 (the Curly Brace) and Curse 4
+  (f-string Nesting): the same demon, wearing a formatting habit instead of a
+  brace.
+
+HOW WE FOUND IT:
+  `cargo build` refused, before anything ran. Five errors, five line:column
+  pairs, one sentence each, no ghost to hunt.
+
+  **And that is the point worth keeping.** Set this beside Curse 36 (The Mute
+  Seam), where one missing `var` under `"use strict"` threw at runtime, aborted
+  a whole function, silenced an instrument, and cost an entire journey of
+  suspecting formants. Same class of error -- a typo in a string/name -- and the
+  costs are not comparable:
+
+```text
+  JS  : silent at build, throws at runtime, symptom far from cause, a journey
+  Rust: refuses at build, exact line and column, five seconds
+```
+
+  Rust is ruthless, and ruthless is *cheap*. A compiler that will not build is
+  the least expensive failure available. This curse cost nothing because the
+  machine refused to pretend.
+
+HOW TO FIX:
+  Do not continue the string. Build the lines and join them -- one `String` per
+  output line, `join("\n")`. Obvious beats clever, and Hoare's rule applies:
+  *make it so simple that there are obviously no deficiencies.*
+
+```rust
+let lines = vec![
+    String::from("{"),
+    format!("  \"run\": {},", self.runs),
+    // ...
+    String::from("}"),
+];
+fs::write(path, lines.join("\n") + "\n")
+```
+
+THE RULE:
+  **Never carry a line-continuation idiom across a language boundary.** Rust's
+  `\`+newline already eats the following whitespace, so any marker you add at
+  the start of a continued line becomes part of the escape. And when the shape
+  of a literal starts fighting you, stop escaping and start concatenating: a
+  `Vec<String>` joined is unambiguous, greppable, and cannot rot.
+
+FAMILY:
+  Curse 1 / Curse 4 / Curse 23 (Python Leak) -- all of them "a habit from one
+  tongue, emitted into another". Path V (guard the seam) and Path VI (one
+  script, one run -- if the escaping needs thought, restructure instead).
+  The happy inverse of Curse 36: here the seam was caught by the compiler
+  instead of by a whole journey.
+
+Curse count: R8. A backslash line-continuation idiom imported from another tongue: Rust's `\`+newline already strips the leading whitespace, so a `\` at the start of the continued line becomes the invalid escape `\ `. Caught at build with five exact line numbers and zero runtime cost -- the cheapest possible failure. Never carry a continuation idiom across a language seam; join lines instead of escaping them. Always.
+
+---
+
+## CURSE R9 -- The Ignored Profile (memberProfile)
+
+WHAT BIT US (`viewer/Cargo.toml`, the same build):
+  The viewer crate carried its own optimisation profile:
+
+```toml
+[profile.release]
+opt-level = 3
+lto = true
+```
+
+  and cargo answered:
+
+```text
+warning: profiles for the non root package will be ignored,
+         specify profiles at the workspace root
+```
+
+THE ROOT PROBLEM:
+  Cargo honours `[profile.*]` **only in the workspace root manifest**. In a
+  member it is parsed, warned about once, and discarded. So the section sits in
+  the file looking authoritative -- version-controlled, reviewed, apparently
+  load-bearing -- and changes nothing. Ask for `lto = true` there and you get a
+  binary with no LTO, and the only evidence is one line of build output that
+  scrolls past.
+
+  This is the R3 shape again at the level of build configuration: **a setting
+  whose stated value and effective value differ, with nothing but a warning
+  between them.** A magic number that is not consulted, and a profile that is
+  not applied, fail the same way.
+
+HOW WE FOUND IT:
+  Read the warnings. That is the entire method, and it is the one that keeps
+  paying (Curse 36's rule: read the console FIRST).
+
+HOW TO FIX:
+  Delete it from the member and put a comment where it was saying why, so the
+  next mage does not helpfully add it back. The root `Cargo.toml` already
+  carried the real profile and it covers every member.
+
+THE RULE:
+  **A configuration key in the wrong file is not a smaller effect, it is no
+  effect.** Warnings are the only channel that reports this class of failure, so
+  a build whose warnings are unread has no configuration guarantees at all.
+  After adding any `[profile]`, `[patch]`, or workspace-scoped key, verify it
+  was actually honoured rather than merely accepted.
+
+FAMILY:
+  R3 (a stated bound that the arithmetic ignored). Curse 32 (The Sticky Track --
+  `.gitignore` accepted and not applied). Curse 15 (a tool's report is not the
+  state of the thing). Path III -- the file is not the truth; the build is.
+
+Curse count: R9. `[profile.release]` in a workspace member is warned about once and then ignored, so `lto = true` written there optimises nothing while looking authoritative. A configuration key in the wrong file has NO effect, not a smaller one -- and warnings are the only channel that says so. Always.
+
+---
+
+## CURSE R10 -- The Painted Clock (clockInFrame)
+
+*Curse 38, committed by the claudy mage ONE TURN after writing the RUSTIUM*
+*section that warns about it. Convicted by its own manifest.*
+
+WHAT BIT US (`viewer/src/main.rs`, the frame seal):
+  `raster.rs` promises, in its own doc comment:
+
+> *"Two renders of the same frame through the same palette are bit-identical by
+> construction ... that is what makes a render a receipt rather than a
+> screenshot."*
+
+  True of the canvas. False of the viewer, because the viewer paints its render
+  time **into** the framebuffer as a HUD line, and then hashes the framebuffer.
+  Four EXPORT clicks produced this, straight out of `MANIFEST.json`:
+
+```text
+  run 0001  view Shell        render_us 370    frame_digest 93b3f5732b12df57
+  run 0002  view FrameBits    render_us 1447   frame_digest 6d5f1010e7ff2c99
+  run 0003  view MachineBits   render_us 2083  frame_digest 206df1fbe6355a01
+  run 0004  view Shell        render_us 241    frame_digest eaaab99eb51fb765
+```
+
+  **Runs 0001 and 0004 are the same view, same mesh, same palette, and their
+  digests differ** -- because `370` and `241` are different pixels. The
+  certificate advertised reproducibility and could never reproduce.
+
+THE ROOT PROBLEM:
+  Identical to Curse 38's gifted kernel, which sealed `datetime.now()` inside
+  its own hashed payload. Here the nondeterministic value is not a timestamp
+  string but a **rendered numeral** -- a clock that became geometry. It is
+  harder to spot precisely because it does not look like a clock by the time it
+  reaches the hash; it looks like pixels.
+
+  The general shape: **any value derived from the run rather than from the
+  input, once it enters the sealed region, poisons the seal.** Wall time, a PID,
+  a duration, a frame counter, a temp path -- and a duration *drawn as text* is
+  still a duration.
+
+HOW WE FOUND IT (proof by kernel, and the receipt convicted itself):
+  Not by reading the code -- by reading two manifests side by side and noticing
+  that the same view had two seals. The artifact that was supposed to prove
+  reproducibility is what demonstrated its absence, which is exactly what a
+  receipt is *for*. Had the digest been checked only once, it would have looked
+  perfect forever.
+
+HOW IT WAS FIXED (applied 2026-08-17):
+  Seal the content, then dress it. One line, in the right place:
+
+```rust
+// everything above is mathematics; everything below is chrome, and the
+// chrome contains a clock.
+self.content_digest = self.cv.digest();
+self.paint_chrome();
+```
+
+  The HUD now reports `SEAL` (the stored content digest) rather than a fresh
+  hash of the dressed frame, and `MANIFEST.json` renames the field to
+  `content_seal_fnv1a64` with `render_us` as an explicit **peer outside** it.
+  Same remedy as KIBOTOS v1.2: hash the reproducible part, attach the moment
+  alongside.
+
+  Note what survives: the `paint_c60` example digests were always honest,
+  because that example paints no clock. Only the viewer's seal was polluted, and
+  the scroll says which is which rather than quietly relabelling both.
+
+THE RULE:
+  **A seal must be taken before the decoration, and the decoration is wherever
+  the clock lives.** In a renderer, "the hashed region" is not a struct field
+  you can point at -- it is a moment in the paint order. Draw the mathematics,
+  hash, then draw the instrumentation. And verify by rendering the same frame
+  twice and comparing: a seal checked once is a screenshot.
+
+FAMILY:
+  Curse 38 (The Sandbox Seal) directly -- same disease, new disguise. Curse 26
+  (a displayed number that is not what it claims). R3 and R9 -- all three are
+  "the stated property and the effective property differ". Path III (proof by
+  kernel: regenerate and compare) and Path IV (a cert that cannot reproduce must
+  say so).
+
+Curse count: R10. The render time is painted into the framebuffer and then the framebuffer is hashed, so the "reproducible" seal moves every render -- Curse 38 wearing pixels instead of a timestamp, caught because two manifests disagreed on the same view. Seal the content BEFORE the chrome; keep the clock a peer outside it. Hash the math, not the moment. Always.
+
+---
+
+## CURSE R11 -- The Amplified Cap (capUnitMismatch)
+
+WHAT BIT US (`viewer`, `DUMP_CAP`, four clicks):
+  The export cap is declared honestly enough:
+
+```rust
+const DUMP_CAP: usize = 4 * 1024 * 1024;
+```
+
+  and it bounds **source** bytes. But a `.bits` file writes one ASCII `0` or `1`
+  per bit, so what lands on disk is **eight times larger**, plus newlines. Four
+  EXPORT clicks:
+
+```text
+  frame.bits      15,126,115 B     from a 1,890,000 B framebuffer   (8.0x)
+  machine.bits     4,169,531 B     from a   513,111 B executable    (8.1x)
+  per run             ~23 MB
+  four runs            88 MB   <-- and runs/ was NOT yet gitignored
+```
+
+  A cap that reads "4 MB" permits a **32 MB** file. Nothing overflowed, nothing
+  errored, and the folder quietly reached **88% of the 100 MB wall** while the
+  number in the source still said four.
+
+THE ROOT PROBLEM:
+  A unit mismatch between where the cap is *applied* and where the cost is
+  *paid*. The 8x is not a bug -- it is the whole point of writing 1s and 0s, paid
+  deliberately. The bug is that the cap does not measure the thing anyone cares
+  about, which is bytes on the disk.
+
+  Cousin of R9: the constant is real, consulted, and effective -- and still does
+  not bound what its name implies. And a cousin of Curse 35: a fence set in the
+  wrong units is a fence in the wrong place.
+
+HOW WE FOUND IT:
+  Listed the run folders and read the sizes. `git check-ignore` then said
+  `runs/` was not ignored and `git status` confirmed `git add -A` would stage all
+  88 MB. The next commit would have carried it (Curse 31, one push from a bounce).
+
+HOW IT WAS FIXED (applied 2026-08-17):
+  1. `runs/**` ignored on the HELENA pattern -- payload local, `MANIFEST.json`
+     tracked. The steps travel; the payload is regenerated by pressing the
+     button. "Pay thea Heleni in compute."
+  2. The 8x amplification stated in the ignore file itself, so the next mage
+     meets the number before the disk does.
+
+THE RULE:
+  **State a cap in the units of the thing it protects.** If a dump amplifies,
+  the cap belongs on the OUTPUT, or the amplification belongs in the constant's
+  name and doc. And any directory a program writes into repeatedly must be
+  ignored *before* the program runs the first time -- R5 taught this for
+  `target/` and it recurred within the day for `runs/`.
+
+FAMILY:
+  R5 (The Tracked Target) -- the same lesson, same week, new directory. Curse 31
+  (the 100MB wall) and Curse 32 (the ignore that arrives too late). Curse 35 (a
+  fence in the wrong place). R9 (a setting whose name overstates its reach).
+
+Curse count: R11. A dump cap stated in SOURCE bytes bounded a file eight times larger on disk: `DUMP_CAP = 4 MB` permits a 32 MB `.bits` file, and four clicks wrote 88 MB into a folder nobody had ignored yet. State a cap in the units of the thing it protects, and ignore a program's output directory BEFORE its first run. Always.
 
 ---
 

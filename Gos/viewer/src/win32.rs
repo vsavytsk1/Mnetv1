@@ -1,0 +1,204 @@
+//! Raw Win32, declared by hand. No `windows` crate, no `winapi`, no bindgen.
+//!
+//! Everything below is an `extern "system"` declaration against `user32.dll`,
+//! `gdi32.dll` and `kernel32.dll` -- the DLLs the OS already loads. That keeps
+//! `[dependencies]` empty even here, in the untrusted layer, so RULE 0's fourth
+//! row survives the whole program.
+//!
+//! This is the ONLY `unsafe` in the project, and it is confined to one file
+//! that does one thing: put a rectangle of our pixels on the screen and tell us
+//! where the mouse was clicked. Nothing here computes anything.
+
+#![allow(non_snake_case, non_camel_case_types, dead_code)]
+
+use std::ffi::c_void;
+
+pub type HANDLE = *mut c_void;
+pub type HWND = HANDLE;
+pub type HDC = HANDLE;
+pub type HINSTANCE = HANDLE;
+pub type HICON = HANDLE;
+pub type HCURSOR = HANDLE;
+pub type HBRUSH = HANDLE;
+pub type HMENU = HANDLE;
+pub type LPARAM = isize;
+pub type WPARAM = usize;
+pub type LRESULT = isize;
+pub type DWORD = u32;
+pub type UINT = u32;
+pub type BOOL = i32;
+pub type LONG = i32;
+pub type WORD = u16;
+
+pub type WNDPROC = unsafe extern "system" fn(HWND, UINT, WPARAM, LPARAM) -> LRESULT;
+
+// ---- messages -------------------------------------------------------------
+pub const WM_DESTROY: UINT = 0x0002;
+pub const WM_PAINT: UINT = 0x000F;
+pub const WM_CLOSE: UINT = 0x0010;
+pub const WM_KEYDOWN: UINT = 0x0100;
+pub const WM_LBUTTONDOWN: UINT = 0x0201;
+pub const WM_MOUSEMOVE: UINT = 0x0200;
+
+// ---- window styles --------------------------------------------------------
+pub const WS_OVERLAPPED: DWORD = 0x0000_0000;
+pub const WS_CAPTION: DWORD = 0x00C0_0000;
+pub const WS_SYSMENU: DWORD = 0x0008_0000;
+pub const WS_MINIMIZEBOX: DWORD = 0x0002_0000;
+pub const WS_VISIBLE: DWORD = 0x1000_0000;
+pub const WS_OVERLAPPEDWINDOW: DWORD =
+    WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX;
+
+pub const CW_USEDEFAULT: i32 = 0x8000_0000u32 as i32;
+pub const CS_HREDRAW: UINT = 0x0002;
+pub const CS_VREDRAW: UINT = 0x0001;
+pub const CS_OWNDC: UINT = 0x0020;
+pub const IDC_ARROW: usize = 32512;
+pub const SW_SHOW: i32 = 5;
+
+// ---- DIB ------------------------------------------------------------------
+pub const BI_RGB: DWORD = 0;
+pub const DIB_RGB_COLORS: UINT = 0;
+pub const SRCCOPY: DWORD = 0x00CC_0020;
+
+pub const VK_ESCAPE: WPARAM = 0x1B;
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct POINT {
+    pub x: LONG,
+    pub y: LONG,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct RECT {
+    pub left: LONG,
+    pub top: LONG,
+    pub right: LONG,
+    pub bottom: LONG,
+}
+
+#[repr(C)]
+pub struct MSG {
+    pub hwnd: HWND,
+    pub message: UINT,
+    pub wParam: WPARAM,
+    pub lParam: LPARAM,
+    pub time: DWORD,
+    pub pt: POINT,
+}
+
+#[repr(C)]
+pub struct WNDCLASSW {
+    pub style: UINT,
+    pub lpfnWndProc: Option<WNDPROC>,
+    pub cbClsExtra: i32,
+    pub cbWndExtra: i32,
+    pub hInstance: HINSTANCE,
+    pub hIcon: HICON,
+    pub hCursor: HCURSOR,
+    pub hbrBackground: HBRUSH,
+    pub lpszMenuName: *const u16,
+    pub lpszClassName: *const u16,
+}
+
+#[repr(C)]
+pub struct PAINTSTRUCT {
+    pub hdc: HDC,
+    pub fErase: BOOL,
+    pub rcPaint: RECT,
+    pub fRestore: BOOL,
+    pub fIncUpdate: BOOL,
+    pub rgbReserved: [u8; 32],
+}
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct BITMAPINFOHEADER {
+    pub biSize: DWORD,
+    pub biWidth: LONG,
+    pub biHeight: LONG,
+    pub biPlanes: WORD,
+    pub biBitCount: WORD,
+    pub biCompression: DWORD,
+    pub biSizeImage: DWORD,
+    pub biXPelsPerMeter: LONG,
+    pub biYPelsPerMeter: LONG,
+    pub biClrUsed: DWORD,
+    pub biClrImportant: DWORD,
+}
+
+#[repr(C)]
+pub struct BITMAPINFO {
+    pub bmiHeader: BITMAPINFOHEADER,
+    pub bmiColors: [DWORD; 3],
+}
+
+#[link(name = "kernel32")]
+extern "system" {
+    pub fn GetModuleHandleW(lpModuleName: *const u16) -> HINSTANCE;
+}
+
+#[link(name = "user32")]
+extern "system" {
+    pub fn RegisterClassW(lpWndClass: *const WNDCLASSW) -> u16;
+    pub fn CreateWindowExW(
+        dwExStyle: DWORD,
+        lpClassName: *const u16,
+        lpWindowName: *const u16,
+        dwStyle: DWORD,
+        x: i32,
+        y: i32,
+        nWidth: i32,
+        nHeight: i32,
+        hWndParent: HWND,
+        hMenu: HMENU,
+        hInstance: HINSTANCE,
+        lpParam: *mut c_void,
+    ) -> HWND;
+    pub fn DefWindowProcW(hWnd: HWND, msg: UINT, wParam: WPARAM, lParam: LPARAM) -> LRESULT;
+    pub fn GetMessageW(lpMsg: *mut MSG, hWnd: HWND, wMsgFilterMin: UINT, wMsgFilterMax: UINT) -> BOOL;
+    pub fn TranslateMessage(lpMsg: *const MSG) -> BOOL;
+    pub fn DispatchMessageW(lpMsg: *const MSG) -> LRESULT;
+    pub fn BeginPaint(hWnd: HWND, lpPaint: *mut PAINTSTRUCT) -> HDC;
+    pub fn EndPaint(hWnd: HWND, lpPaint: *const PAINTSTRUCT) -> BOOL;
+    pub fn InvalidateRect(hWnd: HWND, lpRect: *const RECT, bErase: BOOL) -> BOOL;
+    pub fn PostQuitMessage(nExitCode: i32);
+    pub fn DestroyWindow(hWnd: HWND) -> BOOL;
+    pub fn LoadCursorW(hInstance: HINSTANCE, lpCursorName: usize) -> HCURSOR;
+    pub fn ShowWindow(hWnd: HWND, nCmdShow: i32) -> BOOL;
+    pub fn SetWindowTextW(hWnd: HWND, lpString: *const u16) -> BOOL;
+    pub fn GetClientRect(hWnd: HWND, lpRect: *mut RECT) -> BOOL;
+}
+
+#[link(name = "gdi32")]
+extern "system" {
+    pub fn StretchDIBits(
+        hdc: HDC,
+        xDest: i32,
+        yDest: i32,
+        DestWidth: i32,
+        DestHeight: i32,
+        xSrc: i32,
+        ySrc: i32,
+        SrcWidth: i32,
+        SrcHeight: i32,
+        lpBits: *const c_void,
+        lpbmi: *const BITMAPINFO,
+        iUsage: UINT,
+        rop: DWORD,
+    ) -> i32;
+}
+
+/// A NUL-terminated UTF-16 string, for the W-suffixed APIs.
+pub fn wide(s: &str) -> Vec<u16> {
+    s.encode_utf16().chain(std::iter::once(0)).collect()
+}
+
+/// Low and high 16-bit halves of an `LPARAM`, as signed screen coordinates.
+pub fn lparam_xy(l: LPARAM) -> (i32, i32) {
+    let lo = (l & 0xFFFF) as u16 as i16 as i32;
+    let hi = ((l >> 16) & 0xFFFF) as u16 as i16 as i32;
+    (lo, hi)
+}

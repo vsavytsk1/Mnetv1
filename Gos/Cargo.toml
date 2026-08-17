@@ -12,6 +12,15 @@ license = "MIT"
 
 [dev-dependencies]
 
+# The kernel is `#![forbid(unsafe_code)]`, so it can never own a window -- FFI
+# needs `unsafe`. That constraint is a feature: it forces the Titans split.
+#
+#   Gos/         the TRUSTED base. integers, no unsafe, no deps. judged.
+#   Gos/viewer/  UNTRUSTED surgery. raw Win32 FFI, unsafe allowed, no deps.
+#                It may only ASK the kernel for pixels; it cannot change them.
+[workspace]
+members = ["viewer"]
+
 [profile.release]
 opt-level = 3
 lto = true

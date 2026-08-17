@@ -46,10 +46,14 @@
 
 #![forbid(unsafe_code)]
 
+pub mod bits;
 pub mod complex;
+pub mod font;
 pub mod judge;
 pub mod ladder;
 pub mod ledger;
+pub mod palette;
+pub mod raster;
 pub mod rng;
 
 use std::collections::HashSet;

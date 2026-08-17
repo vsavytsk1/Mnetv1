@@ -1,0 +1,21 @@
+[package]
+name = "gos_viewer"
+version = "0.1.0"
+edition = "2021"
+description = "A window, painted by the kernel. Raw Win32 FFI, zero dependencies."
+license = "MIT"
+
+# Still none. The window is drawn by hand through user32/gdi32, declared as FFI
+# right here -- so RULE 0's fourth row ("nothing to poison") survives even in
+# the untrusted layer.
+[dependencies]
+goldberg_kernel = { path = ".." }
+
+[[bin]]
+name = "gos_viewer"
+path = "src/main.rs"
+
+# NO [profile.*] here. RUSTIUM R9: cargo honours profiles ONLY at the workspace
+# root; in a member it warns once and silently ignores them, so `lto = true`
+# written here would optimise nothing while looking authoritative. The real
+# profile lives in ../Cargo.toml and covers every member.
