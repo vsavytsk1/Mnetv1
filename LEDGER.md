@@ -9551,3 +9551,67 @@ ahead and loses past 10^316; at x=1000 Li is off by 9.7, R by 0.4). shell/latexi
 (24927B, byte-scan PASS, script 3/3, ends html; render-verified). PINNED on the front door between
 KIBOTOS and CHROMODYNAMIUM. Rebuilt eng_v2.0.html (384 sims, 177 cards, 6/6 modules). IO_PAGES=501.
 RH itself: OPEN -- the last third is wagered, not won, and the page says so. P=12. chi=2.
+
+### L188 -- RUSTIUM: the compiled tongue opens, and the judge lands in graph space (2026-08-17)
+Vlad: "lets read the scrools ... make a new scrool called rustium.md and build the first port in the
+Gos folder". Bowed to KERNELIMAGIC (38), the 12 PATHS and Thea v3.0, then opened grimoire/RUSTIUM.md
+-- Volume III-D, the Rust lane, in KERNELIMAGIC's format so curses append one by one. SEVEN carved,
+all with receipts measured today. R1 The Flat Crate: .rs beside Cargo.toml, cargo builds nothing;
+git mv into src/ + tests/ (5 renames, history kept). R2 The Absent Linker: winget rustup exits 0,
+rustc answers 1.97.1, and the FIRST BUILD dies -- MSVC needs link.exe from Visual Studio, which
+rustup does not install; took the GNU toolchain ALONGSIDE (zero-dep crate, no C FFI) rather than
+mutate the default. An installer's exit code certifies the download, never the capability. R3 The
+Counted Ceiling (the headline): I128_MAX_N=92 counted TERMS while the code read it as an INDEX --
+T_0..T_91 is 92 terms -- so the "refuses to guess" fence sat one step past the wall; debug panicked,
+RELEASE would have WRAPPED IN SILENCE, false in exactly the profile you ship. Truth is 91. Fixed with
+checked_* arithmetic so the ARITHMETIC is the fence and the constant is documentation;
+exact_measured() consults no constant, so the bound is now falsifiable. R4 The Uncompiled Gift: the
+README said so honestly -- 33 tests asserted, 0 ever executed; 32 held on the first real run
+(remarkable for 1591 unrun lines) and the ONE that broke was the one guarding the crate's own honesty
+promise; 4 doctests were never reached because the suite aborted first. Asserted is not executed. R5
+The Tracked Target: no .gitignore, so the first git add -A after the first build swallowed 279 files
+/ 35.7MB of cargo target/; Curse 32 -- the ignore alone will not evict, git rm -r --cached did
+(279 -> 0). R6 The Stale Count: a doc comment claimed "72 rather than 96"; measured 60 and 72. R7 The
+Thresholded Weld (MEASURED, and the deep one): a float distance threshold votes on TOPOLOGY. Built
+every golden shell with genesis_wallpaper_v1_6.py and compared min_d*1.15 against the combinatorial
+ground truth -- C20/C60/C140 OK, then C380 BROKEN, 330 of 570 edges dropped, because the edge SPREAD
+(1.2156) exceeds the tolerance itself. false=0 and gap/e_max>1 at every depth: the arithmetic never
+failed, the DECISION PROCEDURE did. Precision is fractalization depth, so a float in the adjacency
+test is a hard ceiling on precision. Credit where due: Gos fails LOUDLY (NotTrivalent), never a fake
+chi.
+THE FIX, and the best part of the day: ported the LATEXIUM SYMBOL FORGE's 41-line judge into
+Gos/src/judge.rs -- a COMBINATORIAL MAP. darts, alpha = d^1 (an XOR, an involution by construction),
+sigma the rotation, phi = sigma o alpha; V/E/F are ORBIT COUNTS and chi = V-E+F is counted, never
+assumed. check(&[usize]) -> Verdict takes integers and returns integers, so it is structurally
+incapable of consulting a distance and R7's C380 wall cannot exist in it. Certified C60 from 180
+darts: V=60 E=90 F=32 chi=2 genus=0, with 12 pentagons / 20 hexagons read off phi's ORBIT LENGTHS.
+Proved it can FAIL -- the one-vertex torus sigma=[2,3,1,0] returns chi=0 genus=1 -- which is the whole
+difference from shell/byte_sphere.html, whose invCounts() returns chi:2 as a TYPED LITERAL and so
+prints 2 for a mesh it never looked at (Curse 26 in a topologist's hat). And ran DDC in miniature: the
+float lane (distances, atan2, face walk) and the integer lane (orbit counting, no coordinate) share NO
+machinery and agree on V,E,F,chi -- Wheeler's rule is that agreement only counts when the second
+derivation is genuinely diverse. Also built src/ledger.rs, a zero-dependency logger that ENFORCES the
+laws it prints: target/current/err always side by side (Curse 26), every line tagged CERT or DISP
+(RULE 0), predict-before-allocate (Curse 35), monotonic Instant only, never a wall clock (Curse 38).
+RULE 0's centrepiece finally PAID: PHI as a literal, as clippy's truncation, and as (1+sqrt5)/2 --
+what genesis .py and byte_sphere .js both compute -- are the IDENTICAL double, 3ff9e3779b97f4a8, ULP
+gap 0, and phi^2-phi-1 is EXACTLY 0.0. Bonus nobody planned: PHI's f64 mantissa is 9E3779B97F4A8 and
+splitmix64's gamma is 9E3779B97F4A7C15 -- the same constant at two widths, (phi-1)*2^64. The geometry
+and the PRNG are seeded by the same number. Chip receipts: AMD Ryzen 5 5600H, baseline x86_64 carries
+sse2 (so no x87 excess precision -- RULE 0 row 3 MEASURED) and NOT fma, so the certified path is
+protected twice; -C target-cpu=native unlocks fma+avx2 (5 features -> 30) and the suite still passes
+there, proving Rust does not auto-contract. Measured the whole width table: u64=46 i128=91 u128=92
+i256=183 u256=184 i512=367 -- every crate row was +1 from the signed truth, one grammar slip
+propagated three times. Also measured the SSD trade Vlad asked for: storing exact lattice identity
+beats float64 xyz by 7.7x, and buys nothing -- 1TB reaches rung 24, ALL WORLD STORAGE reaches 51. A
+constant factor against phi^(2n). The 90s hack that works is the other one: store the RULE, not the
+STATE -- a node IS (f,i,j), neighbours are integer arithmetic, storage O(1). Planck-spacing needs rung
+122; i128 addresses only to 91 (31 short) while u256 reaches 184 (62 spare). We can ADDRESS to the
+fence and COUNT exactly; we can never ENUMERATE. Lane A is not Lane B. FINAL: 52 tests + 7 doctests,
+0 failures, identical in debug / --release / --release -C target-cpu=native. clippy 5 warnings, all
+pre-existing, judge.rs and ledger.rs add none. RUSTIUM.md 59,756 B, byte-scan PASS (loneCR=0, BOM=0,
+ASCII-only, FFFD=0). Trusted base logged honestly: the frozen JS judge is 41 lines, our check() is 54
+-- we are OVER, it is written down, and a pass to get back under is owed. Still owed and named: the
+full 60-vertex hex diff, sigma from the integer lattice (no float at any depth), Mesh::refine(), and
+cargo fmt. The judge is sound but not yet deep. Incomplete is fine. Fake is not. Asserted is not
+executed. P=12 . chi=2 . E/V=3/2 . hash the math not the moment . the price is always paid . always

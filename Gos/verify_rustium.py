@@ -125,13 +125,18 @@ def verify_ladder():
     print("  rel err n=38  : %.6e" % e38)
     print("  rel err n=50  : %.6e   (compounds)" % e50)
 
-    # the i128 ceiling claimed by the crate
+    # the i128 ceiling -- MEASURED. The crate claimed 92; the truth is 91, and
+    # T_0..T_91 being ninety-two TERMS is exactly how the slip happened (R3).
     big = ladder_exact(93)
+    fits91 = big[91] <= I128_MAX
     fits92 = big[92] <= I128_MAX
-    fits93 = big[93] <= I128_MAX
-    check("T_92 fits in i128", True, fits92, fits92)
-    check("T_93 does NOT fit in i128", False, fits93, not fits93)
-    print("  T_92 <= i128max: %s   T_93 <= i128max: %s" % (fits92, fits93))
+    check("T_91 fits in i128", True, fits91, fits91)
+    check("T_92 does NOT fit in i128", False, fits92, not fits92)
+    check("i128 last index is 91", 91, max(n for n in range(93) if big[n] <= I128_MAX),
+          max(n for n in range(93) if big[n] <= I128_MAX) == 91)
+    print("  T_91 <= i128max: %s   T_92 <= i128max: %s" % (fits91, fits92))
+    print("  T_92 over by   : %d  (ratio %.3f)"
+          % (big[92] - I128_MAX, big[92] / I128_MAX))
 
     # phi's defining equation, in f64
     dphi = abs(PHI * PHI - (PHI + 1.0))
@@ -483,7 +488,7 @@ def main():
             "two_pow_53": TWO_POW_53,
             "f64_wall": 38,
             "two_pow_53_crossing": 39,
-            "i128_max_n": 92,
+            "i128_max_n": 91,
         },
         "passed": passed,
         "total": total,

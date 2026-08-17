@@ -38,16 +38,26 @@
 //!
 //! # Integer width
 //!
-//! | width | reaches | note |
+//! **Convention: `n` is an INDEX into `T_0, T_1, ...`, never a count of terms.**
+//! Getting that wrong is how the table below was previously off by one on every
+//! row (RUSTIUM curse R3). All values here are measured, not quoted.
+//!
+//! | width | last exact index | note |
 //! |---|---:|---|
-//! | f64 exact | n = 37 | the wall being demonstrated |
-//! | `u64` | n = 47 | |
-//! | **`i128`** | **n = 92** | native Rust, no dependency -- what this uses |
-//! | 256-bit | n = 184 | only needed past 92 |
+//! | f64 exact | n = 37 | the wall being demonstrated; disagrees at 38 |
+//! | `u64` | n = 46 | |
+//! | **`i128`** | **n = 91** | native Rust, no dependency -- what this uses |
+//! | `u128` | n = 92 | |
+//! | `i256` / `u256` | n = 183 / 184 | only needed past 91 |
 //!
 //! `i128` more than doubles the float64 range while keeping the crate
-//! dependency-free. Anything past `n = 92` returns [`LadderError::Overflow`]
-//! rather than wrapping: refusing to guess beats a silent wrong answer.
+//! dependency-free. Anything past `n = 91` returns [`LadderError`] rather than
+//! wrapping: refusing to guess beats a silent wrong answer.
+//!
+//! That promise is enforced by `checked_*` arithmetic in [`exact_measured`],
+//! **not** by the constant. Rust wraps integers silently in release builds, so
+//! a guard that is only a magic number is false in exactly the profile you
+//! ship. The constant is documentation; the arithmetic is the fence.
 
 /// The ladder overflowed the integer type. Reported, never wrapped.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -68,8 +78,17 @@ impl core::fmt::Display for LadderError {
 
 impl std::error::Error for LadderError {}
 
-/// The largest `n` for which `T_n` fits in `i128`.
-pub const I128_MAX_N: usize = 92;
+/// The largest **INDEX** `n` for which `T_n` is computable in `i128`.
+///
+/// Measured, not asserted: `T_91` fits and `T_92` exceeds `i128::MAX` by a
+/// factor of 1.750. `T_0..T_91` is *ninety-two terms* -- that arithmetic is
+/// exactly how this constant was previously wrong by one (RUSTIUM R3).
+///
+/// [`the_stated_bound_is_the_measured_bound`] proves this constant against the
+/// arithmetic rather than trusting it.
+///
+/// [`the_stated_bound_is_the_measured_bound`]: ../../tests/certification.rs
+pub const I128_MAX_N: usize = 91;
 
 /// The first `n` at which the float64 recurrence disagrees with the exact one.
 /// Not where `T_n` exceeds `2^53` (that is 39) -- one step earlier, because
@@ -95,6 +114,26 @@ pub fn exact(n: usize) -> Result<Vec<i128>, LadderError> {
     if n > I128_MAX_N {
         return Err(LadderError { at: n });
     }
+    exact_measured(n)
+}
+
+/// The ladder to `n`, bounded by the ARITHMETIC rather than by
+/// [`I128_MAX_N`].
+///
+/// Identical to [`exact`] except that it consults no constant: every step runs
+/// through `checked_mul` / `checked_sub`, so the first genuinely
+/// unrepresentable term returns [`LadderError`] no matter what any constant
+/// claims. This is what makes the stated bound falsifiable instead of merely
+/// asserted -- and it is what keeps the "never wraps" promise true in a release
+/// build, where Rust's overflow checks are off and `3 * t[k-1]` would otherwise
+/// wrap in silence.
+///
+/// ```
+/// use goldberg_kernel::ladder::{exact_measured, I128_MAX_N};
+/// assert!(exact_measured(I128_MAX_N).is_ok());
+/// assert!(exact_measured(I128_MAX_N + 1).is_err());   // the arithmetic says so
+/// ```
+pub fn exact_measured(n: usize) -> Result<Vec<i128>, LadderError> {
     let mut t: Vec<i128> = Vec::with_capacity(n + 1);
     t.push(1);
     if n == 0 {
@@ -103,7 +142,11 @@ pub fn exact(n: usize) -> Result<Vec<i128>, LadderError> {
     t.push(3);
     for k in 2..=n {
         let sign: i128 = if k % 2 == 0 { 1 } else { -1 };
-        let next = 3 * t[k - 1] - t[k - 2] - sign;
+        let next = t[k - 1]
+            .checked_mul(3)
+            .and_then(|x| x.checked_sub(t[k - 2]))
+            .and_then(|x| x.checked_sub(sign))
+            .ok_or(LadderError { at: k })?;
         t.push(next);
     }
     Ok(t)

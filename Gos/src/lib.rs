@@ -47,7 +47,9 @@
 #![forbid(unsafe_code)]
 
 pub mod complex;
+pub mod judge;
 pub mod ladder;
+pub mod ledger;
 pub mod rng;
 
 use std::collections::HashSet;
@@ -58,6 +60,12 @@ pub const PHI: f64 = 1.618_033_988_749_894_8;
 
 /// A point or direction in R^3. Plain data, `Copy`, no allocation.
 pub type Vec3 = [f64; 3];
+
+/// Raw points emitted by the three phi-permutation triples before dedupe.
+///
+/// Exactly 60, so the dedupe pass is a no-op on a correct build -- which is
+/// precisely why a wrong count here could never be caught at runtime (R6).
+pub const RAW_PERM_POINTS: usize = 60;
 
 // ===========================================================================
 // STAGE 0 -- PRIMITIVE  (certified: + - * / sqrt only)
@@ -221,8 +229,15 @@ impl fmt::Display for CertError {
 impl std::error::Error for CertError {}
 
 /// Emit every cyclic permutation and sign combination of `(a, b, c)`.
-/// A zero coordinate has no distinct negative, so it is skipped -- that is
-/// what keeps the raw count at 72 rather than 96.
+///
+/// A zero coordinate has no distinct negative, so it is skipped -- that is what
+/// keeps the raw count at **60 rather than 72**. Measured: `3*1*2*2 = 12` from
+/// `(0, +-1, +-3phi)`, plus `3*8 = 24` and `3*8 = 24` from the two triples with
+/// no zero. Twelve, twenty-four, twenty-four.
+///
+/// (The earlier comment here said "72 rather than 96". Both numbers were wrong,
+/// the code was right, and every test passed -- RUSTIUM curse R6. A comment
+/// that states a count now has an assertion behind it.)
 fn push_perms(a: f64, b: f64, c: f64, raw: &mut Vec<Vec3>) {
     const PERMS: [[usize; 3]; 3] = [[0, 1, 2], [1, 2, 0], [2, 0, 1]];
     for p in PERMS.iter() {
@@ -256,10 +271,15 @@ fn push_perms(a: f64, b: f64, c: f64, raw: &mut Vec<Vec3>) {
 /// and exact arithmetic, so the result is reproducible bit-for-bit on any
 /// IEEE-754 platform. This is why the certified path can avoid `sin`/`cos`.
 pub fn build_c60_vertices() -> Vec<Vec3> {
-    let mut raw: Vec<Vec3> = Vec::with_capacity(72);
+    let mut raw: Vec<Vec3> = Vec::with_capacity(RAW_PERM_POINTS);
     push_perms(0.0, 1.0, 3.0 * PHI, &mut raw);
     push_perms(1.0, 2.0 + PHI, 2.0 * PHI, &mut raw);
     push_perms(PHI, 2.0, 2.0 * PHI + 1.0, &mut raw);
+    debug_assert_eq!(
+        raw.len(),
+        RAW_PERM_POINTS,
+        "the zero-skip must leave exactly {RAW_PERM_POINTS} raw points (R6)"
+    );
 
     let mut out: Vec<Vec3> = Vec::with_capacity(60);
     for v in raw {

@@ -6,6 +6,7 @@
 
 use goldberg_kernel::complex::{c_to_s2, C};
 use goldberg_kernel::ladder;
+use goldberg_kernel::ledger::{Lane, Ledger};
 use goldberg_kernel::rng::Rng;
 use goldberg_kernel::*;
 
@@ -161,7 +162,88 @@ fn vnorm_of_zero_does_not_produce_nan() {
 
 #[test]
 fn phi_satisfies_its_defining_equation() {
-    assert!((PHI * PHI - (PHI + 1.0)).abs() < 1e-15, "phi^2 = phi + 1");
+    assert_eq!(
+        PHI * PHI - PHI - 1.0,
+        0.0,
+        "phi^2 - phi - 1 is EXACTLY zero at this double, not merely small"
+    );
+}
+
+// ===========================================================================
+// RULE 0 -- the certified path, MEASURED rather than argued
+// ===========================================================================
+
+/// The seed constant must be bit-identical across every tongue in the cave.
+///
+/// `Gos` writes a literal. `builder/genesis_wallpaper_v1_6.py` writes
+/// `(1.0 + 5.0**0.5)/2.0`. `shell/byte_sphere.html` writes `(1+Math.sqrt(5))/2`.
+/// `sqrt` is correctly rounded by IEEE-754 and `+`/`/` are too, so all three
+/// are required to land on the same double -- and here that requirement is
+/// checked instead of assumed.
+///
+/// Every C60 vertex is built from `PHI` using only `+ - * / sqrt`, so this one
+/// assertion is what the whole "the port is a translation" claim rests on.
+#[test]
+fn phi_is_bit_identical_to_the_computed_form() {
+    let computed = (1.0 + 5.0_f64.sqrt()) / 2.0;
+    assert_eq!(
+        PHI.to_bits(),
+        computed.to_bits(),
+        "literal {:#018x} vs computed {:#018x} -- the port diverges at the seed",
+        PHI.to_bits(),
+        computed.to_bits()
+    );
+    assert_eq!(
+        PHI.to_bits(),
+        0x3FF9_E377_9B97_F4A8,
+        "the golden ratio's f64 bit pattern is frozen; a change here is a finding"
+    );
+}
+
+/// The mantissa of `PHI` and `splitmix64`'s gamma are the same constant at two
+/// widths: `(phi - 1) * 2^64 = 0x9E3779B97F4A7C15`, and the top 52 bits of that
+/// fraction are `PHI`'s mantissa. The geometry and the PRNG are seeded by the
+/// same number, which nobody planned.
+#[test]
+fn the_golden_ratio_appears_at_two_widths() {
+    let mantissa = PHI.to_bits() & ((1u64 << 52) - 1);
+    assert_eq!(mantissa, 0x9_E377_9B97_F4A8);
+    const SPLITMIX_GAMMA: u64 = 0x9E37_79B9_7F4A_7C15;
+    assert_eq!(
+        mantissa >> 4,
+        SPLITMIX_GAMMA >> 16,
+        "both encode phi's fractional part; they must share their leading digits"
+    );
+}
+
+/// RULE 0's second row. `mul_add` is ONE rounding where the browser does two,
+/// so it is faster, more accurate, and WRONG for the certified path -- accuracy
+/// is not the contract, bit-identity is.
+///
+/// On the baseline `x86_64` target FMA is not even in the feature set, so this
+/// is belt and braces. It becomes load-bearing the moment anyone builds with
+/// `-C target-cpu=native`, which unlocks `fma` (measured: 5 features -> 30).
+#[test]
+fn fused_multiply_add_is_not_the_certified_path() {
+    // (1 + eps)(1 - eps) = 1 - eps^2. The product's true value needs 104 bits,
+    // so `*` rounds it to exactly 1.0 and the subtraction then yields zero.
+    // A fused op keeps the full product and lands on -eps^2, which IS
+    // representable. Same inputs, same arithmetic on paper, different bits.
+    let a = 1.0_f64 + f64::EPSILON;
+    let b = 1.0_f64 - f64::EPSILON;
+    let separate = a * b + (-1.0);
+    let fused = a.mul_add(b, -1.0);
+    assert_eq!(separate, 0.0, "the rounded product cancels exactly");
+    assert!(fused < 0.0, "the fused form keeps -eps^2, got {fused:e}");
+    assert_ne!(
+        separate.to_bits(),
+        fused.to_bits(),
+        "if these ever agree the example is too weak to guard the rule"
+    );
+
+    // vdot must use the separate form -- what the browser computes.
+    let d = vdot([a, a, a], [b, b, b]);
+    assert_eq!(d.to_bits(), (a * b + a * b + a * b).to_bits());
 }
 
 // ===========================================================================
@@ -233,9 +315,69 @@ fn the_error_grows_past_the_wall() {
 
 #[test]
 fn ladder_refuses_to_guess_past_i128() {
-    assert!(ladder::exact(ladder::I128_MAX_N).is_ok(), "n = 92 must fit");
-    let e = ladder::exact(ladder::I128_MAX_N + 1);
-    assert!(e.is_err(), "n = 93 must report overflow, never wrap");
+    assert!(
+        ladder::exact(ladder::I128_MAX_N).is_ok(),
+        "n = {} must fit",
+        ladder::I128_MAX_N
+    );
+    assert!(
+        ladder::exact(ladder::I128_MAX_N + 1).is_err(),
+        "n = {} must report overflow, never wrap",
+        ladder::I128_MAX_N + 1
+    );
+}
+
+/// RUSTIUM R3. The bound must be MEASURED, not asserted.
+///
+/// `exact_measured` consults no constant -- `checked_*` arithmetic decides. If
+/// `I128_MAX_N` ever disagrees with the arithmetic again, this fails and names
+/// the real boundary. The previous value (92) counted TERMS while the code read
+/// it as an INDEX, and the test that was supposed to guard it asserted the
+/// wrong number, so it enforced the bug instead of catching it.
+#[test]
+fn the_stated_bound_is_the_measured_bound() {
+    assert!(
+        ladder::exact_measured(ladder::I128_MAX_N).is_ok(),
+        "T_{} must be computable in i128",
+        ladder::I128_MAX_N
+    );
+    let over = ladder::exact_measured(ladder::I128_MAX_N + 1);
+    assert!(
+        over.is_err(),
+        "T_{} must overflow i128 -- if this passes, the bound is too LOW",
+        ladder::I128_MAX_N + 1
+    );
+    assert_eq!(ladder::I128_MAX_N, 91, "measured: T_91 fits, T_92 does not");
+}
+
+/// The promise is "returns LadderError rather than wrapping". Rust only checks
+/// overflow in debug, so a magic-number guard is false in a release build.
+/// This asserts the failure is produced by the ARITHMETIC, and reports the step.
+#[test]
+fn overflow_is_reported_never_wrapped() {
+    match ladder::exact_measured(120) {
+        Ok(_) => panic!("n = 120 cannot fit i128 -- a wrap was silently accepted"),
+        Err(e) => {
+            assert!(
+                e.at > ladder::I128_MAX_N,
+                "must fail past the bound, not before it; failed at {}",
+                e.at
+            );
+            let t = ladder::exact_measured(ladder::I128_MAX_N).unwrap();
+            assert!(t[ladder::I128_MAX_N] > 0, "no wrap: every term stays positive");
+        }
+    }
+}
+
+/// RUSTIUM R6. A comment that states a count now has an assertion behind it.
+#[test]
+fn the_raw_permutation_count_is_sixty() {
+    assert_eq!(RAW_PERM_POINTS, 60, "12 + 24 + 24");
+    assert_eq!(
+        build_c60_vertices().len(),
+        60,
+        "the zero-skip leaves 60 raw points and dedupe is a no-op"
+    );
 }
 
 // ===========================================================================
@@ -363,4 +505,183 @@ fn sphere_sampling_is_uniform_and_reproducible() {
     for c in mean {
         assert!(c.abs() < 0.02, "mean {mean:?} should be near zero if uniform");
     }
+}
+
+// ===========================================================================
+// THE JUDGE -- closure in pure graph space, integers only
+// ===========================================================================
+
+#[test]
+fn the_judge_certifies_c60_without_a_single_float() {
+    let sigma = judge::rotation_system_c60();
+    assert_eq!(sigma.len(), 180, "60 vertices x degree 3 = 180 darts");
+    let v = judge::check(&sigma).expect("C60 must be a closed orientable surface");
+    assert_eq!(v.v, 60, "V -- orbits of sigma");
+    assert_eq!(v.e, 90, "E -- darts/2");
+    assert_eq!(v.f, 32, "F -- orbits of sigma o alpha");
+    assert_eq!(v.chi, 2, "chi = V-E+F, COUNTED");
+    assert_eq!(v.components, 1);
+    assert_eq!(v.genus, Some(0), "a sphere");
+}
+
+/// Diverse Double-Compiling, in miniature.
+///
+/// Two derivations that share no machinery: the float lane measures distances,
+/// sorts by `atan2` and walks faces; the integer lane counts orbits of a
+/// permutation and never sees a coordinate. Wheeler's rule is that agreement
+/// only counts when the second derivation is genuinely *diverse*. These are.
+#[test]
+fn float_lane_and_integer_lane_agree_on_c60() {
+    let float_cert = certify(&Mesh::c60()).expect("the float lane certifies C60");
+    let int_cert = judge::check(&judge::rotation_system_c60()).expect("the judge certifies C60");
+    assert_eq!(float_cert.v, int_cert.v, "V");
+    assert_eq!(float_cert.e, int_cert.e, "E");
+    assert_eq!(float_cert.f, int_cert.f, "F");
+    assert_eq!(float_cert.chi, int_cert.chi, "chi");
+}
+
+/// The judge must be able to FAIL. This is the whole difference between it and
+/// `byte_sphere.html`'s `invCounts()`, which returns `chi: 2` as a typed
+/// literal and therefore prints 2 for a mesh it never looked at.
+///
+/// The one-vertex torus: 4 darts, sigma a single 4-cycle. Two edges, one vertex,
+/// one face -- chi = 0, genus 1. If the judge said 2 here it would be worthless.
+#[test]
+fn the_judge_can_say_something_other_than_two() {
+    let torus = vec![2usize, 3, 1, 0];
+    let v = judge::check(&torus).expect("a torus is a valid map, just not a sphere");
+    assert_eq!((v.v, v.e, v.f), (1, 2, 1));
+    assert_eq!(v.chi, 0, "a torus has chi = 0, and the judge must say so");
+    assert_eq!(v.genus, Some(1), "genus 1 -- one handle");
+}
+
+#[test]
+fn the_judge_certifies_the_smallest_sphere() {
+    // one edge, two vertices, one face: chi = 2 - 1 + 1 = 2
+    let v = judge::check(&[0usize, 1]).expect("the 1-edge sphere");
+    assert_eq!((v.v, v.e, v.f, v.chi, v.genus), (2, 1, 1, 2, Some(0)));
+}
+
+#[test]
+fn the_judge_refuses_an_odd_dart_count() {
+    assert_eq!(judge::check(&[0usize]), Err(judge::Refusal::DartCount(1)));
+    assert_eq!(judge::check(&[]), Err(judge::Refusal::DartCount(0)));
+}
+
+#[test]
+fn the_judge_refuses_a_sigma_that_leaves_the_dart_set() {
+    assert_eq!(
+        judge::check(&[9usize, 1]),
+        Err(judge::Refusal::OutOfRange { at: 0, to: 9 })
+    );
+}
+
+#[test]
+fn the_judge_refuses_a_non_bijection() {
+    assert_eq!(
+        judge::check(&[0usize, 0]),
+        Err(judge::Refusal::NotBijection { hits: 0 })
+    );
+}
+
+/// alpha is an XOR, so it is an involution by construction -- there is no way
+/// to get the edge pairing subtly wrong, which is the point of the encoding.
+#[test]
+fn alpha_is_an_involution_by_construction() {
+    for d in 0..180usize {
+        assert_eq!(judge::alpha(judge::alpha(d)), d);
+        assert_ne!(judge::alpha(d), d);
+    }
+}
+
+/// R7's promise: the judge's depth is not bounded by any tolerance. Every face
+/// of C60 must be a pentagon or hexagon, read off phi's orbit lengths rather
+/// than from geometry.
+#[test]
+fn face_sizes_come_from_orbit_lengths_not_geometry() {
+    let sigma = judge::rotation_system_c60();
+    let mut seen = vec![false; sigma.len()];
+    let (mut pent, mut hex) = (0, 0);
+    for s in 0..sigma.len() {
+        if seen[s] {
+            continue;
+        }
+        let (mut c, mut len) = (s, 0);
+        loop {
+            seen[c] = true;
+            c = sigma[judge::alpha(c)];
+            len += 1;
+            if c == s {
+                break;
+            }
+        }
+        match len {
+            5 => pent += 1,
+            6 => hex += 1,
+            n => panic!("a {n}-gon on C60"),
+        }
+    }
+    assert_eq!(pent, 12, "Euler forces exactly twelve pentagons");
+    assert_eq!(hex, 20);
+}
+
+// ===========================================================================
+// THE LEDGER -- the logger must enforce, not merely print
+// ===========================================================================
+
+#[test]
+fn ledger_counts_both_outcomes() {
+    let mut l = Ledger::silent();
+    assert!(l.check_eq(Lane::Certified, "good", 12usize, 12usize));
+    assert!(!l.check_eq(Lane::Certified, "bad", 12usize, 11usize));
+    assert_eq!((l.passed(), l.failed()), (1, 1));
+    assert!(!l.sealed_ok(), "a ledger with a failure must not seal");
+}
+
+/// Curse 35: the guillotine refuses BEFORE the allocation, and says the number.
+#[test]
+fn ledger_refuses_over_budget() {
+    let mut l = Ledger::silent();
+    assert!(l.predict("level 5", 9_812, 1_200_000));
+    assert!(!l.predict("level 8", 68_612_000, 1_200_000));
+    assert_eq!(l.refused(), 1);
+    assert!(!l.sealed_ok(), "a refusal must break the seal");
+}
+
+/// The display lane reports its error rather than hiding it behind a bool.
+#[test]
+fn ledger_display_lane_carries_a_tolerance() {
+    let mut l = Ledger::silent();
+    assert!(l.check_near(Lane::Display, "phi^2-phi-1", 0.0, 1e-16, 1e-12));
+    assert!(!l.check_near(Lane::Display, "too far", 0.0, 1e-3, 1e-12));
+    assert_eq!((l.passed(), l.failed()), (1, 1));
+}
+
+/// The whole C60 certificate, driven through the ledger. This is the shape the
+/// pre-build closure gate will take: every invariant MEASURED from the built
+/// mesh, target and current side by side, nothing inferred from a formula.
+#[test]
+fn ledger_certifies_c60_end_to_end() {
+    let m = Mesh::c60();
+    let c = certify(&m).expect("C60 must certify");
+    let mut l = Ledger::silent();
+
+    l.check_eq(Lane::Certified, "V", 60usize, c.v);
+    l.check_eq(Lane::Certified, "E", 90usize, c.e);
+    l.check_eq(Lane::Certified, "F", 32usize, c.f);
+    l.check_eq(Lane::Certified, "P (Euler forces 12)", 12usize, c.p);
+    l.check_eq(Lane::Certified, "H", 20usize, c.h);
+    l.check_eq(Lane::Certified, "chi = V-E+F", 2i64, c.chi);
+    l.check_eq(Lane::Certified, "2E == 3V", c.e * 2, c.v * 3);
+
+    let worst = m
+        .verts
+        .iter()
+        .map(|v| (vlen(*v) - 1.0).abs())
+        .fold(0.0f64, f64::max);
+    l.check_near(Lane::Display, "worst radius error", 0.0, worst, 1e-12);
+
+    assert!(l.sealed_ok(), "the C60 ledger must seal clean");
+    assert_eq!(l.passed(), 8);
+    assert_eq!(l.failed(), 0);
 }
