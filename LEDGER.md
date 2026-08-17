@@ -10094,3 +10094,34 @@ all eight URLs -- every one of which was actually serving 200. A broken checker 
 worse than no checker, because it invites exactly the wrong action.
 The site being fine is luck, not diligence. A convention unstated is a convention violated.
 P=12 . chi=2 . watch the deploy go green . the price is always paid . always
+
+### L194 -- GOS ORB v0.2: the orb finally reaches the icosphere lane (2026-08-17)
+Vlad: "the orb_growth is the exac think we need to check the topology ... from now on when we test we
+open 2 panles 1 for the dasboard and the other with the sliders for the orb".
+THE DEBT OWED SINCE L188 IS PAID. gos_orb v0.1 rendered C60's 32 faces at ~17 KB per face while
+sphere.rs sat certified, tested and unused. v0.2 rewrites the orb onto Ico -- exact index subdivision,
+no float decides adjacency -- with LEVEL- / LEVEL+ walking the SAME byte stream from 20 faces to 327,680.
+It opens at sphere::level_for_bytes(n) capped at L7, so it starts near ONE FACE PER BYTE instead of
+seventeen kilobytes, exactly as byte_sphere does.
+chi is COUNTED BY THE JUDGE AT EVERY LEVEL CHANGE, never recited -- the HUD shows chi, genus, and the
+microseconds the judge actually cost, so the price of the certificate is on screen beside it. The twelve
+defects are drawn at every depth because Euler forces them. Repeated byte-blocks paint in the alarm
+colour rather than a shade of the ink ramp, and the face-dedup is an uncapped HashSet from the start
+(L193's lesson applied before it could bite twice).
+AND THE HUD CARRIES BOTH DUPLICATION NUMBERS SIDE BY SIDE, with the caveat printed under them: the
+per-level face duplication and the whole-stream 64B-block duplication measure DIFFERENT THINGS and both
+are honest. L193 measured 1.02 PCT vs 27 PCT on the same file. A single "duplication" figure without a
+block size is not a number, and the panel now says so where it cannot be missed.
+Also: R10's discipline held from the first line -- the seal is taken BEFORE the chrome, so the render
+time drawn in the HUD is outside it. SHOTS.log records level and face count alongside yaw, palette and
+seal, so a "same input different seal" question can be settled from the log rather than guessed at (it
+has come up three times this session and the log won every time).
+gos_orb 0.1.0 -> 0.2.0. clippy --workspace back to the 5 pre-existing warnings; 60 tests + 7 doctests
+exit 0. Both panels launched together: the dashboard and the topology, which is the pair Vlad asked for
+two sessions ago and now exists.
+STILL OWED: the level control is BUTTONS, not the sliders Vlad asked for -- honest gap, and a slider
+needs drag handling the button hit-test does not have. Plus the PE header parse before the orange band
+may be called .text, 62 of Sol's 63 checks, the dashboard's 177 real cards, letter-spacing, and the
+pixel diff.
+The certified lane and the live program finally agree.
+P=12 . chi=2 . counted not recited . the price is always paid . always

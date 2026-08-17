@@ -1,168 +1,104 @@
-//! GOS ORB -- the spini spini byte topology.
+//! GOS ORB v0.2 -- the spini spini byte topology, now on the ICOSPHERE lane.
 //!
-//! The second program. `gos_viewer` shows the dashboard; this shows the
-//! TOPOLOGY OF THE CURRENT CODE -- a file's 1s and 0s laid on the certified
-//! closed shell, spinning, so duplication becomes something the eye can see.
+//! v0.1 rendered C60's 32 faces at ~17 KB per face. This one uses
+//! `sphere::Ico` -- exact index subdivision, no float decides adjacency -- so
+//! LEVEL- / LEVEL+ walks the same byte stream from 20 faces to 81,920 and the
+//! duplication becomes visible exactly as `orb_growth` proved it does.
 //!
-//! ```text
-//!   byte_oracle.html  : bytes on an OPEN plane. edges, corners, a beginning.
-//!   byte_sphere.html  : bytes on a sphere, but chi=2 printed as a LITERAL.
-//!   gos_orb           : bytes on C60, chi COUNTED by the integer judge, and
-//!                       the twelve pentagons drawn because Euler forces them.
-//! ```
-//!
-//! # What it measures
-//!
-//! Duplication, because that is the finding the census already made and never
-//! showed: `MATH_LEDGER.md` counted **89.9% redundant characters** across 2,333
-//! sims, `buildC60Faces()` copied into 249 of them. This program takes any byte
-//! stream, blocks it, hashes the blocks, and paints the repeats. Structure that
-//! repeats is structure that could be a kernel instead.
-//!
-//! # Honest boundary
-//!
-//! C60 has **32 faces**. That is a coarse canvas for a 500 KB binary -- about
-//! 17 KB per face -- so the shell shows the SHAPE of the distribution, not the
-//! detail. The block-level duplication numbers in the HUD are computed over the
-//! whole stream at 64-byte granularity and are exact; only the *painting* is
-//! coarse. When `Mesh::refine()` exists this gets its resolution and the numbers
-//! do not change. Stated rather than blurred (Path IV).
+//! chi is COUNTED by the integer judge at every level, never recited.
 //!
 //! ```powershell
 //! cargo run -p gos_orb --release            # its own machine code
-//! cargo run -p gos_orb --release -- FILE    # any file
+//! cargo run -p gos_orb --release -- FILE
 //! ```
 
 use std::cell::RefCell;
+use std::collections::HashSet;
 use std::ffi::c_void;
 use std::fs;
 use std::path::PathBuf;
 use std::time::Instant;
 
-use goldberg_kernel::bits;
-use goldberg_kernel::font;
-use goldberg_kernel::layout::Rect;
 use goldberg_kernel::palette::{Palette, Rgb, ALL};
 use goldberg_kernel::raster::{project, Canvas};
-use goldberg_kernel::{centroid, certify, judge, project_to_sphere, Cert, Mesh};
+use goldberg_kernel::sphere::{self, Ico};
+use goldberg_kernel::{bits, font, judge, layout::Rect};
 
 use gos_win32::*;
 
-const W: usize = 1000;
-const H: usize = 760;
+const W: usize = 1180;
+const H: usize = 820;
 const BAR_H: i32 = 34;
-const HUD_W: i32 = 300;
-/// duplication is measured at this granularity, over the WHOLE stream
+const HUD_W: i32 = 320;
 const BLOCK: usize = 64;
-/// spin tick, milliseconds -- ~30 Hz, far below what the renderer can do
 const TICK: u32 = 33;
 const TIMER_ID: usize = 1;
+/// levels the buttons may reach. L7 is 327,680 faces -- affordable, and the
+/// judge there is ~0.5 s, so it is the honest ceiling for an interactive panel.
+const MAX_LEVEL: u32 = 7;
 
-/// What the byte stream turned out to be. All measured, none assumed.
-struct Census {
-    label: String,
-    bytes: Vec<u8>,
-    /// blocks of `BLOCK` bytes
-    blocks: usize,
-    /// blocks whose content was seen earlier in the stream
-    repeated: usize,
-    /// distinct block contents
-    unique: usize,
-    ones: usize,
-    entropy: f64,
-    /// per-face: (ones density 0..255, is this face's block a repeat)
-    face_ink: Vec<(u8, bool)>,
+struct Shell {
+    ico: Ico,
+    level: u32,
+    chi: i64,
+    genus: i64,
+    judged_us: u128,
+    /// per face: ink 0..255, and whether its byte block repeats
+    ink: Vec<u8>,
+    repeat: Vec<bool>,
+    repeats: usize,
+    per_face: usize,
 }
 
-impl Census {
-    fn of(label: String, bytes: Vec<u8>, faces: usize) -> Census {
-        // ---- duplication over the whole stream, at BLOCK granularity ----
-        let mut seen: Vec<u64> = Vec::new();
-        let mut repeated = 0usize;
-        let mut blocks = 0usize;
-        for chunk in bytes.chunks(BLOCK) {
-            let h = bits::digest(chunk);
-            blocks += 1;
-            if seen.contains(&h) {
-                repeated += 1;
-            } else {
-                seen.push(h);
+impl Shell {
+    fn build(level: u32, bytes: &[u8]) -> Option<Shell> {
+        let ico = Ico::level(level).ok()?;
+        let t0 = Instant::now();
+        let v = ico.rotation_system().and_then(|s| judge::check(&s).ok())?;
+        let judged_us = t0.elapsed().as_micros();
+
+        let n = ico.faces.len();
+        let order = ico.curve_order();
+        let per = bytes.len().div_ceil(n).max(1);
+        let mut ink = vec![0u8; n];
+        let mut repeat = vec![false; n];
+        let mut seen: HashSet<u64> = HashSet::with_capacity(n);
+        for (slot, &fi) in order.iter().enumerate() {
+            let s = (slot * per).min(bytes.len());
+            let e = ((slot + 1) * per).min(bytes.len());
+            let sl = &bytes[s..e];
+            if sl.is_empty() {
+                continue;
+            }
+            ink[fi] = ((bits::ones(sl) * 255) / (sl.len() * 8)) as u8;
+            if !seen.insert(bits::digest(sl)) {
+                repeat[fi] = true;
             }
         }
-        let unique = seen.len();
-
-        // ---- per-face ink: the shell is coarse, and that is stated ----
-        let mut face_ink = Vec::with_capacity(faces);
-        let per = (bytes.len() / faces.max(1)).max(1);
-        let mut fseen: Vec<u64> = Vec::new();
-        for i in 0..faces {
-            let s = (i * per).min(bytes.len());
-            let e = ((i + 1) * per).min(bytes.len());
-            let slice = &bytes[s..e];
-            let ink = if slice.is_empty() {
-                0u8
-            } else {
-                let ones = bits::ones(slice);
-                ((ones * 255) / (slice.len() * 8)) as u8
-            };
-            let h = bits::digest(slice);
-            let rep = fseen.contains(&h);
-            if !rep {
-                fseen.push(h);
-            }
-            face_ink.push((ink, rep));
-        }
-
-        Census {
-            blocks,
-            repeated,
-            unique,
-            ones: bits::ones(&bytes),
-            entropy: bits::entropy(&bytes),
-            face_ink,
-            label,
-            bytes,
-        }
+        let repeats = repeat.iter().filter(|&&b| b).count();
+        Some(Shell {
+            level,
+            chi: v.chi,
+            genus: v.genus.unwrap_or(-1),
+            judged_us,
+            ink,
+            repeat,
+            repeats,
+            per_face: per,
+            ico,
+        })
     }
-
-    fn dup_pct(&self) -> f64 {
-        if self.blocks == 0 {
-            0.0
-        } else {
-            100.0 * self.repeated as f64 / self.blocks as f64
-        }
-    }
-    fn ones_pct(&self) -> f64 {
-        let n = self.bytes.len() * 8;
-        if n == 0 {
-            0.0
-        } else {
-            100.0 * self.ones as f64 / n as f64
-        }
-    }
-}
-
-/// The Class I rung that would hold this many bits, one bit per node.
-///
-/// `T = k^2`, `V = 20T`, and `k` is FREE -- which is why this lane fits a
-/// payload to 99.99% where `7^k` can waste 85%. Exact integers.
-fn rung_for(bits_needed: usize) -> (usize, usize, usize) {
-    let need_t = bits_needed.div_ceil(20);
-    let mut k = (need_t as f64).sqrt() as usize;
-    while k * k < need_t {
-        k += 1;
-    }
-    (k, k * k, 20 * k * k)
 }
 
 struct App {
     cv: Canvas,
     dib: Vec<u8>,
-    mesh: Mesh,
-    cert: Cert,
-    verdict: judge::Verdict,
-    pent_face: Vec<bool>,
-    census: Census,
+    label: String,
+    bytes: Vec<u8>,
+    shell: Shell,
+    dup_pct: f64,
+    entropy: f64,
+    ones_pct: f64,
     pal: usize,
     yaw: f64,
     spin: bool,
@@ -174,9 +110,7 @@ struct App {
     shots: usize,
 }
 
-thread_local! {
-    static APP: RefCell<Option<App>> = const { RefCell::new(None) };
-}
+thread_local! { static APP: RefCell<Option<App>> = const { RefCell::new(None) }; }
 
 fn main() {
     unsafe { run() }
@@ -185,8 +119,7 @@ fn main() {
 unsafe fn run() {
     let hinst = GetModuleHandleW(std::ptr::null());
     let class = wide("GosOrbClass");
-    let title = wide("GOS ORB - the spini spini byte topology");
-
+    let title = wide("GOS ORB v0.2 - the byte topology, icosphere lane");
     let wc = WNDCLASSW {
         style: CS_HREDRAW | CS_VREDRAW | CS_OWNDC,
         lpfnWndProc: Some(wndproc),
@@ -200,12 +133,9 @@ unsafe fn run() {
         lpszClassName: class.as_ptr(),
     };
     if RegisterClassW(&wc) == 0 {
-        eprintln!("RegisterClassW failed");
         return;
     }
-
     APP.with(|a| *a.borrow_mut() = Some(App::new()));
-
     let hwnd = CreateWindowExW(
         0,
         class.as_ptr(),
@@ -221,12 +151,10 @@ unsafe fn run() {
         std::ptr::null_mut(),
     );
     if hwnd.is_null() {
-        eprintln!("CreateWindowExW failed");
         return;
     }
     ShowWindow(hwnd, SW_SHOW);
     SetTimer(hwnd, TIMER_ID, TICK, 0);
-
     let mut msg: MSG = std::mem::zeroed();
     while GetMessageW(&mut msg, std::ptr::null_mut(), 0, 0) > 0 {
         TranslateMessage(&msg);
@@ -249,16 +177,16 @@ unsafe extern "system" fn wndproc(hwnd: HWND, msg: UINT, wp: WPARAM, lp: LPARAM)
             0
         }
         WM_TIMER => {
-            let mut spin = false;
+            let mut go = false;
             APP.with(|a| {
                 if let Some(app) = a.borrow_mut().as_mut() {
                     if app.spin {
                         app.yaw += 0.012;
-                        spin = true;
+                        go = true;
                     }
                 }
             });
-            if spin {
+            if go {
                 InvalidateRect(hwnd, std::ptr::null(), 0);
             }
             0
@@ -297,25 +225,7 @@ unsafe extern "system" fn wndproc(hwnd: HWND, msg: UINT, wp: WPARAM, lp: LPARAM)
 
 impl App {
     fn new() -> App {
-        // AXIOM 01 -- the gate, before a pixel exists.
-        let mesh = Mesh::c60();
-        let cert = certify(&mesh).expect("P=12 and chi=2, or do not ship");
-        let verdict = judge::check(&judge::rotation_system_c60()).expect("the judge must agree");
-        println!("AXIOM 01 GATE");
-        println!("  float lane : {cert}");
-        println!("  judge      : {verdict}");
-
-        // which faces are pentagons -- Euler forces exactly twelve
-        let pent_face: Vec<bool> = mesh.faces.iter().map(|f| f.len() == 5).collect();
-        assert_eq!(
-            pent_face.iter().filter(|&&p| p).count(),
-            12,
-            "Euler forces twelve pentagons"
-        );
-
-        // the byte stream: a file if given, otherwise our own machine code
-        let arg = std::env::args().nth(1);
-        let (label, bytes) = match arg {
+        let (label, bytes) = match std::env::args().nth(1) {
             Some(p) => {
                 let b = fs::read(&p).unwrap_or_default();
                 (p, b)
@@ -324,57 +234,54 @@ impl App {
                 let p = std::env::current_exe().unwrap_or_default();
                 let b = fs::read(&p).unwrap_or_default();
                 (
-                    p.file_name()
-                        .map(|s| s.to_string_lossy().to_string())
-                        .unwrap_or_else(|| String::from("self")),
+                    p.file_name().map(|s| s.to_string_lossy().to_string()).unwrap_or_default(),
                     b,
                 )
             }
         };
-        println!("stream     : {} ({} bytes)", label, bytes.len());
 
-        let census = Census::of(label, bytes, mesh.faces.len());
-        println!(
-            "duplication: {}/{} blocks repeat at {}B granularity = {:.2}%",
-            census.repeated,
-            census.blocks,
-            BLOCK,
-            census.dup_pct()
-        );
-        println!(
-            "entropy    : {:.4} bits/byte   ones {:.2}%",
-            census.entropy,
-            census.ones_pct()
-        );
-        let (k, t, v) = rung_for(census.bytes.len() * 8);
-        println!("rung needed: Class I k={k}  T={t}  V=20T={v} nodes (one bit per node)");
+        // duplication over the WHOLE stream, exact, at BLOCK granularity
+        let mut seen: HashSet<u64> = HashSet::new();
+        let mut rep = 0usize;
+        for c in bytes.chunks(BLOCK) {
+            if !seen.insert(bits::digest(c)) {
+                rep += 1;
+            }
+        }
+        let blocks = bytes.len().div_ceil(BLOCK).max(1);
 
-        let session = open_session(&cert, &verdict, &census);
-        println!("session    : {}", session.display());
+        // start where one face is close to one byte, capped
+        let start = sphere::level_for_bytes(bytes.len()).min(MAX_LEVEL);
+        let shell = Shell::build(start, &bytes).or_else(|| Shell::build(3, &bytes)).expect("a shell must build");
+
+        println!("AXIOM 01 GATE  chi {} genus {}  JUDGE {} us", shell.chi, shell.genus, shell.judged_us);
+        println!("stream  {label} ({} bytes)  dup {rep}/{blocks} at {BLOCK}B", bytes.len());
+        println!("start   L{}  {} faces  {} B/face", shell.level, shell.ico.faces.len(), shell.per_face);
+
+        let session = open_session();
+        println!("session {}", session.display());
 
         let pal = ALL[0];
         let mut app = App {
             cv: Canvas::new(W, H, pal.bg),
             dib: vec![0u8; W * H * 4],
-            mesh,
-            cert,
-            verdict,
-            pent_face,
-            census,
+            dup_pct: 100.0 * rep as f64 / blocks as f64,
+            entropy: bits::entropy(&bytes),
+            ones_pct: 100.0 * bits::ones(&bytes) as f64 / (bytes.len() * 8).max(1) as f64,
+            label,
+            bytes,
+            shell,
             pal: 0,
             yaw: 0.6,
             spin: true,
             render_us: 0,
             seal: 0,
-            status: String::from("SPINNING. THROUGH MOVEMENT MORE DATA IS EXTRACTED."),
+            status: String::from("LEVEL- / LEVEL+ WALKS THE SAME BYTES."),
             buttons: Vec::new(),
             session,
             shots: 0,
         };
         app.layout();
-        // the PNG at startup, as asked -- the topology as it was on open
-        app.render();
-        app.save_shot();
         app
     }
 
@@ -386,46 +293,58 @@ impl App {
         let y = H as i32 - BAR_H + 6;
         let mut x = 10i32;
         self.buttons.clear();
-        for (id, label) in [
-            (0u8, "SHOT"),
-            (1, "SPIN"),
-            (2, "PALETTE"),
-            (3, "DUMP BITS"),
-        ] {
-            let w = font::width(label, 1) + 16;
-            self.buttons
-                .push((Rect::new(x, y, w, BAR_H - 12), label, id));
+        for (id, l) in [(0u8, "SHOT"), (1, "SPIN"), (2, "PALETTE"), (3, "LEVEL -"), (4, "LEVEL +")] {
+            let w = font::width(l, 1) + 16;
+            self.buttons.push((Rect::new(x, y, w, BAR_H - 12), l, id));
             x += w + 8;
         }
     }
 
+    fn set_level(&mut self, d: i32) {
+        let want = (self.shell.level as i32 + d).clamp(0, MAX_LEVEL as i32) as u32;
+        if want == self.shell.level {
+            self.status = format!("AT THE {} LEVEL ALREADY", if d > 0 { "TOP" } else { "BOTTOM" });
+            return;
+        }
+        let t0 = Instant::now();
+        match Shell::build(want, &self.bytes) {
+            Some(s) => {
+                self.status = format!(
+                    "L{} - {} FACES - {} B/FACE - JUDGE {} US - BUILT IN {} MS",
+                    s.level,
+                    s.ico.faces.len(),
+                    s.per_face,
+                    s.judged_us,
+                    t0.elapsed().as_millis()
+                );
+                self.shell = s;
+                println!("{}", self.status);
+            }
+            None => self.status = format!("L{want} REFUSED - PAST THE BUDGET"),
+        }
+    }
+
     fn click(&mut self, mx: i32, my: i32) -> bool {
-        let hit = self
-            .buttons
-            .iter()
-            .find(|(r, _, _)| r.contains(mx, my))
-            .map(|(_, _, id)| *id);
+        let hit = self.buttons.iter().find(|(r, _, _)| r.contains(mx, my)).map(|(_, _, i)| *i);
         match hit {
             Some(0) => {
-                self.save_shot();
+                self.shot();
                 true
             }
             Some(1) => {
                 self.spin = !self.spin;
-                self.status = if self.spin {
-                    String::from("SPINNING. MOVEMENT IS THE SECOND TEST.")
-                } else {
-                    String::from("HELD. SYMMETRY IS THE FIRST TEST.")
-                };
                 true
             }
             Some(2) => {
                 self.pal = (self.pal + 1) % ALL.len();
-                self.status = format!("PALETTE {}", self.pal().name.to_uppercase());
                 true
             }
             Some(3) => {
-                self.dump_bits();
+                self.set_level(-1);
+                true
+            }
+            Some(4) => {
+                self.set_level(1);
                 true
             }
             _ => false,
@@ -438,69 +357,51 @@ impl App {
         self.cv.fill(pal.bg);
         self.paint_orb();
         self.render_us = t0.elapsed().as_micros();
-        // R10: seal the content BEFORE the chrome, which carries a clock
-        self.seal = self.cv.digest();
+        self.seal = self.cv.digest(); // R10: seal BEFORE the chrome
         self.paint_hud();
         self.paint_bar();
     }
 
-    /// The shell, painter-sorted, each face inked by the bytes that landed on it.
-    /// Pentagons always outlined -- the twelve constraints, visible at all times.
     fn paint_orb(&mut self) {
         let pal = self.pal();
         let area = Rect::new(0, 0, W as i32 - HUD_W, H as i32 - BAR_H);
-        let (rx, zoom) = (0.32_f64, 300.0_f64);
-
-        // face centres and their depth
-        let mut order: Vec<(usize, f64)> = Vec::with_capacity(self.mesh.faces.len());
-        let mut poly: Vec<Vec<(i32, i32)>> = Vec::with_capacity(self.mesh.faces.len());
-        for (fi, face) in self.mesh.faces.iter().enumerate() {
-            let mut pts = Vec::with_capacity(face.len());
-            let mut depth = 0.0;
-            for &vi in face {
-                let (sx, sy, z) =
-                    project(self.mesh.verts[vi], rx, self.yaw, zoom, area.w as usize, area.h as usize);
-                pts.push((sx, sy));
-                depth += z;
-            }
-            order.push((fi, depth / face.len() as f64));
-            poly.push(pts);
-        }
-        order.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
-
-        // outward-facing test: the face centroid must point toward the camera
-        let centers: Vec<[f64; 3]> = self
-            .mesh
-            .faces
+        let zoom = (area.w.min(area.h) as f64) * 0.42;
+        let s = &self.shell;
+        let pts: Vec<(i32, i32, f64)> = s
+            .ico
+            .verts
             .iter()
-            .map(|f| {
-                let p: Vec<[f64; 3]> = f.iter().map(|&i| self.mesh.verts[i]).collect();
-                project_to_sphere(centroid(&p), 1.0)
-            })
+            .map(|&v| project(v, 0.32, self.yaw, zoom, area.w as usize, area.h as usize))
             .collect();
 
-        for (fi, depth) in order {
-            let (_, _, cz) = project(centers[fi], rx, self.yaw, zoom, area.w as usize, area.h as usize);
-            if cz < 0.0 {
-                continue; // back face
+        let mut ord: Vec<(usize, f64)> = (0..s.ico.faces.len())
+            .map(|i| {
+                let f = &s.ico.faces[i];
+                (i, (pts[f[0]].2 + pts[f[1]].2 + pts[f[2]].2) / 3.0)
+            })
+            .collect();
+        ord.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
+
+        for (fi, d) in ord {
+            if d < 0.0 {
+                continue;
             }
-            let (ink, repeat) = self.census.face_ink[fi];
-            let t = ((depth + 2.0) / 4.0).clamp(0.0, 1.0);
-            let alpha = (0.20 + t * 0.55) * 255.0;
-
-            // a REPEATED block is painted in the alarm colour, not the ink ramp:
-            // duplication is the finding, so it must not be a shade of the
-            // normal case (Curse 26 -- do not let a signal hide inside a ramp).
-            let base = if repeat { pal.orange } else { ink_ramp(&pal, ink) };
-            fill_poly(&mut self.cv, &poly[fi], base, alpha as u8);
-
-            let edge = if self.pent_face[fi] { pal.pink } else { pal.cyan };
-            let ea = if self.pent_face[fi] { 255 } else { (alpha * 0.7) as u8 };
-            let p = &poly[fi];
-            for i in 0..p.len() {
-                let (x0, y0) = p[i];
-                let (x1, y1) = p[(i + 1) % p.len()];
-                self.cv.line_a(x0, y0, x1, y1, edge, ea);
+            let f = &s.ico.faces[fi];
+            let (a, b, c) = (pts[f[0]], pts[f[1]], pts[f[2]]);
+            let t = ((d + 1.0) / 2.0).clamp(0.0, 1.0);
+            let al = ((0.25 + t * 0.70) * 255.0) as u8;
+            let col = if s.repeat[fi] { pal.orange } else { ramp(&pal, s.ink[fi]) };
+            let span = (a.0 - b.0).abs().max((a.1 - b.1).abs()).max((a.0 - c.0).abs());
+            if span <= 2 {
+                self.cv.blend(a.0, a.1, col, al);
+            } else {
+                fill_tri(&mut self.cv, (a.0, a.1), (b.0, b.1), (c.0, c.1), col, al);
+            }
+        }
+        for &dv in &s.ico.defects() {
+            let p = pts[dv];
+            if p.2 > 0.0 {
+                self.cv.disc(p.0, p.1, 3, pal.pink, 255);
             }
         }
     }
@@ -509,143 +410,89 @@ impl App {
         let pal = self.pal();
         let x = W as i32 - HUD_W + 12;
         let mut y = 14;
-        let c = &self.census;
-
+        let s = &self.shell;
         font::text(&mut self.cv, x, y, "GOS ORB", pal.gold, 2);
-        y += 22;
-        font::text(&mut self.cv, x, y, "THE SPINI SPINI TOPOLOGY", pal.pink, 1);
-        y += 18;
-
-        let (k, t, v) = rung_for(c.bytes.len() * 8);
+        y += 24;
         let rows: Vec<(String, Rgb)> = vec![
-            (format!("STREAM  {}", trunc(&c.label, 22)), pal.cyan),
-            (format!("BYTES   {}", c.bytes.len()), pal.text),
+            (format!("STREAM {}", trunc(&self.label, 22)), pal.cyan),
+            (format!("BYTES  {}", self.bytes.len()), pal.text),
             (String::new(), pal.text),
-            (String::from("-- AXIOM 01 GATE --"), pal.gold),
-            (
-                format!("V {} E {} F {}", self.cert.v, self.cert.e, self.cert.f),
-                pal.green,
-            ),
-            (
-                format!("P {} CHI {} GENUS {}", self.cert.p, self.verdict.chi,
-                        self.verdict.genus.unwrap_or(-1)),
-                pal.green,
-            ),
-            (String::from("LANES AGREE  COUNTED"), pal.green),
+            (format!("-- LEVEL {} --", s.level), pal.gold),
+            (format!("FACES  {}", s.ico.faces.len()), pal.cyan),
+            (format!("V      {}", s.ico.verts.len()), pal.text),
+            (format!("B/FACE {}", s.per_face), pal.cyan),
+            (String::new(), pal.text),
+            (format!("CHI    {}  JUDGE", s.chi), pal.green),
+            (format!("GENUS  {}", s.genus), pal.green),
+            (format!("JUDGED {} US", s.judged_us), pal.purple),
+            (String::from("DEFECTS 12  EULER"), pal.pink),
             (String::new(), pal.text),
             (String::from("-- DUPLICATION --"), pal.gold),
-            (format!("BLOCK   {} BYTES", BLOCK), pal.text),
-            (format!("BLOCKS  {}", c.blocks), pal.text),
-            (format!("UNIQUE  {}", c.unique), pal.text),
-            (format!("REPEAT  {}", c.repeated), pal.orange),
-            (format!("DUP     {:.2} PCT", c.dup_pct()), pal.orange),
+            (format!("THIS LEVEL {}", s.repeats), pal.orange),
+            (
+                format!("= {:.2} PCT OF FACES", 100.0 * s.repeats as f64 / s.ico.faces.len() as f64),
+                pal.orange,
+            ),
+            (format!("WHOLE STREAM {:.2} PCT", self.dup_pct), pal.text),
+            (format!("AT {} B BLOCKS", BLOCK), [0x4a, 0x5a, 0x6a]),
             (String::new(), pal.text),
-            (String::from("-- THE STREAM --"), pal.gold),
-            (format!("ONES    {:.2} PCT", c.ones_pct()), pal.text),
-            (format!("ENTROPY {:.4} B/B", c.entropy), pal.text),
+            (format!("ENTROPY {:.4} B/B", self.entropy), pal.text),
+            (format!("ONES    {:.2} PCT", self.ones_pct), pal.text),
             (String::new(), pal.text),
-            (String::from("-- RUNG NEEDED --"), pal.gold),
-            (format!("CLASS I K {}", k), pal.cyan),
-            (format!("T {}", t), pal.cyan),
-            (format!("V 20T {}", v), pal.cyan),
-            (String::new(), pal.text),
-            (format!("RENDER  {} US", self.render_us), pal.purple),
+            (format!("RENDER {} US", self.render_us), pal.purple),
             (format!("SEAL {:016X}", self.seal), pal.purple),
         ];
-        for (s, col) in rows {
-            if !s.is_empty() {
-                font::text(&mut self.cv, x, y, &s, col, 1);
+        for (t, c) in rows {
+            if !t.is_empty() {
+                font::text(&mut self.cv, x, y, &t, c, 1);
             }
             y += 11;
         }
-
-        // the honest note about resolution
-        y += 6;
-        for line in [
-            "C60 HAS 32 FACES. THE SHELL",
-            "SHOWS SHAPE, NOT DETAIL. THE",
-            "DUP NUMBERS ARE EXACT OVER THE",
-            "WHOLE STREAM AT 64B BLOCKS.",
+        y += 8;
+        for l in [
+            "DUP DEPENDS ON BLOCK SIZE.",
+            "THE TWO NUMBERS ABOVE MEASURE",
+            "DIFFERENT THINGS AND BOTH ARE",
+            "HONEST.",
         ] {
-            font::text(&mut self.cv, x, y, line, pal.border, 1);
+            font::text(&mut self.cv, x, y, l, pal.border, 1);
             y += 10;
         }
     }
 
     fn paint_bar(&mut self) {
         let pal = self.pal();
-        self.cv
-            .fill_rect(0, H as i32 - BAR_H, W as i32, BAR_H, pal.panel);
-        self.cv
-            .line(0, H as i32 - BAR_H, W as i32 - 1, H as i32 - BAR_H, pal.border);
-        font::text(
-            &mut self.cv,
-            10,
-            H as i32 - BAR_H - 14,
-            &self.status,
-            pal.text,
-            1,
-        );
-        let btns = self.buttons.clone();
-        for (r, label, id) in btns {
-            let accent = match id {
+        self.cv.fill_rect(0, H as i32 - BAR_H, W as i32, BAR_H, pal.panel);
+        self.cv.line(0, H as i32 - BAR_H, W as i32 - 1, H as i32 - BAR_H, pal.border);
+        font::text(&mut self.cv, 10, H as i32 - BAR_H - 14, &self.status, pal.text, 1);
+        for (r, l, id) in self.buttons.clone() {
+            let a = match id {
                 0 => pal.gold,
                 1 => pal.pink,
-                3 => pal.orange,
+                3 | 4 => pal.green,
                 _ => pal.cyan,
             };
-            self.cv.rect(r.x, r.y, r.w, r.h, accent);
-            font::text(
-                &mut self.cv,
-                r.x + 8,
-                r.y + (r.h - font::GH) / 2,
-                label,
-                accent,
-                1,
-            );
+            self.cv.rect(r.x, r.y, r.w, r.h, a);
+            font::text(&mut self.cv, r.x + 8, r.y + (r.h - font::GH) / 2, l, a, 1);
         }
     }
 
-    fn save_shot(&mut self) {
+    fn shot(&mut self) {
         self.shots += 1;
         let f = self.session.join(format!("orb_{:04}.png", self.shots));
-        match self.cv.write_png(&f) {
-            Ok(()) => {
-                self.status = format!("SHOT {:04} - SEAL {:016X}", self.shots, self.seal);
-                let line = format!(
-                    "orb_{:04}.png  yaw={:.4}  palette={}  render_us={}  seal={:016x}\n",
-                    self.shots,
-                    self.yaw,
-                    self.pal().name,
-                    self.render_us,
-                    self.seal
-                );
-                append(&self.session.join("SHOTS.log"), &line);
-                println!("{}", self.status);
-            }
-            Err(e) => self.status = format!("SHOT FAILED: {e}"),
-        }
-    }
-
-    /// The stream as a 1/0 matrix. Capped, and the cap is in OUTPUT bytes this
-    /// time -- R11: a cap stated in source bytes bounded a file eight times
-    /// larger. 8 source bytes become 8 output bytes per bit, so divide by 8.
-    fn dump_bits(&mut self) {
-        const OUT_CAP: usize = 8 * 1024 * 1024;
-        let src_cap = OUT_CAP / 9; // 8 chars per byte plus newlines
-        let f = self.session.join("stream.bits");
-        match bits::write_bits(&f, &self.census.label, &self.census.bytes, 64, src_cap) {
-            Ok(r) => {
-                self.status = format!(
-                    "BITS {} OF {} BYTES{} - FNV {:016X}",
-                    r.bytes_written,
-                    r.bytes_total,
-                    if r.truncated { " (CAPPED, SAYING SO)" } else { "" },
-                    r.digest
-                );
-                println!("{}", self.status);
-            }
-            Err(e) => self.status = format!("DUMP FAILED: {e}"),
+        if self.cv.write_png(&f).is_ok() {
+            self.status = format!("SHOT {:04} - L{} - SEAL {:016X}", self.shots, self.shell.level, self.seal);
+            let line = format!(
+                "orb_{:04}.png  level={}  faces={}  yaw={:.4}  palette={}  seal={:016x}\n",
+                self.shots,
+                self.shell.level,
+                self.shell.ico.faces.len(),
+                self.yaw,
+                self.pal().name,
+                self.seal
+            );
+            append(&self.session.join("SHOTS.log"), &line);
+            println!("{}", self.status);
         }
     }
 
@@ -674,25 +521,13 @@ impl App {
             bmiColors: [0; 3],
         };
         StretchDIBits(
-            hdc,
-            0,
-            0,
-            W as i32,
-            H as i32,
-            0,
-            0,
-            W as i32,
-            H as i32,
-            self.dib.as_ptr() as *const c_void,
-            &bmi,
-            DIB_RGB_COLORS,
-            SRCCOPY,
+            hdc, 0, 0, W as i32, H as i32, 0, 0, W as i32, H as i32,
+            self.dib.as_ptr() as *const c_void, &bmi, DIB_RGB_COLORS, SRCCOPY,
         );
     }
 }
 
-/// Ink ramp for a face: dim panel -> cyan -> bright. Integer interpolation.
-fn ink_ramp(pal: &Palette, t: u8) -> Rgb {
+fn ramp(pal: &Palette, t: u8) -> Rgb {
     let t = t as u32;
     let (a, b) = (pal.panel, pal.cyan);
     [
@@ -702,21 +537,15 @@ fn ink_ramp(pal: &Palette, t: u8) -> Rgb {
     ]
 }
 
-/// Fill a convex polygon by scanline. Integer edges, integer spans.
-fn fill_poly(cv: &mut Canvas, pts: &[(i32, i32)], c: Rgb, a: u8) {
-    if pts.len() < 3 {
-        return;
-    }
-    let (mut lo, mut hi) = (i32::MAX, i32::MIN);
-    for &(_, y) in pts {
-        lo = lo.min(y);
-        hi = hi.max(y);
-    }
+fn fill_tri(cv: &mut Canvas, a: (i32, i32), b: (i32, i32), c: (i32, i32), col: Rgb, al: u8) {
+    let p = [a, b, c];
+    let lo = p.iter().map(|q| q.1).min().unwrap();
+    let hi = p.iter().map(|q| q.1).max().unwrap();
     for y in lo..=hi {
-        let mut xs: Vec<i32> = Vec::with_capacity(8);
-        for i in 0..pts.len() {
-            let (x0, y0) = pts[i];
-            let (x1, y1) = pts[(i + 1) % pts.len()];
+        let mut xs: Vec<i32> = Vec::with_capacity(4);
+        for i in 0..3 {
+            let (x0, y0) = p[i];
+            let (x1, y1) = p[(i + 1) % 3];
             if (y0 <= y && y1 > y) || (y1 <= y && y0 > y) {
                 let dy = y1 - y0;
                 if dy != 0 {
@@ -725,10 +554,10 @@ fn fill_poly(cv: &mut Canvas, pts: &[(i32, i32)], c: Rgb, a: u8) {
             }
         }
         xs.sort_unstable();
-        for pair in xs.chunks(2) {
-            if let [xa, xb] = pair {
+        for pr in xs.chunks(2) {
+            if let [xa, xb] = pr {
                 for x in *xa..=*xb {
-                    cv.blend(x, y, c, a);
+                    cv.blend(x, y, col, al);
                 }
             }
         }
@@ -743,76 +572,27 @@ fn trunc(s: &str, n: usize) -> String {
     }
 }
 
-fn append(path: &std::path::Path, s: &str) {
+fn append(p: &std::path::Path, s: &str) {
     use std::io::Write as _;
-    if let Ok(mut f) = fs::OpenOptions::new().create(true).append(true).open(path) {
+    if let Ok(mut f) = fs::OpenOptions::new().create(true).append(true).open(p) {
         let _ = f.write_all(s.as_bytes());
     }
 }
 
-fn runs_dir() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .map(|p| p.join("runs"))
-        .unwrap_or_else(|| PathBuf::from("runs"))
-}
-
-fn open_session(cert: &Cert, verdict: &judge::Verdict, c: &Census) -> PathBuf {
-    let ver = env!("CARGO_PKG_VERSION").replace('.', "_");
-    let base = runs_dir();
+fn open_session() -> PathBuf {
+    let base = PathBuf::from(env!("CARGO_MANIFEST_DIR")).parent().map(|p| p.join("runs")).unwrap_or_default();
     let _ = fs::create_dir_all(&base);
-    let prefix = format!("orb_v{ver}_s");
+    let pre = format!("orb_v{}_s", env!("CARGO_PKG_VERSION").replace('.', "_"));
     let n = fs::read_dir(&base)
         .map(|rd| {
             rd.filter_map(|e| e.ok())
-                .filter_map(|e| {
-                    e.file_name()
-                        .to_string_lossy()
-                        .strip_prefix(&prefix)
-                        .and_then(|s| s.parse::<usize>().ok())
-                })
+                .filter_map(|e| e.file_name().to_string_lossy().strip_prefix(&pre).and_then(|s| s.parse::<usize>().ok()))
                 .max()
                 .unwrap_or(0)
         })
         .unwrap_or(0)
         + 1;
-    let dir = base.join(format!("{prefix}{n:04}"));
-    let _ = fs::create_dir_all(&dir);
-
-    let (k, t, v) = rung_for(c.bytes.len() * 8);
-    let lines = vec![
-        String::from("{"),
-        format!("  \"program\": \"gos_orb\","),
-        format!("  \"session\": {n},"),
-        format!("  \"version\": \"{}\",", env!("CARGO_PKG_VERSION")),
-        format!("  \"stream\": \"{}\",", c.label.replace('\\', "/")),
-        format!("  \"bytes\": {},", c.bytes.len()),
-        String::from("  \"axiom_01_gate\": {"),
-        format!(
-            "    \"float_lane\": {{ \"v\": {}, \"e\": {}, \"f\": {}, \"p\": {}, \"chi\": {} }},",
-            cert.v, cert.e, cert.f, cert.p, cert.chi
-        ),
-        format!(
-            "    \"integer_judge\": {{ \"v\": {}, \"e\": {}, \"f\": {}, \"chi\": {}, \"genus\": {} }},",
-            verdict.v, verdict.e, verdict.f, verdict.chi, verdict.genus.unwrap_or(-1)
-        ),
-        String::from("    \"passed\": true"),
-        String::from("  },"),
-        String::from("  \"duplication\": {"),
-        format!("    \"block_bytes\": {BLOCK},"),
-        format!("    \"blocks\": {},", c.blocks),
-        format!("    \"unique\": {},", c.unique),
-        format!("    \"repeated\": {},", c.repeated),
-        format!("    \"pct\": {:.4}", c.dup_pct()),
-        String::from("  },"),
-        format!("  \"ones_pct\": {:.4},", c.ones_pct()),
-        format!("  \"entropy_bits_per_byte\": {:.6},", c.entropy),
-        format!(
-            "  \"rung_needed\": {{ \"lane\": \"class_I\", \"k\": {k}, \"t\": {t}, \"v\": {v} }},"
-        ),
-        String::from("  \"note\": \"C60 has 32 faces; the shell shows shape, the numbers are exact\""),
-        String::from("}"),
-    ];
-    let _ = fs::write(dir.join("SESSION.json"), lines.join("\n") + "\n");
-    dir
+    let d = base.join(format!("{pre}{n:04}"));
+    let _ = fs::create_dir_all(&d);
+    d
 }
