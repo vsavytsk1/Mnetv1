@@ -42,6 +42,13 @@ not an interpretability tool. Use transformers with the same open checkpoint:
 Then drag attn.json onto the viewer. Start SMALL -- 8 layers and 32 tokens is
 already a million edges and renders instantly. See the arithmetic in the
 session log before you reach for a bigger checkpoint.
+
+NOT VAULTED, on purpose. The 3-codec vault lives in the SpiderEngineering
+repo (Eleni/builder/vault.py) because irreplaceable payload lives there. A
+dump from here is LAB SCRATCH: one command against a public checkpoint
+regenerates it byte for byte, so triplicating it would be ceremony, not
+insurance. Gos/runs/ keeps its own MANIFEST mirror for the Rust exports --
+the same Curse 31 idea, already in place.
 """
 
 import argparse
@@ -156,8 +163,4 @@ if __name__ == "__main__":
     import os
     print("  wrote      : %s  (%.2f MB)" % (a.out, os.path.getsize(a.out) / 2**20))
     print("  now drag it onto shell/attentium_v0_1.html")
-    # THE MAINFRAME RULE: no matter how small or big, we triplicate.
-    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-    import vault
-    vault.save(a.out)
 

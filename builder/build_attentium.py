@@ -19,7 +19,9 @@ v0.3 closes the v0.2 review findings, measured before fixing:
   * HUD denominator counts only DRAWABLE pairs (gap >= 2); seam reported apart.
   * The entropy readout (v0.1) is restored; it silently died in v0.2.
   * validate() sweeps EVERY layer x head, not attn[0][0] alone.
-And adds BIPARTITE mode for HELENA joins (builder/helena_to_attentium.py):
+And adds BIPARTITE mode for HELENA joins, produced by the SpiderEngineering
+repo (Eleni/tools/helena_to_attentium.py -- HELENA lives there, so her tools
+do too; only the JSON format crosses):
 genesis levels at TRUE stored coordinates (no fold, no r=+0.115 artifact),
 the Mobius heart as a ring at a DECLARED display radius, wires bright by
 log-stretched 1-cos (raw weights pin at ~1.0; range printed), coloured by
@@ -209,7 +211,8 @@ HTML = r"""<!DOCTYPE html>
 
 <div id="src"><b>SYNTHETIC DATA &mdash; NOT A MODEL</b><br>
 Nothing here has been through a transformer. <b>Any pattern is one I put there.</b>
-Drop a dump from builder/dump_attention.py or builder/helena_to_attentium.py.</div>
+Drop a dump from builder/dump_attention.py, or a HELENA join from the
+SpiderEngineering repo (Eleni/tools/helena_to_attentium.py).</div>
 
 <div class="caveat" id="cav_causal">
 <b>THE FOLD (causal mode)</b><br>
@@ -575,7 +578,8 @@ function adopt(m,how){
   if(M.synthetic){ s.className="";
     s.innerHTML="<b>SYNTHETIC DATA &mdash; NOT A MODEL</b><br>Nothing here has been "+
       "through a transformer. <b>Any pattern is one I put there.</b> Drop a dump "+
-      "from builder/dump_attention.py or builder/helena_to_attentium.py."; }
+      "from builder/dump_attention.py, or a HELENA join from the SpiderEngineering "+
+      "repo (Eleni/tools/helena_to_attentium.py)."; }
   else { s.className="real";
     s.innerHTML="<b>REAL "+(bip?"JOIN":"ATTENTION")+"</b><br>model: "+M.model+
       (bip&&M.card?"<br>soul: "+String(M.card.soul_id).slice(0,16)+"&hellip;":"")+
@@ -721,4 +725,4 @@ if node:
 else:
     print("  [WARN] node not found -- syntax NOT verified")
 
-print("  done. drag Gos/runs/helena_*.json onto it for bipartite mode.")
+print("  done. drag a SpiderEngineering Eleni/exports/helena_*.json for bipartite.")
