@@ -26,6 +26,7 @@ use std::time::Instant;
 use goldberg_kernel::bits;
 use goldberg_kernel::dashboard;
 use goldberg_kernel::font;
+use goldberg_kernel::genesis;
 use goldberg_kernel::layout::Rect;
 use goldberg_kernel::palette::{Palette, ALL};
 use goldberg_kernel::raster::{project, Canvas};
@@ -42,6 +43,9 @@ const BAR_H: i32 = 34;
 /// that silently stops is a lie (Path IV).
 const DUMP_CAP: usize = 4 * 1024 * 1024;
 
+/// WM_TIMER id for the GENESIS turn.
+const GENESIS_TIMER: usize = 1;
+
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 enum View {
     /// ENG v2.0 master control, painted from integers -- the target
@@ -52,6 +56,12 @@ enum View {
     FrameBits,
     /// what rustc emitted for this .exe, as a 1/0 texture
     MachineBits,
+    /// GENESIS step 1: the certified C60, spinning. The port target is
+    /// shell/genesis_v8.5.2.html -- see grimoire/GENESIS_PORT_SPEC.md.
+    /// Deliberately the smallest thing that can be shipped and tested:
+    /// a seed on screen, turning, with its census beside it. Refinement,
+    /// the sliders and the Mobius twist arrive as later steps.
+    Genesis,
 }
 
 impl View {
@@ -61,6 +71,7 @@ impl View {
             View::Shell => "THE SHELL - C60 CERTIFIED",
             View::FrameBits => "THE FRAME - ITS OWN 1 AND 0S",
             View::MachineBits => "THE MACHINE - WHAT RUSTC EMITTED",
+            View::Genesis => "GENESIS - THE SEED, SPINNING",
         }
     }
 }
@@ -128,6 +139,13 @@ struct App {
     git: String,
     ledger: String,
     cert_line: String,
+    /// GENESIS: the turn angle, advanced by WM_TIMER. Only this view spins,
+    /// so the dashboard stays still -- Curse 13 / Path VIII, motion is opt-in.
+    genesis_yaw: f64,
+    /// spin runs only while the GENESIS view is open AND this is true.
+    /// Starts ON here because a still seed reads as a broken one, but `S`
+    /// stops it and the panel says so -- motion is opt-in and reversible.
+    genesis_spin: bool,
     /// what the dashboard actually painted, so clicks hit-test against the
     /// drawn geometry instead of a recomputed guess
     card_rects: Vec<Rect>,
@@ -185,6 +203,10 @@ unsafe fn run() {
         return;
     }
     ShowWindow(hwnd, SW_SHOW);
+    // ~60 Hz, consumed ONLY by the GENESIS view (see WM_TIMER). The orb's
+    // pattern: SetTimer drives the turn, so there is no render thread and
+    // nothing moves when nothing is looking.
+    SetTimer(hwnd, GENESIS_TIMER, 16, 0);
 
     let mut msg: MSG = std::mem::zeroed();
     while GetMessageW(&mut msg, std::ptr::null_mut(), 0, 0) > 0 {
@@ -220,9 +242,46 @@ unsafe extern "system" fn wndproc(hwnd: HWND, msg: UINT, wp: WPARAM, lp: LPARAM)
             }
             0
         }
+        WM_TIMER => {
+            // Only the GENESIS view animates. Everything else stays still, so
+            // the dashboard never pulses at a reader (Curse 13 / Path VIII).
+            let mut go = false;
+            APP.with(|a| {
+                if let Some(app) = a.borrow_mut().as_mut() {
+                    if app.view() == View::Genesis && app.genesis_spin {
+                        app.genesis_yaw += 0.012;
+                        go = true;
+                    }
+                }
+            });
+            if go {
+                InvalidateRect(hwnd, std::ptr::null(), 0);
+            }
+            0
+        }
         WM_KEYDOWN => {
             if wp == VK_ESCAPE {
                 DestroyWindow(hwnd);
+            }
+            if wp == 0x53 {
+                // S -- hold the GENESIS turn still, or release it again.
+                let mut go = false;
+                APP.with(|a| {
+                    if let Some(app) = a.borrow_mut().as_mut() {
+                        if app.view() == View::Genesis {
+                            app.genesis_spin = !app.genesis_spin;
+                            app.status = if app.genesis_spin {
+                                String::from("GENESIS SPINNING.")
+                            } else {
+                                String::from("GENESIS HELD STILL.")
+                            };
+                            go = true;
+                        }
+                    }
+                });
+                if go {
+                    InvalidateRect(hwnd, std::ptr::null(), 0);
+                }
             }
             0
         }
@@ -315,6 +374,8 @@ impl App {
             git: git_head(),
             ledger: ledger_entry(),
             cert_line: format!("V {} E {} F {} CHI {}", cert.v, cert.e, cert.f, cert.chi),
+            genesis_yaw: 0.55,
+            genesis_spin: true,
             card_rects: Vec::new(),
         };
         app.layout();
@@ -355,6 +416,25 @@ impl App {
     }
 
     fn click(&mut self, mx: i32, my: i32) -> bool {
+        // CARDS FIRST. draw() returns exactly what it painted, so a click
+        // hit-tests the real geometry instead of a recomputed guess -- which
+        // is how a UI and its layout drift apart. Until now these rects were
+        // collected and never used: the cards looked clickable and were not.
+        if self.view() == View::Dashboard {
+            for (i, r) in self.card_rects.iter().enumerate() {
+                if mx >= r.x && mx < r.x + r.w && my >= r.y && my < r.y + r.h {
+                    // card 1 is GENESIS; the others have no view yet and say so
+                    if i == 1 {
+                        self.stack.push(View::Genesis);
+                        self.status = String::from("GENESIS - THE SEED, SPINNING. S STOPS IT.");
+                    } else {
+                        self.status =
+                            format!("CARD {i} HAS NO VIEW YET - NOT WIRED, NOT PRETENDING");
+                    }
+                    return true;
+                }
+            }
+        }
         let hit = self.buttons.iter().find(|b| b.hit(mx, my)).map(|b| b.id);
         match hit {
             Some(5) => {
@@ -409,6 +489,7 @@ impl App {
         self.cv.fill(pal.bg);
         match self.view() {
             View::Dashboard => self.paint_dashboard(),
+            View::Genesis => self.paint_genesis(),
             View::Shell => self.paint_shell(),
             View::FrameBits => self.paint_bit_texture(true),
             View::MachineBits => self.paint_bit_texture(false),
@@ -463,6 +544,13 @@ impl App {
              agrees. seal is content-only, so it reproduces.",
             self.cert_line
         );
+        // the card says the census, not a slogan: computed, not typed
+        let g = genesis::Census::C60;
+        let genesis_desc = &format!(
+            "the certified C60, spinning. {} chi={} -- step 1 of the port              (spec: grimoire/GENESIS_PORT_SPEC.md)",
+            g,
+            genesis::certify(g).map_or("?".into(), |c| c.to_string())
+        );
         let cards = [
             dashboard::Card {
                 tag: "* THE BIRTH",
@@ -471,6 +559,14 @@ impl App {
                 accent: pal.gold,
                 caps: &["frm", "kbd"],
                 featured: true,
+            },
+            dashboard::Card {
+                tag: "GENESIS",
+                name: "GENESIS v0.1 - THE SEED",
+                desc: genesis_desc,
+                accent: pal.green,
+                caps: &["frm", "kbd"],
+                featured: false,
             },
             dashboard::Card {
                 tag: "KERNEL",
@@ -497,6 +593,74 @@ impl App {
             self.card_rects.len(),
             dashboard::NOT_YET.len()
         );
+    }
+
+    /// GENESIS step 1 -- the certified seed, spinning, with its census.
+    ///
+    /// Deliberately the same projection and depth-cue as `paint_shell`, so the
+    /// only difference is the turn: one variable, one timer, nothing else new.
+    /// Refinement is step 3 in the spec and is NOT faked here -- the panel says
+    /// so rather than implying more than is built.
+    fn paint_genesis(&mut self) {
+        let pal = self.pal();
+        let (rx, zoom) = (0.30_f64, 250.0_f64);
+        let ry = self.genesis_yaw;
+        let sh = H as i32 - BAR_H - 60;
+        let pts: Vec<(i32, i32, f64)> = self
+            .mesh
+            .verts
+            .iter()
+            .map(|&v| project(v, rx, ry, zoom, W, sh as usize))
+            .collect();
+
+        // painter's order: far edges first, so near ones land on top
+        let mut order: Vec<usize> = (0..self.mesh.edges.len()).collect();
+        let (edges, pts_ref) = (&self.mesh.edges, &pts);
+        order.sort_by(|&i, &j| {
+            let d = |k: usize| {
+                let (a, b) = edges[k];
+                (pts_ref[a].2 + pts_ref[b].2) / 2.0
+            };
+            d(i).partial_cmp(&d(j)).unwrap()
+        });
+        for k in order {
+            let (a, b) = self.mesh.edges[k];
+            let depth = (pts[a].2 + pts[b].2) / 2.0;
+            let t = ((depth + 2.0) / 4.0).clamp(0.0, 1.0);
+            let alpha = 0.15 + t * 0.5;
+            let (c, a8) = if self.pent_edge[k] {
+                (pal.pink, (alpha * 255.0) as u8)
+            } else {
+                (pal.cyan, (alpha * 0.6 * 255.0) as u8)
+            };
+            self.cv
+                .line_a(pts[a].0, pts[a].1, pts[b].0, pts[b].1, c, a8);
+        }
+        for p in pts.iter() {
+            let t = ((p.2 + 2.0) / 4.0).clamp(0.0, 1.0);
+            let a8 = ((0.15 + t * 0.5) * 255.0) as u8;
+            self.cv.disc(p.0, p.1, 2, pal.green, a8);
+        }
+
+        // the census, computed -- never typed into a string literal
+        let g = genesis::Census::C60;
+        let chi = genesis::certify(g).map_or("?".to_string(), |c| c.to_string());
+        let (v, e) = genesis::implied(g).unwrap_or((0, 0));
+        let lines = [
+            format!("SEED   {g}"),
+            format!("V={v}  E={e}  F={}", g.f),
+            format!("chi={chi}   E/V={:.3}", e as f64 / v as f64),
+            format!("yaw {:.2} rad", self.genesis_yaw % std::f64::consts::TAU),
+            String::from("chi is COMPUTED from trivalence,"),
+            String::from("never assumed from Euler (R-INV)."),
+            String::new(),
+            String::from("NOT YET: refine, sliders, mobius."),
+            String::from("step 1 of 8 - GENESIS_PORT_SPEC.md"),
+        ];
+        for (i, l) in lines.iter().enumerate() {
+            let c = if i >= 7 { pal.border } else { pal.text };
+            font::text(&mut self.cv, 16, 60 + i as i32 * 14, l, c, 1);
+        }
     }
 
     fn paint_shell(&mut self) {
