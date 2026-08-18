@@ -203,7 +203,7 @@ Pages serves), by `builder/gen_io_index.py`. Nothing hidden; the door is open.*
 - [shell/genesis_v8.5.1.html](https://vsavytsk1.github.io/Mnetv1/shell/genesis_v8.5.1.html)
 - [shell/genesis_v8.5.2.html](https://vsavytsk1.github.io/Mnetv1/shell/genesis_v8.5.2.html)
 - [shell/genesis_v8.5.html](https://vsavytsk1.github.io/Mnetv1/shell/genesis_v8.5.html)
-- [shell/genesis_v9.0.html](https://vsavytsk1.github.io/Mnetv1/shell/genesis_v9.0.html)
+- [shell/diffusium_bench_v1_0.html](https://vsavytsk1.github.io/Mnetv1/shell/diffusium_bench_v1_0.html)
 - [shell/genesium.html](https://vsavytsk1.github.io/Mnetv1/shell/genesium.html)
 - [shell/goldberg_refine.html](https://vsavytsk1.github.io/Mnetv1/shell/goldberg_refine.html)
 - [shell/grand-transmutation-circle.html](https://vsavytsk1.github.io/Mnetv1/shell/grand-transmutation-circle.html)

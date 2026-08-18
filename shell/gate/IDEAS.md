@@ -175,7 +175,7 @@ Gate v1.4 — 411 KB, fully self-contained
 
 ## v2 Plan: Full Genesis UI After Intro
 
-After the FMA sequence completes, bolt on the full genesis_v9.0 control panel:
+After the FMA sequence completes, bolt on the full diffusium_bench_v1_0 control panel (was genesis_v9.0):
 - SEED / REFINE / UNDO / RESET buttons
 - Refinement level slider
 - Reynolds regime toggles (Stokes/Laminar/Transition/Turbulent)
@@ -184,7 +184,7 @@ After the FMA sequence completes, bolt on the full genesis_v9.0 control panel:
 - Camera: drag rotate, scroll zoom, auto-spin toggle
 - HUD: full invariants, face count, memory estimate
 
-Source: copy from shell/genesis_v9.0.html, strip to essentials
+Source: copy from shell/diffusium_bench_v1_0.html, strip to essentials
 
 ---
 

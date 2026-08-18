@@ -168,7 +168,7 @@ grimoire/ (the scrolls):
 |---|---|
 | [**GENESIS FINAL**](https://vsavytsk1.github.io/Mnetv1/shell/genesis_final/genesis_final_v2.html) | **MASTERPIECE.** 3 modules: FMA intro + full v8.0 engine + scripted presentation. 448KB self-contained. |
 | [The Gate](https://vsavytsk1.github.io/Mnetv1/shell/gate/gate_v1.html) | Full Metal Alchemist intro → transmutation circle → Goldberg explorer. Cinematic. |
-| [GENESIS v9.0 — NS Dashboard](https://vsavytsk1.github.io/Mnetv1/shell/genesis_v9.0.html) | Navier-Stokes benchmark. 4 shapes (12→24K faces). O(n) wave diffusion. Real-time benchmarks. |
+| [DIFFUSIUM v1.0 — diffusion benchmark](https://vsavytsk1.github.io/Mnetv1/shell/diffusium_bench_v1_0.html) | Graph-Laplacian diffusion on the Goldberg kernel. 4 shapes (12→24K faces), O(n) per step. **Not** a Navier-Stokes solver — the NS lane is aequalium. |
 | [GENESIS v8.x — Flow Explorer](https://vsavytsk1.github.io/Mnetv1/shell/genesis_v8.0.html) | Goldberg fractal + wave simulation. Möbius twist. Wavefront heatmap. 100M batch compute. |
 | [GENESIS Benchmark](https://vsavytsk1.github.io/Mnetv1/shell/genesis_bench.html) | Compute cost analyzer. Time, memory, F/ms per refinement level. CSV export. |
 | [Sacred Math Tree](https://vsavytsk1.github.io/Mnetv1/) | 10 calculus trees. Autopilot plays them all. Zoom-gated. |
@@ -517,7 +517,7 @@ shell/
                                       393KB. Inline kernel + 4 images.
     rebuild_gate.py                 ← Build script
     img_to_base64.py                ← Image pipeline
-  genesis_v9.0.html                 ← NS Benchmark Dashboard (v9.6)
+  diffusium_bench_v1_0.html         ← graph-diffusion benchmark (was genesis_v9.0)
                                       4 levels, real-time benchmark, loading bars
   genesis_v8.0.html                 ← Flow Explorer (v8.x)
                                       Wave sim, Möbius twist, heatmap, 100M batch

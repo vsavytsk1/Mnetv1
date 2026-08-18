@@ -266,7 +266,7 @@ StrangerDanger ← standalone
 ### Canvas Explorer (genesis format)
 ```
 /shell/genesis_v8.1.html  ← LATEST (full kernel build, M1-M6)
-/shell/genesis_v9.0.html
+/shell/diffusium_bench_v1_0.html
 /shell/genesis_v8.0.html  ← used by warning intro (engine source)
 /shell/genesis_v7.6.html  ← FractalEngBuilder panel
 /shell/genesis_v7.5.html  ← THE REFERENCE FORMAT

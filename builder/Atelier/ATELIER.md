@@ -4,7 +4,7 @@
 
 **Opened:** 2026-05-29 Buenos Aires
 **Owns:** All genesis_v*.html generation
-**First build:** genesis_v9.0.html
+**First build:** genesis_v9.0.html (renamed 2026-08-18 to diffusium_bench_v1_0.html)
 
 ---
 
