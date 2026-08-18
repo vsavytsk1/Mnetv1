@@ -94,7 +94,7 @@ impl Term {
             Term::Eml(a, b) => {
                 let x = a.eval();
                 let y = b.eval();
-                x.exp().sub(y.ln())
+                x.exp() - y.ln()
             }
         }
     }

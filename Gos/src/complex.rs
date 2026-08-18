@@ -26,42 +26,10 @@ impl C {
         C { re, im }
     }
 
-    /// CERTIFIED. `(a+bi) + (c+di)`
-    #[inline]
-    pub fn add(self, o: C) -> C {
-        C::new(self.re + o.re, self.im + o.im)
-    }
-
-    /// CERTIFIED. `(a+bi) - (c+di)`
-    #[inline]
-    pub fn sub(self, o: C) -> C {
-        C::new(self.re - o.re, self.im - o.im)
-    }
-
-    /// CERTIFIED. `(ac - bd) + (ad + bc)i`
-    #[inline]
-    pub fn mul(self, o: C) -> C {
-        C::new(
-            self.re * o.re - self.im * o.im,
-            self.re * o.im + self.im * o.re,
-        )
-    }
-
     /// CERTIFIED. Scale by a real.
     #[inline]
     pub fn scale(self, s: f64) -> C {
         C::new(self.re * s, self.im * s)
-    }
-
-    /// CERTIFIED. Division by the conjugate. Division by zero yields infinities
-    /// rather than panicking -- IEEE-754 behaviour, same as the JS.
-    #[inline]
-    pub fn div(self, o: C) -> C {
-        let d = o.re * o.re + o.im * o.im;
-        C::new(
-            (self.re * o.re + self.im * o.im) / d,
-            (self.im * o.re - self.re * o.im) / d,
-        )
     }
 
     /// CERTIFIED. `a - bi`
@@ -96,9 +64,9 @@ impl C {
         let mut base = self;
         while n > 0 {
             if n & 1 == 1 {
-                result = result.mul(base);
+                result = result * base;
             }
-            base = base.mul(base);
+            base = base * base;
             n >>= 1;
         }
         result
@@ -166,4 +134,61 @@ pub fn c_to_s2(z: C) -> [f64; 3] {
     }
     let d = 1.0 + r2;
     [2.0 * z.re / d, 2.0 * z.im / d, (r2 - 1.0) / d]
+}
+
+// ---------------------------------------------------------------------------
+// THE OPERATORS -- the real std traits, not inherent methods wearing their names
+//
+// These were once inherent `add`/`sub`/`mul`/`div`, which clippy flags
+// (`should_implement_trait`): a method named like a std trait method but not
+// BEING one is a trap, because `a + b` and `a.add(b)` would mean different
+// things. Implementing the traits makes the operator and the method the same
+// code, and `a + b` now reads the way the mathematics does.
+//
+// All four remain CERTIFIED: `+ - * /` on f64 only, correctly rounded, so
+// bit-identical to the JS. No transcendental is reachable from here.
+// ---------------------------------------------------------------------------
+
+impl std::ops::Add for C {
+    type Output = C;
+    /// CERTIFIED. `(a+bi) + (c+di)`
+    #[inline]
+    fn add(self, o: C) -> C {
+        C::new(self.re + o.re, self.im + o.im)
+    }
+}
+
+impl std::ops::Sub for C {
+    type Output = C;
+    /// CERTIFIED. `(a+bi) - (c+di)`
+    #[inline]
+    fn sub(self, o: C) -> C {
+        C::new(self.re - o.re, self.im - o.im)
+    }
+}
+
+impl std::ops::Mul for C {
+    type Output = C;
+    /// CERTIFIED. `(ac - bd) + (ad + bc)i`
+    #[inline]
+    fn mul(self, o: C) -> C {
+        C::new(
+            self.re * o.re - self.im * o.im,
+            self.re * o.im + self.im * o.re,
+        )
+    }
+}
+
+impl std::ops::Div for C {
+    type Output = C;
+    /// CERTIFIED. Division by the conjugate. Division by zero yields infinities
+    /// rather than panicking -- IEEE-754 behaviour, same as the JS.
+    #[inline]
+    fn div(self, o: C) -> C {
+        let d = o.re * o.re + o.im * o.im;
+        C::new(
+            (self.re * o.re + self.im * o.im) / d,
+            (self.im * o.re - self.re * o.im) / d,
+        )
+    }
 }

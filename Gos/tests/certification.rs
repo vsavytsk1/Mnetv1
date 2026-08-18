@@ -395,9 +395,9 @@ fn the_raw_permutation_count_is_sixty() {
 fn complex_arithmetic() {
     let a = C::new(3.0, 4.0);
     let b = C::new(1.0, -2.0);
-    assert_eq!(a.add(b), C::new(4.0, 2.0));
-    assert_eq!(a.sub(b), C::new(2.0, 6.0));
-    assert_eq!(a.mul(b), C::new(11.0, -2.0));
+    assert_eq!(a + b, C::new(4.0, 2.0));
+    assert_eq!(a - b, C::new(2.0, 6.0));
+    assert_eq!(a * b, C::new(11.0, -2.0));
     assert_eq!(a.conj(), C::new(3.0, -4.0));
     assert_eq!(a.norm_sqr(), 25.0);
     assert_eq!(a.abs(), 5.0, "the 3-4-5 triangle is exact");
@@ -405,14 +405,14 @@ fn complex_arithmetic() {
 
 #[test]
 fn i_squared_is_minus_one() {
-    assert_eq!(C::I.mul(C::I), C::new(-1.0, 0.0));
+    assert_eq!(C::I * C::I, C::new(-1.0, 0.0));
 }
 
 #[test]
 fn division_inverts_multiplication() {
     let a = C::new(3.0, 4.0);
     let b = C::new(1.0, -2.0);
-    let q = a.mul(b).div(b);
+    let q = (a * b) / b;
     assert!((q.re - a.re).abs() < 1e-12 && (q.im - a.im).abs() < 1e-12);
 }
 
@@ -421,7 +421,7 @@ fn powi_matches_repeated_multiplication() {
     let z = C::new(0.7, -0.3);
     let mut acc = C::ONE;
     for _ in 0..7 {
-        acc = acc.mul(z);
+        acc = acc * z;
     }
     let p = z.powi(7);
     assert!((p.re - acc.re).abs() < 1e-12 && (p.im - acc.im).abs() < 1e-12);

@@ -68,7 +68,7 @@ use std::fmt;
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 /// The golden ratio. The seed of the whole construction.
-pub const PHI: f64 = 1.618_033_988_749_894_8;
+pub const PHI: f64 = 1.618_033_988_749_895;
 
 /// A point or direction in R^3. Plain data, `Copy`, no allocation.
 pub type Vec3 = [f64; 3];
