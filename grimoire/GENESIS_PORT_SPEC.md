@@ -1,0 +1,316 @@
+# GENESIS PORT SPEC
+### The target for the GENESIS card in the Rust ENG dashboard
+### Source of truth: `shell/genesis_v8.5.2.html` — dissected 2026-08-19
+
+---
+
+## WHY THIS FILE EXISTS
+
+We nearly ported from `builder/genesis_wallpaper_v1_7.py`. That was the wrong
+source, for a reason worth writing down:
+
+> **v1.5 is the tested version. v1.7 is not.** Porting from an untested source
+> means inheriting its bugs *and* its confidence.
+
+We proved that the hard way, before writing the spec. v1.7's `face_growth`
+priced the pentagon op as `(H + 7P, 0)` — seven children per pentagon and
+**zero pentagons surviving**, a shell Euler forbids. It compounded: every
+later step of a plan containing `pent` was priced against that impossible
+object. It survived because the file's own verification line covers `all` and
+`6s` and *never* `5s`.
+
+The HTML is the working version. **It is the spec.** Everything below is read
+out of it, not remembered.
+
+**STATUS GRAMMAR** (Thea's, unchanged): **EXACT** (quoted from source) ·
+**COMPUTED** (derived here) · **DESIGN CHOICE** · **HYPOTHESIS** ·
+**NOT YET BUILT**.
+
+---
+
+## 0. WHAT THE FILE ACTUALLY IS
+
+197,896 B carrying **six standalone kernel modules**, each a self-contained
+IIFE with no DOM and no dependencies:
+
+| module | global | what it owns |
+|---|---|---|
+| `goldberg_kernel.js` | `GK` | **the refinement operator** ← the port target |
+| `graph_axioms.js` | `GA` | the 7 graph primitives |
+| `sar_modular.js` | `SAR` | SAR-5 modular coupling, spectral |
+| `ns_spectral.js` | `NSS` | Navier–Stokes spectral solver |
+| `fractal_search.js` | `FS` | fractal architecture search |
+| `mnet_nanite.js` | nanite | cluster DAG + adaptive LOD |
+
+**SCOPE DECISION:** this card ports **GK only**. The other five are separate
+cards. Attempting six at once is how a port becomes a rewrite.
+
+---
+
+## 1. THE PUBLIC SURFACE — the contract, EXACT from the header
+
+```
+GK.buildC60()                        -> { faces, vertices, edges, info }
+GK.refineFace(face, params)          -> [ subFace, ... ]
+GK.refineAll(state, params)          -> newState (immutable)
+GK.refineOne(state, faceIdx, params) -> newState (immutable)
+GK.invariants(state)                 -> { pents, hexes, depthMax, ... }
+GK.serialize(state)                  -> JSON-safe object
+GK.deserialize(obj)                  -> state
+GK.zoomInto(state, faceIdx)          -> { childState, transform }
+```
+
+Plus, found in the body but not in the header: `GK.refineAllPents` (and its
+hex twin) — the browser's `REFINE 5s` / `REFINE 6s` buttons.
+
+**IMMUTABILITY IS PART OF THE CONTRACT.** `refineAll` returns a new state and
+appends `{op, snapshot}` to `history`. That is what makes `UNDO` work. A Rust
+port that mutates in place has not ported this.
+
+---
+
+## 2. THE DATA MODEL
+
+### A face — EXACT
+
+```js
+{ pts:     [[x,y,z], ...],   // n points, CCW seen from outside
+  type:    'pent' | 'hex',
+  level:   0,                 // refinement depth
+  lineage: [i],               // path of parent indices from the seed
+  id:      'F12',             // stable, mint-once
+  anchor:  'A12' | null }     // pentagons only; INHERITED by inner pentagon
+```
+
+**The mesh is FACE SOUP.** Faces carry their own points; vertices are
+duplicated between neighbours and never welded. That is deliberate — it is
+what lets the browser reach millions of faces without an index structure, and
+it is why `invariants()` has to *reconstruct* V and E (§5).
+
+`anchor` is the thread back to one of the original twelve. Each pentagon
+inherits its parent's anchor, so `anchorCount` should stay 12 forever — an
+independent witness to `P=12` that does not rely on counting types.
+
+### A state — EXACT
+
+```js
+{ faces: [face, ...], history: [{op, snapshot}, ...], counter: n }
+```
+
+`counter` mints ids; it is threaded through refinement by `counterRef` so ids
+stay unique across a whole session.
+
+---
+
+## 3. THE OPERATOR — the heart, EXACT
+
+Defaults, read from the parameter block:
+
+| param | default |
+|---|---|
+| `innerScale` | `0.45` |
+| `midScale` | `0.70` |
+| `preservePentInPent` | `true` |
+| `preserveHexInHex` | `true` |
+| `surfaceMode` | `'planar'` |
+| `sphereR` | `1.6` |
+| `jitter` | `0` |
+
+Given a face of `n` points with centroid `c`:
+
+```
+inner[i]   = lerp(c, pts[i], innerScale)              [project if spherical]
+midRing[i] = lerp(c, mid(pts[i], pts[j]), midScale)   [project if spherical]
+em         = mid(pts[i], pts[j])                      [project if spherical]
+
+inner face = inner[0..n-1]      type: parent arity, ANCHOR INHERITED if pent
+cell i     = [ pts[i], em, pts[j], inner[j], midRing[i], inner[i] ]
+             6 points, type ALWAYS 'hex'
+```
+
+**THE TWO SENTENCES THAT ARE THE WHOLE GROWTH LAW:**
+
+1. The inner face **preserves arity**.
+2. The surrounding cells are **always hexagons**.
+
+Therefore `pentagon → 1 pent + 5 hex` (6 faces) and `hexagon → 1 hex + 6 hex`
+(7 faces). Everything in §4 follows from those two lines and nothing else.
+
+**Ids and lineage — EXACT:** inner gets `parent.id + '.c' + (++counter)` and
+`lineage + [0]`; cell `i` gets `parent.id + '.e' + (++counter)` and
+`lineage + [i+1]`. Level is `parent.level + 1` for all children.
+
+**Jitter is applied to `inner` and `midRing` only** — never to `pts[i]`,
+`pts[j]` or `em`. Those are shared with the neighbouring face, and jittering
+them would tear the mesh. **DESIGN CHOICE, and a load-bearing one.**
+
+**THE CRESCENT DEFECT.** `midRing[i]` sits on the hexagon side of the cell
+edge `inner[i]→inner[j]` and nowhere on the cell side. With `midScale >
+innerScale` the ring opens a gap (a rosette); below, it overlaps. **This is
+not a bug to fix — it is the picture.** Any port that "corrects" it produces
+different images and has failed.
+
+---
+
+## 4. THE GROWTH LAW — port this first, it is pure integer
+
+| op | button | faces | pentagons |
+|---|---|---|---|
+| all | `REFINE ALL` | `6P + 7H` = `7F − 12` | `P` |
+| hex | `REFINE 6s` | `P + 7H` = `7F − 72` | `P` |
+| pent | `REFINE 5s` | `H + 6P` = `F + 5P` | `P` |
+
+**P never moves.** ✅ **Already built** — `Gos/src/genesis.rs`, integers only,
+`checked_*` so the ceiling refuses instead of wrapping (R3).
+
+**Regression ladders, EXACT from the browser's own logs — both are tests:**
+
+```
+all then 6s x5 : 32 → 212 → 1412 → 9812 → 68612 → 480212 → 3361412
+5s twice       : 2352992 → 2353052 → 2353112     (steps of +60 = 5P)
+```
+
+The second ladder is the one v1.7 got wrong. It exists as a test so the
+pentagon branch can never again be the untested one.
+
+---
+
+## 5. INVARIANTS — and the one thing the port must do BETTER
+
+`GK.invariants(state)` returns `{pents, hexes, faces, edges, vertices,
+maxLevel, perLevel, anchorCount, anchors}`.
+
+Because the mesh is face soup, V and E are **reconstructed**:
+
+```js
+edges    = round(faceEdgeSum / 2);
+vertices = edges - faces + 2;                  // ← EULER ASSUMED
+if (hasHex) vertices = round(faceEdgeSum / 3); // ← TRIVALENCE, independent
+```
+
+**COMPUTED, and already verified against a real render (F = 2,353,112):**
+the hex branch gives `E = 7,059,330` and `V = 4,706,220`, matching the HUD
+exactly, and `χ = 2` is then a **genuine** check — V and E come from
+independent divisors, so it can fail.
+
+**But the no-hex branch is a tautology.** `V = E − F + 2` makes `χ = 2` true
+by construction. It bites exactly one case: a hexagon-free seed — the
+dodecahedron, which the browser offers as `SEED 12` and whose log says
+`SEED: dodecahedron born`. There, `χ=2` is asserted, not earned. The source
+even half-admits it in a comment about Platonic seeds.
+
+> **PORT REQUIREMENT R-INV:** the Rust port must **never** derive `V` from
+> Euler. Derive `V` and `E` from trivalence, compute `χ`, and let it be wrong.
+> `Gos/src/genesis.rs::certify` already does this and returns `None` for a
+> census that is not trivalent-closed. A check that cannot fail is not a check.
+
+**Second witness, free:** `anchorCount` must equal 12 independently of the
+type count. Port it, and assert both.
+
+**HYPOTHESIS to resolve during the port:** the source header contains the
+author reasoning aloud about whether mixed local refines can push `pents`
+above 12, and lands on *"after a full refineAll, exactly 12."* By §3, a
+refined pentagon still yields exactly one pentagon, so `refineOne` should also
+hold at 12. **Verify against the code, not the comment.**
+
+---
+
+## 6. RENDER + UI — the card's visible surface
+
+**Seeds:** `doSeed` (C60) · `doSeedDodec` (12) · `doSeedGoldberg` ·
+`doSeedPlatonic`.
+
+**Ops:** `doRefineAll` · `doRefineHexes` · `doRefinePents` · `doUndo` ·
+`doReset`.
+
+**Sliders — EXACT, with their ranges and defaults:**
+
+| id | min | max | default | meaning |
+|---|---|---|---|---|
+| `sl-inner` | 10 | 90 | **45** | `innerScale × 100` |
+| `sl-mid` | 10 | 95 | **70** | `midScale × 100` |
+| `sl-jit` | 0 | 30 | **0** | jitter |
+| `sl-zm` | 1 | 1500 | 200 | zoom |
+| `sl-atom` | 1 | 30 | 10 | atom size |
+| `sl-maxf` | 0 | 100 | 50 | max faces drawn |
+| `sl-spin` | 0 | 50 | 5 | spin |
+| `mobSlider` | 0 | 100 | 0 | Möbius twist |
+| `sl-pov` | 10 | 120 | 60 | field of view |
+| `sl-inside` | 0.1 | 1.5 | 1.2 | inside-view scale |
+
+**Toggles:** `toggleMobius` (χ: 2 → 0) · `toggleLight` · `toggleInsideView` ·
+`toggleFlight` + `toggleFlightLock` + `flightGo`/`flightRelease` ·
+`toggleHud` · `toggleHideAll` · `toggleAxLog`.
+
+**Exports:** `doExport` (image) · `doExportGraph`.
+
+**HUD readouts** (from the live screenshots): `V E F pent hex chi E/V level
+ops drawn MB` — plus the running op log with `P=` and `F=` per step, and
+`SEED: … born`.
+
+---
+
+## 7. WHAT THE RUST PORT GIVES THAT THE HTML CANNOT
+
+The reason to port at all, stated so it can be checked:
+
+1. **Integer certainty.** The growth law is `u64` with `checked_*`; the
+   ceiling is a refusal, not a wrap.
+2. **The judge.** `judge.rs` computes `χ` from a rotation system over integer
+   darts — no coordinates, no Euler assumption. The browser cannot do this
+   because its mesh is soup. **Weld, then judge, and compare against the
+   census.** That is the port's headline result: *counting is not closing.*
+3. **1s and 0s.** `bits.rs` writes the mesh as a bit matrix; `raster.rs`
+   paints it with no browser and no GPU.
+4. **Streaming.** The render is a reduction into a 133 MB framebuffer, so
+   depth stops being a RAM problem.
+5. **The gate.** AXIOM 01 runs before a byte is exported (`examples/gate.rs`).
+
+---
+
+## 8. THE PRECISION LANE — declare it before writing geometry
+
+**EXACT:** the browser runs in JS `Number` = **IEEE-754 binary64**. This
+crate's `Vec3` is `[f64; 3]`. **Same lane.** For `+ − × ÷ √` both are
+correctly rounded, so the geometry can be asserted **bit-identical** — that is
+RULE 0's whole point, and here it applies.
+
+⚠️ **The Python is NOT in this lane.** `genesis_wallpaper_v1_7.py` runs in
+`float32` (41 `np.float32` sites). A port targeting *the Python's* images
+would need `f32`; a port targeting *the browser's* uses `f64`. **We target the
+browser.** Do not mix the two and call the result "the same picture".
+
+`projectToSphere` and `centroid` stay in the certified lane. `Math.random()`
+for jitter does **not** — replace with `rng.rs` so runs are reproducible, and
+say so.
+
+---
+
+## 9. THE STEPS — one at a time, each shippable
+
+| # | step | status |
+|---|---|---|
+| 1 | growth law, integers, both ladders as tests | ✅ `genesis.rs` |
+| 2 | `Face`/`State`, ids, lineage, anchors, immutable history | **next** |
+| 3 | `refine_face` geometry, f64, planar + spherical | |
+| 4 | `refine_all` / `refine_hexes` / `refine_pents` + undo | |
+| 5 | `invariants()` — trivalence only, never Euler; anchors as 2nd witness | |
+| 6 | **weld + judge**, compare against the census (the headline) | |
+| 7 | render via `raster.rs`, match the browser's image | |
+| 8 | dashboard card + the byte-topology checker beside it | |
+
+**ACCEPTANCE, stated up front so it can fail:**
+
+- both ladders reproduce exactly
+- `P = 12` and `anchorCount = 12` at every level, both seeds, all three ops
+- `χ = 2` **computed** from trivalence, never assumed
+- `judge.rs` on the welded mesh **agrees with the census**
+- a rendered level matches the browser's image within a stated tolerance
+- zero new dependencies; `#![forbid(unsafe_code)]` holds in the kernel
+
+---
+
+*The mesh is soup, the growth is integers, and the pentagons are the only
+thing that never moves.*
+
+**P=12 · χ=2 · E/V=3/2 · counting is not closing.**

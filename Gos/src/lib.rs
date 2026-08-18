@@ -52,6 +52,7 @@ pub mod dashboard;
 pub mod eml;
 pub mod fab;
 pub mod font;
+pub mod genesis;
 pub mod judge;
 pub mod ladder;
 pub mod layout;

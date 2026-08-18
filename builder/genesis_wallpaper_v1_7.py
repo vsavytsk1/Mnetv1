@@ -2245,7 +2245,17 @@ def face_growth(F, P, op):
     if op == "hex":
         return P + 7 * H, P
     if op == "pent":
-        return H + 7 * P, 0
+        # v1.7.1 FIX. Shipped as (H + 7*P, 0): it granted each pentagon SEVEN
+        # children and then reported P'=0 -- a shell with no pentagons, which
+        # Euler forbids, and which poisons every later step of predict_ops.
+        # The operator preserves ARITY: a pentagon yields one pentagon plus
+        # five hexagons (six faces, net +5), exactly as a hexagon yields one
+        # hexagon plus six. So P is untouched and only H grows.
+        #   F' = F + 5P,  P' = P
+        # Checked against the browser's own log, which the "all"/"6s" lines
+        # above were verified against but this line never was:
+        #   2352992 --5s--> 2353052 --5s--> 2353112, P=12 throughout.
+        return H + 6 * P, P
     raise SystemExit("  unknown op %r -- use all | hex | pent" % op)
 
 
