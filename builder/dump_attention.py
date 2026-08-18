@@ -45,6 +45,7 @@ session log before you reach for a bigger checkpoint.
 """
 
 import argparse
+import os
 import json
 import sys
 
@@ -134,7 +135,9 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser(description="dump attention for attentium_v0_1.html")
     ap.add_argument("--model", default="meta-llama/Llama-3.2-1B")
     ap.add_argument("--prompt", default="A fluffy blue creature roamed the verdant forest")
-    ap.add_argument("--out", default="attn.json")
+    ap.add_argument("--out", default=os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                    "..", "Gos", "runs", "attn.json"),
+                    help="default lands in Gos/runs/ -- the gitignored payload lane")
     ap.add_argument("--threshold", type=float, default=0.01,
                     help="zero weights below this (default 0.01)")
     ap.add_argument("--max-tokens", type=int, default=48)
@@ -147,8 +150,14 @@ if __name__ == "__main__":
         sys.exit(check(a.check))
 
     d = build(a.model, a.prompt, a.threshold, a.max_tokens, a.layers, a.heads)
+    os.makedirs(os.path.dirname(a.out) or '.', exist_ok=True)
     with open(a.out, "w", encoding="utf-8", newline="\n") as fh:
         json.dump(d, fh, separators=(",", ":"))
     import os
     print("  wrote      : %s  (%.2f MB)" % (a.out, os.path.getsize(a.out) / 2**20))
     print("  now drag it onto shell/attentium_v0_1.html")
+    # THE MAINFRAME RULE: no matter how small or big, we triplicate.
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    import vault
+    vault.save(a.out)
+

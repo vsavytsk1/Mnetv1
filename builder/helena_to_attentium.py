@@ -125,6 +125,11 @@ def main():
     print("  wires : %d total   1-cos range [%.2e, %.2e]" % (len(wires), min(oms), max(oms)))
     print("  wrote : %s  (%.2f MB)" % (path, os.path.getsize(path) / 2**20))
     print("  drag it onto shell/attentium_v0_3.html")
+    # THE MAINFRAME RULE: no matter how small or big, we triplicate.
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    import vault
+    vault.save(path)
+
 
 
 if __name__ == "__main__":
