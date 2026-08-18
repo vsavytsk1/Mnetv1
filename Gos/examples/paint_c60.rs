@@ -69,7 +69,7 @@ fn main() -> std::io::Result<()> {
         paint_swatches(&mut cv, &pal);
 
         let file = format!("c60_{}.png", pal.name);
-        cv.write_png(&file)?;
+        cv.write_png(out_path(&file))?;
         println!(
             "{:<12} {:<10} {:>18x}  {}",
             pal.name,
@@ -160,4 +160,18 @@ fn paint_swatches(cv: &mut Canvas, pal: &Palette) {
         cv.fill_rect(x, top, wid - 2, hgt, *c);
         cv.rect(x, top, wid - 2, hgt, pal.border);
     }
+}
+
+/// Where a render belongs: `runs/<example>/`, created on demand.
+///
+/// `cargo run --example X` inherits the shell's CWD, so renders used to pile
+/// up loose in the crate root -- 101 MB of them, ignored by `/*.png` but never
+/// traced. Ignored is not accounted for. Routing the path here makes the trace
+/// structural instead of a habit someone has to remember.
+fn out_path(name: &str) -> std::path::PathBuf {
+    let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("runs")
+        .join(module_path!().rsplit("::").next().unwrap_or("examples"));
+    let _ = std::fs::create_dir_all(&dir);
+    dir.join(name)
 }

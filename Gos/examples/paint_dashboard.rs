@@ -144,7 +144,21 @@ fn main() -> std::io::Result<()> {
         println!("  - {g}");
     }
 
-    let (kw, kh, kn) = cv.write_png_4k("dashboard_skeleton.png")?;
+    let (kw, kh, kn) = cv.write_png_4k(out_path("dashboard_skeleton.png"))?;
     println!("\nwrote dashboard_skeleton.png + _4k.png  {kw}x{kh}  (exact {kn}x integer upscale)");
     Ok(())
+}
+
+/// Where a render belongs: `runs/<example>/`, created on demand.
+///
+/// `cargo run --example X` inherits the shell's CWD, so renders used to pile
+/// up loose in the crate root -- 101 MB of them, ignored by `/*.png` but never
+/// traced. Ignored is not accounted for. Routing the path here makes the trace
+/// structural instead of a habit someone has to remember.
+fn out_path(name: &str) -> std::path::PathBuf {
+    let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("runs")
+        .join(module_path!().rsplit("::").next().unwrap_or("examples"));
+    let _ = std::fs::create_dir_all(&dir);
+    dir.join(name)
 }
