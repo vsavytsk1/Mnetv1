@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ATTENTIUM v0.2 &middot; the fold onto the C60</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  :root{ --bg:#050510; --panel:rgba(5,5,16,.92); --edge:#1a1f2e;
+    --cyan:#00d4ff; --gold:#ffd700; --pink:#ff69b4; --green:#7fff7f;
+    --red:#ff5a5a; --dim:rgba(220,228,240,.55); }
+  html,body{height:100%}
+  body{background:var(--bg);color:#e0e6f0;font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:11px;overflow:hidden}
+  canvas#cv{display:block;position:fixed;inset:0;touch-action:none}
+  #hud{position:fixed;top:12px;left:12px;z-index:10;pointer-events:none;max-width:350px}
+  #hud .title{font-size:13px;color:var(--cyan);letter-spacing:.09em;margin-bottom:2px}
+  #hud .sub{color:rgba(255,105,180,.75);font-size:9px;letter-spacing:.05em;margin-bottom:6px}
+  #hud .info{color:var(--dim);line-height:1.65}
+  #hud .info b{color:var(--gold)} #hud .info .c{color:var(--cyan)}
+  #hud .info .p{color:var(--pink)} #hud .info .g{color:var(--green)}
+  #hud .info .d{color:rgba(220,228,240,.32)}
+  #src{position:fixed;top:12px;right:12px;z-index:12;max-width:340px;padding:9px 12px;
+    border:1px solid #4a1a1a;background:#180a0a;border-radius:5px;color:#ffb0b0;font-size:10px;line-height:1.6}
+  #src.real{border-color:#1a3a26;background:#08140d;color:var(--green)}
+  #src b{color:var(--red);letter-spacing:.06em} #src.real b{color:var(--green)}
+  #caveat{position:fixed;right:12px;bottom:52px;z-index:11;max-width:340px;
+    padding:8px 11px;border:1px solid #3a3018;background:#12100a;border-radius:5px;
+    color:#c9b98a;font-size:9.5px;line-height:1.6}
+  #caveat b{color:var(--gold)} #caveat i{color:#e0d3a8;font-style:normal}
+  #log{position:fixed;left:12px;top:230px;z-index:10;background:rgba(5,5,16,.82);
+    border:1px solid #241016;border-radius:4px;padding:7px 10px;max-width:320px;
+    max-height:20vh;overflow-y:auto;font-size:10px;line-height:1.5;color:rgba(255,176,120,.8)}
+  #log:empty{display:none}
+  #log .ok{color:var(--green)} #log .w{color:var(--gold)} #log .e{color:var(--red)}
+  #bar{position:fixed;left:0;right:0;bottom:0;z-index:12;background:var(--panel);
+    border-top:1px solid var(--edge);padding:7px 12px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+  .btn{background:#0d0d16;color:#6a6a7a;border:1px solid #26263a;border-radius:3px;
+    padding:4px 11px;font-family:inherit;font-size:11px;cursor:pointer;transition:all .13s;white-space:nowrap}
+  .btn:hover{background:#15151f;border-color:#4a4a66;color:#c9c9dc}
+  .btn.on{background:var(--cyan);color:#050510;border-color:var(--cyan)}
+  .btn.pent.on{background:var(--pink);color:#050510;border-color:var(--pink)}
+  .btn.seam.on{background:var(--gold);color:#050510;border-color:var(--gold)}
+  .lbl{color:rgba(220,228,240,.4);text-transform:uppercase;letter-spacing:.1em;font-size:9px;margin:0 1px}
+  .sep{width:1px;height:20px;background:var(--edge);margin:0 3px}
+  input[type=range]{width:84px;height:3px;-webkit-appearance:none;appearance:none;background:#243;border-radius:2px;outline:none;vertical-align:middle}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:11px;height:11px;border-radius:50%;background:var(--cyan);cursor:pointer;border:1px solid #050510}
+  input[type=range]::-moz-range-thumb{width:11px;height:11px;border:0;border-radius:50%;background:var(--cyan);cursor:pointer}
+  .val{color:var(--gold);min-width:34px;display:inline-block;text-align:right}
+  #drop{position:fixed;inset:0;z-index:20;display:none;align-items:center;justify-content:center;
+    background:rgba(5,5,16,.9);color:var(--cyan);font-size:15px;letter-spacing:.1em;border:2px dashed var(--cyan)}
+  #drop.show{display:flex}
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+
+<div id="hud">
+  <div class="title">ATTENTIUM v0.2 &middot; the fold onto the C60</div>
+  <div class="sub">the sequence walks the surface &middot; attention cuts through the inside</div>
+  <div class="info" id="info"></div>
+</div>
+
+<div id="src"><b>SYNTHETIC DATA &mdash; NOT A MODEL</b><br>
+Nothing here has been through a transformer. <b>Any pattern is one I put there.</b>
+Drop a JSON dump from builder/dump_attention.py to replace it.</div>
+
+<div id="caveat">
+<b>WHAT THE FOLD IS, AND WHAT IT IS NOT</b><br>
+<i>EXACT:</i> the C60 graph is Hamiltonian, so 60 tokens map onto it with every
+consecutive pair landing on a real edge. Audited at boot &mdash; 60 visited,
+0 repeats, 0 non-edges. Locality is perfect, not approximate.<br>
+<i>DESIGN CHOICE:</i> this is <b>one</b> Hamiltonian cycle of many. A different
+one draws a different picture and is equally valid.<br>
+<i>DECLARED ARTIFACT:</i> a cycle wraps &mdash; token 59 sits beside token 0.
+Text does not wrap. That closing edge is drawn <b>dashed red</b>: a lie the
+geometry tells, not one the data told.<br>
+<i>LIMIT:</i> 60 slots. Longer prompts are truncated, and the HUD says by how many.<br>
+<i>MEASURED WEAKNESS:</i> chord LENGTH carries almost no meaning. Correlation
+between sequence gap and geometric distance is <b>r = +0.115</b> over all 1,770
+pairs &mdash; a gap of 10 and a gap of 45 land at similar distances. The fold
+guarantees <b>adjacency</b> and essentially nothing beyond it.
+<b>Read the chords as connections, never as distances.</b>
+</div>
+
+<div id="log"></div>
+
+<div id="bar">
+  <span class="lbl">draw</span>
+  <button class="btn pent on" id="b_pent">12 Ribs</button>
+  <button class="btn on" id="b_shell">Shell</button>
+  <button class="btn seam on" id="b_seam">Fold seam</button>
+  <button class="btn on" id="b_chord">Chords</button>
+  <button class="btn" id="b_spin">Spin</button>
+  <span class="sep"></span>
+  <span class="lbl">layer</span><input type="range" id="s_layer" min="-1" max="7" step="1" value="-1"><span class="val" id="v_layer">all</span>
+  <span class="lbl">cut</span><input type="range" id="s_cut" min="0" max="0.5" step="0.005" value="0.06"><span class="val" id="v_cut">0.06</span>
+  <span class="sep"></span>
+  <button class="btn" id="b_reseed">Reseed</button>
+</div>
+<div id="drop">drop the attention dump</div>
+
+<script>
+"use strict";
+/* ATTENTIUM v0.2 -- fold the token sequence onto the C60, let attention cut
+   straight through the middle.
+
+   THE ALGORITHM, and it is not a heuristic. The truncated icosahedron's graph
+   is HAMILTONIAN: a closed walk visits all 60 vertices exactly once, every
+   step along a real edge. So a token sequence lies on the shell with PERFECT
+   locality -- t and t+1 are always graph-neighbours. That is the fold. Found
+   by DFS, verified at generation, and re-audited here at boot because a claim
+   in a data file is not evidence.
+
+   THE PENTAGONS ARE NOT DATA. Euler forces exactly 12 and they carry all the
+   curvature -- 4pi total, pi/3 each. They are the structural constraint that
+   lets a hexagonal sheet close at all. Nothing is placed ON them. They are
+   drawn in pink as what they are: ribs.
+
+   THE CHORDS. Consecutive tokens run along the surface (the gold seam).
+   Everything else -- token i attending to a distant token j -- cuts through
+   the INTERIOR. Surface carries the sequence; the inside carries attention. */
+
+// C60 fold data -- GENERATED, do not hand-edit.
+// 60 vertices on the unit sphere, 90 edges, 12 pentagons, and one
+// Hamiltonian cycle: the token sequence laid on the shell with every
+// consecutive pair on a real edge. Verified at generation AND at boot.
+var C60_VERTS = [[-0.979432, 0.0, -0.201774], [-0.979432, 0.0, 0.201774], [-0.854729, -0.326477, -0.403548], [-0.854729, -0.326477, 0.403548], [-0.854729, 0.326477, -0.403548], [-0.854729, 0.326477, 0.403548], [-0.730026, -0.652955, -0.201774], [-0.730026, -0.652955, 0.201774], [-0.730026, 0.652955, -0.201774], [-0.730026, 0.652955, 0.201774], [-0.652955, -0.201774, -0.730026], [-0.652955, -0.201774, 0.730026], [-0.652955, 0.201774, -0.730026], [-0.652955, 0.201774, 0.730026], [-0.403548, -0.854729, -0.326477], [-0.403548, -0.854729, 0.326477], [-0.403548, 0.854729, -0.326477], [-0.403548, 0.854729, 0.326477], [-0.326477, -0.403548, -0.854729], [-0.326477, -0.403548, 0.854729], [-0.326477, 0.403548, -0.854729], [-0.326477, 0.403548, 0.854729], [-0.201774, -0.979432, 0.0], [-0.201774, -0.730026, -0.652955], [-0.201774, -0.730026, 0.652955], [-0.201774, 0.730026, -0.652955], [-0.201774, 0.730026, 0.652955], [-0.201774, 0.979432, 0.0], [0.0, -0.201774, -0.979432], [0.0, -0.201774, 0.979432], [0.0, 0.201774, -0.979432], [0.0, 0.201774, 0.979432], [0.201774, -0.979432, 0.0], [0.201774, -0.730026, -0.652955], [0.201774, -0.730026, 0.652955], [0.201774, 0.730026, -0.652955], [0.201774, 0.730026, 0.652955], [0.201774, 0.979432, 0.0], [0.326477, -0.403548, -0.854729], [0.326477, -0.403548, 0.854729], [0.326477, 0.403548, -0.854729], [0.326477, 0.403548, 0.854729], [0.403548, -0.854729, -0.326477], [0.403548, -0.854729, 0.326477], [0.403548, 0.854729, -0.326477], [0.403548, 0.854729, 0.326477], [0.652955, -0.201774, -0.730026], [0.652955, -0.201774, 0.730026], [0.652955, 0.201774, -0.730026], [0.652955, 0.201774, 0.730026], [0.730026, -0.652955, -0.201774], [0.730026, -0.652955, 0.201774], [0.730026, 0.652955, -0.201774], [0.730026, 0.652955, 0.201774], [0.854729, -0.326477, -0.403548], [0.854729, -0.326477, 0.403548], [0.854729, 0.326477, -0.403548], [0.854729, 0.326477, 0.403548], [0.979432, 0.0, -0.201774], [0.979432, 0.0, 0.201774]];
+var C60_EDGES = [[0, 1], [0, 2], [0, 4], [1, 3], [1, 5], [2, 6], [2, 10], [3, 7], [3, 11], [4, 8], [4, 12], [5, 9], [5, 13], [6, 7], [6, 14], [7, 15], [8, 9], [8, 16], [9, 17], [10, 12], [10, 18], [11, 13], [11, 19], [12, 20], [13, 21], [14, 22], [14, 23], [15, 22], [15, 24], [16, 25], [16, 27], [17, 26], [17, 27], [18, 23], [18, 28], [19, 24], [19, 29], [20, 25], [20, 30], [21, 26], [21, 31], [22, 32], [23, 33], [24, 34], [25, 35], [26, 36], [27, 37], [28, 30], [28, 38], [29, 31], [29, 39], [30, 40], [31, 41], [32, 42], [32, 43], [33, 38], [33, 42], [34, 39], [34, 43], [35, 40], [35, 44], [36, 41], [36, 45], [37, 44], [37, 45], [38, 46], [39, 47], [40, 48], [41, 49], [42, 50], [43, 51], [44, 52], [45, 53], [46, 48], [46, 54], [47, 49], [47, 55], [48, 56], [49, 57], [50, 51], [50, 54], [51, 55], [52, 53], [52, 56], [53, 57], [54, 58], [55, 59], [56, 58], [57, 59], [58, 59]];
+var C60_HAMPATH = [0, 1, 3, 7, 6, 2, 10, 12, 20, 25, 16, 27, 17, 26, 21, 31, 29, 39, 34, 43, 32, 42, 33, 38, 46, 48, 56, 52, 53, 57, 59, 58, 54, 50, 51, 55, 47, 49, 41, 36, 45, 37, 44, 35, 40, 30, 28, 18, 23, 14, 22, 15, 24, 19, 11, 13, 5, 9, 8, 4];
+var C60_PENTS = [[0, 2, 10, 12, 4], [1, 3, 11, 13, 5], [6, 7, 15, 22, 14], [8, 9, 17, 27, 16], [18, 23, 33, 38, 28], [19, 24, 34, 39, 29], [20, 25, 35, 40, 30], [21, 26, 36, 41, 31], [32, 42, 50, 51, 43], [37, 44, 52, 53, 45], [46, 48, 56, 58, 54], [47, 49, 57, 59, 55]];
+
+var CV=document.getElementById('cv'), CX=CV.getContext('2d');
+var W=0,H=0,DPR=1,cx=0,cy=0,S=1;
+function resize(){
+  DPR=Math.max(1,Math.min(2,window.devicePixelRatio||1));
+  W=window.innerWidth||900; H=window.innerHeight||600;
+  CV.width=Math.floor(W*DPR); CV.height=Math.floor(H*DPR);
+  CV.style.width=W+"px"; CV.style.height=H+"px";
+  CX.setTransform(DPR,0,0,DPR,0,0); cx=W/2; cy=H/2; S=0.40*Math.min(W,H);
+}
+window.addEventListener('resize',function(){resize();draw();});
+
+var LOG=document.getElementById('log');
+function log(m,c){var d=document.createElement('div');if(c)d.className=c;d.innerHTML=m;
+  LOG.insertBefore(d,LOG.firstChild); while(LOG.childNodes.length>10)LOG.removeChild(LOG.lastChild);}
+
+/* ---- audit the baked fold. a claim in a file is not evidence. ------------ */
+var ESET={};
+for(var _e=0;_e<C60_EDGES.length;_e++){
+  var _a=C60_EDGES[_e][0], _b=C60_EDGES[_e][1];
+  ESET[Math.min(_a,_b)+"_"+Math.max(_a,_b)]=1;
+}
+function auditFold(){
+  var seen={},k,dup=0,bad=0,n=C60_HAMPATH.length;
+  for(k=0;k<n;k++){
+    if(seen[C60_HAMPATH[k]]) dup++; seen[C60_HAMPATH[k]]=1;
+    var u=C60_HAMPATH[k], v=C60_HAMPATH[(k+1)%n];
+    if(!ESET[Math.min(u,v)+"_"+Math.max(u,v)]) bad++;
+  }
+  return {n:n,dup:dup,bad:bad,chi:C60_VERTS.length-C60_EDGES.length+32,pents:C60_PENTS.length};
+}
+var AUDIT=auditFold();
+
+/* ---- data ---------------------------------------------------------------- */
+var M=null, RNG=1;
+function rnd(){RNG=(RNG*1664525+1013904223)>>>0;return RNG/4294967296;}
+function synth(nTok,nLay,nHead,seed){
+  RNG=seed>>>0||1;
+  var words=["A","fluffy","blue","creature","roamed","the","verdant","forest","and",
+    "the","sky","turned","slowly","to","amber","light","while","something","older",
+    "than","language","watched","from","the","hexagons","without","moving","or",
+    "needing","to","because","the","shape","was","already","closed","and","twelve",
+    "was","never","a","choice","only","a","receipt","the","surface","hands","you",
+    "when","it","agrees","to","stop","being","flat","for","your","sake","now"];
+  var toks=[],i,j,L,Hh;
+  for(i=0;i<nTok;i++) toks.push(words[i%words.length]);
+  var attn=[];
+  for(L=0;L<nLay;L++){ var heads=[];
+    for(Hh=0;Hh<nHead;Hh++){ var kind=(L+Hh)%3, rows=[];
+      for(i=0;i<nTok;i++){ var row=new Float32Array(nTok), sum=0;
+        for(j=0;j<=i;j++){ var w;
+          if(kind===0)      w=Math.exp(-(i-j)*(i-j)/4.0);           /* local window */
+          else if(kind===1) w=(j===0?6.0:0.25)+rnd()*0.15;          /* attention sink */
+          else              w=0.15+0.85*Math.exp(-Math.abs((i-j)-(2+Hh%6))/1.5); /* long range */
+          w*=(0.85+0.3*rnd()); row[j]=w; sum+=w; }
+        for(j=0;j<=i;j++) row[j]/=(sum||1);
+        rows.push(row); }
+      heads.push(rows); }
+    attn.push(heads); }
+  return {model:"(synthetic generator)",tokens:toks,n_layers:nLay,n_heads:nHead,
+          attn:attn,synthetic:true};
+}
+
+/* ---- geometry ------------------------------------------------------------ */
+var yaw=0.6,pitch=-0.25,zoom=1.0,panX=0,panY=0,spin=false,CAMD=5;
+function rot(p){var cp=Math.cos(pitch),sp=Math.sin(pitch),cw=Math.cos(yaw),sw=Math.sin(yaw);
+  var y1=p[1]*cp-p[2]*sp, z1=p[1]*sp+p[2]*cp;
+  return [p[0]*cw+z1*sw, y1, -p[0]*sw+z1*cw];}
+function proj(p){var r=rot(p),f=CAMD/(CAMD-r[2]);
+  return {x:cx+panX+r[0]*S*zoom*f, y:cy+panY-r[1]*S*zoom*f, z:r[2]};}
+/* each layer gets its own shell: inner = early, outer = late */
+function shellR(L){ if(!M) return 1; return 0.42+0.58*(L/Math.max(1,M.n_layers-1)); }
+function vpos(vi,L){var r=shellR(L),v=C60_VERTS[vi];return [v[0]*r,v[1]*r,v[2]*r];}
+function tokVert(t){ return C60_HAMPATH[t % C60_HAMPATH.length]; }
+
+var showPent=true,showShell=true,showSeam=true,showChord=true,fLayer=-1,cut=0.06;
+
+function draw(){
+  CX.fillStyle="#050510"; CX.fillRect(0,0,W,H);
+  if(!M) return;
+  var nT=Math.min(M.tokens.length,60), nL=M.n_layers, i,j,L,Hh,k;
+  var LO=(fLayer<0?0:fLayer), HI=(fLayer<0?nL:fLayer+1);
+
+  if(showShell){
+    for(L=LO;L<HI;L++){
+      var t=L/Math.max(1,nL-1);
+      CX.strokeStyle="rgba(0,212,255,"+(0.05+0.11*t).toFixed(3)+")"; CX.lineWidth=1;
+      for(k=0;k<C60_EDGES.length;k++){
+        var p=proj(vpos(C60_EDGES[k][0],L)), q=proj(vpos(C60_EDGES[k][1],L));
+        CX.beginPath(); CX.moveTo(p.x,p.y); CX.lineTo(q.x,q.y); CX.stroke();
+      }
+    }
+  }
+
+  /* the 12 ribs. structural, never data. outer shell only. */
+  if(showPent){
+    var Lp=HI-1;
+    for(k=0;k<C60_PENTS.length;k++){
+      var f=C60_PENTS[k];
+      CX.beginPath();
+      for(i=0;i<f.length;i++){ var pp=proj(vpos(f[i],Lp));
+        if(i===0) CX.moveTo(pp.x,pp.y); else CX.lineTo(pp.x,pp.y); }
+      CX.closePath();
+      CX.fillStyle="rgba(255,105,180,.08)"; CX.fill();
+      CX.strokeStyle="rgba(255,105,180,.55)"; CX.lineWidth=1.6; CX.stroke();
+    }
+  }
+
+  /* ATTENTION AS INTERIOR CHORDS */
+  var drawn=0;
+  if(showChord){
+    for(L=LO;L<HI;L++){
+      for(Hh=0;Hh<M.n_heads;Hh++){
+        var rows=M.attn[L][Hh], hue=(Hh/Math.max(1,M.n_heads))*300;
+        for(i=0;i<rows.length&&i<nT;i++){
+          var row=rows[i];
+          for(j=0;j<=i&&j<nT;j++){
+            var w=row[j]; if(w<cut) continue;
+            if(i-j===1) continue;   /* consecutive is the seam, drawn once */
+            var a=proj(vpos(tokVert(j),L)), b=proj(vpos(tokVert(i),L));
+            CX.strokeStyle="hsla("+hue.toFixed(0)+",92%,64%,"+Math.min(0.85,w*2.0).toFixed(3)+")";
+            CX.lineWidth=Math.max(0.4,w*3.2);
+            CX.beginPath(); CX.moveTo(a.x,a.y); CX.lineTo(b.x,b.y); CX.stroke();
+            drawn++;
+          }
+        }
+      }
+    }
+  }
+
+  /* the fold seam: the sequence walking the surface */
+  if(showSeam){
+    var Ls=HI-1;
+    CX.setLineDash([]); CX.strokeStyle="rgba(255,215,0,.85)"; CX.lineWidth=2.2;
+    CX.beginPath();
+    for(k=0;k<nT;k++){ var ps=proj(vpos(tokVert(k),Ls));
+      if(k===0) CX.moveTo(ps.x,ps.y); else CX.lineTo(ps.x,ps.y); }
+    CX.stroke();
+    if(nT===60){   /* the wrap is an artifact of the cycle. mark it as one. */
+      var pa=proj(vpos(tokVert(59),Ls)), pb=proj(vpos(tokVert(0),Ls));
+      CX.setLineDash([4,4]); CX.strokeStyle="rgba(255,90,90,.75)"; CX.lineWidth=1.6;
+      CX.beginPath(); CX.moveTo(pa.x,pa.y); CX.lineTo(pb.x,pb.y); CX.stroke();
+      CX.setLineDash([]);
+    }
+    var p0=proj(vpos(tokVert(0),Ls));
+    CX.fillStyle="#ffd700"; CX.beginPath(); CX.arc(p0.x,p0.y,4,0,6.2832); CX.fill();
+  }
+
+  var Lv=HI-1;
+  for(k=0;k<nT;k++){
+    var pv=proj(vpos(tokVert(k),Lv)), tz=Math.max(0,Math.min(1,(pv.z+1)/2));
+    CX.fillStyle="rgba(127,255,127,"+(0.30+tz*0.60).toFixed(3)+")";
+    CX.beginPath(); CX.arc(pv.x,pv.y,2.1,0,6.2832); CX.fill();
+  }
+
+  hud(drawn,nT);
+}
+
+function hud(drawn,nT){
+  var full=0,L,Hh,i;
+  for(L=0;L<M.n_layers;L++) for(Hh=0;Hh<M.n_heads;Hh++)
+    for(i=0;i<M.attn[L][Hh].length&&i<nT;i++) full+=(i+1);
+  document.getElementById('info').innerHTML=
+    "substrate <b>C60</b>&nbsp; V <span class='c'>"+C60_VERTS.length+"</span>"+
+      "&nbsp; E <span class='c'>"+C60_EDGES.length+"</span>&nbsp; F <span class='c'>32</span>"+
+      "&nbsp; chi <span class='g'>"+AUDIT.chi+"</span><br>"+
+    "pentagons <span class='p'>"+AUDIT.pents+"</span> "+
+      "<span class='d'>ribs, not data</span><br>"+
+    "THE FOLD&nbsp; <span class='g'>Hamiltonian</span> &mdash; "+AUDIT.n+" visited, "+
+      "<b>"+AUDIT.dup+"</b> repeats, <b>"+AUDIT.bad+"</b> non-edges<br>"+
+    "<span class='d'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;audited at boot, not asserted</span><br>"+
+    "tokens&nbsp;&nbsp;&nbsp; <span class='c'>"+nT+"</span>/60 slots"+
+      (M.tokens.length>60?" <span class='p'>("+(M.tokens.length-60)+" truncated)</span>":"")+"<br>"+
+    "layers&nbsp;&nbsp;&nbsp; <span class='c'>"+M.n_layers+"</span> shells, r "+
+      shellR(0).toFixed(2)+" &rarr; "+shellR(M.n_layers-1).toFixed(2)+"<br>"+
+    "chords&nbsp;&nbsp;&nbsp; <span class='g'>"+drawn.toLocaleString()+"</span> drawn of "+
+      "<span class='p'>"+full.toLocaleString()+"</span> at cut "+cut.toFixed(3);
+}
+
+/* ---- load ---------------------------------------------------------------- */
+function adopt(m,how){
+  M=m; var s=document.getElementById('src');
+  if(M.synthetic){ s.className="";
+    s.innerHTML="<b>SYNTHETIC DATA &mdash; NOT A MODEL</b><br>Nothing here has been "+
+      "through a transformer. <b>Any pattern is one I put there.</b> Drop a JSON dump "+
+      "from builder/dump_attention.py to replace it."; }
+  else { s.className="real";
+    s.innerHTML="<b>REAL ATTENTION</b><br>model: "+M.model+
+      "<br>These weights came out of a forward pass."; }
+  var sl=document.getElementById('s_layer'); sl.max=M.n_layers-1; sl.value=-1; fLayer=-1;
+  document.getElementById('v_layer').textContent="all";
+  if(M.tokens.length>60)
+    log("<span class='w'>"+M.tokens.length+" tokens but a C60 has 60 slots &mdash; TRUNCATED. "+
+        "A longer fold needs a bigger Goldberg shell.</span>","w");
+  log(how, M.synthetic?"w":"ok");
+  draw();
+}
+function validate(o){
+  if(!o||typeof o!=="object") throw new Error("not an object");
+  ["tokens","n_layers","n_heads","attn"].forEach(function(k){
+    if(!(k in o)) throw new Error("missing key: "+k); });
+  if(o.attn.length!==o.n_layers) throw new Error("attn layers "+o.attn.length+" != n_layers "+o.n_layers);
+  if(o.attn[0].length!==o.n_heads) throw new Error("attn heads "+o.attn[0].length+" != n_heads "+o.n_heads);
+  var rows=o.attn[0][0],bad=0,i,j;
+  for(i=0;i<rows.length;i++) for(j=i+1;j<rows.length;j++) if(rows[i][j]>1e-6) bad++;
+  if(bad) log("<span class='w'>"+bad+" upper-triangle weights &gt; 1e-6 &mdash; this dump is NOT "+
+              "causally masked. Drawing anyway.</span>","w");
+  o.synthetic=false; if(!o.model) o.model="(unnamed dump)"; return o;
+}
+var DROP=document.getElementById('drop');
+window.addEventListener('dragover',function(e){e.preventDefault();DROP.classList.add('show');});
+window.addEventListener('dragleave',function(e){if(e.target===DROP)DROP.classList.remove('show');});
+window.addEventListener('drop',function(e){
+  e.preventDefault(); DROP.classList.remove('show');
+  var f=e.dataTransfer.files&&e.dataTransfer.files[0]; if(!f) return;
+  var r=new FileReader();
+  r.onload=function(){
+    try{ adopt(validate(JSON.parse(r.result)),"loaded "+f.name); }
+    catch(err){ log("<span class='e'>REFUSED "+f.name+": "+err.message+"</span>","e"); } };
+  r.readAsText(f);
+});
+
+/* ---- controls ------------------------------------------------------------ */
+function tog(id,get,set){ var b=document.getElementById(id);
+  b.addEventListener('click',function(){ set(!get()); b.classList.toggle('on',get()); draw(); }); }
+tog('b_pent', function(){return showPent;},  function(v){showPent=v;});
+tog('b_shell',function(){return showShell;}, function(v){showShell=v;});
+tog('b_seam', function(){return showSeam;},  function(v){showSeam=v;});
+tog('b_chord',function(){return showChord;}, function(v){showChord=v;});
+document.getElementById('b_spin').addEventListener('click',function(){
+  spin=!spin; this.classList.toggle('on',spin); if(spin) tick(); });
+document.getElementById('s_layer').addEventListener('input',function(){
+  fLayer=+this.value; document.getElementById('v_layer').textContent=fLayer<0?"all":"L"+fLayer; draw(); });
+document.getElementById('s_cut').addEventListener('input',function(){
+  cut=+this.value; document.getElementById('v_cut').textContent=cut.toFixed(3); draw(); });
+document.getElementById('b_reseed').addEventListener('click',function(){
+  adopt(synth(60,8,4,(Math.random()*1e9)|0),"reseeded SYNTHETIC"); });
+
+var drag=false,lx=0,ly=0;
+CV.addEventListener('pointerdown',function(e){drag=true;lx=e.clientX;ly=e.clientY;CV.setPointerCapture(e.pointerId);});
+CV.addEventListener('pointerup',function(){drag=false;});
+CV.addEventListener('pointermove',function(e){ if(!drag) return;
+  if(e.shiftKey){ panX+=e.clientX-lx; panY+=e.clientY-ly; }
+  else { yaw+=(e.clientX-lx)*0.006; pitch+=(e.clientY-ly)*0.006;
+         pitch=Math.max(-1.5,Math.min(1.5,pitch)); }
+  lx=e.clientX; ly=e.clientY; draw(); });
+CV.addEventListener('wheel',function(e){ e.preventDefault();
+  zoom*=(e.deltaY<0?1.1:0.9); zoom=Math.max(0.2,Math.min(10,zoom)); draw(); },{passive:false});
+window.addEventListener('keydown',function(e){ var k=e.key.toLowerCase();
+  if(k==='p') document.getElementById('b_pent').click();
+  if(k==='c') document.getElementById('b_chord').click();
+  if(k==='s') document.getElementById('b_spin').click();
+  if(k==='0'){ yaw=0.6;pitch=-0.25;zoom=1;panX=0;panY=0; draw(); } });
+function tick(){ if(!spin) return; yaw+=0.004; draw(); requestAnimationFrame(tick); }
+
+resize();
+adopt(synth(60,8,4,20260818),"booted SYNTHETIC, 60 tokens into 60 slots");
+log("fold audited: "+AUDIT.n+" vertices, "+AUDIT.dup+" repeats, "+AUDIT.bad+
+    " non-edges, chi="+AUDIT.chi+", P="+AUDIT.pents,"ok");
+log("gold = the sequence on the surface. coloured = attention through the "+
+    "inside. pink = the 12 ribs, which carry no data.","ok");
+console.log("%c ATTENTIUM v0.2 -- the fold is Hamiltonian, the pentagons are ribs ",
+  "background:#00d4ff;color:#050510;font-size:13px;font-weight:bold");
+</script>
+</body>
+</html>
