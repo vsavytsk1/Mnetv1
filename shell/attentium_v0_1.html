@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ATTENTIUM v0.1 &middot; the attention DAG, as a mesh</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  :root{ --bg:#050510; --panel:rgba(5,5,16,.92); --edge:#1a1f2e;
+    --cyan:#00d4ff; --gold:#ffd700; --pink:#ff69b4; --green:#7fff7f;
+    --red:#ff5a5a; --dim:rgba(220,228,240,.55); }
+  html,body{height:100%}
+  body{background:var(--bg);color:#e0e6f0;font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:11px;overflow:hidden}
+  canvas#cv{display:block;position:fixed;inset:0;touch-action:none}
+  #hud{position:fixed;top:12px;left:12px;z-index:10;pointer-events:none;max-width:330px}
+  #hud .title{font-size:13px;color:var(--cyan);letter-spacing:.09em;margin-bottom:2px}
+  #hud .sub{color:rgba(255,105,180,.75);font-size:9px;letter-spacing:.05em;margin-bottom:6px}
+  #hud .info{color:var(--dim);line-height:1.65}
+  #hud .info b{color:var(--gold)} #hud .info .c{color:var(--cyan)} #hud .info .p{color:var(--pink)}
+  #hud .info .g{color:var(--green)}
+  /* the loudest thing on the page until real data arrives */
+  #src{position:fixed;top:12px;right:12px;z-index:12;max-width:330px;padding:9px 12px;
+    border:1px solid #4a1a1a;background:#180a0a;border-radius:5px;color:#ffb0b0;
+    font-size:10px;line-height:1.6}
+  #src.real{border-color:#1a3a26;background:#08140d;color:var(--green)}
+  #src b{color:var(--red);letter-spacing:.06em} #src.real b{color:var(--green)}
+  #log{position:fixed;left:12px;top:210px;z-index:10;background:rgba(5,5,16,.82);
+    border:1px solid #241016;border-radius:4px;padding:7px 10px;max-width:300px;
+    max-height:24vh;overflow-y:auto;font-size:10px;line-height:1.5;color:rgba(255,176,120,.8)}
+  #log:empty{display:none}
+  #log .ok{color:var(--green)} #log .w{color:var(--gold)} #log .e{color:var(--red)}
+  #help{position:fixed;right:12px;bottom:56px;z-index:9;color:rgba(220,228,240,.4);
+    font-size:9.5px;text-align:right;line-height:1.6;pointer-events:none}
+  #help b{color:rgba(0,212,255,.7)}
+  #bar{position:fixed;left:0;right:0;bottom:0;z-index:12;background:var(--panel);
+    border-top:1px solid var(--edge);padding:7px 12px;display:flex;align-items:center;
+    gap:6px;flex-wrap:wrap}
+  .btn{background:#0d0d16;color:#6a6a7a;border:1px solid #26263a;border-radius:3px;
+    padding:4px 11px;font-family:inherit;font-size:11px;cursor:pointer;transition:all .13s;white-space:nowrap}
+  .btn:hover{background:#15151f;border-color:#4a4a66;color:#c9c9dc}
+  .btn.on{background:var(--cyan);color:#050510;border-color:var(--cyan)}
+  .btn.res.on{background:var(--gold);color:#050510;border-color:var(--gold)}
+  .btn.act{color:var(--pink);border-color:#3a1a2e}
+  .btn.act:hover{background:#20101a;border-color:var(--pink);color:var(--pink)}
+  .lbl{color:rgba(220,228,240,.4);text-transform:uppercase;letter-spacing:.1em;font-size:9px;margin:0 1px}
+  .sep{width:1px;height:20px;background:var(--edge);margin:0 3px}
+  input[type=range]{width:88px;height:3px;-webkit-appearance:none;appearance:none;
+    background:#243;border-radius:2px;outline:none;vertical-align:middle}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:11px;height:11px;
+    border-radius:50%;background:var(--cyan);cursor:pointer;border:1px solid #050510}
+  input[type=range]::-moz-range-thumb{width:11px;height:11px;border:0;border-radius:50%;background:var(--cyan);cursor:pointer}
+  .val{color:var(--gold);min-width:34px;display:inline-block;text-align:right}
+  #drop{position:fixed;inset:0;z-index:20;display:none;align-items:center;justify-content:center;
+    background:rgba(5,5,16,.9);color:var(--cyan);font-size:15px;letter-spacing:.1em;
+    border:2px dashed var(--cyan)}
+  #drop.show{display:flex}
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+
+<div id="hud">
+  <div class="title">ATTENTIUM v0.1 &middot; the attention DAG</div>
+  <div class="sub">token &times; layer lattice &middot; attention is the graph, not a metaphor</div>
+  <div class="info" id="info"></div>
+</div>
+
+<div id="src"><b>SYNTHETIC DATA &mdash; NOT A MODEL</b><br>
+Nothing here has been through a transformer. These weights come from a
+hand-written generator so the geometry can be built before the data exists.
+<b>Any pattern you see is a pattern I put there.</b><br>
+Drop a JSON attention dump on this window to replace it.</div>
+
+<div id="log"></div>
+
+<div id="help">
+  <b>drag</b> orbit &middot; <b>wheel</b> zoom &middot; <b>0</b> reset<br>
+  <b>A</b> attention &middot; <b>R</b> residual &middot; <b>S</b> spin &middot; <b>L</b> labels<br>
+  <b>drop a .json</b> to load a real dump
+</div>
+
+<div id="bar">
+  <span class="lbl">view</span>
+  <button class="btn on" id="b_attn">Attention</button>
+  <button class="btn res on" id="b_res">Residual &#8593;</button>
+  <button class="btn" id="b_labels">Tokens</button>
+  <button class="btn" id="b_spin">Spin</button>
+  <span class="sep"></span>
+  <span class="lbl">layer</span><input type="range" id="s_layer" min="-1" max="7" step="1" value="-1"><span class="val" id="v_layer">all</span>
+  <span class="lbl">head</span><input type="range" id="s_head" min="-1" max="3" step="1" value="-1"><span class="val" id="v_head">all</span>
+  <span class="lbl">cut</span><input type="range" id="s_cut" min="0" max="0.5" step="0.005" value="0.05"><span class="val" id="v_cut">0.05</span>
+  <span class="sep"></span>
+  <button class="btn act" id="b_reseed">Reseed</button>
+  <button class="btn" id="b_json">Format?</button>
+</div>
+
+<div id="drop">drop the attention dump</div>
+
+<script>
+"use strict";
+/* ATTENTIUM v0.1 -- the attention DAG of a transformer, drawn as a mesh.
+   Zero dependencies. Pure Canvas 2D, hand-rolled 3D, same as every other
+   sim in this shell.
+
+   THE POINT. A transformer's attention matrix IS an adjacency matrix -- see
+   K1 in the SpiderEngineering scroll: "a transformer is already a graph,
+   attention = weighted edge." So there is nothing to invent here. The graph
+   is already in the model; this only draws it.
+
+   THE LATTICE.
+     node (t, L)      token t, after layer L        -> a lattice, not a sphere
+     attention edge   (j,L) -> (i,L)  for j <= i    -> causal, so a DAG
+     residual edge    (t,L) -> (t,L+1)              -> the highway
+
+   Two edge classes, and they mean different things. Residual is how a token
+   carries itself forward. Attention is how tokens read each other. Toggle
+   them separately -- the shape of "what talks to what" is the whole question.
+
+   HONESTY. Until a real dump is loaded, the weights below are SYNTHETIC and
+   the banner says so in red. This is the same discipline as everything else
+   in the cave: a picture that could be mistaken for a measurement must say
+   which one it is. */
+
+var CV = document.getElementById('cv'), CX = CV.getContext('2d');
+var W=0,H=0,DPR=1,cx=0,cy=0,S=1;
+function resize(){
+  DPR=Math.max(1,Math.min(2,window.devicePixelRatio||1));
+  W=window.innerWidth||900; H=window.innerHeight||600;
+  CV.width=Math.floor(W*DPR); CV.height=Math.floor(H*DPR);
+  CV.style.width=W+"px"; CV.style.height=H+"px";
+  CX.setTransform(DPR,0,0,DPR,0,0); cx=W/2; cy=H/2; S=0.42*Math.min(W,H);
+}
+window.addEventListener('resize',function(){resize();draw();});
+
+// ---------------------------------------------------------------- log
+var LOG=document.getElementById('log');
+function log(msg,cls){
+  var d=document.createElement('div');
+  if(cls) d.className=cls;
+  d.innerHTML=msg; LOG.insertBefore(d,LOG.firstChild);
+  while(LOG.childNodes.length>14) LOG.removeChild(LOG.lastChild);
+}
+
+// ---------------------------------------------------------------- the data
+// M = { model, prompt, tokens[], n_layers, n_heads, attn[L][H][i][j], synthetic }
+var M=null, RNG=1;
+function rnd(){ RNG=(RNG*1664525+1013904223)>>>0; return RNG/4294967296; }
+
+function synth(nTok,nLay,nHead,seed){
+  RNG=seed>>>0||1;
+  var toks=[],i,j,L,Hh;
+  var words=["A","fluffy","blue","creature","roamed","the","verdant","forest",
+             "and","the","sky","turned","slowly","to","amber","light"];
+  for(i=0;i<nTok;i++) toks.push(words[i%words.length]);
+  var attn=[];
+  for(L=0;L<nLay;L++){
+    var heads=[];
+    for(Hh=0;Hh<nHead;Hh++){
+      // three declared synthetic behaviours, chosen so the picture is not
+      // uniform mush. NONE of these is measured -- they are hand-written.
+      var kind=(L+Hh)%3;   // 0 local, 1 first-token sink, 2 long-range
+      var rows=[];
+      for(i=0;i<nTok;i++){
+        var row=new Float32Array(nTok), sum=0;
+        for(j=0;j<=i;j++){            // causal mask: j <= i, always
+          var w;
+          if(kind===0)      w=Math.exp(-(i-j)*(i-j)/4.0);            // local window
+          else if(kind===1) w=(j===0?6.0:0.25)+rnd()*0.15;           // attention sink
+          else              w=0.15+0.85*Math.exp(-Math.abs((i-j)-(1+Hh%5))/1.5);
+          w*= (0.85+0.3*rnd());
+          row[j]=w; sum+=w;
+        }
+        for(j=0;j<=i;j++) row[j]/=(sum||1);   // softmax already applied upstream
+        rows.push(row);
+      }
+      heads.push(rows);
+    }
+    attn.push(heads);
+  }
+  return {model:"(synthetic generator)",prompt:toks.join(" "),tokens:toks,
+          n_layers:nLay,n_heads:nHead,attn:attn,synthetic:true};
+}
+
+// -- a real measurement, computed from whatever data is loaded --------------
+// Shannon entropy of each attention row, in bits, averaged. Low = focused,
+// high = diffuse. log2(i+1) is the maximum for row i (uniform over j<=i).
+function meanEntropy(m){
+  var tot=0,n=0,L,Hh,i,j;
+  for(L=0;L<m.n_layers;L++) for(Hh=0;Hh<m.n_heads;Hh++){
+    var rows=m.attn[L][Hh];
+    for(i=0;i<rows.length;i++){
+      var h=0,row=rows[i];
+      for(j=0;j<=i;j++){ var p=row[j]; if(p>1e-12) h-=p*Math.log2(p); }
+      tot+=h; n++;
+    }
+  }
+  return n? tot/n : 0;
+}
+function maxEntropy(m){ // the uniform-attention ceiling, for scale
+  var tot=0,n=0,i,L,Hh;
+  for(L=0;L<m.n_layers;L++) for(Hh=0;Hh<m.n_heads;Hh++)
+    for(i=0;i<m.attn[L][Hh].length;i++){ tot+=Math.log2(i+1); n++; }
+  return n? tot/n : 0;
+}
+
+// ---------------------------------------------------------------- geometry
+var yaw=0.55,pitch=-0.30,zoom=1.0,panX=0,panY=0,spin=false;
+function rot(p){
+  var cp=Math.cos(pitch),sp=Math.sin(pitch),cyw=Math.cos(yaw),syw=Math.sin(yaw);
+  var y1=p[1]*cp-p[2]*sp, z1=p[1]*sp+p[2]*cp;
+  return [p[0]*cyw+z1*syw, y1, -p[0]*syw+z1*cyw];
+}
+var CAMD=5;
+function proj(p){
+  var r=rot(p), f=CAMD/(CAMD-r[2]);
+  return {x:cx+panX+r[0]*S*zoom*f, y:cy+panY-r[1]*S*zoom*f, z:r[2]};
+}
+// node (t, L) -> world. x = token, y = layer (up), z = 0 plane
+function nodePos(t,L){
+  var nT=M.tokens.length, nL=M.n_layers;
+  return [ (t/(nT-1||1)-0.5)*1.9, (L/(nL-1||1)-0.5)*1.5, 0 ];
+}
+
+// ---------------------------------------------------------------- state
+var showAttn=true, showRes=true, showLabels=false;
+var fLayer=-1, fHead=-1, cut=0.05;
+
+function edgeCount(){
+  var n=0,L,Hh,i,j;
+  for(L=0;L<M.n_layers;L++){
+    if(fLayer>=0&&L!==fLayer) continue;
+    for(Hh=0;Hh<M.n_heads;Hh++){
+      if(fHead>=0&&Hh!==fHead) continue;
+      var rows=M.attn[L][Hh];
+      for(i=0;i<rows.length;i++) for(j=0;j<=i;j++) if(rows[i][j]>=cut) n++;
+    }
+  }
+  return n;
+}
+
+// ---------------------------------------------------------------- draw
+function draw(){
+  CX.fillStyle="#050510"; CX.fillRect(0,0,W,H);
+  if(!M) return;
+  var nT=M.tokens.length, nL=M.n_layers, i,j,L,Hh;
+
+  // pre-project the lattice
+  var P=[];
+  for(L=0;L<nL;L++){ P[L]=[]; for(i=0;i<nT;i++) P[L][i]=proj(nodePos(i,L)); }
+
+  // ---- attention edges (within a layer, causal) --------------------------
+  var drawn=0;
+  if(showAttn){
+    for(L=0;L<nL;L++){
+      if(fLayer>=0&&L!==fLayer) continue;
+      for(Hh=0;Hh<M.n_heads;Hh++){
+        if(fHead>=0&&Hh!==fHead) continue;
+        var rows=M.attn[L][Hh];
+        var hue=(Hh/Math.max(1,M.n_heads))*300;
+        for(i=0;i<rows.length;i++){
+          var row=rows[i];
+          for(j=0;j<=i;j++){
+            var w=row[j]; if(w<cut) continue;
+            var a=P[L][j], b=P[L][i];
+            // bow the edge out of plane so same-layer arcs are readable
+            var lift=Math.min(0.45,(i-j)/(nT||1)*1.2);
+            var mid=proj([ (nodePos(j,L)[0]+nodePos(i,L)[0])/2,
+                           nodePos(i,L)[1], -lift ]);
+            CX.strokeStyle="hsla("+hue.toFixed(0)+",90%,62%,"+Math.min(0.9,w*1.8).toFixed(3)+")";
+            CX.lineWidth=Math.max(0.4,w*3);
+            CX.beginPath(); CX.moveTo(a.x,a.y);
+            CX.quadraticCurveTo(mid.x,mid.y,b.x,b.y); CX.stroke();
+            drawn++;
+          }
+        }
+      }
+    }
+  }
+
+  // ---- residual stream (token carries itself upward) ---------------------
+  if(showRes){
+    CX.strokeStyle="rgba(255,215,0,.30)"; CX.lineWidth=1;
+    for(i=0;i<nT;i++){
+      CX.beginPath(); CX.moveTo(P[0][i].x,P[0][i].y);
+      for(L=1;L<nL;L++) CX.lineTo(P[L][i].x,P[L][i].y);
+      CX.stroke();
+    }
+  }
+
+  // ---- nodes -------------------------------------------------------------
+  for(L=0;L<nL;L++) for(i=0;i<nT;i++){
+    var p=P[L][i], t=Math.max(0,Math.min(1,(p.z+1.5)/3));
+    CX.fillStyle="rgba(0,212,255,"+(0.25+t*0.6).toFixed(3)+")";
+    CX.beginPath(); CX.arc(p.x,p.y,1.6,0,6.2832); CX.fill();
+  }
+
+  // ---- token labels along the bottom layer -------------------------------
+  if(showLabels){
+    CX.font="10px ui-monospace,Consolas,monospace"; CX.textAlign="center";
+    for(i=0;i<nT;i++){
+      var p=P[0][i];
+      CX.fillStyle="rgba(220,228,240,.55)";
+      CX.fillText(M.tokens[i],p.x,p.y+14);
+    }
+    CX.textAlign="left";
+  }
+
+  // ---- layer ticks -------------------------------------------------------
+  CX.font="9px ui-monospace,Consolas,monospace"; CX.fillStyle="rgba(220,228,240,.35)";
+  for(L=0;L<nL;L++){ var q=P[L][0]; CX.fillText("L"+L,q.x-26,q.y+3); }
+
+  hud(drawn);
+}
+
+function hud(drawn){
+  var nT=M.tokens.length;
+  var nodes=nT*M.n_layers;
+  var full=0,L,Hh,i;
+  for(L=0;L<M.n_layers;L++) for(Hh=0;Hh<M.n_heads;Hh++)
+    for(i=0;i<nT;i++) full+=(i+1);
+  document.getElementById('info').innerHTML =
+    "model    <b>"+M.model+"</b><br>"+
+    "tokens   <span class='c'>"+nT+"</span>  layers <span class='c'>"+M.n_layers+
+      "</span>  heads <span class='c'>"+M.n_heads+"</span><br>"+
+    "nodes    <b>"+nodes.toLocaleString()+"</b>  <span class='dim'>(token &times; layer)</span><br>"+
+    "edges    <span class='p'>"+full.toLocaleString()+"</span> causal, "+
+      "<span class='g'>"+drawn.toLocaleString()+"</span> drawn at cut "+cut.toFixed(3)+"<br>"+
+    "residual <span class='c'>"+(nT*(M.n_layers-1)).toLocaleString()+"</span><br>"+
+    "acyclic  <span class='g'>YES</span> <span class='dim'>(causal mask: j &lt;= i)</span><br>"+
+    "entropy  <b>"+M._H.toFixed(3)+"</b> / "+M._Hmax.toFixed(3)+" bits "+
+      "<span class='dim'>("+(100*M._H/(M._Hmax||1)).toFixed(1)+"% of uniform)</span>";
+}
+
+// ---------------------------------------------------------------- load
+function adopt(m,how){
+  M=m;
+  M._H=meanEntropy(M); M._Hmax=maxEntropy(M);
+  var s=document.getElementById('src');
+  if(M.synthetic){
+    s.className=""; s.innerHTML="<b>SYNTHETIC DATA &mdash; NOT A MODEL</b><br>"+
+      "Nothing here has been through a transformer. These weights come from a "+
+      "hand-written generator so the geometry can be built before the data "+
+      "exists. <b>Any pattern you see is a pattern I put there.</b><br>"+
+      "Drop a JSON attention dump on this window to replace it.";
+  } else {
+    s.className="real"; s.innerHTML="<b>REAL ATTENTION</b><br>model: "+M.model+
+      "<br>prompt: "+String(M.prompt).slice(0,90)+
+      "<br>These weights came out of a forward pass.";
+  }
+  // resize the filter sliders to the data
+  var sl=document.getElementById('s_layer'); sl.max=M.n_layers-1;
+  var sh=document.getElementById('s_head');  sh.max=M.n_heads-1;
+  fLayer=-1; fHead=-1; sl.value=-1; sh.value=-1;
+  document.getElementById('v_layer').textContent="all";
+  document.getElementById('v_head').textContent="all";
+  log(how+" &mdash; "+M.tokens.length+" tokens, "+M.n_layers+"L &times; "+M.n_heads+
+      "H, entropy "+M._H.toFixed(3)+" bits", M.synthetic?"w":"ok");
+  draw();
+}
+
+function validate(o){
+  if(!o||typeof o!=="object") throw new Error("not an object");
+  ["tokens","n_layers","n_heads","attn"].forEach(function(k){
+    if(!(k in o)) throw new Error("missing key: "+k);
+  });
+  if(!Array.isArray(o.tokens)||!o.tokens.length) throw new Error("tokens must be a non-empty array");
+  if(o.attn.length!==o.n_layers) throw new Error("attn has "+o.attn.length+" layers, n_layers says "+o.n_layers);
+  if(o.attn[0].length!==o.n_heads) throw new Error("attn[0] has "+o.attn[0].length+" heads, n_heads says "+o.n_heads);
+  var rows=o.attn[0][0];
+  if(rows.length!==o.tokens.length) throw new Error("attn rows "+rows.length+" != tokens "+o.tokens.length);
+  // causality is a CLAIM the file makes; check it rather than trust it
+  var bad=0,i,j;
+  for(i=0;i<rows.length;i++) for(j=i+1;j<rows.length;j++)
+    if(rows[i][j]!==undefined && rows[i][j]>1e-6) bad++;
+  if(bad) log("<span class='w'>"+bad+" upper-triangle weights &gt; 1e-6 &mdash; this dump is NOT causally masked. Drawing anyway.</span>","w");
+  o.synthetic=false;
+  if(!o.model) o.model="(unnamed dump)";
+  return o;
+}
+
+var DROP=document.getElementById('drop');
+window.addEventListener('dragover',function(e){e.preventDefault();DROP.classList.add('show');});
+window.addEventListener('dragleave',function(e){if(e.target===DROP)DROP.classList.remove('show');});
+window.addEventListener('drop',function(e){
+  e.preventDefault(); DROP.classList.remove('show');
+  var f=e.dataTransfer.files&&e.dataTransfer.files[0]; if(!f) return;
+  var r=new FileReader();
+  r.onload=function(){
+    try{ adopt(validate(JSON.parse(r.result)), "loaded "+f.name); }
+    catch(err){ log("<span class='e'>REFUSED "+f.name+": "+err.message+"</span>","e"); }
+  };
+  r.readAsText(f);
+});
+
+// ---------------------------------------------------------------- controls
+function tog(id,get,set){
+  var b=document.getElementById(id);
+  b.addEventListener('click',function(){ set(!get()); b.classList.toggle('on',get()); draw(); });
+}
+tog('b_attn',function(){return showAttn;},function(v){showAttn=v;});
+tog('b_res', function(){return showRes;}, function(v){showRes=v;});
+tog('b_labels',function(){return showLabels;},function(v){showLabels=v;});
+document.getElementById('b_spin').addEventListener('click',function(){
+  spin=!spin; this.classList.toggle('on',spin); if(spin) tick();
+});
+document.getElementById('s_layer').addEventListener('input',function(){
+  fLayer=+this.value; document.getElementById('v_layer').textContent=fLayer<0?"all":"L"+fLayer; draw();
+});
+document.getElementById('s_head').addEventListener('input',function(){
+  fHead=+this.value; document.getElementById('v_head').textContent=fHead<0?"all":"H"+fHead; draw();
+});
+document.getElementById('s_cut').addEventListener('input',function(){
+  cut=+this.value; document.getElementById('v_cut').textContent=cut.toFixed(3); draw();
+});
+document.getElementById('b_reseed').addEventListener('click',function(){
+  adopt(synth(16,8,4,(Math.random()*1e9)|0), "reseeded SYNTHETIC");
+});
+document.getElementById('b_json').addEventListener('click',function(){
+  log("expected JSON: {model, prompt, tokens:[], n_layers, n_heads, attn:[L][H][i][j]} "+
+      "&mdash; attn[L][H][i][j] is the weight token i puts on token j. "+
+      "j &gt; i must be 0 (causal). Threshold small values to keep the file sane.","w");
+});
+
+var drag=false,lx=0,ly=0;
+CV.addEventListener('pointerdown',function(e){drag=true;lx=e.clientX;ly=e.clientY;CV.setPointerCapture(e.pointerId);});
+CV.addEventListener('pointerup',  function(e){drag=false;});
+CV.addEventListener('pointermove',function(e){
+  if(!drag) return;
+  if(e.shiftKey){ panX+=e.clientX-lx; panY+=e.clientY-ly; }
+  else { yaw+=(e.clientX-lx)*0.006; pitch+=(e.clientY-ly)*0.006;
+         pitch=Math.max(-1.5,Math.min(1.5,pitch)); }
+  lx=e.clientX; ly=e.clientY; draw();
+});
+CV.addEventListener('wheel',function(e){
+  e.preventDefault(); zoom*= (e.deltaY<0?1.1:0.9);
+  zoom=Math.max(0.15,Math.min(12,zoom)); draw();
+},{passive:false});
+window.addEventListener('keydown',function(e){
+  var k=e.key.toLowerCase();
+  if(k==='a') document.getElementById('b_attn').click();
+  if(k==='r') document.getElementById('b_res').click();
+  if(k==='s') document.getElementById('b_spin').click();
+  if(k==='l') document.getElementById('b_labels').click();
+  if(k==='0'){ yaw=0.55;pitch=-0.30;zoom=1;panX=0;panY=0; draw(); }
+});
+function tick(){ if(!spin) return; yaw+=0.004; draw(); requestAnimationFrame(tick); }
+
+// ---------------------------------------------------------------- boot
+resize();
+adopt(synth(16,8,4,20260818), "booted on SYNTHETIC data");
+log("the lattice is (token &times; layer). horizontal arcs are ATTENTION, "+
+    "vertical gold is the RESIDUAL stream. causal mask makes it a DAG.","ok");
+console.log("%c ATTENTIUM v0.1 -- attention is the graph, not a metaphor ",
+  "background:#00d4ff;color:#050510;font-size:13px;font-weight:bold");
+</script>
+</body>
+</html>
