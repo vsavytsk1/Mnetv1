@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<title>WITNESS 7 - the browser</title>
+<style>
+  body{background:#050510;color:#e0e6f0;font:13px ui-monospace,Consolas,monospace;padding:24px}
+  h1{color:#00d4ff;font-size:15px;letter-spacing:.08em;font-weight:normal}
+  .r{color:#7fff7f} .k{color:#6a6a7a} b{color:#ffd700}
+  pre{background:#0a0a14;border:1px solid #1a1f2e;border-radius:4px;padding:12px;overflow-x:auto}
+</style>
+<h1>WITNESS 7 &mdash; the browser</h1>
+<p class="k">chi(T) = 20T &minus; 30T + (10T + 2). The T terms cancel: 20 &minus; 30 + 10 = 0.<br>
+Whatever engine this page is running in chose every instruction below.</p>
+<pre id="out">running...</pre>
+<script>
+const PROBES = [0, 1, 2, 3, 21, 147, 1029, 7203, 50421, 1000000];
+const chi = (t) => { const v = 20 * t, e = 30 * t, f = 10 * t + 2; return v - e + f; };
+const receipt = "browser|" + PROBES.map((t) => `${t}:${chi(t)}`).join("|");
+const rows = PROBES.map((t) => `  T=${String(t).padStart(9)}   chi = ${chi(t)}`).join("\n");
+const ok = PROBES.every((t) => chi(t) === 2);
+document.getElementById("out").innerHTML =
+  rows + "\n\n" +
+  (ok ? '<span class="r">all ' + PROBES.length + ' probes: chi = 2</span>'
+      : '<b>*** SPLIT ***</b>') +
+  "\n\ncanonical receipt (paste into run_all.ps1 to compare):\n" + receipt +
+  "\n\nengine: " + navigator.userAgent;
+</script>

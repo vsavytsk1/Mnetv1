@@ -15,17 +15,29 @@ license = "MIT"
 # The kernel is `#![forbid(unsafe_code)]`, so it can never own a window -- FFI
 # needs `unsafe`. That constraint is a feature: it forces the Titans split.
 #
-#   Gos/         the TRUSTED base. integers, no unsafe, no deps. judged.
-#   Gos/win32/   the ONLY unsafe crate. FFI declarations, computes nothing.
-#   Gos/viewer/  the dashboard .exe   -- untrusted surgery.
-#   Gos/orb/     the topology .exe    -- untrusted surgery.
+#   Gos/              the TRUSTED base. integers, no unsafe, no deps. judged.
+#   Gos/win32/        FFI declarations only. computes nothing.
+#   Gos/viewer/       the dashboard .exe   -- untrusted surgery.
+#   Gos/orb/          the topology .exe    -- untrusted surgery.
+#   Gos/experiments/  UNTRUSTED. hand-written machine code, executed.
+#
+# This comment used to say win32 was "the ONLY unsafe crate". As of the chi
+# witness that is no longer true, so the comment changed rather than the claim
+# being quietly left to rot -- a claim in a scroll is a constraint on the code,
+# and when the code wins, the scroll must say so.
+#
+# There are now TWO crates that may write `unsafe`, and they are unsafe for
+# opposite reasons. win32 declares foreign functions and computes nothing.
+# experiments computes, deliberately, at the lowest level available: it
+# allocates an executable page, copies 23 hand-encoded bytes into it, and calls
+# them. Nothing in experiments is ever linked into the kernel.
 #
 # Two binaries share ONE win32 crate. Copying the FFI file into each would have
 # been faster and would have doubled the unsafe surface -- and RUSTIUM says in
 # print that this project has exactly one such file. A claim in a scroll is a
 # constraint on the code, not a description of it.
 [workspace]
-members = ["win32", "viewer", "orb"]
+members = ["win32", "viewer", "orb", "experiments"]
 
 [profile.release]
 opt-level = 3

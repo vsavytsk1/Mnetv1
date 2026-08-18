@@ -21,17 +21,29 @@ fn main() {
     println!("== THE SEED (built, then certified) ==");
     println!("   rust  : {seed}");
     println!("   C#    : F=32, pents=12, chi=2   (GoldbergKernel.cs BuildC60)");
-    assert_eq!((seed.v, seed.e, seed.f, seed.p, seed.chi), (60, 90, 32, 12, 2));
+    assert_eq!(
+        (seed.v, seed.e, seed.f, seed.p, seed.chi),
+        (60, 90, 32, 12, 2)
+    );
     println!("   AGREE on all five integers.\n");
 
     println!("== THE LADDER (closed form, nothing built) ==");
-    println!("{:<7} {:>6} {:>8} {:>8} {:>8} {:>4} {:>4}", "level", "T", "V", "E", "F", "P", "chi");
+    println!(
+        "{:<7} {:>6} {:>8} {:>8} {:>8} {:>4} {:>4}",
+        "level", "T", "V", "E", "F", "P", "chi"
+    );
     println!("{}", "-".repeat(50));
     for k in 0..5 {
         let c = goldberg_counts(k);
         println!(
             "{:<7} {:>6} {:>8} {:>8} {:>8} {:>4} {:>4}",
-            k, triangulation_number(k), c.v, c.e, c.f, c.p, c.chi
+            k,
+            triangulation_number(k),
+            c.v,
+            c.e,
+            c.f,
+            c.p,
+            c.chi
         );
         assert_eq!(c.p, 12, "P=12 at every level");
         assert_eq!(c.chi, 2, "chi=2 at every level");
@@ -42,7 +54,10 @@ fn main() {
     println!("   C# RefineAll() reports  F = 212");
     println!("   rust level 1 predicts   F = {}", k1.f);
     assert_eq!(k1.f, 212, "the two implementations must agree");
-    println!("   AGREE.  and rust additionally predicts V={} E={}", k1.v, k1.e);
+    println!(
+        "   AGREE.  and rust additionally predicts V={} E={}",
+        k1.v, k1.e
+    );
     println!("   -- numbers the C# side can check itself with Invariants().");
 
     println!("\n== WHY THIS IS WORTH SOMETHING ==");

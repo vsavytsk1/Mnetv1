@@ -149,9 +149,29 @@ pub struct BITMAPINFO {
     pub bmiColors: [DWORD; 3],
 }
 
+// --- executable memory, for the assembly witness ----------------------------
+// `experiments/` hand-assembles 23 bytes of x86-64 machine code and asks the
+// CPU to run them. Data pages are non-executable (DEP/NX), so the bytes must
+// live in a page allocated with PAGE_EXECUTE_READWRITE. These are the
+// declarations for that, and nothing here computes anything -- same rule as
+// the rest of this crate.
+pub const MEM_COMMIT: u32 = 0x0000_1000;
+pub const MEM_RESERVE: u32 = 0x0000_2000;
+pub const MEM_RELEASE: u32 = 0x0000_8000;
+pub const PAGE_EXECUTE_READWRITE: u32 = 0x40;
+
 #[link(name = "kernel32")]
 extern "system" {
     pub fn GetModuleHandleW(lpModuleName: *const u16) -> HINSTANCE;
+
+    pub fn VirtualAlloc(
+        lpAddress: *mut core::ffi::c_void,
+        dwSize: usize,
+        flAllocationType: u32,
+        flProtect: u32,
+    ) -> *mut core::ffi::c_void;
+
+    pub fn VirtualFree(lpAddress: *mut core::ffi::c_void, dwSize: usize, dwFreeType: u32) -> BOOL;
 }
 
 #[link(name = "user32")]
