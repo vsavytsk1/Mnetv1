@@ -57,7 +57,7 @@ enum View {
 impl View {
     fn title(self) -> &'static str {
         match self {
-            View::Dashboard => "",  // the dashboard paints its own top bar
+            View::Dashboard => "", // the dashboard paints its own top bar
             View::Shell => "THE SHELL - C60 CERTIFIED",
             View::FrameBits => "THE FRAME - ITS OWN 1 AND 0S",
             View::MachineBits => "THE MACHINE - WHAT RUSTC EMITTED",
@@ -287,7 +287,9 @@ impl App {
             .unwrap_or_default();
         let mut module_kb = [0usize; 6];
         for (i, f) in MODULE_FILES.iter().enumerate() {
-            module_kb[i] = fs::metadata(kroot.join(f)).map(|m| m.len() as usize / 1024).unwrap_or(0);
+            module_kb[i] = fs::metadata(kroot.join(f))
+                .map(|m| m.len() as usize / 1024)
+                .unwrap_or(0);
         }
         println!("modules    : {module_kb:?} KB  (0 = MISSING)");
 
@@ -625,7 +627,14 @@ impl App {
                 _ => pal.cyan,
             };
             self.cv.rect(x, y, w, h, accent);
-            font::text(&mut self.cv, x + 8, y + (h - font::GH) / 2, label, accent, 1);
+            font::text(
+                &mut self.cv,
+                x + 8,
+                y + (h - font::GH) / 2,
+                label,
+                accent,
+                1,
+            );
         }
     }
 
@@ -671,9 +680,7 @@ impl App {
     fn export(&mut self) {
         self.exports += 1;
         self.runs = self.exports;
-        let dir = self
-            .session_dir
-            .join(format!("export_{:04}", self.exports));
+        let dir = self.session_dir.join(format!("export_{:04}", self.exports));
         if let Err(e) = fs::create_dir_all(&dir) {
             self.status = format!("EXPORT FAILED: {e}");
             return;
@@ -849,12 +856,11 @@ fn ledger_entry() -> String {
     let mut root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     for _ in 0..4 {
         if let Ok(t) = fs::read_to_string(root.join("LEDGER.md")) {
-            let last = t.lines().rfind(|l| l.starts_with("### L")).unwrap_or_default();
-            return last
-                .split_whitespace()
-                .nth(1)
-                .unwrap_or("L???")
-                .to_string();
+            let last = t
+                .lines()
+                .rfind(|l| l.starts_with("### L"))
+                .unwrap_or_default();
+            return last.split_whitespace().nth(1).unwrap_or("L???").to_string();
         }
         if !root.pop() {
             break;

@@ -59,7 +59,9 @@ fn main() -> std::io::Result<()> {
             let p = std::env::current_exe().unwrap_or_default();
             let b = std::fs::read(&p).unwrap_or_default();
             (
-                p.file_name().map(|s| s.to_string_lossy().to_string()).unwrap_or_default(),
+                p.file_name()
+                    .map(|s| s.to_string_lossy().to_string())
+                    .unwrap_or_default(),
                 b,
             )
         }
@@ -285,7 +287,10 @@ fn paint_panel(
 
         // LOD: a sub-pixel triangle is a dot. Honest, and it is what keeps
         // 81,920 faces affordable at panel size.
-        let span = (a.0 - b.0).abs().max((a.1 - b.1).abs()).max((a.0 - c.0).abs());
+        let span = (a.0 - b.0)
+            .abs()
+            .max((a.1 - b.1).abs())
+            .max((a.0 - c.0).abs());
         if span <= 2 {
             cv.blend(a.0, a.1, col, alpha as u8);
         } else {
@@ -327,7 +332,11 @@ fn paint_panel(
         r.x + 8,
         cy + 32,
         &format!("P 12 DEFECTS  .  {repeats} REPEAT FACES"),
-        if repeats > 0 { pal.orange } else { [0x3a, 0x4a, 0x5a] },
+        if repeats > 0 {
+            pal.orange
+        } else {
+            [0x3a, 0x4a, 0x5a]
+        },
         1,
     );
 
@@ -352,7 +361,14 @@ fn ramp(pal: &Palette, t: u8) -> Rgb {
     ]
 }
 
-fn fill_tri(cv: &mut Canvas, a: (i32, i32, f64), b: (i32, i32, f64), c: (i32, i32, f64), col: Rgb, al: u8) {
+fn fill_tri(
+    cv: &mut Canvas,
+    a: (i32, i32, f64),
+    b: (i32, i32, f64),
+    c: (i32, i32, f64),
+    col: Rgb,
+    al: u8,
+) {
     let pts = [(a.0, a.1), (b.0, b.1), (c.0, c.1)];
     let lo = pts.iter().map(|p| p.1).min().unwrap();
     let hi = pts.iter().map(|p| p.1).max().unwrap();

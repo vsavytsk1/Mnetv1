@@ -162,7 +162,11 @@ pub fn write_bits(
 
 /// Write the raw bytes verbatim, for the packed twin of a `.bits` file.
 /// The pair is the point: one for the eye, one for the machine, same digest.
-pub fn write_packed(path: impl AsRef<Path>, bytes: &[u8], max_bytes: usize) -> io::Result<DumpReport> {
+pub fn write_packed(
+    path: impl AsRef<Path>,
+    bytes: &[u8],
+    max_bytes: usize,
+) -> io::Result<DumpReport> {
     let take = bytes.len().min(max_bytes);
     std::fs::write(path, &bytes[..take])?;
     Ok(DumpReport {

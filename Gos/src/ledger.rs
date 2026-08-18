@@ -62,7 +62,11 @@ pub enum Level {
 
 impl Level {
     fn from_env() -> Level {
-        match std::env::var("GOS_LOG").unwrap_or_default().to_lowercase().as_str() {
+        match std::env::var("GOS_LOG")
+            .unwrap_or_default()
+            .to_lowercase()
+            .as_str()
+        {
             "silent" | "off" | "0" => Level::Silent,
             "halt" | "error" => Level::Halt,
             "warn" => Level::Warn,
@@ -136,7 +140,13 @@ impl Ledger {
 
     /// A section header.
     pub fn section(&self, title: &str) {
-        self.say(Level::Note, &format!("\n-- {title} {}", "-".repeat(62usize.saturating_sub(title.len()))));
+        self.say(
+            Level::Note,
+            &format!(
+                "\n-- {title} {}",
+                "-".repeat(62usize.saturating_sub(title.len()))
+            ),
+        );
     }
 
     /// An exact check. Target and current are both shown, always.
@@ -169,7 +179,14 @@ impl Ledger {
     }
 
     /// A tolerance check for the display lane. Prints the error, never hides it.
-    pub fn check_near(&mut self, lane: Lane, name: &str, target: f64, current: f64, tol: f64) -> bool {
+    pub fn check_near(
+        &mut self,
+        lane: Lane,
+        name: &str,
+        target: f64,
+        current: f64,
+        tol: f64,
+    ) -> bool {
         let err = (current - target).abs();
         let ok = err <= tol;
         if ok {

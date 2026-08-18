@@ -78,7 +78,11 @@ fn main() -> std::io::Result<()> {
             n,
             exact[n - 1],
             measured[n - 1],
-            if measured[n - 1] == 0.0 { "   <- FALSE ZERO" } else { "" }
+            if measured[n - 1] == 0.0 {
+                "   <- FALSE ZERO"
+            } else {
+                ""
+            }
         );
     }
 
@@ -104,8 +108,24 @@ fn main() -> std::io::Result<()> {
     }
 
     // the two walls, labels staggered so they cannot collide
-    vline(&mut cv, &pal, plot, 38, pal.pink, "N=38 R3 INTEGER LADDER", 8);
-    vline(&mut cv, &pal, plot, ffz, pal.orange, "N=40 PF39 FALSE ZERO", 24);
+    vline(
+        &mut cv,
+        &pal,
+        plot,
+        38,
+        pal.pink,
+        "N=38 R3 INTEGER LADDER",
+        8,
+    );
+    vline(
+        &mut cv,
+        &pal,
+        plot,
+        ffz,
+        pal.orange,
+        "N=40 PF39 FALSE ZERO",
+        24,
+    );
 
     // phi's ulp floor: 2^-53 relative to phi
     let ulp = PHI * 2f64.powi(-53);
@@ -113,13 +133,23 @@ fn main() -> std::io::Result<()> {
     for x in (plot.x..plot.right()).step_by(6) {
         cv.set(x, y, pal.purple);
     }
-    font::text(&mut cv, plot.right() - 150, y - 10, "PHI ULP 2^-53", pal.purple, 1);
+    font::text(
+        &mut cv,
+        plot.right() - 150,
+        y - 10,
+        "PHI ULP 2^-53",
+        pal.purple,
+        1,
+    );
 
     header(&mut cv, &pal, ffz);
     legend(&mut cv, &pal, plot);
 
     let (kw, kh, kn) = cv.write_png_4k("float_wall.png")?;
-    println!("\nwrote float_wall.png + _4k.png  {kw}x{kh}  ({kn}x exact)   seal {:016x}", cv.digest());
+    println!(
+        "\nwrote float_wall.png + _4k.png  {kw}x{kh}  ({kn}x exact)   seal {:016x}",
+        cv.digest()
+    );
     Ok(())
 }
 
@@ -148,7 +178,11 @@ fn grid(cv: &mut Canvas, pal: &Palette, p: Rect) {
         for x in (p.x..p.right()).step_by(4) {
             cv.set(x, y, [0x14, 0x14, 0x24]);
         }
-        let lab = if d == 0 { String::from("1") } else { format!("1E-{d}") };
+        let lab = if d == 0 {
+            String::from("1")
+        } else {
+            format!("1E-{d}")
+        };
         font::text(cv, p.x - 52, y - 3, &lab, [0x3a, 0x4a, 0x5a], 1);
     }
     for n in (0..=N_MAX).step_by(10) {
@@ -156,13 +190,27 @@ fn grid(cv: &mut Canvas, pal: &Palette, p: Rect) {
         for y in (p.y..p.bottom()).step_by(4) {
             cv.set(x, y, [0x14, 0x14, 0x24]);
         }
-        font::text(cv, x - 6, p.bottom() + 8, &format!("{n}"), [0x3a, 0x4a, 0x5a], 1);
+        font::text(
+            cv,
+            x - 6,
+            p.bottom() + 8,
+            &format!("{n}"),
+            [0x3a, 0x4a, 0x5a],
+            1,
+        );
     }
     cv.rect(p.x, p.y, p.w, p.h, pal.border);
 }
 
 fn axes_labels(cv: &mut Canvas, pal: &Palette, p: Rect) {
-    font::text(cv, p.x + p.w / 2 - 60, p.bottom() + 26, "LADDER INDEX N", pal.text, 1);
+    font::text(
+        cv,
+        p.x + p.w / 2 - 60,
+        p.bottom() + 26,
+        "LADDER INDEX N",
+        pal.text,
+        1,
+    );
     // clear of the header block, which ends at y=74
     font::text(cv, 8, p.y - 8, "ABS DEVIATION", pal.text, 1);
 }

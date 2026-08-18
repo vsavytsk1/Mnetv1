@@ -291,7 +291,11 @@ fn crc32(buf: &[u8]) -> u32 {
     for &b in buf {
         c ^= b as u32;
         for _ in 0..8 {
-            c = if c & 1 != 0 { 0xedb8_8320 ^ (c >> 1) } else { c >> 1 };
+            c = if c & 1 != 0 {
+                0xedb8_8320 ^ (c >> 1)
+            } else {
+                c >> 1
+            };
         }
     }
     c ^ 0xffff_ffff

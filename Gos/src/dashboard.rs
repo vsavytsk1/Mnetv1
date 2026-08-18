@@ -145,7 +145,13 @@ pub fn draw(cv: &mut Canvas, pal: &Palette, m: &Model) -> Vec<Rect> {
 /// `#top-bar` -- logo, build stamp, git hash, kernel state, clock at `margin-left:auto`.
 fn top_bar(cv: &mut Canvas, pal: &Palette, r: Rect, m: &Model) {
     cv.fill_rect(r.x, r.y, r.w, r.h, pal.panel);
-    cv.line(r.x, r.bottom() - 1, r.right() - 1, r.bottom() - 1, pal.border);
+    cv.line(
+        r.x,
+        r.bottom() - 1,
+        r.right() - 1,
+        r.bottom() - 1,
+        pal.border,
+    );
 
     let ty = r.y + (r.h - font::GH) / 2;
     let mut x = r.x + 16;
@@ -163,7 +169,13 @@ fn top_bar(cv: &mut Canvas, pal: &Palette, r: Rect, m: &Model) {
 /// `#left` -- `.panel-title`, the six `.k-row`s, then `#mini-canvas-wrap`.
 fn left_panel(cv: &mut Canvas, pal: &Palette, r: Rect, m: &Model) {
     cv.fill_rect(r.x, r.y, r.w, r.h, pal.panel);
-    cv.line(r.right() - 1, r.y, r.right() - 1, r.bottom() - 1, pal.border);
+    cv.line(
+        r.right() - 1,
+        r.y,
+        r.right() - 1,
+        r.bottom() - 1,
+        pal.border,
+    );
 
     let (title, body) = r.split_top(20);
     font::text(cv, title.x + 12, title.y + 7, "KERNEL", CHROME.dim, 1);
@@ -234,7 +246,14 @@ fn right_panel(cv: &mut Canvas, pal: &Palette, r: Rect, m: &Model) {
     let b = body.pad(8, 12, 0, 12);
     font::text(cv, b.x, b.y, m.cert, pal.green, 1);
     font::text(cv, b.x, b.y + 13, "AXIOM 01 GATE PASSED", pal.gold, 1);
-    font::text(cv, b.x, b.y + 26, "P 12 - CHI 2 - E/V 3/2", CHROME.k_name, 1);
+    font::text(
+        cv,
+        b.x,
+        b.y + 26,
+        "P 12 - CHI 2 - E/V 3/2",
+        CHROME.k_name,
+        1,
+    );
     font::text(cv, b.x, b.y + 44, m.ledger, CHROME.cat, 1);
 }
 
@@ -243,7 +262,14 @@ fn bottom_bar(cv: &mut Canvas, pal: &Palette, r: Rect, _m: &Model) {
     cv.fill_rect(r.x, r.y, r.w, r.h, pal.panel);
     cv.line(r.x, r.y, r.right() - 1, r.y, pal.border);
     let ty = r.y + (r.h - font::GH) / 2;
-    font::text(cv, r.x + 16, ty, "> PAINTED BY THE KERNEL. NO CHROMIUM.", CHROME.build, 1);
+    font::text(
+        cv,
+        r.x + 16,
+        ty,
+        "> PAINTED BY THE KERNEL. NO CHROMIUM.",
+        CHROME.build,
+        1,
+    );
 }
 
 /// `#center` -- `.cat-header` then the `.mod-grid`. Returns the card rects.
@@ -293,7 +319,13 @@ fn center(cv: &mut Canvas, pal: &Palette, r: Rect, m: &Model) -> Vec<Rect> {
 /// One `.mod-card`. Square corners for now (see [`NOT_YET`]).
 pub fn draw_card(cv: &mut Canvas, pal: &Palette, r: Rect, c: &Card<'_>) {
     cv.fill_rect(r.x, r.y, r.w, r.h, pal.panel);
-    cv.rect(r.x, r.y, r.w, r.h, if c.featured { c.accent } else { pal.border });
+    cv.rect(
+        r.x,
+        r.y,
+        r.w,
+        r.h,
+        if c.featured { c.accent } else { pal.border },
+    );
 
     // `.feat-card::after{content:'FRONT DOOR'}` -- top-left, tiny, faint
     let mut y = r.y + 10;

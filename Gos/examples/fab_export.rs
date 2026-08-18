@@ -37,7 +37,11 @@ fn main() -> std::io::Result<()> {
     let stl = stl_binary(&tris, BOARD_DIA / 2.0);
     std::fs::write("c60_shell.stl", &stl)?;
     println!("== STL (the shape) ==");
-    println!("   {} faces -> {} triangles (fan)", mesh.faces.len(), tris.len());
+    println!(
+        "   {} faces -> {} triangles (fan)",
+        mesh.faces.len(),
+        tris.len()
+    );
     println!(
         "   c60_shell.stl  {} B  = 84 + {}*50",
         stl.len(),
@@ -98,7 +102,11 @@ fn main() -> std::io::Result<()> {
         drill.tool_count(),
         drill.hit_count()
     );
-    println!("   c60_outline.dxf  {} B   {} LINE entities", dxf.len(), segs.len());
+    println!(
+        "   c60_outline.dxf  {} B   {} LINE entities",
+        dxf.len(),
+        segs.len()
+    );
     println!();
 
     // ---- 4. the receipt ----------------------------------------------------

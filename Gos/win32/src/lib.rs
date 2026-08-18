@@ -61,8 +61,7 @@ pub const WS_CAPTION: DWORD = 0x00C0_0000;
 pub const WS_SYSMENU: DWORD = 0x0008_0000;
 pub const WS_MINIMIZEBOX: DWORD = 0x0002_0000;
 pub const WS_VISIBLE: DWORD = 0x1000_0000;
-pub const WS_OVERLAPPEDWINDOW: DWORD =
-    WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX;
+pub const WS_OVERLAPPEDWINDOW: DWORD = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX;
 
 pub const CW_USEDEFAULT: i32 = 0x8000_0000u32 as i32;
 pub const CS_HREDRAW: UINT = 0x0002;
@@ -173,7 +172,12 @@ extern "system" {
         lpParam: *mut c_void,
     ) -> HWND;
     pub fn DefWindowProcW(hWnd: HWND, msg: UINT, wParam: WPARAM, lParam: LPARAM) -> LRESULT;
-    pub fn GetMessageW(lpMsg: *mut MSG, hWnd: HWND, wMsgFilterMin: UINT, wMsgFilterMax: UINT) -> BOOL;
+    pub fn GetMessageW(
+        lpMsg: *mut MSG,
+        hWnd: HWND,
+        wMsgFilterMin: UINT,
+        wMsgFilterMax: UINT,
+    ) -> BOOL;
     pub fn TranslateMessage(lpMsg: *const MSG) -> BOOL;
     pub fn DispatchMessageW(lpMsg: *const MSG) -> LRESULT;
     pub fn BeginPaint(hWnd: HWND, lpPaint: *mut PAINTSTRUCT) -> HDC;

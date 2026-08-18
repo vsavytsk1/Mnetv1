@@ -24,7 +24,10 @@ fn main() -> std::io::Result<()> {
     println!("AXIOM 01 GATE");
     println!("  float lane : {cert}");
     println!("  judge      : {verdict}");
-    println!("  lanes agree: {}", cert.chi == verdict.chi && cert.v == verdict.v);
+    println!(
+        "  lanes agree: {}",
+        cert.chi == verdict.chi && cert.v == verdict.v
+    );
     println!();
 
     // the layout must tile the canvas exactly -- asserted, not hoped
@@ -46,12 +49,36 @@ fn main() -> std::io::Result<()> {
 
     let pal = DASHBOARD;
     let modules = [
-        KRow { name: "M1 GOLDBERG", ok: true, kb: 47 },
-        KRow { name: "M2 AXIOMS", ok: true, kb: 12 },
-        KRow { name: "M3 SAR", ok: true, kb: 9 },
-        KRow { name: "M4 NS SPECTRAL", ok: true, kb: 21 },
-        KRow { name: "M5 FRACTAL", ok: true, kb: 14 },
-        KRow { name: "M6 NANITE", ok: true, kb: 18 },
+        KRow {
+            name: "M1 GOLDBERG",
+            ok: true,
+            kb: 47,
+        },
+        KRow {
+            name: "M2 AXIOMS",
+            ok: true,
+            kb: 12,
+        },
+        KRow {
+            name: "M3 SAR",
+            ok: true,
+            kb: 9,
+        },
+        KRow {
+            name: "M4 NS SPECTRAL",
+            ok: true,
+            kb: 21,
+        },
+        KRow {
+            name: "M5 FRACTAL",
+            ok: true,
+            kb: 14,
+        },
+        KRow {
+            name: "M6 NANITE",
+            ok: true,
+            kb: 18,
+        },
     ];
 
     // THE BIRTH -- the real front door centerpiece, and a `.feat-card`, so this
@@ -104,9 +131,15 @@ fn main() -> std::io::Result<()> {
         println!("  x{:<5} y{:<5} {}x{}", r.x, r.y, r.w, r.h);
     }
     println!();
-    println!("SEAL (content only, no clock painted): {:016x}", cv.digest());
+    println!(
+        "SEAL (content only, no clock painted): {:016x}",
+        cv.digest()
+    );
     println!();
-    println!("KNOWN GAPS vs the browser -- {} of them, stated not hidden:", NOT_YET.len());
+    println!(
+        "KNOWN GAPS vs the browser -- {} of them, stated not hidden:",
+        NOT_YET.len()
+    );
     for g in NOT_YET {
         println!("  - {g}");
     }

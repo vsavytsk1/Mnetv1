@@ -564,7 +564,10 @@ mod tests {
             // coordinate lines start with X; only aperture declarations (%AD)
             // are allowed a decimal point anywhere in this file
             if line.starts_with('X') {
-                assert!(!line.contains('.'), "float leaked into a coordinate: {line}");
+                assert!(
+                    !line.contains('.'),
+                    "float leaked into a coordinate: {line}"
+                );
             }
         }
         assert!(s.contains("X1500000Y-2250000D01*"));

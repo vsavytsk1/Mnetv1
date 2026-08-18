@@ -70,7 +70,11 @@ fn every_directed_edge_belongs_to_exactly_one_face() {
             *count.entry((f[i], f[(i + 1) % f.len()])).or_insert(0usize) += 1;
         }
     }
-    assert_eq!(count.len(), 180, "60 vertices x degree 3 = 180 directed edges");
+    assert_eq!(
+        count.len(),
+        180,
+        "60 vertices x degree 3 = 180 directed edges"
+    );
     for (k, v) in &count {
         assert_eq!(*v, 1, "directed edge {k:?} appears {v} times, expected 1");
     }
@@ -364,7 +368,10 @@ fn overflow_is_reported_never_wrapped() {
                 e.at
             );
             let t = ladder::exact_measured(ladder::I128_MAX_N).unwrap();
-            assert!(t[ladder::I128_MAX_N] > 0, "no wrap: every term stays positive");
+            assert!(
+                t[ladder::I128_MAX_N] > 0,
+                "no wrap: every term stays positive"
+            );
         }
     }
 }
@@ -427,7 +434,11 @@ fn stereographic_lands_on_the_unit_sphere() {
     for _ in 0..500 {
         let p = c_to_s2(C::new(r.range(-6.0, 6.0), r.range(-6.0, 6.0)));
         let n = (p[0] * p[0] + p[1] * p[1] + p[2] * p[2]).sqrt();
-        assert!((n - 1.0).abs() < 1e-12, "off the sphere by {}", (n - 1.0).abs());
+        assert!(
+            (n - 1.0).abs() < 1e-12,
+            "off the sphere by {}",
+            (n - 1.0).abs()
+        );
     }
 }
 
@@ -435,7 +446,11 @@ fn stereographic_lands_on_the_unit_sphere() {
 fn stereographic_fixes_the_poles() {
     assert_eq!(c_to_s2(C::ZERO), [0.0, 0.0, -1.0], "origin -> south pole");
     let far = c_to_s2(C::new(1e300, 0.0));
-    assert!(far[2] > 0.999_999, "far away -> north pole, got z = {}", far[2]);
+    assert!(
+        far[2] > 0.999_999,
+        "far away -> north pole, got z = {}",
+        far[2]
+    );
 }
 
 // ===========================================================================
@@ -503,7 +518,10 @@ fn sphere_sampling_is_uniform_and_reproducible() {
     }
     let mean = vscale(s, 1.0 / n as f64);
     for c in mean {
-        assert!(c.abs() < 0.02, "mean {mean:?} should be near zero if uniform");
+        assert!(
+            c.abs() < 0.02,
+            "mean {mean:?} should be near zero if uniform"
+        );
     }
 }
 
@@ -752,7 +770,10 @@ fn hilbert_key_is_a_bijection_on_its_grid() {
     let mut seen = std::collections::HashSet::new();
     for y in 0..128u32 {
         for x in 0..128u32 {
-            assert!(seen.insert(sphere::hilbert_xy(7, x, y)), "collision at {x},{y}");
+            assert!(
+                seen.insert(sphere::hilbert_xy(7, x, y)),
+                "collision at {x},{y}"
+            );
         }
     }
     assert_eq!(seen.len(), 128 * 128);

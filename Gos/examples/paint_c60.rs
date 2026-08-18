@@ -148,7 +148,13 @@ fn paint_swatches(cv: &mut Canvas, pal: &Palette) {
     let hgt = (H as i32) - top - pad;
     let wid = ((W as i32) - pad * 2) / n as i32;
 
-    cv.fill_rect(0, SPHERE_H as i32, W as i32, (H - SPHERE_H) as i32, pal.panel);
+    cv.fill_rect(
+        0,
+        SPHERE_H as i32,
+        W as i32,
+        (H - SPHERE_H) as i32,
+        pal.panel,
+    );
     for (i, (_name, c)) in slots.iter().enumerate() {
         let x = pad + i as i32 * wid;
         cv.fill_rect(x, top, wid - 2, hgt, *c);

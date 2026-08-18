@@ -234,7 +234,9 @@ impl App {
                 let p = std::env::current_exe().unwrap_or_default();
                 let b = fs::read(&p).unwrap_or_default();
                 (
-                    p.file_name().map(|s| s.to_string_lossy().to_string()).unwrap_or_default(),
+                    p.file_name()
+                        .map(|s| s.to_string_lossy().to_string())
+                        .unwrap_or_default(),
                     b,
                 )
             }
@@ -252,11 +254,24 @@ impl App {
 
         // start where one face is close to one byte, capped
         let start = sphere::level_for_bytes(bytes.len()).min(MAX_LEVEL);
-        let shell = Shell::build(start, &bytes).or_else(|| Shell::build(3, &bytes)).expect("a shell must build");
+        let shell = Shell::build(start, &bytes)
+            .or_else(|| Shell::build(3, &bytes))
+            .expect("a shell must build");
 
-        println!("AXIOM 01 GATE  chi {} genus {}  JUDGE {} us", shell.chi, shell.genus, shell.judged_us);
-        println!("stream  {label} ({} bytes)  dup {rep}/{blocks} at {BLOCK}B", bytes.len());
-        println!("start   L{}  {} faces  {} B/face", shell.level, shell.ico.faces.len(), shell.per_face);
+        println!(
+            "AXIOM 01 GATE  chi {} genus {}  JUDGE {} us",
+            shell.chi, shell.genus, shell.judged_us
+        );
+        println!(
+            "stream  {label} ({} bytes)  dup {rep}/{blocks} at {BLOCK}B",
+            bytes.len()
+        );
+        println!(
+            "start   L{}  {} faces  {} B/face",
+            shell.level,
+            shell.ico.faces.len(),
+            shell.per_face
+        );
 
         let session = open_session();
         println!("session {}", session.display());
@@ -293,7 +308,13 @@ impl App {
         let y = H as i32 - BAR_H + 6;
         let mut x = 10i32;
         self.buttons.clear();
-        for (id, l) in [(0u8, "SHOT"), (1, "SPIN"), (2, "PALETTE"), (3, "LEVEL -"), (4, "LEVEL +")] {
+        for (id, l) in [
+            (0u8, "SHOT"),
+            (1, "SPIN"),
+            (2, "PALETTE"),
+            (3, "LEVEL -"),
+            (4, "LEVEL +"),
+        ] {
             let w = font::width(l, 1) + 16;
             self.buttons.push((Rect::new(x, y, w, BAR_H - 12), l, id));
             x += w + 8;
@@ -303,7 +324,10 @@ impl App {
     fn set_level(&mut self, d: i32) {
         let want = (self.shell.level as i32 + d).clamp(0, MAX_LEVEL as i32) as u32;
         if want == self.shell.level {
-            self.status = format!("AT THE {} LEVEL ALREADY", if d > 0 { "TOP" } else { "BOTTOM" });
+            self.status = format!(
+                "AT THE {} LEVEL ALREADY",
+                if d > 0 { "TOP" } else { "BOTTOM" }
+            );
             return;
         }
         let t0 = Instant::now();
@@ -325,7 +349,11 @@ impl App {
     }
 
     fn click(&mut self, mx: i32, my: i32) -> bool {
-        let hit = self.buttons.iter().find(|(r, _, _)| r.contains(mx, my)).map(|(_, _, i)| *i);
+        let hit = self
+            .buttons
+            .iter()
+            .find(|(r, _, _)| r.contains(mx, my))
+            .map(|(_, _, i)| *i);
         match hit {
             Some(0) => {
                 self.shot();
@@ -390,8 +418,15 @@ impl App {
             let (a, b, c) = (pts[f[0]], pts[f[1]], pts[f[2]]);
             let t = ((d + 1.0) / 2.0).clamp(0.0, 1.0);
             let al = ((0.25 + t * 0.70) * 255.0) as u8;
-            let col = if s.repeat[fi] { pal.orange } else { ramp(&pal, s.ink[fi]) };
-            let span = (a.0 - b.0).abs().max((a.1 - b.1).abs()).max((a.0 - c.0).abs());
+            let col = if s.repeat[fi] {
+                pal.orange
+            } else {
+                ramp(&pal, s.ink[fi])
+            };
+            let span = (a.0 - b.0)
+                .abs()
+                .max((a.1 - b.1).abs())
+                .max((a.0 - c.0).abs());
             if span <= 2 {
                 self.cv.blend(a.0, a.1, col, al);
             } else {
@@ -430,7 +465,10 @@ impl App {
             (String::from("-- DUPLICATION --"), pal.gold),
             (format!("THIS LEVEL {}", s.repeats), pal.orange),
             (
-                format!("= {:.2} PCT OF FACES", 100.0 * s.repeats as f64 / s.ico.faces.len() as f64),
+                format!(
+                    "= {:.2} PCT OF FACES",
+                    100.0 * s.repeats as f64 / s.ico.faces.len() as f64
+                ),
                 pal.orange,
             ),
             (format!("WHOLE STREAM {:.2} PCT", self.dup_pct), pal.text),
@@ -462,9 +500,23 @@ impl App {
 
     fn paint_bar(&mut self) {
         let pal = self.pal();
-        self.cv.fill_rect(0, H as i32 - BAR_H, W as i32, BAR_H, pal.panel);
-        self.cv.line(0, H as i32 - BAR_H, W as i32 - 1, H as i32 - BAR_H, pal.border);
-        font::text(&mut self.cv, 10, H as i32 - BAR_H - 14, &self.status, pal.text, 1);
+        self.cv
+            .fill_rect(0, H as i32 - BAR_H, W as i32, BAR_H, pal.panel);
+        self.cv.line(
+            0,
+            H as i32 - BAR_H,
+            W as i32 - 1,
+            H as i32 - BAR_H,
+            pal.border,
+        );
+        font::text(
+            &mut self.cv,
+            10,
+            H as i32 - BAR_H - 14,
+            &self.status,
+            pal.text,
+            1,
+        );
         for (r, l, id) in self.buttons.clone() {
             let a = match id {
                 0 => pal.gold,
@@ -481,7 +533,10 @@ impl App {
         self.shots += 1;
         let f = self.session.join(format!("orb_{:04}.png", self.shots));
         if self.cv.write_png(&f).is_ok() {
-            self.status = format!("SHOT {:04} - L{} - SEAL {:016X}", self.shots, self.shell.level, self.seal);
+            self.status = format!(
+                "SHOT {:04} - L{} - SEAL {:016X}",
+                self.shots, self.shell.level, self.seal
+            );
             let line = format!(
                 "orb_{:04}.png  level={}  faces={}  yaw={:.4}  palette={}  seal={:016x}\n",
                 self.shots,
@@ -521,8 +576,19 @@ impl App {
             bmiColors: [0; 3],
         };
         StretchDIBits(
-            hdc, 0, 0, W as i32, H as i32, 0, 0, W as i32, H as i32,
-            self.dib.as_ptr() as *const c_void, &bmi, DIB_RGB_COLORS, SRCCOPY,
+            hdc,
+            0,
+            0,
+            W as i32,
+            H as i32,
+            0,
+            0,
+            W as i32,
+            H as i32,
+            self.dib.as_ptr() as *const c_void,
+            &bmi,
+            DIB_RGB_COLORS,
+            SRCCOPY,
         );
     }
 }
@@ -568,7 +634,13 @@ fn trunc(s: &str, n: usize) -> String {
     if s.chars().count() <= n {
         s.to_string()
     } else {
-        s.chars().rev().take(n).collect::<Vec<_>>().into_iter().rev().collect()
+        s.chars()
+            .rev()
+            .take(n)
+            .collect::<Vec<_>>()
+            .into_iter()
+            .rev()
+            .collect()
     }
 }
 
@@ -580,13 +652,21 @@ fn append(p: &std::path::Path, s: &str) {
 }
 
 fn open_session() -> PathBuf {
-    let base = PathBuf::from(env!("CARGO_MANIFEST_DIR")).parent().map(|p| p.join("runs")).unwrap_or_default();
+    let base = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .map(|p| p.join("runs"))
+        .unwrap_or_default();
     let _ = fs::create_dir_all(&base);
     let pre = format!("orb_v{}_s", env!("CARGO_PKG_VERSION").replace('.', "_"));
     let n = fs::read_dir(&base)
         .map(|rd| {
             rd.filter_map(|e| e.ok())
-                .filter_map(|e| e.file_name().to_string_lossy().strip_prefix(&pre).and_then(|s| s.parse::<usize>().ok()))
+                .filter_map(|e| {
+                    e.file_name()
+                        .to_string_lossy()
+                        .strip_prefix(&pre)
+                        .and_then(|s| s.parse::<usize>().ok())
+                })
                 .max()
                 .unwrap_or(0)
         })

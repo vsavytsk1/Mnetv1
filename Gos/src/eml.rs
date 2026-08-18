@@ -163,18 +163,78 @@ pub struct Target {
 /// `known_k` is what `shell__eml_luca_spiral_v0_2.html` reports for its chain.
 /// Anything found BELOW that number is a shorter descent -- a finding.
 pub const TARGETS: &[Target] = &[
-    Target { sym: "e",    name: "Euler's number",  value: std::f64::consts::E,   known_k: Some(2) },
-    Target { sym: "1",    name: "the terminal",    value: 1.0,                    known_k: Some(0) },
-    Target { sym: "0",    name: "zero",            value: 0.0,                    known_k: None },
-    Target { sym: "-1",   name: "negative one",    value: -1.0,                   known_k: Some(11) },
-    Target { sym: "2",    name: "two",             value: 2.0,                    known_k: Some(16) },
-    Target { sym: "3",    name: "three",           value: 3.0,                    known_k: None },
-    Target { sym: "1/e",  name: "reciprocal of e", value: 1.0 / std::f64::consts::E, known_k: None },
-    Target { sym: "pi",   name: "pi",              value: std::f64::consts::PI,   known_k: None },
-    Target { sym: "phi",  name: "the golden ratio", value: crate::PHI,            known_k: None },
-    Target { sym: "e^e",  name: "e to the e",      value: 15.154_262_241_479_262, known_k: None },
-    Target { sym: "ln2",  name: "ln 2",            value: std::f64::consts::LN_2, known_k: None },
-    Target { sym: "sqrt2", name: "root two",       value: std::f64::consts::SQRT_2, known_k: None },
+    Target {
+        sym: "e",
+        name: "Euler's number",
+        value: std::f64::consts::E,
+        known_k: Some(2),
+    },
+    Target {
+        sym: "1",
+        name: "the terminal",
+        value: 1.0,
+        known_k: Some(0),
+    },
+    Target {
+        sym: "0",
+        name: "zero",
+        value: 0.0,
+        known_k: None,
+    },
+    Target {
+        sym: "-1",
+        name: "negative one",
+        value: -1.0,
+        known_k: Some(11),
+    },
+    Target {
+        sym: "2",
+        name: "two",
+        value: 2.0,
+        known_k: Some(16),
+    },
+    Target {
+        sym: "3",
+        name: "three",
+        value: 3.0,
+        known_k: None,
+    },
+    Target {
+        sym: "1/e",
+        name: "reciprocal of e",
+        value: 1.0 / std::f64::consts::E,
+        known_k: None,
+    },
+    Target {
+        sym: "pi",
+        name: "pi",
+        value: std::f64::consts::PI,
+        known_k: None,
+    },
+    Target {
+        sym: "phi",
+        name: "the golden ratio",
+        value: crate::PHI,
+        known_k: None,
+    },
+    Target {
+        sym: "e^e",
+        name: "e to the e",
+        value: 15.154_262_241_479_262,
+        known_k: None,
+    },
+    Target {
+        sym: "ln2",
+        name: "ln 2",
+        value: std::f64::consts::LN_2,
+        known_k: None,
+    },
+    Target {
+        sym: "sqrt2",
+        name: "root two",
+        value: std::f64::consts::SQRT_2,
+        known_k: None,
+    },
 ];
 
 /// One enumerated term and what it turned out to be.

@@ -32,7 +32,10 @@ fn main() {
 
     // the price of the sweep, BEFORE paying it (Curse 35)
     let mut total = 0u64;
-    println!("  {:>3}  {:>14}  {:>18}", "K", "terms (Catalan)", "cumulative");
+    println!(
+        "  {:>3}  {:>14}  {:>18}",
+        "K", "terms (Catalan)", "cumulative"
+    );
     for k in 0..=max_k {
         total += catalan(k);
         println!("  {k:>3}  {:>14}  {total:>18}", catalan(k));
@@ -56,7 +59,11 @@ fn main() {
                     .known_k
                     .map(|k| k.to_string())
                     .unwrap_or_else(|| String::from("-"));
-                let mark = if h.shorter { "  <== SHORTER THAN KNOWN" } else { "" };
+                let mark = if h.shorter {
+                    "  <== SHORTER THAN KNOWN"
+                } else {
+                    ""
+                };
                 println!(
                     "  {:<6} {:<18} {:>5} {:>5}  {}{}",
                     tg.sym,
@@ -72,7 +79,9 @@ fn main() {
                 tg.sym,
                 tg.name,
                 "-",
-                tg.known_k.map(|k| k.to_string()).unwrap_or_else(|| String::from("-")),
+                tg.known_k
+                    .map(|k| k.to_string())
+                    .unwrap_or_else(|| String::from("-")),
                 max_k
             ),
         }

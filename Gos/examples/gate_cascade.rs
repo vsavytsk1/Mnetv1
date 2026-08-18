@@ -198,8 +198,12 @@ fn main() -> std::io::Result<()> {
             "  {:<18} {:<18} {:>10} {:>14}  {}",
             r.layer,
             r.what,
-            r.nands.map(|n| n.to_string()).unwrap_or_else(|| String::from("-")),
-            r.trans.map(|n| n.to_string()).unwrap_or_else(|| String::from("-")),
+            r.nands
+                .map(|n| n.to_string())
+                .unwrap_or_else(|| String::from("-")),
+            r.trans
+                .map(|n| n.to_string())
+                .unwrap_or_else(|| String::from("-")),
             r.status
         );
     }
@@ -235,11 +239,19 @@ fn main() -> std::io::Result<()> {
         }
     }
 
-    thresholds(&mut cv, &pal, Rect::new(960, 96, W as i32 - 990, H as i32 - 190), byte_add);
+    thresholds(
+        &mut cv,
+        &pal,
+        Rect::new(960, 96, W as i32 - 990, H as i32 - 190),
+        byte_add,
+    );
     footer(&mut cv, &pal);
 
     let (kw, kh, kn) = cv.write_png_4k("gate_cascade.png")?;
-    println!("\nwrote gate_cascade.png + _4k.png  {kw}x{kh}  ({kn}x exact)   seal {:016x}", cv.digest());
+    println!(
+        "\nwrote gate_cascade.png + _4k.png  {kw}x{kh}  ({kn}x exact)   seal {:016x}",
+        cv.digest()
+    );
     Ok(())
 }
 
@@ -258,16 +270,40 @@ fn draw_rung(cv: &mut Canvas, pal: &Palette, r: Rect, rung: &Rung, i: usize) {
     let accent = status_colour(pal, rung.status);
     // the two theorem rungs are the ones that matter -- give them the border
     let is_key = rung.status == "THEOREM";
-    cv.fill_rect(r.x, r.y, r.w, r.h, if is_key { [0x10, 0x0e, 0x06] } else { pal.panel });
+    cv.fill_rect(
+        r.x,
+        r.y,
+        r.w,
+        r.h,
+        if is_key {
+            [0x10, 0x0e, 0x06]
+        } else {
+            pal.panel
+        },
+    );
     cv.rect(r.x, r.y, r.w, r.h, if is_key { accent } else { pal.border });
 
     font::text(cv, r.x + 10, r.y + 6, rung.layer, accent, 1);
-    font::text(cv, r.x + 168, r.y + 4, rung.what, pal.bright, if is_key { 2 } else { 1 });
+    font::text(
+        cv,
+        r.x + 168,
+        r.y + 4,
+        rung.what,
+        pal.bright,
+        if is_key { 2 } else { 1 },
+    );
 
     // counts, right-aligned
     if let Some(n) = rung.nands {
         let s = format!("{n} NAND");
-        font::text(cv, r.right() - 210 - font::width(&s, 1), r.y + 6, &s, pal.cyan, 1);
+        font::text(
+            cv,
+            r.right() - 210 - font::width(&s, 1),
+            r.y + 6,
+            &s,
+            pal.cyan,
+            1,
+        );
     }
     if let Some(t) = rung.trans {
         let s = if t >= 1_000_000 {
@@ -275,12 +311,33 @@ fn draw_rung(cv: &mut Canvas, pal: &Palette, r: Rect, rung: &Rung, i: usize) {
         } else {
             format!("{t} TR")
         };
-        font::text(cv, r.right() - 90 - font::width(&s, 1), r.y + 6, &s, pal.gold, 1);
+        font::text(
+            cv,
+            r.right() - 90 - font::width(&s, 1),
+            r.y + 6,
+            &s,
+            pal.gold,
+            1,
+        );
     }
     let st = rung.status;
-    font::text(cv, r.right() - 8 - font::width(st, 1), r.y + 6, st, accent, 1);
+    font::text(
+        cv,
+        r.right() - 8 - font::width(st, 1),
+        r.y + 6,
+        st,
+        accent,
+        1,
+    );
 
-    font::text(cv, r.x + 10, r.y + 20, &rung.detail.to_uppercase(), [0x4a, 0x5a, 0x6a], 1);
+    font::text(
+        cv,
+        r.x + 10,
+        r.y + 20,
+        &rung.detail.to_uppercase(),
+        [0x4a, 0x5a, 0x6a],
+        1,
+    );
     let _ = i;
 }
 
@@ -350,7 +407,9 @@ fn thresholds(cv: &mut Canvas, pal: &Palette, r: Rect, byte_add: u64) {
         font::text(cv, r.x + 12, y, title, c, 1);
         y += 14;
         for l in lines {
-            if !l.is_empty() { font::text(cv, r.x + 12, y, l, [0x6a, 0x7a, 0x8a], 1); }
+            if !l.is_empty() {
+                font::text(cv, r.x + 12, y, l, [0x6a, 0x7a, 0x8a], 1);
+            }
             y += 10;
         }
         y += 10;

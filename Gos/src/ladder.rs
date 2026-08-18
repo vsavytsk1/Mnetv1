@@ -210,12 +210,13 @@ pub fn compare(n: usize) -> Result<Vec<Rung>, LadderError> {
 /// assert_eq!(find_wall(60).unwrap(), Some(F64_WALL));
 /// ```
 pub fn find_wall(search_to: usize) -> Result<Option<usize>, LadderError> {
-    Ok(compare(search_to)?.into_iter().find(|r| !r.agrees).map(|r| r.n))
+    Ok(compare(search_to)?
+        .into_iter()
+        .find(|r| !r.agrees)
+        .map(|r| r.n))
 }
 
 /// The first `n` whose value exceeds `2^53`. One step *after* the wall.
 pub fn find_2p53_crossing(search_to: usize) -> Result<Option<usize>, LadderError> {
-    Ok(exact(search_to)?
-        .iter()
-        .position(|&t| t > TWO_POW_53))
+    Ok(exact(search_to)?.iter().position(|&t| t > TWO_POW_53))
 }
