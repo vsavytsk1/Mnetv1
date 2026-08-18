@@ -1593,6 +1593,153 @@ tongue.
 
 ---
 
+## THE FAB WALL -- where the tower ends and the lattice resumes
+
+**Added 2026-08-18, with `src/fab.rs` (10 tests, first compile green).**
+
+### The finding
+
+**EXACT.** A Gerber RS-274X file contains **no floating-point numbers**. The file declares
+its coordinate format once in the header -- we emit `%FSLAX46Y46*%`, four integer digits and
+six decimal digits -- and every coordinate after that is a **plain integer** in units of
+10^-6 mm. `X1000000` is 1.000000 mm. Not approximately. Exactly.
+
+Excellon drill files are the same. The step count a mill executes is the same. **The
+photoplotter is an integer lattice machine and always was.**
+
+### Why this matters more than it looks
+
+The whole tower -- 1s and 0s, logic gates, assembly, C, C++, Python, float64 -- was built so
+a human could hold the complexity. Every rung buys abstraction and pays in distance from the
+substrate. And then the tower **terminates**, at the fab wall, back in integers on a lattice.
+
+> **The float was never in the machine. It was in us, the whole time, as a convenience.**
+
+This is RULE 0 in its final and most literal form. The certified/display boundary is not a
+discipline we invented to be careful; it is a **real edge in the world**, and `fab.rs` is
+where the crate finally touches it. Upstream of the wall, floats decide where things go.
+Downstream, nothing can drift, because there is nothing left to drift in.
+
+### The wall is one function
+
+```rust
+pub fn quantise(mm: f64) -> Result<i64, FabError> {
+    if !mm.is_finite() { return Err(FabError::NotFinite(mm)); }
+    if mm.abs() > MAX_MM { return Err(FabError::OutOfRange(mm)); }
+    Ok((mm * SCALE as f64).round() as i64)
+}
+```
+
+**DESIGN CHOICE:** exactly one float-to-integer decision exists in the entire export path,
+it is checked, and it is loud. Rounding is *declared* (half away from zero, what every CAM
+tool assumes), not discovered. `0.1` is not representable in binary64 -- but one rounding at
+the wall makes it exact forever after, and the test asserts
+`quantise(0.1) * 3 == 300_000`.
+
+The test that states the law:
+
+```rust
+for line in s.lines() {
+    if line.starts_with('X') {
+        assert!(!line.contains('.'), "float leaked into a coordinate: {line}");
+    }
+}
+```
+
+A decimal point in a coordinate line is a **test failure**. That is the strongest form the
+doctrine has ever taken in this crate.
+
+### What shipped
+
+| writer | format | machine that eats it |
+|---|---|---|
+| `Gerber` | RS-274X, format 4.6, MM, absolute | photoplotter -> copper |
+| `Excellon` | M48, METRIC, one tool per diameter | the drill |
+| `stl_binary` | binary STL, 84 + 50*n bytes | slicer, printer, CAD |
+| `dxf_lines` | DXF R12, LINE entities | laser, router, every CAD on earth |
+
+**MEASURED**, `cargo run --example fab_export`, the certified C60 taken all the way out:
+
+```
+AXIOM 01   : P=12, chi=2 -- PASS, export permitted
+c60_shell.stl    5884 B  = 84 + 116*50      (12 pentagons*3 + 20 hexagons*4)
+c60_top.gbr      5402 B   2 apertures, 60 pads flashed
+c60.drl          1252 B   1 tool, 60 hits
+c60_outline.dxf  9266 B   86 LINE entities
+90 edges -> 86 drawn, 4 dropped at the seam
+gerber checksum : eb077b73f22f8e51
+```
+
+**The 4 dropped edges are the honest part.** Equirectangular unwrap has a seam on the
+antimeridian; an edge spanning it would plot as a false line straight across the panel. We
+drop those and we print the count. Silence there would have been a lie shaped exactly like
+a working board.
+
+### What `fab.rs` refuses to claim
+
+- No dielectric stackup, so **no controlled impedance**, no per-trace Z0.
+- No solder mask, no paste, no netlist (IPC-356). A real board needs all three.
+- No arcs. Every curve we emit is already a polyline -- **not a limitation, the thesis**.
+- **`judge.rs` certifies the graph. Nothing certifies a Gerber file except the fab's own
+  CAM engineer.** We do not own these formats, so we do not judge them. What we promise is
+  narrower and checkable: the file is the graph we certified, quantised once, and
+  `Gerber::checksum()` lets a later run prove it did not move.
+
+---
+
+## THE DECLARED INTENT -- our own PCB designer
+
+**HYPOTHESIS, logged now so it can be held against us later.**
+
+The sims have been circling one thing for nine versions. `pcbium` reached v2.9 by building
+Bezier curves in v2.5, rendering them as discrete stepper moves, and then in v2.9
+**deleting every curve** in favour of Dijkstra paths on the mesh graph. The conclusion was
+reached by construction and then by demolition, which is the most trustworthy way to reach
+one.
+
+**The intent:** once enough sims have been validated in the lab, we build our own PCB
+designer, in Rust, on pure graph space -- and the file it emits goes to a real fab.
+
+The parts are now all on the bench and none of them are speculative:
+
+| part | where it is | state |
+|---|---|---|
+| closed certified substrate | `judge.rs`, `Mesh::c60()`, `sphere.rs` | **built** |
+| the pre-build gate (AXIOM 01) | `examples/gate.rs`, `TOPOLOGY_GATE.md` | **built** |
+| fab export, integers only | `fab.rs` | **built, 10 tests** |
+| zero-dep framebuffer + PNG | `raster.rs` | **built** |
+| a window, painted from Rust | `gos_orb`, `gos_win32` | **built** |
+| **routing** (`route.rs`, heap Dijkstra, pentagons excluded) | -- | **the missing piece** |
+| stackup / impedance | -- | not started, and not needed to ship v0.1 |
+
+**The one honest gap is routing**, and it is small: `fn route(&Mesh, s, t) -> Option<Vec<usize>>`
+with a binary heap instead of pcbium's O(N^2) linear scan, pentagons excluded as
+destinations. It has an obvious test (*a route never contains a pentagon vertex*) and an
+obvious property (*`route(s,t)` and `route(t,s)` agree in length*). One sitting.
+
+**Where it lands:** the implementation repo's `aracnium/hardware/pcb/` and
+`hardware/cad/` are currently empty `.gitkeep` files, and `hardware/grimoir/PCB_MAGIC.md`
+is **0 bytes**. That hole is exactly this shape. Nothing crosses from lab to product until
+it is judged -- see `SpEngLab/README.md` Section 6 for the contract.
+
+**Why Rust, stated plainly and without mysticism.** Not speed. The reasons are three, and
+each one is a bug this crate has already been bitten by:
+
+1. **`Result` makes refusal cheap.** R3 was a guard constant that let release builds wrap
+   silently. `checked_*` returning `Option` fixed it. `quantise` returns `Result` for the
+   same reason: at the fab wall, *refusing* must be as easy as *proceeding*, or nobody
+   will refuse.
+2. **The type system separates the two lanes.** `f64` upstream of the wall, `i64` after.
+   `Pt` holds integers and offers no float arithmetic -- so the boundary is not a
+   convention a future mage must remember, it is a thing the compiler enforces.
+3. **Zero dependencies is achievable here.** 4 packages, all ours, and `fab.rs` added none.
+   A PCB designer whose supply chain is 400 crates cannot be audited by one person, and
+   this whole cave is an argument that one person should be able to audit it.
+
+`#![forbid(unsafe_code)]` still holds across the crate.
+
+---
+
 ## THE NEXT RUNGS
 
 - Apply R3, R5, R6. Re-run both witnesses to a clean 33/33 and 32/32, and let
