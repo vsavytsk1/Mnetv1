@@ -18,7 +18,7 @@
 > *is* the picture, kept on purpose; the dark well is a pentagon centred by the flight-lock. Every
 > line is a graph edge, not a curve. **P = 12. chi = 2.**
 >
-> Rendered at **8K** by [`builder/genesis_wallpaper_v1_6.py`](builder/genesis_wallpaper_v1_6.py) --
+> Rendered at **8K** by [`builder/genesis_wallpaper_v1_7.py`](builder/genesis_wallpaper_v1_7.py) --
 > the browser canvas ported to numpy, line-for-line, with the exact-integer Goldberg ladder that
 > Chromium's float64 cannot reach past `n=39`. Every shell self-certifies (`--cert`): `V=20T`,
 > `E=30T`, `P=12`, `chi=2`, `CLOSED`, reproducible sha256. Make your own below.
@@ -89,7 +89,8 @@ the way a hand-typed table does). Open **ENG v2.0** and browse the full set of c
 ## Generate your own genesis wallpaper (the centerpiece)
 
 The image at the top of this page was made by
-[`builder/genesis_wallpaper_v1_6.py`](builder/genesis_wallpaper_v1_6.py). The browser shows the
+[`builder/genesis_wallpaper_v1_7.py`](builder/genesis_wallpaper_v1_7.py)
+(v1.6 is kept beside it, frozen -- Path X, the version journey). The browser shows the
 kernel *alive*; this hangs it on your wall. It renders the **original genesis v8.1 `refineFace`
 operator** -- crescent defect and all, *that defect is the picture* -- straight to a huge JPG (up
 to 8K). Same geometry, no fake curve.
@@ -107,11 +108,61 @@ pip install numpy pillow
 # optional GPU (RTX 30xx -> cuda12x):                          pip install cupy-cuda12x
 # optional fast hull:                                         pip install scipy
 
-python builder/genesis_wallpaper_v1_6.py            # render
-python builder/genesis_wallpaper_v1_6.py --plan     # capacity, before you allocate
-python builder/genesis_wallpaper_v1_6.py --cert     # reproducible math certificate
-python builder/genesis_wallpaper_v1_6.py --locks    # the lock table, every shell
+python builder/genesis_wallpaper_v1_7.py            # render
+python builder/genesis_wallpaper_v1_7.py --plan     # capacity, before you allocate
+python builder/genesis_wallpaper_v1_7.py --cert     # reproducible math certificate
+python builder/genesis_wallpaper_v1_7.py --locks    # the lock table, every shell
+python builder/genesis_wallpaper_v1_7.py --wall     # where float64 turns the sphere into a doughnut
 ```
+
+### Choosing where to stand -- the picker (v1.7.1)
+
+A shell has many locks and only one of them is the one you want. Aim at the
+wrong pentagon and the renderer culls the entire universe and hands you ten
+minutes of black. The picker answers that in two seconds, **without a prompt**,
+so it can be scripted and tested:
+
+```bash
+# every lock on the shell, with its verdict
+python builder/genesis_wallpaper_v1_7.py --pick-list
+
+# THE MAP: judge every other lock from ONE camera, the one aimed here
+python builder/genesis_wallpaper_v1_7.py --pick-from "pentagon 7" --pick-kinds pent
+
+# any shell on the golden ladder
+python builder/genesis_wallpaper_v1_7.py --seed C980 --pick-from "pentagon 1"
+
+# still interactive if you want it
+python builder/genesis_wallpaper_v1_7.py --pick
+```
+
+`--pick-from` is the one that matters. Standing on **pentagon 7** of C60:
+
+```
+  #     lock           kind         x        y        z      depth residual verdict
+  *6    pentagon 7     pent    1.2726   0.0000   0.7865    +1.4960   0.0000 centred
+   0    pentagon 1     pent    0.0000   0.7865   1.2726    +0.6690   1.3380 OFFFRAME
+   5    pentagon 6     pent   -1.2726   0.0000  -0.7865    -1.4960   0.0000 BEHIND
+
+    centred        1     8.3%
+    OFFFRAME       5    41.7%
+    BEHIND         6    50.0%
+```
+
+Those depths are not decoration. `+1.4960` is the circumradius, `+0.6690` is
+`R*cos(63.435 deg)` -- the icosahedral adjacent-vertex angle -- and `-1.4960`
+is the antipode. **1 self + 5 near + 5 far + 1 antipode = the 12 pentagons,
+seen from one of them.** The split is `1 / 5 / 6` on *every* shell of the
+golden ladder, C20 through C980 and beyond: P=12 is not just a count, it is an
+arrangement, and it does not change with size.
+
+Note `pentagon 6`: residual `0.0000` **and** depth `-1.4960`. Perfectly on
+axis, and exactly behind you. It is the single worst pick on the shell.
+Before v1.7.1 the picker called it `centred`, because every row was measured
+against a camera aimed at itself -- point a camera at X and X is centred, so
+all 35 locks reported `residual 0.0000 / centred`. The column advertised as
+saving the ten minutes was a tautology. That is fixed; `--pick-list` still
+offers the old per-row view and now says in print that it is one.
 
 Everything you'd tune is in the **CONFIG block** at the top of the file:
 
