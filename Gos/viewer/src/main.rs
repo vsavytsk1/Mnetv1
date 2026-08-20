@@ -628,11 +628,22 @@ fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let mut i = 0;
     let mut script: Option<String> = None;
+    let mut open: Option<String> = None;
     let mut size: Option<String> = None;
     let mut want_max = false;
 
     while i < args.len() {
         match args[i].as_str() {
+            "--open" | "-o" => {
+                i += 1;
+                match args.get(i) {
+                    Some(s) => open = Some(s.clone()),
+                    None => {
+                        eprintln!("--open needs a script string");
+                        std::process::exit(2);
+                    }
+                }
+            }
             "--run" | "-r" => {
                 i += 1;
                 match args.get(i) {
@@ -718,7 +729,7 @@ fn main() {
         // headless: no window, no compositor, no capture API. The PNGs come
         // straight off the framebuffer the kernel computed.
         Some(src) => std::process::exit(run_script(&src)),
-        None => unsafe { run(want_max) },
+        None => unsafe { run(want_max, open) },
     }
 }
 
@@ -727,6 +738,8 @@ const HELP: &str = "GOS VIEWER -- a window, painted by the kernel.
   gos_viewer                       open the window
   gos_viewer --run \"<steps>\"       run steps headless, write PNGs, exit
   gos_viewer --script <file>       the same, from a file
+  gos_viewer --open \"<steps>\"      run steps, THEN open the window with them
+  gos_viewer --max                 canvas = a full-screen client area
   gos_viewer --size 3840x2160      any canvas, no recompile
   gos_viewer --max                 fill the screen
 
@@ -780,7 +793,13 @@ Exit code is the number of failures.
   gos_viewer --run \"card 1; sweepmid 0.9 0.1 120 twist\"    # 121 frames
 ";
 
-unsafe fn run(maximised: bool) {
+/// Open the window, optionally after running some steps first.
+///
+/// `--run` is headless and exits; `--open` runs the SAME steps through the
+/// SAME `step()` and then hands the result to the window. That is why the two
+/// cannot disagree about what `refine all` means -- there is one step table
+/// and both callers go through it.
+unsafe fn run(maximised: bool, prelude: Option<String>) {
     let hinst = GetModuleHandleW(std::ptr::null());
     let class = wide("GosViewerClass");
     let title = wide("GOS VIEWER - the 1 and 0s, painted by the kernel");
@@ -813,7 +832,29 @@ unsafe fn run(maximised: bool) {
         return;
     }
 
-    APP.with(|a| *a.borrow_mut() = Some(App::new()));
+    APP.with(|a| {
+        let mut app = App::new();
+        app.layout();
+        app.layout_genesis();
+        // the prelude, through the ordinary step path
+        if let Some(src) = &prelude {
+            let dir = app.session_dir.join("drive");
+            let _ = fs::create_dir_all(&dir);
+            app.render();
+            let mut failures = 0i32;
+            for raw in src.split([';', '\n', '\r']) {
+                let line = raw.trim();
+                if line.is_empty() || line.starts_with('#') {
+                    continue;
+                }
+                println!("{}", step(&mut app, &dir, line, &mut failures));
+            }
+            if failures > 0 {
+                eprintln!("{failures} step(s) failed -- opening anyway");
+            }
+        }
+        *a.borrow_mut() = Some(app);
+    });
 
     // The client area must be EXACTLY W x H, so one canvas pixel is one screen
     // pixel and a click coordinate is a canvas coordinate.
@@ -3093,6 +3134,223 @@ fn run_mp4(dir: &std::path::Path, name: &str, fps: u32, crf: u32) -> Result<Stri
     ))
 }
 
+/// Execute ONE step against an app, and return what to print.
+///
+/// Lifted out of `run_script` so that `--run` (headless) and `--open` (steps,
+/// then a window) cannot diverge. That is the same rule the program already
+/// follows for `click` and `key`: one path, many callers. Two copies of a step
+/// table would drift the first time either was touched, and the drift would be
+/// invisible -- both would keep working, differently.
+fn step(app: &mut App, dir: &std::path::Path, line: &str, failures: &mut i32) -> String {
+    let (verb, arg) = match line.split_once(char::is_whitespace) {
+        Some((v, a)) => (v, a.trim()),
+        None => (line, ""),
+    };
+
+    let entry = match verb.to_ascii_lowercase().as_str() {
+        "shot" => {
+            let name = if arg.is_empty() { "shot" } else { arg };
+            app.shot_named(dir, name)
+        }
+        "card" => match arg.parse::<usize>() {
+            Ok(i) => match app.click_card(i) {
+                Ok(s) => s,
+                Err(e) => {
+                    *failures += 1;
+                    format!("FAIL   {e}")
+                }
+            },
+            Err(_) => {
+                *failures += 1;
+                format!("FAIL   card needs a number, got '{arg}'")
+            }
+        },
+        "button" => match app.click_button(arg) {
+            Ok(s) => s,
+            Err(e) => {
+                *failures += 1;
+                format!("FAIL   {e}")
+            }
+        },
+        "panel" | "back" | "shell" | "palette" => match app.click_button(verb) {
+            Ok(s) => s,
+            Err(e) => {
+                *failures += 1;
+                format!("FAIL   {e}")
+            }
+        },
+        "key" => {
+            let c = arg.chars().next().unwrap_or(' ').to_ascii_uppercase();
+            let changed = app.key(c as usize);
+            format!("key    {c:<27} changed {changed}")
+        }
+        "spin" => {
+            let n: u32 = arg.parse().unwrap_or(1);
+            app.advance(n);
+            format!("spin   {n:<27} yaw {:.4} rad", app.genesis_yaw)
+        }
+        "expect" => {
+            let got = format!("{:?}", app.view());
+            if got.eq_ignore_ascii_case(arg) {
+                format!("expect {arg:<27} OK")
+            } else {
+                *failures += 1;
+                format!("FAIL   expected view '{arg}', got '{got}'")
+            }
+        }
+        // THE GENESIS CONTROL BAR, from the command line. Same methods
+        // the mouse calls, so a scripted run drives the shipped program.
+        "seed" => {
+            let id = if arg.eq_ignore_ascii_case("12") {
+                11
+            } else {
+                10
+            };
+            app.gen_action(id)
+        }
+        "refine" => {
+            let id = match arg.to_ascii_lowercase().as_str() {
+                "all" => 12,
+                "5s" | "pent" | "pents" => 13,
+                "6s" | "hex" | "hexes" => 14,
+                other => {
+                    *failures += 1;
+                    return format!("FAIL   refine wants all|5s|6s, got '{other}'");
+                }
+            };
+            app.gen_action(id)
+        }
+        "undo" => app.gen_action(15),
+        "cull" => app.gen_action(19),
+        "spherical" => app.gen_action(20),
+        "zoomin" => app.gen_action(18),
+        "zoomout" => app.gen_action(17),
+        "reset" => app.gen_action(16),
+        // ANY registered control, by its own name. Adding a row to
+        // CONTROLS makes it settable here with no code at all -- and the
+        // SAME parse_control the box uses, so a shoe is refused the same
+        // way whether it was typed or scripted.
+        v if App::ctl_index(v).is_some() => {
+            let ctl = App::ctl_index(v).unwrap();
+            match parse_control(&CONTROLS[ctl], arg) {
+                Ok(x) => app.ctl_set(ctl, x),
+                Err(e) => {
+                    *failures += 1;
+                    format!(
+                        "FAIL   {} REFUSED: {e}. WANTED {} ({}..{})",
+                        CONTROLS[ctl].label, CONTROLS[ctl].unit, CONTROLS[ctl].lo, CONTROLS[ctl].hi
+                    )
+                }
+            }
+        }
+        "controls" => {
+            let mut out = vec![String::from("controls")];
+            for (i, c) in CONTROLS.iter().enumerate() {
+                out.push(format!(
+                    "  {:<8} {:>10.4}   {}..{}   [{:?}] {}",
+                    c.name,
+                    app.ctl_get(i),
+                    c.lo,
+                    c.hi,
+                    c.when,
+                    c.unit
+                ));
+            }
+            out.join("\n")
+        }
+        // MOVIES. Frames at 60/s, priced exactly before the first write.
+        //
+        //   movie spin  <frames> <name>
+        //   movie inner <lo> <hi> <frames> <name>
+        //   movie mid   <lo> <hi> <frames> <name>
+        "movie" => {
+            let a: Vec<&str> = arg.split_whitespace().collect();
+            // movie <control> <lo> <hi> <frames> <name> [png|mp4|both] [fps] [crf]
+            let parsed = (|| -> Result<_, String> {
+                if a.len() < 5 {
+                    return Err(String::from(
+                            "usage: movie <control> <lo> <hi> <frames> <name> [png|mp4|both] [fps] [crf]",
+                        ));
+                }
+                let ctl = App::ctl_index(a[0]).ok_or_else(|| {
+                    let names: Vec<&str> = CONTROLS.iter().map(|c| c.name).collect();
+                    format!("no control {:?}. have: {}", a[0], names.join(", "))
+                })?;
+                let lo: f64 = a[1]
+                    .parse()
+                    .map_err(|_| format!("{:?} is not a number", a[1]))?;
+                let hi: f64 = a[2]
+                    .parse()
+                    .map_err(|_| format!("{:?} is not a number", a[2]))?;
+                if !lo.is_finite() || !hi.is_finite() {
+                    return Err(String::from("a movie cannot start or end at NaN"));
+                }
+                let n: u32 = a[3]
+                    .parse()
+                    .map_err(|_| format!("{:?} is not a frame count", a[3]))?;
+                let name = a[4];
+                let emit = match a.get(5) {
+                    Some(m) => {
+                        Emit::parse(m).ok_or_else(|| format!("{m:?} is not png|mp4|both"))?
+                    }
+                    None => Emit::Mp4,
+                };
+                let fps: u32 = a.get(6).and_then(|v| v.parse().ok()).unwrap_or(60);
+                let crf: u32 = a.get(7).and_then(|v| v.parse().ok()).unwrap_or(18);
+                Ok((ctl, lo, hi, n, name, emit, fps, crf))
+            })();
+            match parsed {
+                Ok((ctl, lo, hi, n, name, emit, fps, crf)) => {
+                    match run_movie(app, dir, ctl, lo, hi, n, fps, crf, emit, name) {
+                        Ok(m) => m,
+                        Err(e) => {
+                            *failures += 1;
+                            format!("FAIL   {e}")
+                        }
+                    }
+                }
+                Err(e) => {
+                    *failures += 1;
+                    format!("FAIL   {e}")
+                }
+            }
+        }
+        // ONE SHAREABLE FILE. 846:1 measured, so this is the price paid
+        // in compute that makes 356 MB of frames a 0.4 MB link.
+        "mp4" => {
+            let a: Vec<&str> = arg.split_whitespace().collect();
+            if a.is_empty() {
+                *failures += 1;
+                String::from("FAIL   usage: mp4 <name> [fps] [crf]")
+            } else {
+                let name = a[0];
+                let fps = a.get(1).and_then(|v| v.parse().ok()).unwrap_or(60);
+                let crf = a.get(2).and_then(|v| v.parse().ok()).unwrap_or(16);
+                match run_mp4(dir, name, fps, crf) {
+                    Ok(m) => m,
+                    Err(e) => {
+                        *failures += 1;
+                        format!("FAIL   {e}")
+                    }
+                }
+            }
+        }
+        // what the frame is MADE of, in a space where distance means
+        // something. The seal says different; this says how different.
+        "stats" => {
+            app.render();
+            let st = goldberg_kernel::oklab::FrameStats::measure(&app.cv.px, 37);
+            format!("stats  {st}")
+        }
+        "status" => format!("status {}", app.status),
+        other => {
+            *failures += 1;
+            format!("FAIL   unknown command '{other}'")
+        }
+    };
+    entry
+}
+
 /// Run a script against a headless `App`. Returns the number of failures.
 ///
 /// **Why this lives in Rust and not in a shell script.**
@@ -3155,222 +3413,11 @@ fn run_script(src: &str) -> i32 {
         if line.is_empty() || line.starts_with('#') {
             continue;
         }
-        let (verb, arg) = match line.split_once(char::is_whitespace) {
-            Some((v, a)) => (v, a.trim()),
-            None => (line, ""),
-        };
-
-        let entry = match verb.to_ascii_lowercase().as_str() {
-            "shot" => {
-                let name = if arg.is_empty() { "shot" } else { arg };
-                app.shot_named(&dir, name)
-            }
-            "card" => match arg.parse::<usize>() {
-                Ok(i) => match app.click_card(i) {
-                    Ok(s) => s,
-                    Err(e) => {
-                        failures += 1;
-                        format!("FAIL   {e}")
-                    }
-                },
-                Err(_) => {
-                    failures += 1;
-                    format!("FAIL   card needs a number, got '{arg}'")
-                }
-            },
-            "button" => match app.click_button(arg) {
-                Ok(s) => s,
-                Err(e) => {
-                    failures += 1;
-                    format!("FAIL   {e}")
-                }
-            },
-            "panel" | "back" | "shell" | "palette" => match app.click_button(verb) {
-                Ok(s) => s,
-                Err(e) => {
-                    failures += 1;
-                    format!("FAIL   {e}")
-                }
-            },
-            "key" => {
-                let c = arg.chars().next().unwrap_or(' ').to_ascii_uppercase();
-                let changed = app.key(c as usize);
-                format!("key    {c:<27} changed {changed}")
-            }
-            "spin" => {
-                let n: u32 = arg.parse().unwrap_or(1);
-                app.advance(n);
-                format!("spin   {n:<27} yaw {:.4} rad", app.genesis_yaw)
-            }
-            "expect" => {
-                let got = format!("{:?}", app.view());
-                if got.eq_ignore_ascii_case(arg) {
-                    format!("expect {arg:<27} OK")
-                } else {
-                    failures += 1;
-                    format!("FAIL   expected view '{arg}', got '{got}'")
-                }
-            }
-            // THE GENESIS CONTROL BAR, from the command line. Same methods
-            // the mouse calls, so a scripted run drives the shipped program.
-            "seed" => {
-                let id = if arg.eq_ignore_ascii_case("12") {
-                    11
-                } else {
-                    10
-                };
-                app.gen_action(id)
-            }
-            "refine" => {
-                let id = match arg.to_ascii_lowercase().as_str() {
-                    "all" => 12,
-                    "5s" | "pent" | "pents" => 13,
-                    "6s" | "hex" | "hexes" => 14,
-                    other => {
-                        failures += 1;
-                        log.push(format!("FAIL   refine wants all|5s|6s, got '{other}'"));
-                        continue;
-                    }
-                };
-                app.gen_action(id)
-            }
-            "undo" => app.gen_action(15),
-            "cull" => app.gen_action(19),
-            "spherical" => app.gen_action(20),
-            "zoomin" => app.gen_action(18),
-            "zoomout" => app.gen_action(17),
-            "reset" => app.gen_action(16),
-            // ANY registered control, by its own name. Adding a row to
-            // CONTROLS makes it settable here with no code at all -- and the
-            // SAME parse_control the box uses, so a shoe is refused the same
-            // way whether it was typed or scripted.
-            v if App::ctl_index(v).is_some() => {
-                let ctl = App::ctl_index(v).unwrap();
-                match parse_control(&CONTROLS[ctl], arg) {
-                    Ok(x) => app.ctl_set(ctl, x),
-                    Err(e) => {
-                        failures += 1;
-                        format!(
-                            "FAIL   {} REFUSED: {e}. WANTED {} ({}..{})",
-                            CONTROLS[ctl].label,
-                            CONTROLS[ctl].unit,
-                            CONTROLS[ctl].lo,
-                            CONTROLS[ctl].hi
-                        )
-                    }
-                }
-            }
-            "controls" => {
-                let mut out = vec![String::from("controls")];
-                for (i, c) in CONTROLS.iter().enumerate() {
-                    out.push(format!(
-                        "  {:<8} {:>10.4}   {}..{}   [{:?}] {}",
-                        c.name,
-                        app.ctl_get(i),
-                        c.lo,
-                        c.hi,
-                        c.when,
-                        c.unit
-                    ));
-                }
-                out.join("\n")
-            }
-            // MOVIES. Frames at 60/s, priced exactly before the first write.
-            //
-            //   movie spin  <frames> <name>
-            //   movie inner <lo> <hi> <frames> <name>
-            //   movie mid   <lo> <hi> <frames> <name>
-            "movie" => {
-                let a: Vec<&str> = arg.split_whitespace().collect();
-                // movie <control> <lo> <hi> <frames> <name> [png|mp4|both] [fps] [crf]
-                let parsed = (|| -> Result<_, String> {
-                    if a.len() < 5 {
-                        return Err(String::from(
-                            "usage: movie <control> <lo> <hi> <frames> <name> [png|mp4|both] [fps] [crf]",
-                        ));
-                    }
-                    let ctl = App::ctl_index(a[0]).ok_or_else(|| {
-                        let names: Vec<&str> = CONTROLS.iter().map(|c| c.name).collect();
-                        format!("no control {:?}. have: {}", a[0], names.join(", "))
-                    })?;
-                    let lo: f64 = a[1]
-                        .parse()
-                        .map_err(|_| format!("{:?} is not a number", a[1]))?;
-                    let hi: f64 = a[2]
-                        .parse()
-                        .map_err(|_| format!("{:?} is not a number", a[2]))?;
-                    if !lo.is_finite() || !hi.is_finite() {
-                        return Err(String::from("a movie cannot start or end at NaN"));
-                    }
-                    let n: u32 = a[3]
-                        .parse()
-                        .map_err(|_| format!("{:?} is not a frame count", a[3]))?;
-                    let name = a[4];
-                    let emit = match a.get(5) {
-                        Some(m) => {
-                            Emit::parse(m).ok_or_else(|| format!("{m:?} is not png|mp4|both"))?
-                        }
-                        None => Emit::Mp4,
-                    };
-                    let fps: u32 = a.get(6).and_then(|v| v.parse().ok()).unwrap_or(60);
-                    let crf: u32 = a.get(7).and_then(|v| v.parse().ok()).unwrap_or(18);
-                    Ok((ctl, lo, hi, n, name, emit, fps, crf))
-                })();
-                match parsed {
-                    Ok((ctl, lo, hi, n, name, emit, fps, crf)) => {
-                        match run_movie(&mut app, &dir, ctl, lo, hi, n, fps, crf, emit, name) {
-                            Ok(m) => m,
-                            Err(e) => {
-                                failures += 1;
-                                format!("FAIL   {e}")
-                            }
-                        }
-                    }
-                    Err(e) => {
-                        failures += 1;
-                        format!("FAIL   {e}")
-                    }
-                }
-            }
-            // ONE SHAREABLE FILE. 846:1 measured, so this is the price paid
-            // in compute that makes 356 MB of frames a 0.4 MB link.
-            "mp4" => {
-                let a: Vec<&str> = arg.split_whitespace().collect();
-                if a.is_empty() {
-                    failures += 1;
-                    String::from("FAIL   usage: mp4 <name> [fps] [crf]")
-                } else {
-                    let name = a[0];
-                    let fps = a.get(1).and_then(|v| v.parse().ok()).unwrap_or(60);
-                    let crf = a.get(2).and_then(|v| v.parse().ok()).unwrap_or(16);
-                    match run_mp4(&dir, name, fps, crf) {
-                        Ok(m) => m,
-                        Err(e) => {
-                            failures += 1;
-                            format!("FAIL   {e}")
-                        }
-                    }
-                }
-            }
-            // what the frame is MADE of, in a space where distance means
-            // something. The seal says different; this says how different.
-            "stats" => {
-                app.render();
-                let st = goldberg_kernel::oklab::FrameStats::measure(&app.cv.px, 37);
-                format!("stats  {st}")
-            }
-            "status" => format!("status {}", app.status),
-            other => {
-                failures += 1;
-                format!("FAIL   unknown command '{other}'")
-            }
-        };
-
+        let entry = step(&mut app, &dir, line, &mut failures);
         println!("{entry}");
         log.push(entry);
     }
 
-    // the receipt
     log.push(String::new());
     log.push(format!("canvas          {}x{}", W(), H()));
     log.push(format!(
