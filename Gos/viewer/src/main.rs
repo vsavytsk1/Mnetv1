@@ -39,12 +39,57 @@ use gos_win32::*;
 /// window to yield exactly this, and the app refuses to claim pixel-exactness
 /// if the OS disagrees. 1920x1080 on a 2560x1440 panel, so the whole frame is
 /// on screen with the window frame to spare.
-const W: usize = 1920;
-const H: usize = 1080;
+const DEFAULT_W: usize = 1920;
+const DEFAULT_H: usize = 1080;
+
+/// The canvas, decided ONCE at startup and never again.
+///
+/// It was a pair of `const`s, which meant the render size was a property of
+/// the BUILD rather than of the run -- so 4K needed a recompile and "fill the
+/// screen" was not expressible at all. It is now set once, before the window
+/// or any script exists, and read through `W()` / `H()` everywhere.
+///
+/// **Set once, not mutable.** A canvas that could change mid-run would have to
+/// reallocate the framebuffer, the DIB and every cached layout rect while a
+/// paint might be in flight; `OnceLock` makes that impossible by construction
+/// rather than by remembering not to. Live drag-resize is a separate job with
+/// a `WM_SIZE` handler behind it, and this is not pretending to be it.
+static CANVAS: std::sync::OnceLock<(usize, usize)> = std::sync::OnceLock::new();
+
+/// Canvas width. Falls back to the old default if nothing set it, so a code
+/// path that forgets cannot produce a zero-sized buffer.
+#[allow(non_snake_case)]
+#[inline]
+fn W() -> usize {
+    CANVAS.get().map(|c| c.0).unwrap_or(DEFAULT_W)
+}
+
+/// Canvas height.
+#[allow(non_snake_case)]
+#[inline]
+fn H() -> usize {
+    CANVAS.get().map(|c| c.1).unwrap_or(DEFAULT_H)
+}
+
+/// Fix the canvas. Ignored if it has already been set.
+///
+/// **Both dimensions are forced EVEN.** `yuv420p` subsamples chroma 2x2, so
+/// H.264 cannot encode an odd width or height -- ffmpeg simply refuses. An odd
+/// canvas would render and shoot and then fail only at `movie`, which is the
+/// worst place to find out. Rounding down here, once, is the whole fix.
+fn set_canvas(w: usize, h: usize) -> (usize, usize) {
+    let wh = ((w.max(64)) & !1, (h.max(64)) & !1);
+    let _ = CANVAS.set(wh);
+    *CANVAS.get().unwrap_or(&wh)
+}
+
 const BAR_H: i32 = 34;
 
 /// One full frame, in source bytes: `W * H * 3`.
-const FRAME_BYTES: usize = W * H * 3;
+/// One full frame, in source bytes.
+fn frame_bytes() -> usize {
+    W() * H() * 3
+}
 
 /// Cap on any single exported dump. The HELENA doctrine: heavy payload stays
 /// local, git keeps the manifest. A cap that is stated is engineering; a dump
@@ -65,7 +110,9 @@ const FRAME_BYTES: usize = W * H * 3;
 ///
 /// That is the price, stated before it is paid. `runs/**` is gitignored, and
 /// `MANIFEST.json` carries the digests so the steps travel without the payload.
-const DUMP_CAP: usize = FRAME_BYTES;
+fn dump_cap() -> usize {
+    frame_bytes()
+}
 
 /// WM_TIMER id for the GENESIS turn.
 const GENESIS_TIMER: usize = 1;
@@ -105,7 +152,7 @@ struct Control {
 }
 
 /// Every animatable control the GENESIS view has.
-const CONTROLS: [Control; 6] = [
+const CONTROLS: [Control; 7] = [
     Control {
         name: "inner",
         label: "INNER",
@@ -147,6 +194,17 @@ const CONTROLS: [Control; 6] = [
         lo: 0.25,
         hi: 6.0,
         unit: "multiplier on the fitted zoom",
+    },
+    Control {
+        name: "speed",
+        label: "SPEED",
+        lo: 0.0,
+        hi: 0.25,
+        // A rate, expressed PER FRAME rather than per second, because the
+        // frame is what this program actually counts. At the 60 Hz timer the
+        // default 0.012 is one turn every 8.7 seconds; in a movie it is one
+        // turn every 524 frames, and both statements are the same statement.
+        unit: "turn per frame, radians -- 0 holds it still",
     },
 ];
 
@@ -358,10 +416,86 @@ struct App {
     gen_error: Option<String>,
     /// multiplier on the fitted zoom -- a control like any other
     gen_zoom: f64,
+    /// radians of turn per frame. ONE constant for both callers: the window's
+    /// timer and the script's `spin`. They were separate literals in the orb
+    /// and had DRIFTED apart -- 0.012 in the timer, 0.01 in advance() -- so a
+    /// scripted spin did not reproduce what the window did. A control cannot
+    /// drift from itself.
+    gen_speed: f64,
 }
 
 thread_local! {
     static APP: RefCell<Option<App>> = const { RefCell::new(None) };
+}
+
+/// Declare this process DPI-aware, once, and remember the answer.
+///
+/// **Awareness can only be set ONCE per process.** A second call fails, and a
+/// caller reading that failure concludes the process is not aware -- which is
+/// exactly what happened the moment `--max` needed the screen size before the
+/// window existed: `resolve_canvas` set it, `run()` set it again, got 0, and
+/// renamed the window to "PIXELS RESAMPLED - NOT EXACT" while the pixels were
+/// in fact exact. The report was wrong, not the rendering.
+///
+/// Caching turns the second caller into a reader of the first result instead
+/// of a second setter with a worse answer. One call, one witness.
+static DPI_AWARE: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+
+fn ensure_dpi_aware() -> bool {
+    *DPI_AWARE
+        .get_or_init(|| unsafe { SetProcessDpiAwarenessContext(DPI_PER_MONITOR_AWARE_V2) != 0 })
+}
+
+/// Work out the canvas from the command line, and FIX it before anything runs.
+///
+/// Three ways, in order of how much the caller knows:
+///
+/// * `--size 3840x2160` -- say it exactly. This is how 4K and 8K happen now,
+///   with no recompile, because the canvas stopped being a property of the
+///   build.
+/// * `--max` -- fill the screen. `SM_CXFULLSCREEN` is the client area of a
+///   maximised window, so the taskbar and the frame are already deducted and
+///   there is no guesswork left to get wrong.
+/// * neither -- the old default, unchanged.
+///
+/// DPI awareness is declared HERE rather than in `run()`, because `--max`
+/// reads a screen metric and a DPI-unaware process is told a 2560-wide panel
+/// is 1707 wide. Sizing a canvas from that number would reintroduce the exact
+/// resampling the DPI work removed. `--run` never opens a window and still
+/// needs the true number, so this must happen before the fork, not after it.
+fn resolve_canvas(size: Option<String>, want_max: bool) -> Result<(usize, usize), String> {
+    ensure_dpi_aware();
+    if let Some(spec) = size {
+        let lower = spec.to_ascii_lowercase();
+        let (w, h) = lower
+            .split_once('x')
+            .ok_or_else(|| format!("--size wants WxH, got {spec:?}"))?;
+        let w: usize = w
+            .trim()
+            .parse()
+            .map_err(|_| format!("{:?} is not a width", w.trim()))?;
+        let h: usize = h
+            .trim()
+            .parse()
+            .map_err(|_| format!("{:?} is not a height", h.trim()))?;
+        if w < 64 || h < 64 || w > 16384 || h > 16384 {
+            return Err(format!("{w}x{h} is outside 64..16384"));
+        }
+        return Ok(set_canvas(w, h));
+    }
+    if want_max {
+        let (w, h) = unsafe {
+            (
+                GetSystemMetrics(SM_CXFULLSCREEN),
+                GetSystemMetrics(SM_CYFULLSCREEN),
+            )
+        };
+        if w > 0 && h > 0 {
+            return Ok(set_canvas(w as usize, h as usize));
+        }
+        return Err(String::from("the screen would not report its size"));
+    }
+    Ok(set_canvas(DEFAULT_W, DEFAULT_H))
 }
 
 fn main() {
@@ -370,6 +504,8 @@ fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let mut i = 0;
     let mut script: Option<String> = None;
+    let mut size: Option<String> = None;
+    let mut want_max = false;
 
     while i < args.len() {
         match args[i].as_str() {
@@ -397,6 +533,17 @@ fn main() {
                     }
                 }
             }
+            "--size" => {
+                i += 1;
+                match args.get(i) {
+                    Some(v) => size = Some(v.clone()),
+                    None => {
+                        eprintln!("--size needs WxH, e.g. --size 3840x2160");
+                        std::process::exit(2);
+                    }
+                }
+            }
+            "--max" => want_max = true,
             "--help" | "-h" => {
                 println!("{HELP}");
                 return;
@@ -413,6 +560,36 @@ fn main() {
         i += 1;
     }
 
+    // THE CANVAS IS FIXED HERE, before a window, a script or a buffer exists.
+    let asked = size.clone();
+    match resolve_canvas(size, want_max) {
+        Ok((w, h)) => {
+            // If a request was rounded, SAY SO. `--size 1921x1081` quietly
+            // becoming 1920x1080 is a silent cap, and a cap that does not
+            // announce itself reads as "you got what you asked for".
+            if let Some(spec) = asked.as_deref() {
+                let got = format!("{w}x{h}");
+                if spec.eq_ignore_ascii_case(&got) {
+                    println!("canvas  {w} x {h}");
+                } else {
+                    println!(
+                        "canvas  {w} x {h}   ROUNDED from {spec} -- both axes forced even, \
+                         because yuv420p subsamples chroma 2x2 and cannot encode an odd one"
+                    );
+                }
+            } else if want_max {
+                println!(
+                    "canvas  {w} x {h}   MAXIMISED -- the client area of a full-screen window, \
+                     so the taskbar and the frame are already deducted"
+                );
+            }
+        }
+        Err(e) => {
+            eprintln!("{e}");
+            std::process::exit(2);
+        }
+    }
+
     match script {
         // headless: no window, no compositor, no capture API. The PNGs come
         // straight off the framebuffer the kernel computed.
@@ -426,6 +603,8 @@ const HELP: &str = "GOS VIEWER -- a window, painted by the kernel.
   gos_viewer                       open the window
   gos_viewer --run \"<steps>\"       run steps headless, write PNGs, exit
   gos_viewer --script <file>       the same, from a file
+  gos_viewer --size 3840x2160      any canvas, no recompile
+  gos_viewer --max                 fill the screen
 
 STEPS -- ';' or newline separated, '#' comments
 
@@ -455,7 +634,7 @@ MOVIES -- priced exactly before the first frame is written
   stats                                   what the frame is made of, in OKLab
   mp4 <name> [fps] [crf]                  one shareable file, via ffmpeg
 
-  We do NOT own H.264 and do not pretend to: the job goes to ffmpeg, which is
+  We do NOT own H().264 and do not pretend to: the job goes to ffmpeg, which is
   libavcodec, which is the engine under VLC. `[dependencies]` is still empty --
   ffmpeg is a TOOL we invoke, found by running it, and if it is missing we say
   so and leave the exact command in movie_<name>/MAKE_MP4.txt.
@@ -502,7 +681,7 @@ unsafe fn run() {
     // receipt would stay honest while the screen quietly stopped matching it.
     //
     // If it fails we do not pretend. The title says so.
-    let dpi_exact = SetProcessDpiAwarenessContext(DPI_PER_MONITOR_AWARE_V2) != 0;
+    let dpi_exact = ensure_dpi_aware();
 
     if RegisterClassW(&wc) == 0 {
         eprintln!("RegisterClassW failed");
@@ -521,8 +700,8 @@ unsafe fn run() {
     let mut want = RECT {
         left: 0,
         top: 0,
-        right: W as LONG,
-        bottom: H as LONG,
+        right: W() as LONG,
+        bottom: H() as LONG,
     };
     AdjustWindowRect(&mut want, WS_OVERLAPPEDWINDOW, 0);
     let outer_w = want.right - want.left;
@@ -558,9 +737,9 @@ unsafe fn run() {
     };
     GetClientRect(hwnd, &mut got);
     let (cw, ch) = (got.right - got.left, got.bottom - got.top);
-    let exact = dpi_exact && cw == W as LONG && ch == H as LONG;
+    let exact = dpi_exact && cw == W() as LONG && ch == H() as LONG;
     println!("DPI aware   : {dpi_exact}");
-    println!("client area : {cw} x {ch}   (canvas {W} x {H})");
+    println!("client area : {cw} x {ch}   (canvas {} x {})", W(), H());
     println!(
         "pixel exact : {}",
         if exact {
@@ -621,7 +800,7 @@ unsafe extern "system" fn wndproc(hwnd: HWND, msg: UINT, wp: WPARAM, lp: LPARAM)
             APP.with(|a| {
                 if let Some(app) = a.borrow_mut().as_mut() {
                     if app.view() == View::Genesis && app.genesis_spin {
-                        app.genesis_yaw += 0.012;
+                        app.genesis_yaw += app.gen_speed;
                         go = true;
                     }
                 }
@@ -719,8 +898,8 @@ impl App {
 
         let pal = ALL[0];
         let mut app = App {
-            cv: Canvas::new(W, H, pal.bg),
-            dib: vec![0u8; W * H * 4],
+            cv: Canvas::new(W(), H(), pal.bg),
+            dib: vec![0u8; W() * H() * 4],
             stack: vec![View::Dashboard],
             pal: 0,
             buttons: Vec::new(),
@@ -750,6 +929,7 @@ impl App {
             gen_edit: None,
             gen_error: None,
             gen_zoom: 1.0,
+            gen_speed: 0.012,
             paint_clock: true,
         };
         app.layout();
@@ -765,7 +945,7 @@ impl App {
     }
 
     fn layout(&mut self) {
-        let y = H as i32 - BAR_H + 6;
+        let y = H() as i32 - BAR_H + 6;
         let mut x = 10i32;
         self.buttons.clear();
         for (id, label) in [
@@ -923,6 +1103,7 @@ impl App {
             "jitter" => self.gen_params.jitter,
             "sphere" => self.gen_params.sphere_r,
             "yaw" => self.genesis_yaw,
+            "speed" => self.gen_speed,
             _ => self.gen_zoom,
         }
     }
@@ -941,6 +1122,7 @@ impl App {
             "jitter" => self.gen_params.jitter = v,
             "sphere" => self.gen_params.sphere_r = v,
             "yaw" => self.genesis_yaw = v,
+            "speed" => self.gen_speed = v,
             _ => self.gen_zoom = v,
         }
         // the crescent is the fact worth repeating, so the two that decide it
@@ -995,7 +1177,7 @@ impl Estimate {
             fps: fps.max(1),
             play_s: frames as f64 / fps.max(1) as f64,
             render_s: one * frames as f64,
-            png_bytes: goldberg_kernel::raster::png_bytes(W, H) as u64 * frames as u64,
+            png_bytes: goldberg_kernel::raster::png_bytes(W(), H()) as u64 * frames as u64,
         }
     }
 
@@ -1046,7 +1228,7 @@ impl App {
     /// plainly: it is not a bug to fix, it is the picture. So these two floats
     /// are a first-class control, not a debug knob.
     fn layout_genesis(&mut self) {
-        let y = H as i32 - BAR_H - GEN_BAR_H + 6;
+        let y = H() as i32 - BAR_H - GEN_BAR_H + 6;
         let h = GEN_BAR_H - 12;
         let mut x = 10i32;
 
@@ -1181,9 +1363,9 @@ impl App {
     /// Paint the GENESIS control bar.
     fn paint_gen_bar(&mut self) {
         let pal = self.pal();
-        let top = H as i32 - BAR_H - GEN_BAR_H;
-        self.cv.fill_rect(0, top, W as i32, GEN_BAR_H, pal.panel);
-        self.cv.line(0, top, W as i32 - 1, top, pal.border);
+        let top = H() as i32 - BAR_H - GEN_BAR_H;
+        self.cv.fill_rect(0, top, W() as i32, GEN_BAR_H, pal.panel);
+        self.cv.line(0, top, W() as i32 - 1, top, pal.border);
 
         let items: Vec<(i32, i32, i32, i32, &str, u8)> = self
             .gen_buttons
@@ -1278,8 +1460,8 @@ impl App {
     /// size the drawing height is 606 px and `606 * 0.41 = 248`, within a
     /// couple of pixels of the old 250.
     fn fit_zoom(&self) -> f64 {
-        let sh = (H as i32 - BAR_H - 60) as f64;
-        0.41 * (W as f64).min(sh)
+        let sh = (H() as i32 - BAR_H - 60) as f64;
+        0.41 * (W() as f64).min(sh)
     }
 
     /// Publish the hit-test geometry the viewer ACTUALLY painted.
@@ -1298,7 +1480,7 @@ impl App {
     fn dump_layout(&self) {
         let mut lines: Vec<String> = Vec::new();
         lines.push(String::from("{"));
-        lines.push(format!("  \"canvas\": [{}, {}],", W, H));
+        lines.push(format!("  \"canvas\": [{}, {}],", W(), H()));
         lines.push(format!("  \"view\": \"{:?}\",", self.view()));
         lines.push(format!("  \"stack_depth\": {},", self.stack.len()));
 
@@ -1510,7 +1692,7 @@ impl App {
     fn paint_genesis(&mut self) {
         let pal = self.pal();
         let (rx, ry, zoom) = (0.30_f64, self.genesis_yaw, self.fit_zoom());
-        let sh = H as i32 - BAR_H - GEN_BAR_H - 60;
+        let sh = H() as i32 - BAR_H - GEN_BAR_H - 60;
 
         let depths: Vec<f64> = self
             .gen
@@ -1520,7 +1702,7 @@ impl App {
                 let n = f.pts.len() as f64;
                 f.pts
                     .iter()
-                    .map(|&v| project(v, rx, ry, zoom, W, sh as usize).2)
+                    .map(|&v| project(v, rx, ry, zoom, W(), sh as usize).2)
                     .sum::<f64>()
                     / n
             })
@@ -1544,7 +1726,7 @@ impl App {
             let pts: Vec<(i32, i32, f64)> = f
                 .pts
                 .iter()
-                .map(|&v| project(v, rx, ry, zoom, W, sh as usize))
+                .map(|&v| project(v, rx, ry, zoom, W(), sh as usize))
                 .collect();
             for i in 0..pts.len() {
                 let j = (i + 1) % pts.len();
@@ -1627,12 +1809,12 @@ impl App {
     fn paint_shell(&mut self) {
         let pal = self.pal();
         let (rx, ry, zoom) = (0.30_f64, 0.55_f64, self.fit_zoom());
-        let sh = H as i32 - BAR_H - 60;
+        let sh = H() as i32 - BAR_H - 60;
         let pts: Vec<(i32, i32, f64)> = self
             .mesh
             .verts
             .iter()
-            .map(|&v| project(v, rx, ry, zoom, W, sh as usize))
+            .map(|&v| project(v, rx, ry, zoom, W(), sh as usize))
             .collect();
 
         let mut order: Vec<usize> = (0..self.mesh.edges.len()).collect();
@@ -1667,9 +1849,9 @@ impl App {
     fn paint_bit_texture(&mut self, frame: bool) {
         let pal = self.pal();
         let top = 52i32;
-        let bot = H as i32 - BAR_H - 8;
+        let bot = H() as i32 - BAR_H - 8;
         let rows = (bot - top) as usize;
-        let cols = W - 20;
+        let cols = W() - 20;
 
         // snapshot the source first; painting mutates the framebuffer
         let src: Vec<u8> = if frame {
@@ -1736,7 +1918,7 @@ impl App {
             font::text(&mut self.cv, 10, 30, &sub, pal.cyan, 1);
 
             let extra = if v == View::Genesis { GEN_BAR_H } else { 0 };
-            let sy = H as i32 - BAR_H - extra - 14;
+            let sy = H() as i32 - BAR_H - extra - 14;
             font::text(&mut self.cv, 10, sy, &self.status, pal.text, 1);
         }
 
@@ -1746,12 +1928,12 @@ impl App {
 
         // button bar
         self.cv
-            .fill_rect(0, H as i32 - BAR_H, W as i32, BAR_H, pal.panel);
+            .fill_rect(0, H() as i32 - BAR_H, W() as i32, BAR_H, pal.panel);
         self.cv.line(
             0,
-            H as i32 - BAR_H,
-            W as i32 - 1,
-            H as i32 - BAR_H,
+            H() as i32 - BAR_H,
+            W() as i32 - 1,
+            H() as i32 - BAR_H,
             pal.border,
         );
         let buttons: Vec<(i32, i32, i32, i32, &str, u8)> = self
@@ -1833,19 +2015,19 @@ impl App {
         let _ = self.cv.write_png(&png);
         let r1 = bits::write_bits(
             &framebits,
-            &format!("framebuffer {}x{} RGB, view {:?}", W, H, self.view()),
+            &format!("framebuffer {}x{} RGB, view {:?}", W(), H(), self.view()),
             &self.cv.px,
             self.cv.w * 3,
-            DUMP_CAP,
+            dump_cap(),
         );
         let r2 = bits::write_bits(
             &machinebits,
             "this .exe, as emitted by rustc",
             &self.exe_bytes,
             64,
-            DUMP_CAP,
+            dump_cap(),
         );
-        let _ = bits::write_packed(&packed, &self.cv.px, DUMP_CAP);
+        let _ = bits::write_packed(&packed, &self.cv.px, dump_cap());
 
         let (f1, f2) = (r1.unwrap_or_else(zero_rep), r2.unwrap_or_else(zero_rep));
         // RUSTIUM R8: no backslash line continuations. Rust's own continuation
@@ -1857,7 +2039,7 @@ impl App {
             format!("  \"run\": {},", self.runs),
             format!("  \"view\": \"{:?}\",", self.view()),
             format!("  \"palette\": \"{}\",", self.pal().name),
-            format!("  \"canvas\": [{}, {}],", W, H),
+            format!("  \"canvas\": [{}, {}],", W(), H()),
             // render_us is a PEER of the seal, never inside it (Curse 38 / R10)
             format!("  \"render_us\": {},", self.last_render_us),
             format!(
@@ -1872,7 +2054,7 @@ impl App {
                 "  \"machine_bits\": {{ \"bytes\": {}, \"of\": {}, \"truncated\": {}, \"fnv1a64\": \"{:016x}\" }},",
                 f2.bytes_written, f2.bytes_total, f2.truncated, f2.digest
             ),
-            format!("  \"dump_cap_bytes\": {},", DUMP_CAP),
+            format!("  \"dump_cap_bytes\": {},", dump_cap()),
             String::from("  \"note\": \"payload is local and gitignored; this manifest is the mirror\""),
             String::from("}"),
         ];
@@ -1905,8 +2087,8 @@ impl App {
         let bmi = BITMAPINFO {
             bmiHeader: BITMAPINFOHEADER {
                 biSize: std::mem::size_of::<BITMAPINFOHEADER>() as u32,
-                biWidth: W as i32,
-                biHeight: -(H as i32), // negative = top-down
+                biWidth: W() as i32,
+                biHeight: -(H() as i32), // negative = top-down
                 biPlanes: 1,
                 biBitCount: 32,
                 biCompression: BI_RGB,
@@ -1922,12 +2104,12 @@ impl App {
             hdc,
             0,
             0,
-            W as i32,
-            H as i32,
+            W() as i32,
+            H() as i32,
             0,
             0,
-            W as i32,
-            H as i32,
+            W() as i32,
+            H() as i32,
             self.dib.as_ptr() as *const c_void,
             &bmi,
             DIB_RGB_COLORS,
@@ -2027,7 +2209,7 @@ impl App {
     fn advance(&mut self, frames: u32) {
         for _ in 0..frames {
             if self.view() == View::Genesis && self.genesis_spin {
-                self.genesis_yaw += 0.012;
+                self.genesis_yaw += self.gen_speed;
             }
         }
     }
@@ -2280,7 +2462,7 @@ fn run_movie(
                 "-pix_fmt",
                 "rgb24",
                 "-s",
-                &format!("{W}x{H}"),
+                &format!("{}x{}", W(), H()),
                 "-framerate",
                 &fps.to_string(),
                 "-i",
@@ -2331,7 +2513,7 @@ fn run_movie(
             app.cv
                 .write_png(&file)
                 .map_err(|e| format!("frame {f}: {e}"))?;
-            png_written += goldberg_kernel::raster::png_bytes(W, H) as u64;
+            png_written += goldberg_kernel::raster::png_bytes(W(), H()) as u64;
         }
 
         let st = goldberg_kernel::oklab::FrameStats::measure(&app.cv.px, 37);
@@ -2375,7 +2557,7 @@ fn run_movie(
         "  \"frames\": {frames}, \"fps\": {fps}, \"crf\": {crf},"
     ));
     m.push(format!("  \"emit\": \"{emit:?}\","));
-    m.push(format!("  \"canvas\": [{W}, {H}],"));
+    m.push(format!("  \"canvas\": [{}, {}],", W(), H()));
     m.push(format!(
         "  \"png_bytes\": {png_written}, \"mp4_bytes\": {mp4_bytes},"
     ));
@@ -2629,7 +2811,11 @@ fn run_script(src: &str) -> i32 {
     let mut log: Vec<String> = Vec::new();
     let mut failures = 0i32;
 
-    println!("canvas   {W} x {H}   headless, no window, no compositor");
+    println!(
+        "canvas   {} x {}   headless, no window, no compositor",
+        W(),
+        H()
+    );
     println!("session  {}", app.session_dir.display());
     report_disk();
     println!();
@@ -2851,7 +3037,7 @@ fn run_script(src: &str) -> i32 {
 
     // the receipt
     log.push(String::new());
-    log.push(format!("canvas          {W}x{H}"));
+    log.push(format!("canvas          {}x{}", W(), H()));
     log.push(format!(
         "cards declared  {}   painted {}",
         app.card_views.len(),

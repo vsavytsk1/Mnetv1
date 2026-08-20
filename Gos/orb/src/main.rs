@@ -26,8 +26,50 @@ use goldberg_kernel::{bits, font, judge, layout::Rect};
 
 use gos_win32::*;
 
-const W: usize = 1180;
-const H: usize = 820;
+const DEFAULT_W: usize = 1180;
+const DEFAULT_H: usize = 820;
+
+/// The canvas, decided ONCE at startup and never again.
+///
+/// It was a pair of `const`s, which meant the render size was a property of
+/// the BUILD rather than of the run -- so 4K needed a recompile and "fill the
+/// screen" was not expressible at all. It is now set once, before the window
+/// or any script exists, and read through `W()` / `H()` everywhere.
+///
+/// **Set once, not mutable.** A canvas that could change mid-run would have to
+/// reallocate the framebuffer, the DIB and every cached layout rect while a
+/// paint might be in flight; `OnceLock` makes that impossible by construction
+/// rather than by remembering not to. Live drag-resize is a separate job with
+/// a `WM_SIZE` handler behind it, and this is not pretending to be it.
+static CANVAS: std::sync::OnceLock<(usize, usize)> = std::sync::OnceLock::new();
+
+/// Canvas width. Falls back to the old default if nothing set it, so a code
+/// path that forgets cannot produce a zero-sized buffer.
+#[allow(non_snake_case)]
+#[inline]
+fn W() -> usize {
+    CANVAS.get().map(|c| c.0).unwrap_or(DEFAULT_W)
+}
+
+/// Canvas height.
+#[allow(non_snake_case)]
+#[inline]
+fn H() -> usize {
+    CANVAS.get().map(|c| c.1).unwrap_or(DEFAULT_H)
+}
+
+/// Fix the canvas. Ignored if it has already been set.
+///
+/// **Both dimensions are forced EVEN.** `yuv420p` subsamples chroma 2x2, so
+/// H.264 cannot encode an odd width or height -- ffmpeg simply refuses. An odd
+/// canvas would render and shoot and then fail only at `movie`, which is the
+/// worst place to find out. Rounding down here, once, is the whole fix.
+fn set_canvas(w: usize, h: usize) -> (usize, usize) {
+    let wh = ((w.max(64)) & !1, (h.max(64)) & !1);
+    let _ = CANVAS.set(wh);
+    *CANVAS.get().unwrap_or(&wh)
+}
+
 const BAR_H: i32 = 34;
 const HUD_W: i32 = 320;
 const BLOCK: usize = 64;
@@ -108,6 +150,14 @@ struct App {
     buttons: Vec<(Rect, &'static str, u8)>,
     session: PathBuf,
     shots: usize,
+    /// Radians of turn per frame.
+    ///
+    /// **This closes a real drift.** The window's timer added 0.012 and
+    /// `advance()` added 0.01, so a scripted `spin n` did NOT reproduce what
+    /// the window did -- the same motion with two different constants, which
+    /// is the R3/R9 shape wearing a rate. One field, both callers, and it
+    /// cannot drift from itself.
+    speed: f64,
     /// Whether the HUD may paint the render time into the frame.
     ///
     /// R10: the seal is taken before the chrome so the SEAL reproduces, but a
@@ -120,6 +170,76 @@ struct App {
 
 thread_local! { static APP: RefCell<Option<App>> = const { RefCell::new(None) }; }
 
+/// Declare this process DPI-aware, once, and remember the answer.
+///
+/// **Awareness can only be set ONCE per process.** A second call fails, and a
+/// caller reading that failure concludes the process is not aware -- which is
+/// exactly what happened the moment `--max` needed the screen size before the
+/// window existed: `resolve_canvas` set it, `run()` set it again, got 0, and
+/// renamed the window to "PIXELS RESAMPLED - NOT EXACT" while the pixels were
+/// in fact exact. The report was wrong, not the rendering.
+///
+/// Caching turns the second caller into a reader of the first result instead
+/// of a second setter with a worse answer. One call, one witness.
+static DPI_AWARE: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+
+fn ensure_dpi_aware() -> bool {
+    *DPI_AWARE
+        .get_or_init(|| unsafe { SetProcessDpiAwarenessContext(DPI_PER_MONITOR_AWARE_V2) != 0 })
+}
+
+/// Work out the canvas from the command line, and FIX it before anything runs.
+///
+/// Three ways, in order of how much the caller knows:
+///
+/// * `--size 3840x2160` -- say it exactly. This is how 4K and 8K happen now,
+///   with no recompile, because the canvas stopped being a property of the
+///   build.
+/// * `--max` -- fill the screen. `SM_CXFULLSCREEN` is the client area of a
+///   maximised window, so the taskbar and the frame are already deducted and
+///   there is no guesswork left to get wrong.
+/// * neither -- the old default, unchanged.
+///
+/// DPI awareness is declared HERE rather than in `run()`, because `--max`
+/// reads a screen metric and a DPI-unaware process is told a 2560-wide panel
+/// is 1707 wide. Sizing a canvas from that number would reintroduce the exact
+/// resampling the DPI work removed. `--run` never opens a window and still
+/// needs the true number, so this must happen before the fork, not after it.
+fn resolve_canvas(size: Option<String>, want_max: bool) -> Result<(usize, usize), String> {
+    ensure_dpi_aware();
+    if let Some(spec) = size {
+        let lower = spec.to_ascii_lowercase();
+        let (w, h) = lower
+            .split_once('x')
+            .ok_or_else(|| format!("--size wants WxH, got {spec:?}"))?;
+        let w: usize = w
+            .trim()
+            .parse()
+            .map_err(|_| format!("{:?} is not a width", w.trim()))?;
+        let h: usize = h
+            .trim()
+            .parse()
+            .map_err(|_| format!("{:?} is not a height", h.trim()))?;
+        if w < 64 || h < 64 || w > 16384 || h > 16384 {
+            return Err(format!("{w}x{h} is outside 64..16384"));
+        }
+        return Ok(set_canvas(w, h));
+    }
+    if want_max {
+        let (w, h) = unsafe {
+            (
+                GetSystemMetrics(SM_CXFULLSCREEN),
+                GetSystemMetrics(SM_CYFULLSCREEN),
+            )
+        };
+        if w > 0 && h > 0 {
+            return Ok(set_canvas(w as usize, h as usize));
+        }
+        return Err(String::from("the screen would not report its size"));
+    }
+    Ok(set_canvas(DEFAULT_W, DEFAULT_H))
+}
+
 fn main() {
     // A click is a function call and a frame is a buffer we already own, so
     // the driver lives HERE rather than in a shell wrapping the OS.
@@ -130,6 +250,8 @@ fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let mut i = 0;
     let mut script: Option<String> = None;
+    let mut size: Option<String> = None;
+    let mut want_max = false;
     let mut target: Option<String> = None;
 
     while i < args.len() {
@@ -158,6 +280,17 @@ fn main() {
                     }
                 }
             }
+            "--size" => {
+                i += 1;
+                match args.get(i) {
+                    Some(v) => size = Some(v.clone()),
+                    None => {
+                        eprintln!("--size needs WxH, e.g. --size 3840x2160");
+                        std::process::exit(2);
+                    }
+                }
+            }
+            "--max" => want_max = true,
             "--help" | "-h" => {
                 println!("{HELP}");
                 return;
@@ -173,6 +306,36 @@ fn main() {
             other => target = Some(other.to_string()),
         }
         i += 1;
+    }
+
+    // THE CANVAS IS FIXED HERE, before a window, a script or a buffer exists.
+    let asked = size.clone();
+    match resolve_canvas(size, want_max) {
+        Ok((w, h)) => {
+            // If a request was rounded, SAY SO. `--size 1921x1081` quietly
+            // becoming 1920x1080 is a silent cap, and a cap that does not
+            // announce itself reads as "you got what you asked for".
+            if let Some(spec) = asked.as_deref() {
+                let got = format!("{w}x{h}");
+                if spec.eq_ignore_ascii_case(&got) {
+                    println!("canvas  {w} x {h}");
+                } else {
+                    println!(
+                        "canvas  {w} x {h}   ROUNDED from {spec} -- both axes forced even, \
+                         because yuv420p subsamples chroma 2x2 and cannot encode an odd one"
+                    );
+                }
+            } else if want_max {
+                println!(
+                    "canvas  {w} x {h}   MAXIMISED -- the client area of a full-screen window, \
+                     so the taskbar and the frame are already deducted"
+                );
+            }
+        }
+        Err(e) => {
+            eprintln!("{e}");
+            std::process::exit(2);
+        }
     }
 
     match script {
@@ -206,7 +369,7 @@ unsafe fn run(target: Option<String>) {
     // receipt would stay honest while the screen quietly stopped matching it.
     //
     // If it fails we do not pretend. The title says so.
-    let dpi_exact = SetProcessDpiAwarenessContext(DPI_PER_MONITOR_AWARE_V2) != 0;
+    let dpi_exact = ensure_dpi_aware();
 
     if RegisterClassW(&wc) == 0 {
         return;
@@ -218,8 +381,8 @@ unsafe fn run(target: Option<String>) {
     let mut want = RECT {
         left: 0,
         top: 0,
-        right: W as LONG,
-        bottom: H as LONG,
+        right: W() as LONG,
+        bottom: H() as LONG,
     };
     AdjustWindowRect(&mut want, WS_OVERLAPPEDWINDOW, 0);
 
@@ -249,9 +412,11 @@ unsafe fn run(target: Option<String>) {
     GetClientRect(hwnd, &mut got);
     let (cw, ch) = (got.right - got.left, got.bottom - got.top);
     println!(
-        "dpi     {}  client {cw} x {ch}  canvas {W} x {H}  exact {}",
+        "dpi     {}  client {cw} x {ch}  canvas {} x {}  exact {}",
         dpi_exact,
-        dpi_exact && cw == W as LONG && ch == H as LONG
+        W(),
+        H(),
+        dpi_exact && cw == W() as LONG && ch == H() as LONG
     );
     ShowWindow(hwnd, SW_SHOW);
     SetTimer(hwnd, TIMER_ID, TICK, 0);
@@ -281,7 +446,7 @@ unsafe extern "system" fn wndproc(hwnd: HWND, msg: UINT, wp: WPARAM, lp: LPARAM)
             APP.with(|a| {
                 if let Some(app) = a.borrow_mut().as_mut() {
                     if app.spin {
-                        app.yaw += 0.012;
+                        app.yaw += app.speed;
                         go = true;
                     }
                 }
@@ -378,8 +543,8 @@ impl App {
 
         let pal = ALL[0];
         let mut app = App {
-            cv: Canvas::new(W, H, pal.bg),
-            dib: vec![0u8; W * H * 4],
+            cv: Canvas::new(W(), H(), pal.bg),
+            dib: vec![0u8; W() * H() * 4],
             dup_pct: 100.0 * rep as f64 / blocks as f64,
             entropy: bits::entropy(&bytes),
             ones_pct: 100.0 * bits::ones(&bytes) as f64 / (bytes.len() * 8).max(1) as f64,
@@ -395,6 +560,7 @@ impl App {
             buttons: Vec::new(),
             session,
             shots: 0,
+            speed: 0.012,
             paint_clock: true,
         };
         app.layout();
@@ -406,7 +572,7 @@ impl App {
     }
 
     fn layout(&mut self) {
-        let y = H as i32 - BAR_H + 6;
+        let y = H() as i32 - BAR_H + 6;
         let mut x = 10i32;
         self.buttons.clear();
         for (id, l) in [
@@ -493,7 +659,7 @@ impl App {
 
     fn paint_orb(&mut self) {
         let pal = self.pal();
-        let area = Rect::new(0, 0, W as i32 - HUD_W, H as i32 - BAR_H);
+        let area = Rect::new(0, 0, W() as i32 - HUD_W, H() as i32 - BAR_H);
         let zoom = (area.w.min(area.h) as f64) * 0.42;
         let s = &self.shell;
         let pts: Vec<(i32, i32, f64)> = s
@@ -544,7 +710,7 @@ impl App {
 
     fn paint_hud(&mut self) {
         let pal = self.pal();
-        let x = W as i32 - HUD_W + 12;
+        let x = W() as i32 - HUD_W + 12;
         let mut y = 14;
         let s = &self.shell;
         font::text(&mut self.cv, x, y, "GOS ORB", pal.gold, 2);
@@ -610,18 +776,18 @@ impl App {
     fn paint_bar(&mut self) {
         let pal = self.pal();
         self.cv
-            .fill_rect(0, H as i32 - BAR_H, W as i32, BAR_H, pal.panel);
+            .fill_rect(0, H() as i32 - BAR_H, W() as i32, BAR_H, pal.panel);
         self.cv.line(
             0,
-            H as i32 - BAR_H,
-            W as i32 - 1,
-            H as i32 - BAR_H,
+            H() as i32 - BAR_H,
+            W() as i32 - 1,
+            H() as i32 - BAR_H,
             pal.border,
         );
         font::text(
             &mut self.cv,
             10,
-            H as i32 - BAR_H - 14,
+            H() as i32 - BAR_H - 14,
             &self.status,
             pal.text,
             1,
@@ -668,7 +834,7 @@ impl App {
     fn advance(&mut self, frames: u32) {
         for _ in 0..frames {
             if self.spin {
-                self.yaw += 0.01;
+                self.yaw += self.speed;
             }
         }
     }
@@ -729,7 +895,7 @@ struct Control {
     unit: &'static str,
 }
 
-const CONTROLS: [Control; 2] = [
+const CONTROLS: [Control; 3] = [
     Control {
         name: "yaw",
         lo: 0.0,
@@ -741,6 +907,12 @@ const CONTROLS: [Control; 2] = [
         lo: 0.0,
         hi: MAX_LEVEL as f64,
         unit: "subdivision depth -- 4^n faces, and a REBUILD each step",
+    },
+    Control {
+        name: "speed",
+        lo: 0.0,
+        hi: 0.25,
+        unit: "turn per frame, radians -- 0 holds it still",
     },
 ];
 
@@ -873,7 +1045,7 @@ fn run_movie(
     app.render();
     let one = t0.elapsed().as_secs_f64();
     let render_s = one * frames as f64;
-    let png_total = goldberg_kernel::raster::png_bytes(W, H) as u64 * frames as u64;
+    let png_total = goldberg_kernel::raster::png_bytes(W(), H()) as u64 * frames as u64;
 
     println!("movie  {name}  [{}]", CONTROLS[ctl].name);
     println!(
@@ -921,7 +1093,7 @@ fn run_movie(
                     "-pix_fmt",
                     "rgb24",
                     "-s",
-                    &format!("{W}x{H}"),
+                    &format!("{}x{}", W(), H()),
                     "-framerate",
                     &fps.to_string(),
                     "-i",
@@ -959,6 +1131,7 @@ fn run_movie(
         let v = lo + t * (hi - lo);
         match CONTROLS[ctl].name {
             "yaw" => app.yaw = v,
+            "speed" => app.speed = v,
             _ => app.goto_level(v.round().clamp(0.0, MAX_LEVEL as f64) as u32),
         }
         app.render();
@@ -973,7 +1146,7 @@ fn run_movie(
             app.cv
                 .write_png(out.join(format!("frame_{f:05}.png")))
                 .map_err(|e| format!("frame {f}: {e}"))?;
-            png_written += goldberg_kernel::raster::png_bytes(W, H) as u64;
+            png_written += goldberg_kernel::raster::png_bytes(W(), H()) as u64;
         }
 
         let st = goldberg_kernel::oklab::FrameStats::measure(&app.cv.px, 37);
@@ -1025,7 +1198,11 @@ fn run_movie(
     m.push(format!(
         "  \"frames\": {frames}, \"fps\": {fps}, \"crf\": {crf},"
     ));
-    m.push(format!("  \"emit\": \"{emit:?}\", \"canvas\": [{W}, {H}],"));
+    m.push(format!(
+        "  \"emit\": \"{emit:?}\", \"canvas\": [{}, {}],",
+        W(),
+        H()
+    ));
     m.push(format!(
         "  \"stream\": \"{}\", \"stream_bytes\": {},",
         app.label,
@@ -1108,7 +1285,11 @@ fn run_script(src: &str, target: Option<String>) -> i32 {
         app.entropy,
         app.ones_pct
     );
-    println!("canvas  {W} x {H}   headless, no window, no compositor");
+    println!(
+        "canvas  {} x {}   headless, no window, no compositor",
+        W(),
+        H()
+    );
     println!("{head}");
     println!("session {}", app.session.display());
     println!();
@@ -1221,6 +1402,7 @@ fn run_script(src: &str, target: Option<String>) -> i32 {
                 for c in CONTROLS.iter() {
                     let v = match c.name {
                         "yaw" => app.yaw,
+                        "speed" => app.speed,
                         _ => app.shell.level as f64,
                     };
                     out.push(format!(
@@ -1230,18 +1412,36 @@ fn run_script(src: &str, target: Option<String>) -> i32 {
                 }
                 out.join("\n")
             }
-            "yaw" => {
-                let c = &CONTROLS[0];
+            // ANY registered control, by its own name.
+            //
+            // This was a hardcoded `"yaw"` arm, and adding `speed` to the
+            // table did NOT give it a verb -- the control showed up in
+            // `controls` and could not be set. That is a card that looks
+            // clickable and is not, one layer down. A table only pays for
+            // itself if the lookup goes THROUGH it, so it now does.
+            v if CONTROLS.iter().any(|c| c.name.eq_ignore_ascii_case(v)) => {
+                let i = CONTROLS
+                    .iter()
+                    .position(|c| c.name.eq_ignore_ascii_case(v))
+                    .unwrap();
+                let c = &CONTROLS[i];
                 match parse_control(c, arg) {
-                    Ok(v) => {
-                        app.yaw = v;
-                        format!("yaw    {v:.4}")
+                    Ok(x) => {
+                        match c.name {
+                            "yaw" => app.yaw = x,
+                            "speed" => app.speed = x,
+                            _ => app.goto_level(x.round().clamp(0.0, MAX_LEVEL as f64) as u32),
+                        }
+                        format!("{:<7}{x:.4}   ({})", c.name, c.unit)
                     }
                     Err(e) => {
                         failures += 1;
                         format!(
-                            "FAIL   YAW REFUSED: {e}. WANTED {} ({}..{})",
-                            c.unit, c.lo, c.hi
+                            "FAIL   {} REFUSED: {e}. WANTED {} ({}..{})",
+                            c.name.to_uppercase(),
+                            c.unit,
+                            c.lo,
+                            c.hi
                         )
                     }
                 }
@@ -1316,7 +1516,7 @@ fn run_script(src: &str, target: Option<String>) -> i32 {
     }
 
     log.push(String::new());
-    log.push(format!("canvas          {W}x{H}"));
+    log.push(format!("canvas          {}x{}", W(), H()));
     log.push(format!(
         "final           L{} {} faces chi {} genus {}",
         app.shell.level,
@@ -1347,6 +1547,8 @@ GOS ORB v0.2 -- the byte topology, icosphere lane.
   gos_orb <file>               stream that file instead
   gos_orb --run \"<steps>\"      run steps headless, write PNGs, exit
   gos_orb --script <file>      the same, from a file
+  gos_orb --size 3840x2160     any canvas, no recompile
+  gos_orb --max                fill the screen
 
 STEPS -- ';' or newline separated, '#' comments
 
@@ -1388,8 +1590,8 @@ impl App {
         let bmi = BITMAPINFO {
             bmiHeader: BITMAPINFOHEADER {
                 biSize: std::mem::size_of::<BITMAPINFOHEADER>() as u32,
-                biWidth: W as i32,
-                biHeight: -(H as i32),
+                biWidth: W() as i32,
+                biHeight: -(H() as i32),
                 biPlanes: 1,
                 biBitCount: 32,
                 biCompression: BI_RGB,
@@ -1405,12 +1607,12 @@ impl App {
             hdc,
             0,
             0,
-            W as i32,
-            H as i32,
+            W() as i32,
+            H() as i32,
             0,
             0,
-            W as i32,
-            H as i32,
+            W() as i32,
+            H() as i32,
             self.dib.as_ptr() as *const c_void,
             &bmi,
             DIB_RGB_COLORS,

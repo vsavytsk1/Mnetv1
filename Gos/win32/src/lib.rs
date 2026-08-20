@@ -221,6 +221,14 @@ extern "system" {
     /// guess was made on.
     pub fn AdjustWindowRect(lpRect: *mut RECT, dwStyle: u32, bMenu: BOOL) -> BOOL;
 
+    /// A system metric, by index. See [`SM_CXFULLSCREEN`].
+    ///
+    /// **Call `SetProcessDpiAwarenessContext` FIRST.** Without it these come
+    /// back in virtual, scaled coordinates -- on a 150% display a 2560-wide
+    /// panel reports 1707, and a canvas sized from that would be resampled by
+    /// exactly the factor the DPI work went in to remove.
+    pub fn GetSystemMetrics(nIndex: i32) -> i32;
+
     /// Declare this process DPI-aware, per monitor, v2.
     ///
     /// **Without this the OS RESAMPLES the whole framebuffer before it reaches
@@ -236,6 +244,14 @@ extern "system" {
     /// must SAY SO rather than carry on pretending the pixels are exact.
     pub fn SetProcessDpiAwarenessContext(value: isize) -> BOOL;
 }
+
+/// Width of the CLIENT area of a maximised window -- the screen less the
+/// taskbar and the window frame. Exactly the number "fill the screen" wants,
+/// which is why it is used instead of `SM_CXSCREEN` and some guesswork.
+pub const SM_CXFULLSCREEN: i32 = 16;
+
+/// Height of the client area of a maximised window.
+pub const SM_CYFULLSCREEN: i32 = 17;
 
 /// `DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2` -- the handle value, as
 /// documented. Not a pointer we dereference; a sentinel the OS compares.
