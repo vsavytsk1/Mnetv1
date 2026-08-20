@@ -715,6 +715,353 @@ impl App {
     }
 }
 
+/// One named, bounded, numeric control of the orb.
+///
+/// Same table, same reasons as the viewer's: a row here is a command-line
+/// verb and a `movie` channel at once, so the next control is animatable the
+/// day it lands. The orb's fractal space has fewer knobs than the mesh, and
+/// that is exactly why a table beats three copies of the same wiring -- the
+/// cost of the table is paid once and the third control is free.
+struct Control {
+    name: &'static str,
+    lo: f64,
+    hi: f64,
+    unit: &'static str,
+}
+
+const CONTROLS: [Control; 2] = [
+    Control {
+        name: "yaw",
+        lo: 0.0,
+        hi: std::f64::consts::TAU,
+        unit: "turn, radians",
+    },
+    Control {
+        name: "level",
+        lo: 0.0,
+        hi: MAX_LEVEL as f64,
+        unit: "subdivision depth -- 4^n faces, and a REBUILD each step",
+    },
+];
+
+/// Why a typed value was refused. The monkey brain will type a shoe.
+#[derive(Clone, Debug, PartialEq)]
+enum BadValue {
+    NotANumber(String),
+    NotFinite(String),
+    OutOfRange { got: f64, lo: f64, hi: f64 },
+}
+
+impl std::fmt::Display for BadValue {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            BadValue::NotANumber(s) => write!(f, "'{s}' IS NOT A NUMBER"),
+            BadValue::NotFinite(s) => write!(f, "'{s}' IS NOT FINITE - NAN AND INF ARE REFUSED"),
+            BadValue::OutOfRange { got, lo, hi } => write!(f, "{got} IS OUTSIDE {lo}..{hi}"),
+        }
+    }
+}
+
+/// Parse a human's typing. `"nan".parse::<f64>()` SUCCEEDS, which is why the
+/// finite test is a separate fence and not folded into the parse.
+fn parse_control(c: &Control, text: &str) -> Result<f64, BadValue> {
+    let t = text.trim();
+    let v: f64 = t.parse().map_err(|_| BadValue::NotANumber(t.to_string()))?;
+    if !v.is_finite() {
+        return Err(BadValue::NotFinite(t.to_string()));
+    }
+    if v < c.lo || v > c.hi {
+        return Err(BadValue::OutOfRange {
+            got: v,
+            lo: c.lo,
+            hi: c.hi,
+        });
+    }
+    Ok(v)
+}
+
+/// Where a movie's frames end up.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+enum Emit {
+    Png,
+    Mp4,
+    Both,
+}
+
+impl Emit {
+    fn parse(s: &str) -> Option<Emit> {
+        match s.to_ascii_lowercase().as_str() {
+            "png" | "frames" => Some(Emit::Png),
+            "mp4" | "film" => Some(Emit::Mp4),
+            "both" => Some(Emit::Both),
+            _ => None,
+        }
+    }
+    fn writes_png(self) -> bool {
+        matches!(self, Emit::Png | Emit::Both)
+    }
+    fn writes_mp4(self) -> bool {
+        matches!(self, Emit::Mp4 | Emit::Both)
+    }
+}
+
+/// Past this a movie is refused, with the number.
+const RENDER_SECONDS_BUDGET: f64 = 20.0 * 60.0;
+
+/// Where `ffmpeg` might be. Probed by RUNNING it -- an installer's exit code
+/// certifies the download, never the capability (R2).
+fn find_ffmpeg() -> Option<PathBuf> {
+    let mut tries: Vec<PathBuf> = vec![PathBuf::from("ffmpeg")];
+    if let Ok(home) = std::env::var("USERPROFILE") {
+        tries.push(PathBuf::from(&home).join("ffmpeg/bin/ffmpeg.exe"));
+    }
+    if let Ok(la) = std::env::var("LOCALAPPDATA") {
+        tries.push(PathBuf::from(&la).join("Microsoft/WinGet/Links/ffmpeg.exe"));
+    }
+    if let Ok(pf) = std::env::var("ProgramFiles") {
+        tries.push(PathBuf::from(&pf).join("ffmpeg/bin/ffmpeg.exe"));
+    }
+    tries.push(PathBuf::from("C:/ffmpeg/bin/ffmpeg.exe"));
+    tries.into_iter().find(|p| {
+        std::process::Command::new(p)
+            .arg("-version")
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .status()
+            .map(|s| s.success())
+            .unwrap_or(false)
+    })
+}
+
+fn hms(s: f64) -> String {
+    let t = s.max(0.0) as u64;
+    if t < 60 {
+        format!("{s:.1}s")
+    } else if t < 3600 {
+        format!("{}m {:02}s", t / 60, t % 60)
+    } else {
+        format!("{}h {:02}m", t / 3600, (t % 3600) / 60)
+    }
+}
+
+/// One movie over any registered orb control.
+///
+/// **`level` is the interesting one.** Sweeping it does not merely move a
+/// camera: each step REBUILDS the shell and re-judges it, so the film is the
+/// fractal space growing, with chi counted at every frame rather than assumed.
+/// That is the orb's whole subject, and it was previously only reachable by
+/// clicking LEVEL+ seven times and watching.
+#[allow(clippy::too_many_arguments)]
+fn run_movie(
+    app: &mut App,
+    dir: &std::path::Path,
+    ctl: usize,
+    lo: f64,
+    hi: f64,
+    frames: u32,
+    fps: u32,
+    crf: u32,
+    emit: Emit,
+    name: &str,
+) -> Result<String, String> {
+    if frames == 0 {
+        return Err(String::from("a movie needs at least one frame"));
+    }
+
+    // price it in both currencies, from ONE measured frame
+    let t0 = Instant::now();
+    app.render();
+    let one = t0.elapsed().as_secs_f64();
+    let render_s = one * frames as f64;
+    let png_total = goldberg_kernel::raster::png_bytes(W, H) as u64 * frames as u64;
+
+    println!("movie  {name}  [{}]", CONTROLS[ctl].name);
+    println!(
+        "  {frames} frames @ {fps} fps = {} of footage",
+        hms(frames as f64 / fps.max(1) as f64)
+    );
+    println!("  render ~{} (one frame measured)", hms(render_s));
+    println!(
+        "  disk {}",
+        if emit.writes_png() {
+            format!("{:.2} GB of PNG, exact", png_total as f64 / 1_073_741_824.0)
+        } else {
+            String::from("0 bytes -- frames are piped, never written")
+        }
+    );
+    if render_s > RENDER_SECONDS_BUDGET {
+        return Err(format!(
+            "REFUSED - this would render for {}, past the {} ceiling. One frame at L{} \
+             ({} faces) took {:.0} ms, and that is measured, not guessed.",
+            hms(render_s),
+            hms(RENDER_SECONDS_BUDGET),
+            app.shell.level,
+            app.shell.ico.faces.len(),
+            1000.0 * one
+        ));
+    }
+
+    let out = dir.join(format!("movie_{name}"));
+    fs::create_dir_all(&out).map_err(|e| format!("cannot create {}: {e}", out.display()))?;
+    let mp4 = out.join(format!("{name}.mp4"));
+
+    let mut child = if emit.writes_mp4() {
+        let ff = find_ffmpeg().ok_or_else(|| {
+            String::from("ffmpeg NOT FOUND. `winget install Gyan.FFmpeg`, or render with `png`.")
+        })?;
+        Some(
+            std::process::Command::new(&ff)
+                .args([
+                    "-hide_banner",
+                    "-loglevel",
+                    "error",
+                    "-y",
+                    "-f",
+                    "rawvideo",
+                    "-pix_fmt",
+                    "rgb24",
+                    "-s",
+                    &format!("{W}x{H}"),
+                    "-framerate",
+                    &fps.to_string(),
+                    "-i",
+                    "-",
+                    "-c:v",
+                    "libx264",
+                    "-preset",
+                    "medium",
+                    "-crf",
+                    &crf.to_string(),
+                    "-pix_fmt",
+                    "yuv420p",
+                    "-movflags",
+                    "+faststart",
+                ])
+                .arg(&mp4)
+                .stdin(std::process::Stdio::piped())
+                .spawn()
+                .map_err(|e| format!("could not start {}: {e}", ff.display()))?,
+        )
+    } else {
+        None
+    };
+
+    let mut rows: Vec<String> = Vec::new();
+    let mut png_written = 0u64;
+    let t1 = Instant::now();
+
+    for f in 0..frames {
+        let t = if frames == 1 {
+            0.0
+        } else {
+            f as f64 / (frames - 1) as f64
+        };
+        let v = lo + t * (hi - lo);
+        match CONTROLS[ctl].name {
+            "yaw" => app.yaw = v,
+            _ => app.goto_level(v.round().clamp(0.0, MAX_LEVEL as f64) as u32),
+        }
+        app.render();
+
+        if let Some(c) = child.as_mut() {
+            use std::io::Write as _;
+            let pipe = c.stdin.as_mut().ok_or("the encoder closed its stdin")?;
+            pipe.write_all(&app.cv.px)
+                .map_err(|e| format!("frame {f}: the encoder stopped reading: {e}"))?;
+        }
+        if emit.writes_png() {
+            app.cv
+                .write_png(out.join(format!("frame_{f:05}.png")))
+                .map_err(|e| format!("frame {f}: {e}"))?;
+            png_written += goldberg_kernel::raster::png_bytes(W, H) as u64;
+        }
+
+        let st = goldberg_kernel::oklab::FrameStats::measure(&app.cv.px, 37);
+        rows.push(format!(
+            "  {{ \"frame\": {f}, \"t\": {t:.6}, \"{}\": {v:.6}, \"level\": {}, \"faces\": {}, \
+             \"chi\": {}, \"genus\": {}, \"seal\": \"{:016x}\", \"colours\": {}, \"ink\": {:.6}, \
+             \"mean_l\": {:.6}, \"l_entropy\": {:.6} }}",
+            CONTROLS[ctl].name,
+            app.shell.level,
+            app.shell.ico.faces.len(),
+            app.shell.chi,
+            app.shell.genus,
+            app.seal,
+            st.distinct,
+            st.ink,
+            st.mean_l,
+            st.l_entropy
+        ));
+    }
+
+    let mut mp4_bytes = 0u64;
+    if let Some(mut c) = child {
+        drop(c.stdin.take());
+        let status = c.wait().map_err(|e| format!("waiting on ffmpeg: {e}"))?;
+        if !status.success() {
+            return Err(format!("ffmpeg refused (exit {:?})", status.code()));
+        }
+        mp4_bytes = fs::metadata(&mp4).map(|m| m.len()).unwrap_or(0);
+    }
+    let secs = t1.elapsed().as_secs_f64();
+
+    let _ = fs::write(
+        out.join("MAKE_MP4.txt"),
+        format!(
+            "ffmpeg -y -framerate {fps} -i \"{}\" -c:v libx264 -preset slow -crf {crf} \
+             -pix_fmt yuv420p -movflags +faststart \"{}\"\n",
+            out.join("frame_%05d.png").display(),
+            mp4.display()
+        ),
+    );
+
+    let mut m: Vec<String> = Vec::new();
+    m.push(String::from("{"));
+    m.push(format!(
+        "  \"name\": \"{name}\", \"control\": \"{}\",",
+        CONTROLS[ctl].name
+    ));
+    m.push(format!("  \"from\": {lo:.6}, \"to\": {hi:.6},"));
+    m.push(format!(
+        "  \"frames\": {frames}, \"fps\": {fps}, \"crf\": {crf},"
+    ));
+    m.push(format!("  \"emit\": \"{emit:?}\", \"canvas\": [{W}, {H}],"));
+    m.push(format!(
+        "  \"stream\": \"{}\", \"stream_bytes\": {},",
+        app.label,
+        app.bytes.len()
+    ));
+    m.push(format!(
+        "  \"png_bytes\": {png_written}, \"mp4_bytes\": {mp4_bytes},"
+    ));
+    m.push(format!("  \"render_seconds\": {secs:.3},"));
+    m.push(String::from("  \"oklab_sample_stride\": 37,"));
+    m.push(String::from("  \"frames_detail\": ["));
+    m.push(rows.join(",\n"));
+    m.push(String::from("  ]"));
+    m.push(String::from("}"));
+    let _ = fs::write(out.join("MOVIE.json"), m.join("\n") + "\n");
+
+    Ok(format!(
+        "movie  {name:<18} {frames}f @ {fps} = {} footage  |  {}  |  {secs:.1}s at {:.1} fps",
+        hms(frames as f64 / fps.max(1) as f64),
+        if mp4_bytes > 0 {
+            format!(
+                "{:.3} MB mp4{}",
+                mp4_bytes as f64 / 1_048_576.0,
+                if png_written > 0 {
+                    format!(" + {:.2} GB png", png_written as f64 / 1_073_741_824.0)
+                } else {
+                    String::from(" (0 bytes of frames -- piped)")
+                }
+            )
+        } else {
+            format!("{:.2} GB png", png_written as f64 / 1_073_741_824.0)
+        },
+        frames as f64 / secs.max(1e-9)
+    ))
+}
+
 /// Run a script against a headless orb. Returns the number of failures.
 ///
 /// **Why the orb needs this most.** The orb streams a file's bytes onto a
@@ -869,6 +1216,94 @@ fn run_script(src: &str, target: Option<String>) -> i32 {
                     format!("FAIL   {k} is {got}, expected {}", want.trim())
                 }
             }
+            "controls" => {
+                let mut out = vec![String::from("controls")];
+                for c in CONTROLS.iter() {
+                    let v = match c.name {
+                        "yaw" => app.yaw,
+                        _ => app.shell.level as f64,
+                    };
+                    out.push(format!(
+                        "  {:<7} {:>10.4}   {}..{}   {}",
+                        c.name, v, c.lo, c.hi, c.unit
+                    ));
+                }
+                out.join("\n")
+            }
+            "yaw" => {
+                let c = &CONTROLS[0];
+                match parse_control(c, arg) {
+                    Ok(v) => {
+                        app.yaw = v;
+                        format!("yaw    {v:.4}")
+                    }
+                    Err(e) => {
+                        failures += 1;
+                        format!(
+                            "FAIL   YAW REFUSED: {e}. WANTED {} ({}..{})",
+                            c.unit, c.lo, c.hi
+                        )
+                    }
+                }
+            }
+            "movie" => {
+                let a: Vec<&str> = arg.split_whitespace().collect();
+                let parsed = (|| -> Result<_, String> {
+                    if a.len() < 5 {
+                        return Err(String::from(
+                            "usage: movie <control> <lo> <hi> <frames> <name> [png|mp4|both] [fps] [crf]",
+                        ));
+                    }
+                    let ctl = CONTROLS
+                        .iter()
+                        .position(|c| c.name.eq_ignore_ascii_case(a[0]))
+                        .ok_or_else(|| {
+                            let n: Vec<&str> = CONTROLS.iter().map(|c| c.name).collect();
+                            format!("no control {:?}. have: {}", a[0], n.join(", "))
+                        })?;
+                    let lo: f64 = a[1]
+                        .parse()
+                        .map_err(|_| format!("{:?} is not a number", a[1]))?;
+                    let hi: f64 = a[2]
+                        .parse()
+                        .map_err(|_| format!("{:?} is not a number", a[2]))?;
+                    if !lo.is_finite() || !hi.is_finite() {
+                        return Err(String::from("a movie cannot start or end at NaN"));
+                    }
+                    let n: u32 = a[3]
+                        .parse()
+                        .map_err(|_| format!("{:?} is not a frame count", a[3]))?;
+                    let emit = match a.get(5) {
+                        Some(m) => {
+                            Emit::parse(m).ok_or_else(|| format!("{m:?} is not png|mp4|both"))?
+                        }
+                        None => Emit::Mp4,
+                    };
+                    let fps: u32 = a.get(6).and_then(|v| v.parse().ok()).unwrap_or(60);
+                    let crf: u32 = a.get(7).and_then(|v| v.parse().ok()).unwrap_or(18);
+                    Ok((ctl, lo, hi, n, a[4], emit, fps, crf))
+                })();
+                match parsed {
+                    Ok((ctl, lo, hi, n, name, emit, fps, crf)) => {
+                        match run_movie(&mut app, &dir, ctl, lo, hi, n, fps, crf, emit, name) {
+                            Ok(m) => m,
+                            Err(e) => {
+                                failures += 1;
+                                format!("FAIL   {e}")
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        failures += 1;
+                        format!("FAIL   {e}")
+                    }
+                }
+            }
+            "stats" => {
+                app.render();
+                let st = goldberg_kernel::oklab::FrameStats::measure(&app.cv.px, 37);
+                format!("stats  {st}")
+            }
             "status" => format!("status {}", app.status),
             other => {
                 failures += 1;
@@ -922,7 +1357,19 @@ STEPS -- ';' or newline separated, '#' comments
   palette          cycle the palette
   button <LABEL>   click a button by name
   expect <k>=<v>   level | faces | chi | genus, or FAIL
+  controls         what exists, its value, its range, its units
+  yaw <v>          set the turn, validated
+  stats            what the frame is made of, in OKLab
   status           print the status line
+
+MOVIES -- priced in BOTH currencies before the first frame
+
+  movie <control> <lo> <hi> <frames> <name> [png|mp4|both] [fps] [crf]
+
+  `movie level 0 6 240 grow mp4` films the fractal space GROWING: each step
+  rebuilds the shell and re-judges it, so chi is counted at every frame rather
+  than assumed. With mp4 the frames are piped to the encoder and NOTHING but
+  the finished file touches the disk.
 
 Exit code is the number of failures.
 
