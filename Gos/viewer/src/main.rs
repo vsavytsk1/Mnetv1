@@ -125,6 +125,14 @@ const GEN_BAR_H: i32 = 34;
 /// and says whose limit it is (Curse 35: state the cost before allocating).
 const GEN_FACE_BUDGET: u64 = 400_000;
 
+/// One press of `ZOOM +`. The fourth root of two, so four presses double it.
+///
+/// Multiplicative because zoom is a SCALE: a fixed additive step is a huge
+/// jump at 0.25 and imperceptible at 6.0, which is the same complaint as
+/// measuring colour in sRGB instead of OKLab -- the axis is not linear in what
+/// the eye does.
+const ZOOM_STEP: f64 = 1.189_207_115_002_721;
+
 /// The most memory one refinement may PEAK at.
 ///
 /// Distinct from the face budget on purpose: they fence different things and
@@ -605,7 +613,7 @@ fn main() {
         // headless: no window, no compositor, no capture API. The PNGs come
         // straight off the framebuffer the kernel computed.
         Some(src) => std::process::exit(run_script(&src)),
-        None => unsafe { run() },
+        None => unsafe { run(want_max) },
     }
 }
 
@@ -633,6 +641,7 @@ GENESIS CONTROL BAR -- the same methods the mouse calls
   seed c60|12      reseed
   refine all|5s|6s one refinement, priced before it is allocated
   undo | reset     step back, or back to the seed and the browser defaults
+  zoomin | zoomout one multiplicative step -- x2 every four presses
   inner <v>        0.05..0.95   where the inner ring sits
   mid <v>          0.05..0.95   where the mid ring is pulled to
                    mid > inner opens a rosette; mid < inner overlaps into
@@ -666,7 +675,7 @@ Exit code is the number of failures.
   gos_viewer --run \"card 1; sweepmid 0.9 0.1 120 twist\"    # 121 frames
 ";
 
-unsafe fn run() {
+unsafe fn run(maximised: bool) {
     let hinst = GetModuleHandleW(std::ptr::null());
     let class = wide("GosViewerClass");
     let title = wide("GOS VIEWER - the 1 and 0s, painted by the kernel");
@@ -737,6 +746,34 @@ unsafe fn run() {
         return;
     }
     ShowWindow(hwnd, SW_SHOW);
+    // SHOW IS NOT RAISE.
+    //
+    // Launched from an elevated PowerShell the window appeared *behind* the
+    // console, which to the person who typed the command is exactly the same
+    // experience as no window at all -- and that is how it was reported.
+    // Neither call is guaranteed to succeed (Windows refuses foreground
+    // steals), so their results are deliberately ignored: this is a request,
+    // and a failed request is not an error worth stopping for.
+    BringWindowToTop(hwnd);
+    SetForegroundWindow(hwnd);
+
+    // With --max the canvas already IS the full-screen client area, so the
+    // window only needs putting at the origin for the two to coincide. Note
+    // what is NOT done here: `SW_MAXIMIZE`. Maximising lets the OS choose the
+    // client size, and if that disagrees with the canvas by even one pixel the
+    // frame is letterboxed or clipped and the pixel-exact promise quietly
+    // stops being true. The canvas decides; the window follows.
+    if maximised {
+        SetWindowPos(
+            hwnd,
+            std::ptr::null_mut(),
+            0,
+            0,
+            0,
+            0,
+            SWP_NOSIZE | SWP_NOZORDER,
+        );
+    }
 
     // MEASURE it. AdjustWindowRect is a request; the client rect is the fact.
     // Proof by kernel: the window's own report grades the arithmetic above.
@@ -1252,6 +1289,11 @@ impl App {
             (14, "REFINE 6s"),
             (15, "UNDO"),
             (16, "RESET"),
+            // Zoom in STEPS as well as by typing. A box is exact and a step is
+            // fast, and they are the same control underneath -- both go
+            // through ctl_set, so neither can drift from the other.
+            (17, "ZOOM -"),
+            (18, "ZOOM +"),
         ] {
             let w = font::width(label, 1) + 16;
             self.gen_buttons.push(Button {
@@ -1314,6 +1356,30 @@ impl App {
                     "RESET - THE SEED, AND INNER {:.2} MID {:.2} BACK TO THE BROWSER DEFAULTS.",
                     p.inner_scale, p.mid_scale
                 )
+            }
+            // MULTIPLICATIVE steps, not additive.
+            //
+            // Zoom is a scale: the eye reads a doubling the same way at 0.5 as
+            // at 4.0, while a fixed +0.25 is a huge jump down low and invisible
+            // up high. `ZOOM_STEP` is the fourth root of 2, so four presses
+            // double it and the range 0.25..6 is 18 even steps rather than a
+            // ramp that feels wrong at both ends.
+            17 | 18 => {
+                let i = Self::ctl_index("zoom").expect("zoom is in the table");
+                let now = self.ctl_get(i);
+                let next = if id == 18 {
+                    now * ZOOM_STEP
+                } else {
+                    now / ZOOM_STEP
+                };
+                let msg = self.ctl_set(i, next);
+                let got = self.ctl_get(i);
+                if (got - now).abs() < 1e-12 {
+                    format!("ZOOM {got:.3} - AT THE {} OF THE RANGE ALREADY",
+                        if id == 18 { "TOP" } else { "BOTTOM" })
+                } else {
+                    msg
+                }
             }
             other => format!("CONTROL {other} IS NOT WIRED, NOT PRETENDING"),
         }
@@ -1411,6 +1477,7 @@ impl App {
                 11 => pal.border,
                 10 | 16 => pal.green,
                 15 => pal.pink,
+                17 | 18 => pal.gold,
                 _ => pal.cyan,
             };
             self.cv.rect(x, y, w, h, accent);
@@ -2948,6 +3015,8 @@ fn run_script(src: &str) -> i32 {
                 app.gen_action(id)
             }
             "undo" => app.gen_action(15),
+            "zoomin" => app.gen_action(18),
+            "zoomout" => app.gen_action(17),
             "reset" => app.gen_action(16),
             // ANY registered control, by its own name. Adding a row to
             // CONTROLS makes it settable here with no code at all -- and the

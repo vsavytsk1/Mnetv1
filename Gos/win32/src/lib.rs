@@ -70,6 +70,15 @@ pub const CS_OWNDC: UINT = 0x0020;
 pub const IDC_ARROW: usize = 32512;
 pub const SW_SHOW: i32 = 5;
 
+/// `SetWindowPos`: keep the current size.
+pub const SWP_NOSIZE: u32 = 0x0001;
+
+/// `SetWindowPos`: keep the current Z order.
+pub const SWP_NOZORDER: u32 = 0x0004;
+
+/// Show the window maximised.
+pub const SW_MAXIMIZE: i32 = 3;
+
 // ---- DIB ------------------------------------------------------------------
 pub const BI_RGB: DWORD = 0;
 pub const DIB_RGB_COLORS: UINT = 0;
@@ -220,6 +229,32 @@ extern "system" {
     /// ends up clipped at the bottom while looking fine on the machine the
     /// guess was made on.
     pub fn AdjustWindowRect(lpRect: *mut RECT, dwStyle: u32, bMenu: BOOL) -> BOOL;
+
+    /// Move or resize a window. Used only to PLACE it -- the canvas decides
+    /// the size, so `SWP_NOSIZE` is always set here.
+    pub fn SetWindowPos(
+        hWnd: HWND,
+        hWndInsertAfter: HWND,
+        X: i32,
+        Y: i32,
+        cx: i32,
+        cy: i32,
+        uFlags: u32,
+    ) -> BOOL;
+
+    /// Bring a window to the top of the Z order.
+    ///
+    /// **`ShowWindow` shows; it does not RAISE.** A window created by a
+    /// process launched from an elevated console appears *behind* the console
+    /// that launched it, and to the person who typed the command that is
+    /// indistinguishable from "no window opened". Both calls are needed, and
+    /// neither is guaranteed -- Windows refuses foreground steals from
+    /// background processes -- so the caller must treat failure as normal and
+    /// not as an error.
+    pub fn BringWindowToTop(hWnd: HWND) -> BOOL;
+
+    /// Ask for the foreground. May legitimately fail; see [`BringWindowToTop`].
+    pub fn SetForegroundWindow(hWnd: HWND) -> BOOL;
 
     /// A system metric, by index. See [`SM_CXFULLSCREEN`].
     ///

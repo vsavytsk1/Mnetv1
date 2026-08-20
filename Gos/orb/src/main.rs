@@ -419,6 +419,16 @@ unsafe fn run(target: Option<String>) {
         dpi_exact && cw == W() as LONG && ch == H() as LONG
     );
     ShowWindow(hwnd, SW_SHOW);
+    // SHOW IS NOT RAISE.
+    //
+    // Launched from an elevated PowerShell the window appeared *behind* the
+    // console, which to the person who typed the command is exactly the same
+    // experience as no window at all -- and that is how it was reported.
+    // Neither call is guaranteed to succeed (Windows refuses foreground
+    // steals), so their results are deliberately ignored: this is a request,
+    // and a failed request is not an error worth stopping for.
+    BringWindowToTop(hwnd);
+    SetForegroundWindow(hwnd);
     SetTimer(hwnd, TIMER_ID, TICK, 0);
     let mut msg: MSG = std::mem::zeroed();
     while GetMessageW(&mut msg, std::ptr::null_mut(), 0, 0) > 0 {
