@@ -211,7 +211,35 @@ extern "system" {
     pub fn GetClientRect(hWnd: HWND, lpRect: *mut RECT) -> BOOL;
     pub fn SetTimer(hWnd: HWND, nIDEvent: usize, uElapse: UINT, lpTimerFunc: usize) -> usize;
     pub fn KillTimer(hWnd: HWND, nIDEvent: usize) -> BOOL;
+
+    /// Grow a desired CLIENT rect into the WINDOW rect that yields it.
+    ///
+    /// The border and caption are the OS's business and their size is not
+    /// knowable at compile time -- it varies with the theme, the Windows
+    /// version and the DPI. Guessing them (`W + 16`, `H + 39`) is how a canvas
+    /// ends up clipped at the bottom while looking fine on the machine the
+    /// guess was made on.
+    pub fn AdjustWindowRect(lpRect: *mut RECT, dwStyle: u32, bMenu: BOOL) -> BOOL;
+
+    /// Declare this process DPI-aware, per monitor, v2.
+    ///
+    /// **Without this the OS RESAMPLES the whole framebuffer before it reaches
+    /// the glass.** On a 150% display the window we ask for at 916x739 is
+    /// created at 1374x1109 and every pixel the kernel computed is stretched
+    /// by 1.5 and interpolated by a bitmap scaler we do not own.
+    ///
+    /// The frame seal hashes the framebuffer, so it cannot see this: the
+    /// receipt stays honest while the thing on screen stops being the thing
+    /// that was sealed. Curse 26 wearing a display driver.
+    ///
+    /// Available since Windows 10 1703. Returns 0 on failure, and the caller
+    /// must SAY SO rather than carry on pretending the pixels are exact.
+    pub fn SetProcessDpiAwarenessContext(value: isize) -> BOOL;
 }
+
+/// `DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2` -- the handle value, as
+/// documented. Not a pointer we dereference; a sentinel the OS compares.
+pub const DPI_PER_MONITOR_AWARE_V2: isize = -4;
 
 #[link(name = "gdi32")]
 extern "system" {

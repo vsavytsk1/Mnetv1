@@ -34,14 +34,37 @@ use goldberg_kernel::{certify, judge, Mesh};
 
 use gos_win32::*;
 
-const W: usize = 900;
-const H: usize = 700;
+/// The canvas, and therefore the client area -- `AdjustWindowRect` sizes the
+/// window to yield exactly this, and the app refuses to claim pixel-exactness
+/// if the OS disagrees. 1920x1080 on a 2560x1440 panel, so the whole frame is
+/// on screen with the window frame to spare.
+const W: usize = 1920;
+const H: usize = 1080;
 const BAR_H: i32 = 34;
+
+/// One full frame, in source bytes: `W * H * 3`.
+const FRAME_BYTES: usize = W * H * 3;
 
 /// Cap on any single exported dump. The HELENA doctrine: heavy payload stays
 /// local, git keeps the manifest. A cap that is stated is engineering; a dump
 /// that silently stops is a lie (Path IV).
-const DUMP_CAP: usize = 4 * 1024 * 1024;
+///
+/// **Stated in the units of the thing it protects (R11).** A `.bits` file
+/// writes one ASCII `0` or `1` per bit, so what lands on disk is **eight times
+/// this number**, plus newlines. The old cap said "4 MB" and permitted a 32 MB
+/// file; four clicks wrote 88 MB into a folder nobody had ignored yet.
+///
+/// One full frame is the natural unit -- a truncated frame is not the frame --
+/// so the cap is `FRAME_BYTES`:
+///
+/// ```text
+///   source  1920 * 1080 * 3 =  6,220,800 B   ~5.9 MB
+///   on disk           x8 + newlines          ~50   MB per frame.bits
+/// ```
+///
+/// That is the price, stated before it is paid. `runs/**` is gitignored, and
+/// `MANIFEST.json` carries the digests so the steps travel without the payload.
+const DUMP_CAP: usize = FRAME_BYTES;
 
 /// WM_TIMER id for the GENESIS turn.
 const GENESIS_TIMER: usize = 1;
@@ -149,6 +172,19 @@ struct App {
     /// what the dashboard actually painted, so clicks hit-test against the
     /// drawn geometry instead of a recomputed guess
     card_rects: Vec<Rect>,
+    /// Whether the HUD may paint the render time into the frame.
+    ///
+    /// **R10, one level out.** The seal is taken before the chrome, so the
+    /// SEAL reproduces -- but a PNG written after the chrome contains
+    /// `RENDER 683 US`, and 683 is a clock. Two runs of the identical script
+    /// produced the identical seal and DIFFERENT png bytes, which is the same
+    /// disease wearing a file instead of a hash.
+    ///
+    /// Interactive runs keep it: a human watching wants the number live.
+    /// `--run` drops it and puts the timing in `DRIVE.log` as a peer OUTSIDE
+    /// the image -- exactly the remedy R10 prescribed for the manifest.
+    /// Hash the math, not the moment; and photograph the math, not the moment.
+    paint_clock: bool,
     /// where each painted card leads, built in the SAME loop that builds the
     /// cards. Previously the click handler said `if i == 1` and the wiring
     /// lived in a magic index -- insert a card at the front and GENESIS would
@@ -162,8 +198,83 @@ thread_local! {
 }
 
 fn main() {
-    unsafe { run() }
+    // A click is a function call and a frame is a buffer we already own, so
+    // the driver lives HERE, not in a shell wrapping the OS. See run_script.
+    let args: Vec<String> = std::env::args().skip(1).collect();
+    let mut i = 0;
+    let mut script: Option<String> = None;
+
+    while i < args.len() {
+        match args[i].as_str() {
+            "--run" | "-r" => {
+                i += 1;
+                match args.get(i) {
+                    Some(s) => script = Some(s.clone()),
+                    None => {
+                        eprintln!("--run needs a script string");
+                        std::process::exit(2);
+                    }
+                }
+            }
+            "--script" | "-s" => {
+                i += 1;
+                match args.get(i).map(fs::read_to_string) {
+                    Some(Ok(s)) => script = Some(s),
+                    Some(Err(e)) => {
+                        eprintln!("cannot read script: {e}");
+                        std::process::exit(2);
+                    }
+                    None => {
+                        eprintln!("--script needs a path");
+                        std::process::exit(2);
+                    }
+                }
+            }
+            "--help" | "-h" => {
+                println!("{HELP}");
+                return;
+            }
+            other => {
+                eprintln!(
+                    "unknown argument '{other}'
+
+{HELP}"
+                );
+                std::process::exit(2);
+            }
+        }
+        i += 1;
+    }
+
+    match script {
+        // headless: no window, no compositor, no capture API. The PNGs come
+        // straight off the framebuffer the kernel computed.
+        Some(src) => std::process::exit(run_script(&src)),
+        None => unsafe { run() },
+    }
 }
+
+const HELP: &str = "GOS VIEWER -- a window, painted by the kernel.
+
+  gos_viewer                       open the window
+  gos_viewer --run \"<steps>\"       run steps headless, write PNGs, exit
+  gos_viewer --script <file>       the same, from a file
+
+STEPS -- ';' or newline separated, '#' comments
+
+  shot <name>      render and write <name>.png FROM THE FRAMEBUFFER
+  card <n>         click the centre of card n
+  button <LABEL>   click the centre of that button
+  panel|back|shell|palette   sugar for the matching button
+  key <c>          press a key
+  spin <n>         advance the GENESIS turn n frames -- deterministic, not a sleep
+  expect <View>    the current view must be this, or FAIL
+  status           print the status line
+
+Exit code is the number of failures.
+
+  gos_viewer --run \"expect Dashboard; shot panel; card 1; spin 60; shot genesis\"
+";
 
 unsafe fn run() {
     let hinst = GetModuleHandleW(std::ptr::null());
@@ -182,6 +293,17 @@ unsafe fn run() {
         lpszMenuName: std::ptr::null(),
         lpszClassName: class.as_ptr(),
     };
+    // DPI FIRST -- before the class, before the window, before any pixel.
+    //
+    // Without it the OS resamples the entire framebuffer on the way to the
+    // glass: on a 150% display a 916x739 request becomes a 1374x1109 window
+    // and every kernel-computed pixel is stretched 1.5x by a scaler we do not
+    // own. The frame seal hashes the framebuffer and cannot see it, so the
+    // receipt would stay honest while the screen quietly stopped matching it.
+    //
+    // If it fails we do not pretend. The title says so.
+    let dpi_exact = SetProcessDpiAwarenessContext(DPI_PER_MONITOR_AWARE_V2) != 0;
+
     if RegisterClassW(&wc) == 0 {
         eprintln!("RegisterClassW failed");
         return;
@@ -189,7 +311,23 @@ unsafe fn run() {
 
     APP.with(|a| *a.borrow_mut() = Some(App::new()));
 
-    // client area must be W x H; ask for a bit more and let Windows fit it
+    // The client area must be EXACTLY W x H, so one canvas pixel is one screen
+    // pixel and a click coordinate is a canvas coordinate.
+    //
+    // `W + 16, H + 39` was a guess at the border and caption. Border metrics
+    // are the OS's business -- they move with the theme, the Windows version
+    // and the DPI -- so a guess is right on the machine it was made on and
+    // silently clips somewhere else. AdjustWindowRect asks the OS instead.
+    let mut want = RECT {
+        left: 0,
+        top: 0,
+        right: W as LONG,
+        bottom: H as LONG,
+    };
+    AdjustWindowRect(&mut want, WS_OVERLAPPEDWINDOW, 0);
+    let outer_w = want.right - want.left;
+    let outer_h = want.bottom - want.top;
+
     let hwnd = CreateWindowExW(
         0,
         class.as_ptr(),
@@ -197,8 +335,8 @@ unsafe fn run() {
         WS_OVERLAPPEDWINDOW | WS_VISIBLE,
         CW_USEDEFAULT,
         CW_USEDEFAULT,
-        W as i32 + 16,
-        H as i32 + 39,
+        outer_w,
+        outer_h,
         std::ptr::null_mut(),
         std::ptr::null_mut(),
         hinst,
@@ -209,6 +347,34 @@ unsafe fn run() {
         return;
     }
     ShowWindow(hwnd, SW_SHOW);
+
+    // MEASURE it. AdjustWindowRect is a request; the client rect is the fact.
+    // Proof by kernel: the window's own report grades the arithmetic above.
+    let mut got = RECT {
+        left: 0,
+        top: 0,
+        right: 0,
+        bottom: 0,
+    };
+    GetClientRect(hwnd, &mut got);
+    let (cw, ch) = (got.right - got.left, got.bottom - got.top);
+    let exact = dpi_exact && cw == W as LONG && ch == H as LONG;
+    println!("DPI aware   : {dpi_exact}");
+    println!("client area : {cw} x {ch}   (canvas {W} x {H})");
+    println!(
+        "pixel exact : {}",
+        if exact {
+            "YES -- one canvas pixel is one screen pixel"
+        } else {
+            "NO -- the OS is resampling; the seal no longer describes the screen"
+        }
+    );
+    if !exact {
+        // Path IV: incomplete is fine, fake is not. If the screen is not the
+        // framebuffer, the window says so where a human will read it.
+        let warn = wide("GOS VIEWER - PIXELS RESAMPLED BY THE OS - NOT EXACT");
+        SetWindowTextW(hwnd, warn.as_ptr());
+    }
     // ~60 Hz, consumed ONLY by the GENESIS view (see WM_TIMER). The orb's
     // pattern: SetTimer drives the turn, so there is no render thread and
     // nothing moves when nothing is looking.
@@ -269,25 +435,18 @@ unsafe extern "system" fn wndproc(hwnd: HWND, msg: UINT, wp: WPARAM, lp: LPARAM)
             if wp == VK_ESCAPE {
                 DestroyWindow(hwnd);
             }
-            if wp == 0x53 {
-                // S -- hold the GENESIS turn still, or release it again.
-                let mut go = false;
-                APP.with(|a| {
-                    if let Some(app) = a.borrow_mut().as_mut() {
-                        if app.view() == View::Genesis {
-                            app.genesis_spin = !app.genesis_spin;
-                            app.status = if app.genesis_spin {
-                                String::from("GENESIS SPINNING.")
-                            } else {
-                                String::from("GENESIS HELD STILL.")
-                            };
-                            go = true;
-                        }
-                    }
-                });
-                if go {
-                    InvalidateRect(hwnd, std::ptr::null(), 0);
+            // Every key goes through App::key. The window is one caller of
+            // it; --run is another. A key pressed by a human and a key pressed
+            // by a script must travel the SAME path, or the script is testing
+            // a different program than the one being shipped.
+            let mut go = false;
+            APP.with(|a| {
+                if let Some(app) = a.borrow_mut().as_mut() {
+                    go = app.key(wp);
                 }
+            });
+            if go {
+                InvalidateRect(hwnd, std::ptr::null(), 0);
             }
             0
         }
@@ -384,6 +543,7 @@ impl App {
             genesis_spin: true,
             card_rects: Vec::new(),
             card_views: Vec::new(),
+            paint_clock: true,
         };
         app.layout();
         app
@@ -510,6 +670,87 @@ impl App {
         }
     }
 
+    /// How many pixels one unit of the shell's radius should occupy.
+    ///
+    /// The shell sits on the unit sphere, so it spans `2 * zoom` pixels. This
+    /// was a hard 250.0 -- tuned by eye at 900x700 and then WRONG the moment
+    /// the canvas moved, which is exactly what the first 1920x1080 render
+    /// showed: a small ball in a large empty frame.
+    ///
+    /// A constant that has to be re-tuned per canvas is not a constant, it is
+    /// an unstated dependency (the R7 shape, one lane over). Derive it from the
+    /// drawing area instead, and the picture is the same picture at any size.
+    /// `0.41` reproduces the 900x700 framing that was tuned by eye: at that
+    /// size the drawing height is 606 px and `606 * 0.41 = 248`, within a
+    /// couple of pixels of the old 250.
+    fn fit_zoom(&self) -> f64 {
+        let sh = (H as i32 - BAR_H - 60) as f64;
+        0.41 * (W as f64).min(sh)
+    }
+
+    /// Publish the hit-test geometry the viewer ACTUALLY painted.
+    ///
+    /// `tools/drive.ps1` clicks this app by name -- "SHOT", "card 1" -- and it
+    /// must never recompute where those things are. That is the `card_rects`
+    /// lesson one level up: a driver that derives the layout from the same
+    /// constants the app uses is not an independent witness, it is a second
+    /// copy of the same assumption, and the two drift the moment either moves.
+    ///
+    /// So the app writes down what it painted and the driver reads it. The
+    /// rects here are the very ones [`Self::click`] hit-tests against, and the
+    /// canvas is 900x700 with the client area asserted equal to it at startup,
+    /// so a coordinate in this file is a screen coordinate plus the client
+    /// origin. Nothing to convert, nothing to scale, nothing to guess.
+    fn dump_layout(&self) {
+        let mut lines: Vec<String> = Vec::new();
+        lines.push(String::from("{"));
+        lines.push(format!("  \"canvas\": [{}, {}],", W, H));
+        lines.push(format!("  \"view\": \"{:?}\",", self.view()));
+        lines.push(format!("  \"stack_depth\": {},", self.stack.len()));
+
+        lines.push(String::from("  \"buttons\": ["));
+        for (i, b) in self.buttons.iter().enumerate() {
+            let comma = if i + 1 == self.buttons.len() { "" } else { "," };
+            lines.push(format!(
+                "    {{ \"label\": \"{}\", \"id\": {}, \"x\": {}, \"y\": {}, \"w\": {}, \"h\": {} }}{}",
+                b.label, b.id, b.x, b.y, b.w, b.h, comma
+            ));
+        }
+        lines.push(String::from("  ],"));
+
+        lines.push(String::from("  \"cards\": ["));
+        for (i, r) in self.card_rects.iter().enumerate() {
+            let comma = if i + 1 == self.card_rects.len() {
+                ""
+            } else {
+                ","
+            };
+            let dest = match self.card_views.get(i).copied().flatten() {
+                Some(v) => format!("\"{v:?}\""),
+                None => String::from("null"),
+            };
+            lines.push(format!(
+                "    {{ \"index\": {}, \"x\": {}, \"y\": {}, \"w\": {}, \"h\": {}, \"leads_to\": {} }}{}",
+                i, r.x, r.y, r.w, r.h, dest, comma
+            ));
+        }
+        lines.push(String::from("  ],"));
+        lines.push(format!(
+            "  \"cards_declared\": {}, \"cards_painted\": {},",
+            self.card_views.len(),
+            self.card_rects.len()
+        ));
+        lines.push(String::from(
+            "  \"note\": \"written by the app from the rects it painted; the driver reads, never recomputes\"",
+        ));
+        lines.push(String::from("}"));
+
+        let _ = fs::write(
+            self.session_dir.join("LAYOUT.json"),
+            lines.join("\n") + "\n",
+        );
+    }
+
     /// Paint the current view, then the chrome. Timed, because "how close to
     /// the chip" is a number, not an adjective.
     fn render(&mut self) {
@@ -534,6 +775,11 @@ impl App {
         self.flipped = usize::from(before != self.content_digest);
 
         self.paint_chrome();
+
+        // publish the geometry AFTER the chrome, because the chrome is where
+        // the buttons live. Small file, rare write; the dashboard does not
+        // animate and GENESIS repaints do not move a rect.
+        self.dump_layout();
     }
 
     /// The dashboard skeleton plus the first card, as a fidelity test.
@@ -633,7 +879,7 @@ impl App {
     /// so rather than implying more than is built.
     fn paint_genesis(&mut self) {
         let pal = self.pal();
-        let (rx, zoom) = (0.30_f64, 250.0_f64);
+        let (rx, zoom) = (0.30_f64, self.fit_zoom());
         let ry = self.genesis_yaw;
         let sh = H as i32 - BAR_H - 60;
         let pts: Vec<(i32, i32, f64)> = self
@@ -695,7 +941,7 @@ impl App {
 
     fn paint_shell(&mut self) {
         let pal = self.pal();
-        let (rx, ry, zoom) = (0.30_f64, 0.55_f64, 250.0_f64);
+        let (rx, ry, zoom) = (0.30_f64, 0.55_f64, self.fit_zoom());
         let sh = H as i32 - BAR_H - 60;
         let pts: Vec<(i32, i32, f64)> = self
             .mesh
@@ -788,11 +1034,20 @@ impl App {
         // bar the real dashboard reserves that space for.
         if v != View::Dashboard {
             font::text(&mut self.cv, 10, 10, v.title(), pal.gold, 2);
-            // the sealed content digest, NOT a fresh one -- R10
-            let sub = format!(
-                "V 60 E 90 F 32 CHI 2 P 12 - RENDER {} US - SEAL {:016X}",
-                self.last_render_us, self.content_digest
-            );
+            // the sealed content digest, NOT a fresh one -- R10.
+            // And the render time only when a human is watching: it is a
+            // clock, and a clock in the frame makes the frame unreproducible.
+            let sub = if self.paint_clock {
+                format!(
+                    "V 60 E 90 F 32 CHI 2 P 12 - RENDER {} US - SEAL {:016X}",
+                    self.last_render_us, self.content_digest
+                )
+            } else {
+                format!(
+                    "V 60 E 90 F 32 CHI 2 P 12 - SEAL {:016X}",
+                    self.content_digest
+                )
+            };
             font::text(&mut self.cv, 10, 30, &sub, pal.cyan, 1);
 
             let sy = H as i32 - BAR_H - 14;
@@ -989,6 +1244,244 @@ impl App {
             SRCCOPY,
         );
     }
+
+    /// One key press. The window calls this, and so does `--run`.
+    ///
+    /// Returns whether anything changed and a repaint is owed.
+    fn key(&mut self, vk: usize) -> bool {
+        match vk {
+            // S -- hold the GENESIS turn still, or release it again.
+            0x53 if self.view() == View::Genesis => {
+                self.genesis_spin = !self.genesis_spin;
+                self.status = if self.genesis_spin {
+                    String::from("GENESIS SPINNING.")
+                } else {
+                    String::from("GENESIS HELD STILL.")
+                };
+                true
+            }
+            _ => false,
+        }
+    }
+
+    /// Advance the GENESIS turn by exactly `frames` ticks.
+    ///
+    /// **This is what replaces `sleep`.** A driver that waits on the wall clock
+    /// produces a different picture every run, and a picture that will not
+    /// reproduce is a screenshot, not a receipt (Curse 38, R10). The timer
+    /// advances the yaw by a fixed step, so stepping it `n` times from a known
+    /// state is deterministic: the same script twice gives the same seal.
+    fn advance(&mut self, frames: u32) {
+        for _ in 0..frames {
+            if self.view() == View::Genesis && self.genesis_spin {
+                self.genesis_yaw += 0.012;
+            }
+        }
+    }
+
+    /// Write the current canvas to a named PNG, and log its seal.
+    ///
+    /// The image comes from `self.cv` -- the framebuffer the kernel computed --
+    /// **not from the screen**. There is no window, no compositor, no DPI
+    /// scaler and no capture API between the mathematics and the file. That is
+    /// the whole reason this runs inside Rust instead of outside it.
+    fn shot_named(&mut self, dir: &std::path::Path, name: &str) -> String {
+        self.render();
+        let file = dir.join(format!("{name}.png"));
+        match self.cv.write_png(&file) {
+            Ok(()) => format!(
+                "shot   {name:<28} seal {:016x}  view {:?}  {} us",
+                self.content_digest,
+                self.view(),
+                self.last_render_us
+            ),
+            Err(e) => format!("shot   {name:<28} FAILED: {e}"),
+        }
+    }
+
+    /// Click the centre of a named button, by reading the rect it painted.
+    fn click_button(&mut self, label: &str) -> Result<String, String> {
+        let b = self
+            .buttons
+            .iter()
+            .find(|b| b.label.eq_ignore_ascii_case(label))
+            .ok_or_else(|| {
+                let have: Vec<&str> = self.buttons.iter().map(|b| b.label).collect();
+                format!("no button '{label}'. have: {}", have.join(", "))
+            })?;
+        let (x, y) = (b.x + b.w / 2, b.y + b.h / 2);
+        self.click(x, y);
+        Ok(format!("button {label:<27} at {x},{y}"))
+    }
+
+    /// Click the centre of card `i`, through the real hit-test path.
+    fn click_card(&mut self, i: usize) -> Result<String, String> {
+        let r = *self.card_rects.get(i).ok_or_else(|| {
+            format!(
+                "no card {i} -- {} declared, {} painted (the grid clips)",
+                self.card_views.len(),
+                self.card_rects.len()
+            )
+        })?;
+        let (x, y) = (r.x + r.w / 2, r.y + r.h / 2);
+        self.click(x, y);
+        Ok(format!("card   {i:<27} at {x},{y}"))
+    }
+}
+
+/// Run a script against a headless `App`. Returns the number of failures.
+///
+/// **Why this lives in Rust and not in a shell script.**
+///
+/// A click is a function call. A key is a function call. A frame is a
+/// framebuffer we already own. Driving the app from outside meant synthesising
+/// OS mouse events, fighting the foreground lock, translating coordinates
+/// through a DPI scaler, and photographing a screen -- four layers of things
+/// that can lie, between us and a picture we could simply write to disk.
+///
+/// From in here there is no window at all. `shot` writes the canvas the kernel
+/// computed. `advance` steps the animation by whole frames instead of sleeping.
+/// The same script run twice produces byte-identical PNGs, which is the
+/// difference between a receipt and a screenshot.
+///
+/// The commands go through the SAME `click` and `key` methods the window uses,
+/// so this drives the shipped program and not a parallel copy of it.
+///
+/// ```text
+///   shot <name>      render and write <name>.png (from the framebuffer)
+///   card <n>         click the centre of card n
+///   button <LABEL>   click the centre of that button
+///   key <c>          press a key ('S')
+///   spin <n>         advance the GENESIS turn n frames -- NOT a sleep
+///   expect <View>    the current view must be this, or FAIL
+///   palette | back | panel | shell    sugar for the matching button
+/// ```
+fn run_script(src: &str) -> i32 {
+    let mut app = App::new();
+    app.layout();
+
+    // No clock in the frame. The timing still gets reported -- in DRIVE.log,
+    // as a peer outside the image (R10). This is what makes two runs of the
+    // same script produce byte-identical PNGs.
+    app.paint_clock = false;
+
+    let dir = app.session_dir.join("drive");
+    if let Err(e) = fs::create_dir_all(&dir) {
+        eprintln!("cannot create {}: {e}", dir.display());
+        return 1;
+    }
+
+    // paint once so card_rects and the button rects exist before any click
+    app.render();
+
+    let mut log: Vec<String> = Vec::new();
+    let mut failures = 0i32;
+
+    println!("canvas   {W} x {H}   headless, no window, no compositor");
+    println!("session  {}", app.session_dir.display());
+    println!();
+
+    for raw in src.split([';', '\n', '\r']) {
+        let line = raw.trim();
+        if line.is_empty() || line.starts_with('#') {
+            continue;
+        }
+        let (verb, arg) = match line.split_once(char::is_whitespace) {
+            Some((v, a)) => (v, a.trim()),
+            None => (line, ""),
+        };
+
+        let entry = match verb.to_ascii_lowercase().as_str() {
+            "shot" => {
+                let name = if arg.is_empty() { "shot" } else { arg };
+                app.shot_named(&dir, name)
+            }
+            "card" => match arg.parse::<usize>() {
+                Ok(i) => match app.click_card(i) {
+                    Ok(s) => s,
+                    Err(e) => {
+                        failures += 1;
+                        format!("FAIL   {e}")
+                    }
+                },
+                Err(_) => {
+                    failures += 1;
+                    format!("FAIL   card needs a number, got '{arg}'")
+                }
+            },
+            "button" => match app.click_button(arg) {
+                Ok(s) => s,
+                Err(e) => {
+                    failures += 1;
+                    format!("FAIL   {e}")
+                }
+            },
+            "panel" | "back" | "shell" | "palette" => match app.click_button(verb) {
+                Ok(s) => s,
+                Err(e) => {
+                    failures += 1;
+                    format!("FAIL   {e}")
+                }
+            },
+            "key" => {
+                let c = arg.chars().next().unwrap_or(' ').to_ascii_uppercase();
+                let changed = app.key(c as usize);
+                format!("key    {c:<27} changed {changed}")
+            }
+            "spin" => {
+                let n: u32 = arg.parse().unwrap_or(1);
+                app.advance(n);
+                format!("spin   {n:<27} yaw {:.4} rad", app.genesis_yaw)
+            }
+            "expect" => {
+                let got = format!("{:?}", app.view());
+                if got.eq_ignore_ascii_case(arg) {
+                    format!("expect {arg:<27} OK")
+                } else {
+                    failures += 1;
+                    format!("FAIL   expected view '{arg}', got '{got}'")
+                }
+            }
+            "status" => format!("status {}", app.status),
+            other => {
+                failures += 1;
+                format!("FAIL   unknown command '{other}'")
+            }
+        };
+
+        println!("{entry}");
+        log.push(entry);
+    }
+
+    // the receipt
+    log.push(String::new());
+    log.push(format!("canvas          {W}x{H}"));
+    log.push(format!(
+        "cards declared  {}   painted {}",
+        app.card_views.len(),
+        app.card_rects.len()
+    ));
+    log.push(format!("failures        {failures}"));
+    let _ = fs::write(dir.join("DRIVE.log"), log.join("\n") + "\n");
+
+    println!();
+    if app.card_views.len() != app.card_rects.len() {
+        println!(
+            "WARNING {} cards declared, {} painted -- the grid clipped one and it is unclickable",
+            app.card_views.len(),
+            app.card_rects.len()
+        );
+    }
+    println!("shots -> {}", dir.display());
+    println!(
+        "{}",
+        if failures == 0 {
+            "all steps held"
+        } else {
+            "FAILURES -- see above"
+        }
+    );
+    failures
 }
 
 fn zero_rep(_: std::io::Error) -> bits::DumpReport {

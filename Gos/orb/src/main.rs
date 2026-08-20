@@ -132,10 +132,32 @@ unsafe fn run() {
         lpszMenuName: std::ptr::null(),
         lpszClassName: class.as_ptr(),
     };
+    // DPI FIRST -- before the class, before the window, before any pixel.
+    //
+    // Without it the OS resamples the entire framebuffer on the way to the
+    // glass: on a 150% display a 916x739 request becomes a 1374x1109 window
+    // and every kernel-computed pixel is stretched 1.5x by a scaler we do not
+    // own. The frame seal hashes the framebuffer and cannot see it, so the
+    // receipt would stay honest while the screen quietly stopped matching it.
+    //
+    // If it fails we do not pretend. The title says so.
+    let dpi_exact = SetProcessDpiAwarenessContext(DPI_PER_MONITOR_AWARE_V2) != 0;
+
     if RegisterClassW(&wc) == 0 {
         return;
     }
     APP.with(|a| *a.borrow_mut() = Some(App::new()));
+    // Ask the OS for the border metrics instead of guessing them, so the
+    // client area is EXACTLY W x H and the byte topology is not resampled on
+    // its way to the eye. See the viewer for the full note.
+    let mut want = RECT {
+        left: 0,
+        top: 0,
+        right: W as LONG,
+        bottom: H as LONG,
+    };
+    AdjustWindowRect(&mut want, WS_OVERLAPPEDWINDOW, 0);
+
     let hwnd = CreateWindowExW(
         0,
         class.as_ptr(),
@@ -143,8 +165,8 @@ unsafe fn run() {
         WS_OVERLAPPEDWINDOW | WS_VISIBLE,
         CW_USEDEFAULT,
         CW_USEDEFAULT,
-        W as i32 + 16,
-        H as i32 + 39,
+        want.right - want.left,
+        want.bottom - want.top,
         std::ptr::null_mut(),
         std::ptr::null_mut(),
         hinst,
@@ -153,6 +175,19 @@ unsafe fn run() {
     if hwnd.is_null() {
         return;
     }
+    let mut got = RECT {
+        left: 0,
+        top: 0,
+        right: 0,
+        bottom: 0,
+    };
+    GetClientRect(hwnd, &mut got);
+    let (cw, ch) = (got.right - got.left, got.bottom - got.top);
+    println!(
+        "dpi     {}  client {cw} x {ch}  canvas {W} x {H}  exact {}",
+        dpi_exact,
+        dpi_exact && cw == W as LONG && ch == H as LONG
+    );
     ShowWindow(hwnd, SW_SHOW);
     SetTimer(hwnd, TIMER_ID, TICK, 0);
     let mut msg: MSG = std::mem::zeroed();
