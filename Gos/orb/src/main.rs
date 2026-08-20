@@ -108,15 +108,80 @@ struct App {
     buttons: Vec<(Rect, &'static str, u8)>,
     session: PathBuf,
     shots: usize,
+    /// Whether the HUD may paint the render time into the frame.
+    ///
+    /// R10: the seal is taken before the chrome so the SEAL reproduces, but a
+    /// PNG written after the chrome contains `RENDER 683 US`, and 683 is a
+    /// clock. Interactive keeps it -- a human watching wants the number live.
+    /// `--run` drops it and reports the timing in DRIVE.log as a peer outside
+    /// the image.
+    paint_clock: bool,
 }
 
 thread_local! { static APP: RefCell<Option<App>> = const { RefCell::new(None) }; }
 
 fn main() {
-    unsafe { run() }
+    // A click is a function call and a frame is a buffer we already own, so
+    // the driver lives HERE rather than in a shell wrapping the OS.
+    //
+    // The first non-flag argument stays what it always was: the file to
+    // stream. Default is this executable, so by default the orb draws a
+    // portrait of the build that produced it.
+    let args: Vec<String> = std::env::args().skip(1).collect();
+    let mut i = 0;
+    let mut script: Option<String> = None;
+    let mut target: Option<String> = None;
+
+    while i < args.len() {
+        match args[i].as_str() {
+            "--run" | "-r" => {
+                i += 1;
+                match args.get(i) {
+                    Some(s) => script = Some(s.clone()),
+                    None => {
+                        eprintln!("--run needs a script string");
+                        std::process::exit(2);
+                    }
+                }
+            }
+            "--script" | "-s" => {
+                i += 1;
+                match args.get(i).map(fs::read_to_string) {
+                    Some(Ok(s)) => script = Some(s),
+                    Some(Err(e)) => {
+                        eprintln!("cannot read script: {e}");
+                        std::process::exit(2);
+                    }
+                    None => {
+                        eprintln!("--script needs a path");
+                        std::process::exit(2);
+                    }
+                }
+            }
+            "--help" | "-h" => {
+                println!("{HELP}");
+                return;
+            }
+            other if other.starts_with('-') => {
+                eprintln!(
+                    "unknown flag '{other}'
+
+{HELP}"
+                );
+                std::process::exit(2);
+            }
+            other => target = Some(other.to_string()),
+        }
+        i += 1;
+    }
+
+    match script {
+        Some(src) => std::process::exit(run_script(&src, target)),
+        None => unsafe { run(target) },
+    }
 }
 
-unsafe fn run() {
+unsafe fn run(target: Option<String>) {
     let hinst = GetModuleHandleW(std::ptr::null());
     let class = wide("GosOrbClass");
     let title = wide("GOS ORB v0.2 - the byte topology, icosphere lane");
@@ -146,7 +211,7 @@ unsafe fn run() {
     if RegisterClassW(&wc) == 0 {
         return;
     }
-    APP.with(|a| *a.borrow_mut() = Some(App::new()));
+    APP.with(|a| *a.borrow_mut() = Some(App::new(target)));
     // Ask the OS for the border metrics instead of guessing them, so the
     // client area is EXACTLY W x H and the byte topology is not resampled on
     // its way to the eye. See the viewer for the full note.
@@ -259,8 +324,8 @@ unsafe extern "system" fn wndproc(hwnd: HWND, msg: UINT, wp: WPARAM, lp: LPARAM)
 }
 
 impl App {
-    fn new() -> App {
-        let (label, bytes) = match std::env::args().nth(1) {
+    fn new(target: Option<String>) -> App {
+        let (label, bytes) = match target {
             Some(p) => {
                 let b = fs::read(&p).unwrap_or_default();
                 (p, b)
@@ -330,6 +395,7 @@ impl App {
             buttons: Vec::new(),
             session,
             shots: 0,
+            paint_clock: true,
         };
         app.layout();
         app
@@ -512,7 +578,15 @@ impl App {
             (format!("ENTROPY {:.4} B/B", self.entropy), pal.text),
             (format!("ONES    {:.2} PCT", self.ones_pct), pal.text),
             (String::new(), pal.text),
-            (format!("RENDER {} US", self.render_us), pal.purple),
+            // the clock only when a human is watching (R10)
+            (
+                if self.paint_clock {
+                    format!("RENDER {} US", self.render_us)
+                } else {
+                    String::new()
+                },
+                pal.purple,
+            ),
             (format!("SEAL {:016X}", self.seal), pal.purple),
         ];
         for (t, c) in rows {
@@ -586,6 +660,276 @@ impl App {
         }
     }
 
+    /// Advance the turn by exactly `frames` ticks.
+    ///
+    /// Replaces `sleep`. A driver that waits on the wall clock renders a
+    /// different picture every run, and a picture that will not reproduce is a
+    /// screenshot rather than a receipt (R10 / Curse 38).
+    fn advance(&mut self, frames: u32) {
+        for _ in 0..frames {
+            if self.spin {
+                self.yaw += 0.01;
+            }
+        }
+    }
+
+    /// Set the level absolutely, rather than by delta.
+    fn goto_level(&mut self, want: u32) {
+        let d = want as i32 - self.shell.level as i32;
+        if d != 0 {
+            self.set_level(d);
+        }
+    }
+
+    /// Write the current canvas to a named PNG, from the FRAMEBUFFER.
+    fn shot_named(&mut self, dir: &std::path::Path, name: &str) -> String {
+        self.render();
+        let f = dir.join(format!("{name}.png"));
+        match self.cv.write_png(&f) {
+            Ok(()) => format!(
+                "shot   {name:<22} L{} {:>9} faces  {:>4} B/face  chi {}  seal {:016x}",
+                self.shell.level,
+                self.shell.ico.faces.len(),
+                self.shell.per_face,
+                self.shell.chi,
+                self.seal
+            ),
+            Err(e) => format!("shot   {name:<22} FAILED: {e}"),
+        }
+    }
+
+    /// Click the centre of a named button, through the real hit-test path.
+    fn click_button(&mut self, label: &str) -> Result<String, String> {
+        let b = self
+            .buttons
+            .iter()
+            .find(|(_, l, _)| l.eq_ignore_ascii_case(label))
+            .map(|(r, l, _)| (*r, *l))
+            .ok_or_else(|| {
+                let have: Vec<&str> = self.buttons.iter().map(|(_, l, _)| *l).collect();
+                format!("no button '{label}'. have: {}", have.join(", "))
+            })?;
+        let (r, l) = b;
+        self.click(r.x + r.w / 2, r.y + r.h / 2);
+        Ok(format!("button {l:<22} at {},{}", r.x, r.y))
+    }
+}
+
+/// Run a script against a headless orb. Returns the number of failures.
+///
+/// **Why the orb needs this most.** The orb streams a file's bytes onto a
+/// certified shell -- and by default that file is *its own executable*. So
+/// every build changes the picture, and the picture is a portrait of the code
+/// we just wrote. Driving it from a script means each build can end with a
+/// render of what the build actually produced, beside the numbers.
+///
+/// ```text
+///   shot <name>       render and write <name>.png FROM THE FRAMEBUFFER
+///   level <n|+|->     absolute level, or one step
+///   sweep <a>-<b>     shot every level from a to b -- the growth, in order
+///   spin <n>          advance the turn n frames -- deterministic, not a sleep
+///   palette           cycle the palette
+///   button <LABEL>    click a button by name
+///   expect <k>=<v>    level | faces | chi | genus, or FAIL
+///   status            print the status line
+/// ```
+fn run_script(src: &str, target: Option<String>) -> i32 {
+    let mut app = App::new(target);
+
+    // No clock in the frame: the timing is reported in DRIVE.log as a peer
+    // outside the image, so two runs of one script give identical PNGs (R10).
+    app.paint_clock = false;
+
+    let dir = app.session.join("drive");
+    if let Err(e) = fs::create_dir_all(&dir) {
+        eprintln!("cannot create {}: {e}", dir.display());
+        return 1;
+    }
+    app.render();
+
+    let mut log: Vec<String> = Vec::new();
+    let mut failures = 0i32;
+
+    // THE TOPOLOGY LEDGER ROW. What this build's bytes look like as a shell,
+    // recorded before any picture, so a diff across commits is a diff of the
+    // code's own shape rather than of a render.
+    let head = format!(
+        "stream  {}  {} bytes  dup {:.2}%  entropy {:.4} B/B  ones {:.2}%",
+        app.label,
+        app.bytes.len(),
+        app.dup_pct,
+        app.entropy,
+        app.ones_pct
+    );
+    println!("canvas  {W} x {H}   headless, no window, no compositor");
+    println!("{head}");
+    println!("session {}", app.session.display());
+    println!();
+    log.push(head);
+    log.push(String::new());
+
+    for raw in src.split([';', '\n', '\r']) {
+        let line = raw.trim();
+        if line.is_empty() || line.starts_with('#') {
+            continue;
+        }
+        let (verb, arg) = match line.split_once(char::is_whitespace) {
+            Some((v, a)) => (v, a.trim()),
+            None => (line, ""),
+        };
+
+        let entry = match verb.to_ascii_lowercase().as_str() {
+            "shot" => {
+                let name = if arg.is_empty() { "orb" } else { arg };
+                app.shot_named(&dir, name)
+            }
+            "level" => match arg {
+                "+" => {
+                    app.set_level(1);
+                    format!("level  +{:<21} -> L{}", "", app.shell.level)
+                }
+                "-" => {
+                    app.set_level(-1);
+                    format!("level  -{:<21} -> L{}", "", app.shell.level)
+                }
+                n => match n.trim_start_matches('L').parse::<u32>() {
+                    Ok(v) => {
+                        app.goto_level(v);
+                        format!(
+                            "level  {n:<22} -> L{} {} faces {} B/face",
+                            app.shell.level,
+                            app.shell.ico.faces.len(),
+                            app.shell.per_face
+                        )
+                    }
+                    Err(_) => {
+                        failures += 1;
+                        format!("FAIL   level wants a number, '+' or '-', got '{n}'")
+                    }
+                },
+            },
+            // the growth of the shell, one shot per rung, in order
+            "sweep" => match arg.split_once('-') {
+                Some((a, b)) => match (a.trim().parse::<u32>(), b.trim().parse::<u32>()) {
+                    (Ok(lo), Ok(hi)) if lo <= hi => {
+                        let mut rows = Vec::new();
+                        for l in lo..=hi {
+                            app.goto_level(l);
+                            if app.shell.level != l {
+                                rows.push(format!("sweep  L{l} REFUSED - past the budget"));
+                                break;
+                            }
+                            rows.push(app.shot_named(&dir, &format!("L{l}")));
+                        }
+                        rows.join("\n")
+                    }
+                    _ => {
+                        failures += 1;
+                        format!("FAIL   sweep wants lo-hi, got '{arg}'")
+                    }
+                },
+                None => {
+                    failures += 1;
+                    format!("FAIL   sweep wants lo-hi, got '{arg}'")
+                }
+            },
+            "spin" => {
+                let n: u32 = arg.parse().unwrap_or(1);
+                app.advance(n);
+                format!("spin   {n:<22} yaw {:.4} rad", app.yaw)
+            }
+            "palette" => {
+                app.pal = (app.pal + 1) % ALL.len();
+                format!("palette{:<23} {}", "", app.pal().name)
+            }
+            "button" => match app.click_button(arg) {
+                Ok(s) => s,
+                Err(e) => {
+                    failures += 1;
+                    format!("FAIL   {e}")
+                }
+            },
+            "expect" => {
+                let (k, want) = arg.split_once('=').unwrap_or((arg, ""));
+                let got = match k.trim() {
+                    "level" => app.shell.level.to_string(),
+                    "faces" => app.shell.ico.faces.len().to_string(),
+                    "chi" => app.shell.chi.to_string(),
+                    "genus" => app.shell.genus.to_string(),
+                    other => {
+                        failures += 1;
+                        log.push(format!("FAIL   unknown field '{other}'"));
+                        continue;
+                    }
+                };
+                if got == want.trim() {
+                    format!("expect {arg:<22} OK")
+                } else {
+                    failures += 1;
+                    format!("FAIL   {k} is {got}, expected {}", want.trim())
+                }
+            }
+            "status" => format!("status {}", app.status),
+            other => {
+                failures += 1;
+                format!("FAIL   unknown command '{other}'")
+            }
+        };
+
+        println!("{entry}");
+        log.push(entry);
+    }
+
+    log.push(String::new());
+    log.push(format!("canvas          {W}x{H}"));
+    log.push(format!(
+        "final           L{} {} faces chi {} genus {}",
+        app.shell.level,
+        app.shell.ico.faces.len(),
+        app.shell.chi,
+        app.shell.genus
+    ));
+    log.push(format!("failures        {failures}"));
+    let _ = fs::write(dir.join("DRIVE.log"), log.join("\n") + "\n");
+
+    println!();
+    println!("shots -> {}", dir.display());
+    println!(
+        "{}",
+        if failures == 0 {
+            "all steps held"
+        } else {
+            "FAILURES -- see above"
+        }
+    );
+    failures
+}
+
+const HELP: &str = "\
+GOS ORB v0.2 -- the byte topology, icosphere lane.
+
+  gos_orb                      open the window, streaming its own machine code
+  gos_orb <file>               stream that file instead
+  gos_orb --run \"<steps>\"      run steps headless, write PNGs, exit
+  gos_orb --script <file>      the same, from a file
+
+STEPS -- ';' or newline separated, '#' comments
+
+  shot <name>      render and write <name>.png FROM THE FRAMEBUFFER
+  level <n|+|->    absolute level, or one step
+  sweep <a>-<b>    shot every level a..b -- the growth of the shell, in order
+  spin <n>         advance the turn n frames -- deterministic, not a sleep
+  palette          cycle the palette
+  button <LABEL>   click a button by name
+  expect <k>=<v>   level | faces | chi | genus, or FAIL
+  status           print the status line
+
+Exit code is the number of failures.
+
+  gos_orb --run \"sweep 0-6; expect chi=2\"
+";
+
+impl App {
     unsafe fn blit(&mut self, hdc: HDC) {
         for (i, p) in self.cv.px.chunks_exact(3).enumerate() {
             let q = i * 4;

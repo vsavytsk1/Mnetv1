@@ -30,6 +30,7 @@ use goldberg_kernel::genesis;
 use goldberg_kernel::layout::Rect;
 use goldberg_kernel::palette::{Palette, ALL};
 use goldberg_kernel::raster::{project, Canvas};
+use goldberg_kernel::rng::Rng;
 use goldberg_kernel::{certify, judge, Mesh};
 
 use gos_win32::*;
@@ -68,6 +69,53 @@ const DUMP_CAP: usize = FRAME_BYTES;
 
 /// WM_TIMER id for the GENESIS turn.
 const GENESIS_TIMER: usize = 1;
+
+/// Height of the GENESIS control bar, which sits above the main button bar.
+const GEN_BAR_H: i32 = 34;
+
+/// The most faces the viewer will BUILD. The mathematics is fine far past
+/// this -- `genesis::grow` counts to `u64` -- so the refusal names the number
+/// and says whose limit it is (Curse 35: state the cost before allocating).
+const GEN_FACE_BUDGET: u64 = 400_000;
+
+/// The most faces the viewer will DRAW in one frame. Distinct from the build
+/// budget on purpose: the mesh may legitimately be larger than the canvas can
+/// show, and the HUD prints `DRAWN n OF m` so the shortfall is a number rather
+/// than a silence.
+const GEN_DRAW_CAP: usize = 60_000;
+
+/// A continuous control. The browser's `<input type=range>`.
+///
+/// The value does NOT live here -- it lives in [`genesis::Params`], which is
+/// what the operator actually reads. A slider that carried its own copy would
+/// be a second source of truth, and the two would drift the moment either
+/// moved (the `card_rects` lesson, one widget down).
+struct Slider {
+    x: i32,
+    y: i32,
+    w: i32,
+    h: i32,
+    label: &'static str,
+    id: u8,
+    lo: f64,
+    hi: f64,
+}
+
+impl Slider {
+    fn hit(&self, mx: i32, my: i32) -> bool {
+        mx >= self.x && mx < self.x + self.w && my >= self.y - 6 && my < self.y + self.h + 6
+    }
+    /// Where a click lands, in the slider's own units.
+    fn value_at(&self, mx: i32) -> f64 {
+        let t = ((mx - self.x) as f64 / self.w.max(1) as f64).clamp(0.0, 1.0);
+        self.lo + t * (self.hi - self.lo)
+    }
+    /// Where a value sits, in pixels.
+    fn knob_x(&self, v: f64) -> i32 {
+        let t = ((v - self.lo) / (self.hi - self.lo)).clamp(0.0, 1.0);
+        self.x + (t * self.w as f64) as i32
+    }
+}
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 enum View {
@@ -191,6 +239,14 @@ struct App {
     /// silently become something else. Same shape as R3 and R9: an index
     /// standing where an identity belongs.
     card_views: Vec<Option<View>>,
+    /// The live GENESIS mesh the control bar operates on.
+    gen: genesis::State,
+    /// INNER / MID and the rest. The sliders READ this; they do not shadow it.
+    gen_params: genesis::Params,
+    /// the control bar's own buttons, live only in the GENESIS view
+    gen_buttons: Vec<Button>,
+    /// INNER and MID
+    gen_sliders: Vec<Slider>,
 }
 
 thread_local! {
@@ -271,9 +327,22 @@ STEPS -- ';' or newline separated, '#' comments
   expect <View>    the current view must be this, or FAIL
   status           print the status line
 
+GENESIS CONTROL BAR -- the same methods the mouse calls
+
+  seed c60|12      reseed
+  refine all|5s|6s one refinement, priced before it is allocated
+  undo | reset     step back, or back to the seed and the browser defaults
+  inner <v>        0.05..0.95   where the inner ring sits
+  mid <v>          0.05..0.95   where the mid ring is pulled to
+                   mid > inner opens a rosette; mid < inner overlaps into
+                   bursts. That is the CRESCENT DEFECT, and it is the picture.
+  sweepinner <lo> <hi> <steps> <name>     shoot every step -- a movie
+  sweepmid   <lo> <hi> <steps> <name>
+
 Exit code is the number of failures.
 
-  gos_viewer --run \"expect Dashboard; shot panel; card 1; spin 60; shot genesis\"
+  gos_viewer --run \"card 1; inner 0.78; mid 0.32; shot bursts\"
+  gos_viewer --run \"card 1; sweepmid 0.9 0.1 120 twist\"    # 121 frames
 ";
 
 unsafe fn run() {
@@ -543,9 +612,14 @@ impl App {
             genesis_spin: true,
             card_rects: Vec::new(),
             card_views: Vec::new(),
+            gen: genesis::State::seed_c60(),
+            gen_params: genesis::Params::default(),
+            gen_buttons: Vec::new(),
+            gen_sliders: Vec::new(),
             paint_clock: true,
         };
         app.layout();
+        app.layout_genesis();
         app
     }
 
@@ -584,6 +658,29 @@ impl App {
     }
 
     fn click(&mut self, mx: i32, my: i32) -> bool {
+        // THE GENESIS CONTROL BAR, and only while that view is open, so no
+        // other view can be driven by a click landing in the same pixels.
+        if self.view() == View::Genesis {
+            if let Some(id) = self
+                .gen_buttons
+                .iter()
+                .find(|b| b.hit(mx, my))
+                .map(|b| b.id)
+            {
+                self.status = self.gen_action(id);
+                return true;
+            }
+            if let Some((id, v)) = self
+                .gen_sliders
+                .iter()
+                .find(|s| s.hit(mx, my))
+                .map(|s| (s.id, s.value_at(mx)))
+            {
+                self.status = self.gen_set(id, v);
+                return true;
+            }
+        }
+
         // CARDS FIRST. draw() returns exactly what it painted, so a click
         // hit-tests the real geometry instead of a recomputed guess -- which
         // is how a UI and its layout drift apart. Until now these rects were
@@ -670,6 +767,243 @@ impl App {
         }
     }
 
+    /// The GENESIS control bar: the browser's own row, ported.
+    ///
+    /// `SEED C60 | SEED 12 | REFINE ALL | REFINE 5s | REFINE 6s | UNDO | RESET`
+    /// then the two sliders that decide what the picture looks like.
+    ///
+    /// **INNER and MID are the whole aesthetic.** With `mid > inner` the ring
+    /// opens a rosette; with `mid < inner` it overlaps and you get the
+    /// five-pointed bursts. The spec calls that the CRESCENT DEFECT and says
+    /// plainly: it is not a bug to fix, it is the picture. So these two floats
+    /// are a first-class control, not a debug knob.
+    fn layout_genesis(&mut self) {
+        let y = H as i32 - BAR_H - GEN_BAR_H + 6;
+        let h = GEN_BAR_H - 12;
+        let mut x = 10i32;
+
+        self.gen_buttons.clear();
+        for (id, label) in [
+            (10u8, "SEED C60"),
+            (11, "SEED 12"),
+            (12, "REFINE ALL"),
+            (13, "REFINE 5s"),
+            (14, "REFINE 6s"),
+            (15, "UNDO"),
+            (16, "RESET"),
+        ] {
+            let w = font::width(label, 1) + 16;
+            self.gen_buttons.push(Button {
+                x,
+                y,
+                w,
+                h,
+                label,
+                id,
+            });
+            x += w + 8;
+        }
+
+        // the sliders take the rest of the bar, split evenly
+        self.gen_sliders.clear();
+        x += 12;
+        let room = (W as i32 - 20 - x).max(120);
+        let each = room / 2;
+        for (i, (id, label, lo, hi)) in
+            [(20u8, "INNER", 0.05_f64, 0.95_f64), (21, "MID", 0.05, 0.95)]
+                .into_iter()
+                .enumerate()
+        {
+            let lw = font::width(label, 1) + 8;
+            let sx = x + i as i32 * each + lw;
+            self.gen_sliders.push(Slider {
+                x: sx,
+                y: y + h / 2 - 2,
+                w: each - lw - 90,
+                h: 4,
+                label,
+                id,
+                lo,
+                hi,
+            });
+        }
+    }
+
+    /// One control-bar action. The window calls this and so does `--run`.
+    fn gen_action(&mut self, id: u8) -> String {
+        let p = self.gen_params;
+        match id {
+            10 => {
+                self.gen = genesis::State::seed_c60();
+                String::from("SEED C60 - 12 PENTAGONS, 20 HEXAGONS, 12 ANCHORS.")
+            }
+            11 => String::from(
+                "SEED 12 NOT BUILT YET - buildDodecahedron IS STEP 1 OF THE PORT. NOT WIRED, NOT PRETENDING.",
+            ),
+            12 => self.gen_refine(genesis::Op::All),
+            13 => self.gen_refine(genesis::Op::Pent),
+            14 => self.gen_refine(genesis::Op::Hex),
+            15 => match self.gen.undo() {
+                Some(prev) => {
+                    self.gen = prev;
+                    format!(
+                        "UNDO - BACK TO {} FACES. THE COUNTER DOES NOT ROLL BACK.",
+                        self.gen.faces.len()
+                    )
+                }
+                None => String::from("NOTHING TO UNDO - THIS IS THE SEED."),
+            },
+            16 => {
+                self.gen = genesis::State::seed_c60();
+                self.gen_params = genesis::Params::default();
+                format!(
+                    "RESET - THE SEED, AND INNER {:.2} MID {:.2} BACK TO THE BROWSER DEFAULTS.",
+                    p.inner_scale, p.mid_scale
+                )
+            }
+            other => format!("CONTROL {other} IS NOT WIRED, NOT PRETENDING"),
+        }
+    }
+
+    /// One refinement, priced BEFORE it is allocated (Curse 35).
+    ///
+    /// The integer census predicts; the operator builds; the invariants
+    /// measure. All three are printed, so the two lanes can be seen to agree
+    /// -- or, if the operator ever breaks, to disagree in public.
+    fn gen_refine(&mut self, op: genesis::Op) -> String {
+        let predicted = match self.gen.predict(op) {
+            Ok(c) => c,
+            Err(e) => return format!("REFUSED {} - {e}", op.label().to_uppercase()),
+        };
+        if predicted.f > GEN_FACE_BUDGET {
+            return format!(
+                "REFUSED {} - {} FACES EXCEEDS THE {} VIEWER BUDGET. THE MATH IS FINE.",
+                op.label().to_uppercase(),
+                predicted.f,
+                GEN_FACE_BUDGET
+            );
+        }
+        let params = self.gen_params;
+        let mut rng = Rng::new(0x5EED);
+        self.gen = self.gen.refine(op, &params, &mut rng);
+        match self.gen.invariants() {
+            Ok(i) if i.faces == predicted.f && i.pents == predicted.p => format!(
+                "REFINE {} - PREDICTED F={} P={}, BUILT F={} P={}. LANES AGREE.",
+                op.label().to_uppercase(),
+                predicted.f,
+                predicted.p,
+                i.faces,
+                i.pents
+            ),
+            Ok(i) => format!(
+                "LANES DISAGREE - PREDICTED F={} P={}, BUILT F={} P={}",
+                predicted.f, predicted.p, i.faces, i.pents
+            ),
+            Err(e) => format!("BUILT, BUT WOULD NOT MEASURE: {e}"),
+        }
+    }
+
+    /// Set a slider's value, by id. Shared by the mouse and by `--run`.
+    fn gen_set(&mut self, id: u8, v: f64) -> String {
+        match id {
+            20 => {
+                self.gen_params.inner_scale = v.clamp(0.05, 0.95);
+                format!(
+                    "INNER {:.3}  (MID {:.3}) - {}",
+                    self.gen_params.inner_scale,
+                    self.gen_params.mid_scale,
+                    Self::crescent(&self.gen_params)
+                )
+            }
+            21 => {
+                self.gen_params.mid_scale = v.clamp(0.05, 0.95);
+                format!(
+                    "MID {:.3}  (INNER {:.3}) - {}",
+                    self.gen_params.mid_scale,
+                    self.gen_params.inner_scale,
+                    Self::crescent(&self.gen_params)
+                )
+            }
+            other => format!("SLIDER {other} IS NOT WIRED"),
+        }
+    }
+
+    /// Which side of the crescent defect the parameters are on.
+    ///
+    /// Named out loud in the HUD because it is the single fact that explains
+    /// what you are looking at, and the browser never says it anywhere.
+    fn crescent(p: &genesis::Params) -> &'static str {
+        if p.mid_scale > p.inner_scale {
+            "MID > INNER: THE RING OPENS. ROSETTE."
+        } else if p.mid_scale < p.inner_scale {
+            "MID < INNER: THE RING OVERLAPS. BURSTS."
+        } else {
+            "MID = INNER: THE RING CLOSES FLAT."
+        }
+    }
+
+    /// Paint the GENESIS control bar.
+    fn paint_gen_bar(&mut self) {
+        let pal = self.pal();
+        let top = H as i32 - BAR_H - GEN_BAR_H;
+        self.cv.fill_rect(0, top, W as i32, GEN_BAR_H, pal.panel);
+        self.cv.line(0, top, W as i32 - 1, top, pal.border);
+
+        let items: Vec<(i32, i32, i32, i32, &str, u8)> = self
+            .gen_buttons
+            .iter()
+            .map(|b| (b.x, b.y, b.w, b.h, b.label, b.id))
+            .collect();
+        for (x, y, w, h, label, id) in items {
+            // SEED 12 is drawn dim on purpose: it exists, it is not wired, and
+            // the colour says so before the click does (Path IV).
+            let accent = match id {
+                11 => pal.border,
+                10 | 16 => pal.green,
+                15 => pal.pink,
+                _ => pal.cyan,
+            };
+            self.cv.rect(x, y, w, h, accent);
+            font::text(
+                &mut self.cv,
+                x + 8,
+                y + (h - font::GH) / 2,
+                label,
+                accent,
+                1,
+            );
+        }
+
+        let sliders: Vec<(i32, i32, i32, i32, &str, u8, f64)> = self
+            .gen_sliders
+            .iter()
+            .map(|s| {
+                let v = match s.id {
+                    20 => self.gen_params.inner_scale,
+                    _ => self.gen_params.mid_scale,
+                };
+                (s.x, s.y, s.w, s.h, s.label, s.id, v)
+            })
+            .collect();
+        for (x, y, w, h, label, id, v) in sliders {
+            let lw = font::width(label, 1) + 8;
+            font::text(&mut self.cv, x - lw, y - 3, label, pal.text, 1);
+            self.cv.fill_rect(x, y, w, h, pal.border);
+            let kx = self.gen_sliders[if id == 20 { 0 } else { 1 }].knob_x(v);
+            // filled to the knob, so the eye reads the value without the number
+            self.cv.fill_rect(x, y, (kx - x).max(0), h, pal.cyan);
+            self.cv.disc(kx, y + h / 2, 5, pal.cyan, 255);
+            font::text(
+                &mut self.cv,
+                x + w + 10,
+                y - 3,
+                &format!("{v:.2}"),
+                pal.text,
+                1,
+            );
+        }
+    }
+
     /// How many pixels one unit of the shell's radius should occupy.
     ///
     /// The shell sits on the unit sphere, so it spans `2 * zoom` pixels. This
@@ -732,6 +1066,39 @@ impl App {
             lines.push(format!(
                 "    {{ \"index\": {}, \"x\": {}, \"y\": {}, \"w\": {}, \"h\": {}, \"leads_to\": {} }}{}",
                 i, r.x, r.y, r.w, r.h, dest, comma
+            ));
+        }
+        lines.push(String::from("  ],"));
+
+        lines.push(String::from("  \"gen_buttons\": ["));
+        for (i, b) in self.gen_buttons.iter().enumerate() {
+            let comma = if i + 1 == self.gen_buttons.len() {
+                ""
+            } else {
+                ","
+            };
+            lines.push(format!(
+                "    {{ \"label\": \"{}\", \"id\": {}, \"x\": {}, \"y\": {}, \"w\": {}, \"h\": {} }}{}",
+                b.label, b.id, b.x, b.y, b.w, b.h, comma
+            ));
+        }
+        lines.push(String::from("  ],"));
+
+        lines.push(String::from("  \"gen_sliders\": ["));
+        for (i, sl) in self.gen_sliders.iter().enumerate() {
+            let comma = if i + 1 == self.gen_sliders.len() {
+                ""
+            } else {
+                ","
+            };
+            let v = if sl.id == 20 {
+                self.gen_params.inner_scale
+            } else {
+                self.gen_params.mid_scale
+            };
+            lines.push(format!(
+                "    {{ \"label\": \"{}\", \"id\": {}, \"x\": {}, \"y\": {}, \"w\": {}, \"lo\": {}, \"hi\": {}, \"value\": {:.4} }}{}",
+                sl.label, sl.id, sl.x, sl.y, sl.w, sl.lo, sl.hi, v, comma
             ));
         }
         lines.push(String::from("  ],"));
@@ -877,65 +1244,127 @@ impl App {
     /// only difference is the turn: one variable, one timer, nothing else new.
     /// Refinement is step 3 in the spec and is NOT faked here -- the panel says
     /// so rather than implying more than is built.
+    /// GENESIS -- the live mesh, turning, with its control bar.
+    ///
+    /// Draws the face soup `genesis::State` actually holds: every face
+    /// outlined from its OWN points, painter-ordered by depth, pentagons
+    /// picked out. Face soup means neighbours each draw their own copy of a
+    /// shared corner; that is the browser's design and it is what lets the
+    /// mesh reach millions of faces with no index structure.
     fn paint_genesis(&mut self) {
         let pal = self.pal();
-        let (rx, zoom) = (0.30_f64, self.fit_zoom());
-        let ry = self.genesis_yaw;
-        let sh = H as i32 - BAR_H - 60;
-        let pts: Vec<(i32, i32, f64)> = self
-            .mesh
-            .verts
-            .iter()
-            .map(|&v| project(v, rx, ry, zoom, W, sh as usize))
-            .collect();
+        let (rx, ry, zoom) = (0.30_f64, self.genesis_yaw, self.fit_zoom());
+        let sh = H as i32 - BAR_H - GEN_BAR_H - 60;
 
-        // painter's order: far edges first, so near ones land on top
-        let mut order: Vec<usize> = (0..self.mesh.edges.len()).collect();
-        let (edges, pts_ref) = (&self.mesh.edges, &pts);
-        order.sort_by(|&i, &j| {
-            let d = |k: usize| {
-                let (a, b) = edges[k];
-                (pts_ref[a].2 + pts_ref[b].2) / 2.0
-            };
-            d(i).partial_cmp(&d(j)).unwrap()
-        });
-        for k in order {
-            let (a, b) = self.mesh.edges[k];
-            let depth = (pts[a].2 + pts[b].2) / 2.0;
-            let t = ((depth + 2.0) / 4.0).clamp(0.0, 1.0);
+        let depths: Vec<f64> = self
+            .gen
+            .faces
+            .iter()
+            .map(|f| {
+                let n = f.pts.len() as f64;
+                f.pts
+                    .iter()
+                    .map(|&v| project(v, rx, ry, zoom, W, sh as usize).2)
+                    .sum::<f64>()
+                    / n
+            })
+            .collect();
+        let mut order: Vec<usize> = (0..self.gen.faces.len()).collect();
+        order.sort_by(|&a, &b| depths[a].partial_cmp(&depths[b]).unwrap());
+
+        // At depth the soup outruns the canvas: 1920x1080 is 2.07M pixels and
+        // the mesh passes that within a few rungs. Cap the draw and PRINT the
+        // count -- silence here would be a lie shaped like a finished render.
+        let drawn = order.len().min(GEN_DRAW_CAP);
+        for &k in order.iter().take(drawn) {
+            let f = &self.gen.faces[k];
+            let t = ((depths[k] + 2.0) / 4.0).clamp(0.0, 1.0);
             let alpha = 0.15 + t * 0.5;
-            let (c, a8) = if self.pent_edge[k] {
+            let (c, a8) = if f.kind == genesis::Kind::Pent {
                 (pal.pink, (alpha * 255.0) as u8)
             } else {
                 (pal.cyan, (alpha * 0.6 * 255.0) as u8)
             };
-            self.cv
-                .line_a(pts[a].0, pts[a].1, pts[b].0, pts[b].1, c, a8);
-        }
-        for p in pts.iter() {
-            let t = ((p.2 + 2.0) / 4.0).clamp(0.0, 1.0);
-            let a8 = ((0.15 + t * 0.5) * 255.0) as u8;
-            self.cv.disc(p.0, p.1, 2, pal.green, a8);
+            let pts: Vec<(i32, i32, f64)> = f
+                .pts
+                .iter()
+                .map(|&v| project(v, rx, ry, zoom, W, sh as usize))
+                .collect();
+            for i in 0..pts.len() {
+                let j = (i + 1) % pts.len();
+                self.cv
+                    .line_a(pts[i].0, pts[i].1, pts[j].0, pts[j].1, c, a8);
+            }
         }
 
-        // the census, computed -- never typed into a string literal
-        let g = genesis::Census::C60;
-        let chi = genesis::certify(g).map_or("?".to_string(), |c| c.to_string());
-        let (v, e) = genesis::implied(g).unwrap_or((0, 0));
-        let lines = [
-            format!("SEED   {g}"),
-            format!("V={v}  E={e}  F={}", g.f),
-            format!("chi={chi}   E/V={:.3}", e as f64 / v as f64),
-            format!("yaw {:.2} rad", self.genesis_yaw % std::f64::consts::TAU),
-            String::from("chi is COMPUTED from trivalence,"),
-            String::from("never assumed from Euler (R-INV)."),
-            String::new(),
-            String::from("NOT YET: refine, sliders, mobius."),
-            String::from("step 1 of 8 - GENESIS_PORT_SPEC.md"),
-        ];
+        // ---- the panel. measured off the built mesh, never typed ----------
+        let inv = self.gen.invariants();
+        let census = self.gen.census();
+        let mut lines: Vec<String> = Vec::new();
+        match &inv {
+            Ok(i) => {
+                lines.push(format!("MEASURED  {i}"));
+                lines.push(format!("CENSUS    {census}"));
+                let agree = i.faces == census.f && i.pents == census.p;
+                lines.push(format!(
+                    "LANES     {}",
+                    if agree {
+                        "AGREE - integer census == built soup"
+                    } else {
+                        "DISAGREE - THE OPERATOR IS WRONG"
+                    }
+                ));
+                lines.push(String::new());
+                lines.push(format!(
+                    "chi = V-E+F = {} - {} + {} = {}",
+                    i.vertices, i.edges, i.faces, i.chi
+                ));
+                lines.push(String::from(
+                    "V and E from TRIVALENCE, never Euler (R-INV).",
+                ));
+                lines.push(format!(
+                    "anchors {} - the second witness to P=12",
+                    i.anchor_count
+                ));
+                lines.push(String::new());
+                lines.push(format!(
+                    "depth {}  history {}  undo cost {} KB",
+                    i.max_level,
+                    self.gen.history.len(),
+                    self.gen.snapshot_bytes() / 1024
+                ));
+            }
+            Err(e) => {
+                lines.push(String::from("REFUSED - the soup did not measure:"));
+                lines.push(format!("{e}"));
+            }
+        }
+        lines.push(String::new());
+        lines.push(format!(
+            "INNER {:.3}   MID {:.3}",
+            self.gen_params.inner_scale, self.gen_params.mid_scale
+        ));
+        lines.push(Self::crescent(&self.gen_params).to_string());
+        lines.push(String::new());
+        if drawn < order.len() {
+            lines.push(format!(
+                "DRAWN {drawn} OF {} - capped, not complete",
+                order.len()
+            ));
+        } else {
+            lines.push(format!("DRAWN {drawn} OF {} - all of them", order.len()));
+        }
+        lines.push(format!("YAW {:.2} RAD", self.genesis_yaw));
+        lines.push(String::new());
+        for op in [genesis::Op::All, genesis::Op::Hex, genesis::Op::Pent] {
+            match self.gen.predict(op) {
+                Ok(c) => lines.push(format!("next {:<4} -> {}", op.label(), c)),
+                Err(e) => lines.push(format!("next {:<4} -> REFUSED: {e}", op.label())),
+            }
+        }
+
         for (i, l) in lines.iter().enumerate() {
-            let c = if i >= 7 { pal.border } else { pal.text };
-            font::text(&mut self.cv, 16, 60 + i as i32 * 14, l, c, 1);
+            font::text(&mut self.cv, 16, 60 + i as i32 * 14, l, pal.text, 1);
         }
     }
 
@@ -1050,8 +1479,13 @@ impl App {
             };
             font::text(&mut self.cv, 10, 30, &sub, pal.cyan, 1);
 
-            let sy = H as i32 - BAR_H - 14;
+            let extra = if v == View::Genesis { GEN_BAR_H } else { 0 };
+            let sy = H as i32 - BAR_H - extra - 14;
             font::text(&mut self.cv, 10, sy, &self.status, pal.text, 1);
+        }
+
+        if v == View::Genesis {
+            self.paint_gen_bar();
         }
 
         // button bar
@@ -1440,6 +1874,73 @@ fn run_script(src: &str) -> i32 {
                 } else {
                     failures += 1;
                     format!("FAIL   expected view '{arg}', got '{got}'")
+                }
+            }
+            // THE GENESIS CONTROL BAR, from the command line. Same methods
+            // the mouse calls, so a scripted run drives the shipped program.
+            "seed" => {
+                let id = if arg.eq_ignore_ascii_case("12") {
+                    11
+                } else {
+                    10
+                };
+                app.gen_action(id)
+            }
+            "refine" => {
+                let id = match arg.to_ascii_lowercase().as_str() {
+                    "all" => 12,
+                    "5s" | "pent" | "pents" => 13,
+                    "6s" | "hex" | "hexes" => 14,
+                    other => {
+                        failures += 1;
+                        log.push(format!("FAIL   refine wants all|5s|6s, got '{other}'"));
+                        continue;
+                    }
+                };
+                app.gen_action(id)
+            }
+            "undo" => app.gen_action(15),
+            "reset" => app.gen_action(16),
+            "inner" | "mid" => {
+                let id = if verb == "inner" { 20 } else { 21 };
+                match arg.parse::<f64>() {
+                    Ok(v) => app.gen_set(id, v),
+                    Err(_) => {
+                        failures += 1;
+                        format!("FAIL   {verb} wants a number, got '{arg}'")
+                    }
+                }
+            }
+            // sweep a slider and shoot every step: this is how a movie is made
+            "sweepinner" | "sweepmid" => {
+                let id = if verb == "sweepinner" { 20 } else { 21 };
+                let parts: Vec<&str> = arg.split_whitespace().collect();
+                match parts.as_slice() {
+                    [lo, hi, n, name] => {
+                        match (lo.parse::<f64>(), hi.parse::<f64>(), n.parse::<u32>()) {
+                            (Ok(a), Ok(b), Ok(k)) if k > 0 => {
+                                let mut rows = Vec::new();
+                                for f in 0..=k {
+                                    let t = f as f64 / k as f64;
+                                    let v = a + t * (b - a);
+                                    app.gen_set(id, v);
+                                    rows.push(app.shot_named(&dir, &format!("{name}_{f:04}")));
+                                }
+                                rows.join(
+                                    "
+",
+                                )
+                            }
+                            _ => {
+                                failures += 1;
+                                format!("FAIL   {verb} wants: lo hi steps name")
+                            }
+                        }
+                    }
+                    _ => {
+                        failures += 1;
+                        format!("FAIL   {verb} wants: lo hi steps name, got '{arg}'")
+                    }
                 }
             }
             "status" => format!("status {}", app.status),
