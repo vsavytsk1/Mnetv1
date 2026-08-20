@@ -1244,3 +1244,123 @@ fn refinement_preserves_the_centre() {
         );
     }
 }
+
+// ===========================================================================
+// CLIPPING -- cost proportional to what is SEEN, not to what is asked for
+//
+// `line_a` walks one pixel per step, so an entirely off-screen line used to
+// cost every pixel it would have covered. Fine at zoom 1; unbounded as zoom
+// grows. At 480,212 faces and a 400,000-pixel span that is over a trillion
+// iterations -- a hang, not a slowdown, and the reason the zoom range could
+// not be widened until this existed.
+// ===========================================================================
+
+/// A line wholly inside must be untouched by the clipper, so everything that
+/// was visible before rasterises **identically**. This is the property that
+/// makes clipping safe to add to a program whose frames are sealed.
+#[test]
+fn a_fully_visible_line_is_unchanged_by_clipping() {
+    use goldberg_kernel::palette::DASHBOARD;
+    use goldberg_kernel::raster::Canvas;
+
+    let mut a = Canvas::new(64, 64, DASHBOARD.bg);
+    a.line_a(5, 5, 58, 40, DASHBOARD.cyan, 255);
+
+    // the same line drawn on a canvas large enough that it could never have
+    // been clipped either way
+    let mut b = Canvas::new(200, 200, DASHBOARD.bg);
+    b.line_a(5, 5, 58, 40, DASHBOARD.cyan, 255);
+
+    for y in 0..64 {
+        for x in 0..64 {
+            let ia = (y * 64 + x) * 3;
+            let ib = (y * 200 + x) * 3;
+            assert_eq!(
+                a.px[ia..ia + 3],
+                b.px[ib..ib + 3],
+                "pixel ({x},{y}) differs -- clipping changed a line it should not touch"
+            );
+        }
+    }
+}
+
+/// A line with nothing on screen must draw nothing, and must not iterate its
+/// length to find that out.
+#[test]
+fn a_line_entirely_off_screen_draws_nothing() {
+    use goldberg_kernel::palette::DASHBOARD;
+    use goldberg_kernel::raster::Canvas;
+
+    for (x0, y0, x1, y1, where_) in [
+        (-500, -500, -400, -400, "up-left"),
+        (900, 10, 2000, 40, "right"),
+        (10, -900, 40, -500, "above"),
+        (
+            -2_000_000,
+            30,
+            -1_000_000,
+            35,
+            "far left, a million pixels long",
+        ),
+    ] {
+        let mut cv = Canvas::new(200, 150, DASHBOARD.bg);
+        let before = cv.digest();
+        cv.line_a(x0, y0, x1, y1, DASHBOARD.cyan, 255);
+        assert_eq!(
+            before,
+            cv.digest(),
+            "a line {where_} of the canvas changed pixels"
+        );
+    }
+}
+
+/// A line that crosses the boundary keeps its visible part.
+#[test]
+fn a_crossing_line_keeps_the_part_that_is_on_screen() {
+    use goldberg_kernel::palette::DASHBOARD;
+    use goldberg_kernel::raster::Canvas;
+
+    let mut cv = Canvas::new(200, 150, DASHBOARD.bg);
+    let before = cv.digest();
+    // starts far off the left, ends in the middle
+    cv.line_a(-10_000, 75, 100, 75, DASHBOARD.cyan, 255);
+    assert_ne!(before, cv.digest(), "the visible half must still be drawn");
+
+    // and it reaches the edge it entered through
+    let left = (75 * 200) * 3;
+    assert_ne!(
+        cv.px[left..left + 3],
+        [DASHBOARD.bg[0], DASHBOARD.bg[1], DASHBOARD.bg[2]][..],
+        "the clipped line must start at the canvas edge, not inside it"
+    );
+}
+
+/// **The property the whole thing exists for.** A line a million pixels long
+/// with nothing on screen must return in the time a short one takes -- if it
+/// still walked its length, this would be the slowest test in the suite by
+/// several orders of magnitude.
+#[test]
+fn an_enormous_off_screen_line_costs_nothing() {
+    use goldberg_kernel::palette::DASHBOARD;
+    use goldberg_kernel::raster::Canvas;
+    use std::time::Instant;
+
+    let mut cv = Canvas::new(200, 150, DASHBOARD.bg);
+    let t0 = Instant::now();
+    for _ in 0..1000 {
+        cv.line_a(
+            -3_000_000,
+            -3_000_000,
+            -2_000_000,
+            -2_000_000,
+            DASHBOARD.cyan,
+            255,
+        );
+    }
+    let us = t0.elapsed().as_micros();
+    assert!(
+        us < 50_000,
+        "1000 rejected lines took {us} us. Unclipped they would each have walked \
+         a million pixels -- this test is the difference between a fence and a hang."
+    );
+}

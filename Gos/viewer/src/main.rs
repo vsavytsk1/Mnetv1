@@ -268,9 +268,19 @@ const CONTROLS: [Control; 7] = [
     Control {
         name: "zoom",
         label: "ZOOM",
-        lo: 0.25,
-        hi: 6.0,
-        unit: "multiplier on the fitted zoom",
+        lo: 0.01,
+        hi: 20_000.0,
+        // Deliberately absurd at the top end. The mathematics does not care:
+        // the mesh is exact at any scale, and past about 40x the canvas lands
+        // inside a single face and NOTHING renders -- every one of the half a
+        // million faces is projected, sorted and clipped away. Zooming back
+        // out is then a demonstration of exactly what that cost buys, which is
+        // why the HUD prints VISIBLE beside DRAWN.
+        //
+        // Safe because `line_a` clips before it rasterises. Without that this
+        // range would hang: cost was proportional to a line's FULL length, and
+        // at 20,000x a span is ~1.6 million pixels.
+        unit: "multiplier on the fitted zoom -- 0.01 to 20000",
         when: When::Render,
     },
     Control {
@@ -1969,6 +1979,7 @@ impl App {
         // the mesh passes that within a few rungs. Cap the draw and PRINT the
         // count -- silence here would be a lie shaped like a finished render.
         let drawn = order.len().min(GEN_DRAW_CAP);
+        let mut visible = 0usize;
         // KEEP THE NEAR HALF, NOT THE FAR ONE.
         //
         // `order` is sorted ASCENDING by depth, because painter's order draws
@@ -2000,6 +2011,14 @@ impl App {
                 .iter()
                 .map(|&v| project(v, rx, ry, zoom, W(), sh as usize))
                 .collect();
+            // Did any corner of this face land on the canvas? Cheap, and it is
+            // the difference between what we DRAW and what anyone SEES.
+            if pts
+                .iter()
+                .any(|p| p.0 >= 0 && p.0 < W() as i32 && p.1 >= 0 && p.1 < H() as i32)
+            {
+                visible += 1;
+            }
             for i in 0..pts.len() {
                 let j = (i + 1) % pts.len();
                 self.cv
@@ -2092,6 +2111,17 @@ impl App {
         } else {
             lines.push(format!("DRAWN {drawn} OF {} - all of them", order.len()));
         }
+        // The price, made visible. Every drawn face was projected, depth-sorted
+        // and clipped whether or not one pixel of it reached the canvas.
+        lines.push(format!(
+            "VISIBLE {visible} - {:.2}% of what was drawn{}",
+            100.0 * visible as f64 / drawn.max(1) as f64,
+            if visible == 0 {
+                "  <- NOTHING ON SCREEN, AND WE PAID FOR ALL OF IT"
+            } else {
+                ""
+            }
+        ));
         lines.push(format!("YAW {:.2} RAD", self.genesis_yaw));
         lines.push(String::new());
         for op in [genesis::Op::All, genesis::Op::Hex, genesis::Op::Pent] {

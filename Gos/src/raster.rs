@@ -112,7 +112,90 @@ impl Canvas {
     }
 
     /// The same line, drawn at partial strength. Used for depth cueing.
+    /// Cohen--Sutherland: trim a segment to the canvas, or reject it entirely.
+    ///
+    /// Returns `None` when nothing of the line is on screen -- which at high
+    /// zoom is almost all of them, and is exactly the work worth not doing.
+    ///
+    /// **A fully visible line is returned unchanged**, so the common case is
+    /// two comparisons and no arithmetic, and its rasterisation is bit-for-bit
+    /// what it was before clipping existed.
+    fn clip(
+        &self,
+        mut x0: i32,
+        mut y0: i32,
+        mut x1: i32,
+        mut y1: i32,
+    ) -> Option<(i32, i32, i32, i32)> {
+        let (w, h) = (self.w as i32 - 1, self.h as i32 - 1);
+        let code = |x: i32, y: i32| -> u8 {
+            let mut c = 0u8;
+            if x < 0 {
+                c |= 1;
+            } else if x > w {
+                c |= 2;
+            }
+            if y < 0 {
+                c |= 4;
+            } else if y > h {
+                c |= 8;
+            }
+            c
+        };
+        let (mut c0, mut c1) = (code(x0, y0), code(x1, y1));
+        loop {
+            if c0 | c1 == 0 {
+                return Some((x0, y0, x1, y1)); // wholly inside
+            }
+            if c0 & c1 != 0 {
+                return None; // wholly outside, on one side
+            }
+            let out = if c0 != 0 { c0 } else { c1 };
+            // f64 for the intersection: this is the DISPLAY lane, a pixel
+            // boundary, and integer division here would bias every clipped
+            // endpoint toward zero
+            let (dx, dy) = ((x1 - x0) as f64, (y1 - y0) as f64);
+            let (nx, ny) = if out & 8 != 0 {
+                (x0 as f64 + dx * (h - y0) as f64 / dy, h as f64)
+            } else if out & 4 != 0 {
+                (x0 as f64 + dx * (0 - y0) as f64 / dy, 0.0)
+            } else if out & 2 != 0 {
+                (w as f64, y0 as f64 + dy * (w - x0) as f64 / dx)
+            } else {
+                (0.0, y0 as f64 + dy * (0 - x0) as f64 / dx)
+            };
+            if !nx.is_finite() || !ny.is_finite() {
+                return None;
+            }
+            let (nx, ny) = (nx.round() as i32, ny.round() as i32);
+            if out == c0 {
+                x0 = nx;
+                y0 = ny;
+                c0 = code(x0, y0);
+            } else {
+                x1 = nx;
+                y1 = ny;
+                c1 = code(x1, y1);
+            }
+        }
+    }
+
     pub fn line_a(&mut self, x0: i32, y0: i32, x1: i32, y1: i32, c: Rgb, a: u8) {
+        // CLIP FIRST, or the cost is the line's FULL length rather than its
+        // visible one.
+        //
+        // Bresenham below walks one pixel per step and `blend` discards the
+        // out-of-bounds ones, so an entirely off-screen line still costs every
+        // pixel it would have covered. That is fine at zoom 1 and unbounded as
+        // zoom grows: at 480,212 faces and a 400,000-pixel span it is over a
+        // trillion iterations, which is a hang and not a slowdown.
+        //
+        // A line already fully inside is trivially accepted and takes the
+        // IDENTICAL path it took before, so nothing that was visible changes.
+        let (x0, y0, x1, y1) = match self.clip(x0, y0, x1, y1) {
+            Some(v) => v,
+            None => return,
+        };
         let (dx, dy) = ((x1 - x0).abs(), -(y1 - y0).abs());
         let (sx, sy) = (if x0 < x1 { 1 } else { -1 }, if y0 < y1 { 1 } else { -1 });
         let (mut x, mut y, mut err) = (x0, y0, dx + dy);
