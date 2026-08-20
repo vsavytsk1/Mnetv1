@@ -711,6 +711,56 @@ impl std::fmt::Display for Invariants {
     }
 }
 
+/// A mesh's heap cost, counted field by field rather than estimated.
+///
+/// Every number here is walked from the built structure, so it is exact up to
+/// allocator bookkeeping. That last part is not negligible: a `Face` makes
+/// FOUR allocations (pts, lineage, id, anchor) and the overhead is per
+/// allocation, not per byte -- at depth 7 that is 74 million allocations.
+#[derive(Default, Clone, Copy, PartialEq, Eq, Debug)]
+pub struct Bytes {
+    /// how many faces this describes
+    pub faces: u64,
+    /// `size_of::<Face>()` per face -- the part that is not on the heap twice
+    pub inline: u64,
+    /// the corner points. FLAT at 144 B/face: six points, always.
+    pub pts: u64,
+    /// the lineage path. GROWS one `usize` per level.
+    pub lineage: u64,
+    /// the id string. GROWS a few characters per level.
+    pub ids: u64,
+    /// pentagons only, so twelve strings however deep it goes
+    pub anchors: u64,
+    /// allocations made, which is a cost in its own right
+    pub allocs: u64,
+}
+
+impl Bytes {
+    /// Everything.
+    pub fn total(&self) -> u64 {
+        self.inline + self.pts + self.lineage + self.ids + self.anchors
+    }
+    /// Bytes per face, the number worth comparing across depths.
+    pub fn per_face(&self) -> f64 {
+        self.total() as f64 / self.faces.max(1) as f64
+    }
+}
+
+impl std::fmt::Display for Bytes {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{:.1} MB ({:.0} B/face: pts {:.0}, inline {:.0}, lineage {:.0}, ids {:.0})",
+            self.total() as f64 / 1_048_576.0,
+            self.per_face(),
+            self.pts as f64 / self.faces.max(1) as f64,
+            self.inline as f64 / self.faces.max(1) as f64,
+            self.lineage as f64 / self.faces.max(1) as f64,
+            self.ids as f64 / self.faces.max(1) as f64
+        )
+    }
+}
+
 impl State {
     /// The certified C60 seed: 12 pentagons, 20 hexagons, twelve anchors.
     ///
@@ -768,13 +818,73 @@ impl State {
         grow(self.census(), op)
     }
 
-    /// Bytes one undo snapshot of the current face list would cost:
-    /// `sum(arity) * 24`, which dominates everything else in a `Face`.
+    /// What this mesh really costs on the heap, field by field.
+    ///
+    /// **The old version of this counted the points and nothing else**, on the
+    /// stated grounds that they "dominate everything else in a `Face`". They
+    /// do not. Measured by `examples/kaboom`, which builds real meshes and
+    /// walks them:
+    ///
+    /// ```text
+    ///   depth   faces        pts only       real     ratio
+    ///       1     212      142.6 B/f    286.8 B/f    2.01x
+    ///       3   10292      144.0 B/f    321.3 B/f    2.23x
+    ///       5  504212      144.0 B/f    379.7 B/f    2.64x
+    ///       7  24.7M       144.0 B/f    445.4 B/f    3.09x
+    /// ```
+    ///
+    /// And the error GROWS WITH DEPTH, which is the wrong direction for a
+    /// number a budget is built on. `pts` is flat at 144 B/face forever --
+    /// six points, always -- while `lineage` gains one `usize` per level and
+    /// `id` gains a few characters per level (`F7.c33.e34.e35...`). At depth 7
+    /// the ids alone are 2 GB.
+    pub fn heap_bytes(&self) -> Bytes {
+        let mut b = Bytes {
+            faces: self.faces.len() as u64,
+            inline: self.faces.len() as u64 * std::mem::size_of::<Face>() as u64,
+            ..Default::default()
+        };
+        for f in &self.faces {
+            b.pts += f.pts.capacity() as u64 * std::mem::size_of::<Vec3>() as u64;
+            b.lineage += f.lineage.capacity() as u64 * std::mem::size_of::<usize>() as u64;
+            b.ids += f.id.capacity() as u64;
+            b.allocs += 3;
+            if let Some(a) = &f.anchor {
+                b.anchors += a.capacity() as u64;
+                b.allocs += 1;
+            }
+        }
+        b
+    }
+
+    /// Bytes one undo snapshot of the current face list would cost.
+    ///
+    /// A snapshot is a full `Vec<Face>` clone, so it clones the points, the
+    /// lineage, the id and the anchor -- all of it. This now counts all of it.
     pub fn snapshot_bytes(&self) -> u64 {
-        self.faces
-            .iter()
-            .map(|f| f.pts.len() as u64 * std::mem::size_of::<Vec3>() as u64)
-            .sum()
+        self.heap_bytes().total()
+    }
+
+    /// Peak heap while `refine` is running, which is what actually decides
+    /// whether a step is possible.
+    ///
+    /// **`refine` holds BOTH generations at once**: `self.faces` is still
+    /// alive while the new `Vec` is being filled, and it has to be -- the old
+    /// faces are the input. So the peak is `old + new`, and since `Op::All`
+    /// multiplies faces by about seven, that is roughly `8x` the current mesh.
+    ///
+    /// This is not theory. `kaboom` at depth 8 died asking for 6.1 GB while
+    /// already holding 10.5 GB, on a machine with 14 GB free -- it never got
+    /// close to the 84 GB the finished mesh would have needed, because it had
+    /// to carry the old one the whole way.
+    ///
+    /// A budget that checks only the RESULT will therefore pass steps that
+    /// cannot run.
+    pub fn refine_peak_bytes(&self, op: Op) -> Option<u64> {
+        let now = self.snapshot_bytes();
+        let next = grow(self.census(), op).ok()?;
+        let per_face = now.checked_div(self.faces.len().max(1) as u64)?;
+        Some(now + next.f * per_face)
     }
 
     /// Refine every face the op touches. **Immutable** -- returns a new state
@@ -1220,16 +1330,38 @@ mod mesh_tests {
         }
     }
 
-    /// The price is stated before it is paid (Curse 35).
+    /// The price is stated before it is paid (Curse 35) -- and the price is
+    /// the WHOLE face, not the points.
+    ///
+    /// This test used to assert `snapshot_bytes() == 180 * 24`, pinning a
+    /// points-only model that was wrong by 1.88x at the seed and 3.09x at
+    /// depth 7. It failed the moment the model was fixed, which is precisely
+    /// what a test pinning a wrong number is for.
     #[test]
-    fn the_snapshot_cost_is_measurable_before_the_allocation() {
+    fn the_snapshot_cost_counts_the_whole_face() {
         let (mut s, p, mut rng) = seed();
-        // 32 faces: 12 pentagons and 20 hexagons -> 180 points -> 4320 bytes
-        assert_eq!(s.snapshot_bytes(), 180 * 24);
+        let b = s.heap_bytes();
+
+        // 12 pentagons + 20 hexagons = 180 points, and that part IS structural
+        assert_eq!(b.pts, 180 * 24, "six points a hexagon, five a pentagon");
+        assert_eq!(b.faces, 32);
+
+        // ...and it is not most of the cost, even at the shallowest depth
+        assert!(b.pts < b.total(), "points {} vs total {}", b.pts, b.total());
+        assert_eq!(b.inline, 32 * std::mem::size_of::<Face>() as u64);
+        assert!(b.anchors > 0, "twelve pentagons carry twelve anchors");
+        assert_eq!(b.allocs, 32 * 3 + 12, "three per face, plus one per anchor");
+        assert_eq!(s.snapshot_bytes(), b.total());
+
         s = s.refine(Op::All, &p, &mut rng);
-        // 212 faces, arity sum 1260
-        assert_eq!(s.snapshot_bytes(), 1260 * 24);
+        let after = s.heap_bytes();
+        assert_eq!(after.faces, 212);
+        assert_eq!(after.pts, 1260 * 24);
         assert_eq!(s.invariants().unwrap().edges, 630);
+        assert!(
+            after.total() > b.total() * 6,
+            "seven times the faces costs at least six times the bytes"
+        );
     }
 
     /// The operator refuses a census Euler forbids rather than building it.
@@ -1240,5 +1372,108 @@ mod mesh_tests {
             grow(bad, Op::All),
             Err(GrowthError::Impossible(_))
         ));
+    }
+}
+
+#[cfg(test)]
+mod cost_tests {
+    use super::*;
+
+    fn built(depth: u32) -> State {
+        let p = Params::default();
+        let mut rng = Rng::new(0x5EED);
+        let mut s = State::seed_c60();
+        for _ in 0..depth {
+            s = s.refine(Op::All, &p, &mut rng);
+            s.history.clear();
+        }
+        s
+    }
+
+    /// **The points do not dominate.** The old `snapshot_bytes` said they did
+    /// and every memory number printed anywhere was built on that.
+    #[test]
+    fn the_points_are_less_than_half_the_cost() {
+        let s = built(3);
+        let b = s.heap_bytes();
+        assert_eq!(b.faces, 10292);
+        assert!(
+            b.pts < b.total() / 2,
+            "points are {} of {} -- if this ever becomes true again, a Face got smaller \
+             and the doc needs rewriting, not the test",
+            b.pts,
+            b.total()
+        );
+        // measured by examples/kaboom at this exact depth
+        assert!(
+            (b.per_face() - 321.3).abs() < 1.0,
+            "per-face cost moved: {:.1}, was 321.3",
+            b.per_face()
+        );
+    }
+
+    /// `pts` is flat forever and the rest is not, so the error in a
+    /// points-only model GROWS with depth. That direction is the whole problem.
+    #[test]
+    fn the_points_only_model_gets_worse_with_depth() {
+        let shallow = built(1).heap_bytes();
+        let deeper = built(4).heap_bytes();
+
+        let r1 = shallow.total() as f64 / shallow.pts as f64;
+        let r4 = deeper.total() as f64 / deeper.pts as f64;
+
+        // pts per face is SIX POINTS, always -- that is why it cannot track
+        assert!((shallow.pts as f64 / shallow.faces as f64 - 144.0).abs() < 2.0);
+        assert!((deeper.pts as f64 / deeper.faces as f64 - 144.0).abs() < 0.5);
+
+        assert!(
+            r4 > r1,
+            "the ratio must worsen with depth: depth1 {r1:.2}x, depth4 {r4:.2}x"
+        );
+        assert!(
+            r4 > 2.3,
+            "at depth 4 the real cost was measured at 2.43x the points, got {r4:.2}x"
+        );
+    }
+
+    /// The ids really are the thing that grows. At depth 7 they are 2 GB.
+    #[test]
+    fn ids_and_lineage_grow_while_points_do_not() {
+        let a = built(2).heap_bytes();
+        let b = built(4).heap_bytes();
+        let per = |x: u64, f: u64| x as f64 / f as f64;
+        assert!(
+            per(b.ids, b.faces) > per(a.ids, a.faces),
+            "id bytes per face must grow with depth"
+        );
+        assert!(
+            per(b.lineage, b.faces) > per(a.lineage, a.faces),
+            "lineage bytes per face must grow with depth"
+        );
+    }
+
+    /// **What actually decides whether a step can run.** `refine` keeps the
+    /// old generation alive while building the new one, so the peak is
+    /// `old + new` -- about 8x the current mesh for `Op::All`. A budget that
+    /// checks only the result would pass steps that cannot run.
+    #[test]
+    fn the_peak_is_both_generations_not_just_the_result() {
+        let s = built(2);
+        let now = s.snapshot_bytes();
+        let peak = s.refine_peak_bytes(Op::All).expect("C60 can always grow");
+        assert!(peak > now, "the peak must exceed what is already held");
+        let ratio = peak as f64 / now as f64;
+        assert!(
+            (7.0..9.5).contains(&ratio),
+            "Op::All is ~7x faces, so the peak should be ~8x the mesh, got {ratio:.2}x"
+        );
+    }
+
+    /// Twelve anchors, however deep it goes -- so that field never grows.
+    #[test]
+    fn the_anchors_do_not_grow() {
+        let a = built(1).heap_bytes();
+        let b = built(4).heap_bytes();
+        assert_eq!(a.anchors, b.anchors, "twelve anchors, forever");
     }
 }

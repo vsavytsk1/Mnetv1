@@ -125,6 +125,17 @@ const GEN_BAR_H: i32 = 34;
 /// and says whose limit it is (Curse 35: state the cost before allocating).
 const GEN_FACE_BUDGET: u64 = 400_000;
 
+/// The most memory one refinement may PEAK at.
+///
+/// Distinct from the face budget on purpose: they fence different things and
+/// either can be the binding one. `examples/kaboom` found the machine's own
+/// wall at depth 7 -- 24.7 million faces, 10.49 GB -- with depth 8 aborting
+/// (`0xC0000409`) while asking for 6.1 GB on top of the 10.5 it already held.
+///
+/// 2 GB leaves the window responsive and the machine usable, which is the
+/// point of a viewer as opposed to a batch job.
+const GEN_PEAK_BYTES: u64 = 2 * 1024 * 1024 * 1024;
+
 /// The most faces the viewer will DRAW in one frame. Distinct from the build
 /// budget on purpose: the mesh may legitimately be larger than the canvas can
 /// show, and the HUD prints `DRAWN n OF m` so the shortfall is a number rather
@@ -1326,6 +1337,27 @@ impl App {
                 GEN_FACE_BUDGET
             );
         }
+        // AND the memory, which is a different fence in a different place.
+        //
+        // `refine` holds BOTH generations at once -- the old faces are the
+        // input and stay alive while the new Vec fills -- so the peak is
+        // roughly 8x the current mesh, not the size of the result. Measured
+        // by `examples/kaboom`: depth 8 died asking for 6.1 GB while already
+        // holding 10.5 GB, nowhere near the 84 GB the finished mesh needed.
+        //
+        // A face also costs about 3x what the points alone suggest, and that
+        // multiple GROWS with depth, so this reads the REAL per-face cost off
+        // the mesh in hand rather than assuming one.
+        if let Some(peak) = self.gen.refine_peak_bytes(op) {
+            if peak > GEN_PEAK_BYTES {
+                return format!(
+                    "REFUSED {} - PEAK {:.2} GB EXCEEDS THE {:.1} GB CEILING.                      refine HOLDS BOTH GENERATIONS, so the peak is ~8x the mesh,                      not the size of the result. THE MATH IS FINE.",
+                    op.label().to_uppercase(),
+                    peak as f64 / 1_073_741_824.0,
+                    GEN_PEAK_BYTES as f64 / 1_073_741_824.0
+                );
+            }
+        }
         let params = self.gen_params;
         let mut rng = Rng::new(0x5EED);
         self.gen = self.gen.refine(op, &params, &mut rng);
@@ -1766,11 +1798,22 @@ impl App {
                 ));
                 lines.push(String::new());
                 lines.push(format!(
-                    "depth {}  history {}  undo cost {} KB",
+                    "depth {}  history {}",
                     i.max_level,
-                    self.gen.history.len(),
-                    self.gen.snapshot_bytes() / 1024
+                    self.gen.history.len()
                 ));
+                lines.push(format!("mesh  {}", self.gen.heap_bytes()));
+                if let Some(peak) = self
+                    .gen
+                    .predict(genesis::Op::All)
+                    .ok()
+                    .and_then(|_| self.gen.refine_peak_bytes(genesis::Op::All))
+                {
+                    lines.push(format!(
+                        "next ALL would PEAK at {:.2} GB (both generations)",
+                        peak as f64 / 1_073_741_824.0
+                    ));
+                }
             }
             Err(e) => {
                 lines.push(String::from("REFUSED - the soup did not measure:"));
