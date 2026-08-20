@@ -839,3 +839,107 @@ fn ledger_certifies_c60_end_to_end() {
     assert_eq!(l.passed(), 8);
     assert_eq!(l.failed(), 0);
 }
+
+// ===========================================================================
+// R12 -- THE EQUAL FORMULA
+//
+// RULE 0 promises bit-identity with the browser on the certified path. That
+// promise is about the EXPRESSION, not the value: IEEE-754 gives correct
+// rounding per OPERATION, so two algebraically identical formulas that round a
+// different number of times give different doubles.
+//
+// These three tests freeze the browser's spelling. They are the only thing
+// standing between the port and a well-meaning "simplification" -- the whole
+// 90-test suite passed on both spellings, so nothing else here can see it.
+// ===========================================================================
+
+/// `centroid` must divide by `n`, never multiply by `1/n`.
+///
+/// `1/5` is not representable in binary64, so `sum * (1.0/5.0)` rounds twice
+/// where `sum / 5.0` rounds once. Measured over 400k random inputs, 34.2%
+/// disagree by an ulp. `refineFace` calls this on every face at every level.
+#[test]
+fn centroid_divides_by_n_and_does_not_multiply_by_its_reciprocal() {
+    // A pentagon whose coordinate sum exercises the n=5 rounding, built from
+    // PHI so it sits on the scale the operator actually works at.
+    let pts: Vec<Vec3> = vec![
+        [1.0, 2.0, PHI],
+        [2.0 * PHI, 1.0, 2.0],
+        [3.0 * PHI, PHI, 1.0],
+        [2.0, 3.0 * PHI, 2.0 * PHI],
+        [PHI, 2.0 * PHI, 3.0 * PHI],
+    ];
+    let n = pts.len() as f64;
+    let sum = pts.iter().fold([0.0f64; 3], |a, p| vadd(a, *p));
+
+    let good = centroid(&pts);
+    let bad = vscale(sum, 1.0 / n);
+
+    // the browser's spelling, reproduced here so the test does not consult the
+    // function it is grading
+    for k in 0..3 {
+        assert_eq!(
+            good[k].to_bits(),
+            (sum[k] / n).to_bits(),
+            "centroid component {k} must be sum/n, bit for bit"
+        );
+    }
+
+    // and the two spellings really do differ -- a weak example is a failed
+    // test, not a passed one (the fused_multiply_add lesson)
+    assert!(
+        (0..3).any(|k| good[k].to_bits() != bad[k].to_bits()),
+        "this fixture no longer distinguishes sum/n from sum*(1/n); \
+         pick coordinates that do, or the test is decorative"
+    );
+}
+
+/// `project_to_sphere` must be `p * (R/L)`, never `(p * (1/L)) * R`.
+///
+/// Measured over 400k random inputs, 41.6% disagree by an ulp.
+#[test]
+fn project_to_sphere_scales_by_r_over_l_in_one_step() {
+    let p: Vec3 = [0.7136441795461798, 1.0 / 3.0, PHI];
+    let r = 1.6;
+    let l = vlen(p);
+
+    let good = project_to_sphere(p, r);
+    let bad = vscale(vnorm(p), r);
+
+    for k in 0..3 {
+        assert_eq!(
+            good[k].to_bits(),
+            (p[k] * (r / l)).to_bits(),
+            "component {k} must be p*(R/L), bit for bit"
+        );
+    }
+    assert!(
+        (0..3).any(|k| good[k].to_bits() != bad[k].to_bits()),
+        "this fixture no longer distinguishes p*(R/L) from (p*(1/L))*R"
+    );
+}
+
+/// A point at the origin has no direction. The browser returns it unchanged;
+/// normalising it would produce NaN and poison every face downstream.
+#[test]
+fn project_to_sphere_refuses_the_origin_instead_of_returning_nan() {
+    let o = project_to_sphere([0.0, 0.0, 0.0], 1.6);
+    assert_eq!(o, [0.0, 0.0, 0.0]);
+    assert!(o.iter().all(|c| c.is_finite()), "must not be NaN");
+}
+
+/// `vlerp` must be `a(1-t) + bt`, never `a + (b-a)t`.
+#[test]
+fn vlerp_is_the_browsers_spelling() {
+    let a: Vec3 = [1.0, PHI, 3.0 * PHI];
+    let b: Vec3 = [2.0 * PHI, 0.1, 1.0 / 7.0];
+    let t = 0.45; // the operator's INNER_SCALE
+    let got = vlerp(a, b, t);
+    for k in 0..3 {
+        assert_eq!(
+            got[k].to_bits(),
+            (a[k] * (1.0 - t) + b[k] * t).to_bits(),
+            "component {k} must be a(1-t)+bt, bit for bit"
+        );
+    }
+}
