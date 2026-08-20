@@ -30,7 +30,6 @@ use goldberg_kernel::genesis;
 use goldberg_kernel::layout::Rect;
 use goldberg_kernel::palette::{Palette, ALL};
 use goldberg_kernel::raster::{project, Canvas};
-use goldberg_kernel::rng::Rng;
 use goldberg_kernel::{certify, judge, Mesh};
 
 use gos_win32::*;
@@ -63,12 +62,6 @@ enum View {
     /// a seed on screen, turning, with its census beside it. Refinement,
     /// the sliders and the Mobius twist arrive as later steps.
     Genesis,
-    /// GENESIS step 2: the operator itself. `REFINE ALL / 6s / 5s` and `UNDO`,
-    /// running the real `genesis::State` -- immutable, id-minting, anchored.
-    /// Every number in its panel is measured from the built face soup; the
-    /// integer census is shown beside it so the two lanes can disagree in
-    /// public.
-    Refine,
 }
 
 impl View {
@@ -79,7 +72,6 @@ impl View {
             View::FrameBits => "THE FRAME - ITS OWN 1 AND 0S",
             View::MachineBits => "THE MACHINE - WHAT RUSTC EMITTED",
             View::Genesis => "GENESIS - THE SEED, SPINNING",
-            View::Refine => "GENESIS - THE OPERATOR",
         }
     }
 }
@@ -163,16 +155,6 @@ struct App {
     /// silently become something else. Same shape as R3 and R9: an index
     /// standing where an identity belongs.
     card_views: Vec<Option<View>>,
-    /// GENESIS step 2 -- the live face soup the operator refines.
-    refine: genesis::State,
-    /// the operator's parameters. Browser defaults; jitter 0, so the RNG below
-    /// is never consulted on the default path.
-    refine_params: genesis::Params,
-    /// seeded, so a jittered mesh is reproducible. NOT the browser's stream.
-    refine_rng: Rng,
-    /// what the last refinement cost, in wall time. A peer of the seal, never
-    /// inside it (R10).
-    refine_us: u128,
 }
 
 thread_local! {
@@ -286,41 +268,6 @@ unsafe extern "system" fn wndproc(hwnd: HWND, msg: UINT, wp: WPARAM, lp: LPARAM)
         WM_KEYDOWN => {
             if wp == VK_ESCAPE {
                 DestroyWindow(hwnd);
-            }
-            // GENESIS step 2 -- the operator's keys. Only live while the
-            // Refine view is open, so no other view can be driven by accident.
-            if matches!(wp, 0x41 | 0x48 | 0x50 | 0x55 | 0x52) {
-                let mut go = false;
-                APP.with(|a| {
-                    if let Some(app) = a.borrow_mut().as_mut() {
-                        if app.view() == View::Refine {
-                            app.status = match wp {
-                                0x41 => app.do_refine(genesis::Op::All),
-                                0x48 => app.do_refine(genesis::Op::Hex),
-                                0x50 => app.do_refine(genesis::Op::Pent),
-                                0x55 => match app.refine.undo() {
-                                    Some(prev) => {
-                                        app.refine = prev;
-                                        format!(
-                                            "UNDO - BACK TO {} FACES. THE COUNTER DOES NOT ROLL BACK.",
-                                            app.refine.faces.len()
-                                        )
-                                    }
-                                    None => String::from("NOTHING TO UNDO - THIS IS THE SEED."),
-                                },
-                                _ => {
-                                    app.refine = genesis::State::seed_c60();
-                                    app.refine_us = 0;
-                                    String::from("RESET - THE CERTIFIED C60 SEED, 32 FACES.")
-                                }
-                            };
-                            go = true;
-                        }
-                    }
-                });
-                if go {
-                    InvalidateRect(hwnd, std::ptr::null(), 0);
-                }
             }
             if wp == 0x53 {
                 // S -- hold the GENESIS turn still, or release it again.
@@ -437,10 +384,6 @@ impl App {
             genesis_spin: true,
             card_rects: Vec::new(),
             card_views: Vec::new(),
-            refine: genesis::State::seed_c60(),
-            refine_params: genesis::Params::default(),
-            refine_rng: Rng::new(0x5EED),
-            refine_us: 0,
         };
         app.layout();
         app
@@ -465,6 +408,7 @@ impl App {
             (2, "MACHINE BITS"),
             (3, "PALETTE"),
             (4, "BACK"),
+            (7, "PANEL"),
         ] {
             let w = font::width(label, 1) + 16;
             self.buttons.push(Button {
@@ -493,12 +437,6 @@ impl App {
                         Some(View::Genesis) => {
                             self.stack.push(View::Genesis);
                             self.status = String::from("GENESIS - THE SEED, SPINNING. S STOPS IT.");
-                        }
-                        Some(View::Refine) => {
-                            self.stack.push(View::Refine);
-                            self.status = String::from(
-                                "GENESIS - THE OPERATOR. A REFINE ALL, H 6s, P 5s, U UNDO, R RESET.",
-                            );
                         }
                         Some(v) => {
                             self.stack.push(v);
@@ -553,6 +491,21 @@ impl App {
                 }
                 true
             }
+            // PANEL -- all the way home in one click, however deep the stack
+            // got. BACK pops one; this truncates to the root. Two buttons
+            // because they answer two different questions, and a reader should
+            // never have to click BACK an unknown number of times to find out
+            // where the root is.
+            Some(7) => {
+                if self.stack.len() > 1 {
+                    let depth = self.stack.len() - 1;
+                    self.stack.truncate(1);
+                    self.status = format!("PANEL - CLIMBED {depth} BACK TO THE DASHBOARD.");
+                } else {
+                    self.status = String::from("ALREADY ON THE PANEL.");
+                }
+                true
+            }
             _ => false,
         }
     }
@@ -568,7 +521,6 @@ impl App {
         match self.view() {
             View::Dashboard => self.paint_dashboard(),
             View::Genesis => self.paint_genesis(),
-            View::Refine => self.paint_refine(),
             View::Shell => self.paint_shell(),
             View::FrameBits => self.paint_bit_texture(true),
             View::MachineBits => self.paint_bit_texture(false),
@@ -609,20 +561,18 @@ impl App {
             .collect();
 
         // Two cards, on purpose: THE BIRTH is `.feat-card` (gold, FRONT DOOR
-        // marker, scale-2 name) and C60KTEST is a plain `.mod-card` (cyan,
+        // marker, scale-2 name) and GENESIS is a plain `.mod-card` (green,
         // border only). Side by side they exercise both paths and the 2-column
         // grid at once -- the integration test, not a decoration.
+        //
+        // Only GENESIS is wired. THE LIGHT MATRIX describes a browser page
+        // this crate has NOT ported -- nothing in Rust computes the spectrum
+        // it names -- so it stays a catalogue entry and its click says
+        // NOT WIRED, NOT PRETENDING.
         let birth_desc = "the source code of it all, computed LIVE. Euler forces P=12; one \
                           4x4 integer matrix governs the whole family; the C60 adjacency \
                           graph is built and diagonalized to land lambda min at minus phi \
                           squared.";
-        let test_name = format!("C60KTEST v{}", goldberg_kernel::VERSION);
-        let test_desc = format!(
-            "the integration card. painted by the kernel, no browser. this shell was \
-             certified by BOTH lanes before a pixel existed: {} and the integer judge \
-             agrees. seal is content-only, so it reproduces.",
-            self.cert_line
-        );
         // the card says the census, not a slogan: computed, not typed
         let g = genesis::Census::C60;
         let genesis_desc = &format!(
@@ -630,16 +580,6 @@ impl App {
             g,
             genesis::certify(g).map_or("?".into(), |c| c.to_string())
         );
-        // measured off the LIVE state, so the card reports what the operator
-        // actually holds right now rather than a sentence about it
-        let ri = self.refine.invariants();
-        let refine_desc = &match &ri {
-            Ok(i) => format!(
-                "the refinement operator, running. {} - chi COUNTED from trivalence, never                  assumed from Euler. A refine ALL, H 6s, P 5s, U undo. step 2 of 8.",
-                i
-            ),
-            Err(e) => format!("the operator, and it currently REFUSES: {e}"),
-        };
         let cards = [
             dashboard::Card {
                 tag: "* THE BIRTH",
@@ -657,32 +597,15 @@ impl App {
                 caps: &["frm", "kbd"],
                 featured: false,
             },
-            dashboard::Card {
-                tag: "KERNEL",
-                name: &test_name,
-                desc: &test_desc,
-                accent: pal.cyan,
-                caps: &["frm", "pc", "kbd"],
-                featured: false,
-            },
-            dashboard::Card {
-                tag: "GENESIS",
-                name: "GENESIS v0.2 - THE OPERATOR",
-                desc: refine_desc,
-                accent: pal.pink,
-                caps: &["frm", "kbd"],
-                featured: false,
-            },
         ];
 
-        // Where each card leads, in the SAME order the cards were built. A
-        // `None` is a card with nothing behind it, and the click handler says
-        // so out loud rather than doing nothing and looking broken.
+        // Where each card leads, built in the SAME place as the cards so the
+        // two lists cannot drift. `None` is a card with nothing behind it, and
+        // the click says so out loud rather than doing nothing and looking
+        // broken. Two cards, one wired -- the honest state of the port.
         self.card_views = vec![
-            None,                // THE LIGHT MATRIX -- the browser page, visual
+            None,                // THE LIGHT MATRIX -- the browser page, not ported
             Some(View::Genesis), // GENESIS v0.1 -- the seed, spinning
-            Some(View::Shell),   // C60KTEST -- and "this shell" IS View::Shell
-            Some(View::Refine),  // GENESIS v0.2 -- the operator
         ];
 
         let m = dashboard::Model {
@@ -767,188 +690,6 @@ impl App {
         for (i, l) in lines.iter().enumerate() {
             let c = if i >= 7 { pal.border } else { pal.text };
             font::text(&mut self.cv, 16, 60 + i as i32 * 14, l, c, 1);
-        }
-    }
-
-    /// GENESIS step 2 -- the operator, live.
-    ///
-    /// Draws the actual face soup `genesis::State` holds: every face outlined
-    /// from its own points, pentagons picked out, painter-ordered by depth.
-    ///
-    /// **Every number in the panel is measured from the built mesh.** The
-    /// integer census is printed beside the measured one so the two lanes can
-    /// be seen to agree -- or, if the operator ever breaks, to disagree in
-    /// public rather than quietly. Nothing here is a literal.
-    fn paint_refine(&mut self) {
-        let pal = self.pal();
-        let (rx, ry, zoom) = (0.30_f64, 0.55_f64, 250.0_f64);
-        let sh = H as i32 - BAR_H - 60;
-        let dy = 44;
-
-        // one polyline per face, from the face's OWN points -- this is face
-        // soup, so neighbours each draw their own copy of a shared corner
-        let mut order: Vec<usize> = (0..self.refine.faces.len()).collect();
-        let depth_of = |f: &goldberg_kernel::genesis::Face| -> f64 {
-            let n = f.pts.len() as f64;
-            f.pts
-                .iter()
-                .map(|&v| project(v, rx, ry, zoom, W, sh as usize).2)
-                .sum::<f64>()
-                / n
-        };
-        let depths: Vec<f64> = self.refine.faces.iter().map(depth_of).collect();
-        order.sort_by(|&i, &j| depths[i].partial_cmp(&depths[j]).unwrap());
-
-        // At depth the soup is millions of faces and 900x700 is 630k pixels,
-        // so drawing every one is both slow and a solid block of colour. Cap
-        // it, and PRINT the cap -- silence here would be a lie shaped like a
-        // finished render (the fab_export seam lesson).
-        const FACE_DRAW_CAP: usize = 20_000;
-        let drawn = order.len().min(FACE_DRAW_CAP);
-
-        for &k in order.iter().take(drawn) {
-            let f = &self.refine.faces[k];
-            let t = ((depths[k] + 2.0) / 4.0).clamp(0.0, 1.0);
-            let alpha = 0.15 + t * 0.5;
-            let (c, a8) = if f.kind == goldberg_kernel::genesis::Kind::Pent {
-                (pal.pink, (alpha * 255.0) as u8)
-            } else {
-                (pal.cyan, (alpha * 0.6 * 255.0) as u8)
-            };
-            let pts: Vec<(i32, i32, f64)> = f
-                .pts
-                .iter()
-                .map(|&v| project(v, rx, ry, zoom, W, sh as usize))
-                .collect();
-            for i in 0..pts.len() {
-                let j = (i + 1) % pts.len();
-                self.cv
-                    .line_a(pts[i].0, pts[i].1 + dy, pts[j].0, pts[j].1 + dy, c, a8);
-            }
-        }
-
-        // ---- the panel. measured, never typed --------------------------------
-        let inv = self.refine.invariants();
-        let census = self.refine.census();
-        let mut lines: Vec<String> = Vec::new();
-
-        match &inv {
-            Ok(i) => {
-                lines.push(format!("MEASURED  {i}"));
-                lines.push(format!("CENSUS    {census}"));
-                // the two lanes, side by side. equal is the claim; showing
-                // both is what makes it a claim rather than an assertion.
-                let agree = i.faces == census.f && i.pents == census.p;
-                lines.push(format!(
-                    "LANES     {}",
-                    if agree {
-                        "AGREE - integer census == built soup"
-                    } else {
-                        "DISAGREE - THE OPERATOR IS WRONG"
-                    }
-                ));
-                lines.push(String::new());
-                lines.push(format!(
-                    "chi = V-E+F = {} - {} + {} = {}",
-                    i.vertices, i.edges, i.faces, i.chi
-                ));
-                lines.push(String::from("V and E from TRIVALENCE, not Euler."));
-                lines.push(format!(
-                    "anchors {} - the second witness to P=12",
-                    i.anchor_count
-                ));
-                lines.push(String::new());
-                lines.push(format!(
-                    "depth {}  history {}",
-                    i.max_level,
-                    self.refine.history.len()
-                ));
-                lines.push(format!(
-                    "undo cost {} KB   ids minted {}",
-                    self.refine.snapshot_bytes() / 1024,
-                    self.refine.counter
-                ));
-            }
-            Err(e) => {
-                lines.push(String::from("REFUSED - the soup did not measure:"));
-                lines.push(format!("{e}"));
-            }
-        }
-
-        lines.push(String::new());
-        if drawn < order.len() {
-            lines.push(format!(
-                "DRAWN {drawn} OF {} FACES - capped, not complete",
-                order.len()
-            ));
-        } else {
-            lines.push(format!("DRAWN {drawn} OF {} - all of them", order.len()));
-        }
-        if self.refine_us > 0 {
-            lines.push(format!("last refine {} us", self.refine_us));
-        }
-
-        // what the NEXT step would cost, before it is paid (Curse 35)
-        lines.push(String::new());
-        for op in [
-            goldberg_kernel::genesis::Op::All,
-            goldberg_kernel::genesis::Op::Hex,
-            goldberg_kernel::genesis::Op::Pent,
-        ] {
-            match self.refine.predict(op) {
-                Ok(c) => lines.push(format!("next {:<4} -> {}", op.label(), c)),
-                Err(e) => lines.push(format!("next {:<4} -> REFUSED: {e}", op.label())),
-            }
-        }
-
-        lines.push(String::new());
-        lines.push(String::from("A refine ALL   H refine 6s   P refine 5s"));
-        lines.push(String::from("U undo         R reset to the seed"));
-
-        let head = lines.len() - 2;
-        for (i, l) in lines.iter().enumerate() {
-            let c = if i >= head { pal.border } else { pal.text };
-            font::text(&mut self.cv, 16, 60 + i as i32 * 14, l, c, 1);
-        }
-    }
-
-    /// One refinement, timed and priced. Returns the status line.
-    ///
-    /// The prediction is taken BEFORE the allocation, so a step that will not
-    /// fit is refused with its own number rather than discovered by the
-    /// allocator (Curse 35, the Loaded Gun).
-    fn do_refine(&mut self, op: goldberg_kernel::genesis::Op) -> String {
-        let predicted = match self.refine.predict(op) {
-            Ok(c) => c,
-            Err(e) => return format!("REFUSED {} - {e}", op.label().to_uppercase()),
-        };
-        if predicted.f > 400_000 {
-            return format!(
-                "REFUSED {} - {} FACES EXCEEDS THE 400000 VIEWER BUDGET. THE MATH IS FINE.",
-                op.label().to_uppercase(),
-                predicted.f
-            );
-        }
-        let t0 = Instant::now();
-        let params = self.refine_params;
-        self.refine = self.refine.refine(op, &params, &mut self.refine_rng);
-        self.refine_us = t0.elapsed().as_micros();
-
-        // the measured result, graded against the integer prediction
-        match self.refine.invariants() {
-            Ok(i) if i.faces == predicted.f && i.pents == predicted.p => format!(
-                "REFINE {} - PREDICTED F={} P={}, BUILT F={} P={}. LANES AGREE.",
-                op.label().to_uppercase(),
-                predicted.f,
-                predicted.p,
-                i.faces,
-                i.pents
-            ),
-            Ok(i) => format!(
-                "LANES DISAGREE - PREDICTED F={} P={}, BUILT F={} P={}",
-                predicted.f, predicted.p, i.faces, i.pents
-            ),
-            Err(e) => format!("BUILT, BUT WOULD NOT MEASURE: {e}"),
         }
     }
 

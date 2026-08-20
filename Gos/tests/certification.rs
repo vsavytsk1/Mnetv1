@@ -943,3 +943,146 @@ fn vlerp_is_the_browsers_spelling() {
         );
     }
 }
+
+// ===========================================================================
+// THE GRID MUST NOT SILENTLY DROP A CARD
+//
+// `dashboard::center` clips: a card whose bottom leaves the grid is skipped
+// with a bare `break`, so it is never drawn AND never gets a rect. The viewer
+// hit-tests against those rects, so a clipped card is invisible and unclickable
+// and nothing anywhere says so.
+//
+// That is the drift these tests exist to catch: the viewer's `card_views` list
+// is built beside the cards, so if `draw()` returns fewer rects than there are
+// cards, the two lists disagree and a click lands on the wrong view -- or on
+// nothing. Pin the viewer's ACTUAL geometry so adding a card that does not fit
+// fails here instead of in someone's hand.
+// ===========================================================================
+
+/// The viewer paints the dashboard at exactly 900x700. Every card it declares
+/// must come back with a rect.
+#[test]
+fn every_card_the_viewer_declares_gets_a_clickable_rect() {
+    use goldberg_kernel::dashboard::{self, Card, KRow, Model};
+    use goldberg_kernel::palette::DASHBOARD;
+    use goldberg_kernel::raster::Canvas;
+
+    // the viewer's canvas, not a convenient one
+    const VIEWER_W: usize = 900;
+    const VIEWER_H: usize = 700;
+
+    let modules: Vec<KRow> = (0..6)
+        .map(|i| KRow {
+            name: "M",
+            ok: true,
+            kb: i,
+        })
+        .collect();
+
+    let card = |tag, name, featured| Card {
+        tag,
+        name,
+        desc: "a description long enough to wrap the way the real ones do, so the \
+               measured height is the height the viewer actually paints",
+        accent: DASHBOARD.gold,
+        caps: &["frm", "kbd"],
+        featured,
+    };
+
+    // the two the viewer declares today, in its order
+    let cards = [
+        card("* THE BIRTH", "THE LIGHT MATRIX", true),
+        card("GENESIS", "GENESIS v0.1 - THE SEED", false),
+    ];
+
+    let m = Model {
+        version: "v2.0",
+        git: "0000000",
+        ledger: "L000",
+        cert: "V 60 E 90 F 32 CHI 2",
+        modules: &modules,
+        cards: &cards,
+        category: "THEA HELENI SOURCE CODE",
+    };
+
+    let mut cv = Canvas::new(VIEWER_W, VIEWER_H, DASHBOARD.bg);
+    let rects = dashboard::draw(&mut cv, &DASHBOARD, &m);
+
+    assert_eq!(
+        rects.len(),
+        cards.len(),
+        "the grid dropped {} of {} cards at {VIEWER_W}x{VIEWER_H}. A clipped card is \
+         never drawn and never clickable, and the viewer's card_views list would then \
+         be indexed against a shorter rect list. Either shrink the card or scroll the \
+         grid -- do not ship a card nobody can reach.",
+        cards.len() - rects.len(),
+        cards.len()
+    );
+
+    // and the rects must be real, disjoint, and inside the canvas
+    for (i, r) in rects.iter().enumerate() {
+        assert!(r.w > 0 && r.h > 0, "card {i} has an empty rect");
+        assert!(
+            r.x >= 0 && r.y >= 0 && r.right() <= VIEWER_W as i32 && r.bottom() <= VIEWER_H as i32,
+            "card {i} rect {r:?} leaves the canvas"
+        );
+        for (j, o) in rects.iter().enumerate().skip(i + 1) {
+            let overlap =
+                r.x < o.right() && o.x < r.right() && r.y < o.bottom() && o.y < r.bottom();
+            assert!(
+                !overlap,
+                "cards {i} and {j} overlap -- one click would hit both"
+            );
+        }
+    }
+}
+
+/// How much headroom the grid actually has, so the next mage knows the budget
+/// before adding a card rather than after.
+#[test]
+fn the_grid_reports_its_real_card_budget() {
+    use goldberg_kernel::dashboard::{self, Card, KRow, Model};
+    use goldberg_kernel::palette::DASHBOARD;
+    use goldberg_kernel::raster::Canvas;
+
+    let modules: Vec<KRow> = (0..6)
+        .map(|_| KRow {
+            name: "M",
+            ok: true,
+            kb: 1,
+        })
+        .collect();
+    // Card borrows, so build 40 fresh ones rather than cloning
+    let many: Vec<Card> = (0..40)
+        .map(|_| Card {
+            tag: "T",
+            name: "N",
+            desc: "d",
+            accent: DASHBOARD.gold,
+            caps: &["frm"],
+            featured: false,
+        })
+        .collect();
+    let m = Model {
+        version: "v2.0",
+        git: "0000000",
+        ledger: "L000",
+        cert: "c",
+        modules: &modules,
+        cards: &many,
+        category: "CAT",
+    };
+    let mut cv = Canvas::new(900, 700, DASHBOARD.bg);
+    let fits = dashboard::draw(&mut cv, &DASHBOARD, &m).len();
+
+    // MEASURED, not assumed. If the layout changes this number moves and the
+    // assertion says so, instead of a card quietly vanishing.
+    assert_eq!(
+        fits, 10,
+        "the 900x700 grid holds a different number of cards than recorded"
+    );
+    assert!(
+        fits >= 2,
+        "the viewer declares 2 cards and the grid must hold them"
+    );
+}
