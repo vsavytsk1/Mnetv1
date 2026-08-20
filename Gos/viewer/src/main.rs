@@ -84,36 +84,140 @@ const GEN_FACE_BUDGET: u64 = 400_000;
 /// than a silence.
 const GEN_DRAW_CAP: usize = 60_000;
 
-/// A continuous control. The browser's `<input type=range>`.
+/// One named, bounded, numeric control.
 ///
-/// The value does NOT live here -- it lives in [`genesis::Params`], which is
-/// what the operator actually reads. A slider that carried its own copy would
-/// be a second source of truth, and the two would drift the moment either
-/// moved (the `card_rects` lesson, one widget down).
-struct Slider {
+/// **This table is the point.** A control listed here gets, for free and at
+/// once: a box on the panel, a command-line verb, a `movie` channel, a slot in
+/// `LAYOUT.json`, and input validation. Adding the next one is a row here plus
+/// two match arms in [`App::ctl_get`] / [`App::ctl_set`] -- and it is
+/// immediately animatable, which is the whole reason it is a table instead of
+/// seven copies of the same wiring.
+struct Control {
+    /// how the command line names it: `inner 0.78`, `movie inner ...`
+    name: &'static str,
+    /// how the panel names it
+    label: &'static str,
+    lo: f64,
+    hi: f64,
+    /// what a bad value should be compared against, in words, when a human
+    /// types a shoe into a box that wanted a number
+    unit: &'static str,
+}
+
+/// Every animatable control the GENESIS view has.
+const CONTROLS: [Control; 6] = [
+    Control {
+        name: "inner",
+        label: "INNER",
+        lo: 0.05,
+        hi: 0.95,
+        unit: "where the inner ring sits, 0..1",
+    },
+    Control {
+        name: "mid",
+        label: "MID",
+        lo: 0.05,
+        hi: 0.95,
+        unit: "where the mid ring is pulled to, 0..1",
+    },
+    Control {
+        name: "jitter",
+        label: "JITTER",
+        lo: 0.0,
+        hi: 0.20,
+        unit: "symmetry-breaking, 0 = off",
+    },
+    Control {
+        name: "sphere",
+        label: "SPHERE",
+        lo: 0.5,
+        hi: 3.0,
+        unit: "projection radius when spherical",
+    },
+    Control {
+        name: "yaw",
+        label: "YAW",
+        lo: 0.0,
+        hi: std::f64::consts::TAU,
+        unit: "turn, radians",
+    },
+    Control {
+        name: "zoom",
+        label: "ZOOM",
+        lo: 0.25,
+        hi: 6.0,
+        unit: "multiplier on the fitted zoom",
+    },
+];
+
+/// Why a typed value was refused.
+///
+/// **The monkey brain will type a shoe.** That is not a failure of the user,
+/// it is a certainty about input, so the box says what it wanted and keeps the
+/// old value rather than imploding or -- worse -- accepting a NaN that
+/// silently poisons every frame downstream.
+#[derive(Clone, Debug, PartialEq)]
+enum BadValue {
+    /// not a number at all
+    NotANumber(String),
+    /// NaN or an infinity. `"nan"` and `"inf"` PARSE as f64, which is exactly
+    /// why this check exists separately: `"nan".parse::<f64>()` succeeds.
+    NotFinite(String),
+    /// a real number, outside the control's range
+    OutOfRange { got: f64, lo: f64, hi: f64 },
+}
+
+impl std::fmt::Display for BadValue {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            BadValue::NotANumber(s) => write!(f, "'{s}' IS NOT A NUMBER"),
+            BadValue::NotFinite(s) => write!(f, "'{s}' IS NOT FINITE - NAN AND INF ARE REFUSED"),
+            BadValue::OutOfRange { got, lo, hi } => {
+                write!(f, "{got} IS OUTSIDE {lo}..{hi}")
+            }
+        }
+    }
+}
+
+/// Parse a human's typing into a value this control will accept.
+///
+/// Three refusals, in order, because they are three different mistakes:
+/// gibberish, a number that is not a number (`NaN`, `inf` -- both of which
+/// `parse::<f64>()` happily accepts), and a fine number in the wrong place.
+fn parse_control(c: &Control, text: &str) -> Result<f64, BadValue> {
+    let t = text.trim();
+    let v: f64 = t.parse().map_err(|_| BadValue::NotANumber(t.to_string()))?;
+    if !v.is_finite() {
+        return Err(BadValue::NotFinite(t.to_string()));
+    }
+    if v < c.lo || v > c.hi {
+        return Err(BadValue::OutOfRange {
+            got: v,
+            lo: c.lo,
+            hi: c.hi,
+        });
+    }
+    Ok(v)
+}
+
+/// A numeric input box. Click to edit, type, Enter commits, Esc cancels.
+///
+/// Replaces the slider it grew out of. A slider cannot express `0.7853981634`
+/// and cannot be driven from a keyboard; a box can do both, and it is the same
+/// text the command line takes, so what you type by hand and what you script
+/// are literally the same string.
+struct Field {
     x: i32,
     y: i32,
     w: i32,
     h: i32,
-    label: &'static str,
-    id: u8,
-    lo: f64,
-    hi: f64,
+    /// index into [`CONTROLS`]
+    ctl: usize,
 }
 
-impl Slider {
+impl Field {
     fn hit(&self, mx: i32, my: i32) -> bool {
-        mx >= self.x && mx < self.x + self.w && my >= self.y - 6 && my < self.y + self.h + 6
-    }
-    /// Where a click lands, in the slider's own units.
-    fn value_at(&self, mx: i32) -> f64 {
-        let t = ((mx - self.x) as f64 / self.w.max(1) as f64).clamp(0.0, 1.0);
-        self.lo + t * (self.hi - self.lo)
-    }
-    /// Where a value sits, in pixels.
-    fn knob_x(&self, v: f64) -> i32 {
-        let t = ((v - self.lo) / (self.hi - self.lo)).clamp(0.0, 1.0);
-        self.x + (t * self.w as f64) as i32
+        mx >= self.x && mx < self.x + self.w && my >= self.y && my < self.y + self.h
     }
 }
 
@@ -245,8 +349,15 @@ struct App {
     gen_params: genesis::Params,
     /// the control bar's own buttons, live only in the GENESIS view
     gen_buttons: Vec<Button>,
-    /// INNER and MID
-    gen_sliders: Vec<Slider>,
+    /// one numeric box per row of CONTROLS
+    gen_fields: Vec<Field>,
+    /// which box has the caret, and what has been typed into it so far.
+    /// `None` means nothing is being edited and keys go to the view.
+    gen_edit: Option<(usize, String)>,
+    /// the last refusal, shown under the box that caused it
+    gen_error: Option<String>,
+    /// multiplier on the fitted zoom -- a control like any other
+    gen_zoom: f64,
 }
 
 thread_local! {
@@ -635,7 +746,10 @@ impl App {
             gen: genesis::State::seed_c60(),
             gen_params: genesis::Params::default(),
             gen_buttons: Vec::new(),
-            gen_sliders: Vec::new(),
+            gen_fields: Vec::new(),
+            gen_edit: None,
+            gen_error: None,
+            gen_zoom: 1.0,
             paint_clock: true,
         };
         app.layout();
@@ -690,14 +804,28 @@ impl App {
                 self.status = self.gen_action(id);
                 return true;
             }
-            if let Some((id, v)) = self
-                .gen_sliders
+            // click a box to edit it. The buffer starts EMPTY rather than
+            // pre-filled, so the first keystroke replaces instead of appending
+            // to a number the user did not choose.
+            if let Some(ctl) = self
+                .gen_fields
                 .iter()
-                .find(|s| s.hit(mx, my))
-                .map(|s| (s.id, s.value_at(mx)))
+                .find(|f| f.hit(mx, my))
+                .map(|f| f.ctl)
             {
-                self.status = self.gen_set(id, v);
+                self.gen_edit = Some((ctl, String::new()));
+                self.gen_error = None;
+                self.status = format!(
+                    "{} - TYPE A NUMBER, ENTER COMMITS, ESC CANCELS. {} ({}..{})",
+                    CONTROLS[ctl].label, CONTROLS[ctl].unit, CONTROLS[ctl].lo, CONTROLS[ctl].hi
+                );
                 return true;
+            }
+            // a click anywhere else abandons the edit rather than leaving a
+            // half-typed number holding the keyboard hostage
+            if self.gen_edit.is_some() {
+                self.gen_edit = None;
+                self.gen_error = None;
             }
         }
 
@@ -787,6 +915,126 @@ impl App {
         }
     }
 
+    /// Read a control by index. One arm per row of [`CONTROLS`].
+    fn ctl_get(&self, i: usize) -> f64 {
+        match CONTROLS[i].name {
+            "inner" => self.gen_params.inner_scale,
+            "mid" => self.gen_params.mid_scale,
+            "jitter" => self.gen_params.jitter,
+            "sphere" => self.gen_params.sphere_r,
+            "yaw" => self.genesis_yaw,
+            _ => self.gen_zoom,
+        }
+    }
+
+    /// Write a control by index, clamped to its own range.
+    ///
+    /// Clamping rather than refusing is right HERE because the value has
+    /// already been validated by [`parse_control`] or produced by a movie's
+    /// own interpolation; this is the last line of defence, not the first.
+    fn ctl_set(&mut self, i: usize, v: f64) -> String {
+        let c = &CONTROLS[i];
+        let v = v.clamp(c.lo, c.hi);
+        match c.name {
+            "inner" => self.gen_params.inner_scale = v,
+            "mid" => self.gen_params.mid_scale = v,
+            "jitter" => self.gen_params.jitter = v,
+            "sphere" => self.gen_params.sphere_r = v,
+            "yaw" => self.genesis_yaw = v,
+            _ => self.gen_zoom = v,
+        }
+        // the crescent is the fact worth repeating, so the two that decide it
+        // say which side they are on every time either moves
+        if c.name == "inner" || c.name == "mid" {
+            format!(
+                "{} {v:.4}   INNER {:.3} MID {:.3} - {}",
+                c.label,
+                self.gen_params.inner_scale,
+                self.gen_params.mid_scale,
+                Self::crescent(&self.gen_params)
+            )
+        } else {
+            format!("{} {v:.4}   ({})", c.label, c.unit)
+        }
+    }
+
+    /// Find a control by the name the command line uses.
+    fn ctl_index(name: &str) -> Option<usize> {
+        CONTROLS
+            .iter()
+            .position(|c| c.name.eq_ignore_ascii_case(name))
+    }
+}
+
+/// What a movie will cost, measured before it is agreed to.
+///
+/// **This is the "bro, get a server" gate.** Bytes were already exact --
+/// stored deflate makes a frame's size a pure function of the canvas. Time was
+/// not, so it is MEASURED: render one real frame at the current settings,
+/// then multiply. A mesh at 68,612 faces renders an order of magnitude slower
+/// than one at 212, and no formula would have known that; the clock does.
+struct Estimate {
+    frames: u32,
+    fps: u32,
+    /// seconds of finished footage
+    play_s: f64,
+    /// seconds of rendering, from one measured frame
+    render_s: f64,
+    /// bytes of PNG, exact, if frames are written
+    png_bytes: u64,
+}
+
+impl Estimate {
+    /// Time one frame at the real settings, then scale.
+    fn measure(app: &mut App, frames: u32, fps: u32) -> Estimate {
+        let t0 = Instant::now();
+        app.render();
+        let one = t0.elapsed().as_secs_f64();
+        Estimate {
+            frames,
+            fps: fps.max(1),
+            play_s: frames as f64 / fps.max(1) as f64,
+            render_s: one * frames as f64,
+            png_bytes: goldberg_kernel::raster::png_bytes(W, H) as u64 * frames as u64,
+        }
+    }
+
+    fn hms(s: f64) -> String {
+        let t = s.max(0.0) as u64;
+        if t < 60 {
+            format!("{:.1}s", s)
+        } else if t < 3600 {
+            format!("{}m {:02}s", t / 60, t % 60)
+        } else {
+            format!("{}h {:02}m", t / 3600, (t % 3600) / 60)
+        }
+    }
+
+    /// The line a human reads before deciding.
+    fn report(&self, write_png: bool) -> String {
+        format!(
+            "  {} frames @ {} fps = {} of footage\n  render ~{} (one frame measured)\n  \
+             disk {}",
+            self.frames,
+            self.fps,
+            Self::hms(self.play_s),
+            Self::hms(self.render_s),
+            if write_png {
+                format!(
+                    "{:.2} GB of PNG, exact",
+                    self.png_bytes as f64 / 1_073_741_824.0
+                )
+            } else {
+                String::from("0 bytes -- frames are piped, never written")
+            }
+        )
+    }
+}
+
+/// Past this a movie is refused, with the number, and told to go elsewhere.
+const RENDER_SECONDS_BUDGET: f64 = 20.0 * 60.0;
+
+impl App {
     /// The GENESIS control bar: the browser's own row, ported.
     ///
     /// `SEED C60 | SEED 12 | REFINE ALL | REFINE 5s | REFINE 6s | UNDO | RESET`
@@ -824,28 +1072,21 @@ impl App {
             x += w + 8;
         }
 
-        // the sliders take the rest of the bar, split evenly
-        self.gen_sliders.clear();
+        // one numeric BOX per control, laid out from the table. Add a row to
+        // CONTROLS and a box appears here without touching this code.
+        self.gen_fields.clear();
         x += 12;
-        let room = (W as i32 - 20 - x).max(120);
-        let each = room / 2;
-        for (i, (id, label, lo, hi)) in
-            [(20u8, "INNER", 0.05_f64, 0.95_f64), (21, "MID", 0.05, 0.95)]
-                .into_iter()
-                .enumerate()
-        {
-            let lw = font::width(label, 1) + 8;
-            let sx = x + i as i32 * each + lw;
-            self.gen_sliders.push(Slider {
-                x: sx,
-                y: y + h / 2 - 2,
-                w: each - lw - 90,
-                h: 4,
-                label,
-                id,
-                lo,
-                hi,
+        let bw = 68i32;
+        for (i, c) in CONTROLS.iter().enumerate() {
+            let lw = font::width(c.label, 1) + 6;
+            self.gen_fields.push(Field {
+                x: x + lw,
+                y,
+                w: bw,
+                h,
+                ctl: i,
             });
+            x += lw + bw + 10;
         }
     }
 
@@ -923,31 +1164,6 @@ impl App {
         }
     }
 
-    /// Set a slider's value, by id. Shared by the mouse and by `--run`.
-    fn gen_set(&mut self, id: u8, v: f64) -> String {
-        match id {
-            20 => {
-                self.gen_params.inner_scale = v.clamp(0.05, 0.95);
-                format!(
-                    "INNER {:.3}  (MID {:.3}) - {}",
-                    self.gen_params.inner_scale,
-                    self.gen_params.mid_scale,
-                    Self::crescent(&self.gen_params)
-                )
-            }
-            21 => {
-                self.gen_params.mid_scale = v.clamp(0.05, 0.95);
-                format!(
-                    "MID {:.3}  (INNER {:.3}) - {}",
-                    self.gen_params.mid_scale,
-                    self.gen_params.inner_scale,
-                    Self::crescent(&self.gen_params)
-                )
-            }
-            other => format!("SLIDER {other} IS NOT WIRED"),
-        }
-    }
-
     /// Which side of the crescent defect the parameters are on.
     ///
     /// Named out loud in the HUD because it is the single fact that explains
@@ -994,33 +1210,57 @@ impl App {
             );
         }
 
-        let sliders: Vec<(i32, i32, i32, i32, &str, u8, f64)> = self
-            .gen_sliders
+        // the boxes. The one being edited shows what has been TYPED, not the
+        // committed value -- otherwise a half-finished number looks accepted.
+        let boxes: Vec<(i32, i32, i32, i32, usize)> = self
+            .gen_fields
             .iter()
-            .map(|s| {
-                let v = match s.id {
-                    20 => self.gen_params.inner_scale,
-                    _ => self.gen_params.mid_scale,
-                };
-                (s.x, s.y, s.w, s.h, s.label, s.id, v)
-            })
+            .map(|f| (f.x, f.y, f.w, f.h, f.ctl))
             .collect();
-        for (x, y, w, h, label, id, v) in sliders {
-            let lw = font::width(label, 1) + 8;
-            font::text(&mut self.cv, x - lw, y - 3, label, pal.text, 1);
-            self.cv.fill_rect(x, y, w, h, pal.border);
-            let kx = self.gen_sliders[if id == 20 { 0 } else { 1 }].knob_x(v);
-            // filled to the knob, so the eye reads the value without the number
-            self.cv.fill_rect(x, y, (kx - x).max(0), h, pal.cyan);
-            self.cv.disc(kx, y + h / 2, 5, pal.cyan, 255);
+        let editing = self.gen_edit.clone();
+        let bad = self.gen_error.is_some();
+        for (x, y, w, h, ctl) in boxes {
+            let c = &CONTROLS[ctl];
+            let lw = font::width(c.label, 1) + 6;
             font::text(
                 &mut self.cv,
-                x + w + 10,
-                y - 3,
-                &format!("{v:.2}"),
+                x - lw,
+                y + (h - font::GH) / 2,
+                c.label,
                 pal.text,
                 1,
             );
+
+            let (shown, live) = match &editing {
+                Some((e, buf)) if *e == ctl => (buf.clone(), true),
+                _ => (format!("{:.3}", self.ctl_get(ctl)), false),
+            };
+            let accent = if live && bad {
+                pal.pink
+            } else if live {
+                pal.gold
+            } else {
+                pal.cyan
+            };
+            self.cv.rect(x, y, w, h, accent);
+            font::text(
+                &mut self.cv,
+                x + 5,
+                y + (h - font::GH) / 2,
+                &shown,
+                accent,
+                1,
+            );
+            // a caret, so it is obvious the box is taking keys
+            if live {
+                let cx = x + 5 + font::width(&shown, 1) + 1;
+                self.cv.fill_rect(cx, y + 4, 1, h - 8, accent);
+            }
+        }
+
+        // the refusal, under the bar, in the colour of a refusal
+        if let Some(e) = self.gen_error.clone() {
+            font::text(&mut self.cv, 10, top - 14, &e, pal.pink, 1);
         }
     }
 
@@ -1104,21 +1344,17 @@ impl App {
         }
         lines.push(String::from("  ],"));
 
-        lines.push(String::from("  \"gen_sliders\": ["));
-        for (i, sl) in self.gen_sliders.iter().enumerate() {
-            let comma = if i + 1 == self.gen_sliders.len() {
+        lines.push(String::from("  \"gen_controls\": ["));
+        for (i, f) in self.gen_fields.iter().enumerate() {
+            let comma = if i + 1 == self.gen_fields.len() {
                 ""
             } else {
                 ","
             };
-            let v = if sl.id == 20 {
-                self.gen_params.inner_scale
-            } else {
-                self.gen_params.mid_scale
-            };
+            let c = &CONTROLS[f.ctl];
             lines.push(format!(
-                "    {{ \"label\": \"{}\", \"id\": {}, \"x\": {}, \"y\": {}, \"w\": {}, \"lo\": {}, \"hi\": {}, \"value\": {:.4} }}{}",
-                sl.label, sl.id, sl.x, sl.y, sl.w, sl.lo, sl.hi, v, comma
+                "    {{ \"name\": \"{}\", \"label\": \"{}\", \"x\": {}, \"y\": {}, \"w\": {}, \"h\": {}, \"lo\": {}, \"hi\": {}, \"value\": {:.6} }}{}",
+                c.name, c.label, f.x, f.y, f.w, f.h, c.lo, c.hi, self.ctl_get(f.ctl), comma
             ));
         }
         lines.push(String::from("  ],"));
@@ -1703,6 +1939,69 @@ impl App {
     ///
     /// Returns whether anything changed and a repaint is owed.
     fn key(&mut self, vk: usize) -> bool {
+        // A BOX IS OPEN: every key belongs to it, so nothing typed into a
+        // number can also trip a view shortcut.
+        if let Some((ctl, buf)) = self.gen_edit.clone() {
+            match vk {
+                0x0D => {
+                    // ENTER -- validate. On refusal the OLD VALUE STANDS and
+                    // the box says what it wanted. Nothing implodes, and
+                    // nothing silently becomes NaN.
+                    match parse_control(&CONTROLS[ctl], &buf) {
+                        Ok(v) => {
+                            self.status = self.ctl_set(ctl, v);
+                            self.gen_edit = None;
+                            self.gen_error = None;
+                        }
+                        Err(e) => {
+                            self.status = format!(
+                                "{} REFUSED: {e}. WANTED {} ({}..{}). THE OLD VALUE STANDS.",
+                                CONTROLS[ctl].label,
+                                CONTROLS[ctl].unit,
+                                CONTROLS[ctl].lo,
+                                CONTROLS[ctl].hi
+                            );
+                            self.gen_error = Some(self.status.clone());
+                        }
+                    }
+                    return true;
+                }
+                0x1B => {
+                    self.gen_edit = None;
+                    self.gen_error = None;
+                    self.status = String::from("EDIT CANCELLED - NOTHING CHANGED.");
+                    return true;
+                }
+                0x08 => {
+                    let mut b = buf;
+                    b.pop();
+                    self.gen_edit = Some((ctl, b));
+                    self.gen_error = None;
+                    return true;
+                }
+                _ => {}
+            }
+            // Only what a number is made of gets in. This is the FIRST fence,
+            // not the last: `parse_control` still runs, because "..--" is made
+            // entirely of legal characters and is still not a number.
+            let ch = match vk {
+                0x30..=0x39 => Some((b'0' + (vk - 0x30) as u8) as char),
+                0x60..=0x69 => Some((b'0' + (vk - 0x60) as u8) as char),
+                0xBE | 0x6E => Some('.'),
+                0xBD | 0x6D => Some('-'),
+                _ => None,
+            };
+            if let Some(c) = ch {
+                let mut b = buf;
+                if b.len() < 16 {
+                    b.push(c);
+                }
+                self.gen_edit = Some((ctl, b));
+                self.gen_error = None;
+            }
+            return true;
+        }
+
         match vk {
             // S -- hold the GENESIS turn still, or release it again.
             0x53 if self.view() == View::Genesis => {
@@ -1869,133 +2168,228 @@ fn report_disk() {
     println!();
 }
 
-/// One movie: N frames, priced exactly before the first one is written.
+/// Where a movie's frames end up.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+enum Emit {
+    /// PNG frames only. Byte-reproducible, and enormous.
+    Png,
+    /// Straight into ffmpeg's stdin as rawvideo. **Nothing touches the disk
+    /// but the finished mp4.** 712 MB of intermediate PNG becomes 0 bytes.
+    Mp4,
+    /// Both, for when the frames are wanted for a 4K re-encode later.
+    Both,
+}
+
+impl Emit {
+    fn parse(s: &str) -> Option<Emit> {
+        match s.to_ascii_lowercase().as_str() {
+            "png" | "frames" => Some(Emit::Png),
+            "mp4" | "film" => Some(Emit::Mp4),
+            "both" => Some(Emit::Both),
+            _ => None,
+        }
+    }
+    fn writes_png(self) -> bool {
+        matches!(self, Emit::Png | Emit::Both)
+    }
+    fn writes_mp4(self) -> bool {
+        matches!(self, Emit::Mp4 | Emit::Both)
+    }
+}
+
+/// One movie over any registered control.
 ///
-/// **The price is knowable, so it is stated.** `png_bytes` is exact rather than
-/// approximate -- stored deflate makes a frame's size a pure function of the
-/// canvas -- so a 60-frame 8K movie can be refused *before* it writes 5.5 GB,
-/// with the real number in the refusal. That is Curse 35 with the arithmetic
-/// actually available.
+/// **Generic on purpose.** The channel is an index into [`CONTROLS`], so every
+/// control that exists is animatable the day it is added and none of this has
+/// to be touched. That was the whole reason for the table.
 ///
-/// Every frame carries two witnesses:
+/// # The pipe
 ///
-/// * the **seal**, an exact integer digest of the framebuffer. Brittle by
-///   design: flip one pixel and it moves completely, so it answers *different
-///   or not* and never *how different*.
-/// * the **OKLab statistics**, which answer the second question. Perceptual,
-///   so `mean_l` and `l_entropy` move smoothly across a sweep where the seal
-///   just scatters. This is the topology of the pixels, beside the topology of
-///   the bytes that painted them.
+/// With [`Emit::Mp4`] the frames never become files. ffmpeg is started with
+/// `-f rawvideo -pix_fmt rgb24` and each rendered framebuffer is written
+/// straight to its stdin -- which is exactly the buffer the kernel computed,
+/// with no PNG encode, no filesystem, and no round trip. It is faster AND it
+/// writes 0 bytes of intermediate, which is the answer to "do not save all
+/// the images as we generate".
+///
+/// The PNG frames remain available on request, because they are the
+/// byte-reproducible artifact and the mp4 is the lossy convenience.
+#[allow(clippy::too_many_arguments)]
 fn run_movie(
     app: &mut App,
     dir: &std::path::Path,
-    channel: &str,
+    ctl: usize,
     lo: f64,
     hi: f64,
     frames: u32,
+    fps: u32,
+    crf: u32,
+    emit: Emit,
     name: &str,
 ) -> Result<String, String> {
     if frames == 0 {
         return Err(String::from("a movie needs at least one frame"));
     }
-    let per = goldberg_kernel::raster::png_bytes(W, H) as u64;
-    let total = per * frames as u64;
-    if total > MOVIE_BUDGET {
+
+    // ---- PRICE IT FIRST, in both currencies ------------------------------
+    let est = Estimate::measure(app, frames, fps);
+    println!("movie  {name}  [{}]", CONTROLS[ctl].name);
+    println!("{}", est.report(emit.writes_png()));
+
+    if est.render_s > RENDER_SECONDS_BUDGET {
         return Err(format!(
-            "REFUSED - {frames} frames at {W}x{H} is {} B per frame = {:.2} GB, over the {:.0} GB \
-             movie budget. The renderer is fine; the disk is the fence. Fewer frames, or a \
-             smaller canvas.",
-            per,
-            total as f64 / 1_073_741_824.0,
+            "REFUSED - this would render for {}, past the {} ceiling. One frame at the current \
+             {} faces took {:.0} ms, and that is measured, not guessed. Fewer frames, a coarser \
+             mesh, or a machine that is not this one.",
+            Estimate::hms(est.render_s),
+            Estimate::hms(RENDER_SECONDS_BUDGET),
+            app.gen.faces.len(),
+            1000.0 * est.render_s / frames as f64
+        ));
+    }
+    if emit.writes_png() && est.png_bytes > MOVIE_BUDGET {
+        return Err(format!(
+            "REFUSED - {:.2} GB of PNG is past the {:.0} GB budget. Use `mp4` mode: the frames \
+             are piped to the encoder and never written at all.",
+            est.png_bytes as f64 / 1_073_741_824.0,
             MOVIE_BUDGET as f64 / 1_073_741_824.0
         ));
     }
 
     let out = dir.join(format!("movie_{name}"));
     fs::create_dir_all(&out).map_err(|e| format!("cannot create {}: {e}", out.display()))?;
+    let mp4 = out.join(format!("{name}.mp4"));
 
-    println!(
-        "movie  {name}: {frames} frames x {} B = {:.2} GB, priced before the first write",
-        per,
-        total as f64 / 1_073_741_824.0
-    );
+    // ---- the encoder, fed from stdin -------------------------------------
+    let mut child = if emit.writes_mp4() {
+        let ff = find_ffmpeg().ok_or_else(|| {
+            format!(
+                "ffmpeg NOT FOUND, so no mp4 can be written. `winget install Gyan.FFmpeg`, or \
+                 render with `png` mode and encode later -- movie_{name}/MAKE_MP4.txt will hold \
+                 the command."
+            )
+        })?;
+        let c = std::process::Command::new(&ff)
+            .args([
+                "-hide_banner",
+                "-loglevel",
+                "error",
+                "-y",
+                "-f",
+                "rawvideo",
+                "-pix_fmt",
+                "rgb24",
+                "-s",
+                &format!("{W}x{H}"),
+                "-framerate",
+                &fps.to_string(),
+                "-i",
+                "-",
+                "-c:v",
+                "libx264",
+                "-preset",
+                "medium",
+                "-crf",
+                &crf.to_string(),
+                "-pix_fmt",
+                "yuv420p",
+                "-movflags",
+                "+faststart",
+            ])
+            .arg(&mp4)
+            .stdin(std::process::Stdio::piped())
+            .spawn()
+            .map_err(|e| format!("could not start {}: {e}", ff.display()))?;
+        Some(c)
+    } else {
+        None
+    };
 
     let mut rows: Vec<String> = Vec::new();
-    let mut written = 0u64;
+    let mut png_written = 0u64;
     let t0 = Instant::now();
 
     for f in 0..frames {
-        // f/(frames-1) so a single frame is the START and the last frame is
-        // exactly `hi` -- an off-by-one here would silently never reach the end
         let t = if frames == 1 {
             0.0
         } else {
             f as f64 / (frames - 1) as f64
         };
-        match channel {
-            "spin" => {
-                // one full turn across the whole movie, deterministic: the yaw
-                // is SET from the frame index, never accumulated from a clock
-                app.genesis_yaw = t * std::f64::consts::TAU;
-            }
-            "inner" => {
-                app.gen_set(20, lo + t * (hi - lo));
-            }
-            "mid" => {
-                app.gen_set(21, lo + t * (hi - lo));
-            }
-            other => return Err(format!("unknown movie channel '{other}'")),
-        }
+        // SET from the frame index, never accumulated -- that is what makes
+        // two runs of one command produce the same bytes.
+        app.ctl_set(ctl, lo + t * (hi - lo));
         app.render();
-        let file = out.join(format!("frame_{f:05}.png"));
-        app.cv
-            .write_png(&file)
-            .map_err(|e| format!("frame {f}: {e}"))?;
-        written += per;
 
-        // stride 37: prime, so it never aligns with a row width and samples
-        // the whole frame evenly. ~56k of 2.07M pixels, and it SAYS so.
+        if let Some(c) = child.as_mut() {
+            use std::io::Write as _;
+            let pipe = c.stdin.as_mut().ok_or("the encoder closed its stdin")?;
+            pipe.write_all(&app.cv.px)
+                .map_err(|e| format!("frame {f}: the encoder stopped reading: {e}"))?;
+        }
+        if emit.writes_png() {
+            let file = out.join(format!("frame_{f:05}.png"));
+            app.cv
+                .write_png(&file)
+                .map_err(|e| format!("frame {f}: {e}"))?;
+            png_written += goldberg_kernel::raster::png_bytes(W, H) as u64;
+        }
+
         let st = goldberg_kernel::oklab::FrameStats::measure(&app.cv.px, 37);
         rows.push(format!(
-            "  {{ \"frame\": {f}, \"t\": {t:.6}, \"{channel}\": {:.6}, \"seal\": \"{:016x}\", \
+            "  {{ \"frame\": {f}, \"t\": {t:.6}, \"{}\": {:.6}, \"seal\": \"{:016x}\", \
              \"colours\": {}, \"ink\": {:.6}, \"mean_l\": {:.6}, \"mean_c\": {:.6}, \"l_entropy\": {:.6} }}",
-            match channel {
-                "spin" => app.genesis_yaw,
-                "inner" => app.gen_params.inner_scale,
-                _ => app.gen_params.mid_scale,
-            },
+            CONTROLS[ctl].name,
+            app.ctl_get(ctl),
             app.content_digest,
-            st.distinct,
-            st.ink,
-            st.mean_l,
-            st.mean_c,
-            st.l_entropy
+            st.distinct, st.ink, st.mean_l, st.mean_c, st.l_entropy
         ));
+    }
+
+    // close the pipe, THEN wait: ffmpeg finishes on EOF and would otherwise
+    // block forever holding a stdin that never ends
+    let mut mp4_bytes = 0u64;
+    if let Some(mut c) = child {
+        drop(c.stdin.take());
+        let status = c.wait().map_err(|e| format!("waiting on ffmpeg: {e}"))?;
+        if !status.success() {
+            return Err(format!("ffmpeg refused (exit {:?})", status.code()));
+        }
+        mp4_bytes = fs::metadata(&mp4).map(|m| m.len()).unwrap_or(0);
     }
     let secs = t0.elapsed().as_secs_f64();
 
-    // MOVIE.json is the STEPS -- it travels. The frames are payload and are
-    // gitignored, because `--run` regenerates them byte for byte.
+    let cmd = format!(
+        "ffmpeg -y -framerate {fps} -i \"{}\" -c:v libx264 -preset slow -crf {crf} \
+         -pix_fmt yuv420p -movflags +faststart \"{}\"",
+        out.join("frame_%05d.png").display(),
+        mp4.display()
+    );
+    let _ = fs::write(out.join("MAKE_MP4.txt"), format!("{cmd}\n"));
+
     let mut m: Vec<String> = Vec::new();
     m.push(String::from("{"));
     m.push(format!("  \"name\": \"{name}\","));
-    m.push(format!("  \"channel\": \"{channel}\","));
+    m.push(format!("  \"control\": \"{}\",", CONTROLS[ctl].name));
     m.push(format!("  \"from\": {lo:.6}, \"to\": {hi:.6},"));
-    m.push(format!("  \"frames\": {frames},"));
+    m.push(format!(
+        "  \"frames\": {frames}, \"fps\": {fps}, \"crf\": {crf},"
+    ));
+    m.push(format!("  \"emit\": \"{emit:?}\","));
     m.push(format!("  \"canvas\": [{W}, {H}],"));
     m.push(format!(
-        "  \"bytes_per_frame\": {per}, \"bytes_total\": {written},"
+        "  \"png_bytes\": {png_written}, \"mp4_bytes\": {mp4_bytes},"
     ));
     m.push(format!(
-        "  \"faces\": {}, \"inner\": {:.6}, \"mid\": {:.6},",
-        app.gen.faces.len(),
-        app.gen_params.inner_scale,
-        app.gen_params.mid_scale
+        "  \"faces\": {}, \"render_seconds\": {secs:.3},",
+        app.gen.faces.len()
     ));
+    for c in CONTROLS.iter() {
+        let i = App::ctl_index(c.name).unwrap_or(0);
+        m.push(format!("  \"{}\": {:.6},", c.name, app.ctl_get(i)));
+    }
     m.push(String::from(
-        "  \"note\": \"frames are payload and gitignored; --run regenerates them byte for byte. \
-         seal is the exact integer witness, the oklab fields are the perceptual one (DISPLAY \
-         lane: cbrt and powf are not correctly rounded).\",",
+        "  \"note\": \"frames and mp4 are payload and gitignored; the same command rewrites them. \
+         seal is the exact integer witness, oklab fields the perceptual one (DISPLAY lane).\",",
     ));
     m.push(String::from("  \"oklab_sample_stride\": 37,"));
     m.push(String::from("  \"frames_detail\": ["));
@@ -2004,9 +2398,22 @@ fn run_movie(
     m.push(String::from("}"));
     let _ = fs::write(out.join("MOVIE.json"), m.join("\n") + "\n");
 
+    let disk = if mp4_bytes > 0 {
+        format!(
+            "{:.3} MB mp4{}",
+            mp4_bytes as f64 / 1_048_576.0,
+            if png_written > 0 {
+                format!(" + {:.2} GB png", png_written as f64 / 1_073_741_824.0)
+            } else {
+                String::from(" (0 bytes of frames -- piped)")
+            }
+        )
+    } else {
+        format!("{:.2} GB png", png_written as f64 / 1_073_741_824.0)
+    };
     Ok(format!(
-        "movie  {name:<22} {frames} frames  {:.2} GB  {:.1} s  {:.1} fps  -> movie_{name}/",
-        written as f64 / 1_073_741_824.0,
+        "movie  {name:<18} {frames}f @ {fps} = {} footage  |  {disk}  |  {:.1}s at {:.1} fps",
+        Estimate::hms(est.play_s),
         secs,
         frames as f64 / secs.max(1e-9)
     ))
@@ -2313,15 +2720,39 @@ fn run_script(src: &str) -> i32 {
             }
             "undo" => app.gen_action(15),
             "reset" => app.gen_action(16),
-            "inner" | "mid" => {
-                let id = if verb == "inner" { 20 } else { 21 };
-                match arg.parse::<f64>() {
-                    Ok(v) => app.gen_set(id, v),
-                    Err(_) => {
+            // ANY registered control, by its own name. Adding a row to
+            // CONTROLS makes it settable here with no code at all -- and the
+            // SAME parse_control the box uses, so a shoe is refused the same
+            // way whether it was typed or scripted.
+            v if App::ctl_index(v).is_some() => {
+                let ctl = App::ctl_index(v).unwrap();
+                match parse_control(&CONTROLS[ctl], arg) {
+                    Ok(x) => app.ctl_set(ctl, x),
+                    Err(e) => {
                         failures += 1;
-                        format!("FAIL   {verb} wants a number, got '{arg}'")
+                        format!(
+                            "FAIL   {} REFUSED: {e}. WANTED {} ({}..{})",
+                            CONTROLS[ctl].label,
+                            CONTROLS[ctl].unit,
+                            CONTROLS[ctl].lo,
+                            CONTROLS[ctl].hi
+                        )
                     }
                 }
+            }
+            "controls" => {
+                let mut out = vec![String::from("controls")];
+                for (i, c) in CONTROLS.iter().enumerate() {
+                    out.push(format!(
+                        "  {:<8} {:>10.4}   {}..{}   {}",
+                        c.name,
+                        app.ctl_get(i),
+                        c.lo,
+                        c.hi,
+                        c.unit
+                    ));
+                }
+                out.join("\n")
             }
             // MOVIES. Frames at 60/s, priced exactly before the first write.
             //
@@ -2330,25 +2761,44 @@ fn run_script(src: &str) -> i32 {
             //   movie mid   <lo> <hi> <frames> <name>
             "movie" => {
                 let a: Vec<&str> = arg.split_whitespace().collect();
-                let parsed: Result<(&str, f64, f64, u32, &str), String> = match a.as_slice() {
-                    ["spin", n, name] => n
-                        .parse::<u32>()
-                        .map(|k| ("spin", 0.0, 1.0, k, *name))
-                        .map_err(|_| format!("frames must be a number, got '{n}'")),
-                    [ch @ ("inner" | "mid"), lo, hi, n, name] => {
-                        match (lo.parse::<f64>(), hi.parse::<f64>(), n.parse::<u32>()) {
-                            (Ok(l), Ok(h), Ok(k)) => Ok((*ch, l, h, k, *name)),
-                            _ => Err(format!("bad numbers in 'movie {arg}'")),
-                        }
+                // movie <control> <lo> <hi> <frames> <name> [png|mp4|both] [fps] [crf]
+                let parsed = (|| -> Result<_, String> {
+                    if a.len() < 5 {
+                        return Err(String::from(
+                            "usage: movie <control> <lo> <hi> <frames> <name> [png|mp4|both] [fps] [crf]",
+                        ));
                     }
-                    _ => Err(String::from(
-                        "usage: movie spin <frames> <name> | movie inner|mid <lo> <hi> <frames> <name>",
-                    )),
-                };
+                    let ctl = App::ctl_index(a[0]).ok_or_else(|| {
+                        let names: Vec<&str> = CONTROLS.iter().map(|c| c.name).collect();
+                        format!("no control {:?}. have: {}", a[0], names.join(", "))
+                    })?;
+                    let lo: f64 = a[1]
+                        .parse()
+                        .map_err(|_| format!("{:?} is not a number", a[1]))?;
+                    let hi: f64 = a[2]
+                        .parse()
+                        .map_err(|_| format!("{:?} is not a number", a[2]))?;
+                    if !lo.is_finite() || !hi.is_finite() {
+                        return Err(String::from("a movie cannot start or end at NaN"));
+                    }
+                    let n: u32 = a[3]
+                        .parse()
+                        .map_err(|_| format!("{:?} is not a frame count", a[3]))?;
+                    let name = a[4];
+                    let emit = match a.get(5) {
+                        Some(m) => {
+                            Emit::parse(m).ok_or_else(|| format!("{m:?} is not png|mp4|both"))?
+                        }
+                        None => Emit::Mp4,
+                    };
+                    let fps: u32 = a.get(6).and_then(|v| v.parse().ok()).unwrap_or(60);
+                    let crf: u32 = a.get(7).and_then(|v| v.parse().ok()).unwrap_or(18);
+                    Ok((ctl, lo, hi, n, name, emit, fps, crf))
+                })();
                 match parsed {
-                    Ok((ch, lo, hi, n, name)) => {
-                        match run_movie(&mut app, &dir, ch, lo, hi, n, name) {
-                            Ok(msg) => msg,
+                    Ok((ctl, lo, hi, n, name, emit, fps, crf)) => {
+                        match run_movie(&mut app, &dir, ctl, lo, hi, n, fps, crf, emit, name) {
+                            Ok(m) => m,
                             Err(e) => {
                                 failures += 1;
                                 format!("FAIL   {e}")
