@@ -29,7 +29,7 @@ use goldberg_kernel::font;
 use goldberg_kernel::genesis;
 use goldberg_kernel::layout::Rect;
 use goldberg_kernel::palette::{Palette, ALL};
-use goldberg_kernel::raster::{project, Canvas};
+use goldberg_kernel::raster::{project, project_rpy, Canvas};
 use goldberg_kernel::rng::Rng;
 use goldberg_kernel::{certify, judge, Mesh};
 
@@ -224,7 +224,7 @@ struct Control {
 }
 
 /// Every animatable control the GENESIS view has.
-const CONTROLS: [Control; 7] = [
+const CONTROLS: [Control; 11] = [
     Control {
         name: "inner",
         label: "INNER",
@@ -282,6 +282,41 @@ const CONTROLS: [Control; 7] = [
         // at 20,000x a span is ~1.6 million pixels.
         unit: "multiplier on the fitted zoom -- 0.01 to 20000",
         when: When::Render,
+    },
+    // THE OTHER TWO AXES. `pitch` was always there and was nailed to 0.30 --
+    // a hardcoded camera angle nobody could reach, which is R13's shape with
+    // no control at all rather than a control with no reader. `roll` is new.
+    Control {
+        name: "pitch",
+        label: "PITCH",
+        lo: 0.0,
+        hi: std::f64::consts::TAU,
+        unit: "tip, radians -- 0.30 is the old fixed angle",
+        when: When::Render,
+    },
+    Control {
+        name: "roll",
+        label: "ROLL",
+        lo: 0.0,
+        hi: std::f64::consts::TAU,
+        unit: "spin in the screen plane, radians",
+        when: When::Render,
+    },
+    Control {
+        name: "speedp",
+        label: "SPD-P",
+        lo: 0.0,
+        hi: 0.25,
+        unit: "pitch per frame -- tumble",
+        when: When::Motion,
+    },
+    Control {
+        name: "speedr",
+        label: "SPD-R",
+        lo: 0.0,
+        hi: 0.25,
+        unit: "roll per frame -- barrel",
+        when: When::Motion,
     },
     Control {
         name: "speed",
@@ -546,6 +581,14 @@ struct App {
     /// scripted spin did not reproduce what the window did. A control cannot
     /// drift from itself.
     gen_speed: f64,
+    /// tip, radians. Was the literal `0.30` inside `paint_genesis`.
+    gen_pitch: f64,
+    /// spin in the screen plane, radians. Applied after projection.
+    gen_roll: f64,
+    /// pitch per frame -- with `speed` non-zero as well, it tumbles
+    gen_speed_p: f64,
+    /// roll per frame -- a barrel roll of the picture itself
+    gen_speed_r: f64,
 }
 
 thread_local! {
@@ -995,6 +1038,8 @@ unsafe extern "system" fn wndproc(hwnd: HWND, msg: UINT, wp: WPARAM, lp: LPARAM)
                 if let Some(app) = a.borrow_mut().as_mut() {
                     if app.view() == View::Genesis && app.genesis_spin {
                         app.genesis_yaw += app.gen_speed;
+                        app.gen_pitch += app.gen_speed_p;
+                        app.gen_roll += app.gen_speed_r;
                         go = true;
                     }
                 }
@@ -1128,6 +1173,10 @@ impl App {
             gen_error: None,
             gen_zoom: 1.0,
             gen_speed: 0.012,
+            gen_pitch: 0.30,
+            gen_roll: 0.0,
+            gen_speed_p: 0.0,
+            gen_speed_r: 0.0,
             gen_cull: false,
             gen_spherical: false,
             paint_clock: true,
@@ -1304,6 +1353,10 @@ impl App {
             "sphere" => self.gen_params.sphere_r,
             "yaw" => self.genesis_yaw,
             "speed" => self.gen_speed,
+            "pitch" => self.gen_pitch,
+            "roll" => self.gen_roll,
+            "speedp" => self.gen_speed_p,
+            "speedr" => self.gen_speed_r,
             _ => self.gen_zoom,
         }
     }
@@ -1323,6 +1376,10 @@ impl App {
             "sphere" => self.gen_params.sphere_r = v,
             "yaw" => self.genesis_yaw = v,
             "speed" => self.gen_speed = v,
+            "pitch" => self.gen_pitch = v,
+            "roll" => self.gen_roll = v,
+            "speedp" => self.gen_speed_p = v,
+            "speedr" => self.gen_speed_r = v,
             _ => self.gen_zoom = v,
         }
         // the crescent is the fact worth repeating, so the two that decide it
@@ -1997,7 +2054,12 @@ impl App {
     /// mesh reach millions of faces with no index structure.
     fn paint_genesis(&mut self) {
         let pal = self.pal();
-        let (rx, ry, zoom) = (0.30_f64, self.genesis_yaw, self.fit_zoom());
+        let (rx, ry, rz, zoom) = (
+            self.gen_pitch,
+            self.genesis_yaw,
+            self.gen_roll,
+            self.fit_zoom(),
+        );
         let sh = H() as i32 - BAR_H - GEN_BAR_H - 60;
 
         let depths: Vec<f64> = self
@@ -2008,7 +2070,7 @@ impl App {
                 let n = f.pts.len() as f64;
                 f.pts
                     .iter()
-                    .map(|&v| project(v, rx, ry, zoom, W(), sh as usize).2)
+                    .map(|&v| project_rpy(v, rx, ry, rz, zoom, W(), sh as usize).2)
                     .sum::<f64>()
                     / n
             })
@@ -2050,7 +2112,7 @@ impl App {
             let pts: Vec<(i32, i32, f64)> = f
                 .pts
                 .iter()
-                .map(|&v| project(v, rx, ry, zoom, W(), sh as usize))
+                .map(|&v| project_rpy(v, rx, ry, rz, zoom, W(), sh as usize))
                 .collect();
             // Did any corner of this face land on the canvas? Cheap, and it is
             // the difference between what we DRAW and what anyone SEES.
@@ -2163,7 +2225,10 @@ impl App {
                 ""
             }
         ));
-        lines.push(format!("YAW {:.2} RAD", self.genesis_yaw));
+        lines.push(format!(
+            "YAW {:.2}  PITCH {:.2}  ROLL {:.2} RAD",
+            self.genesis_yaw, self.gen_pitch, self.gen_roll
+        ));
         lines.push(String::new());
         for op in [genesis::Op::All, genesis::Op::Hex, genesis::Op::Pent] {
             match self.gen.predict(op) {
@@ -2179,6 +2244,9 @@ impl App {
 
     fn paint_shell(&mut self) {
         let pal = self.pal();
+        // THE SHELL VIEW IS DELIBERATELY FIXED. It is the certification card --
+        // one canonical angle, so two runs are comparable by eye and by seal.
+        // The GENESIS view is the one you fly; this one you check against.
         let (rx, ry, zoom) = (0.30_f64, 0.55_f64, self.fit_zoom());
         let sh = H() as i32 - BAR_H - 60;
         let pts: Vec<(i32, i32, f64)> = self
@@ -2581,6 +2649,8 @@ impl App {
         for _ in 0..frames {
             if self.view() == View::Genesis && self.genesis_spin {
                 self.genesis_yaw += self.gen_speed;
+                self.gen_pitch += self.gen_speed_p;
+                self.gen_roll += self.gen_speed_r;
             }
         }
     }
@@ -3661,23 +3731,31 @@ mod control_tests {
                         c.name, c.lo, c.hi
                     );
                 }
-                // it must change how far the turn advances
+                // it must change how far SOMETHING advances
+                //
+                // The first version of this watched `genesis_yaw` alone and
+                // failed the moment `speedp` was added -- which drives pitch.
+                // That is precisely the mistake this test exists to catch: an
+                // honest measurement of the wrong quantity. It now compares the
+                // whole angle triple, so it need not know which axis a given
+                // Motion control happens to move.
                 When::Motion => {
-                    let mut a = app_at(0);
-                    a.genesis_spin = true;
-                    a.ctl_set(i, c.lo);
-                    a.genesis_yaw = 0.0;
-                    a.advance(50);
-                    let lo = a.genesis_yaw;
-
-                    a.ctl_set(i, c.hi);
-                    a.genesis_yaw = 0.0;
-                    a.advance(50);
-                    let hi = a.genesis_yaw;
+                    let run = |v: f64| {
+                        let mut a = app_at(0);
+                        a.genesis_spin = true;
+                        a.ctl_set(i, v);
+                        a.genesis_yaw = 0.0;
+                        a.gen_pitch = 0.0;
+                        a.gen_roll = 0.0;
+                        a.advance(50);
+                        a.genesis_yaw + a.gen_pitch * 7.0 + a.gen_roll * 31.0
+                    };
+                    let lo = run(c.lo);
+                    let hi = run(c.hi);
                     assert!(
                         (lo - hi).abs() > 1e-9,
-                        "control '{}' is Motion but 50 frames advanced the same amount \
-                         at {} and at {}",
+                        "control '{}' is Motion but 50 frames left yaw, pitch AND roll \
+                         identical at {} and at {} -- nothing advances on it",
                         c.name,
                         c.lo,
                         c.hi

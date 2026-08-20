@@ -437,7 +437,32 @@ fn adler32(buf: &[u8]) -> u32 {
 /// distance and an FOV cannot imitate it, they change the silhouette.
 ///
 /// Returns `(screen_x, screen_y, depth)`.
-pub fn project(p: [f64; 3], rx: f64, ry: f64, zoom: f64, w: usize, h: usize) -> (i32, i32, f64) {
+/// The same projection with all three axes, in yaw-pitch-roll order.
+///
+/// `project` is this with `rz = 0`, and delegates to it -- one implementation,
+/// so the two can never disagree about what a rotation means.
+///
+/// ```text
+///   yaw    ry   about Y, the vertical -- the turn
+///   pitch  rx   about X, after the yaw -- tips the pole toward you
+///   roll   rz   in the SCREEN PLANE, after projection -- spins the picture
+/// ```
+///
+/// Roll is applied last and in 2D on purpose. Once the shell is flattened, a
+/// rotation of the image and a rotation of the camera about the view axis are
+/// the same thing, and doing it in 2D is two multiplies instead of nine.
+///
+/// **DISPLAY lane.** `sin` and `cos` are not correctly rounded by IEEE-754, so
+/// nothing here may be asserted bit-identical across a language seam (RULE 0).
+pub fn project_rpy(
+    p: [f64; 3],
+    rx: f64,
+    ry: f64,
+    rz: f64,
+    zoom: f64,
+    w: usize,
+    h: usize,
+) -> (i32, i32, f64) {
     let (x, y, z) = (p[0], p[1], p[2]);
     let (cy, sy) = (ry.cos(), ry.sin());
     let x1 = x * cy - z * sy;
@@ -445,9 +470,16 @@ pub fn project(p: [f64; 3], rx: f64, ry: f64, zoom: f64, w: usize, h: usize) -> 
     let (crx, srx) = (rx.cos(), rx.sin());
     let y1 = y * crx - z1 * srx;
     let z2 = y * srx + z1 * crx;
+    // roll, in the plane, after the shell is already flat
+    let (cz, sz) = (rz.cos(), rz.sin());
+    let (x2, y2) = (x1 * cz - y1 * sz, x1 * sz + y1 * cz);
     (
-        (w as f64 / 2.0 + x1 * zoom).round() as i32,
-        (h as f64 / 2.0 - y1 * zoom).round() as i32,
+        (w as f64 / 2.0 + x2 * zoom).round() as i32,
+        (h as f64 / 2.0 - y2 * zoom).round() as i32,
         z2,
     )
+}
+
+pub fn project(p: [f64; 3], rx: f64, ry: f64, zoom: f64, w: usize, h: usize) -> (i32, i32, f64) {
+    project_rpy(p, rx, ry, 0.0, zoom, w, h)
 }
