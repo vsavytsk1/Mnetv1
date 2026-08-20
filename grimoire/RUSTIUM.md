@@ -2,6 +2,8 @@
 ## The Compiled Tongue -- black magic good practices for the Rust lane
 ### Grimoire Volume III-D -- where the certified/display boundary becomes a type
 *Opened: 2026-08-17 -- Buenos Aires. Companion to `Gos/` (`goldberg_kernel` v0.2).*
+*R12-R16 added 2026-08-21, the day the viewer grew a command line and four*
+*honest instruments were each caught answering a question nobody asked.*
 *Sub-scroll of the cave. Read `KERNELIMAGIC.md` and `THE_12_PATHS_OF_THE_FRACTAL_MAGE.md` first.*
 *P=12. chi=2. The price is always paid. Always.*
 
@@ -61,12 +63,19 @@ different objects even when they share the same glyph.
 | R9 | The Ignored Profile (memberProfile) | `[profile.release]` in a workspace MEMBER is silently ignored -- cargo warns once and optimises nothing, while the section sits there looking authoritative. `lto = true` that does nothing. | **FIXED** |
 | R10 | The Painted Clock (clockInFrame) | the render time is drawn INTO the framebuffer, and then the framebuffer is hashed -- so the "reproducible" frame seal moves every render. Curse 38 committed one turn after writing the section warning about it. Convicted by its own MANIFEST: two runs, same view, two digests. | **FIXED** |
 | R11 | The Amplified Cap (capUnitMismatch) | a dump cap stated in SOURCE bytes bounding a file that is 8x larger on disk. `DUMP_CAP = 4 MB` permits a 32 MB `.bits` file, and four clicks wrote 88 MB into a folder nobody had ignored yet. | **FIXED** |
+| R12 | The Equal Formula (algebraicRewrite) | IEEE-754 rounds per OPERATION, so `sum/n` and `sum*(1/n)` are equal in algebra and different doubles -- 34.2% of inputs, measured. `centroid` and `project_to_sphere` were spelled the textbook way; the whole 90-test suite passed on BOTH. Bit-identity is a promise about the EXPRESSION. | **FIXED** |
+| R13 | The Generated Ghost (tableNoReader) | a row in a generator table gave `zoom` a box, a button, a verb, a movie channel, validation and a listing -- six surfaces, all correct -- and no reader. The completeness of the plumbing is the camouflage. A test for the CLASS found a second dead control in its first run. | **FIXED** |
+| R14 | The Kept Far Half (sortTakeWrongEnd) | `take(n)` on a list sorted ASCENDING by depth keeps the FARTHEST faces, so the moment a draw cap bites the render shows the back of the shell through the missing front. Every invariant held; the count was honest; only the selection was reversed. | **FIXED** |
+| R15 | The Resampled Receipt (dpiResample) | a DPI-unaware process had its framebuffer resampled 1.5x by the OS before the glass, so "every pixel computed by the kernel" was true of the buffer and false of the screen -- and the seal, which hashes the buffer, could not see it. | **FIXED** |
+| R16 | The Points Do Not Dominate (costModelDrift) | `snapshot_bytes` counted only points because a comment said they dominate. Measured: 45% at depth 3, 32% at depth 7, and the error GROWS with depth. Plus `refine` holds BOTH generations, so the peak is ~8x the mesh, not the result. | **FIXED** |
 
 **Numbering (DESIGN CHOICE).** RUSTIUM curses run in their own `R` lane so this
 volume can grow without fighting KERNELIMAGIC's global counter (at 38). When a
 curse here proves *general* -- not specific to Rust or to cargo -- it gets
-promoted into `KERNELIMAGIC.md` and takes the next global number. R3 and R4 are
-the current promotion candidates: neither is really about Rust.
+promoted into `KERNELIMAGIC.md` and takes the next global number. R3, R4, R12 and R13 are
+the current promotion candidates: none of them is really about Rust, and R13 is
+the one that matters most for the census -- it is what happens when a
+generator makes surfaces faster than anybody verifies effects.
 
 ---
 
@@ -149,7 +158,7 @@ WITNESS 1 -- the browser        shell/thea_light_matrix_v1.3.7.html
                                 the shipped JS kernel, verified by the eye and the live DOM
 
 WITNESS 2 -- the compiler       Gos/  ->  cargo test
-                                33 integration tests + 4 doctests
+                                133 tests across the workspace
 
 WITNESS 3 -- a different tongue Gos/verify_rustium.py
                                 re-derives every asserted constant in Python,
@@ -1024,6 +1033,431 @@ Curse count: R11. A dump cap stated in SOURCE bytes bounded a file eight times l
 
 ---
 
+## CURSE R12 -- The Equal Formula (algebraicRewrite)
+
+*RULE 0's promise, nearly lost to a rewrite that was correct in algebra.*
+
+WHAT BIT US (`src/lib.rs`, `centroid` and `project_to_sphere`):
+  RULE 0 says a port on the certified path is a **translation**, and that is
+  true only if you write the *same expression*. IEEE-754 gives correct
+  rounding **per operation**, not per formula. Two of ours were spelled the
+  textbook way instead of the browser's way:
+
+```text
+                  the browser              this crate            differ
+  centroid        sum / n                  sum * (1.0/n)         34.2%
+  project         vscale(p, R/L)           vscale(vnorm(p), R)   41.6%
+```
+
+  Measured over 400,000 random inputs each. At C60 scale with `n=5`:
+
+```text
+  sum/n        40045547c3c192cb
+  sum*(1/n)    40045547c3c192cc     <- one ulp apart
+```
+
+THE ROOT PROBLEM:
+  `1/5` is not representable in binary64. `sum * (1.0/5.0)` rounds **twice** --
+  once forming the reciprocal, once multiplying -- where `sum / 5.0` rounds
+  once. Algebraically identical, arithmetically different. The same for
+  `(p * (1/L)) * R` against `p * (R/L)`.
+
+  `refineFace` calls `centroid` on **every face at every level** and projects
+  every point in spherical mode, so the divergence would appear at level 1 and
+  compound forever. The whole certified path was resting on a promise that two
+  functions were quietly breaking.
+
+HOW WE FOUND IT:
+  Not by a test. By reading the browser's `vlerp`, `centroid` and
+  `projectToSphere` side by side with ours before porting the operator, because
+  RULE 0 says the expression is the contract. `vlerp` matched. The other two
+  did not.
+
+  **All 90 tests passed on both spellings.** Nothing in the suite could see it,
+  which is the whole reason this is a curse and not a typo.
+
+HOW IT WAS FIXED (applied 2026-08-20):
+  Both rewritten to the browser's spelling, with the reason in the doc comment
+  so a future "simplification" has to argue with it. Then four tests, and each
+  asserts **two** things: that we match the browser bit for bit, AND that the
+  two spellings genuinely differ on that fixture.
+
+```rust
+  assert_eq!(good[k].to_bits(), (sum[k] / n).to_bits());
+  assert!((0..3).any(|k| good[k].to_bits() != bad[k].to_bits()),
+      "this fixture no longer distinguishes sum/n from sum*(1/n); \
+       pick coordinates that do, or the test is decorative");
+```
+
+  The second assertion is the one that matters. Without it a fixture that
+  happened to agree either way would pass forever and guard nothing -- the same
+  trap the `fused_multiply_add` test fell into with `0.1*0.2+0.3`.
+
+THE RULE:
+  **Bit-identity is a promise about the EXPRESSION, not the value.** Correct
+  rounding is per operation, so a rewrite that is exact in algebra is a
+  different program in binary64. When porting a certified path, transcribe the
+  spelling character for character and write down that you did. And when you
+  freeze one with a test, prove the fixture can tell the two apart, or the test
+  is decoration.
+
+FAMILY:
+  RULE 0 directly -- this is the clause that says "translation, not
+  reimplementation", tested. Cousin of the `mul_add` hazard already logged
+  there (one fused rounding where the browser does two). Path III and Path IV.
+  **Promotion candidate for KERNELIMAGIC**: nothing about this is Rust-specific.
+
+Curse count: R12. IEEE-754 rounds per OPERATION, so `sum/n` and `sum*(1/n)` are the same number in algebra and different doubles in binary64 -- 34.2% of inputs, measured. `centroid` and `project_to_sphere` were spelled the textbook way and the whole 90-test suite passed on both. Transcribe the expression, not the meaning. Always.
+
+---
+
+## CURSE R13 -- The Generated Ghost (tableNoReader)
+
+*The one that matters most for what comes next: a generator makes the wiring*
+*free and cannot make the EFFECT free, and the completeness of the wiring is*
+*what hides the absence.*
+
+WHAT BIT US (`viewer`, the `CONTROLS` table):
+  Controls were moved into a table so that adding one would be cheap. It
+  worked: a row there yields, automatically and at once --
+
+```text
+  a numeric box on the panel        a command-line verb
+  a `movie` channel                 a row in LAYOUT.json
+  input validation                  a line in `controls`
+```
+
+  `zoom` got all six. It had a box you could type into, a button that stepped
+  it, a verb, a movie channel, range checking, and it appeared in every
+  listing. **And nothing read it.**
+
+```rust
+  fn fit_zoom(&self) -> f64 {
+      0.41 * (W() as f64).min(sh)          // gen_zoom is NOT here
+  }
+```
+
+  Reported as *"the zoom pushes but the view does not re-render"*. The view
+  re-rendered perfectly. It rendered the same thing.
+
+THE ROOT PROBLEM:
+  A table generates *plumbing*. The one thing it cannot generate is the
+  **consumer** -- the line somewhere else that actually reads the value and
+  changes behaviour. And because the plumbing is what you see, a control with
+  no consumer looks *more* finished than a half-wired one: every surface is
+  present and correct.
+
+  The claim written in the commit that introduced the table -- *"adding a
+  control is one row plus two match arms"* -- was true of the plumbing and
+  false of the effect. The design did not notice, and neither did I.
+
+  This is R9's shape (a setting that is real, consulted and ineffective) one
+  level up, and it gets **worse as the generator gets better**: the more a row
+  produces for free, the more complete a reader-less row looks.
+
+HOW WE FOUND IT:
+  A human looked at the screen and said the picture did not move. Then, hunting
+  for why, `grep gen_zoom` returned four lines -- declaration, initialisation,
+  getter, setter -- and no fifth.
+
+  Then a test was written to catch the class rather than the instance, and
+  **it found a second one in its first run**:
+
+```text
+  control 'sphere' is Build but refining at 0.5 and at 3 produced the
+  same frame -- refine_face is not reading it
+```
+
+  `sphere_r` is only consulted when `surface` is `Spherical`; the default is
+  `Planar`; and **nothing could change it**, because the browser's
+  `surfaceMode` switch had never been ported. A third control, inert at every
+  value, for a different reason. Two dead controls, one test, one run.
+
+HOW IT WAS FIXED (applied 2026-08-21):
+  1. `fit_zoom` reads `gen_zoom`. `SPHERICAL` added as a toggle so `sphere` has
+     a mode to be live in.
+  2. The counter-hex, which is the part worth stealing: **name what kind of
+     effect each generated thing should have, then test that category.**
+
+```rust
+  enum When { Render, Build, Motion }
+
+  Render   the very next frame must differ between lo and hi
+  Build    refining at lo and at hi must differ
+  Motion   n frames must advance a different distance
+```
+
+  A single blanket "it does something" assertion was impossible -- it would be
+  false for two thirds of the table, because `inner`/`mid`/`jitter`/`sphere`
+  are read when points are *created* and legitimately do not move a mesh that
+  already exists. **Naming the category is what made the difference testable.**
+
+THE RULE:
+  A generator table buys you the wiring and never the consumer. So for every
+  row, state what kind of effect it is supposed to have, and assert THAT --
+  because "it appears everywhere it should appear" is exactly what a dead
+  control also does. And expect this curse to get worse the better your
+  generator gets: the completeness of the plumbing is the camouflage.
+
+FAMILY:
+  R9 (a setting real, consulted, ineffective) and R3 (a constant whose stated
+  property differs from its effective one) -- R13 is both, at the scale where a
+  table produces them. The viewer's own `card_rects` lesson one layer down: a
+  card that looks clickable and is not. Paths III and IV.
+  **Promotion candidate for KERNELIMAGIC**, and the one to carry into the
+  census: reducing 500 sims to a small generator set makes the plumbing nearly
+  free and the correspondence nearly all of the remaining work.
+
+Curse count: R13. A row in a generator table gave `zoom` a box, a button, a verb, a movie channel, validation and a listing -- six surfaces, all correct -- and no reader, so the value moved and the picture never did. The completeness of the plumbing is the camouflage. Name the kind of effect each row must have and test THAT; a second dead control turned up in the first run. Always.
+
+---
+
+## CURSE R14 -- The Kept Far Half (sortTakeWrongEnd)
+
+WHAT BIT US (`viewer`, `paint_genesis`):
+  Faces are painter-ordered, far to near, so near ones land on top. Past a
+  depth the mesh outruns the canvas, so the draw is capped and the shortfall
+  printed. Both halves of that are right. The cap is not:
+
+```rust
+  order.sort_by(|&a, &b| depths[a].partial_cmp(&depths[b]).unwrap());  // ASCENDING
+  let drawn = order.len().min(GEN_DRAW_CAP);
+  for &k in order.iter().take(drawn) { ... }                           // the FIRST
+```
+
+  Ascending depth means **far first** -- that is precisely what makes painter's
+  order work. So `take(drawn)` kept the 60,000 **farthest** faces and discarded
+  the near ones. The instant the cap bit, the render became the **back** of the
+  shell, seen through the space where the front should have been.
+
+  Reported as *"on lv 6 the centre shows only the back for some reason"*. Not
+  an approximation of the failure. A description of it.
+
+THE ROOT PROBLEM:
+  A sort order that exists for one purpose (draw far first) read as though it
+  existed for another (rank by importance). The two want opposite ends of the
+  same list, and nothing in the code says which end this call wanted.
+
+  Note what did **not** fire. `chi = 2`, `P = 12`, anchors 12, the census and
+  the built soup agreeing -- every invariant held throughout, because not one
+  of them looks at *which* faces were drawn. `DRAWN 60000 OF 68612` was printed
+  honestly the whole time. **The count was true and the selection was
+  backwards.**
+
+HOW WE FOUND IT:
+  A human looked at a render and said the picture was wrong. No test could
+  have: the only witness to *which* faces reached the screen is the screen.
+
+HOW IT WAS FIXED (applied 2026-08-21):
+  `skip(len - drawn)` keeps the nearest, still ordered far-to-near among
+  themselves, so painter's order is untouched.
+
+THE RULE:
+  When you truncate a sorted list, say which END you meant and why, in the same
+  breath -- a sort has a purpose and a truncation has a different one. And keep
+  a human in the loop for anything whose only witness is the picture: a suite
+  that checks the mesh cannot check the view, and it will stay green while the
+  view is inside out.
+
+FAMILY:
+  R11 and Curse 35 (a fence in the wrong place). R3 (an index whose convention
+  is unstated). Path III -- proof by kernel, where the kernel here is an eye.
+
+Curse count: R14. `take(n)` on a list sorted ASCENDING by depth kept the FARTHEST faces, so the moment the draw cap bit the render showed the back of the shell through the missing front. Every invariant held and the count was honest; only the selection was reversed. Say which end of a sort you meant. Always.
+
+---
+
+## CURSE R15 -- The Resampled Receipt (dpiResample)
+
+WHAT BIT US (both windows, every render before 2026-08-20):
+
+```text
+  the app asked for    916 x 739
+  Windows created     1374 x 1109        ratio 1.5000
+  client area         1365 x 1065   =     910 x 710 logical
+```
+
+  The display was at 150% and the process was **DPI-unaware**, so the OS took
+  the finished framebuffer and **resampled the whole thing** on its way to the
+  glass. One kernel pixel was smeared across 1.5 screen pixels by a scaler we
+  do not own.
+
+  `gos_viewer`'s own module doc says *"Every pixel is computed by the TRUSTED
+  kernel."* True of the framebuffer. **False of the screen.**
+
+THE ROOT PROBLEM:
+  The seal hashes the framebuffer, which is exactly right and exactly why it
+  could not see this. Between the sealed artifact and the eye sat a
+  transformation belonging to neither. Every image looked at for three days was
+  an interpolation of the thing that had been certified, and nothing anywhere
+  was in a position to say so.
+
+  Compounded by a second guess: the window was sized `W + 16, H + 39`, a
+  hand-guess at the border and caption. Those metrics move with the theme, the
+  Windows version and the DPI -- a guess is right on the machine it was made on
+  and silently clips on any other.
+
+HOW WE FOUND IT:
+  Trying to script mouse clicks, and needing canvas coordinates to equal screen
+  coordinates. Asking whether they did is what exposed that they did not. The
+  bug had been in every render of the project and surfaced only because
+  something finally needed the identity to hold.
+
+HOW IT WAS FIXED (applied 2026-08-20):
+  `SetProcessDpiAwarenessContext(PER_MONITOR_AWARE_V2)` before any pixel, and
+  `AdjustWindowRect` to ask the OS for the border instead of guessing it. Then
+  the part that makes it a receipt rather than a hope: after `ShowWindow` the
+  app **measures its own client rect**, prints the verdict, and renames its own
+  window to `PIXELS RESAMPLED BY THE OS - NOT EXACT` if the numbers disagree.
+
+```text
+  DPI aware   : true
+  client area : 1920 x 1080   (canvas 1920 x 1080)
+  pixel exact : YES -- one canvas pixel is one screen pixel
+```
+
+THE RULE:
+  A seal covers the artifact, never the path from the artifact to the eye. If
+  you claim your pixels are exact, **measure the last hop** -- and let the
+  program say out loud when it cannot make the claim. And never guess a number
+  the OS will tell you.
+
+FAMILY:
+  R10 and Curse 38 (a certificate that does not cover what the reader thinks it
+  covers). R2 (the machine is lazy and lies by silence). Path VII.
+  Sibling of R16 below: both are an honest instrument measuring the wrong
+  quantity.
+
+Curse count: R15. A DPI-unaware process had its framebuffer resampled 1.5x by the OS before it reached the glass, so "every pixel computed by the kernel" was true of the buffer and false of the screen -- and the seal, which hashes the buffer, could not see it. Measure the last hop, and say so when you cannot. Always.
+
+---
+
+## CURSE R16 -- The Points Do Not Dominate (costModelDrift)
+
+WHAT BIT US (`genesis::State::snapshot_bytes`):
+  It counted the corner points and nothing else, on its own stated grounds:
+
+> *`sum(arity) * 24`, which dominates everything else in a `Face`.*
+
+  Built and measured by `examples/kaboom`:
+
+```text
+  depth   faces        pts only       real     ratio
+      1     212      142.6 B/f    286.8 B/f    2.01x
+      3   10292      144.0 B/f    321.3 B/f    2.23x
+      5  504212      144.0 B/f    379.7 B/f    2.64x
+      7  24.7M       144.0 B/f    445.4 B/f    3.09x
+```
+
+  Every memory number this codebase had printed was understated by 2x to 3.09x.
+
+THE ROOT PROBLEM:
+  `pts` is **flat forever** -- six points, always -- while `lineage` gains a
+  `usize` per level and `id` gains characters per level (`F7.c33.e34.e35...`).
+  So the error is not a constant factor, it **grows with depth**, which is the
+  worst possible direction for a number a budget rests on. At depth 7 the ids
+  alone are 2 GB and the lineage is 2.6 GB.
+
+  And a second cost nobody had priced at all: `refine` holds **both
+  generations** at once -- the old faces are the input and stay alive while the
+  new `Vec` fills -- so the peak is `old + new`, roughly **8x** the current mesh
+  for `Op::All`. A budget that checks only the *result* passes steps that
+  cannot run.
+
+HOW WE FOUND IT:
+  By deliberately pushing until the program died, each depth in its own process
+  because a Rust allocation failure **aborts** and cannot be caught from inside
+  the process that caused it:
+
+```text
+  depth 7   24,706,292 faces   10.49 GB   chi=2   SURVIVED
+  depth 8  172,944,032 faces   DIED
+            memory allocation of 6,106,906,624 bytes failed
+            exit 0xC0000409 -- the allocator gave up
+```
+
+  The death message carried the second finding for free: it failed asking for
+  6.1 GB while **already holding 10.5**, on a machine with 14 free -- nowhere
+  near the 84 GB the finished mesh needed. It never got close, because it had
+  to carry the old generation the whole way.
+
+HOW IT WAS FIXED (applied 2026-08-21):
+  `heap_bytes()` walks the built structure and counts every field;
+  `snapshot_bytes()` delegates to it, because a snapshot clones all of it;
+  `refine_peak_bytes(op)` states the both-generations peak, reading the **real**
+  per-face cost off the mesh in hand rather than assuming one.
+
+  The old test asserted `snapshot_bytes() == 180 * 24` and **failed the moment
+  the model was corrected**, which is precisely what a test pinning a wrong
+  number is for.
+
+THE RULE:
+  A cost model is a claim about the world and decays like any other. Build the
+  thing, walk it, and count -- especially where a comment says one term
+  dominates, because that is a comparison nobody re-ran. And check whether the
+  error is *constant* or *growing*: a model that is 2x off at the size you
+  tested and 3x off at the size you ship is not a model, it is a coincidence
+  you outgrew.
+
+FAMILY:
+  R6 (a count in prose that nobody re-measured) at the scale of a whole model.
+  Curse 35 (predict the next step's cost BEFORE allocating) -- the prediction
+  was there and was wrong. R11 (a cap in the wrong units).
+
+Curse count: R16. `snapshot_bytes` counted only the points because a comment said they dominate; measured, they are 45% at depth 3 and 32% at depth 7, and the error GROWS with depth because ids and lineage grow while points stay flat. And `refine` holds both generations, so the peak is ~8x the mesh rather than the size of the result. Build it, walk it, count it. Always.
+
+---
+
+## THE PATTERN UNDER R13, R14, R15 AND R16
+### *coverage is not correspondence*
+
+Four curses in one session, and they are one curse wearing four coats. In every
+case **the check that existed was passing, and was correct**:
+
+| the check | what it truly said | what was wrong |
+|---|---|---|
+| `chi = 2`, `P = 12`, anchors 12 | the mesh is a closed shell | the render showed its back (R14) |
+| the frame seal | the framebuffer is reproducible | the OS resampled it afterwards (R15) |
+| `DRAWN 60000 OF 68612` | 60,000 faces were drawn | they were the wrong 60,000 (R14) |
+| the box, the verb, the movie channel | the control is fully wired | nothing read it (R13) |
+| `snapshot_bytes` | the points weigh this much | they were a third of the weight (R16) |
+| 90 green tests | the code does what it says | `sum/n` had become `sum*(1/n)` (R12) |
+
+Not one of these is a broken instrument. Every one is an **honest instrument
+answering a question nobody asked**, standing where a different question was
+being inferred. R4 says static verification checks *consistency* and cannot
+check *correspondence*. These say the same of tests and of instruments:
+
+> **A green suite proves the properties you named. It says nothing whatever**
+> **about the properties you did not.**
+
+Three practical consequences, and the third is why this section exists:
+
+1. **When you add a check, write down what it cannot see.** The seal covers the
+   buffer, not the screen. The census covers the mesh, not the view. Both
+   sentences take one line and both were missing.
+
+2. **Keep a human in front of the render.** R13, R14 and R15 were all found by
+   somebody looking at a picture and saying it was wrong -- none by a test, and
+   R14 could not have been. That is the whole argument for making renders cheap
+   enough to look at on every build.
+
+3. **This gets WORSE as the generators get better**, and that is the direction
+   this cave is heading. Reducing 500 sims to a small set of generators makes
+   the plumbing nearly free -- and the plumbing was never the expensive part.
+   Correspondence is. A generated thing arrives looking complete, with every
+   surface present and correct, and the one line that makes it *mean* something
+   is the one line no table can emit.
+
+   So the ratio to watch as the census proceeds is not sims-to-generators. It
+   is **generated surfaces per verified effect.** R13 is what happens when that
+   ratio grows without anybody stating it.
+
+*Incomplete is fine. Fake is not. And a green suite is neither -- it is exactly*
+*and only the claims you thought to make.*
+
+---
+
 ## THE TWO WALLS -- a gift from the Sol mage, verified
 ### `THEA_PRECISE_FLOAT_PARADIGM_v1.0.0_BOOKKEEPING.md` -- 63 checks, 63 passed, 11 corrections
 
@@ -1303,11 +1737,18 @@ silently diverge from the browser. Logged as a standing hazard.
 
 ### Witness 2 -- `cargo test`
 
-**COMPUTED.** `52 passed, 0 failed` + `7 doctests passed, 0 failed`, identical in
-**three profiles**: debug, `--release`, and `--release -C target-cpu=native`.
+**COMPUTED, re-measured 2026-08-21.** `133 passed, 0 failed` across the
+workspace -- 44 lib + 72 integration + 13 doctests + 4 viewer -- identical in
+debug and `--release`.
+
+The count when this section was first written was 52. The growth is not
+padding: R12 added four tests that freeze the browser's *spelling*, R13 added
+`every_control_changes_something` which grades a whole table, and R16 added
+five that pin a cost model measured by building the thing until it died.
 
 ```text
-running 52 tests ... test result: ok. 52 passed; 0 failed
+running 44 tests ... test result: ok. 44 passed; 0 failed   (lib)
+running 72 tests ... test result: ok. 72 passed; 0 failed   (certification)
    Doc-tests goldberg_kernel
 running 7 tests  ... test result: ok. 7 passed; 0 failed
 ```
@@ -1416,10 +1857,10 @@ screenshot, not a proof.
 | `cargo clippy` | **PAID** -- 5 pre-existing, 0 new |
 | 256-bit ladder bound | **PAID** -- u256 = 184, i256 = 183 |
 | `PHI` bit-identity across the three tongues | **PAID** -- identical bits |
-| the full 60-vertex browser/Rust hex diff | **STILL OWED** |
+| the full 60-vertex browser/Rust hex diff | **STILL OWED** -- and R12 makes it urgent: two of the functions it would exercise were spelled wrong for four days and no test could see it |
 | `sigma` built from the integer lattice (no float at all) | **STILL OWED** |
-| `cargo fmt --check` | **NEVER RUN** |
-| a mesh certified past C60 | **STILL OWED** -- `Mesh::refine()` does not exist |
+| `cargo fmt --check` | **PAID** -- clean, and run on every change since |
+| a mesh certified past C60 | **PAID** -- `genesis::State::refine` builds and measures to 24.7M faces, chi=2 counted at every rung (R16) |
 | the trusted base back under 41 lines | **STILL OWED** -- currently 54 |
 
 **What the centrepiece still owes.** The seed constant is proven identical
@@ -1431,8 +1872,14 @@ the word this grimoire exists to replace with a receipt.
 
 **And the honest ceiling.** The judge certifies C60. It has no depth limit of
 its own, but `sigma` for a deeper shell has to come from somewhere, and
-`Mesh::refine()` does not exist. So the integer lane is proven *sound* and not
-yet proven *deep*. Counting a shell is not closing one.
+`Mesh::refine()` does not exist -- but `genesis::State::refine` does, and it
+builds rather than counts: 24,706,292 faces at depth 7, chi=2 measured from
+trivalence at every rung, with the machine's own wall found at depth 8 by
+walking into it (R16). What the JUDGE has not yet certified is a `sigma` built
+at those depths, because `sigma` still comes from the float lane at C60. So the
+integer lane is proven *sound* and not yet proven *deep*; the geometry lane is
+now proven deep and not yet proven *integer*. Counting a shell is not closing
+one, and building one is not judging one.
 
 ---
 
@@ -1514,7 +1961,7 @@ rustup toolchain install stable-x86_64-pc-windows-gnu
 cd c:\PythonDevs\MNetv1\Gos
 
 # witness 2 -- the compiler
-cargo +stable-x86_64-pc-windows-gnu test              # 33 integration + 4 doctests
+cargo +stable-x86_64-pc-windows-gnu test --workspace  # 133, must be green
 cargo +stable-x86_64-pc-windows-gnu test --release    # R3: where overflow WRAPS
 cargo +stable-x86_64-pc-windows-gnu clippy
 cargo +stable-x86_64-pc-windows-gnu doc --open        # the mathematics, rendered
