@@ -77,7 +77,16 @@ const TICK: u32 = 33;
 const TIMER_ID: usize = 1;
 /// levels the buttons may reach. L7 is 327,680 faces -- affordable, and the
 /// judge there is ~0.5 s, so it is the honest ceiling for an interactive panel.
-const MAX_LEVEL: u32 = 7;
+/// The deepest subdivision the orb will build.
+///
+/// `sphere::FACE_BUDGET` is 6,000,000 and the kernel would allow L9
+/// (5,242,880 faces); this is the ORB's own, tighter fence, so the two are
+/// distinct on purpose and either can be the binding one.
+///
+/// L8 is 20 * 4^8 = 1,310,720 faces. Raised from 7 because L7 built and judged
+/// comfortably, and a fence should sit where the machine actually complains
+/// rather than where it was first guessed.
+const MAX_LEVEL: u32 = 8;
 
 struct Shell {
     ico: Ico,

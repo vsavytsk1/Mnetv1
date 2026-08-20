@@ -1158,3 +1158,89 @@ fn an_8k_frame_is_five_megabytes_from_the_hundred_meg_wall() {
         "and the margin is thin enough that nothing at this size may be tracked"
     );
 }
+
+// ===========================================================================
+// CENTROSYMMETRY -- why a full turn shows only EVEN harmonics
+//
+// Sweeping the view through a full turn and measuring each frame, every
+// significant rotational harmonic came out even: m = 2,4,6,8,10,12, with the
+// odd ones one to two orders of magnitude down.
+//
+// The first explanation offered was that the see-through render superimposes
+// front and back, so a rotation by pi maps one onto the other and imposes a
+// 2-fold symmetry the mesh does not have. A prediction followed: turn on
+// back-face culling and the odd harmonics should rise.
+//
+// THEY FELL. m=3 dropped 10x and m=5 dropped 2x. The hypothesis was wrong.
+//
+// The real cause is this test: the shell is CENTROSYMMETRIC. `-v` is a vertex
+// for every vertex `v`, so the orthographic projection from `d` and from `-d`
+// differ only by an inversion; any global scalar of them is therefore equal,
+// and `f(yaw) == f(yaw + pi)` for any such measure -- with or without culling,
+// and for any renderer at all. Only even harmonics can survive.
+// ===========================================================================
+
+#[test]
+fn the_c60_is_centrosymmetric() {
+    let m = Mesh::c60();
+    let key = |v: Vec3| {
+        (
+            (v[0] * 1e9).round() as i64,
+            (v[1] * 1e9).round() as i64,
+            (v[2] * 1e9).round() as i64,
+        )
+    };
+    let set: std::collections::HashSet<(i64, i64, i64)> = m.verts.iter().map(|v| key(*v)).collect();
+    assert_eq!(set.len(), 60, "sixty distinct vertices");
+
+    let orphans: Vec<Vec3> = m
+        .verts
+        .iter()
+        .copied()
+        .filter(|v| !set.contains(&key([-v[0], -v[1], -v[2]])))
+        .collect();
+    assert!(
+        orphans.is_empty(),
+        "{} vertices have no antipode -- the shell is NOT centrosymmetric, and the \
+         even-only harmonic spectrum measured over a full turn has no explanation",
+        orphans.len()
+    );
+}
+
+/// The consequence, stated as geometry rather than as a rendering effect:
+/// the centroid of the whole shell sits exactly at the origin, because the
+/// vertices cancel in antipodal pairs.
+#[test]
+fn centrosymmetry_puts_the_centroid_exactly_at_the_origin() {
+    let m = Mesh::c60();
+    let c = centroid(&m.verts);
+    for (i, x) in c.iter().enumerate() {
+        assert!(
+            x.abs() < 1e-15,
+            "centroid component {i} is {x:e}, not zero -- antipodal pairs must cancel"
+        );
+    }
+}
+
+/// And it survives refinement: `refineFace` treats every face the same way, so
+/// a centrosymmetric face set stays centrosymmetric. This is what makes the
+/// even-only spectrum hold at depth, not just at the seed.
+#[test]
+fn refinement_preserves_the_centre() {
+    use goldberg_kernel::genesis::{Op, Params, State};
+    use goldberg_kernel::rng::Rng;
+
+    let mut rng = Rng::new(0x5EED);
+    let mut s = State::seed_c60();
+    for _ in 0..2 {
+        s = s.refine(Op::All, &Params::default(), &mut rng);
+    }
+    let all: Vec<Vec3> = s.faces.iter().flat_map(|f| f.pts.iter().copied()).collect();
+    let c = centroid(&all);
+    for (i, x) in c.iter().enumerate() {
+        assert!(
+            x.abs() < 1e-12,
+            "after two refinements the centroid component {i} is {x:e}"
+        );
+    }
+}

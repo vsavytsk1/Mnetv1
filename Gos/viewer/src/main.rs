@@ -123,7 +123,7 @@ const GEN_BAR_H: i32 = 34;
 /// The most faces the viewer will BUILD. The mathematics is fine far past
 /// this -- `genesis::grow` counts to `u64` -- so the refusal names the number
 /// and says whose limit it is (Curse 35: state the cost before allocating).
-const GEN_FACE_BUDGET: u64 = 400_000;
+const GEN_FACE_BUDGET: u64 = 1_200_000;
 
 /// One press of `ZOOM +`. The fourth root of two, so four presses double it.
 ///
@@ -132,6 +132,21 @@ const GEN_FACE_BUDGET: u64 = 400_000;
 /// measuring colour in sRGB instead of OKLab -- the axis is not linear in what
 /// the eye does.
 const ZOOM_STEP: f64 = 1.189_207_115_002_721;
+
+/// Where the viewer opens INNER and MID.
+///
+/// **Not the browser's defaults, and deliberately not.** `Params::default()`
+/// is 0.45 / 0.70 because that is what `GK.refineFace` declares, and that
+/// stays true -- it is a recorded fact about the source, not a preference.
+/// This is the viewer's preference, and it is a different thing.
+///
+/// 0.1 / 0.1 sits at `MID = INNER`, where the ring closes flat and the
+/// interference between the front and back lattices is at its strongest. That
+/// interference is the picture: it is where the symmetry visibly collapses
+/// into and out of register as the shell turns, and a see-through render is
+/// the only way to see it happen.
+const VIEW_INNER: f64 = 0.1;
+const VIEW_MID: f64 = 0.1;
 
 /// The most memory one refinement may PEAK at.
 ///
@@ -142,13 +157,13 @@ const ZOOM_STEP: f64 = 1.189_207_115_002_721;
 ///
 /// 2 GB leaves the window responsive and the machine usable, which is the
 /// point of a viewer as opposed to a batch job.
-const GEN_PEAK_BYTES: u64 = 2 * 1024 * 1024 * 1024;
+const GEN_PEAK_BYTES: u64 = 6 * 1024 * 1024 * 1024;
 
 /// The most faces the viewer will DRAW in one frame. Distinct from the build
 /// budget on purpose: the mesh may legitimately be larger than the canvas can
 /// show, and the HUD prints `DRAWN n OF m` so the shortfall is a number rather
 /// than a silence.
-const GEN_DRAW_CAP: usize = 60_000;
+const GEN_DRAW_CAP: usize = 500_000;
 
 /// One named, bounded, numeric control.
 ///
@@ -435,6 +450,30 @@ struct App {
     gen_error: Option<String>,
     /// multiplier on the fitted zoom -- a control like any other
     gen_zoom: f64,
+    /// Drop the far hemisphere before drawing.
+    ///
+    /// Off by default, and the default is the honest one: this renderer has no
+    /// depth buffer, so faces do not occlude, they BLEND. What you see is the
+    /// back lattice superimposed on the front at a different projected scale,
+    /// which is a real moire and the thing that makes these pictures.
+    ///
+    /// It also imposes a symmetry that is not the shell's: a rotation by pi
+    /// swaps front and back, so a transparent render is 2-fold symmetric about
+    /// the view axis whatever the mesh underneath is doing. Measured over a
+    /// full turn, every significant rotational harmonic of the frame came out
+    /// EVEN -- m = 2,4,6,8,10,12 -- with the odd ones one to two orders of
+    /// magnitude down. `m=10` is the icosahedral 5-fold axis doubled; `m=6`
+    /// is the 3-fold doubled.
+    ///
+    /// Turning this on removes that doubling, so it is the control that
+    /// separates "the shell's symmetry" from "the render's symmetry".
+    ///
+    /// The test is exact for this mesh and only for this mesh: the shell is
+    /// convex and centred on the origin, so a face is back-facing exactly when
+    /// its centroid's rotated depth is negative. No normals, no dot products,
+    /// and nothing that could disagree with the painter's order -- it reuses
+    /// the very depth that order is computed from.
+    gen_cull: bool,
     /// radians of turn per frame. ONE constant for both callers: the window's
     /// timer and the script's `spin`. They were separate literals in the orb
     /// and had DRIFTED apart -- 0.012 in the timer, 0.01 in advance() -- so a
@@ -971,13 +1010,18 @@ impl App {
             card_rects: Vec::new(),
             card_views: Vec::new(),
             gen: genesis::State::seed_c60(),
-            gen_params: genesis::Params::default(),
+            gen_params: genesis::Params {
+                inner_scale: VIEW_INNER,
+                mid_scale: VIEW_MID,
+                ..genesis::Params::default()
+            },
             gen_buttons: Vec::new(),
             gen_fields: Vec::new(),
             gen_edit: None,
             gen_error: None,
             gen_zoom: 1.0,
             gen_speed: 0.012,
+            gen_cull: false,
             paint_clock: true,
         };
         app.layout();
@@ -1294,6 +1338,7 @@ impl App {
             // through ctl_set, so neither can drift from the other.
             (17, "ZOOM -"),
             (18, "ZOOM +"),
+            (19, "CULL"),
         ] {
             let w = font::width(label, 1) + 16;
             self.gen_buttons.push(Button {
@@ -1351,9 +1396,13 @@ impl App {
             },
             16 => {
                 self.gen = genesis::State::seed_c60();
-                self.gen_params = genesis::Params::default();
+                self.gen_params = genesis::Params {
+                    inner_scale: VIEW_INNER,
+                    mid_scale: VIEW_MID,
+                    ..genesis::Params::default()
+                };
                 format!(
-                    "RESET - THE SEED, AND INNER {:.2} MID {:.2} BACK TO THE BROWSER DEFAULTS.",
+                    "RESET - THE SEED, AND INNER {:.2} MID {:.2} BACK TO {VIEW_INNER} / {VIEW_MID}.",
                     p.inner_scale, p.mid_scale
                 )
             }
@@ -1379,6 +1428,18 @@ impl App {
                         if id == 18 { "TOP" } else { "BOTTOM" })
                 } else {
                     msg
+                }
+            }
+            19 => {
+                self.gen_cull = !self.gen_cull;
+                if self.gen_cull {
+                    String::from(
+                        "CULL ON - THE FAR HEMISPHERE IS DROPPED. THE RENDER'S OWN 2-FOLD                          SYMMETRY GOES WITH IT.",
+                    )
+                } else {
+                    String::from(
+                        "CULL OFF - SEE-THROUGH. FRONT AND BACK SUPERIMPOSE, WHICH IS THE MOIRE.",
+                    )
                 }
             }
             other => format!("CONTROL {other} IS NOT WIRED, NOT PRETENDING"),
@@ -1478,6 +1539,13 @@ impl App {
                 10 | 16 => pal.green,
                 15 => pal.pink,
                 17 | 18 => pal.gold,
+                19 => {
+                    if self.gen_cull {
+                        pal.green
+                    } else {
+                        pal.border
+                    }
+                }
                 _ => pal.cyan,
             };
             self.cv.rect(x, y, w, h, accent);
@@ -1813,7 +1881,24 @@ impl App {
         // the mesh passes that within a few rungs. Cap the draw and PRINT the
         // count -- silence here would be a lie shaped like a finished render.
         let drawn = order.len().min(GEN_DRAW_CAP);
-        for &k in order.iter().take(drawn) {
+        // KEEP THE NEAR HALF, NOT THE FAR ONE.
+        //
+        // `order` is sorted ASCENDING by depth, because painter's order draws
+        // far first so near faces land on top. `take(drawn)` therefore kept
+        // the FARTHEST faces and threw the near ones away -- so the moment the
+        // cap bit, the picture became the BACK of the shell seen through where
+        // the front should have been. Reported as "on lv 6 the centre shows
+        // only the back", which is exactly and literally what it was doing.
+        //
+        // `skip(len - drawn)` keeps the nearest, still ordered far-to-near
+        // among themselves, so the painter's order is untouched.
+        for &k in order.iter().skip(order.len() - drawn) {
+            // back-face cull: exact for a convex shell centred on the origin,
+            // and it reuses the SAME depth the painter's order sorted on, so
+            // the two can never disagree about which side a face is on
+            if self.gen_cull && depths[k] < 0.0 {
+                continue;
+            }
             let f = &self.gen.faces[k];
             let t = ((depths[k] + 2.0) / 4.0).clamp(0.0, 1.0);
             let alpha = 0.15 + t * 0.5;
@@ -1893,6 +1978,15 @@ impl App {
             self.gen_params.inner_scale, self.gen_params.mid_scale
         ));
         lines.push(Self::crescent(&self.gen_params).to_string());
+        lines.push(format!(
+            "CULL {} - {}",
+            if self.gen_cull { "ON " } else { "OFF" },
+            if self.gen_cull {
+                "far hemisphere dropped"
+            } else {
+                "see-through: front and back superimpose"
+            }
+        ));
         lines.push(String::new());
         if drawn < order.len() {
             lines.push(format!(
@@ -3015,6 +3109,7 @@ fn run_script(src: &str) -> i32 {
                 app.gen_action(id)
             }
             "undo" => app.gen_action(15),
+            "cull" => app.gen_action(19),
             "zoomin" => app.gen_action(18),
             "zoomout" => app.gen_action(17),
             "reset" => app.gen_action(16),
