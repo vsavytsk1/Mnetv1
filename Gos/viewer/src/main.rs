@@ -165,6 +165,42 @@ const GEN_PEAK_BYTES: u64 = 6 * 1024 * 1024 * 1024;
 /// than a silence.
 const GEN_DRAW_CAP: usize = 500_000;
 
+/// WHEN a control takes effect, which is not the same for all of them.
+///
+/// **This exists because a control was shipped that did nothing at all.**
+/// `zoom` had a box, a verb, a movie channel and validation -- and no reader:
+/// `fit_zoom()` never consulted it. The value moved, the frame repainted, and
+/// the picture was identical. "One row plus two match arms" was true of the
+/// plumbing and false of the effect, and nothing in the design noticed.
+///
+/// Naming the category is what makes the difference testable.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+enum When {
+    /// Read by the renderer. Changing it changes the very next frame.
+    Render,
+    /// Read by `refine_face` when it CREATES points. Changing it moves
+    /// nothing that already exists -- it applies to the next refinement.
+    ///
+    /// Measured: with the mesh already built, `mid 0.9` vs `mid 0.1` gives
+    /// PSNR 41.07 dB, and the whole of that difference is the printed number
+    /// in the corner. Set BEFORE building, the same pair gives 23.99 dB --
+    /// the picture genuinely moves. This is the browser's semantics too; its
+    /// sliders also apply on the next REFINE.
+    Build,
+    /// Read only when the turn advances. A single frame cannot show it.
+    Motion,
+}
+
+impl When {
+    fn note(self) -> &'static str {
+        match self {
+            When::Render => "takes effect now",
+            When::Build => "applies to the NEXT refine -- it does not move built faces",
+            When::Motion => "only visible while it turns",
+        }
+    }
+}
+
 /// One named, bounded, numeric control.
 ///
 /// **This table is the point.** A control listed here gets, for free and at
@@ -183,6 +219,8 @@ struct Control {
     /// what a bad value should be compared against, in words, when a human
     /// types a shoe into a box that wanted a number
     unit: &'static str,
+    /// when it takes effect -- and the thing the tests grade against
+    when: When,
 }
 
 /// Every animatable control the GENESIS view has.
@@ -193,6 +231,7 @@ const CONTROLS: [Control; 7] = [
         lo: 0.05,
         hi: 0.95,
         unit: "where the inner ring sits, 0..1",
+        when: When::Build,
     },
     Control {
         name: "mid",
@@ -200,6 +239,7 @@ const CONTROLS: [Control; 7] = [
         lo: 0.05,
         hi: 0.95,
         unit: "where the mid ring is pulled to, 0..1",
+        when: When::Build,
     },
     Control {
         name: "jitter",
@@ -207,6 +247,7 @@ const CONTROLS: [Control; 7] = [
         lo: 0.0,
         hi: 0.20,
         unit: "symmetry-breaking, 0 = off",
+        when: When::Build,
     },
     Control {
         name: "sphere",
@@ -214,6 +255,7 @@ const CONTROLS: [Control; 7] = [
         lo: 0.5,
         hi: 3.0,
         unit: "projection radius when spherical",
+        when: When::Build,
     },
     Control {
         name: "yaw",
@@ -221,6 +263,7 @@ const CONTROLS: [Control; 7] = [
         lo: 0.0,
         hi: std::f64::consts::TAU,
         unit: "turn, radians",
+        when: When::Render,
     },
     Control {
         name: "zoom",
@@ -228,6 +271,7 @@ const CONTROLS: [Control; 7] = [
         lo: 0.25,
         hi: 6.0,
         unit: "multiplier on the fitted zoom",
+        when: When::Render,
     },
     Control {
         name: "speed",
@@ -239,6 +283,7 @@ const CONTROLS: [Control; 7] = [
         // default 0.012 is one turn every 8.7 seconds; in a movie it is one
         // turn every 524 frames, and both statements are the same statement.
         unit: "turn per frame, radians -- 0 holds it still",
+        when: When::Motion,
     },
 ];
 
@@ -474,6 +519,17 @@ struct App {
     /// and nothing that could disagree with the painter's order -- it reuses
     /// the very depth that order is computed from.
     gen_cull: bool,
+    /// Project refined points onto the sphere instead of leaving them planar.
+    ///
+    /// **Ported because a test found `sphere` was dead without it.**
+    /// `Params::sphere_r` is only consulted when `surface` is `Spherical`, the
+    /// default is `Planar`, and nothing could change it -- so a control with a
+    /// box, a verb and a movie channel had no effect at any value. That is the
+    /// same failure as `zoom`, found the same way, in the same test run.
+    ///
+    /// The browser offers `planar | spherical | tangent`. Two of the three are
+    /// here; `tangent` is not, and is not pretended to be.
+    gen_spherical: bool,
     /// radians of turn per frame. ONE constant for both callers: the window's
     /// timer and the script's `spin`. They were separate literals in the orb
     /// and had DRIFTED apart -- 0.012 in the timer, 0.01 in advance() -- so a
@@ -1022,6 +1078,7 @@ impl App {
             gen_zoom: 1.0,
             gen_speed: 0.012,
             gen_cull: false,
+            gen_spherical: false,
             paint_clock: true,
         };
         app.layout();
@@ -1221,14 +1278,15 @@ impl App {
         // say which side they are on every time either moves
         if c.name == "inner" || c.name == "mid" {
             format!(
-                "{} {v:.4}   INNER {:.3} MID {:.3} - {}",
+                "{} {v:.4}   INNER {:.3} MID {:.3} - {} - {}",
                 c.label,
                 self.gen_params.inner_scale,
                 self.gen_params.mid_scale,
-                Self::crescent(&self.gen_params)
+                Self::crescent(&self.gen_params),
+                c.when.note()
             )
         } else {
-            format!("{} {v:.4}   ({})", c.label, c.unit)
+            format!("{} {v:.4}   ({}) - {}", c.label, c.unit, c.when.note())
         }
     }
 
@@ -1339,6 +1397,7 @@ impl App {
             (17, "ZOOM -"),
             (18, "ZOOM +"),
             (19, "CULL"),
+            (20, "SPHERICAL"),
         ] {
             let w = font::width(label, 1) + 16;
             self.gen_buttons.push(Button {
@@ -1441,6 +1500,23 @@ impl App {
                         "CULL OFF - SEE-THROUGH. FRONT AND BACK SUPERIMPOSE, WHICH IS THE MOIRE.",
                     )
                 }
+            }
+            20 => {
+                self.gen_spherical = !self.gen_spherical;
+                self.gen_params.surface = if self.gen_spherical {
+                    genesis::Surface::Spherical
+                } else {
+                    genesis::Surface::Planar
+                };
+                format!(
+                    "SURFACE {} - APPLIES TO THE NEXT REFINE. {}",
+                    if self.gen_spherical { "SPHERICAL" } else { "PLANAR" },
+                    if self.gen_spherical {
+                        "SPHERE radius is live now."
+                    } else {
+                        "SPHERE radius is inert while planar."
+                    }
+                )
             }
             other => format!("CONTROL {other} IS NOT WIRED, NOT PRETENDING"),
         }
@@ -1546,6 +1622,13 @@ impl App {
                         pal.border
                     }
                 }
+                20 => {
+                    if self.gen_spherical {
+                        pal.green
+                    } else {
+                        pal.border
+                    }
+                }
                 _ => pal.cyan,
             };
             self.cv.rect(x, y, w, h, accent);
@@ -1628,7 +1711,12 @@ impl App {
     /// couple of pixels of the old 250.
     fn fit_zoom(&self) -> f64 {
         let sh = (H() as i32 - BAR_H - 60) as f64;
-        0.41 * (W() as f64).min(sh)
+        // `* self.gen_zoom` was MISSING, so the zoom control was a value with
+        // no reader: the button pushed, the box updated, the frame repainted,
+        // and the picture never moved. Reported as "the zoom pushes but the
+        // view does not re-render" -- the view re-rendered perfectly, it just
+        // rendered the same thing.
+        0.41 * (W() as f64).min(sh) * self.gen_zoom
     }
 
     /// Publish the hit-test geometry the viewer ACTUALLY painted.
@@ -1978,6 +2066,14 @@ impl App {
             self.gen_params.inner_scale, self.gen_params.mid_scale
         ));
         lines.push(Self::crescent(&self.gen_params).to_string());
+        lines.push(format!(
+            "SURFACE {} - INNER/MID/JITTER/SPHERE APPLY TO THE NEXT REFINE",
+            if self.gen_spherical {
+                "SPHERICAL"
+            } else {
+                "PLANAR (sphere radius inert)"
+            }
+        ));
         lines.push(format!(
             "CULL {} - {}",
             if self.gen_cull { "ON " } else { "OFF" },
@@ -3110,6 +3206,7 @@ fn run_script(src: &str) -> i32 {
             }
             "undo" => app.gen_action(15),
             "cull" => app.gen_action(19),
+            "spherical" => app.gen_action(20),
             "zoomin" => app.gen_action(18),
             "zoomout" => app.gen_action(17),
             "reset" => app.gen_action(16),
@@ -3137,11 +3234,12 @@ fn run_script(src: &str) -> i32 {
                 let mut out = vec![String::from("controls")];
                 for (i, c) in CONTROLS.iter().enumerate() {
                     out.push(format!(
-                        "  {:<8} {:>10.4}   {}..{}   {}",
+                        "  {:<8} {:>10.4}   {}..{}   [{:?}] {}",
                         c.name,
                         app.ctl_get(i),
                         c.lo,
                         c.hi,
+                        c.when,
                         c.unit
                     ));
                 }
@@ -3406,4 +3504,160 @@ fn open_session(cert: &goldberg_kernel::Cert, verdict: &judge::Verdict) -> PathB
     ];
     let _ = fs::write(dir.join("SESSION.json"), lines.join("\n") + "\n");
     dir
+}
+
+#[cfg(test)]
+mod control_tests {
+    use super::*;
+
+    /// Build a headless app at a known state.
+    fn app_at(depth: usize) -> App {
+        set_canvas(DEFAULT_W, DEFAULT_H);
+        let mut a = App::new();
+        a.layout();
+        a.layout_genesis();
+        a.paint_clock = false;
+        a.stack.push(View::Genesis);
+        a.genesis_spin = false;
+        for _ in 0..depth {
+            a.gen_action(12); // REFINE ALL
+        }
+        a
+    }
+
+    /// Render and return the sealed content digest.
+    fn seal(a: &mut App) -> u64 {
+        a.render();
+        a.content_digest
+    }
+
+    /// **EVERY CONTROL MUST HAVE A READER.**
+    ///
+    /// This is the test that was missing when `zoom` shipped as a control that
+    /// nothing consumed: it had a box, a command-line verb, a movie channel and
+    /// input validation, and `fit_zoom()` never looked at it. The value moved,
+    /// the frame repainted, and the picture was identical.
+    ///
+    /// Each category is checked the way it actually works, which is the whole
+    /// reason `When` exists -- a single blanket assertion would have to be
+    /// false for two thirds of the table.
+    #[test]
+    fn every_control_changes_something() {
+        for (i, c) in CONTROLS.iter().enumerate() {
+            match c.when {
+                // the very next frame must differ
+                When::Render => {
+                    let mut a = app_at(1);
+                    a.ctl_set(i, c.lo);
+                    let lo = seal(&mut a);
+                    a.ctl_set(i, c.hi);
+                    let hi = seal(&mut a);
+                    assert_ne!(
+                        lo, hi,
+                        "control '{}' is Render but the frame did not change between \
+                         {} and {}. Either nothing reads it -- which is what happened to \
+                         `zoom` -- or it belongs in another category.",
+                        c.name, c.lo, c.hi
+                    );
+                }
+                // set BEFORE building, the geometry must differ
+                When::Build => {
+                    // SPHERICAL first: `sphere_r` is only consulted when the
+                    // surface is spherical, so grading it in planar mode would
+                    // find it dead -- which it was, and which is how the
+                    // missing surface toggle was discovered.
+                    let mut a = app_at(0);
+                    a.gen_action(20);
+                    a.ctl_set(i, c.lo);
+                    a.gen_action(12);
+                    let lo = seal(&mut a);
+
+                    let mut b = app_at(0);
+                    b.gen_action(20);
+                    b.ctl_set(i, c.hi);
+                    b.gen_action(12);
+                    let hi = seal(&mut b);
+                    assert_ne!(
+                        lo, hi,
+                        "control '{}' is Build but refining at {} and at {} produced the \
+                         same frame -- refine_face is not reading it",
+                        c.name, c.lo, c.hi
+                    );
+                }
+                // it must change how far the turn advances
+                When::Motion => {
+                    let mut a = app_at(0);
+                    a.genesis_spin = true;
+                    a.ctl_set(i, c.lo);
+                    a.genesis_yaw = 0.0;
+                    a.advance(50);
+                    let lo = a.genesis_yaw;
+
+                    a.ctl_set(i, c.hi);
+                    a.genesis_yaw = 0.0;
+                    a.advance(50);
+                    let hi = a.genesis_yaw;
+                    assert!(
+                        (lo - hi).abs() > 1e-9,
+                        "control '{}' is Motion but 50 frames advanced the same amount \
+                         at {} and at {}",
+                        c.name,
+                        c.lo,
+                        c.hi
+                    );
+                }
+            }
+        }
+    }
+
+    /// The specific regression: zoom must move the picture.
+    #[test]
+    fn zoom_moves_the_picture() {
+        let mut a = app_at(1);
+        let i = App::ctl_index("zoom").expect("zoom is in the table");
+        a.ctl_set(i, 1.0);
+        let one = seal(&mut a);
+        a.ctl_set(i, 3.0);
+        let three = seal(&mut a);
+        assert_ne!(one, three, "fit_zoom must consult gen_zoom");
+    }
+
+    /// And the honest converse, so nobody re-reports it as a bug: a Build
+    /// control genuinely does NOT move faces that already exist. Measured at
+    /// PSNR 41.07 dB between two such frames, all of it the printed number.
+    #[test]
+    fn a_build_control_does_not_move_faces_that_already_exist() {
+        let inner = App::ctl_index("inner").unwrap();
+        let mut a = app_at(2);
+
+        // strip the HUD's own text out of the comparison by asking the mesh
+        // directly -- the geometry is the claim, not the caption
+        let before: Vec<[f64; 3]> = a.gen.faces.iter().flat_map(|f| f.pts.clone()).collect();
+        a.ctl_set(inner, 0.9);
+        let after: Vec<[f64; 3]> = a.gen.faces.iter().flat_map(|f| f.pts.clone()).collect();
+
+        assert_eq!(
+            before, after,
+            "changing a Build control must leave existing points untouched"
+        );
+
+        // ...and the NEXT refine must use the new value
+        a.gen_action(12);
+        let grown: Vec<[f64; 3]> = a.gen.faces.iter().flat_map(|f| f.pts.clone()).collect();
+        assert_ne!(before.len(), grown.len(), "the refine must have happened");
+    }
+
+    /// Every control is reachable by the name the command line uses, and the
+    /// table is the only place that decides.
+    #[test]
+    fn every_control_is_reachable_by_name() {
+        for c in CONTROLS.iter() {
+            assert!(
+                App::ctl_index(c.name).is_some(),
+                "control '{}' is in the table and cannot be looked up",
+                c.name
+            );
+        }
+        assert!(App::ctl_index("shoe").is_none());
+    }
 }
