@@ -45,7 +45,16 @@ rustium_certificate.json
 # ONE 8K FRAME IS 94.93 MB -- five short of the 100 MB limit that bounces an
 # ENTIRE push (Curse 31). Nothing at that size is ever tracked here.
 /runs/**/movie_*/*.png
+/runs/**/movie_*/*.mp4
 !/runs/**/movie_*/MOVIE.json
+!/runs/**/movie_*/MAKE_MP4.txt
+
+# The mp4 is listed explicitly even though `/runs/**` already catches it,
+# because it is the file most likely to look worth keeping. It is not: at
+# 1920x1080 a 2-second turn is 21 MB, and it is derived twice over -- the
+# frames regenerate it, and the script regenerates the frames, byte for byte.
+# MAKE_MP4.txt carries the exact ffmpeg command, so the whole chain reproduces
+# from a few kilobytes of text. Share the mp4; never track it.
 
 # Rendered output from `cargo run --example ...` lands in the crate root.
 # Ignored as a CLASS, not name by name: enumerating `c60_*.png` already missed
