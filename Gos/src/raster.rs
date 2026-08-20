@@ -257,6 +257,42 @@ impl Canvas {
     }
 }
 
+/// Exactly how many bytes [`Canvas::to_png`] will produce for a `w x h` canvas.
+///
+/// **This is a real prediction, not an estimate.** Our encoder uses *stored*
+/// (uncompressed) deflate, so the output size depends on nothing but the
+/// dimensions -- not on the image, not on the palette, not on how much of the
+/// frame is black. That property was found by noticing two renders weighed the
+/// same to the byte, and it is what lets a movie be PRICED BEFORE THE FIRST
+/// FRAME IS WRITTEN rather than discovered at frame 400 (Curse 35).
+///
+/// ```text
+///   raw     = (w*3 + 1) * h        scanlines, each with its filter byte
+///   blocks  = ceil(raw / 65535)    stored deflate blocks
+///   bytes   = raw + blocks*5 + 6 + 57
+///                        |     |    |
+///                        |     |    +-- 8 signature + 25 IHDR + 12 IEND + 12 IDAT
+///                        |     +------- zlib header (2) + adler32 (4)
+///                        +------------- 1 flag + 2 len + 2 ~len per block
+/// ```
+///
+/// The scale this exists to make visible:
+///
+/// ```text
+///   1920x1080    5.93 MB/frame     60 frames    0.35 GB
+///   3840x2160   23.73 MB/frame     60 frames    1.39 GB
+///   7680x4320   94.93 MB/frame     60 frames    5.56 GB
+/// ```
+///
+/// **One 8K frame is 94.93 MB** -- five megabytes short of the 100 MB limit
+/// that bounces an entire push (Curse 31). Nothing at that size may ever be
+/// tracked, and the caller must be told the number before it allocates.
+pub const fn png_bytes(w: usize, h: usize) -> usize {
+    let raw = (w * 3 + 1) * h;
+    let blocks = raw.div_ceil(65535);
+    raw + blocks * 5 + 6 + 57
+}
+
 fn push_chunk(out: &mut Vec<u8>, tag: &[u8; 4], data: &[u8]) {
     out.extend_from_slice(&(data.len() as u32).to_be_bytes());
     let start = out.len();

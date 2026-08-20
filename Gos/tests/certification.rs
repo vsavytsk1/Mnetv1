@@ -1086,3 +1086,75 @@ fn the_grid_reports_its_real_card_budget() {
         "the viewer declares 2 cards and the grid must hold them"
     );
 }
+
+// ===========================================================================
+// THE MOVIE BUDGET -- a prediction that must be exact, not close
+//
+// `png_bytes` prices a render before it is written. If it were an estimate,
+// a 60-frame 8K movie would be "about 5 GB" and the disk would find out the
+// truth. It is not an estimate: stored deflate makes the size a pure function
+// of the dimensions, so this can be graded against a real encode.
+// ===========================================================================
+
+#[test]
+fn png_bytes_predicts_the_encoder_exactly() {
+    use goldberg_kernel::palette::DASHBOARD;
+    use goldberg_kernel::raster::{png_bytes, Canvas};
+
+    // sizes that straddle the 65535-byte deflate block boundary in both
+    // directions, plus the two the viewer actually uses
+    for (w, h) in [
+        (1, 1),
+        (7, 3),
+        (64, 64),
+        (321, 197),
+        (900, 700),
+        (1920, 1080),
+    ] {
+        let mut cv = Canvas::new(w, h, DASHBOARD.bg);
+        // paint something, to prove the size does NOT depend on the content
+        cv.fill_rect(0, 0, (w / 2) as i32, (h / 2) as i32, DASHBOARD.gold);
+        let encoded = cv.to_png().len();
+        assert_eq!(
+            encoded,
+            png_bytes(w, h),
+            "png_bytes({w},{h}) predicted {} but the encoder produced {encoded}",
+            png_bytes(w, h)
+        );
+    }
+}
+
+/// The size must not move when the picture does. That is the whole property
+/// the movie budget rests on.
+#[test]
+fn png_size_is_blind_to_the_image() {
+    use goldberg_kernel::palette::DASHBOARD;
+    use goldberg_kernel::raster::Canvas;
+
+    let blank = Canvas::new(200, 150, DASHBOARD.bg).to_png().len();
+    let mut busy = Canvas::new(200, 150, DASHBOARD.bg);
+    for i in 0..150 {
+        busy.line(0, i, 199, 149 - i, DASHBOARD.cyan);
+    }
+    assert_eq!(
+        blank,
+        busy.to_png().len(),
+        "stored deflate must make size independent of content"
+    );
+}
+
+/// The number that governs how careful we have to be.
+#[test]
+fn an_8k_frame_is_five_megabytes_from_the_hundred_meg_wall() {
+    use goldberg_kernel::raster::png_bytes;
+    let eight_k = png_bytes(7680, 4320);
+    assert_eq!(eight_k, 99_544_778);
+    assert!(
+        eight_k < 100 * 1024 * 1024,
+        "an 8K frame must still be under the git limit, barely"
+    );
+    assert!(
+        100 * 1024 * 1024 - eight_k < 6 * 1024 * 1024,
+        "and the margin is thin enough that nothing at this size may be tracked"
+    );
+}

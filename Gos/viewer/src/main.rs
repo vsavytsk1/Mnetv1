@@ -336,8 +336,18 @@ GENESIS CONTROL BAR -- the same methods the mouse calls
   mid <v>          0.05..0.95   where the mid ring is pulled to
                    mid > inner opens a rosette; mid < inner overlaps into
                    bursts. That is the CRESCENT DEFECT, and it is the picture.
-  sweepinner <lo> <hi> <steps> <name>     shoot every step -- a movie
-  sweepmid   <lo> <hi> <steps> <name>
+MOVIES -- priced exactly before the first frame is written
+
+  movie spin <frames> <name>              one full turn across the movie
+  movie inner <lo> <hi> <frames> <name>   sweep the inner ring
+  movie mid   <lo> <hi> <frames> <name>   sweep the mid ring
+  stats                                   what the frame is made of, in OKLab
+
+  Frames land in <session>/drive/movie_<name>/ and are GITIGNORED -- the same
+  script rewrites them byte for byte, so they are a cache, not a record.
+  MOVIE.json beside them is the record: every frame's seal plus its perceptual
+  statistics. At 1920x1080 a frame is 5.93 MB; at 8K it is 94.93 MB, five
+  short of the limit that bounces a push.
 
 Exit code is the number of failures.
 
@@ -1763,6 +1773,235 @@ impl App {
     }
 }
 
+/// Total bytes currently sitting under `runs/`.
+///
+/// Printed on every scripted run, because this is the number that grows while
+/// nobody is looking. 829 MB arrived over three days of clicking.
+fn runs_bytes() -> u64 {
+    fn walk(p: &std::path::Path) -> u64 {
+        let mut n = 0u64;
+        if let Ok(rd) = fs::read_dir(p) {
+            for e in rd.flatten() {
+                match e.file_type() {
+                    Ok(t) if t.is_dir() => n += walk(&e.path()),
+                    Ok(_) => n += e.metadata().map(|m| m.len()).unwrap_or(0),
+                    Err(_) => {}
+                }
+            }
+        }
+        n
+    }
+    walk(&runs_dir())
+}
+
+/// Past this, the run says so and names the oldest sessions to move out.
+///
+/// **Not a limit -- a tap on the shoulder.** Frames are regenerable by
+/// definition (`--run` reproduces them byte for byte), so the right move when
+/// this fires is to archive or delete the old payload, never to stop working.
+const DISK_WARN: u64 = 2 * 1024 * 1024 * 1024;
+
+/// The most a single movie may write. **Stated in the units it protects**
+/// (R11): bytes that will exist on the disk, not frames and not seconds.
+const MOVIE_BUDGET: u64 = 3 * 1024 * 1024 * 1024;
+
+/// Say what `runs/` holds, and if it is getting heavy, say which folders to
+/// move and how much that would recover.
+fn report_disk() {
+    let total = runs_bytes();
+    let gb = total as f64 / 1_073_741_824.0;
+    println!("runs/   {gb:.2} GB on disk   (payload is gitignored; the steps travel)");
+    if total < DISK_WARN {
+        return;
+    }
+    println!();
+    println!("  ------------------------------------------------------------------");
+    println!("  runs/ is over {} GB.", DISK_WARN / 1_073_741_824);
+    println!("  Every frame here is REGENERABLE -- the same script writes the same");
+    println!("  bytes -- so the payload is a cache, not a record. The MANIFEST and");
+    println!("  DRIVE.log are the record, and they are tiny and tracked.");
+    println!();
+    let mut dirs: Vec<(String, u64)> = fs::read_dir(runs_dir())
+        .map(|rd| {
+            rd.flatten()
+                .filter(|e| e.file_type().map(|t| t.is_dir()).unwrap_or(false))
+                .map(|e| {
+                    fn walk(p: &std::path::Path) -> u64 {
+                        let mut n = 0u64;
+                        if let Ok(rd) = fs::read_dir(p) {
+                            for e in rd.flatten() {
+                                match e.file_type() {
+                                    Ok(t) if t.is_dir() => n += walk(&e.path()),
+                                    Ok(_) => n += e.metadata().map(|m| m.len()).unwrap_or(0),
+                                    Err(_) => {}
+                                }
+                            }
+                        }
+                        n
+                    }
+                    (e.file_name().to_string_lossy().to_string(), walk(&e.path()))
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+    dirs.sort_by_key(|(n, _)| n.clone());
+    let heavy: Vec<&(String, u64)> = dirs.iter().filter(|(_, b)| *b > 50 * 1024 * 1024).collect();
+    println!("  the heaviest, oldest first -- move these out and keep the manifests:");
+    for (n, b) in heavy.iter().take(8) {
+        println!("    {:>8.1} MB   runs/{n}", *b as f64 / 1_048_576.0);
+    }
+    let freed: u64 = heavy.iter().take(8).map(|(_, b)| *b).sum();
+    println!(
+        "    {:>8.2} GB   would be recovered",
+        freed as f64 / 1_073_741_824.0
+    );
+    println!("  ------------------------------------------------------------------");
+    println!();
+}
+
+/// One movie: N frames, priced exactly before the first one is written.
+///
+/// **The price is knowable, so it is stated.** `png_bytes` is exact rather than
+/// approximate -- stored deflate makes a frame's size a pure function of the
+/// canvas -- so a 60-frame 8K movie can be refused *before* it writes 5.5 GB,
+/// with the real number in the refusal. That is Curse 35 with the arithmetic
+/// actually available.
+///
+/// Every frame carries two witnesses:
+///
+/// * the **seal**, an exact integer digest of the framebuffer. Brittle by
+///   design: flip one pixel and it moves completely, so it answers *different
+///   or not* and never *how different*.
+/// * the **OKLab statistics**, which answer the second question. Perceptual,
+///   so `mean_l` and `l_entropy` move smoothly across a sweep where the seal
+///   just scatters. This is the topology of the pixels, beside the topology of
+///   the bytes that painted them.
+fn run_movie(
+    app: &mut App,
+    dir: &std::path::Path,
+    channel: &str,
+    lo: f64,
+    hi: f64,
+    frames: u32,
+    name: &str,
+) -> Result<String, String> {
+    if frames == 0 {
+        return Err(String::from("a movie needs at least one frame"));
+    }
+    let per = goldberg_kernel::raster::png_bytes(W, H) as u64;
+    let total = per * frames as u64;
+    if total > MOVIE_BUDGET {
+        return Err(format!(
+            "REFUSED - {frames} frames at {W}x{H} is {} B per frame = {:.2} GB, over the {:.0} GB \
+             movie budget. The renderer is fine; the disk is the fence. Fewer frames, or a \
+             smaller canvas.",
+            per,
+            total as f64 / 1_073_741_824.0,
+            MOVIE_BUDGET as f64 / 1_073_741_824.0
+        ));
+    }
+
+    let out = dir.join(format!("movie_{name}"));
+    fs::create_dir_all(&out).map_err(|e| format!("cannot create {}: {e}", out.display()))?;
+
+    println!(
+        "movie  {name}: {frames} frames x {} B = {:.2} GB, priced before the first write",
+        per,
+        total as f64 / 1_073_741_824.0
+    );
+
+    let mut rows: Vec<String> = Vec::new();
+    let mut written = 0u64;
+    let t0 = Instant::now();
+
+    for f in 0..frames {
+        // f/(frames-1) so a single frame is the START and the last frame is
+        // exactly `hi` -- an off-by-one here would silently never reach the end
+        let t = if frames == 1 {
+            0.0
+        } else {
+            f as f64 / (frames - 1) as f64
+        };
+        match channel {
+            "spin" => {
+                // one full turn across the whole movie, deterministic: the yaw
+                // is SET from the frame index, never accumulated from a clock
+                app.genesis_yaw = t * std::f64::consts::TAU;
+            }
+            "inner" => {
+                app.gen_set(20, lo + t * (hi - lo));
+            }
+            "mid" => {
+                app.gen_set(21, lo + t * (hi - lo));
+            }
+            other => return Err(format!("unknown movie channel '{other}'")),
+        }
+        app.render();
+        let file = out.join(format!("frame_{f:05}.png"));
+        app.cv
+            .write_png(&file)
+            .map_err(|e| format!("frame {f}: {e}"))?;
+        written += per;
+
+        // stride 37: prime, so it never aligns with a row width and samples
+        // the whole frame evenly. ~56k of 2.07M pixels, and it SAYS so.
+        let st = goldberg_kernel::oklab::FrameStats::measure(&app.cv.px, 37);
+        rows.push(format!(
+            "  {{ \"frame\": {f}, \"t\": {t:.6}, \"{channel}\": {:.6}, \"seal\": \"{:016x}\", \
+             \"colours\": {}, \"ink\": {:.6}, \"mean_l\": {:.6}, \"mean_c\": {:.6}, \"l_entropy\": {:.6} }}",
+            match channel {
+                "spin" => app.genesis_yaw,
+                "inner" => app.gen_params.inner_scale,
+                _ => app.gen_params.mid_scale,
+            },
+            app.content_digest,
+            st.distinct,
+            st.ink,
+            st.mean_l,
+            st.mean_c,
+            st.l_entropy
+        ));
+    }
+    let secs = t0.elapsed().as_secs_f64();
+
+    // MOVIE.json is the STEPS -- it travels. The frames are payload and are
+    // gitignored, because `--run` regenerates them byte for byte.
+    let mut m: Vec<String> = Vec::new();
+    m.push(String::from("{"));
+    m.push(format!("  \"name\": \"{name}\","));
+    m.push(format!("  \"channel\": \"{channel}\","));
+    m.push(format!("  \"from\": {lo:.6}, \"to\": {hi:.6},"));
+    m.push(format!("  \"frames\": {frames},"));
+    m.push(format!("  \"canvas\": [{W}, {H}],"));
+    m.push(format!(
+        "  \"bytes_per_frame\": {per}, \"bytes_total\": {written},"
+    ));
+    m.push(format!(
+        "  \"faces\": {}, \"inner\": {:.6}, \"mid\": {:.6},",
+        app.gen.faces.len(),
+        app.gen_params.inner_scale,
+        app.gen_params.mid_scale
+    ));
+    m.push(String::from(
+        "  \"note\": \"frames are payload and gitignored; --run regenerates them byte for byte. \
+         seal is the exact integer witness, the oklab fields are the perceptual one (DISPLAY \
+         lane: cbrt and powf are not correctly rounded).\",",
+    ));
+    m.push(String::from("  \"oklab_sample_stride\": 37,"));
+    m.push(String::from("  \"frames_detail\": ["));
+    m.push(rows.join(",\n"));
+    m.push(String::from("  ]"));
+    m.push(String::from("}"));
+    let _ = fs::write(out.join("MOVIE.json"), m.join("\n") + "\n");
+
+    Ok(format!(
+        "movie  {name:<22} {frames} frames  {:.2} GB  {:.1} s  {:.1} fps  -> movie_{name}/",
+        written as f64 / 1_073_741_824.0,
+        secs,
+        frames as f64 / secs.max(1e-9)
+    ))
+}
+
 /// Run a script against a headless `App`. Returns the number of failures.
 ///
 /// **Why this lives in Rust and not in a shell script.**
@@ -1813,6 +2052,7 @@ fn run_script(src: &str) -> i32 {
 
     println!("canvas   {W} x {H}   headless, no window, no compositor");
     println!("session  {}", app.session_dir.display());
+    report_disk();
     println!();
 
     for raw in src.split([';', '\n', '\r']) {
@@ -1911,37 +2151,50 @@ fn run_script(src: &str) -> i32 {
                     }
                 }
             }
-            // sweep a slider and shoot every step: this is how a movie is made
-            "sweepinner" | "sweepmid" => {
-                let id = if verb == "sweepinner" { 20 } else { 21 };
-                let parts: Vec<&str> = arg.split_whitespace().collect();
-                match parts.as_slice() {
-                    [lo, hi, n, name] => {
+            // MOVIES. Frames at 60/s, priced exactly before the first write.
+            //
+            //   movie spin  <frames> <name>
+            //   movie inner <lo> <hi> <frames> <name>
+            //   movie mid   <lo> <hi> <frames> <name>
+            "movie" => {
+                let a: Vec<&str> = arg.split_whitespace().collect();
+                let parsed: Result<(&str, f64, f64, u32, &str), String> = match a.as_slice() {
+                    ["spin", n, name] => n
+                        .parse::<u32>()
+                        .map(|k| ("spin", 0.0, 1.0, k, *name))
+                        .map_err(|_| format!("frames must be a number, got '{n}'")),
+                    [ch @ ("inner" | "mid"), lo, hi, n, name] => {
                         match (lo.parse::<f64>(), hi.parse::<f64>(), n.parse::<u32>()) {
-                            (Ok(a), Ok(b), Ok(k)) if k > 0 => {
-                                let mut rows = Vec::new();
-                                for f in 0..=k {
-                                    let t = f as f64 / k as f64;
-                                    let v = a + t * (b - a);
-                                    app.gen_set(id, v);
-                                    rows.push(app.shot_named(&dir, &format!("{name}_{f:04}")));
-                                }
-                                rows.join(
-                                    "
-",
-                                )
-                            }
-                            _ => {
+                            (Ok(l), Ok(h), Ok(k)) => Ok((*ch, l, h, k, *name)),
+                            _ => Err(format!("bad numbers in 'movie {arg}'")),
+                        }
+                    }
+                    _ => Err(String::from(
+                        "usage: movie spin <frames> <name> | movie inner|mid <lo> <hi> <frames> <name>",
+                    )),
+                };
+                match parsed {
+                    Ok((ch, lo, hi, n, name)) => {
+                        match run_movie(&mut app, &dir, ch, lo, hi, n, name) {
+                            Ok(msg) => msg,
+                            Err(e) => {
                                 failures += 1;
-                                format!("FAIL   {verb} wants: lo hi steps name")
+                                format!("FAIL   {e}")
                             }
                         }
                     }
-                    _ => {
+                    Err(e) => {
                         failures += 1;
-                        format!("FAIL   {verb} wants: lo hi steps name, got '{arg}'")
+                        format!("FAIL   {e}")
                     }
                 }
+            }
+            // what the frame is MADE of, in a space where distance means
+            // something. The seal says different; this says how different.
+            "stats" => {
+                app.render();
+                let st = goldberg_kernel::oklab::FrameStats::measure(&app.cv.px, 37);
+                format!("stats  {st}")
             }
             "status" => format!("status {}", app.status),
             other => {

@@ -30,6 +30,23 @@ rustium_certificate.json
 !/runs/**/LAYOUT.json
 !/runs/**/DRIVE.log
 
+# -- MOVIES: the frames are a CACHE, not a record -----------------------------
+# `gos_viewer --run "movie ..."` rewrites them byte for byte -- the clock left
+# the frame (R10) precisely so that would be true -- so the payload never needs
+# to travel. MOVIE.json does: it carries every frame's seal and its perceptual
+# statistics, which is the part that cannot be regenerated from nothing.
+#
+# The scale, exact rather than estimated (raster::png_bytes, stored deflate):
+#
+#   1920x1080    5.93 MB/frame     60 frames    0.35 GB
+#   3840x2160   23.73 MB/frame     60 frames    1.39 GB
+#   7680x4320   94.93 MB/frame     60 frames    5.56 GB
+#
+# ONE 8K FRAME IS 94.93 MB -- five short of the 100 MB limit that bounces an
+# ENTIRE push (Curse 31). Nothing at that size is ever tracked here.
+/runs/**/movie_*/*.png
+!/runs/**/movie_*/MOVIE.json
+
 # Rendered output from `cargo run --example ...` lands in the crate root.
 # Ignored as a CLASS, not name by name: enumerating `c60_*.png` already missed
 # `dashboard_skeleton.png` within the hour, which is R11's lesson again -- a
