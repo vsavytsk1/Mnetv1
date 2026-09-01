@@ -3,6 +3,8 @@
 ### Grimoire Volume III-B -- exact closure, golden selection, and the renormalized spectrum
 *Opened: 2026-07-30. Expanded to v3.0: 2026-07-31 -- Buenos Aires + Ancient Korinthos.*
 *Companion to `shell/aequalium_v2.4.7.html`, `kernel/light_matrix_v3.js`, and `experiments/light_matrix_v3.py`.*
+*The LIVE page is now `shell/thea_light_matrix_v1.3.9.html` -- see PART XI at the end,*
+*added 2026-09-01. Parts I--X are unchanged and still describe the v3 core.*
 *Sub-scroll of the cave. P=12. chi=2. The price is always paid. Always.*
 
 ---
@@ -1570,3 +1572,151 @@ above are also derived and reproduced directly by the supplied code.
 pentagons hold; the hexes pay; the error remains visible.*
 
 *P=12. chi=2. spec(M_light)={phi^2,1,-1,phi^-2}. The price is always paid. Always.*
+
+---
+---
+
+# PART XI -- THE v1.3.x LINE, AND WHAT SECTION X SETTLED
+### *added 2026-09-01, from `shell/thea_light_matrix_v1.3.9.html`*
+
+THEA v3.0 above was written on 2026-07-31 against `aequalium_v2.4.7` and
+`light_matrix_v3.py`. The page has moved on three times since. This part
+records what changed, measured rather than remembered, and one number it
+settles that this cave had open.
+
+## THE LINEAGE -- and the mathematics did not change
+
+| version | bytes | what moved |
+|---|---:|---|
+| `v1.3.7` | 481,650 | KaTeX from a CDN, plus ~300 KB of **pre-rendered** KaTeX SVG inline |
+| `v1.3.8` | 181,929 | the CDN and the pre-rendered SVG both gone. **Self-contained, zero external links.** |
+| `v1.3.9` | 209,625 | adds the **dependency DAG** over the sections |
+
+**All nineteen `claim:` strings are byte-identical across all three.** Checked
+by extracting them in order and comparing; 19/19 in both directions. So the
+delivery changed twice and the mathematics did not change at all -- which is
+the honest reading of a 60% size drop, and the reason to check before assuming
+something was lost.
+
+Two things worth knowing before opening them:
+
+* **v1.3.8 and v1.3.9 have no `</body>` and no `</html>`.** v1.3.7 has both.
+  All four `<script>` blocks in each file pass `node --check` (88,477 /
+  17,381 / 16,501 / 15,542 chars in v1.3.8; 109,443 / same three in v1.3.9),
+  so the files are **complete** and the omission is authoring, not truncation.
+  They are shipped exactly as received -- byte-identical, sha256 verified --
+  because a page we silently repaired would no longer be the author's v1.3.9.
+* v1.3.8 dropping the CDN is a real gain and not only a size one: the page now
+  has **zero external links**, so it renders from the filesystem with nothing
+  to fetch and nothing to go stale.
+
+## WHAT v1.3.9 ADDS -- the scroll learns its own shape
+
+Nineteen sections, each now carrying a level and a dependency list:
+
+```text
+  ☀  lv0             I  lv0  <- ☀           II  lv1
+  III lv1 <- II      IV lv0                  V  lv2 <- IV
+  VI  lv2 <- V,IV    VII lv3 <- ☀,I         VIII lv3 <- VII,VI
+  IX  lv5 <- VI      X  lv3 <- VII,VIII,III  XI lv1 <- IV
+  XII lv1 <- I       XIII lv3 <- XII         XIV lv5 <- VI
+  XV  lv4 <- VI,XIV  XVI lv5 <- XIV          XVII lv6 <- IX,XIV
+  XVIII lv5 <- XV,XIV,II
+```
+
+Seven levels, 0 through 6. The page can now say which sections a claim rests
+on, which is the difference between a list of results and a tower. **STATUS:
+COMPUTED** -- the graph is in the page and drawn from it, not asserted here.
+
+## SECTION X SETTLES A NUMBER THIS CAVE HAD OPEN
+
+`OPEN #6` in the 2026-08-19 and 2026-08-21 handoffs asked what the true
+constant is in the shell's spectral gap, against HELENI v2's `lambda_2 =
+4.3484/T`.
+
+Section X derives it from three gifts, **none of them ours**: the honeycomb
+three-point stencil (three bonds at 120 degrees give \(\Sigma(\hat e\cdot
+\nabla)^2 = \tfrac32\nabla^2\), so \(L \approx -\tfrac34 a^2\nabla^2\)); the
+bookkeeping of area (each site owns \(\tfrac{3\sqrt3}{4}a^2\), and twelve
+pentagons are measure zero as \(T\to\infty\)); and the sphere's own ladder
+\(\ell(\ell+1)\) with degeneracies 3, 5, 7. Multiply the three:
+
+$$T\cdot\lambda_2 \;\longrightarrow\; \frac{2\pi}{5\sqrt3} \;=\; 0.7255197\ldots$$
+
+**And it agrees with what was measured here, independently, before v1.3.9
+existed.** On 2026-08-20 the C60 adjacency spectrum was diagonalised in this
+cave with a Jacobi rotation using only `+ - * / sqrt` -- the certified path, no
+transcendentals:
+
+| T | shell | \(\lambda_2(L)\) measured | \(T\lambda_2\) | gap from \(2\pi/5\sqrt3\) |
+|---:|---|---:|---:|---:|
+| 1 | C20 | \(3-\sqrt5=0.763932\) | 0.763932 | **+0.03841** |
+| 3 | C60 | 0.243402 | 0.730205 | **+0.00469** |
+
+Both above the limit, and **the gap shrank by a factor of eight in one rung.**
+
+> **STATUS: the `1/T` FORM is corroborated. The CONSTANT is settled by
+> derivation, and two measured points descend toward it. Two points are a
+> trend, not a convergence -- a third rung (T=4 or T=7) is OWED.**
+
+And the contrast that closes the open item:
+
+```text
+  derived      2*pi/(5*sqrt3)  =  0.7255197
+  HELENI v2    4.3484          =  5.994 x the derived limit
+```
+
+Within 0.1% of exactly **six times** too large. **HYPOTHESIS, and it must be
+labelled one:** a factor of six is what a hexagon's neighbour count looks like,
+so a per-vertex versus per-edge normalisation is the first place to look. It
+may equally be coincidence at that precision. Nobody has checked, and this
+scroll should not pretend otherwise.
+
+## THE THREE SECTIONS THAT KEEP THEIR OWN MISTAKES
+
+Worth naming, because the cave's own laws say the wrong half is usually the
+finding, and this page practises it rather than citing it:
+
+* **XIII** -- the first audit assumed the twelve vertices attract under
+  \(g_{11}\). They do not; \(g_{11}\) attracts to the **twenty faces**. The
+  correction is kept as the point of the section.
+* **XV** -- a prediction was registered that the float64 ladder would compound
+  catastrophically. It is **WRONG**, and structurally so. The refutation is
+  kept instead of the prediction, *"because the record is the point."*
+* **XVIII** -- and the finding that should worry us most:
+
+> *"Four hundred sims deep and this is the first place float compute has
+> cracked. ... The headline is not what you would guess: the cave's own
+> invariant \(\chi = 2\) fails BEFORE the numbers it is made of."*
+
+That last sentence belongs beside RUSTIUM R3 and the `THE TWO WALLS` section:
+an invariant that fails *earlier* than its own inputs is a check whose failure
+mode nobody priced. `Gos` derives \(\chi\) from trivalence precisely so it is
+*allowed* to be wrong -- but it has never been run at the depth where v1.3.9
+says the crack opens. **OWED: reproduce section XVIII's ladder in the Rust and
+find out whether our \(\chi\) cracks at the same rung.**
+
+## WHERE THEY LIVE
+
+```text
+  shell/thea_light_matrix_v1.3.8.html   sha256 702a4dfaf0130db4...
+  shell/thea_light_matrix_v1.3.9.html   sha256 f249f65647ace8ca...
+```
+
+Both byte-identical to the files handed over. v1.1, v1.2, v1.3.1 and v1.3.7
+stay frozen beside them -- Path X, the whole journey published, the dead ends
+included.
+
+The ENG dashboard was regenerated against them and the card advanced
+`THEA_LIGHT_MATRIX_V1.3.7 -> V1.3.9` with all six versions still in the URL
+map. Note what the scanner did *first*: it refused to card the new files while
+they were untracked, because `sim_scan` holds that **TRUTH = GIT** -- Pages
+will not serve an untracked file, so a card for one would be a lie. The count
+moved 388 -> 390 only after `git add`.
+
+---
+
+*Added 2026-09-01. The mathematics did not change; the delivery got honest*
+*twice, and the scroll learned its own dependency graph.*
+
+*P=12. chi=2. T*lambda_2 -> 2*pi/(5*sqrt3). Two points are a trend.*
