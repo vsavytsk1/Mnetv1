@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # build_eng_v2_clean.py
-# KERNELIMAGIC compliant: Pattern 2, ASCII only, one f-string at end
+# KERNELIC_MAGIC compliant: Pattern 2, ASCII only, one f-string at end
 import time, subprocess
 from pathlib import Path
 
@@ -27,7 +27,7 @@ def read_js(name):
     return js
 
 print("Building eng_v2.0.html -- MASTER CONTROL DASHBOARD")
-print("Following KERNELIMAGIC Pattern 2 -- ASCII only")
+print("Following KERNELIC_MAGIC Pattern 2 -- ASCII only")
 
 M1 = read_js("goldberg_kernel.js")
 M2 = read_js("graph_axioms.js")

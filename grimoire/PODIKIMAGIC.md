@@ -333,7 +333,7 @@ PERFORMANCE RULES:
   - Do not claim performance wins without evidence.
 ```
 
-OUR MIRROR (KERNELIMAGIC + GALACTIC LAW):
+OUR MIRROR (KERNELIC_MAGIC + GALACTIC LAW):
   Curse 5: File Too Long. Bound your operations.
   Curse 14: CR Accumulator. Persist atomically (normalize, then write).
   Curse 18-19: Windows/Shell Devour. One script, one run.
@@ -359,7 +359,7 @@ OUR MIRROR (KERNELIMAGIC + GALACTIC LAW):
  CI runs cargo test + cargo clippy -D warnings.
 ```
 
-OUR MIRROR (KERNELIMAGIC Curse 18):
+OUR MIRROR (KERNELIC_MAGIC Curse 18):
   Windows Devour. The local environment lies.
   The friend's solution: containerize EVERYTHING.
   Our solution: full Python path, heredoc scripts.
@@ -1041,7 +1041,7 @@ REQUIRED IN PRODUCTION:
   - Rejection tests for every trust boundary
   - Compact machine-readable agent reports
 
-Our mirror: KERNELIMAGIC.
+Our mirror: KERNELIC_MAGIC.
   Curse 5: bounded operations.
   Curse 14: atomic writes (normalize, then write).
   Curse 25: never fake what you cannot verify.
@@ -1160,7 +1160,7 @@ WORK RULES:
   - If worktree is dirty, document pre-existing dirty files.
   - Do not commit automatically unless asked.
 
-Our mirror: KERNELIMAGIC Curse 14 (gitiumCurse).
+Our mirror: KERNELIC_MAGIC Curse 14 (gitiumCurse).
   git checkout is always the answer.
   Pattern 3 is always the protocol.
   One script. One run. One commit.

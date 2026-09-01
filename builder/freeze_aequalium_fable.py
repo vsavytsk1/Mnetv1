@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 freeze_aequalium_fable.py -- one-shot freezer for Fable's AEQUALIUM v2.3..v2.4.3.
-KERNELIMAGIC compliant: ASCII-only source, one script one run (Path VI).
+KERNELIC_MAGIC compliant: ASCII-only source, one script one run (Path VI).
 
 Fable delivered standalone HTML (kernel embedded verbatim). We freeze each as its
 own immutable shell/ artifact (Path X) after healing a Curse-25 escape leak:

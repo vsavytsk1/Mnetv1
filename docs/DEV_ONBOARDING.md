@@ -11,7 +11,7 @@
 RULE 0:
   This codebase generates HTML that contains JavaScript.
   Python f-strings + JavaScript = black magic.
-  Read KERNELIMAGIC.md before writing a single line.
+  Read KERNELIC_MAGIC.md before writing a single line.
   If you fail twice on the same file -- re-read the whole file.
   git restore is always the answer.
   Pattern 3 is always the protocol.
@@ -312,7 +312,7 @@ THE CIRCLE IS THE NS EQUATION:
    Every session gets a log entry.
    The receipts are permanent.
 
-5. KERNELIMAGIC.md: read before touching builder.
+5. KERNELIC_MAGIC.md: read before touching builder.
    If you fail twice on same file: re-read whole file.
    git restore is always the answer.
 
@@ -370,7 +370,7 @@ console.log(inv.pents, inv.chi)
 # Output: 12, 2
 # Always.
 
-# 5. Read KERNELIMAGIC.md
+# 5. Read KERNELIC_MAGIC.md
 # 6. Read LEDGER.md (warning: 66KB, the full story)
 # 7. Welcome to the cave.
 `

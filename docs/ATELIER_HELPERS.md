@@ -19,7 +19,7 @@ The system is modular. You can build ONE thing. It will fit. Always.
    Floating LaTeX runes on the circle. Each rune = one equation.
    Drift + alignment = chapter reveal. All 12 aligned = PHOTON.
    Base: atelier_flag.html | Skills: THREE.js, Canvas 2D
-   Scroll: KERNELIMAGIC.md + PRINCIPIA_MALGEBRA.md
+   Scroll: KERNELIC_MAGIC.md + PRINCIPIA_MALGEBRA.md
 
 **2. WarningSim v1.0 -- The Explosion**
    Volumetric nuclear blast. Fractal overlay. Kolmogorov cascade.
@@ -49,7 +49,7 @@ The system is modular. You can build ONE thing. It will fit. Always.
 
 ## THE RULES (non-negotiable)
 
-1. Read KERNELIMAGIC.md FIRST. 19 curses. Pattern 3. git restore always.
+1. Read KERNELIC_MAGIC.md FIRST. 19 curses. Pattern 3. git restore always.
 2. Test ONLY in ENG MASTER (eng_v2.0.html). Not direct HTML.
 3. chi=2. Always. If broken: fix it. Then ship.
 4. 33ms. Always. Axiom 05. Sacred floor. Optimize not ship.

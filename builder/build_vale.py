@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # build_vale.py -- VALE v1.1
-# KERNELIMAGIC: Pattern 2, ASCII only, string concat assembly, no f-string JS
+# KERNELIC_MAGIC: Pattern 2, ASCII only, string concat assembly, no f-string JS
 import time, subprocess
 from pathlib import Path
 
@@ -22,7 +22,7 @@ def read_js(name):
     print("  M: " + name.ljust(30) + str(len(js)//1024) + "KB")
     return js
 
-print("VALE v1.1 -- polar window layout -- KERNELIMAGIC Pattern 2")
+print("VALE v1.1 -- polar window layout -- KERNELIC_MAGIC Pattern 2")
 M1 = read_js("goldberg_kernel.js")
 M2 = read_js("graph_axioms.js")
 M3 = read_js("sar_modular.js")

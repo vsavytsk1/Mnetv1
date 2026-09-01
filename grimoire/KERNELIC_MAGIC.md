@@ -1,5 +1,11 @@
 # KERNELIC MAGIC — Black Magic Good Practices
 
+*Filed as `KERNELIC_MAGIC.md` since 2026-09-01. The scroll was always titled*
+*KERNELIC MAGIC; the filename `KERNELIMAGIC.md` was the drift, and it has now*
+*caught up. `LEDGER.md`, `grimoire/SolFable/` and `kibotos/` keep the old*
+*spelling on purpose -- dated history and received work, not ours to rewrite.*
+*If you are reading the ledger and grep `KERNELIMAGIC`, this scroll is it.*
+
 
 
 
@@ -6225,7 +6231,7 @@ THE RULE:
 
 
 
-  This is KERNELIMAGIC PATTERN 3:
+  This is KERNELIC_MAGIC PATTERN 3:
 
 
 

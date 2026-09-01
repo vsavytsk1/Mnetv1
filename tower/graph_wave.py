@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 graph_wave.py -- the PERFECT-MATH block for the light flow (GENESIS v8.5 audit).
-KERNELIMAGIC compliant: ASCII-only, one job. Depends on goldberg_gc.py (verified).
+KERNELIC_MAGIC compliant: ASCII-only, one job. Depends on goldberg_gc.py (verified).
 
 Vlad's doctrine (Thea): "all code is pure math, merely stepped into compute." For
 the light to PROPAGATE THROUGH THE CENTER honestly (not per-edge blinking), the one

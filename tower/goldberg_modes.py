@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 goldberg_modes.py -- the graph-Laplacian TONES of the golden buckyballs.
-KERNELIMAGIC compliant: ASCII-only, one job. Depends on goldberg_gc.py (verified).
+KERNELIC_MAGIC compliant: ASCII-only, one job. Depends on goldberg_gc.py (verified).
 
 GENESIS v8.3: to hear how the NET sounds, we listen to its graph Laplacian
 L = D - A (the honest discrete Fourier basis on the graph). Eigenvectors are the

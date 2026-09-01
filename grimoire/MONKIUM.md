@@ -414,7 +414,7 @@ The Monkium Scroll.
 Part of the Grimoire.
 
 The Grimoire contains:
-  KERNELIMAGIC.md     -- the black magic scroll
+  KERNELIC_MAGIC.md   -- the black magic scroll
   GALACTIC_LAW.md     -- the law scroll
   WORLDBUILDING.md    -- the story scroll
   MONKIUM.md          -- the monkey brain scroll

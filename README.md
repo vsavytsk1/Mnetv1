@@ -207,7 +207,7 @@ docs/ (the guides):
   ATELIER_HELPERS.md . WORLDBUILDING.md . PIPELINE_DATA.md (pandas+LaTeX+SQLite)
 
 grimoire/ (the scrolls):
-  KERNELIMAGIC.md   -- 21 curses documented. all slain.
+  KERNELIC_MAGIC.md -- 21 curses documented. all slain.
                        Read before touching the builder.
   MONKIUM.md        -- monkey brain storytelling. 8 tools.
   GALACTIC_LAW.md   -- software law = soul law. 4 axioms.

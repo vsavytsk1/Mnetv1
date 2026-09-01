@@ -9,7 +9,7 @@ harmonics = lower residual = more degrees of certainty. Gibbs guarantees the
 "=" is asymptotic, never exactly reached: that is the honesty (Path III --
 target is not result; show the residual, never fake the prize).
 
-KERNELIMAGIC compliance:
+KERNELIC_MAGIC compliance:
   * ASCII-ONLY python source (Curse 2). Unicode lives in the OUTPUT only, via
     HTML entities and \\uXXXX escapes inside JS string literals.
   * NO f-string wraps the JS (Curse 1/4). JS is a plain triple-quoted string;

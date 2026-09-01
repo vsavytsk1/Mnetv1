@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 build_tower.py -- the physics vector-space tower builder.
-KERNELIMAGIC compliant: ASCII-only source, no deps, one job.
+KERNELIC_MAGIC compliant: ASCII-only source, no deps, one job.
 
 The idea (Vlad): every known physics/eng formula is a POINT in a LaTeX vector
 space; its derivation/prerequisite links are EDGES (graph math to all the

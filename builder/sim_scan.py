@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 sim_scan.py -- the self-discovering sim registry for the ENG master control.
-KERNELIMAGIC compliant: ASCII only, no deps, one job.
+KERNELIC_MAGIC compliant: ASCII only, no deps, one job.
 
 The builder is absolute. This scanner makes the master control DISCOVER every
 sim on disk instead of a hand-typed list that drifts (the dum-dum we are fixing).

@@ -73,7 +73,7 @@ duplicates** of files already here, verified by sha256 before removal:
   SOL_FABLE_LATEX_TOWER_v2_1.pdf     -> 01.SolFableTOv2/   (identical)
 ```
 
-968,123 bytes freed, nothing lost. `Thea.md` cites these by BARE NAME in its
+968,123 bytes freed, nothing lost. `THEA.md` cites these by BARE NAME in its
 bundle-layout section (`tests/`, `receipts/`), never by a `grimoire/` path, so
 no citation broke.
 

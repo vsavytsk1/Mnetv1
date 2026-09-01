@@ -4,7 +4,7 @@
 *Opened: 2026-08-17 -- Buenos Aires. Companion to `Gos/` (`goldberg_kernel` v0.2).*
 *R12-R16 added 2026-08-21, the day the viewer grew a command line and four*
 *honest instruments were each caught answering a question nobody asked.*
-*Sub-scroll of the cave. Read `KERNELIMAGIC.md` and `THE_12_PATHS_OF_THE_FRACTAL_MAGE.md` first.*
+*Sub-scroll of the cave. Read `KERNELIC_MAGIC.md` and `THE_12_PATHS_OF_THE_FRACTAL_MAGE.md` first.*
 *P=12. chi=2. The price is always paid. Always.*
 
 ---
@@ -70,9 +70,9 @@ different objects even when they share the same glyph.
 | R16 | The Points Do Not Dominate (costModelDrift) | `snapshot_bytes` counted only points because a comment said they dominate. Measured: 45% at depth 3, 32% at depth 7, and the error GROWS with depth. Plus `refine` holds BOTH generations, so the peak is ~8x the mesh, not the result. | **FIXED** |
 
 **Numbering (DESIGN CHOICE).** RUSTIUM curses run in their own `R` lane so this
-volume can grow without fighting KERNELIMAGIC's global counter (at 38). When a
+volume can grow without fighting KERNELIC_MAGIC's global counter (at 38). When a
 curse here proves *general* -- not specific to Rust or to cargo -- it gets
-promoted into `KERNELIMAGIC.md` and takes the next global number. R3, R4, R12 and R13 are
+promoted into `KERNELIC_MAGIC.md` and takes the next global number. R3, R4, R12 and R13 are
 the current promotion candidates: none of them is really about Rust, and R13 is
 the one that matters most for the census -- it is what happens when a
 generator makes surfaces faster than anybody verifies effects.
@@ -415,7 +415,7 @@ FAMILY:
   was mis-set by one). Curse 26 (False Convergence -- the doc printed the
   intended bound as if it were the measured one). Curse 38 family (a self-
   certifying artifact whose own seal cannot hold). Paths III and IV.
-  **Promotion candidate for KERNELIMAGIC**: nothing about this is Rust-specific.
+  **Promotion candidate for KERNELIC_MAGIC**: nothing about this is Rust-specific.
 
 Curse count: R3. A guard constant that counts TERMS while the code reads it as an INDEX puts the fence one step past the wall -- and Rust wraps silently in release, so the "refuses to guess" promise is false exactly where you ship. i128 reaches n=91, not 92. State the convention; implement the guard with `checked_*`, not a magic number. Always.
 
@@ -481,7 +481,7 @@ FAMILY:
   Curse 38 (The Sandbox Seal) directly -- both are "a gifted kernel carries its
   birth environment". Curse 24 family (the artifact is not the truth; reproduce
   it). Curse 15 (a tool's report is not the state of the file). Paths III, IV,
-  XII. **Promotion candidate for KERNELIMAGIC.**
+  XII. **Promotion candidate for KERNELIC_MAGIC.**
 
 Curse count: R4. A gifted kernel's "33 tests" meant 33 assertions and 0 receipts -- verified statically, never executed. 32 held on the first real run; the one that broke was the one guarding the crate's own honesty promise, and 4 doctests were never reached at all because the suite aborted first. Asserted is not executed. Always.
 
@@ -737,7 +737,7 @@ FAMILY:
   never infer closure from formula counts alone). Curse 26 (a tolerance that
   reports a target). Curse 35 (the fence in the wrong place). Sibling of R3 --
   both are a float or a miscounted constant standing where an integer belongs.
-  **Promotion candidate for KERNELIMAGIC.**
+  **Promotion candidate for KERNELIC_MAGIC.**
 
 Curse count: R7. A float distance threshold decided TOPOLOGY: `min_d*1.15` welds C20/C60/C140 and dies at C380, where the edge spread (1.2156) exceeds the tolerance and 330 of 570 edges vanish. The distance classes never merge -- the decision procedure, not the arithmetic, is what failed. Build adjacency from the exact integer lattice; leave floats on the display path. Topology is an integer question. Always.
 
@@ -1105,7 +1105,7 @@ FAMILY:
   RULE 0 directly -- this is the clause that says "translation, not
   reimplementation", tested. Cousin of the `mul_add` hazard already logged
   there (one fused rounding where the browser does two). Path III and Path IV.
-  **Promotion candidate for KERNELIMAGIC**: nothing about this is Rust-specific.
+  **Promotion candidate for KERNELIC_MAGIC**: nothing about this is Rust-specific.
 
 Curse count: R12. IEEE-754 rounds per OPERATION, so `sum/n` and `sum*(1/n)` are the same number in algebra and different doubles in binary64 -- 34.2% of inputs, measured. `centroid` and `project_to_sphere` were spelled the textbook way and the whole 90-test suite passed on both. Transcribe the expression, not the meaning. Always.
 
@@ -1204,7 +1204,7 @@ FAMILY:
   property differs from its effective one) -- R13 is both, at the scale where a
   table produces them. The viewer's own `card_rects` lesson one layer down: a
   card that looks clickable and is not. Paths III and IV.
-  **Promotion candidate for KERNELIMAGIC**, and the one to carry into the
+  **Promotion candidate for KERNELIC_MAGIC**, and the one to carry into the
   census: reducing 500 sims to a small generator set makes the plumbing nearly
   free and the correspondence nearly all of the remaining work.
 
@@ -2011,7 +2011,7 @@ tongue.
 
 - The certified/display split as a *type-level* discipline with the side named
   in every doc comment.
-- The `R` numbering lane, and promotion into KERNELIMAGIC when a curse proves
+- The `R` numbering lane, and promotion into KERNELIC_MAGIC when a curse proves
   general.
 - `i128` over a bignum dependency: `[dependencies]` stays empty, and the
   ceiling is stated instead of hidden.

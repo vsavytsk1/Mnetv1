@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 goldberg_gc.py -- the Goldberg-Coxeter (k,l) fullerene mesh generator + verifier.
-KERNELIMAGIC compliant: ASCII-only source, stdlib only (math), one job.
+KERNELIC_MAGIC compliant: ASCII-only source, stdlib only (math), one job.
 
 Thea Lane B (certified closure), made geometric. For each (k,l) we:
   1. take the icosahedron (12 verts, 20 outward triangles),

@@ -2,9 +2,14 @@
 ## The Math Core Scroll -- the LIGHT MATRIX
 ### Grimoire Volume III-B -- exact closure, golden selection, and the renormalized spectrum
 *Opened: 2026-07-30. Expanded to v3.0: 2026-07-31 -- Buenos Aires + Ancient Korinthos.*
-*Companion to `shell/aequalium_v2.4.7.html`, `kernel/light_matrix_v3.js`, and `experiments/light_matrix_v3.py`.*
+*Companion to `shell/aequalium_v2.4.7.html` and*
+*`grimoire/SolFable/01.SolFableTOv3/light_matrix_v3.py`. This line used to cite*
+*`kernel/light_matrix_v3.js` and `experiments/light_matrix_v3.py`; neither path*
+*resolves -- the .py moved into SolFable on 2026-09-01 and the .js is in no commit.*
 *The LIVE page is now `shell/thea_light_matrix_v1.3.9.html` -- see PART XI at the end,*
 *added 2026-09-01. Parts I--X are unchanged and still describe the v3 core.*
+*Filed as `THEA.md` since 2026-09-01; it was `Thea.md`, and the title said*
+*THEA all along. `LEDGER.md` and `grimoire/SolFable/` keep the old spelling.*
 *Sub-scroll of the cave. P=12. chi=2. The price is always paid. Always.*
 
 ---

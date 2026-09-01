@@ -305,5 +305,5 @@ kernel telling you it's black magic. Listen to it. Cut the pattern.
 ```
 
 *Filed under the Thea-Heleni Law: effort deserves a reward; the reward is the joke.*
-*Sister scrolls: KERNELIMAGIC.md (the curses), THE_12_PATHS (the capstone),*
+*Sister scrolls: KERNELIC_MAGIC.md (the curses), THE_12_PATHS (the capstone),*
 *GALACTIC_LAW.md (respect the mainframe). White magic only. Pass the scroll.*
