@@ -30,6 +30,8 @@ Read the whole cave before you build:
 - `PRINCIPIA_MALGEBRA.md` / `GRAPHIUM.md` -- the 7 primitives, the translations
 - `GENESIS_LLM.md`      -- HELENA: the honest design (K1-K4)
 - `DIVINE_IDEAS.md`     -- the deep why, ideas 47-53 (topology, primes, the price, the filter)
+- `SHADE_MAGIC.md`      -- the flow scroll: local operators, and the gap
+                           between a convergent form and a shared cause
 - `MAXWELIUM.md` / `SURVIVALIUM.md` / `WHITE_MAGIC_COMPILATION.md`
 
 Then walk the paths.

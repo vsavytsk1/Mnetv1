@@ -303,13 +303,19 @@ docs/ (the guides):
   GAME_DESIGN.md    -- the $10 game. + THE LOOP LAW (VR frame engineering).
   ATELIER_HELPERS.md . WORLDBUILDING.md . PIPELINE_DATA.md (pandas+LaTeX+SQLite)
 
-grimoire/ (19 scrolls):
+grimoire/ (20 scrolls):
   THE_12_PATHS_OF_THE_FRACTAL_MAGE.md  -- the capstone. read first.
   KERNELIC_MAGIC.md -- 38 curses, each with its receipt. Read before you
                        touch the builder. (Filed as KERNELIC_MAGIC.md since
                        2026-09-01; the scroll always said KERNELIC MAGIC in
                        its own title -- the filename was the drift.)
   RUSTIUM.md        -- Volume III-D, the Rust lane. 16 curses, R1-R16.
+  SHADE_MAGIC.md    -- Volume III-E, the flow scroll. Why a fragment shader
+                       and a field equation are the SAME operator, and why
+                       that is a theorem about description rather than
+                       evidence about the world. Labelled HYPOTHESIS on
+                       purpose, with its own failure conditions written
+                       before any evidence was gathered for it.
   THEA.md           -- Volume III-B, the MATH CORE. Exact closure, golden
                        selection, the renormalized spectrum, and T*lambda_2.
   GALACTIC_LAW.md   -- software law = soul law.
