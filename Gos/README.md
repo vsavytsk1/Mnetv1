@@ -10,7 +10,7 @@ holds across the kernel, so it can never own a window — that is why the
 `unsafe` lives in one small FFI crate and nowhere else.
 
 ```
-17 modules · 11 examples · 129 tests · clippy zero · fmt clean
+17 modules · 11 examples · 137 tests · clippy zero · fmt clean
 ```
 
 ---
@@ -22,7 +22,7 @@ holds across the kernel, so it can never own a window — that is why the
 rustup toolchain install stable-x86_64-pc-windows-gnu
 
 cd Gos
-cargo +stable-x86_64-pc-windows-gnu test --workspace     # 129, must be green
+cargo +stable-x86_64-pc-windows-gnu test --workspace     # 137, must be green
 cargo +stable-x86_64-pc-windows-gnu build --release --workspace
 
 # then look at something

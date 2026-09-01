@@ -197,8 +197,22 @@ so *you* are the guard). Every seed x every knob = a unique fractal. The 12 pent
 ## `Gos` -- the same kernel, in Rust
 
 The browser proved the shape. `Gos/` is the shape rebuilt where the arithmetic
-can be pinned down: **16,432 lines of Rust, 17 modules, 124 `#[test]`
-functions, zero dependencies in the kernel crate.**
+can be pinned down: **16,432 lines of Rust, 17 modules, 137 tests green,
+zero dependencies in the kernel crate.**
+
+```text
+   44  goldberg_kernel unit tests
+   76  tests/certification.rs
+    4  gos_viewer
+  ---
+  124  #[test] functions
+   13  doc-tests -- every example in the docs is compiled and run
+  ---
+  137  total, 0 failed
+```
+
+The 13 doc-tests are the reason the docs do not rot: an example that stops
+compiling fails the suite.
 
 ```powershell
 # the toolchain, once -- this line is not optional on Windows, see below
