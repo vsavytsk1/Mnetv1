@@ -13,7 +13,12 @@ Tony Stark lab layout:
 import re, time, subprocess
 from pathlib import Path
 
-ROOT      = Path(__file__).parent.parent
+# One level deeper than it used to sit: this file moved from builder/ into
+# builder/eng/ when the three eng builders were versioned, so ROOT needs a
+# third .parent. A move that silently leaves this at two would point ROOT at
+# builder/ and the scan would find nothing -- loudly, at least, since sim_scan
+# would return zero sims rather than wrong ones.
+ROOT      = Path(__file__).parent.parent.parent
 KERNEL    = ROOT / "kernel"
 SHELL     = ROOT / "shell"
 VERSION   = "v2.0"
@@ -58,6 +63,10 @@ LEDGER_HTML = "".join(
 # Module cards: AUTO-DISCOVERED from disk (sim_scan). The builder is absolute --
 # the master control DISCOVERS every sim on the io pages (KEEP IT ALL: every version,
 # matching the archive) so it can never drift from what is shipped. Add a sim -> it appears.
+# sim_scan stays in builder/ -- it is shared by more than the eng dashboard,
+# so it does not belong inside a version folder for one page.
+import sys
+sys.path.insert(0, str(Path(__file__).parent.parent))
 import sim_scan
 SIMS  = sim_scan.discover()             # ALL versions -- the archive truth (for LINKS)
 CARDS = sim_scan.latest_only(SIMS)      # newest per family -- the DASHBOARD view (pretty cards)

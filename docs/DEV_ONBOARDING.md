@@ -111,7 +111,9 @@ complex changes -- use the builder.
 
 `
 builder/
-  build_eng_v2_clean.py    -- ENG v2.0 master builder
+  eng/v2_0.py              -- ENG v2.0 master builder (LIVE)
+  eng/v2_0_clean.py        -- frozen. Wrote the same file; a collision.
+  eng/v1_0_dashboard.py    -- frozen. Its output no longer exists.
   build_vale.py            -- VALE OS builder
   Atelier/ATELIER.md       -- Atelier workshop notes
   Obsidius/OBSIDIUS.md     -- mind-graph module notes

@@ -14,7 +14,8 @@ question is "what are we even doing", the answer is on this shelf.
 
 **`machinenet_eng_v2_0_master_control.html`** -- the ENG v2.0 master control
 dashboard, as Chromium received it. 361 KB of HTML+JS produced by
-`builder/build_eng_v2.py`.
+`builder/eng/v2_0.py` (which lived at `builder/build_eng_v2.py` when this
+capture was taken).
 
 This is not a keepsake. **It is the target.** The whole Rust visual lane exists
 to paint this without a browser:

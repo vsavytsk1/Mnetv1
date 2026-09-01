@@ -33,8 +33,15 @@ https://vsavytsk1.github.io/Mnetv1/shell/eng_v2.0.html
 
 **ENG v2.0 -- MASTER CONTROL.** 176 live cards from ~380 sims, one URL.
 Click any card. Everything runs in your browser. Zero install.
-The dashboard is BUILT, not hand-listed: `builder/build_eng_v2.py` scans the sims on
-disk and generates every card, so it can never drift from what actually ships.
+The dashboard is BUILT, not hand-listed: `builder/eng/v2_0.py` scans the sims on
+disk and generates every card.
+
+**It has drifted, and the drift is recorded rather than hidden.** The live page
+carries eleven hand-added lines (three ATTENTIUM cards the builder's
+`latest_only` policy would collapse into one), so regenerating today would
+delete four cards and add three. Measured, never by overwriting the page. Until
+the policy question is settled, `shell/eng_v2.0.html` is the artifact of record
+and the builder is not -- see `builder/eng/README.md`.
 
 **Want every single link, no matter how small?** See [`IO_PAGES.md`](IO_PAGES.md) --
 the complete public index of all 475 `.html` pages across every repo.
