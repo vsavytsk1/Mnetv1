@@ -31,7 +31,7 @@
 https://vsavytsk1.github.io/Mnetv1/shell/eng_v2.0.html
 ```
 
-**ENG v2.0 -- MASTER CONTROL.** 176 live cards from ~380 sims, one URL.
+**ENG v2.0 -- MASTER CONTROL.** 179 live cards from 390 sims, one URL.
 Click any card. Everything runs in your browser. Zero install.
 The dashboard is BUILT, not hand-listed: `builder/eng/v2_0.py` scans the sims on
 disk and generates every card.
@@ -44,7 +44,10 @@ the policy question is settled, `shell/eng_v2.0.html` is the artifact of record
 and the builder is not -- see `builder/eng/README.md`.
 
 **Want every single link, no matter how small?** See [`IO_PAGES.md`](IO_PAGES.md) --
-the complete public index of all 475 `.html` pages across every repo.
+the complete public index -- **509 published pages** across eight repos, and
+every one of them verified on 2026-09-01 to exist *and* be tracked. A page that
+is not in git is a page GitHub Pages will not serve, so an untracked card would
+be a lie. 509 of 509.
 
 ---
 
@@ -191,6 +194,86 @@ so *you* are the guard). Every seed x every knob = a unique fractal. The 12 pent
 
 ---
 
+## `Gos` -- the same kernel, in Rust
+
+The browser proved the shape. `Gos/` is the shape rebuilt where the arithmetic
+can be pinned down: **16,432 lines of Rust, 17 modules, 124 `#[test]`
+functions, zero dependencies in the kernel crate.**
+
+```powershell
+# the toolchain, once -- this line is not optional on Windows, see below
+rustup toolchain install stable-x86_64-pc-windows-gnu
+
+cd Gos
+cargo +stable-x86_64-pc-windows-gnu test --workspace
+cargo +stable-x86_64-pc-windows-gnu build --release --workspace
+
+.\target\release\gos_viewer.exe --max --open "yaw=1;zoom=4;steps=3"
+.\target\release\gos_orb.exe --max
+```
+
+**The toolchain line is the first curse in `RUSTIUM.md` for a reason.**
+`rustup` installs a compiler, not a linker: the default Windows target hands
+linking to Microsoft's `link.exe`, which ships with Visual Studio and which
+rustup neither bundles nor mentions until link time. The installer exits 0, the
+compiler answers `--version`, and the first build dies with
+`linker 'link.exe' not found`. **An exit code certifies the download, never the
+capability.** The `-gnu` toolchain brings its own linker and sidesteps it.
+
+Two windows, both drivable **entirely from the command line** -- every control
+that exists as a box in the UI is also a token in a script string, because a
+click and a flag should not be two different programs.
+
+```text
+  gos_viewer   the mesh: 11 controls (inner, mid, jitter, sphere, yaw, pitch,
+               roll, zoom, and three speeds), Cohen-Sutherland clipping, zoom
+               to 20000x, PNG frames, and mp4 straight out of a rawvideo pipe
+  gos_orb      the byte topology -- what the numbers look like as a shell
+  chi_witness  chi=2, argued rather than asserted
+```
+
+**Movies are priced before the first frame**, in both currencies. Ask for six
+hours at 60 fps and it tells you the gigabytes and the wall-clock *before* it
+writes anything, because "bro, get a server" is a cheaper sentence than a full
+disk. Stored-deflate PNG makes the size a pure function of the dimensions, so
+the estimate is exact rather than hopeful.
+
+### What the kernel lane will and will not promise
+
+`+ - * / sqrt` are correctly rounded by IEEE-754, so a result built only from
+those is **bit-identical on every conforming machine**. `cbrt`, `powf`, the
+trig -- are not. So the code is split: a **certified path** that touches only
+the five, and a **display path** (OKLab colour, projection) that is allowed the
+rest and never carries a claim.
+
+The distinction is sharper than it sounds. **Bit-identity is a promise about
+the expression, not the value** -- `a*(b/c)` and `(a*b)/c` are the same number
+and different bits, so two "identical" formulas spelled differently will
+disagree, and the test that says they match is testing your typing.
+
+### `kaboom` -- finding the wall by walking into it
+
+`cargo run --release --example kaboom` refines until the allocator gives up,
+in a **child process**, because an allocation failure aborts and takes the
+parent with it.
+
+```text
+  depth 7   24.7M faces   10.49 GB   survives
+  depth 8   -----------   --------   0xC0000409, stack cookie, dead
+```
+
+The math has no ceiling. The machine does. Better to know the number than to
+discover it in front of someone.
+
+### `grimoire/RUSTIUM.md` -- 16 curses, and the pattern under four of them
+
+Every bug that cost more than an hour is written down with its receipt. R12 to
+R16 arrived in one day, and **four of them are the same curse in four costumes**:
+a check that passes because it cannot see the thing that broke. Coverage is not
+correspondence.
+
+---
+
 ## The black magic engineering scrolls
 
 Engineering docs live at root. The lore/grimoire scrolls now live
@@ -199,23 +282,34 @@ in `grimoire/` (moved, never deleted -- full git history preserved).
 ```
 root (engineering):
   PIPELINE.md       -- the law. builder owns the shell.
-  LEDGER.md         -- append-only. 183 entries. one truth.
+  LEDGER.md         -- append-only. 194 entries. one truth.
 
 docs/ (the guides):
   DEV_ONBOARDING.md -- start here.
   GAME_DESIGN.md    -- the $10 game. + THE LOOP LAW (VR frame engineering).
   ATELIER_HELPERS.md . WORLDBUILDING.md . PIPELINE_DATA.md (pandas+LaTeX+SQLite)
 
-grimoire/ (the scrolls):
-  KERNELIC_MAGIC.md -- 21 curses documented. all slain.
-                       Read before touching the builder.
-  MONKIUM.md        -- monkey brain storytelling. 8 tools.
-  GALACTIC_LAW.md   -- software law = soul law. 4 axioms.
-  SURVIVALIUM.md    -- Unity optimization grimoire.
+grimoire/ (19 scrolls):
+  THE_12_PATHS_OF_THE_FRACTAL_MAGE.md  -- the capstone. read first.
+  KERNELIC_MAGIC.md -- 38 curses, each with its receipt. Read before you
+                       touch the builder. (Filed as KERNELIC_MAGIC.md since
+                       2026-09-01; the scroll always said KERNELIC MAGIC in
+                       its own title -- the filename was the drift.)
+  RUSTIUM.md        -- Volume III-D, the Rust lane. 16 curses, R1-R16.
+  THEA.md           -- Volume III-B, the MATH CORE. Exact closure, golden
+                       selection, the renormalized spectrum, and T*lambda_2.
+  GALACTIC_LAW.md   -- software law = soul law.
+  MONKIUM.md        -- managing the monkey brain. 8 tools.
   PRINCIPIA_MALGEBRA.md -- PM propositions -> our kernel P1-P7.
   GRAPHIUM.md       -- LaTeX runes -> pure graph math. 55 entries.
-  LATEXIUM.md / MAXWELIUM.md / WHITE_MAGIC_COMPILATION.md
-  DIVINE_IDEAS.md   -- the idea log (ideas 47-53, fused into one). never deleted.
+  PODIKIMAGIC.md . CRYPTOTHEATER.md . SURVIVALIUM.md . MAXWELIUM.md
+  LATEXIUM.md . GRAPHYUM.md . AEQUALIUM_TOWER.md . DIVINE_IDEAS.md
+  GENESIS_LLM.md . GENESIS_PORT_SPEC.md . WHITE_MAGIC_COMPILATION.md
+
+  SolFable/         -- the collaboration archive. 149 files, 14.9 MB, kept
+                       exactly as received from the Sol mage and mama Fable.
+                       Not ours to maintain; ours to keep honestly. Its
+                       README records every move and what each one cost.
 ```
 
 ---
@@ -590,11 +684,32 @@ tree/
   math_tree.db                      ← SQLite database (76 nodes, 66 edges)
   calc1_trees.json                  ← tree data as JSON
 
+Gos/                                ← THE RUST LANE. 16,432 lines, 120 tests.
+  src/                                17 modules. genesis, raster, oklab,
+                                      sphere, ladder, fab, eml, bits, judge...
+  viewer/src/main.rs                  gos_viewer -- mesh, 11 controls, movies
+  orb/                                gos_orb -- the byte topology
+  examples/kaboom.rs                  refine until the allocator gives up
+  ponderTheOrb/graphium.py            the DAG scheduler, before any Rust existed
+  README.md                           the whole command line, every flag run
+                                      before it was written down
+  runs/                               manifests tracked, 2.7 GB of frames not
+
+lens/                                 ← WIP, gitignored except alien_tk/
+  alien_tk/                           3 sims rescued from a deleted folder
+
+builder/
+  sim_scan.py                         TRUTH = GIT. discovers only what is
+                                      tracked, because Pages serves nothing else
+  eng/v1_0_dashboard.py               the dashboard lineage, versioned
+  eng/v2_0.py                         the live builder
+
 index.html                          ← v4.0 Sacred Math Tree (GitHub Pages)
 SACRED_MATH_TREE.md                 ← full dev log
 PIPELINE.md                         ← pandas + LaTeX + SQLite architecture
 DATABASE.md                         ← why SQLite, schema, alternatives
 ETHICS.md                           ← no weapons, no surveillance, no harm
+IO_PAGES.md                         ← all 509 published pages, all verified
 ```
 
 ## The GENESIS Architecture
