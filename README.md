@@ -236,7 +236,7 @@ grimoire/ (the scrolls):
 | [Dodecahedron of Open Questions](https://vsavytsk1.github.io/SpookyPrimes/) | 12 open physics problems. Spin it. Click a pentagon. |
 | [Fractal Geometry Builder](https://vsavytsk1.github.io/Mnet/) | C60 recursive shell. Click any face. It opens forever. |
 
-> **ETHICS:** This software shall not be used for weapons, surveillance, or harm. See [ETHICS.md](./ETHICS.md).
+> **ETHICS:** This software shall not be used for weapons, surveillance, or harm. See [ETHICS.md](./docs/ETHICS.md).
 
 > **Engineering body of work:** The Genesis evolution chain (v7.1→v9.0) lives in [`shell/`](./shell/). The GPU benchmark engine and portable pack live in [`pack/`](./pack/). Compute receipts in [`research/compute_receipts/`](./research/compute_receipts/).
 
