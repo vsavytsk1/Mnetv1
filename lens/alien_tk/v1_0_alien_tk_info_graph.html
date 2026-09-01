@@ -1,0 +1,353 @@
+﻿<!DOCTYPE html>
+<html><head><meta charset="UTF-8">
+<title>INFORMATION GRAPH — No Dimensions, Only Topology</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#020205;overflow:hidden;font-family:'Courier New',monospace}
+canvas{display:block}
+#title{position:fixed;top:10px;width:100%;text-align:center;font-family:'Orbitron';color:#ff69b4;font-size:13px;letter-spacing:0.3em;z-index:10}
+#sub{position:fixed;top:30px;width:100%;text-align:center;font-size:8px;color:#444;letter-spacing:0.2em;z-index:10}
+#hud{position:fixed;top:55px;left:14px;color:#00ffd5;font-size:9px;line-height:1.8;z-index:10}
+.pk{color:#ff69b4}.gd{color:#ffd700}.gn{color:#7fff7f}.rd{color:#ff4444}
+#msg{position:fixed;bottom:55px;width:100%;text-align:center;font-family:'Orbitron';font-size:10px;letter-spacing:0.15em;color:#555;z-index:10}
+#controls{position:fixed;bottom:14px;width:100%;text-align:center;z-index:10}
+#controls button{background:none;border:1px solid #333;color:#555;padding:6px 16px;margin:0 4px;cursor:pointer;font-family:'Orbitron';font-size:9px;letter-spacing:0.1em;border-radius:3px;transition:all 0.3s}
+#controls button:hover{border-color:#00ffd5;color:#00ffd5}
+#controls button.on{border-color:#ff69b4;color:#ff69b4;background:rgba(255,105,180,0.1)}
+</style>
+</head><body>
+<div id="title">INFORMATION GRAPH</div>
+<div id="sub">no dimensions &middot; no coordinates &middot; only topology and information flow</div>
+<div id="hud">
+  <div>N <span class="pk" id="hN">-</span> E <span class="pk" id="hE">-</span></div>
+  <div>total info <span class="gd" id="hI">-</span></div>
+  <div>entropy <span class="gn" id="hS">-</span></div>
+  <div>max node <span class="rd" id="hMax">-</span></div>
+  <div>min node <span id="hMin" style="color:#335">-</span></div>
+  <div>steps <span class="gd" id="hSteps">0</span></div>
+  <div>topology <span class="pk" id="hTopo">-</span></div>
+</div>
+<div id="msg">click a node to inject information</div>
+<div id="controls">
+  <button onclick="setTopo('ring')">RING</button>
+  <button onclick="setTopo('grid')">GRID</button>
+  <button onclick="setTopo('cube')">CUBE</button>
+  <button onclick="setTopo('dodec')">DODEC</button>
+  <button onclick="setTopo('random')">RANDOM</button>
+  <button onclick="setTopo('tree')">TREE</button>
+  <button onclick="setTopo('complete')">COMPLETE</button>
+  <button onclick="toggleFlow()" id="bFlow">FLOW</button>
+  <button onclick="toggleDecay()" id="bDecay">DECAY</button>
+  <button onclick="doReset()">RESET</button>
+</div>
+<canvas id="cv"></canvas>
+
+<script>
+var cv=document.getElementById('cv'),cx=cv.getContext('2d');
+var W,H;
+function resize(){W=cv.width=innerWidth;H=cv.height=innerHeight;}
+resize();window.addEventListener('resize',resize);
+
+var nodes=[]; // {x,y,info,vel:{x,y}}
+var edges=[]; // [i,j]
+var adj=[];
+var flowing=false;
+var decaying=false;
+var steps=0;
+var topo='ring';
+
+// === TOPOLOGIES ===
+function makeRing(n){
+  nodes=[];edges=[];adj=[];
+  for(var i=0;i<n;i++){
+    var a=i/n*Math.PI*2-Math.PI/2;
+    nodes.push({x:W/2+Math.cos(a)*200,y:H/2+Math.sin(a)*200,info:0,vx:0,vy:0});
+  }
+  adj=new Array(n);for(var i=0;i<n;i++) adj[i]=[];
+  for(var i=0;i<n;i++){
+    var j=(i+1)%n;
+    edges.push([i,j]);adj[i].push(j);adj[j].push(i);
+  }
+}
+
+function makeGrid(s){
+  nodes=[];edges=[];adj=[];
+  var id=0,grid={};
+  var sp=Math.min(W,H)*0.6/s;
+  var ox=W/2-(s-1)*sp/2,oy=H/2-(s-1)*sp/2;
+  for(var r=0;r<s;r++)for(var c=0;c<s;c++){
+    nodes.push({x:ox+c*sp,y:oy+r*sp,info:0,vx:0,vy:0});
+    grid[r+','+c]=id++;
+  }
+  adj=new Array(nodes.length);for(var i=0;i<nodes.length;i++) adj[i]=[];
+  for(var r=0;r<s;r++)for(var c=0;c<s;c++){
+    var me=grid[r+','+c];
+    [[0,1],[1,0]].forEach(function(d){
+      var key=(r+d[0])+','+(c+d[1]);
+      if(grid[key]!==undefined){
+        edges.push([me,grid[key]]);adj[me].push(grid[key]);adj[grid[key]].push(me);
+      }
+    });
+  }
+}
+
+function makeCubeGraph(){
+  // 8 vertices of cube + 12 edges
+  var v=[ [-1,-1,-1],[-1,-1,1],[-1,1,-1],[-1,1,1],[1,-1,-1],[1,-1,1],[1,1,-1],[1,1,1] ];
+  nodes=[];edges=[];adj=new Array(8);for(var i=0;i<8;i++) adj[i]=[];
+  // Layout: force-directed will handle it, start circular
+  for(var i=0;i<8;i++){
+    var a=i/8*Math.PI*2;
+    nodes.push({x:W/2+Math.cos(a)*150,y:H/2+Math.sin(a)*150,info:0,vx:0,vy:0});
+  }
+  for(var i=0;i<8;i++)for(var j=i+1;j<8;j++){
+    var diff=0;for(var k=0;k<3;k++) if(v[i][k]!==v[j][k]) diff++;
+    if(diff===1){edges.push([i,j]);adj[i].push(j);adj[j].push(i);}
+  }
+}
+
+function makeDodecGraph(){
+  // 20 vertices, 30 edges of dodecahedron dual (icosahedron adjacency)
+  // Actually: 12 nodes (faces of dodec), connected by shared edges
+  var n=12;nodes=[];edges=[];adj=new Array(n);for(var i=0;i<n;i++) adj[i]=[];
+  for(var i=0;i<n;i++){
+    var a=i/n*Math.PI*2;var r=150+((i%2)?40:0);
+    nodes.push({x:W/2+Math.cos(a)*r,y:H/2+Math.sin(a)*r,info:0,vx:0,vy:0});
+  }
+  // Dodecahedron face adjacency (each face touches 5 others)
+  var adjList=[[1,2,3,4,5],[0,2,6,7,5],[0,1,3,8,6],[0,2,4,9,8],[0,3,5,10,9],[0,4,1,11,10],[1,2,7,8,11],[1,6,11,10,5],[2,3,6,9,11],[3,4,8,11,10],[4,5,7,9,11],[6,7,8,9,10]];
+  for(var i=0;i<n;i++){
+    adj[i]=adjList[i];
+    for(var j=0;j<adjList[i].length;j++){
+      var nb=adjList[i][j];
+      if(i<nb) edges.push([i,nb]);
+    }
+  }
+}
+
+function makeRandom(n){
+  nodes=[];edges=[];adj=new Array(n);for(var i=0;i<n;i++) adj[i]=[];
+  for(var i=0;i<n;i++){
+    nodes.push({x:W/2+(Math.random()-0.5)*400,y:H/2+(Math.random()-0.5)*400,info:0,vx:0,vy:0});
+  }
+  // Connect with probability inversely proportional to distance (small world)
+  for(var i=0;i<n;i++)for(var j=i+1;j<n;j++){
+    var dx=nodes[i].x-nodes[j].x,dy=nodes[i].y-nodes[j].y;
+    var d=Math.sqrt(dx*dx+dy*dy);
+    if(d<120||Math.random()<0.03){
+      edges.push([i,j]);adj[i].push(j);adj[j].push(i);
+    }
+  }
+}
+
+function makeTree(depth){
+  nodes=[];edges=[];
+  var id=0;
+  function addNode(x,y){nodes.push({x:x,y:y,info:0,vx:0,vy:0});return id++;}
+  function buildTree(parent,x,y,spread,d){
+    if(d<=0) return;
+    var children=2+Math.floor(Math.random()*2);
+    for(var i=0;i<children;i++){
+      var angle=-Math.PI/2+(i/(children-1||1))*Math.PI-Math.PI/2+Math.PI/2;
+      var cx=x+Math.cos(angle+(Math.random()-0.5)*0.5)*spread;
+      var cy=y+spread*0.8;
+      var child=addNode(cx,cy);
+      edges.push([parent,child]);
+      buildTree(child,cx,cy,spread*0.55,d-1);
+    }
+  }
+  var root=addNode(W/2,80);
+  buildTree(root,W/2,80,180,depth||4);
+  adj=new Array(nodes.length);for(var i=0;i<nodes.length;i++) adj[i]=[];
+  edges.forEach(function(e){adj[e[0]].push(e[1]);adj[e[1]].push(e[0]);});
+}
+
+function makeComplete(n){
+  nodes=[];edges=[];adj=new Array(n);for(var i=0;i<n;i++) adj[i]=[];
+  for(var i=0;i<n;i++){
+    var a=i/n*Math.PI*2-Math.PI/2;
+    nodes.push({x:W/2+Math.cos(a)*180,y:H/2+Math.sin(a)*180,info:0,vx:0,vy:0});
+  }
+  for(var i=0;i<n;i++)for(var j=i+1;j<n;j++){
+    edges.push([i,j]);adj[i].push(j);adj[j].push(i);
+  }
+}
+
+function setTopo(t){
+  topo=t;steps=0;flowing=false;decaying=false;
+  document.getElementById('bFlow').className='';
+  document.getElementById('bDecay').className='';
+  if(t==='ring') makeRing(24);
+  else if(t==='grid') makeGrid(8);
+  else if(t==='cube') makeCubeGraph();
+  else if(t==='dodec') makeDodecGraph();
+  else if(t==='random') makeRandom(40);
+  else if(t==='tree') makeTree(4);
+  else if(t==='complete') makeComplete(8);
+  document.getElementById('hN').textContent=nodes.length;
+  document.getElementById('hE').textContent=edges.length;
+  document.getElementById('hTopo').textContent=t.toUpperCase()+' (deg '+avgDegree()+')';
+  updateHUD();
+}
+
+function avgDegree(){
+  if(!nodes.length) return 0;
+  var sum=0;for(var i=0;i<adj.length;i++) sum+=adj[i].length;
+  return (sum/nodes.length).toFixed(1);
+}
+
+function toggleFlow(){flowing=!flowing;document.getElementById('bFlow').className=flowing?'on':'';}
+function toggleDecay(){decaying=!decaying;document.getElementById('bDecay').className=decaying?'on':'';}
+
+function doReset(){
+  for(var i=0;i<nodes.length;i++){nodes[i].info=0;}
+  steps=0;flowing=false;decaying=false;
+  document.getElementById('bFlow').className='';
+  document.getElementById('bDecay').className='';
+}
+
+// === FORCE-DIRECTED LAYOUT ===
+function forceStep(){
+  var k=80; // ideal edge length
+  // Repulsion between all pairs
+  for(var i=0;i<nodes.length;i++){
+    for(var j=i+1;j<nodes.length;j++){
+      var dx=nodes[j].x-nodes[i].x,dy=nodes[j].y-nodes[i].y;
+      var d=Math.max(1,Math.sqrt(dx*dx+dy*dy));
+      var f=k*k/(d*d)*0.5;
+      nodes[i].vx-=dx/d*f;nodes[i].vy-=dy/d*f;
+      nodes[j].vx+=dx/d*f;nodes[j].vy+=dy/d*f;
+    }
+  }
+  // Attraction along edges
+  for(var i=0;i<edges.length;i++){
+    var a=nodes[edges[i][0]],b=nodes[edges[i][1]];
+    var dx=b.x-a.x,dy=b.y-a.y;
+    var d=Math.max(1,Math.sqrt(dx*dx+dy*dy));
+    var f=(d-k)*0.01;
+    a.vx+=dx/d*f;a.vy+=dy/d*f;
+    b.vx-=dx/d*f;b.vy-=dy/d*f;
+  }
+  // Center gravity
+  for(var i=0;i<nodes.length;i++){
+    nodes[i].vx+=(W/2-nodes[i].x)*0.0005;
+    nodes[i].vy+=(H/2-nodes[i].y)*0.0005;
+    nodes[i].vx*=0.9;nodes[i].vy*=0.9;
+    nodes[i].x+=nodes[i].vx;nodes[i].y+=nodes[i].vy;
+  }
+}
+
+// === INFORMATION FLOW ===
+function infoStep(){
+  var newI=new Float64Array(nodes.length);
+  for(var i=0;i<nodes.length;i++){
+    var sum=0,nb=adj[i];
+    for(var j=0;j<nb.length;j++) sum+=nodes[nb[j]].info;
+    var avg=nb.length?sum/nb.length:0;
+    newI[i]=nodes[i].info*0.5+avg*0.5;
+    if(decaying) newI[i]*=0.998;
+  }
+  for(var i=0;i<nodes.length;i++) nodes[i].info=newI[i];
+  steps++;
+}
+
+function updateHUD(){
+  var total=0,maxI=0,minI=Infinity;
+  for(var i=0;i<nodes.length;i++){
+    total+=nodes[i].info;
+    if(nodes[i].info>maxI) maxI=nodes[i].info;
+    if(nodes[i].info<minI) minI=nodes[i].info;
+  }
+  var entropy=0;
+  if(total>0.001){
+    for(var i=0;i<nodes.length;i++){
+      var p=nodes[i].info/total;
+      if(p>0.0001) entropy-=p*Math.log2(p);
+    }
+  }
+  document.getElementById('hI').textContent=total.toFixed(3);
+  document.getElementById('hS').textContent=entropy.toFixed(3);
+  document.getElementById('hMax').textContent=maxI.toFixed(3);
+  document.getElementById('hMin').textContent=minI.toFixed(4);
+  document.getElementById('hSteps').textContent=steps;
+}
+
+// === RENDER ===
+function render(){
+  cx.fillStyle='rgba(2,2,5,0.2)';cx.fillRect(0,0,W,H);
+  
+  // Edges
+  for(var i=0;i<edges.length;i++){
+    var a=nodes[edges[i][0]],b=nodes[edges[i][1]];
+    var flow=(a.info+b.info)/2;
+    cx.beginPath();cx.moveTo(a.x,a.y);cx.lineTo(b.x,b.y);
+    if(flow>0.01){
+      var h=180-Math.min(1,flow)*180;
+      cx.strokeStyle='hsla('+h+',100%,50%,'+(0.15+flow*0.5)+')';
+      cx.lineWidth=0.5+flow*3;
+    } else {
+      cx.strokeStyle='rgba(0,120,180,0.08)';
+      cx.lineWidth=0.5;
+    }
+    cx.stroke();
+  }
+  
+  // Nodes
+  for(var i=0;i<nodes.length;i++){
+    var nd=nodes[i];
+    var r=3+nd.info*12;
+    cx.beginPath();cx.arc(nd.x,nd.y,r,0,Math.PI*2);
+    if(nd.info>0.5){
+      cx.fillStyle='rgba(255,105,180,'+(0.5+nd.info*0.5)+')';
+      // Glow
+      cx.shadowColor='#ff69b4';cx.shadowBlur=nd.info*20;
+    } else if(nd.info>0.01){
+      var h=180-nd.info*180;
+      cx.fillStyle='hsla('+h+',100%,60%,'+(0.3+nd.info)+')';
+      cx.shadowBlur=0;
+    } else {
+      cx.fillStyle='rgba(0,180,255,0.2)';
+      cx.shadowBlur=0;
+    }
+    cx.fill();cx.shadowBlur=0;
+    
+    // Degree label
+    if(nodes.length<=30){
+      cx.font='7px Courier New';
+      cx.fillStyle='rgba(255,255,255,0.3)';
+      cx.fillText(adj[i].length,nd.x+r+3,nd.y+3);
+    }
+  }
+}
+
+// === CLICK TO INJECT ===
+cv.addEventListener('click',function(e){
+  var mx=e.clientX,my=e.clientY;
+  var closest=-1,closestD=50;
+  for(var i=0;i<nodes.length;i++){
+    var dx=nodes[i].x-mx,dy=nodes[i].y-my;
+    var d=Math.sqrt(dx*dx+dy*dy);
+    if(d<closestD){closestD=d;closest=i;}
+  }
+  if(closest>=0){
+    nodes[closest].info=1.0;
+    document.getElementById('msg').textContent='injected info at node '+closest+' (degree '+adj[closest].length+')';
+    document.getElementById('msg').style.color='#ff69b4';
+  }
+});
+
+// === LOOP ===
+function animate(){
+  forceStep();
+  if(flowing){for(var s=0;s<2;s++) infoStep();}
+  if(steps%15===0) updateHUD();
+  render();
+  requestAnimationFrame(animate);
+}
+setTopo('dodec');
+animate();
+console.log('%c INFORMATION GRAPH ','background:#ff69b4;color:#020205;font-size:14px');
+console.log('%cNo dimensions. No coordinates. Only topology and information.','color:#00ffd5');
+</script>
+</body></html>

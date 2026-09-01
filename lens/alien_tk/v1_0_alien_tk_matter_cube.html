@@ -1,0 +1,346 @@
+﻿<!DOCTYPE html>
+<html><head><meta charset="UTF-8">
+<title>MATTER CUBE — Mass/Energy/Information Tradeoff</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#020205;overflow:hidden;font-family:'Courier New',monospace}
+canvas{display:block}
+#title{position:fixed;top:10px;width:100%;text-align:center;font-family:'Orbitron';color:#ff69b4;font-size:13px;letter-spacing:0.3em;z-index:10}
+#sub{position:fixed;top:30px;width:100%;text-align:center;font-size:9px;color:#555;z-index:10}
+#hud{position:fixed;top:50px;left:14px;color:#00ffd5;font-size:9px;line-height:1.8;z-index:10}
+#hud .pk{color:#ff69b4}#hud .gd{color:#ffd700}#hud .gn{color:#7fff7f}#hud .rd{color:#ff4444}
+#sliders{position:fixed;top:50px;right:14px;z-index:10;font-size:9px;color:#888;text-align:right}
+#sliders label{display:block;margin:4px 0}
+#sliders input[type=range]{width:120px;vertical-align:middle;accent-color:#ff69b4}
+#status{position:fixed;bottom:50px;width:100%;text-align:center;font-family:'Orbitron';font-size:11px;letter-spacing:0.15em;color:#00ffd5;z-index:10}
+#controls{position:fixed;bottom:14px;width:100%;text-align:center;z-index:10}
+#controls button{background:none;border:1px solid #00ffd5;color:#00ffd5;padding:6px 18px;margin:0 4px;cursor:pointer;font-family:'Orbitron';font-size:10px;letter-spacing:0.1em;border-radius:3px}
+#controls button:hover{background:#00ffd5;color:#020205}
+#controls button.pk{border-color:#ff69b4;color:#ff69b4}
+#controls button.pk:hover{background:#ff69b4;color:#020205}
+</style>
+</head><body>
+<div id="title">MATTER CUBE</div>
+<div id="sub">3D volumetric graph &middot; mass/energy/information tradeoff &middot; wave diffusion</div>
+<div id="hud">
+  <div>nodes <span class="pk" id="hN">-</span></div>
+  <div>edges <span class="pk" id="hE">-</span></div>
+  <div>density <span class="gd" id="hD">-</span></div>
+  <div>mass <span class="gn" id="hM">-</span></div>
+  <div>energy <span class="rd" id="hEnergy">-</span></div>
+  <div>information <span class="gd" id="hInfo">-</span></div>
+  <div>entropy <span id="hEntropy">-</span></div>
+  <div>CoM <span class="gn" id="hCoM">0, 0, 0</span></div>
+</div>
+<div id="sliders">
+  <label>density <input type="range" id="sDensity" min="2" max="12" value="6" oninput="rebuild()"></label>
+  <label>mass bias <input type="range" id="sMass" min="0" max="100" value="50" oninput="updateTradeoff()"></label>
+  <label>energy <input type="range" id="sEnergy" min="0" max="100" value="50" oninput="updateTradeoff()"></label>
+  <label>info preserve <input type="range" id="sInfo" min="0" max="100" value="50" oninput="updateTradeoff()"></label>
+</div>
+<div id="status">IDLE</div>
+<div id="controls">
+  <button onclick="rebuild()">REBUILD</button>
+  <button onclick="diffuse()">DIFFUSE</button>
+  <button class="pk" onclick="compress()">COMPRESS</button>
+  <button onclick="doReset()">RESET</button>
+</div>
+<canvas id="cv"></canvas>
+
+<script>
+var cv=document.getElementById('cv'),cx=cv.getContext('2d');
+var W,H;
+function resize(){W=cv.width=innerWidth;H=cv.height=innerHeight;}
+resize();window.addEventListener('resize',resize);
+
+// === MATTER CUBE: dense 3D graph ===
+var nodes=[];     // {x,y,z, bx,by,bz, mass, energy, info, pressure}
+var edges=[];     // [i,j]
+var adj=[];       // adjacency list
+var cam={ry:0.4,rx:0.35,zoom:30};
+var running=false;
+var diffusing=false;
+var compressing=false;
+var stepCount=0;
+
+function rebuild(){
+  var n=parseInt(document.getElementById('sDensity').value);
+  nodes=[];edges=[];adj=[];stepCount=0;
+  var id=0;
+  var grid={};
+  // Build NxNxN cube of nodes
+  for(var ix=0;ix<n;ix++){
+    for(var iy=0;iy<n;iy++){
+      for(var iz=0;iz<n;iz++){
+        var x=(ix-(n-1)/2)*1.0;
+        var y=(iy-(n-1)/2)*1.0;
+        var z=(iz-(n-1)/2)*1.0;
+        nodes.push({
+          x:x,y:y,z:z,
+          bx:x,by:y,bz:z,  // base position
+          mass:1.0,
+          energy:0,
+          info:1.0,
+          pressure:0,
+          id:id
+        });
+        grid[ix+','+iy+','+iz]=id;
+        id++;
+      }
+    }
+  }
+  // Build edges: 6-connected (face neighbors)
+  adj=new Array(nodes.length);
+  for(var i=0;i<nodes.length;i++) adj[i]=[];
+  for(var ix=0;ix<n;ix++){
+    for(var iy=0;iy<n;iy++){
+      for(var iz=0;iz<n;iz++){
+        var me=grid[ix+','+iy+','+iz];
+        var neighbors=[
+          [ix+1,iy,iz],[ix-1,iy,iz],
+          [ix,iy+1,iz],[ix,iy-1,iz],
+          [ix,iy,iz+1],[ix,iy,iz-1]
+        ];
+        for(var ni=0;ni<6;ni++){
+          var nb=neighbors[ni];
+          var key=nb[0]+','+nb[1]+','+nb[2];
+          if(grid[key]!==undefined){
+            var them=grid[key];
+            if(me<them){
+              edges.push([me,them]);
+            }
+            adj[me].push(them);
+          }
+        }
+      }
+    }
+  }
+  // Seed: center node gets pressure
+  var center=Math.floor(nodes.length/2);
+  nodes[center].pressure=1.0;
+  nodes[center].energy=10.0;
+  
+  document.getElementById('hN').textContent=nodes.length;
+  document.getElementById('hE').textContent=edges.length;
+  document.getElementById('hD').textContent=n+'x'+n+'x'+n;
+  document.getElementById('status').textContent='CUBE BUILT: '+nodes.length+' nodes, '+edges.length+' edges';
+  updateTradeoff();
+}
+
+// === TRADEOFF ENGINE ===
+function updateTradeoff(){
+  var massBias=parseInt(document.getElementById('sMass').value)/100;
+  var energyBias=parseInt(document.getElementById('sEnergy').value)/100;
+  var infoBias=parseInt(document.getElementById('sInfo').value)/100;
+  
+  // Compute totals
+  var totalMass=0,totalEnergy=0,totalInfo=0;
+  var comX=0,comY=0,comZ=0;
+  for(var i=0;i<nodes.length;i++){
+    var nd=nodes[i];
+    totalMass+=nd.mass;
+    totalEnergy+=nd.energy;
+    totalInfo+=nd.info;
+    comX+=nd.x*nd.mass;comY+=nd.y*nd.mass;comZ+=nd.z*nd.mass;
+  }
+  if(totalMass>0){comX/=totalMass;comY/=totalMass;comZ/=totalMass;}
+  
+  // Shannon entropy of info distribution
+  var entropy=0;
+  for(var i=0;i<nodes.length;i++){
+    var p=nodes[i].info/Math.max(totalInfo,0.001);
+    if(p>0.0001) entropy-=p*Math.log2(p);
+  }
+  
+  document.getElementById('hM').textContent=totalMass.toFixed(1);
+  document.getElementById('hEnergy').textContent=totalEnergy.toFixed(2);
+  document.getElementById('hInfo').textContent=totalInfo.toFixed(2);
+  document.getElementById('hEntropy').textContent=entropy.toFixed(3)+' bits';
+  document.getElementById('hCoM').textContent=comX.toFixed(2)+', '+comY.toFixed(2)+', '+comZ.toFixed(2);
+}
+
+// === DIFFUSE: wave through the volume ===
+function diffuse(){
+  diffusing=!diffusing;
+  document.getElementById('status').textContent=diffusing?'DIFFUSING...':'PAUSED';
+  document.getElementById('status').style.color=diffusing?'#00ffd5':'#ffd700';
+}
+
+function diffuseStep(){
+  var n=nodes.length;
+  var newP=new Float64Array(n);
+  var massBias=parseInt(document.getElementById('sMass').value)/100;
+  var energyBias=parseInt(document.getElementById('sEnergy').value)/100;
+  var infoBias=parseInt(document.getElementById('sInfo').value)/100;
+  
+  for(var i=0;i<n;i++){
+    var nd=nodes[i];
+    var neighbors=adj[i];
+    if(!neighbors.length) continue;
+    var sum=0;
+    for(var j=0;j<neighbors.length;j++) sum+=nodes[neighbors[j]].pressure;
+    var avg=sum/neighbors.length;
+    // Mix ratio depends on energy bias (high energy = faster diffusion)
+    var mix=0.3+energyBias*0.5;
+    newP[i]=nd.pressure*(1-mix)+avg*mix;
+    
+    // Energy: pressure movement costs energy
+    var delta=Math.abs(newP[i]-nd.pressure);
+    nd.energy+=delta*energyBias*0.1;
+    
+    // Info: high mass preserves info, low mass loses it
+    var infoLoss=(1-infoBias)*(1-nd.mass/Math.max(1,massBias*5))*0.001;
+    nd.info=Math.max(0,nd.info-infoLoss);
+    
+    // Mass redistributes slightly toward pressure
+    if(newP[i]>0.01){
+      nd.mass+=massBias*0.001*newP[i];
+    } else {
+      nd.mass=Math.max(0.1,nd.mass-massBias*0.0001);
+    }
+  }
+  for(var i=0;i<n;i++) nodes[i].pressure=newP[i];
+  stepCount++;
+}
+
+// === COMPRESS: squeeze the cube toward CoM ===
+function compress(){
+  compressing=!compressing;
+  document.getElementById('status').textContent=compressing?'COMPRESSING...':'IDLE';
+  document.getElementById('status').style.color=compressing?'#ff69b4':'#00ffd5';
+}
+
+function compressStep(){
+  var infoBias=parseInt(document.getElementById('sInfo').value)/100;
+  // Find CoM
+  var comX=0,comY=0,comZ=0,totalM=0;
+  for(var i=0;i<nodes.length;i++){
+    var nd=nodes[i];
+    comX+=nd.x*nd.mass;comY+=nd.y*nd.mass;comZ+=nd.z*nd.mass;
+    totalM+=nd.mass;
+  }
+  if(totalM>0){comX/=totalM;comY/=totalM;comZ/=totalM;}
+  
+  for(var i=0;i<nodes.length;i++){
+    var nd=nodes[i];
+    var dx=comX-nd.x,dy=comY-nd.y,dz=comZ-nd.z;
+    var d=Math.sqrt(dx*dx+dy*dy+dz*dz);
+    if(d>0.01){
+      // Compress toward CoM, modulated by info preservation
+      var strength=0.002*(1-infoBias*0.8);
+      nd.x+=dx*strength*nd.mass;
+      nd.y+=dy*strength*nd.mass;
+      nd.z+=dz*strength*nd.mass;
+      // Compression costs info (Landauer's principle)
+      nd.info=Math.max(0,nd.info-0.001*(1-infoBias));
+      // But gains energy (PV work)
+      nd.energy+=0.01*nd.mass*strength;
+    }
+  }
+}
+
+function doReset(){
+  for(var i=0;i<nodes.length;i++){
+    var nd=nodes[i];
+    nd.x=nd.bx;nd.y=nd.by;nd.z=nd.bz;
+    nd.mass=1.0;nd.energy=0;nd.info=1.0;nd.pressure=0;
+  }
+  var center=Math.floor(nodes.length/2);
+  nodes[center].pressure=1.0;nodes[center].energy=10.0;
+  diffusing=false;compressing=false;stepCount=0;
+  document.getElementById('status').textContent='RESET';
+  document.getElementById('status').style.color='#00ffd5';
+  updateTradeoff();
+}
+
+// === RENDERER ===
+function project(x,y,z){
+  var cy=Math.cos(cam.ry),sy=Math.sin(cam.ry);
+  var crx=Math.cos(cam.rx),srx=Math.sin(cam.rx);
+  var x1=x*cy-z*sy;var z1=x*sy+z*cy;
+  var y1=y*crx-z1*srx;var z2=y*srx+z1*crx;
+  return{x:W/2+x1*cam.zoom,y:H/2-y1*cam.zoom,z:z2};
+}
+
+function render(){
+  cx.fillStyle='rgba(2,2,5,0.25)';
+  cx.fillRect(0,0,W,H);
+  
+  // Project nodes
+  var proj=[];
+  for(var i=0;i<nodes.length;i++){
+    var nd=nodes[i];
+    proj.push(project(nd.x,nd.y,nd.z));
+  }
+  
+  // Sort edges by average depth
+  var sortedEdges=edges.map(function(e,idx){
+    return{e:e,z:(proj[e[0]].z+proj[e[1]].z)/2};
+  }).sort(function(a,b){return a.z-b.z;});
+  
+  // Draw edges
+  for(var i=0;i<sortedEdges.length;i++){
+    var e=sortedEdges[i].e;
+    var a=proj[e[0]],b=proj[e[1]];
+    var na=nodes[e[0]],nb=nodes[e[1]];
+    var p=(na.pressure+nb.pressure)/2;
+    var info=(na.info+nb.info)/2;
+    cx.beginPath();cx.moveTo(a.x,a.y);cx.lineTo(b.x,b.y);
+    if(p>0.01){
+      var h=Math.min(1,p)*120;
+      cx.strokeStyle='hsla('+(180-h)+',100%,60%,'+Math.min(0.8,0.2+p)+')';
+      cx.lineWidth=0.5+p*2;
+    } else {
+      cx.strokeStyle='rgba(0,180,255,'+(0.08+info*0.15)+')';
+      cx.lineWidth=0.3;
+    }
+    cx.stroke();
+  }
+  
+  // Draw nodes (only visible ones, sorted by depth)
+  var sortedNodes=nodes.map(function(nd,i){return{nd:nd,p:proj[i]};})
+    .sort(function(a,b){return a.p.z-b.p.z;});
+  
+  for(var i=0;i<sortedNodes.length;i++){
+    var nd=sortedNodes[i].nd,p=sortedNodes[i].p;
+    var r=1+nd.mass*0.5+nd.pressure*3;
+    cx.beginPath();cx.arc(p.x,p.y,r,0,Math.PI*2);
+    if(nd.pressure>0.01){
+      var h=180-Math.min(1,nd.pressure)*180;
+      cx.fillStyle='hsla('+h+',100%,60%,'+(0.4+nd.pressure*0.6)+')';
+    } else if(nd.info<0.5){
+      cx.fillStyle='rgba(255,50,50,'+(0.2+nd.energy*0.05)+')';
+    } else {
+      cx.fillStyle='rgba(0,255,213,'+(0.15+nd.info*0.2)+')';
+    }
+    cx.fill();
+  }
+}
+
+// === DRAG + ZOOM ===
+var dragging=false,lastX=0,lastY=0;
+cv.addEventListener('mousedown',function(e){dragging=true;lastX=e.clientX;lastY=e.clientY;});
+cv.addEventListener('mousemove',function(e){if(dragging){cam.ry+=(e.clientX-lastX)*0.01;cam.rx+=(e.clientY-lastY)*0.01;lastX=e.clientX;lastY=e.clientY;}});
+cv.addEventListener('mouseup',function(){dragging=false;});
+cv.addEventListener('wheel',function(e){e.preventDefault();cam.zoom*=e.deltaY>0?0.9:1.1;},{passive:false});
+
+// === ANIMATE ===
+function animate(){
+  cam.ry+=0.003;
+  if(diffusing){
+    for(var s=0;s<3;s++) diffuseStep();
+    if(stepCount%30===0) updateTradeoff();
+  }
+  if(compressing){
+    compressStep();
+    if(stepCount%10===0) updateTradeoff();
+  }
+  render();
+  requestAnimationFrame(animate);
+}
+
+rebuild();
+animate();
+</script>
+</body></html>

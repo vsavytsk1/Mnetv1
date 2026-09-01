@@ -1,0 +1,373 @@
+﻿<!DOCTYPE html>
+<html><head><meta charset="UTF-8">
+<title>MATTER CUBE v1.2 — Observer/Cube Perspectives</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#020205;overflow:hidden;font-family:'Courier New',monospace}
+canvas{display:block}
+#title{position:fixed;top:8px;width:100%;text-align:center;font-family:'Orbitron';color:#ff69b4;font-size:13px;letter-spacing:0.3em;z-index:10}
+#sub{position:fixed;top:28px;width:100%;text-align:center;font-size:8px;color:#555;z-index:10}
+#hud{position:fixed;top:50px;left:12px;color:#00ffd5;font-size:9px;line-height:1.7;z-index:10;background:rgba(2,2,5,0.7);padding:8px;border-radius:4px}
+#hud .pk{color:#ff69b4}#hud .gd{color:#ffd700}#hud .gn{color:#7fff7f}#hud .rd{color:#ff4444}
+#timeline{position:fixed;bottom:50px;left:5%;width:90%;height:6px;background:#111;border-radius:3px;z-index:10;cursor:pointer}
+#tFill{height:100%;background:linear-gradient(90deg,#00ffd5,#ff69b4);border-radius:3px;width:0%;transition:width 0.1s}
+#tLabel{position:fixed;bottom:58px;width:100%;text-align:center;font-size:8px;color:#555;z-index:10}
+#viewLabel{position:fixed;top:50px;right:14px;font-family:'Orbitron';font-size:10px;letter-spacing:0.2em;z-index:10;padding:6px 12px;border-radius:3px}
+#controls{position:fixed;bottom:12px;width:100%;text-align:center;z-index:10}
+#controls button{background:none;border:1px solid #00ffd5;color:#00ffd5;padding:6px 16px;margin:0 4px;cursor:pointer;font-family:'Orbitron';font-size:10px;letter-spacing:0.1em;border-radius:3px}
+#controls button:hover{background:#00ffd5;color:#020205}
+#controls button.pk{border-color:#ff69b4;color:#ff69b4}
+#controls button.pk:hover{background:#ff69b4;color:#020205}
+#controls button.gd{border-color:#ffd700;color:#ffd700}
+#controls button.gd:hover{background:#ffd700;color:#020205}
+#controls button.active{background:#00ffd5;color:#020205}
+</style>
+</head><body>
+<div id="title">MATTER CUBE v1.2</div>
+<div id="sub">observer &harr; cube perspective &middot; warp animation &middot; time = position on timeline</div>
+<div id="hud">
+  <div>nodes <span class="pk" id="hN">-</span> edges <span class="pk" id="hE">-</span></div>
+  <div>phase <span class="gn" id="hPhase">IDLE</span></div>
+  <div>T <span class="gd" id="hT">0.000</span></div>
+  <div>warp <span id="hWarp">0%</span></div>
+  <div>CoM <span class="gn" id="hCoM">-</span></div>
+  <div>entropy <span class="gd" id="hEntropy">-</span></div>
+  <div>info loss <span class="rd" id="hLoss">0%</span></div>
+</div>
+<div id="viewLabel" style="color:#00ffd5;border:1px solid #00ffd5">OBSERVER</div>
+<div id="tLabel">TIMELINE</div>
+<div id="timeline" onclick="scrubTimeline(event)"><div id="tFill"></div></div>
+<div id="controls">
+  <button onclick="toggleView()" id="bView">SWITCH VIEW</button>
+  <button onclick="startWarp()">WARP</button>
+  <button onclick="togglePlay()" id="bPlay">PLAY</button>
+  <button class="gd" onclick="resetAll()">RESET</button>
+</div>
+<canvas id="cv"></canvas>
+
+<script>
+var cv=document.getElementById('cv'),cx=cv.getContext('2d');
+var W,H;
+function resize(){W=cv.width=innerWidth;H=cv.height=innerHeight;}
+resize();window.addEventListener('resize',resize);
+
+// === GRID POINTS ===
+var ORIGIN={x:0,y:0,z:0};
+var DESTINATION={x:12,y:2,z:-8};
+var GRID_SIZE=20;
+
+// === CUBE STATE ===
+var cubeSize=5;
+var nodes=[],edges=[],adj=[];
+var cubePos={x:0,y:0,z:0};  // current cube center
+var cubeWiggle=0;            // 0=solid, 1=max distortion
+var warpT=-1;                // -1=idle, 0..1=warping
+var playing=false;
+var phase='IDLE';
+
+// === CAMERA ===
+var view='OBSERVER'; // OBSERVER or CUBE
+var obsCam={x:0,y:8,z:20,ry:0,rx:-0.3};  // observer: far away, looking at scene
+var cubeCam={rx:0,ry:0};                    // cube-riding camera
+
+// === BUILD CUBE ===
+function buildCube(){
+  var n=cubeSize;
+  nodes=[];edges=[];adj=[];
+  var grid={},id=0;
+  for(var ix=0;ix<n;ix++)for(var iy=0;iy<n;iy++)for(var iz=0;iz<n;iz++){
+    var x=(ix-(n-1)/2)*0.8;
+    var y=(iy-(n-1)/2)*0.8;
+    var z=(iz-(n-1)/2)*0.8;
+    nodes.push({lx:x,ly:y,lz:z,mass:1,info:1,pressure:0,wiggleF:0.5+Math.random()*2,wiggleP:Math.random()*6.28});
+    grid[ix+','+iy+','+iz]=id++;
+  }
+  adj=new Array(nodes.length);
+  for(var i=0;i<nodes.length;i++) adj[i]=[];
+  for(var ix=0;ix<n;ix++)for(var iy=0;iy<n;iy++)for(var iz=0;iz<n;iz++){
+    var me=grid[ix+','+iy+','+iz];
+    [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]].forEach(function(d){
+      var key=(ix+d[0])+','+(iy+d[1])+','+(iz+d[2]);
+      if(grid[key]!==undefined){
+        var them=grid[key];
+        if(me<them) edges.push([me,them]);
+        adj[me].push(them);
+      }
+    });
+  }
+  // Seed center
+  nodes[Math.floor(nodes.length/2)].pressure=1;
+  cubePos={x:ORIGIN.x,y:ORIGIN.y,z:ORIGIN.z};
+  document.getElementById('hN').textContent=nodes.length;
+  document.getElementById('hE').textContent=edges.length;
+}
+
+// === WARP PHYSICS ===
+function easeInOut(t){return t<0.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;}
+
+function getWiggleAmount(t){
+  // Bell curve: max wiggle at t=0.5
+  if(t<0) return 0;
+  if(t>1) return 0;
+  return Math.sin(t*Math.PI)*1.2; // peaks at 1.2
+}
+
+function getNodeWorldPos(i,time){
+  var nd=nodes[i];
+  // Local position + wiggle
+  var w=cubeWiggle;
+  var lx=nd.lx+Math.sin(time*nd.wiggleF+nd.wiggleP)*w*0.5;
+  var ly=nd.ly+Math.cos(time*nd.wiggleF*1.3+nd.wiggleP+1)*w*0.5;
+  var lz=nd.lz+Math.sin(time*nd.wiggleF*0.7+nd.wiggleP+2)*w*0.5;
+  // World position
+  return{x:cubePos.x+lx,y:cubePos.y+ly,z:cubePos.z+lz};
+}
+
+function startWarp(){
+  if(warpT>=0) return; // already warping
+  warpT=0;
+  phase='WARPING';
+  playing=true;
+  document.getElementById('bPlay').textContent='PAUSE';
+  document.getElementById('hPhase').textContent='WARPING';
+  document.getElementById('hPhase').style.color='#ff69b4';
+}
+
+function togglePlay(){
+  playing=!playing;
+  document.getElementById('bPlay').textContent=playing?'PAUSE':'PLAY';
+}
+
+function toggleView(){
+  view=(view==='OBSERVER')?'CUBE':'OBSERVER';
+  var vl=document.getElementById('viewLabel');
+  vl.textContent=view;
+  vl.style.color=view==='OBSERVER'?'#00ffd5':'#ff69b4';
+  vl.style.borderColor=view==='OBSERVER'?'#00ffd5':'#ff69b4';
+}
+
+function scrubTimeline(e){
+  var rect=document.getElementById('timeline').getBoundingClientRect();
+  var t=(e.clientX-rect.left)/rect.width;
+  t=Math.max(0,Math.min(1,t));
+  warpT=t;
+  phase=t<1?'WARPING':'ARRIVED';
+}
+
+function resetAll(){
+  warpT=-1;cubeWiggle=0;playing=false;phase='IDLE';
+  cubePos={x:ORIGIN.x,y:ORIGIN.y,z:ORIGIN.z};
+  for(var i=0;i<nodes.length;i++){nodes[i].info=1;nodes[i].pressure=0;}
+  nodes[Math.floor(nodes.length/2)].pressure=1;
+  document.getElementById('bPlay').textContent='PLAY';
+  document.getElementById('hPhase').textContent='IDLE';
+  document.getElementById('hPhase').style.color='#7fff7f';
+  document.getElementById('tFill').style.width='0%';
+}
+
+// === UPDATE ===
+function update(time){
+  if(playing&&warpT>=0&&warpT<1){
+    warpT+=0.002;
+    if(warpT>=1){
+      warpT=1;phase='ARRIVED';playing=false;
+      document.getElementById('bPlay').textContent='PLAY';
+      document.getElementById('hPhase').textContent='ARRIVED';
+      document.getElementById('hPhase').style.color='#7fff7f';
+    }
+  }
+  
+  if(warpT>=0){
+    var e=easeInOut(Math.min(1,warpT));
+    cubePos.x=ORIGIN.x+(DESTINATION.x-ORIGIN.x)*e;
+    cubePos.y=ORIGIN.y+(DESTINATION.y-ORIGIN.y)*e;
+    cubePos.z=ORIGIN.z+(DESTINATION.z-ORIGIN.z)*e;
+    cubeWiggle=getWiggleAmount(warpT);
+    
+    // Info loss proportional to wiggle
+    for(var i=0;i<nodes.length;i++){
+      nodes[i].info=Math.max(0.1,1-cubeWiggle*0.6+Math.random()*0.1);
+    }
+    
+    // Diffuse pressure during warp
+    if(cubeWiggle>0.1){
+      var newP=new Float64Array(nodes.length);
+      for(var i=0;i<nodes.length;i++){
+        var sum=0;
+        for(var j=0;j<adj[i].length;j++) sum+=nodes[adj[i][j]].pressure;
+        newP[i]=nodes[i].pressure*0.5+sum/Math.max(1,adj[i].length)*0.5;
+      }
+      for(var i=0;i<nodes.length;i++) nodes[i].pressure=newP[i];
+    }
+  }
+  
+  // Timeline
+  document.getElementById('tFill').style.width=(warpT>=0?warpT*100:0)+'%';
+  document.getElementById('hT').textContent=warpT>=0?warpT.toFixed(3):'0.000';
+  document.getElementById('hWarp').textContent=Math.round(cubeWiggle*100)+'%';
+  
+  // Entropy
+  var totalInfo=0;
+  for(var i=0;i<nodes.length;i++) totalInfo+=nodes[i].info;
+  var avgInfo=totalInfo/Math.max(1,nodes.length);
+  document.getElementById('hLoss').textContent=Math.round((1-avgInfo)*100)+'%';
+  document.getElementById('hCoM').textContent=cubePos.x.toFixed(1)+','+cubePos.y.toFixed(1)+','+cubePos.z.toFixed(1);
+  
+  var entropy=0;
+  for(var i=0;i<nodes.length;i++){
+    var p=nodes[i].info/Math.max(totalInfo,0.001);
+    if(p>0.0001) entropy-=p*Math.log2(p);
+  }
+  document.getElementById('hEntropy').textContent=entropy.toFixed(2)+' bits';
+}
+
+// === 3D PROJECTION ===
+function projectWorld(wx,wy,wz){
+  var camX,camY,camZ,ry,rx;
+  if(view==='OBSERVER'){
+    camX=obsCam.x;camY=obsCam.y;camZ=obsCam.z;
+    ry=obsCam.ry;rx=obsCam.rx;
+  } else {
+    camX=cubePos.x;camY=cubePos.y+0.5;camZ=cubePos.z+6;
+    ry=cubeCam.ry;rx=cubeCam.rx-0.1;
+  }
+  // Translate
+  var dx=wx-camX,dy=wy-camY,dz=wz-camZ;
+  // Rotate Y
+  var cy=Math.cos(ry),sy=Math.sin(ry);
+  var x1=dx*cy-dz*sy,z1=dx*sy+dz*cy;
+  // Rotate X
+  var crx=Math.cos(rx),srx=Math.sin(rx);
+  var y1=dy*crx-z1*srx,z2=dy*srx+z1*crx;
+  // Perspective
+  var fov=view==='OBSERVER'?300:400;
+  if(z2<0.1) z2=0.1;
+  var sx=W/2+x1/z2*fov;
+  var sy2=H/2-y1/z2*fov;
+  return{x:sx,y:sy2,z:z2};
+}
+
+// === RENDER ===
+function drawGrid(){
+  // Grid lines on the floor (y=0 plane)
+  cx.strokeStyle='rgba(0,180,255,0.06)';cx.lineWidth=0.5;
+  for(var i=-GRID_SIZE;i<=GRID_SIZE;i+=2){
+    var a=projectWorld(i,0,-GRID_SIZE),b=projectWorld(i,0,GRID_SIZE);
+    cx.beginPath();cx.moveTo(a.x,a.y);cx.lineTo(b.x,b.y);cx.stroke();
+    a=projectWorld(-GRID_SIZE,0,i);b=projectWorld(GRID_SIZE,0,i);
+    cx.beginPath();cx.moveTo(a.x,a.y);cx.lineTo(b.x,b.y);cx.stroke();
+  }
+  // Origin marker
+  var o=projectWorld(ORIGIN.x,ORIGIN.y,ORIGIN.z);
+  cx.beginPath();cx.arc(o.x,o.y,6,0,Math.PI*2);
+  cx.strokeStyle='rgba(0,255,213,0.5)';cx.lineWidth=2;cx.stroke();
+  cx.fillStyle='rgba(0,255,213,0.15)';cx.fill();
+  // Destination marker
+  var d=projectWorld(DESTINATION.x,DESTINATION.y,DESTINATION.z);
+  cx.beginPath();cx.arc(d.x,d.y,6,0,Math.PI*2);
+  cx.strokeStyle='rgba(255,105,180,0.5)';cx.lineWidth=2;cx.stroke();
+  cx.fillStyle='rgba(255,105,180,0.15)';cx.fill();
+  // Labels
+  cx.font='9px Orbitron';
+  cx.fillStyle='#00ffd5';cx.fillText('ORIGIN',o.x+10,o.y);
+  cx.fillStyle='#ff69b4';cx.fillText('DEST',d.x+10,d.y);
+  // Warp path (dashed)
+  cx.setLineDash([4,4]);cx.strokeStyle='rgba(255,255,255,0.1)';cx.lineWidth=0.5;
+  cx.beginPath();cx.moveTo(o.x,o.y);cx.lineTo(d.x,d.y);cx.stroke();
+  cx.setLineDash([]);
+}
+
+function drawCube(time){
+  // Project all nodes
+  var projected=[];
+  for(var i=0;i<nodes.length;i++){
+    var wp=getNodeWorldPos(i,time);
+    var sp=projectWorld(wp.x,wp.y,wp.z);
+    projected.push(sp);
+  }
+  // Draw edges sorted by depth
+  var sEdges=edges.map(function(e){return{e:e,z:(projected[e[0]].z+projected[e[1]].z)/2};})
+    .sort(function(a,b){return b.z-a.z;});
+  for(var i=0;i<sEdges.length;i++){
+    var e=sEdges[i].e;
+    var a=projected[e[0]],b=projected[e[1]];
+    var na=nodes[e[0]],nb=nodes[e[1]];
+    var info=(na.info+nb.info)/2;
+    var p=(na.pressure+nb.pressure)/2;
+    cx.beginPath();cx.moveTo(a.x,a.y);cx.lineTo(b.x,b.y);
+    if(cubeWiggle>0.3){
+      var flick=0.3+Math.random()*0.7;
+      cx.strokeStyle='rgba(255,105,180,'+flick*info+')';
+      cx.lineWidth=0.5+cubeWiggle*Math.random()*2;
+    } else if(p>0.01){
+      cx.strokeStyle='rgba(255,215,0,'+(0.3+p*0.7)+')';
+      cx.lineWidth=0.5+p;
+    } else {
+      cx.strokeStyle='rgba(0,255,213,'+(0.1+info*0.3)+')';
+      cx.lineWidth=0.4;
+    }
+    cx.stroke();
+  }
+  // Draw nodes
+  var sNodes=nodes.map(function(nd,i){return{nd:nd,p:projected[i]};})
+    .sort(function(a,b){return b.p.z-a.p.z;});
+  for(var i=0;i<sNodes.length;i++){
+    var nd=sNodes[i].nd,p=sNodes[i].p;
+    var r=1.5+nd.pressure*3+cubeWiggle*Math.random()*2;
+    cx.beginPath();cx.arc(p.x,p.y,r,0,Math.PI*2);
+    if(cubeWiggle>0.5){
+      cx.fillStyle='rgba(255,105,180,'+(0.3+Math.random()*0.7)+')';
+    } else if(nd.pressure>0.01){
+      cx.fillStyle='rgba(255,215,0,'+(0.4+nd.pressure*0.6)+')';
+    } else {
+      cx.fillStyle='rgba(0,255,213,'+(0.2+nd.info*0.3)+')';
+    }
+    cx.fill();
+  }
+}
+
+function render(time){
+  cx.fillStyle='rgba(2,2,5,0.3)';
+  cx.fillRect(0,0,W,H);
+  // Stars
+  if(!render.stars){render.stars=[];for(var i=0;i<300;i++)render.stars.push({x:Math.random()*3000,y:Math.random()*2000,b:0.2+Math.random()*0.8});}
+  for(var i=0;i<render.stars.length;i++){var s=render.stars[i];cx.fillStyle='rgba(200,220,255,'+s.b*0.3+')';cx.fillRect(s.x%W,s.y%H,1,1);}
+  drawGrid();
+  drawCube(time);
+}
+
+// === MOUSE ===
+var dragging=false,lastX=0,lastY=0;
+cv.addEventListener('mousedown',function(e){dragging=true;lastX=e.clientX;lastY=e.clientY;});
+cv.addEventListener('mousemove',function(e){
+  if(!dragging) return;
+  var dx=(e.clientX-lastX)*0.005,dy=(e.clientY-lastY)*0.005;
+  if(view==='OBSERVER'){obsCam.ry+=dx;obsCam.rx+=dy;}
+  else{cubeCam.ry+=dx;cubeCam.rx+=dy;}
+  lastX=e.clientX;lastY=e.clientY;
+});
+cv.addEventListener('mouseup',function(){dragging=false;});
+cv.addEventListener('wheel',function(e){
+  e.preventDefault();
+  if(view==='OBSERVER'){
+    obsCam.z*=e.deltaY>0?1.05:0.95;
+    obsCam.z=Math.max(3,Math.min(80,obsCam.z));
+  }
+},{passive:false});
+
+// === LOOP ===
+var t0=performance.now();
+function animate(){
+  var time=(performance.now()-t0)/1000;
+  update(time);
+  render(time);
+  requestAnimationFrame(animate);
+}
+buildCube();
+animate();
+console.log('%c MATTER CUBE v1.2 ','background:#ff69b4;color:#020205;font-size:14px;font-weight:bold');
+console.log('%cOBSERVER: see both points + the warp','color:#00ffd5');
+console.log('%cCUBE: ride the cube through the warp','color:#ff69b4');
+</script>
+</body></html>
