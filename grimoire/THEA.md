@@ -1660,9 +1660,14 @@ transcendentals:
 
 Both above the limit, and **the gap shrank by a factor of eight in one rung.**
 
-> **STATUS: the `1/T` FORM is corroborated. The CONSTANT is settled by
-> derivation, and two measured points descend toward it. Two points are a
-> trend, not a convergence -- a third rung (T=4 or T=7) is OWED.**
+> **STATUS, SUPERSEDED 2026-09-01. The third rung was run, and twenty-two
+> more with it. The sequence CROSSES the derived constant at T~7, bottoms out
+> near T~30, and climbs back to 0.72471 at T=196 (V=3,920) -- still 0.11%
+> short and rising ever more slowly. Five extrapolation models all land
+> 0.7247-0.7249; none reaches 0.7255197. The  FORM holds. The CONSTANT
+> does not. See  and
+> . Two points agree with any curve drawn
+> between them.**
 
 And the contrast that closes the open item:
 

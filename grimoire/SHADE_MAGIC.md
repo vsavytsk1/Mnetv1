@@ -126,9 +126,10 @@ with no stated failure condition is a mood.
    **first** thing to go, not the last. **OWED: reproduce that ladder in `Gos`
    and find the rung.** Until then this scroll is arguing above its evidence.
 
-2. **One derived constant is one.** `2*pi/(5*sqrt3)` is a real result. Two
-   measured rungs descending toward it is a trend, not a convergence. **OWED:
-   a third rung, T=4 or T=7.**
+2. ~~**One derived constant is one.**~~ **ANSWERED THE SAME DAY, AND IT FAILED.**
+   25 rungs run. The sequence crosses the derived value at T~7 and settles near
+   0.7248, not 0.7255197. See *THE FIRST OWED ITEM* below. The constant is not
+   the limit of the thing it was derived for.
 
 3. **The convergence may be trivial.** If *every* local-parallel scheme yields a
    Laplacian -- and it does -- then finding one here says nothing about
@@ -138,8 +139,106 @@ with no stated failure condition is a mood.
 4. **The strongest disconfirmation would be boring.** If the Goldberg spectrum
    reproduces nothing a generic sphere discretisation does not already give,
    then P=12 is decoration on the physics and the topology is a rendering
-   detail. Nobody has checked. That check is cheap and nobody has run it,
-   which is usually a sign the answer is feared.
+   detail. **STILL OPEN -- but the ladder result below now points the other
+   way.** The smooth-sphere derivation is the thing that failed to reproduce
+   the mesh, and the residue sits exactly where the twelve pentagons live.
+   The check is still owed: a matched-N sphere graph with NO pentagons. If it
+   lands on 0.7255197 while the fullerene sits at 0.7248, the pentagons are
+   the difference. If both give 0.7248, they are innocent and the derivation
+   is wrong somewhere else entirely.
+
+## THE FIRST OWED ITEM, ANSWERED -- AND THE ANSWER IS NO
+
+*Run the same day the scroll was opened. `tower/ladder_probe.py`,*
+*`tower/ladder_limit.py`, receipt in `tower/ladder_limit_receipt.json`.*
+*25 rungs, deepest T=196 (V=3,920). LANE: DISPLAY -- numpy `eigh`, LAPACK.*
+
+Item #2 said two measured rungs were a trend, not a convergence, and that a
+third was owed. Twenty-five rungs later, the trend was **wrong about the
+destination**.
+
+```text
+  T      T*lambda_2     minus 2*pi/(5*sqrt3)
+    1     0.7639320          +0.0384123
+    3     0.7302052          +0.0046855     <- the two rungs the earlier
+    4     0.7275403          +0.0020205        handoff called a convergence
+    7     0.7255351          +0.0000153     <- CROSSES the derived value
+    9     0.7250641          -0.0004557     <- and keeps going
+   31     0.7245541          -0.0009657     <- MINIMUM, then it turns around
+   64     0.7246111          -0.0009087
+  100     0.7246570          -0.0008628
+  144     0.7246906          -0.0008292
+  196     0.7247148          -0.0008049     <- still 0.11% short, still rising
+```
+
+**The sequence is not monotonic.** It descends through the derived value at
+T~7, bottoms out near T~30, and climbs back -- but not far enough, and ever
+more slowly. Five independent extrapolations of the achiral branch:
+
+```text
+  L + c/T              0.7247339    rms 1.20e-05
+  L + c/sqrt(T)        0.7248266    rms 6.03e-06
+  L + c/T + d/T^2      0.7247843    rms 9.27e-07
+  L + c/T + d/T^1.5    0.7247981    rms 3.62e-07   <- best fit
+  L + c*log(T)/T       0.7247625    rms 8.44e-06
+
+  derived 2*pi/(5*sqrt3)  =  0.7255197
+```
+
+**All five land between 0.7247 and 0.7249. None reaches the derived constant.**
+The best-fitting model misses it by 7.2e-4 while fitting the data to 3.6e-7 --
+a discrepancy three orders of magnitude larger than the residual. That is not
+noise, and it is not float64 giving up either: every one of the 25 meshes was
+checked and every one is structurally perfect, `V=20T, E=30T, F=10T+2, chi=2,
+P=12`. The `lambda_0` mode sits at ~1e-16 throughout.
+
+### The smaller finding, which may be the sharper one
+
+**T alone does not determine the value.** At T=49 there are two distinct
+Goldberg meshes, and they disagree:
+
+```text
+  (7,0)  T=49  V=980   T*lambda_2 = 0.724584296    achiral
+  (5,3)  T=49  V=980   T*lambda_2 = 0.724584865    chiral
+```
+
+5.7e-7 apart. Tiny -- and the derivation has no room for it at all. Section X
+builds its constant from the stencil, the area bookkeeping and the sphere's
+`l(l+1)` ladder, every one of them a function of **T alone**. A quantity that
+depends on `(k,l)` separately cannot come out of it.
+
+### What this points at, and it is not what I expected
+
+The derivation's second gift assumes **"twelve pentagons are measure zero as
+T -> infinity."** Their *area* fraction certainly vanishes. But a pentagon is
+not a small hexagon -- it is a **fixed quantum of curvature**, and there are
+always exactly twelve of them no matter how large T grows. Euler will not let
+that number fall.
+
+**HYPOTHESIS:** the 0.1% gap is what the pentagons leave behind. Their measure
+goes to zero; their contribution to the spectral gap does not.
+
+If that is right, then item #4 of this scroll -- *does the Goldberg mesh give
+anything a generic sphere discretisation does not?* -- has its answer pointing
+the opposite way from the one I braced for. The disconfirming check would be
+**the smooth-sphere derivation failing to reproduce the mesh**, and the residue
+is exactly where P=12 lives.
+
+**That is a hypothesis born from a failed prediction and it must be labelled
+one.** The honest test is direct and nobody has run it: build a sphere graph of
+matched N with **no** pentagons -- a torus-topology hex sheet, or a random
+triangulation -- and see whether its scaled gap lands on 0.7255197 while the
+fullerene sits at 0.7248. If both give 0.7248, the pentagons are innocent and
+the derivation is simply wrong somewhere else.
+
+### What was actually gained
+
+An OWED item closed with a **no**, and a derivation that looked confirmed by
+two points shown to be crossed and overshot by twenty-five. The two-point
+agreement was real; the inference from it was not. **Two points can agree with
+any curve that passes between them.**
+
+---
 
 ## THE HONEST POSITION, 2026-09-01
 
