@@ -13,7 +13,7 @@ kernels, the receipts, the frozen HTML previews.
 
 | folder | files | bytes | dates |
 |---|---:|---:|---|
-| `01.SolFableTOv3/` | 12 | 289,991 | 2026-07-31 |
+| `01.SolFableTOv3/` | 13 | 322,956 | 2026-07-30 .. 07-31 |
 | `01.SolFableTOv3/forSim/` | 2 | 53,717 | 2026-07-31 |
 | `01.SolFableTOv3/FableSolThea/` | 8 | 627,930 | 2026-08-03 |
 | `01.SolFableTOv2/` | 46 | 2,586,440 | 2026-08-05 .. 08-06 |
@@ -22,11 +22,18 @@ kernels, the receipts, the frozen HTML previews.
 | `01.SolFableTOv5/` | 40 | 6,481,719 | 2026-08-10 |
 
 **148 files, 14,912,174 bytes** as received. By type: 49 `.md`, 33 `.py`,
-26 `.html`, 22 `.json`, 8 `.txt`, 7 `.pdf`, 2 `.c`.
+26 `.html`, 22 `.json`, 8 `.txt`, 7 `.pdf`, 2 `.c`, and one extensionless
+`SolFableTower2.1`. The first draft of this line dropped that last file, so the
+types summed to 147 while the count beside them said 148. The count was right;
+the list was short one file.
 
-The heal below removed 12 bytes, so the archive **content** is
-**148 files, 14,912,162 bytes**, plus this README. Nothing was added by the
-dedupe: every one of the seven files folded in was already here, byte-identical.
+The heal below removed 12 bytes, and the audit folded in afterwards added one.
+The archive **content** now stands at **149 files, 14,945,139 bytes**, plus this
+README.
+
+Of the nine files folded in on 2026-09-01, eight were already here
+byte-identical; only `SOLMAGE_V2_TO_V3_AUDIT.md` (32,977 B) was genuinely new,
+which is why the total moved by exactly its size and by nothing else.
 
 That total deliberately excludes this file. A total that counts the document
 stating it never settles -- the first draft of this line said 14,916,510, which
@@ -126,6 +133,87 @@ Healed by copying the clean bytes over it. The published page now carries zero
 replacement characters. **Curse 25 -- Rune Rot:** a fumbled decode carves
 garbage into something sacred, silently, and the only witness is somebody
 reading the glyph.
+
+## THE TWO `.md` THAT BELONG HERE BY CONTENT
+
+The sweep rule was *everything that is not a `.md`*. These two are `.md` and
+they still belong here, because what defines this folder is **whose work it
+is**, not a file extension. Both are Sol-mage collaboration artifacts. They
+were pointed at by name rather than caught by the rule, and the survey was run
+the same way regardless -- evidence before the move, every time.
+
+### `SOLMAGE_V2_TO_V3_AUDIT.md` -- a genuine move
+
+```text
+  32,977 B   2026-07-30
+  opens: "Hear, hear, Sol-mage -- the last pre-V3 audit"
+```
+
+Present nowhere else in the archive, so this one is a real move, not a dedupe.
+Filed into `01.SolFableTOv3/` beside the two documents it audits the passage
+between: `Thea_v2.4.7_frozen.md` and `Thea_v3.0.md`.
+
+At 2026-07-30 it is now **the earliest-dated file in the whole archive**, one
+day older than everything in the folder that receives it -- which is the same
+lesson as the section above, arriving from the other direction.
+
+**What the move costs.** Two shipped pages cite it by path, in prose:
+
+```text
+  shell/aequalium_v2.4.6.html
+  shell/aequalium_v2.4.7.html
+    "V3 (structural, flagged not faked -- see grimoire/SOLMAGE_V2_TO_V3_AUDIT.md)"
+```
+
+Zero `<a href>` anchors in either page -- counted, not assumed, the same check
+that cleared `light_matrix_v3.py`. Nothing links, so nothing breaks; one
+sentence in each is now one folder stale. **Both pages stay untouched.** They
+are frozen shipped versions, and editing a published page to tidy a prose path
+would spend a byte-identity promise on a cosmetic fix. That is Path X, and the
+stale sentence is the cheaper half of the trade. `LEDGER.md` cites it too and
+also stays: dated history is not supposed to age well.
+
+### `Thea_v2.4.7_frozen.md` -- deduped, and very nearly mis-read
+
+A copy already sat at `01.SolFableTOv3/Thea_v2.4.7_frozen.md`, and the two
+working-tree files looked 315 bytes apart -- exactly the kind of gap worth
+opening before deleting anything:
+
+```text
+  top-level   16,739 B   315 lines   LF     0 x U+FFFD
+  SolFable    17,054 B   315 lines   CRLF   0 x U+FFFD
+```
+
+315 lines, 315 bytes, one carriage return per line. `difflib` reports **zero
+hunks**. Git settles it outright -- both paths resolve to one and the same blob:
+
+```text
+  b1b1eea73cc7396c6333cdc3d085115fce0985c0
+```
+
+They were never different. This repo's `.gitattributes` already normalises to
+LF (`i/lf  w/crlf  attr/text=auto eol=lf`), so the CRLF lived only in a stale
+working-tree checkout and never in the committed content. The top-level copy
+was removed as a duplicate.
+
+**The lesson this cave keeps re-learning:** a byte comparison means nothing
+until the line-ending convention is stated. This one read *315 bytes apart*
+when the true answer was *identical* -- the same shape as the LEDGER 11-byte
+and HELENI_STATUS 129-byte false alarms that put `.gitattributes` in the repo
+in the first place. Had it been trusted, a file would have been kept on the
+strength of a difference that did not exist.
+
+## THE GRIMOIRE IS NOW `.md` ONLY
+
+```text
+  MNetv1/grimoire/   19 x .md  +  SolFable/
+  non-.md remaining: 0
+```
+
+Nineteen scrolls and one archive folder. Everything the cave wrote stays in
+`grimoire/`; everything the collaboration produced lives under `SolFable/`, and
+the boundary is now something a single `ls` can check rather than something
+somebody has to remember.
 
 ---
 
