@@ -92,3 +92,19 @@ kibotos/**/__pycache__/
 # Their licences are quoted in SpEngLab/TITANS.md -- credit lives in git,
 # payload does not. Nested .git dirs would become gitlinks here anyway.
 SpEngLab/_titans/
+
+# -- GRAPHIUM node cache (mirror, not payload -- same rule as helena_net) -------
+# graphium.py defaults to workdir="./.graphium" and memoises every node to disk
+# by content hash. Those .json files are REGENERABLE: the demo runs on
+# Provider.echo(), so re-running reproduces them byte for byte. The receipt is
+# NOT -- it records wall clock, measured speedup and the Amdahl p of one real
+# run on one real machine. Ignore what a rerun can rebuild; keep the measurement.
+#
+# VERIFIED, not assumed (2026-09-01): ran `graphium.py --demo` in a clean temp
+# dir and compared. 26/26 cache files identical by sha256. The receipt was not:
+#   old  0.23s  5.49x  p=0.82        new  0.35s  4.34x  p=0.77
+# Same critical path (scope -> audit -> check -> report), different machine
+# moment. That is exactly the line between payload and measurement.
+Gos/ponderTheOrb/.graphium/**
+!Gos/ponderTheOrb/.graphium/**/
+!Gos/ponderTheOrb/.graphium/**/receipt_*.txt
