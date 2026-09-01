@@ -24,8 +24,9 @@ kernels, the receipts, the frozen HTML previews.
 **148 files, 14,912,174 bytes** as received. By type: 49 `.md`, 33 `.py`,
 26 `.html`, 22 `.json`, 8 `.txt`, 7 `.pdf`, 2 `.c`.
 
-The heal below removed 12 bytes, so the archive **content** is now
-**148 files, 14,912,162 bytes**, plus this README.
+The heal below removed 12 bytes, so the archive **content** is
+**148 files, 14,912,162 bytes**, plus this README. Nothing was added by the
+dedupe: every one of the seven files folded in was already here, byte-identical.
 
 That total deliberately excludes this file. A total that counts the document
 stating it never settles -- the first draft of this line said 14,916,510, which
@@ -69,14 +70,34 @@ duplicates** of files already here, verified by sha256 before removal:
 bundle-layout section (`tests/`, `receipts/`), never by a `grimoire/` path, so
 no citation broke.
 
-### Two files stayed at the top level, and here is why
+### The last two, and what they cost
 
-* **`grimoire/light_matrix_v3.py`** -- cited BY PATH on **eleven shipped
-  pages**, from `thea_light_matrix_v1.1` through `v1.3.9`:
-  *"grimoire/light_matrix_v3.py (8/8 tests) · the source is open, the door is
-  open"*. Moving it closes that door on every one of them.
-* **`grimoire/Thea_v3.0_preview.html`** -- a **live published URL**
-  (`IO_PAGES.md` line 46), and the clean copy. See below.
+Two were held back on the first pass and then folded in on the same day when
+the instruction was restated. Both were **also exact duplicates**, so the
+archive lost nothing; what they cost was elsewhere, and it is written down
+here rather than discovered later.
+
+* **`light_matrix_v3.py`** -- cited on **eleven shipped pages**, from
+  `thea_light_matrix_v1.1` through `v1.3.9`: *"grimoire/light_matrix_v3.py
+  (8/8 tests) · the source is open, the door is open"*.
+  **Checked before moving: those are `<b>` tags, zero `<a href>`.** So no link
+  404s; eleven pages now name a path that has moved. They are frozen versions
+  and must not be edited (Path X), so the forwarding lives here:
+
+  > `grimoire/light_matrix_v3.py` is now
+  > `grimoire/SolFable/01.SolFableTOv3/light_matrix_v3.py`, byte-identical.
+
+* **`Thea_v3.0_preview.html`** -- this one had a real price. It was a live
+  published URL, and moving it **kills that URL**:
+
+  ```text
+    DEAD   /Mnetv1/grimoire/Thea_v3.0_preview.html
+    LIVE   /Mnetv1/grimoire/SolFable/01.SolFableTOv3/Thea_v3.0_preview.html
+  ```
+
+  The same bytes, and now the HEALED ones -- the surviving URL is the copy that
+  had six `U+FFFD` in it until this same day. `IO_PAGES.md` was regenerated so
+  the index states what is actually served.
 
 ## A LIVE PAGE WAS SERVING CORRUPTED GLYPHS, and is not any more
 

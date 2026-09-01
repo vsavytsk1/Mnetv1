@@ -4,15 +4,18 @@
 repos. Generated from what git actually tracks on each repo (the truth of what
 Pages serves), by `builder/gen_io_index.py`. Nothing hidden; the door is open.*
 
-**TOTAL: 501 public pages across 8 repos.**
+**TOTAL: 509 public pages across 8 repos.**
 
 *P=12 . chi=2 . the receipts are public . always.*
 
 ---
 
-## Mnetv1  (426 pages)
+## Mnetv1  (434 pages)
 
+- [Gos/experiments/witnesses/chi.html](https://vsavytsk1.github.io/Mnetv1/Gos/experiments/witnesses/chi.html)
+- [Gos/ponderTheOrb/machinenet_eng_v2_0_master_control.html](https://vsavytsk1.github.io/Mnetv1/Gos/ponderTheOrb/machinenet_eng_v2_0_master_control.html)
 - [about.html](https://vsavytsk1.github.io/Mnetv1/about.html)
+- [builder/Riemannium/riemannium_base.html](https://vsavytsk1.github.io/Mnetv1/builder/Riemannium/riemannium_base.html)
 - [builder/_pyibuild/HOLLY7/xref-HOLLY7.html](https://vsavytsk1.github.io/Mnetv1/builder/_pyibuild/HOLLY7/xref-HOLLY7.html)
 - [builder/navierKolmogorov_L3_Re1000.html](https://vsavytsk1.github.io/Mnetv1/builder/navierKolmogorov_L3_Re1000.html)
 - [builder/navierKolmogorov_L4_Re5000.html](https://vsavytsk1.github.io/Mnetv1/builder/navierKolmogorov_L4_Re5000.html)
@@ -43,7 +46,6 @@ Pages serves), by `builder/gen_io_index.py`. Nothing hidden; the door is open.*
 - [grimoire/SolFable/01.SolFableTOv5/shell__thea_light_matrix_v1_3_5.html](https://vsavytsk1.github.io/Mnetv1/grimoire/SolFable/01.SolFableTOv5/shell__thea_light_matrix_v1_3_5.html)
 - [grimoire/SolFable/01.SolFableTOv5/shell__thea_light_matrix_v1_3_6.html](https://vsavytsk1.github.io/Mnetv1/grimoire/SolFable/01.SolFableTOv5/shell__thea_light_matrix_v1_3_6.html)
 - [grimoire/SolFable/01.SolFableTOv5/shell__thea_light_matrix_v1_3_7.html](https://vsavytsk1.github.io/Mnetv1/grimoire/SolFable/01.SolFableTOv5/shell__thea_light_matrix_v1_3_7.html)
-- [grimoire/Thea_v3.0_preview.html](https://vsavytsk1.github.io/Mnetv1/grimoire/Thea_v3.0_preview.html)
 - [index.html](https://vsavytsk1.github.io/Mnetv1/index.html)
 - [kibotos/kibotos_100_scroll_v1_0.html](https://vsavytsk1.github.io/Mnetv1/kibotos/kibotos_100_scroll_v1_0.html)
 - [kibotos/solv1/metalatexium_v0_1.html](https://vsavytsk1.github.io/Mnetv1/kibotos/solv1/metalatexium_v0_1.html)
@@ -128,6 +130,9 @@ Pages serves), by `builder/gen_io_index.py`. Nothing hidden; the door is open.*
 - [shell/atelier_v1.3_envelope.html](https://vsavytsk1.github.io/Mnetv1/shell/atelier_v1.3_envelope.html)
 - [shell/atelier_v1.4_baudin_hybrids.html](https://vsavytsk1.github.io/Mnetv1/shell/atelier_v1.4_baudin_hybrids.html)
 - [shell/atelier_v1.5_moire.html](https://vsavytsk1.github.io/Mnetv1/shell/atelier_v1.5_moire.html)
+- [shell/attentium_v0_1.html](https://vsavytsk1.github.io/Mnetv1/shell/attentium_v0_1.html)
+- [shell/attentium_v0_2.html](https://vsavytsk1.github.io/Mnetv1/shell/attentium_v0_2.html)
+- [shell/attentium_v0_3.html](https://vsavytsk1.github.io/Mnetv1/shell/attentium_v0_3.html)
 - [shell/baudin_atelier_v1.0.html](https://vsavytsk1.github.io/Mnetv1/shell/baudin_atelier_v1.0.html)
 - [shell/baudin_matrix_v1.0.html](https://vsavytsk1.github.io/Mnetv1/shell/baudin_matrix_v1.0.html)
 - [shell/baudin_matrix_v2.0.html](https://vsavytsk1.github.io/Mnetv1/shell/baudin_matrix_v2.0.html)
@@ -149,6 +154,7 @@ Pages serves), by `builder/gen_io_index.py`. Nothing hidden; the door is open.*
 - [shell/cryostasium_mobile_v2.0.html](https://vsavytsk1.github.io/Mnetv1/shell/cryostasium_mobile_v2.0.html)
 - [shell/cryostasium_v1.1.html](https://vsavytsk1.github.io/Mnetv1/shell/cryostasium_v1.1.html)
 - [shell/dfwcatium_v1.1.html](https://vsavytsk1.github.io/Mnetv1/shell/dfwcatium_v1.1.html)
+- [shell/diffusium_bench_v1_0.html](https://vsavytsk1.github.io/Mnetv1/shell/diffusium_bench_v1_0.html)
 - [shell/emporium_3d_v2.0.html](https://vsavytsk1.github.io/Mnetv1/shell/emporium_3d_v2.0.html)
 - [shell/emporium_v1.1.html](https://vsavytsk1.github.io/Mnetv1/shell/emporium_v1.1.html)
 - [shell/eng_v2.0.html](https://vsavytsk1.github.io/Mnetv1/shell/eng_v2.0.html)
@@ -203,10 +209,7 @@ Pages serves), by `builder/gen_io_index.py`. Nothing hidden; the door is open.*
 - [shell/genesis_v8.5.1.html](https://vsavytsk1.github.io/Mnetv1/shell/genesis_v8.5.1.html)
 - [shell/genesis_v8.5.2.html](https://vsavytsk1.github.io/Mnetv1/shell/genesis_v8.5.2.html)
 - [shell/genesis_v8.5.html](https://vsavytsk1.github.io/Mnetv1/shell/genesis_v8.5.html)
-- [shell/attentium_v0_3.html](https://vsavytsk1.github.io/Mnetv1/shell/attentium_v0_3.html)
-- [shell/attentium_v0_1.html](https://vsavytsk1.github.io/Mnetv1/shell/attentium_v0_1.html)
-- [shell/attentium_v0_2.html](https://vsavytsk1.github.io/Mnetv1/shell/attentium_v0_2.html)
-- [shell/diffusium_bench_v1_0.html](https://vsavytsk1.github.io/Mnetv1/shell/diffusium_bench_v1_0.html)
+- [shell/genesis_v9.0.html](https://vsavytsk1.github.io/Mnetv1/shell/genesis_v9.0.html)
 - [shell/genesium.html](https://vsavytsk1.github.io/Mnetv1/shell/genesium.html)
 - [shell/goldberg_refine.html](https://vsavytsk1.github.io/Mnetv1/shell/goldberg_refine.html)
 - [shell/grand-transmutation-circle.html](https://vsavytsk1.github.io/Mnetv1/shell/grand-transmutation-circle.html)
@@ -382,6 +385,8 @@ Pages serves), by `builder/gen_io_index.py`. Nothing hidden; the door is open.*
 - [shell/thea_light_matrix_v1.2.html](https://vsavytsk1.github.io/Mnetv1/shell/thea_light_matrix_v1.2.html)
 - [shell/thea_light_matrix_v1.3.1.html](https://vsavytsk1.github.io/Mnetv1/shell/thea_light_matrix_v1.3.1.html)
 - [shell/thea_light_matrix_v1.3.7.html](https://vsavytsk1.github.io/Mnetv1/shell/thea_light_matrix_v1.3.7.html)
+- [shell/thea_light_matrix_v1.3.8.html](https://vsavytsk1.github.io/Mnetv1/shell/thea_light_matrix_v1.3.8.html)
+- [shell/thea_light_matrix_v1.3.9.html](https://vsavytsk1.github.io/Mnetv1/shell/thea_light_matrix_v1.3.9.html)
 - [shell/thealimitium-v1_0.html](https://vsavytsk1.github.io/Mnetv1/shell/thealimitium-v1_0.html)
 - [shell/theophania.html](https://vsavytsk1.github.io/Mnetv1/shell/theophania.html)
 - [shell/traffic_observatory.html](https://vsavytsk1.github.io/Mnetv1/shell/traffic_observatory.html)
