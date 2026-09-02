@@ -288,16 +288,67 @@ say so.
 
 ## 9. THE STEPS — one at a time, each shippable
 
-| # | step | status |
-|---|---|---|
-| 1 | growth law, integers, both ladders as tests | ✅ `genesis.rs` |
-| 2 | `Face`/`State`, ids, lineage, anchors, immutable history | **next** |
-| 3 | `refine_face` geometry, f64, planar + spherical | |
-| 4 | `refine_all` / `refine_hexes` / `refine_pents` + undo | |
-| 5 | `invariants()` — trivalence only, never Euler; anchors as 2nd witness | |
-| 6 | **weld + judge**, compare against the census (the headline) | |
-| 7 | render via `raster.rs`, match the browser's image | |
-| 8 | dashboard card + the byte-topology checker beside it | |
+*Status re-scored against the code on 2026-09-02, not against memory. The
+table had said "step 2 is next" while steps 2–5 were already shipped.*
+
+| # | step | status | the mirror that proves it |
+|---|---|---|---|
+| 1 | growth law, integers, both ladders as tests | ✅ | both ladders reproduce exactly |
+| 2 | `Face`/`State`, ids, lineage, anchors, immutable history | ✅ | `id`, `lineage`, `anchors`, `anchor_count`, `history` all present; `Step`/`Snapshot`/`State` |
+| 3 | `refine_face` geometry, f64, planar + spherical | ✅ | `Surface::{Planar,Spherical}`, `project_to_sphere` on the certified lane |
+| 4 | `refine_all` / `refine_hexes` / `refine_pents` + undo | ✅ | `Op::{All,Hex,Pent}`, `refine`, `refine_one`, `undo` |
+| 5 | `invariants()` — trivalence only, never Euler; anchors as 2nd witness | ✅ | `arity_sum/2` and `/3`; χ is **derived so it is allowed to fail** |
+| 6 | **weld + judge**, compare against the census (the headline) | ⬜ **NEXT** | `judge.rs` exists (4 public fns) but **nothing calls it against a welded genesis mesh**. No `weld` in the crate. |
+| 7 | render via `raster.rs`, match the browser's image | 🟡 partial | it renders — but there is **no test comparing a frame to the browser's**, so "match" is unmeasured |
+| 8 | dashboard card + the byte-topology checker beside it | ✅ | GENESIS card ships in `gos_viewer`, FRAME BITS beside it |
+
+### Step 6 is the headline, and it is next for a reason
+
+Steps 1–5 built the mesh and 8 draws it. **Nothing yet closes the loop**: the
+census in `genesis.rs` counts faces, `judge.rs` computes closure in pure graph
+space, and the two have never been introduced. Until they are, the port has an
+honest builder and an honest judge and **no proof they agree** — which is
+precisely the R13–R16 pattern: two correct instruments, no correspondence
+between them.
+
+### Step 9 — MEASURE THE BIT-IDENTITY CLAIM
+
+*Added 2026-09-02. RUSTIUM calls this "highest value, lowest cost in this
+scroll" and it has been open since v0.1.*
+
+Section 8 above states the geometry "can be asserted **bit-identical**" against
+the browser. **That has never been measured.** The gap survived because a file
+named `examples/cross_check.rs` looks exactly like the thing that would measure
+it — and does something else:
+
+```text
+  what cross_check.rs asserts   F = 212, P = 12, chi = 2      INTEGERS
+  what it cannot see            whether one f64 multiply agrees, bit for bit
+  what certification.rs proves  17 to_bits() facts -- all WITHIN Rust
+  stored JS reference vectors   none, anywhere in the repo
+```
+
+An honest instrument answering a question nobody asked, standing where a
+different question was being inferred. R4: static verification checks
+*consistency*, never *correspondence*.
+
+**The work, and it is one evening:**
+
+1. In the browser kernel, run N seeded inputs through `projectToSphere`,
+   `centroid`, and raw `+ − × ÷ √`. Emit each result as a **hex bit pattern**
+   (`f64` → `BigInt` → 16 hex chars), never as a decimal string — a decimal
+   round-trip is the one thing that would hide the very difference being tested.
+2. Commit that vector as data. It is the receipt.
+3. Assert it in Rust with `to_bits()`, on the certified path only.
+
+**ACCEPTANCE:** every vector entry matches, or the ones that do not are listed
+with the operation that produced them. A partial result is the interesting one
+— it would name exactly which operation leaves the lane, and RULE 0 would gain
+a row it does not currently have.
+
+**If this fails, section 8 of this spec is wrong** and every "bit-identical"
+claim in the port becomes a tolerance. That is why it ranks above step 7:
+step 7 *assumes* the answer this step would measure.
 
 **ACCEPTANCE, stated up front so it can fail:**
 

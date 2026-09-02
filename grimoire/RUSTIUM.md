@@ -2191,9 +2191,21 @@ each one is a bug this crate has already been bitten by:
 
 - Apply R3, R5, R6. Re-run both witnesses to a clean 33/33 and 32/32, and let
   the certificate finally emit.
-- Run the doctests. They have never executed.
+- ~~Run the doctests. They have never executed.~~ **DONE 2026-09-01** -- 13
+  doc-tests, all green. That run is also what corrected the suite count from a
+  written 129 to a measured 137 (124 `#[test]` + 13 doc-tests).
 - Run `--release`. That is the profile where R3 has teeth.
 - **Measure the bit-identity claim.** Highest value, lowest cost in this scroll.
+  **STILL OPEN as of 2026-09-02, and now filed as step 9 of
+  `GENESIS_PORT_SPEC.md` so it has an owner.** Worth knowing WHY it survived a
+  fortnight: `examples/cross_check.rs` is named like the measurement and reads
+  like it, but asserts `F = 212`, `P = 12`, `chi = 2` -- **integers from a
+  closed-form ladder**, which cannot test float bit-identity at all. The 17
+  `to_bits()` assertions in `certification.rs` are all *within Rust*. There is
+  no stored JS reference vector in the repo. RULE 0's load-bearing wall is
+  still a written standard rather than a receipt.
+  *This is the R13-R16 pattern again, and this time it hid inside the very file
+  whose name promised the check.*
 - `Mesh::refine()` -- build level 1..k, do not merely count it. Then certify
   each level: counting is not closing.
 - Carry `rng.rs` back into THEA and make the basin count assertable.
