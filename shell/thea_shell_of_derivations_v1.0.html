@@ -1,0 +1,580 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>THEA -- THE SHELL OF DERIVATIONS v1.0 -- the dodecahedron of open questions, opened into C60</title>
+<!-- v1.0 -- THE SHELL. Two sister pages, joined.
+     The Dodecahedron of Open Questions has twelve pentagons (the questions) and twenty
+     points. THEA has twenty-four propositions and a dependency graph. Stand a THEA tower
+     on each of the twenty points and open the dodecahedron: truncating the dual
+     icosahedron turns every point into a hexagon and every pentagon stays a pentagon.
+     That is C60. So:
+       12 pentagons  = the twelve open questions (Euler forces exactly twelve; a pentagon
+                       is where the flat tiling cannot continue -- the curvature lives there)
+       20 hexagons   = twenty THEA towers, I..XX, their full formula stacks typeset by the
+                       page's own TeX kernel (the one THEA and the towers share, no CDN)
+       60 vertices   = the correlative nodes: each is the meeting of exactly two towers and
+                       one question, and takes the weaker status of its two towers
+       the centre    = the sun (section zero), whose two rays reach I and VII
+     THE LIGHT MATRIX TRACES THE PATHS. The 27 dependencies among the twenty are laid on
+     the shell by a seeded annealer at load: hexagon adjacency is the dodecahedral graph,
+     3-regular, so a card with more than three relations cannot lie flat. What lies flat is
+     drawn as a gold bond; what will not is drawn as an arc -- a knot. Press "trace" and
+     the light walks the graph by topological depth, one beat per depth; at depth n the HUD
+     shows M^n s_0 and the shell T_n the light has reached.
+     WHERE THE KNOTS ARE, counted, not asserted: the twelve pentagons; the arcs; the rung
+     knots (cards whose rung on THEA's ladder is below a foundation's); the hypotheses.
+     All of this is computed at load. The placement receipt is printed in the HUD.
+     Not claimed: any correspondence between a tower and the physics element that stood on
+     its dodecahedron point. The point's name is shown in the panel, marked as placement. -->
+<style>
+:root{--bg:#04040c;--paper:#080b16;--rule:#1e2740;--ink:#e8ecf8;--dim:#6b7390;--gold:#ffd166;--knot:#e86753;--exact:#38d39f;--computed:#00d4ff;--measured:#b48cff;--hyp:#ffb347}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:"Times New Roman",Georgia,"Noto Serif",serif}
+body{display:grid;grid-template-rows:auto 1fr;grid-template-columns:minmax(0,1.55fr) minmax(360px,1fr);height:100vh;overflow:hidden}
+header{grid-column:1/3;display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 18px;padding:12px 18px 8px;border-bottom:1px solid var(--rule)}
+header h1{font-size:19px;font-weight:500;margin:0;letter-spacing:.01em}
+header h1 span{color:var(--dim);font-style:italic;font-weight:400}
+header .ctl{margin-left:auto;display:flex;gap:6px}
+button{font:12px/1 ui-monospace,Menlo,Consolas,monospace;background:transparent;color:var(--dim);border:1px solid var(--rule);border-radius:4px;padding:7px 11px;cursor:pointer}
+button:hover,button:focus-visible{color:var(--ink);border-color:var(--dim);outline:none}
+button.on{color:var(--gold);border-color:rgba(255,209,102,.5)}
+#stage{position:relative;min-height:0;border-right:1px solid var(--rule)}
+#shell{width:100%;height:100%;display:block;cursor:grab;touch-action:none}
+#shell:active{cursor:grabbing}
+#legend{position:absolute;left:14px;bottom:12px;font:11px/1.7 ui-monospace,Menlo,monospace;color:var(--dim);pointer-events:none}
+#legend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+#hud{position:absolute;right:14px;top:12px;max-width:min(440px,60%);font:11px/1.6 ui-monospace,Menlo,monospace;color:var(--dim);background:rgba(4,4,12,.72);border:1px solid var(--rule);border-radius:6px;padding:8px 10px}
+#hud b{color:var(--ink);font-weight:500}
+#hud .ok{color:var(--exact)}#hud .knot,.st.knot,i.knot{color:var(--knot)}
+#hud #lm{margin-bottom:6px;padding-bottom:6px;border-bottom:1px dashed var(--rule)}
+#hud .rc{margin-top:4px}
+#traceout{margin-top:6px;color:var(--gold);min-height:1.6em}
+#traceout .tex{font-size:14px;padding:0}
+#tip{position:absolute;display:none;pointer-events:none;background:rgba(8,11,22,.94);border:1px solid var(--rule);border-radius:5px;padding:6px 9px;font:12px/1.5 ui-monospace,Menlo,monospace;color:var(--ink);max-width:250px}
+#panel{overflow:auto;padding:18px 22px 40px;background:var(--paper)}
+#panel h2{font-size:21px;font-weight:500;margin:6px 0 10px;line-height:1.25}
+#panel p{line-height:1.6;margin:0 0 10px;max-width:62ch}
+#panel .claim{font-size:15.5px}
+#panel .tech{font:12px/1.5 ui-monospace,Menlo,monospace;color:var(--computed)}
+#panel .dim,.dim{color:var(--dim)}#panel .small{font-size:12px}
+.ph{display:flex;align-items:baseline;gap:10px;font:11px/1 ui-monospace,Menlo,monospace;color:var(--dim)}
+.ph .num{font:500 22px "Times New Roman",Georgia,serif;color:var(--ink)}.ph .num.q{color:var(--knot)}
+.ph .rung{margin-left:auto}
+.st{font:11px/1 ui-monospace,Menlo,monospace;padding:2px 6px;border-radius:3px;border:1px solid currentColor}
+.st.exact{color:var(--exact)}.st.computed{color:var(--computed)}.st.measured{color:var(--measured)}.st.hyp,.st.meta{color:var(--hyp)}.st.seal{color:var(--gold)}
+.tower{margin:12px 0;padding:8px 10px;border:1px solid var(--rule);border-radius:6px;background:rgba(4,4,12,.5)}
+.tex{font-size:16.5px;line-height:1.8;text-align:center;white-space:nowrap;padding:6px 0;color:#f0f4ff;overflow-x:auto}
+.note{font:11px/1.5 ui-monospace,Menlo,monospace;color:var(--dim);text-align:center;margin:-2px 0 8px}
+.assume{font-size:13.5px;line-height:1.55;color:#aeb8d0;border-left:2px solid var(--hyp);padding:4px 10px;margin:10px 0}
+.assume span,.deps span{font:11px/1 ui-monospace,Menlo,monospace;color:var(--dim);margin-right:6px}
+.deps{font-size:14px;line-height:1.7;margin:8px 0}
+.deps a,#panel a,.triple a{color:var(--gold);text-decoration:none;border-bottom:1px dotted rgba(255,209,102,.5)}
+i.flat{color:var(--exact);font:11px ui-monospace,Menlo,monospace}i.knot{font:11px ui-monospace,Menlo,monospace}
+.knotbox{font-size:13.5px;line-height:1.55;border:1px dashed var(--knot);border-radius:6px;padding:8px 10px;margin:10px 0;color:#f2c9c0}
+.triple{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;font-size:13px;line-height:1.5;margin:10px 0}
+.triple>div{border:1px solid var(--rule);border-radius:6px;padding:8px}
+.sun{color:var(--gold)}
+#intro p{max-width:66ch}
+#intro .k{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:14px;line-height:1.55;margin:12px 0}
+#intro .k b{font-weight:500;color:var(--gold)}
+@media (max-width:900px){body{grid-template-columns:1fr;grid-template-rows:auto 1fr 42vh}header{grid-column:1}#stage{border-right:0;border-bottom:1px solid var(--rule)}#hud{max-width:75%;font-size:10px}}
+@media (prefers-reduced-motion:reduce){*{transition:none}}
+.tex i{font-style:italic}.tex .rm{font-style:normal}.tex .op{font-style:normal}
+.tex .tx{font-style:normal;font-family:inherit;color:#aeb8d0;white-space:pre}
+.tex .fr{display:inline-block;vertical-align:middle;text-align:center;line-height:1.2;margin:0 .16em;font-size:.9em}
+.tex .fr>span{display:block;padding:0 .2em}
+.tex .fr>span:first-child{border-bottom:.055em solid currentColor;padding-bottom:.1em}
+.tex .fr>span:last-child{padding-top:.11em}
+.tex .sq{display:inline-flex;align-items:stretch;vertical-align:middle;line-height:1.15;margin:0 .12em}
+.tex .sq .rad{line-height:1;align-self:flex-end;margin-right:-.03em}
+.tex .sq .rt{border-top:.05em solid currentColor;padding:.1em .18em 0 .1em}
+.tex .sq .idx{font-size:.58em;line-height:1;align-self:flex-start;margin-right:-.4em;position:relative;top:.15em}
+.tex .ss{display:inline-flex;flex-direction:column;vertical-align:middle;line-height:1.05;font-size:.72em;margin-left:.06em;text-align:left}
+.tex .ss>span{display:block}.tex .ss .up{margin-bottom:.22em}.tex .ss .dn{margin-top:.1em}
+.tex sup,.tex sub{display:inline-block;font-size:.72em;line-height:1.1;margin-left:.05em}
+.tex sup{vertical-align:.62em}.tex sub{vertical-align:-.28em}
+.tex .dl{font-style:normal;display:inline-block;vertical-align:middle;line-height:1;transform-origin:50% 50%}
+.tex .ov{display:inline-flex;flex-direction:column;align-items:center;vertical-align:middle;line-height:1.05;margin:0 .12em}
+.tex .ov .ovt{font-size:.62em;margin-bottom:.06em;white-space:nowrap}
+.tex .ov .arw{display:block;transform:scaleX(1.3)}
+.tex .ov.acc{margin:0;vertical-align:baseline}.tex .ov.acc .ovt{font-size:.5em;line-height:.6;margin-bottom:-.12em}
+.tex .ol{border-top:.05em solid currentColor;padding-top:.06em}
+.tex .sp{display:inline-block}.tex .bad{color:#ff69b4;font-family:ui-monospace,monospace;font-size:.8em;border:1px dashed #ff69b4;padding:0 3px}
+.tex .bb{font-style:normal}.tex b{font-weight:700}
+.tex .bx{display:inline-block;border:1px solid currentColor;padding:.12em .4em;margin:0 .1em;vertical-align:middle}
+.tex .mat{display:inline-flex;align-items:center;vertical-align:middle;margin:0 .1em}
+.tex .mtx{display:inline-grid;column-gap:.7em;row-gap:.12em;text-align:center;line-height:1.25;margin:0 .1em}
+.tex .mtx .mc{display:block;padding:0 .05em}.tex .mtx .mr{text-align:right}.tex .mtx .ml{text-align:left;padding-left:.5em}
+.tex .mdl{font-size:1.05em;font-weight:200}
+</style></head>
+<body>
+<header>
+  <h1>THEA — The Shell of Derivations <span>v1.0 · the dodecahedron of open questions, opened into C₆₀</span></h1>
+  <div class="ctl"><button id="trace">▶ trace the light</button><button id="spin">spin</button><button id="reset">reset</button></div>
+</header>
+<div id="stage">
+  <canvas id="shell" aria-label="C60 shell: twenty towers on the hexagons, twelve open questions on the pentagons, sixty correlative nodes"></canvas>
+  <div id="hud"><div id="lm"></div><div id="placement">placing the towers…</div><div id="traceout"></div></div>
+  <div id="legend"><i style="background:#38d39f"></i>exact <i style="background:#00d4ff"></i>computed <i style="background:#b48cff"></i>measured <i style="background:#ffb347"></i>hypothesis <i style="background:#e86753"></i>open question <i style="background:#ffd166"></i>dependency · dashed arc = a knot<br>drag to turn · scroll to zoom · click a hexagon, a pentagon, or a node</div>
+  <div id="tip"></div>
+</div>
+<div id="panel"><div id="intro">
+  <div class="ph"><span class="num">☀</span><span class="st birth" style="color:var(--gold)">birth</span><span class="rung">the shell · read me first</span></div>
+  <h2>Two pages, one shell</h2>
+  <p class="claim">The Dodecahedron of Open Questions has twelve pentagons and twenty points. THEA has twenty-four propositions and a dependency graph. Stand a THEA tower on each point and open the dodecahedron — truncate the dual icosahedron — and every point becomes a hexagon while every pentagon stays a pentagon. That is C₆₀.</p>
+  <div class="k"><b>12 pentagons</b><span>the twelve open questions. Euler forces exactly twelve on any closed trivalent sphere; a pentagon is where the flat tiling cannot continue, so the curvature — the thing that will not close — lives there.</span>
+  <b>20 hexagons</b><span>twenty THEA towers, I to XX, each with its full formula stack typeset by the page’s own kernel. The colour is the card’s status.</span>
+  <b>60 nodes</b><span>the correlative nodes: each is the meeting of exactly two towers and one question, and it takes the weaker status of its two towers.</span>
+  <b>the light</b><span>section zero at the centre. Its two rays reach I and VII. Press trace and the light walks the dependency graph by depth; the light matrix advances once per beat and the HUD shows the shell T it has reached.</span>
+  <b>gold bonds</b><span>dependencies that lie flat on the shell — foundation and dependent are neighbouring hexagons.</span>
+  <b>dashed arcs</b><span>dependencies the shell cannot hold locally. Hexagon adjacency is the dodecahedral graph, three neighbours each; a card with more relations than that must send some of them over the top. These are the knots of the second kind; the placement that minimises them is annealed at load and receipted in the corner.</span></div>
+  <p class="dim">Click anything on the shell. The reading panel shows the tower, the question, or the node — with jump links along the dependencies.</p>
+</div></div>
+<script>
+const SYM={alpha:'α',beta:'β',gamma:'γ',delta:'δ',epsilon:'ϵ',varepsilon:'ε',zeta:'ζ',eta:'η',theta:'θ',vartheta:'ϑ',iota:'ι',kappa:'κ',lambda:'λ',mu:'μ',nu:'ν',xi:'ξ',pi:'π',varpi:'ϖ',rho:'ρ',varrho:'ϱ',sigma:'σ',varsigma:'ς',tau:'τ',upsilon:'υ',phi:'ϕ',varphi:'φ',chi:'χ',psi:'ψ',omega:'ω',
+Gamma:'Γ',Delta:'Δ',Theta:'Θ',Lambda:'Λ',Xi:'Ξ',Pi:'Π',Sigma:'Σ',Upsilon:'Υ',Phi:'Φ',Psi:'Ψ',Omega:'Ω',
+partial:'∂',nabla:'∇',infty:'∞',pm:'±',mp:'∓',times:'×',cdot:'·',cdots:'⋯',ldots:'…',dots:'…',to:'→',rightarrow:'→',longrightarrow:'⟶',leftarrow:'←',leftrightarrow:'↔',longleftrightarrow:'⟷',Rightarrow:'⇒',Leftarrow:'⇐',Leftrightarrow:'⇔',mapsto:'↦',hookrightarrow:'↪',
+le:'≤',leq:'≤',ge:'≥',geq:'≥',ne:'≠',neq:'≠',approx:'≈',sim:'∼',simeq:'≃',equiv:'≡',propto:'∝',lesssim:'≲',gtrsim:'≳',ll:'≪',gg:'≫',
+hbar:'ℏ',ell:'ℓ',langle:'⟨',rangle:'⟩',dagger:'†',star:'⋆',ast:'∗',circ:'∘',otimes:'⊗',oplus:'⊕',wedge:'∧',vee:'∨',cap:'∩',cup:'∪','in':'∈',notin:'∉',subset:'⊂',subseteq:'⊆',supset:'⊃',forall:'∀',exists:'∃',emptyset:'∅',Box:'□',square:'□',prime:'′',lVert:'‖',rVert:'‖','|':'‖','{':'{','}':'}','%':'%','_':'_','&':'&','#':'#',lbrace:'{',rbrace:'}',lfloor:'⌊',rfloor:'⌋',lceil:'⌈',rceil:'⌉',
+int:'∫',oint:'∮',iint:'∬',sum:'∑',prod:'∏',bigcup:'⋃',bigcap:'⋂',perp:'⊥',parallel:'∥',mid:'∣',vdash:'⊢',models:'⊨',neg:'¬',bullet:'•',aleph:'ℵ',Re:'ℜ',Im:'ℑ',setminus:'∖',because:'∵',therefore:'∴',qed:'∎',checkmark:'✓',degree:'°',prec:'≺',succ:'≻',preceq:'≼',succeq:'≽',hbox:''};
+const OPS=['sin','cos','tan','ln','log','exp','det','lim','max','min','sup','inf','arg','tr','Tr','dim','ker','sgn','Pr','ext','diag','mod'];
+const SPACES={',':'.17em',';':'.28em',':':'.22em','!':'-.17em',quad:'1em',qquad:'2em',' ':'.3em'};
+const ACC={hat:'\u0302',widehat:'\u0302',tilde:'\u0303',widetilde:'\u0303',bar:'\u0304',vec:'\u20D7',dot:'\u0307',ddot:'\u0308',dddot:'\u20DB',breve:'\u0306',check:'\u030C',acute:'\u0301',grave:'\u0300'};
+const FONTS={mathrm:'rm',text:'tx',textrm:'tx',operatorname:'op',mathbf:'bf',boldsymbol:'bf',mathbb:'bb',mathcal:'cal',mathfrak:'frak',mathit:'it',mathsf:'rm',mathtt:'rm'};
+const BBX={C:'ℂ',H:'ℍ',N:'ℕ',P:'ℙ',Q:'ℚ',R:'ℝ',Z:'ℤ'},CALX={B:'ℬ',E:'ℰ',F:'ℱ',H:'ℋ',I:'ℐ',L:'ℒ',M:'ℳ',R:'ℛ'},FRX={C:'ℭ',H:'ℌ',I:'ℑ',R:'ℜ',Z:'ℨ'};
+const uni=(ch,base,exc)=>{if(exc[ch])return exc[ch];const c=ch.charCodeAt(0);if(c>=65&&c<=90)return String.fromCodePoint(base+(c-65));if(c>=97&&c<=122)return String.fromCodePoint(base+26+(c-97));return ch;};
+function parse(s){let i=0;const n=s.length;
+  const ws=()=>{while(i<n&&(s[i]===' '||s[i]==='\n'||s[i]==='\t'))i++;};
+  function until(stop,peek){const out=[];for(;;){ws();if(i>=n)return out;if((stop==='}'||stop==='sw')&&s[i]==='}'){if(!peek)i++;return out;}if(stop==='right'&&s.startsWith('\\right',i)){i+=6;return out;}if(stop==='end'&&s.startsWith('\\end',i)){i+=4;rawArg();return out;}if(stop==='sw'&&(s.startsWith('\\right',i)||s.startsWith('\\end',i)))return out;
+      let a=atom();if(!a)return out;a=scripts(a);out.push(a);}}
+  function scripts(base){let sup=null,sub=null;for(;;){ws();if(s[i]==='^'&&!sup){i++;sup=arg();}else if(s[i]==='_'&&!sub){i++;sub=arg();}else break;}
+    return(sup||sub)?{t:'ss',base,sup,sub}:base;}
+  function arg(){ws();if(s[i]==='{'){i++;return{t:'g',k:until('}')};}if(s[i]==='\\')return cmd();const c=s[i++];return{t:'c',v:c};}
+  function rawArg(){ws();if(s[i]!=='{')return arg();let d=1,j=i+1;while(j<n&&d){if(s[j]==='{')d++;else if(s[j]==='}')d--;j++;}const raw=s.slice(i+1,j-1);i=j;return{t:'raw',v:raw};}
+  function delim(){ws();if(s[i]==='\\'){const c=cmd();return c.v===''?'':(c.v||'');}const c=s[i++];return c==='.'?'':c;}
+  function atom(){ws();if(i>=n)return null;const c=s[i];
+    if(c==='{'){i++;return{t:'g',k:until('}')};}
+    if(c==='}')return null;
+    if(c==='\\')return cmd();
+    if(c==="'"){i++;return{t:'s',v:'′'};}
+    if(c==='^'||c==='_'){i++;return{t:'c',v:''};}
+    i++;return{t:'c',v:c};}
+  function cmd(){i++;let name='';if(i<n&&/[A-Za-z]/.test(s[i])){while(i<n&&/[A-Za-z]/.test(s[i]))name+=s[i++];}else name=s[i++];
+    if(name==='\\')return{t:'br'};
+    if(name==='frac'||name==='tfrac'||name==='dfrac')return{t:'fr',n:arg(),d:arg()};
+    if(name==='sqrt'){ws();let idx=null;if(s[i]==='['){i++;const j=s.indexOf(']',i);idx=parse(s.slice(i,j));i=j+1;}return{t:'sq',k:arg(),idx};}
+    if(name==='left'){const d=delim();const k=until('right');const dr=delim();return{t:'lr',d,k,dr};}
+    if(name==='right')return{t:'c',v:''};
+    if(name==='overset'){const top=arg();const k=arg();return{t:'ov',top,k};}
+    if(name==='xrightarrow'){const top=arg();return{t:'ov',top,k:{t:'s',v:'⟶'},arw:1};}
+    if(name==='xleftarrow'){const top=arg();return{t:'ov',top,k:{t:'s',v:'⟵'},arw:1};}
+    if(name==='overline'||name==='widebar')return{t:'ol',k:arg()};
+    if(name==='boxed')return{t:'bx',k:arg()};
+    if(name==='begin'){const env=rawArg().v.trim();if(env==='array'||env==='tabular')rawArg();const body=until('end');
+      const rows=[[[]]];for(const x of body){if(x.t==='br')rows.push([[]]);else if(x.t==='c'&&x.v==='&')rows[rows.length-1].push([]);else rows[rows.length-1][rows[rows.length-1].length-1].push(x);}
+      if(rows.length>1&&rows[rows.length-1].length===1&&!rows[rows.length-1][0].length)rows.pop();
+      const D={pmatrix:['(',')'],bmatrix:['[',']'],Bmatrix:['{','}'],vmatrix:['|','|'],Vmatrix:['‖','‖'],cases:['{',''],matrix:['',''],aligned:['',''],array:['',''],align:['',''],gathered:['','']};
+      return{t:'mat',env,rows,d:D[env]||['',''],al:env==='aligned'||env==='align'||env==='cases'};}
+    if(name==='rm'||name==='it'||name==='bf'||name==='cal'||name==='sf'||name==='tt'){const f=name==='rm'||name==='sf'||name==='tt'?'rm':name;return{t:'font',f,k:{t:'g',k:until('sw',true)}};}
+    if(name==='underbrace')return{t:'g',k:[arg()]};
+    if(name==='dddot')return{t:'ov',top:{t:'s',v:'⋯'},k:arg(),acc:1};
+    if(ACC[name])return{t:'acc',a:ACC[name],k:arg()};
+    if(FONTS[name]){const f=FONTS[name];return f==='tx'||f==='op'||f==='rm'?{t:'font',f,k:rawArg()}:{t:'font',f,k:arg()};}
+    if(SPACES[name]!==undefined)return{t:'sp',w:SPACES[name]};
+    if(name==='displaystyle'||name==='textstyle'||name==='nonumber'||name==='limits'||name==='nolimits'||name==='big'||name==='Big'||name==='bigl'||name==='bigr'||name==='Bigl'||name==='Bigr')return{t:'c',v:''};
+    if(OPS.includes(name))return{t:'op',v:name};
+    if(SYM[name]!==undefined)return{t:'s',v:SYM[name],name};
+    return{t:'bad',v:'\\'+name};}
+  return until(null);}
+const esc=t=>t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+/* how tall a \left...\right pair has to grow: 0 none, 1 scripts, 2 two-storey */
+function bigLevel(ns){const A=(Array.isArray(ns)?ns:[ns]).filter(Boolean);let m=0;
+  for(const x of A){let v=0;
+    if(x.t==='fr'||x.t==='sq'||x.t==='mat')v=2;
+    else if(x.t==='bx')v=bigLevel(x.k);
+    else if(x.t==='ss')v=Math.max(x.sup&&x.sub?1:.6,bigLevel([x.base,x.sup,x.sub]));
+    else if(x.t==='g')v=bigLevel(x.k);
+    else if(x.t==='lr')v=Math.min(2,bigLevel(x.k)+1);
+    else if(x.t==='ov'||x.t==='ol'||x.t==='acc')v=1;
+    if(v>m)m=v;}
+  return m;}
+
+/* ---- TeX's atom classes and its inter-atom spacing (Appendix G / TeXbook p.170).
+   Without this every formula reads as one word: "L=-1/4F+..." instead of "L = -1/4 F + ...".
+   Widths are mu (18mu = 1em) so they shrink correctly inside scripts. ---- */
+const BIN=new Set(['+','−','±','∓','×','·','∗','⊗','⊕','∘','∧','∨','∩','∪','∖','⋆','•']);
+const REL=new Set(['=','≠','<','>','≤','≥','≈','∼','≃','≡','∝','≲','≳','≪','≫','→','⟶','←','⟵','↔','⟷','⇒','⇐','⇔','↦','↪','∈','∉','⊂','⊆','⊃','⊢','⊨','≺','≻','≼','≽','∥','⊥','∣','∴','∵']);
+const OPEN=new Set(['(','[','{','⟨','⌊','⌈']);
+const CLOSE=new Set([')',']','}','⟩','⌋','⌉']);
+const PUNCT=new Set([',',';',':']);
+const BIGOP=new Set(['∑','∏','∫','∮','∬','⋃','⋂']);
+const NORM={'-':'−','*':'∗'};                              /* r1 rewrites these on output */
+function cls(x){if(!x)return'ord';
+  switch(x.t){
+    case 'c':case 's':{const v=NORM[x.v]||x.v;if(v==='')return'none';
+      if(BIGOP.has(v))return'op';if(BIN.has(v))return'bin';if(REL.has(v))return'rel';
+      if(OPEN.has(v))return'open';if(CLOSE.has(v))return'close';if(PUNCT.has(v))return'punct';
+      return'ord';}
+    case 'op':return'op';
+    case 'sp':case 'br':return'none';
+    case 'lr':case 'mat':return'inner';
+    case 'bx':return'ord';
+    case 'ov':return x.acc?'ord':'rel';
+    case 'ss':return cls(x.base)==='op'?'op':'ord';
+    default:return'ord';}}
+const MU=['', '.166em', '.222em', '.277em'];              /* thin, medium, thick */
+const GLUE={ord:{op:1,bin:2,rel:3,inner:1},
+            op:{ord:1,op:1,rel:3,inner:1},
+            bin:{ord:2,op:2,open:2,inner:2},
+            rel:{ord:3,op:3,open:3,inner:3},
+            open:{},
+            close:{op:1,bin:2,rel:3,inner:1},
+            punct:{ord:1,op:1,bin:1,rel:1,open:1,close:1,punct:1,inner:1},
+            inner:{ord:1,op:1,bin:2,rel:3,open:1,punct:1,inner:1}};
+const glue=w=>'<span class="sp" style="'+(w[0]==='-'?'width:0;margin-left:'+w:'width:'+w)+'"></span>';
+function accentLast(html,a){let inTag=false,last=-1;
+  for(let i=0;i<html.length;i++){const ch=html[i];
+    if(ch==='<')inTag=true;else if(ch==='>')inTag=false;
+    else if(!inTag&&ch.trim()!=='')last=i;}
+  return last<0?html+a:html.slice(0,last+1)+a+html.slice(last+1);}
+function R(ns,mode){const A=(Array.isArray(ns)?ns:[ns]).filter(Boolean);
+  let h='',prev=null,gap=false;
+  for(const x of A){let c=cls(x);
+    if(c==='none'){h+=r1(x,mode);gap=true;continue;}
+    /* a Bin with nothing usable on its left is unary: -x, (-,+,+,+), = -1/4 */
+    if(c==='bin'&&(prev===null||prev==='bin'||prev==='op'||prev==='rel'||prev==='open'||prev==='punct'))c='ord';
+    if(prev!==null&&!gap){const k=(GLUE[prev]||{})[c]||0;if(k)h+=glue(MU[k]);}
+    h+=r1(x,mode);prev=c;gap=false;}
+  return h;}
+function r1(x,mode){if(!x)return'';switch(x.t){
+  case 'c':{const v=x.v;if(v==='')return'';if(v==='-')return'−';if(v==='<')return'&lt;';if(v==='>')return'&gt;';if(v==='&')return'&amp;';if(v==='*')return'∗';
+    if(/[A-Za-z]/.test(v))return mode==='rm'||mode==='tx'?v:'<i>'+v+'</i>';return v;}
+  case 's':{const g=x.v;if(mode!=='rm'&&/[α-ω]/.test(g)&&g!=='ϵ')return'<i>'+g+'</i>';if(/[ϵεφϑϖϱ]/.test(g)&&mode!=='rm')return'<i>'+g+'</i>';return g;}
+  case 'op':return'<span class="op">'+x.v+'</span>';
+  case 'sp':return glue(x.w);
+  case 'br':return'<br>';
+  case 'g':return R(x.k,mode);
+  case 'fr':return'<span class="fr"><span>'+R(x.n,mode)+'</span><span>'+R(x.d,mode)+'</span></span>';
+  case 'sq':{const lv=bigLevel(x.k);const sz=lv>=2?2.3:lv>=1?1.6:lv>=.5?1.3:1.12;
+    return'<span class="sq">'+(x.idx?'<span class="idx">'+R(x.idx,mode)+'</span>':'')+
+      '<span class="rad" style="font-size:'+sz+'em">√</span><span class="rt">'+R(x.k,mode)+'</span></span>';}
+  case 'ss':{const b=r1(x.base,mode);if(x.sup&&x.sub)return b+'<span class="ss"><span class="up">'+R(x.sup,mode)+'</span><span class="dn">'+R(x.sub,mode)+'</span></span>';
+    if(x.sup)return b+'<sup>'+R(x.sup,mode)+'</sup>';return b+'<sub>'+R(x.sub,mode)+'</sub>';}
+  case 'lr':{const lv=bigLevel(x.k);const st='font-size:'+(lv>=2?1.75:lv>=1?1.32:lv>=.5?1.15:1.04)+'em';
+    const D=d=>d?'<span class="dl" style="'+st+'">'+esc(d)+'</span>':'';
+    return D(x.d)+R(x.k,mode)+D(x.dr);}
+  case 'ov':return'<span class="ov'+(x.acc?' acc':'')+'"><span class="ovt">'+R(x.top,mode)+'</span><span'+(x.arw?' class="arw"':'')+'>'+r1(x.k,mode)+'</span></span>';
+  case 'ol':return'<span class="ol">'+R(x.k,mode)+'</span>';
+  case 'bx':return'<span class="bx">'+R(x.k,mode)+'</span>';
+  case 'mat':{const nr=x.rows.length,nc=Math.max(...x.rows.map(r=>r.length));const sy=Math.max(1,nr*0.92);
+    const D=d=>d?'<span class="dl mdl" style="transform:scaleY('+sy.toFixed(2)+')">'+esc(d)+'</span>':'';
+    const cells=x.rows.map(r=>{let h='';for(let c=0;c<nc;c++){h+='<span class="mc'+(x.al?(c%2?' ml':' mr'):'')+'">'+(r[c]?R(r[c],mode):'')+'</span>';}return h;}).join('');
+    return'<span class="mat">'+D(x.d[0])+'<span class="mtx" style="grid-template-columns:repeat('+nc+',auto)'+(x.al?';column-gap:0':'')+'">'+cells+'</span>'+D(x.d[1])+'</span>';}
+  case 'acc':{const inner=R(x.k,mode);const plain=inner.replace(/<[^>]+>/g,'');
+    if([...plain].length===1)return accentLast(inner,x.a);
+    return'<span class="ol">'+inner+'</span>';}
+  case 'raw':return esc(x.v);
+  case 'font':{const f=x.f;if(f==='tx')return'<span class="tx">'+esc(x.k.v!==undefined?x.k.v:R(x.k,'tx').replace(/<[^>]+>/g,''))+'</span>';
+    if(f==='rm'||f==='op'){const inner=x.k.v!==undefined?esc(x.k.v):R(x.k,'rm');return'<span class="'+(f==='op'?'op':'rm')+'">'+inner+'</span>';}
+    const txt=R(x.k,'rm').replace(/<[^>]+>/g,'');
+    if(f==='bf')return'<b>'+txt+'</b>';if(f==='it')return'<i>'+txt+'</i>';
+    if(f==='bb')return'<span class="bb">'+[...txt].map(c=>uni(c,0x1D538,BBX)).join('')+'</span>';
+    if(f==='cal')return'<span class="bb">'+[...txt].map(c=>uni(c,0x1D49C,CALX)).join('')+'</span>';
+    if(f==='frak')return'<span class="bb">'+[...txt].map(c=>uni(c,0x1D504,FRX)).join('')+'</span>';
+    return txt;}
+  case 'bad':return'<span class="bad">'+esc(x.v)+'</span>';
+  default:return'';}}
+function tex(s){try{return R(parse(s),'it');}catch(e){return'<span class="bad">parse error: '+esc(String(e.message))+'</span>';}}
+const bad=s=>(tex(s).match(/class="bad"/g)||[]).length;
+</script>
+<script>
+var CARDS=[{"n": "☀", "lv": 0, "deps": [], "status": "birth", "ttl": "Thea Source Code — the birth, the whole light", "claim": "Before the tower, the light. 4.2 billion years ago the first self-assembly cell paid the price to read this source code — and every mage since pays it again to see. From ONE forced number, the pentagon's own ratio φ = 2cos(π/5), the whole closed shell is born: the twelve anchors, the first fullerene C₆₀, and the light matrix whose four eigenvalues are the four modes of all that grows. Click once and watch the light turn on — the source computes itself.", "tex": ["\\phi=2\\cos\\frac{\\pi}{5}=\\frac{1+\\sqrt5}{2}\\;\\;\\xrightarrow{\\text{Euler}}\\;\\; P=12", "\\text{first closed shell: } C_{60}\\;(k,\\ell)=(1,1),\\; T=3,\\; V=60,\\; \\chi=2", "\\mathcal M_{\\text{light}}=\\begin{pmatrix}1&2&1&0\\\\1&1&0&0\\\\1&0&0&0\\\\0&0&0&1\\end{pmatrix}\\;\\Rightarrow\\;\\operatorname{spec}=\\{\\phi^2,\\,1,\\,-1,\\,\\phi^{-2}\\}"], "notes": ["exact · φ from the pentagon; the arrow is Euler’s theorem (II), not a derivation from φ", "computed · (1,1) → T = 3 → V = 60, χ = 2, counted live", "computed · spec(M) is no longer asserted: the charpoly comes out of Faddeev–LeVerrier and its roots out of Durand–Kerner (V)"], "assume": "That a discrete hexagonal lattice closed on an icosahedron is an object worth studying in its own right — no claim yet that it is physics. That is section XVII’s question, not this one’s. (Ported from the towers, rung L0; the towers wrote “a object” and this page corrects it.)"}, {"n": "I", "lv": 0, "deps": ["☀"], "status": "exact", "ttl": "The constant field — φ and π are not independent", "claim": "The golden ratio is the pentagon's own number: φ = 2cos(π/5). Every identity below is exact algebra, checked live to machine precision.", "tex": ["\\phi=\\frac{1+\\sqrt5}{2},\\quad \\phi^2=\\phi+1,\\quad \\phi^{-2}=2-\\phi", "\\phi=2\\cos\\frac{\\pi}{5},\\qquad \\phi^{-1}=2\\cos\\frac{2\\pi}{5}", "\\phi^2+\\phi^{-2}=3,\\qquad \\phi^2-\\phi^{-2}=\\sqrt5"], "notes": ["exact · the minimal polynomial x² = x + 1 and its consequences", "exact · the pentagon’s own trigonometry; checked to machine precision", "exact · the two symmetric combinations; 3 is the trace of M’s growth block"], "assume": "That φ is “forced” by the pentagon and not by the page: 2cos(π/5) is one of many equivalent definitions, and choosing the pentagon as the primitive is the column’s aesthetic. The identities are not a choice; the starting point is."}, {"n": "II", "lv": 1, "deps": [], "status": "exact", "ttl": "Why P = 12 — Euler forces twelve pentagons", "claim": "On any closed trivalent sphere, the curvature sum Σ(6−p)f_p = 12 is forced by Euler. Pentagons contribute +1 each, hexagons 0. So P = 12, independent of how many hexagons you grow.", "tex": ["3V=2E,\\qquad \\sum_p p\\,f_p=2E,\\qquad V-E+\\sum_p f_p=2", "\\boxed{\\sum_{p\\ge3}(6-p)\\,f_p=12}\\;\\Rightarrow\\;(6-5)P=12\\;\\Rightarrow\\;P=12", "E=\\tfrac{3V}{2},\\quad F=\\tfrac{V}{2}+2,\\quad H=\\tfrac{V}{2}-10,\\quad V-E+F=2"], "notes": ["exact · handshake (trivalent), face count, and Euler for the sphere", "exact · Euler’s theorem for trivalent 5/6 tilings: pentagons weigh +1, hexagons 0, so P = 12 always", "exact · the whole census from V alone; hexagons need V ≥ 20, V even, V ≠ 22"], "assume": "Trivalent (every vertex degree 3), pentagons and hexagons only, and a sphere (χ = 2). Drop any one and P = 12 goes: a torus has χ = 0 and P = 0; allow heptagons and the count becomes P − H₇ = 12."}, {"n": "III", "lv": 1, "deps": ["II"], "status": "exact", "ttl": "Discrete Gauss–Bonnet — the total curvature is 4π", "claim": "Give each p-gon curvature K_p = (π/3)(6−p). Summed over a closed fullerene, the total is 12·(π/3) = 4π — the exact Gauss–Bonnet integral of a sphere, recovered on a discrete graph. v1.4.0: until now this card multiplied π/3 by 12 and compared it to 4π — the same number written twice. Now it embeds C₆₀ as the truncated icosahedron, reads the three edge angles at each of the 60 vertices, and lets Descartes do the summing: every vertex carries π/15, every pentagon’s five vertices carry π/3 between them, and the total is 4π because χ = 2 — geometry, not bookkeeping.", "tex": ["K_p=\\frac{\\pi}{3}(6-p),\\qquad \\sum_{\\text{faces}}K_p=\\frac{\\pi}{3}\\sum_p(6-p)f_p=4\\pi=\\int_{S^2}K\\,dA", "\\delta_v=2\\pi-\\sum_{\\text{faces at }v}\\theta,\\qquad \\sum_v\\delta_v=2\\pi\\chi\\quad(\\text{Descartes})", "C_{60}:\\;\\delta_v=2\\pi-\\big(\\tfrac{2\\pi}{3}+\\tfrac{2\\pi}{3}+\\tfrac{3\\pi}{5}\\big)=\\tfrac{\\pi}{15},\\qquad 60\\cdot\\tfrac{\\pi}{15}=4\\pi"], "notes": ["exact · angle defect per face of a flat-hexagon tiling: each pentagon carries π/3", "exact · discrete Gauss–Bonnet: 12 · π/3 = 4π = ∫K dA on the round sphere", "measured · Descartes: the defect at every vertex read off the embedded C₆₀ (planar faces) and a T = 7 shell (fanned to a polyhedron); the sum is 2πχ"], "assume": "That angle defect concentrated on faces IS curvature — exact for polyhedra (Descartes), while the continuum reading is the round sphere’s, which the graph only approximates (VIII). v1.4.0: the face bookkeeping (π/3 per pentagon) is a theorem; the 4π below is no longer that theorem restated but 60 spatial angles, measured, summing to it."}, {"n": "IV", "lv": 0, "deps": [], "status": "exact", "ttl": "The hexagonal closure norm — T = k² + kℓ + ℓ²", "claim": "Eisenstein integers k + ℓω have norm T = k² + kℓ + ℓ². This norm is multiplicative: N(ab) = N(a)N(b). It is the triangulation number that sets the carbon count V = 20T.", "tex": ["T=N(k+\\ell\\,\\zeta_6)=k^2+k\\ell+\\ell^2", "N(ab)=N(a)\\,N(b)\\quad(\\text{multiplicative})", "(k,\\ell)\\cdot(m,n)=(km-\\ell n,\\;kn+\\ell m+\\ell n)"], "notes": ["exact · the Eisenstein norm = the Goldberg–Coxeter triangulation number (Caspar–Klug’s T)", "exact · multiplicativity of the norm; verified live on a random product", "exact · the product rule in the basis (1, ζ₆) with ζ₆² = ζ₆ − 1"], "assume": "That the Goldberg–Coxeter family on an icosahedron is the only family grown here. Other closed 5/6 shells exist — 1812 isomers at C₆₀ alone — and T counts only the icosahedral ones."}, {"n": "V", "lv": 2, "deps": ["IV"], "status": "exact", "ttl": "The light matrix — one 4×4 integer recursion", "claim": "Lift the pair recursion (k,ℓ)→(k+ℓ,k) into quadratic data s=(k², kℓ, ℓ², P). One integer matrix M advances the whole shell family. Its four eigenvalues are the whole story.", "tex": ["s_{n+1}=\\mathcal M\\,s_n,\\qquad \\mathcal M=\\begin{pmatrix}1&2&1&0\\\\1&1&0&0\\\\1&0&0&0\\\\0&0&0&1\\end{pmatrix}", "\\det(\\lambda I-\\mathcal M)=(\\lambda-1)(\\lambda+1)(\\lambda^2-3\\lambda+1)", "\\operatorname{spec}(\\mathcal M)=\\{\\phi^2,\\;1,\\;-1,\\;\\phi^{-2}\\}"], "notes": ["exact · one integer matrix advances s = (k², kℓ, ℓ², P); the last row is the frozen P = 12", "computed · the coefficients [1, −3, 0, 3, −1] come out of Faddeev–LeVerrier on M, then are matched to the hand factorization", "computed · the four roots by Durand–Kerner on the computed polynomial; det(M − λI) at each printed as the receipt"], "assume": "That the Fibonacci ray is a choice, not a necessity — wiggling off it leaves the SHELLS’ spectra unchanged (their Laplacians care about T, not about φ) — but not M’s: {φ², 1, −1, φ⁻²} is the spectrum of the Fibonacci lift specifically, and another ray gives another integer matrix with other eigenvalues (v1.4.0: two spectra were conflated here). The recurrence is exact; the golden framing is the column’s own aesthetic, tagged as such. (Towers, L2.)"}, {"n": "VI", "lv": 2, "deps": ["V", "IV"], "status": "exact", "ttl": "The golden selector — Fibonacci picks the closed shells", "claim": "Take (k,ℓ) = (F_{n+1}, F_n). The triangulation numbers T obey T_{n+3}=2T_{n+2}+2T_{n+1}−T_n, whose characteristic roots are exactly {φ², −1, φ⁻²}. The ratio T_{n+1}/T_n climbs to φ².", "tex": ["(k_n,\\ell_n)=(F_{n+1},F_n),\\qquad T_n=F_{n+1}^2+F_{n+1}F_n+F_n^2", "T_n:\\;1,3,7,19,49,129,337,883,\\ldots", "T_{n+3}=2T_{n+2}+2T_{n+1}-T_n,\\qquad r^3-2r^2-2r+1=(r+1)(r^2-3r+1)"], "notes": ["exact · the golden ray through the (k, ℓ) lattice, by definition", "computed · the first eight shells, generated live", "exact · the recurrence follows from Fibonacci’s; the cubic is V’s charpoly with the frozen eigenvalue 1 removed"], "assume": "That the Fibonacci ray is the natural path. It is one ray in the lattice; the T sequence is a choice of direction, and other rays give other integer recurrences with the same norm."}, {"n": "VII", "lv": 3, "deps": ["☀", "I"], "status": "exact", "ttl": "The exact C₆₀ spectral boundary — λ_min = −φ²", "claim": "Build the real C₆₀ adjacency graph (truncated icosahedron, 60 vertices, 3-regular) live, and diagonalize it in-browser. Its least eigenvalue is exactly −φ² = −(3+√5)/2. The golden ratio is written into the soccer ball's spectrum.", "tex": ["\\lambda_{\\min}\\big(A_{C_{60}}\\big)=-\\phi^2=-\\frac{3+\\sqrt5}{2}\\quad(\\text{multiplicity }3)", "\\det(xI-A)=(x-3)(x-1)^9(x+2)^4\\cdots(x^2+3x+1)^3\\cdots"], "notes": ["computed · diagonalized live from a C₆₀ graph built from scratch; −φ² met to ∼10⁻⁹", "exact · only the factor carrying −φ² is named here; the full factorization is X [6] and the ellipses are honest"], "assume": "That the 3·5·7 degeneracy is symmetry-protected: wiggle one diagonal of the triangulation and it shatters into singlets (verified on the genesis page). The −φ² is diagonalized here from a graph built from scratch, not looked up. (Towers, L3.)"}, {"n": "VIII", "lv": 3, "deps": ["VII", "VI"], "status": "computed", "ttl": "The renormalized Laplacian tower — growing toward the sphere", "claim": "v1.2: the tower is now COMPUTED IN THIS PAGE — shells built live, Lanczos on the light matrix, bands read with their multiplicities. (The v1.1 build imported these numbers from light_matrix_v3.py while the box stamped them ‘computed live’ — that violated our own Curse 26, and it is repaired here.) Deep shells are gated: the price is printed before you pay.", "tex": ["\\mu_2/\\mu_1 \\to 3,\\qquad \\mu_{\\text{center}}/\\mu_1 \\to 6\\quad(\\text{sphere targets})", "\\text{numerical stabilization}\\neq\\text{proved limit}"], "notes": ["measured · a trend on the Lanczos ladder; the targets are the sphere’s ℓ(ℓ+1) ratios", "meta · the section’s own warning about itself (Path III)"], "assume": "That “grows toward the sphere” is a measured trend, not a proved limit (Path III). The deep shells are gated and priced before they are paid for (Curse 35). (Towers, L4.)"}, {"n": "IX", "lv": 5, "deps": ["VI"], "status": "hyp", "ttl": "The Planck line — the honest wall", "claim": "Tempting: count how many golden contractions from a C₆₀ bond reach the Planck length. But the count DEPENDS on the chosen start length and contraction — h is not a length. This is a HYPOTHESIS/forward-model, never a proof. The equation may be exact; the naked numeral is incomplete.", "tex": ["n=\\frac{\\log(L_{\\text{start}}/\\ell_P)}{-\\log q}\\quad\\text{depends on }L_{\\text{start}},q", "\\boxed{h\\ \\text{is not a length}}"], "notes": ["hyp · the rung count depends on two choices; that dependence is the point", "meta · the honest boundary: h is a step count, not a metre"], "assume": "That “a rung” is φ² is a choice (q); that Lₛₜₐᵣₜ is a choice. The section exists to say both are choices — nothing in it is measured."}, {"n": "X", "lv": 3, "deps": ["VII", "VIII", "III"], "status": "exact", "ttl": "The full derivation — the titans’ constant", "claim": "The bow. Everything above computed the echo; the titans let us DERIVE it. Three gifts, none ours: the honeycomb stencil L ≈ −(3a²/4)∇² (three bonds at 120° give Σ(ê·∇)² = 3/2∇²); the bookkeeping of area (each site owns (3√3/4)a²; twelve pentagons are measure zero as T→∞); and the sphere’s own ladder ℓ(ℓ+1) with degeneracies 3, 5, 7 — spherical harmonics, older than any of us. Multiply the three and the tower’s echo closes: T·λ₂ → 2π/(5√3) = 0.7255197… And C₆₀’s own Fiedler value surrenders a quartic — computed live below against exact radicals. The deep tower’s deviations are MEASURED, never modeled: the pentagons’ slow tax (Path III).", "tex": ["L f=\\sum_{i=1}^{3}\\big(f(x)-f(x+\\delta_i)\\big)\\;\\approx\\;-\\tfrac{3a^2}{4}\\nabla^2 f\\qquad\\Big(\\textstyle\\sum_i(\\hat e_i\\!\\cdot\\!\\nabla)^2=\\tfrac32\\nabla^2\\Big)", "\\text{area/site}=\\tfrac{3\\sqrt3}{4}a^2,\\qquad 20T\\cdot\\tfrac{3\\sqrt3}{4}a^2=4\\pi R^2\\;\\Rightarrow\\;\\frac{a^2}{R^2}=\\frac{4\\pi}{15\\sqrt3\\,T}", "-\\nabla^2_{S^2}Y_{\\ell m}=\\tfrac{\\ell(\\ell+1)}{R^2}Y_{\\ell m}:\\;\\;\\mu_\\ell\\propto2,6,12\\;(\\times3,5,7)\\;\\Rightarrow\\;\\tfrac{\\mu_2}{\\mu_1}\\to3,\\;\\tfrac{\\mu_{3}}{\\mu_1}\\to6", "\\boxed{\\;T\\lambda_2\\;\\longrightarrow\\;\\tfrac{3a^2}{4}\\cdot\\tfrac{2}{R^2}\\cdot T\\;=\\;\\tfrac32\\cdot\\tfrac{4\\pi}{15\\sqrt3}\\;=\\;\\frac{2\\pi}{5\\sqrt3}\\;=\\;0.7255197456\\ldots\\;}", "\\lambda_2\\big(L_{C_{60}}\\big)=\\tfrac94-\\tfrac{\\sqrt2}{8}\\big(\\sqrt{10}+2\\sqrt{19-\\sqrt5}\\big),\\quad x^4-9x^3+25x^2-22x+4=0\\;(\\times3)", "\\mu_2=\\tfrac{5-\\sqrt{13}}{2}\\;(\\times5),\\qquad \\ell{=}3\\text{ splits: }x^4\\text{-sibling }1.1797\\ldots(\\times3)\\;\\text{and}\\;\\tfrac{7-\\sqrt{17}}{2}\\;(\\times4)", "\\det(xI-A_{C_{60}})=(x-3)(x-1)^9(x+2)^4(x^2-x-3)^5(x^2+x-4)^4(x^2+x-1)^5(x^2+3x+1)^3(x^4-3x^3-2x^2+7x+1)^3"], "notes": ["exact · the honeycomb three-point stencil to O(a⁴); the 3/2 is Σ(êᵢ·∇)² over three directions at 120°", "exact · area per site of the hexagonal lattice, 20T sites on a sphere of radius R", "exact · the sphere’s ladder; degeneracies 3, 5, 7 are spherical harmonics, ℓ = 3 split 3 + 4 by the icosahedron", "exact · the titans’ constant, assembled from the three gifts above; the limit itself is measured (VIII), not proved", "exact · the Fiedler value of C₆₀ as a root of a quartic in radicals; met at machine precision live", "exact · the ℓ = 2 and ℓ = 3 blocks of C₆₀ in radicals; the seven splits 3 + 4", "exact · the full adjacency characteristic polynomial of C₆₀; (x² + 3x + 1)³ carries −φ² (VII); checked live against the Jacobi spectrum"], "assume": "That T·λ₂ → 2π/(5√3) is a measured convergence, not a proved limit — at T = 129 it still sits ∼0.0009 below the constant; the residual is the pentagons’ slow tax and it is not modelled. (Towers, L3.)"}, {"n": "XI", "lv": 1, "deps": ["IV"], "status": "exact", "ttl": "The one quadratic form — T is the SU(3) weight lattice", "claim": "The shell index is not only a shell index. T = k² + kℓ + ℓ² is the norm form of the A₂ root lattice — which is the SU(3) weight lattice, which is ℤ[ζ₆]. The same integer that counts a fullerene's triangulation sits inside the SU(3) quadratic Casimir. Both statements are checked here, live, on every pair in a block. This is an identity of lattices. It is not a theorem of QCD, and section XVII says so plainly.", "tex": ["\\tfrac12\\bigl\\|p\\,a_1-q\\,a_2\\bigr\\|^2=p^2+pq+q^2=T(p,q)", "3\\,C_2(p,q)=T(p,q)+3(p+q),\\qquad \\dim(p,q)=\\tfrac12(p+1)(q+1)(p+q+2)", "(1,0)\\to\\mathbf{3},\\quad(1,1)\\to\\mathbf{8},\\quad(2,1)\\to\\mathbf{15},\\quad(3,2)\\to\\mathbf{42}"], "notes": ["exact · A₂ Gram matrix [[2, −1], [−1, 2]]: the weight-lattice norm is the shell index", "exact · the Casimir bridge; checked live on every (p, q) in a block", "computed · the golden ladder read as SU(3) irreps; (1,1) is the octet at T = 3 = C₆₀"], "assume": "That an identity between two integer quadratic forms carries no physics on its own. It says ℤ[ζ₆] is the A₂ lattice, which was known before either shells or quarks."}, {"n": "XII", "lv": 1, "deps": ["I"], "status": "exact", "ttl": "Klein’s icosahedral forms — 12, 20, 30 are the DEGREES", "claim": "Felix Klein’s three icosahedral forms have degrees 12, 20 and 30. Those are exactly P, V(C₂₀) and E(C₂₀) — the shell numbers appear here as the degrees of the invariant polynomials of the icosahedral group. Their syzygy T² + H³ = 1728 f⁵ is verified live at random points of the Riemann sphere, and the twelve vertices are shown to sit on two rings of radius 1/φ and φ.", "tex": ["f_{12}=zw\\bigl(z^{10}+11z^5w^5-w^{10}\\bigr)", "H_{20}=-(z^{20}+w^{20})+228(z^{15}w^5-z^5w^{15})-494\\,z^{10}w^{10}", "T_{30}^{\\,2}+H_{20}^{\\,3}=1728\\,f_{12}^{\\,5}"], "notes": ["exact · Klein’s vertex form, degree 12 = P", "exact · Klein’s face form (the Hessian of f), degree 20 = V(C₂₀)", "exact · the syzygy; T is the Jacobian of (f, H), degree 30 = E(C₂₀); verified live at random points of the Riemann sphere"], "assume": "That Klein’s forms are taken in his 1878 normalization; the coefficients 11, 228, 494, 1728 are his. The syzygy is checked here, not derived."}, {"n": "XIII", "lv": 3, "deps": ["XII"], "status": "measured", "ttl": "The three equivariants — the basins count the shell", "claim": "Each Klein form F yields a rational map g = [F_w : −F_z] on the sphere, equivariant under the icosahedral group. Their basins of attraction are counted here by iterating from random seeds — measured, never assumed. The first audit of this assumed the twelve vertices attract under g₁₁ and was WRONG: g₁₁ attracts to the twenty faces. The correction is the point of the section.", "tex": ["g_F=[\\,F_w:-F_z\\,],\\qquad g_F(\\gamma p)=\\gamma\\,g_F(p)\\ \\ \\forall\\gamma\\in I", "g_{11}\\to 20=V(C_{20}),\\quad g_{19}\\to 12=P,\\quad g_{29}\\to 32=F(C_{60})"], "notes": ["exact · the equivariant rational map from a form; equivariance under the icosahedral group is an identity", "measured · basin counts from random seeds; the first audit assumed vertices for g₁₁ and was wrong; XX shows every attractor is an antipodal 2-cycle"], "assume": "That random seeding samples every basin at the seed count used — sometimes it does not, and the section’s ✗ is coverage, not a wrong map. That the counts are POINT counts (XX): every attractor is an antipodal 2-cycle, not a fixed point."}, {"n": "XIV", "lv": 5, "deps": ["VI"], "status": "computed", "ttl": "The Chromium fence — what float64 actually buys", "claim": "The mathematics above is absolute. This browser is not. One rung is φ². The Planck length to the observable horizon is a finite number of rungs, and a float64 mantissa holds a finite number of rungs. Both are computed here. They do not match, and the page says so rather than pretending depth it does not have.", "tex": ["\\text{1 rung}=\\varphi^2,\\qquad \\ln\\varphi^2=0.962\\,423\\,650", "N_{\\text{ladder}}=\\frac{\\ln(L_{\\text{horizon}}/\\ell_P)}{\\ln\\varphi^2},\\qquad N_{\\text{chart}}=\\frac{\\ln(1/\\varepsilon_{64})}{\\ln\\varphi^2}"], "notes": ["exact · the ladder’s step; ln φ² to nine places", "computed · 147 rungs vs 37.5 per float64 chart; ℓₚ from CODATA 2018, horizon 4.4×10²⁶ m"], "assume": "That the fence is a statement about arithmetic, not about the world — nothing here says spacetime is discrete. 147 rungs, 37.5 per chart, 205 bits are measured in this page, not asserted. (Towers, L5.)"}, {"n": "XV", "lv": 4, "deps": ["VI", "XIV"], "status": "measured", "ttl": "The compounding delta — measured, and refuted", "claim": "Prediction before measurement: running the ladder in float64 would compound catastrophically. This page runs the exact ladder in BigInt and the same recurrence in float64 and compares them. The prediction is WRONG, and the reason is structural. The refutation is kept here rather than the prediction, because the record is the point.", "tex": ["T_{n+3}=2T_{n+2}+2T_{n+1}-T_n,\\qquad \\delta_n=\\frac{|T_n^{\\rm f64}-T_n|}{T_n}", "T_n=\\tfrac25\\bigl(\\varphi^{2n+2}+\\varphi^{-2n-2}\\bigr)-\\tfrac15(-1)^n"], "notes": ["measured · the same recurrence in BigInt and float64, side by side across 147 rungs", "exact · the closed form; measured to be WORSE than the crude iteration — the φ⁻²ⁿ term is lost first"], "assume": "That the forward-stability is structural, not luck — but it is stability of the recurrence, not of any physical claim built on it. The refutation is kept rather than the prediction because the record is the point. (Towers, L4.)"}, {"n": "XVI", "lv": 5, "deps": ["XIV"], "status": "measured", "ttl": "The ruler — ten measurements, and who out-resolves whom", "claim": "Resolving power, in rungs: a measurement with relative uncertainty u commands ln(1/u)/lnφ² rungs. Laid against float64, the ten most precise measurements humanity has ever made answer the question of where the bottleneck actually sits. It is not the laboratory.", "tex": ["N(u)=\\frac{\\ln(1/u)}{\\ln\\varphi^2},\\qquad \\Delta=N(u_{\\min})-N(\\varepsilon_{64})"], "notes": ["computed · resolving power in rungs (a definition this page makes); ten quoted uncertainties priced against ε₆₄"], "assume": "That “resolving power in rungs” = ln(1/u)/ln φ² is a definition this page makes, tagged as such; the ten uncertainties are quoted from their sources, not measured here."}, {"n": "XVII", "lv": 6, "deps": ["IX", "XIV"], "status": "hyp", "ttl": "What this page does NOT claim — the honest boundary", "claim": "Everything above that is labelled EXACT is exact, and everything labelled COMPUTED was computed in this browser. None of it is a theory of physics. This section exists because the temptation at this point is to say more than was earned, and a page that solves all mysteries has stopped being a page and become a sales pitch. Coverage may be INCOMPLETE. It must never be FAKE.", "tex": ["\\text{lattice identity}\\;\\ne\\;\\text{physical theorem}", "P=12\\ \\text{is forced by Euler for trivalent 5/6 tilings of }S^2\\ \\text{---and by nothing else here}"], "notes": ["meta · the boundary this page draws around itself", "exact · the scope of the theorem, stated once more so it cannot be inflated"], "assume": "That this list is complete. It is not; it is what the authors could name. Coverage may be incomplete. It must never be fake."}, {"n": "XVIII", "lv": 5, "deps": ["XV", "XIV", "II"], "status": "computed", "ttl": "Where the architecture breaks — bit by bit, live", "claim": "Four hundred sims deep and this is the first place float compute has cracked. So this section cracks it deliberately, in front of you. It walks the ladder upward until each exact quantity leaves float64, runs the same recurrence BACKWARD to show the identical mathematics destroying itself, and then prices every IEEE format against the 147-rung ladder. The headline is not what you would guess: the cave’s own invariant χ = 2 fails BEFORE the numbers it is made of.", "tex": ["\\chi=V-E+F=20T-30T+(10T+2)=2\\quad\\text{(exact in }\\mathbb Z)", "T_n=2T_{n+2}+2T_{n+1}-T_{n+3}\\quad\\text{(the same law, run backward)}", "N_{\\rm rungs}(p)=\\frac{p\\ln 2}{\\ln\\varphi^2},\\qquad T_{147}\\ \\text{needs}\\ 205\\ \\text{bits}"], "notes": ["exact · in ℤ; in float64 it fails rungs before T does — measured live", "computed · backward: same law, same numbers, 10⁴⁸ times worse", "computed · rungs per IEEE format; T₁₄₇ needs 205 bits, so binary256 holds it and float64 does not"], "assume": "That the fence is arithmetic’s, not the world’s (XIV). That χ “failing first” is a statement about the expression 20T − 30T + (10T + 2) evaluated in float64, not about topology."}, {"n": "XIX", "lv": 5, "deps": ["XVIII", "XIV"], "status": "computed", "ttl": "The fourth wall — overflow, and the three-stage death", "claim": "Section XIV priced three float walls: relative spacing, the all-integers line, and selected multiples. Running the ladder in binary16 found a fourth that binary64 hides beyond rung 147: OVERFLOW — and it arrives in coefficient order. E = 30T hits every ceiling one rung before V = 20T, because 30 > 20. There is a rung where the format holds a finite V, an infinite E, and computes χ = V − ∞ + F = −∞ — a surface of infinitely negative genus — and one rung later inf−inf confesses NaN. Death has three stages: doughnut → −∞ → NaN. The arithmetic lies, then raves, then goes silent. All of it computed", "tex": [], "notes": [], "assume": ""}, {"n": "XX", "lv": 3, "deps": ["XIII", "XII"], "status": "computed", "ttl": "The antipodal dance — nothing is fixed", "claim": "Section XIII counts basins 20 / 12 / 32. An independent instrument measured 20 / 11 / 31 — one short, twice — and the resolution turned out better than either count: every attracting orbit of all three equivariants is an antipodal 2-cycle. Not one attractor is a fixed point. The maps never rest on the icosahedron's features; they hold each one by swapping it with its antipode, forever. XIII's numbers are vindicated as POINT counts (10 / 6 / 16 cycles → 20 / 12 / 32 points, 0 fixed), and the two undercounts were both instrument artifacts — a bailout that collapsed the pole cycle to one exit lab", "tex": [], "notes": [], "assume": ""}, {"n": "XXI", "lv": 6, "deps": ["XIX"], "status": "seal", "ttl": "Gate V — two curses and a standing seal", "claim": "The tower's first sealed-before-measured wager is resolved, and the ledger keeps the misses at the same size as the bullseye: sealed window {14,15,16} HIT, point estimate 15 EXACT, the spoken pre-seal guess “n ≈ 16” MISS, and the hand theory for binary16's NaN onset WRONG (said 10, measured 9 — the machine found the −∞ stage the theory never predicted). Seal 001: c0c866d0…cb98c1e, receipt page shell__gate_v_the_gamble_v1_0.html, scroll addendum e70ced60…fee363. Two curses were paid for in that session's own blood, and one new seal is left on the table — deliberately unmeasured, including by th", "tex": [], "notes": [], "assume": ""}, {"n": "XXII", "lv": 4, "deps": ["II", "VI"], "status": "computed", "ttl": "The glamour — the floor of the dials, and the unrendered center", "claim": "The genesis sim's own dials have a floor: INNER min=\"10\", MID min=\"10\" (shell__genesis_v8_5_2.html, lines 106–107). 0.10 / 0.10 is the lowest resistance the sim's reality allows, and the 8K wallpaper that stopped the monkey brain (lock pentagon 7, zoom 3000) sits exactly on that double floor. Why is the floor striking? Two quantitative guesses were made before measuring, and both died: it is NOT maximum edge-mass growth (λ peaks at inner=0.45, mid=0.10), and it is NOT maximum tile contrast (the STD is minimal at the floor). The measured truth is sharper. Under the 8K ladder — refine ALL once, ", "tex": [], "notes": [], "assume": ""}, {"n": "◐", "lv": 0, "deps": [], "status": "monkey", "ttl": "The shadow — spin it, flatten it, and let the monkey judge", "claim": "Nobody knows what this is. That is the honest starting position, and it is why this section is at the top instead of buried at the back. A closed shell is a 3D object; the eye only ever receives its 2D shadow. So: spin the shell, flatten it, put a real 2D fractal next to it, and ask the oldest instrument in the building — your visual cortex — whether they are the same kind of thing. Then measure it, and find out whether the instrument was right. The vote comes first and the number comes second, on purpose: once you have seen the number you cannot un-see it, and a monkey-brain judgement is only", "tex": [], "notes": [], "assume": ""}];
+var QUESTIONS=[{"title": "Why this algebra and not another?", "technical": "Step 4 — variational selection of A_F in the Connes spectral action", "body": "The Standard Model can be built from a very specific small algebra: ℂ ⊕ ℍ ⊕ M₃(ℂ). Why this one? We don't have a principle that picks it out. Every attempt to derive it from a single 'minimize this functional' principle has failed, including the one we built this dodecahedron to test.", "footer": "This is the canonical open question of the program. The geometry of the whole sphere is organized around it."}, {"title": "Three different inputs, identical output", "technical": "The 16-dimensional plateau", "body": "If you compute the space of allowed Dirac operators for three different algebras — ℂ⊕M₃(ℂ), ℍ⊕M₃(ℂ), and the full SM algebra — you get the exact same 16-dimensional subspace. Not just the same dimension; the same subspace. This means you cannot tell these three algebras apart by looking at their Dirac content alone.", "footer": "Verified at machine precision (10⁻¹⁵). This was the cleanest computational finding."}, {"title": "Why does it take two conditions?", "technical": "Two-condition characterization rather than one functional", "body": "We can characterize the Standard Model algebra as the smallest one satisfying (1) full Yukawa freedom AND (2) the right gauge factors with the right hypercharge action. But that's two conditions, not one. A real Step 4 closure would be a single principle that implies both. We don't have it.", "footer": ""}, {"title": "Why are quarks and leptons different?", "technical": "The 8 → 16 leptoquark carveout mechanism", "body": "Pati–Salam unification says leptons are essentially the 'fourth color' of quarks — at high energy, quark and lepton Yukawa couplings should be locked together. In the Standard Model they're not. The algebraic structure that breaks the lock is identified, but the physical mechanism that selects 'broken' over 'unified' is not.", "footer": "Source of the well-known m_b / m_τ ≈ 3 prediction after RG running."}, {"title": "Why exactly three generations?", "technical": "The fermion generation count problem", "body": "Electrons have heavier siblings: muons and taus. Up quarks have charm and top, down has strange and bottom. Three copies of everything, with vastly different masses. Why three and not two, four, or seven? No framework derives this — it's an empirical brute fact.", "footer": "Stays open in every theory of fundamental physics, including this one."}, {"title": "A suspiciously precise coincidence", "technical": "The Koide residue", "body": "Take the three charged lepton masses and form a specific combination: K = (mₑ + m_μ + m_τ) / (√mₑ + √m_μ + √m_τ)². The result is 2/3 to about one part in 100,000. Nobody knows whether this is a deep hint or a meaningless coincidence. The formula doesn't survive renormalization-group running cleanly, which makes it harder to take seriously, but the precision keeps physicists from dismissing it.", "footer": "Currently undecidable. Coincidence or hint, we cannot tell."}, {"title": "The worst prediction in physics", "technical": "The cosmological constant problem", "body": "Quantum field theory predicts a vacuum energy density. Observation gives a different one. They differ by 10¹²⁰ — a factor of one followed by 120 zeros. No serious framework, including the one this dodecahedron belongs to, addresses this discrepancy at all.", "footer": "If physics has a single hole, this is the one."}, {"title": "Why does any of this work at all?", "technical": "The unreasonable effectiveness of mathematics (Wigner, 1960)", "body": "Internal mathematical structures built without reference to physics — operator algebras, symmetry groups, geometric objects — keep turning out to describe physical reality with bizarre precision. Why? We have no idea. This isn't a question within the theory; it's a question about why the theory is possible at all.", "footer": "The meta-defect. Has been open for 65 years."}, {"title": "Why these specific signs?", "technical": "KO-dimension 6 signature", "body": "The Standard Model bimodule has three sign relations between its structural operators. These signs single out one possibility out of eight. Connes proved you need exactly this one to recover the SM. But 'you need it because it works' isn't a derivation. Why does nature pick this signature?", "footer": "Stated, not derived. Like much of foundational physics."}, {"title": "Does the spectral action actually do its job?", "technical": "Spectral action critical point in A", "body": "The spectral action is the candidate functional for closing Step 4. It's known to produce the right physics when you fix the algebra and vary the Dirac operator. The harder question — whether varying the algebra *itself* gives the SM as a critical point — has not been settled in the published literature.", "footer": "Whoever closes this closes Step 4."}, {"title": "Why these particular masses?", "technical": "Yukawa hierarchy magnitudes", "body": "The electron weighs 0.5 MeV. The top quark weighs 173,000 MeV. Why these specific numbers, with ratios spanning six orders of magnitude? The 16-dimensional Dirac space contains *room* for these parameters, but doesn't fix their values.", "footer": ""}, {"title": "Why do flavors mix the way they do?", "technical": "Mixing matrices (CKM, PMNS)", "body": "Quark flavors and neutrino flavors don't line up cleanly with the eigenstates of weak interaction. The 'rotation' matrices between them (CKM for quarks, PMNS for neutrinos) have specific empirical values that this framework does not derive. They're inputs, not outputs.", "footer": ""}];
+var ATOMS=["Spectral action S", "Dirac operator D", "Heat kernel coefficient a₄", "Algebra representation π", "Cosmological constant value Λ", "Grading operator γ", "Yukawa coupling matrix", "Real structure J", "Unitary group U(A_F)", "dim D(A_F) = 16", "SU(2)_L factor", "Order-one condition", "Quark-lepton paired Yukawa", "Charged lepton mass triple", "λ vs λ* on right-handed up/down", "M₃(ℂ) summand", "U(1)_Y factor", "Bimodule H_F", "ℂ summand of A_F (the contested one)", "ℍ summand of A_F"];
+</script>
+<script>
+"use strict";
+/* ============================================================================
+   THEA -- THE SHELL OF DERIVATIONS v1.0
+   The Dodecahedron of Open Questions, opened into C60. A THEA tower on each of
+   the twenty points; the twelve pentagons keep the twelve open questions; the
+   sixty vertices are the correlative nodes, each the meeting of two towers and
+   one question. The light matrix's dependency graph is laid on the shell by an
+   annealer at load; what lies flat is a bond, what will not is an arc -- a knot.
+   Nothing here is fetched. Every number on the page is computed at load.
+   ============================================================================ */
+var PHI=(1+Math.sqrt(5))/2, PHI2=PHI*PHI;
+var M_LIGHT=[[1,2,1,0],[1,1,0,0],[1,0,0,0],[0,0,0,1]];
+var esc2=function(t){ return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
+
+/* ---------- the light matrix, counted out (Faddeev-LeVerrier, Durand-Kerner) ---------- */
+function matMul(A,B){ var n=A.length,C=[],i,j,k; for(i=0;i<n;i++){ C.push([]); for(j=0;j<n;j++){ var s=0; for(k=0;k<n;k++) s+=A[i][k]*B[k][j]; C[i].push(s);} } return C; }
+function charPoly(A){ var n=A.length, c=[1], Mk=A.map(function(r){return r.slice();}), I=A.map(function(r,i){return r.map(function(_,j){return i===j?1:0;});});
+  var Bk=I.map(function(r){return r.slice();}), k;
+  for(k=1;k<=n;k++){ var AB=matMul(A,Bk), tr=0; for(var i=0;i<n;i++) tr+=AB[i][i]; var ck=-tr/k; c.push(ck);
+    Bk=AB.map(function(r,i){return r.map(function(v,j){return v+(i===j?ck:0);});}); }
+  return c; }
+function polyRoots(c){ var n=c.length-1, z=[], k, it; for(k=0;k<n;k++){ var a=0.4+0.9*k; z.push([Math.cos(a)*1.3,Math.sin(a)*1.3]); }
+  function ev(x){ var re=c[0],im=0,i; for(i=1;i<=n;i++){ var r2=re*x[0]-im*x[1]+c[i], i2=re*x[1]+im*x[0]; re=r2; im=i2; } return [re,im]; }
+  for(it=0;it<300;it++){ var nz=[]; for(k=0;k<n;k++){ var num=ev(z[k]), den=[1,0], j;
+      for(j=0;j<n;j++) if(j!==k){ var d=[z[k][0]-z[j][0],z[k][1]-z[j][1]]; den=[den[0]*d[0]-den[1]*d[1],den[0]*d[1]+den[1]*d[0]]; }
+      var dd=den[0]*den[0]+den[1]*den[1], q=[(num[0]*den[0]+num[1]*den[1])/dd,(num[1]*den[0]-num[0]*den[1])/dd];
+      nz.push([z[k][0]-q[0],z[k][1]-q[1]]); } z=nz; }
+  return z; }
+var LM=(function(){ var c=charPoly(M_LIGHT), r=polyRoots(c).map(function(z){return z[0];}).sort(function(a,b){return a-b;});
+  var want=[-1,1/PHI2,1,PHI2], dev=Math.max.apply(null,r.map(function(x,i){return Math.abs(x-want[i]);}));
+  return {c:c, roots:r, dev:dev}; })();
+
+/* ---------- C60 from the icosahedron: vertices, pentagons, hexagons, bonds ---------- */
+var SHELL=(function(){
+  var t=PHI, i, j;
+  var ico=[[-1,t,0],[1,t,0],[-1,-t,0],[1,-t,0],[0,-1,t],[0,1,t],[0,-1,-t],[0,1,-t],[t,0,-1],[t,0,1],[-t,0,-1],[-t,0,1]];
+  var faces=[[0,11,5],[0,5,1],[0,1,7],[0,7,10],[0,10,11],[1,5,9],[5,11,4],[11,10,2],[10,7,6],[7,1,8],
+             [3,9,4],[3,4,2],[3,2,6],[3,6,8],[3,8,9],[4,9,5],[2,4,11],[6,2,10],[8,6,7],[9,8,1]];
+  /* orient every face outward */
+  faces=faces.map(function(F){ var a=ico[F[0]],b=ico[F[1]],c=ico[F[2]];
+    var u=[b[0]-a[0],b[1]-a[1],b[2]-a[2]], v=[c[0]-a[0],c[1]-a[1],c[2]-a[2]];
+    var nx=[u[1]*v[2]-u[2]*v[1],u[2]*v[0]-u[0]*v[2],u[0]*v[1]-u[1]*v[0]], cen=[a[0]+b[0]+c[0],a[1]+b[1]+c[1],a[2]+b[2]+c[2]];
+    return (nx[0]*cen[0]+nx[1]*cen[1]+nx[2]*cen[2])>0?F:[F[0],F[2],F[1]]; });
+  var inc={}; for(i=0;i<12;i++) inc[i]=[];
+  var id={}, pos=[], cnt=0, vpent=[];
+  faces.forEach(function(F){ for(var e=0;e<3;e++){ var a=F[e], b=F[(e+1)%3]; if(inc[a].indexOf(b)<0) inc[a].push(b); if(inc[b].indexOf(a)<0) inc[b].push(a); } });
+  for(i=0;i<12;i++){ id[i]={}; for(j=0;j<inc[i].length;j++){ var u=inc[i][j]; id[i][u]=cnt++; var a=ico[i], b=ico[u];
+      var p=[(2*a[0]+b[0])/3,(2*a[1]+b[1])/3,(2*a[2]+b[2])/3], L=Math.hypot(p[0],p[1],p[2]); pos.push([p[0]/L,p[1]/L,p[2]/L]); vpent.push(i); } }
+  /* pentagon rings in cyclic order around each icosa vertex */
+  var pent=[];
+  for(i=0;i<12;i++){ var v=ico[i], n=[v[0],v[1],v[2]], L2=Math.hypot(n[0],n[1],n[2]); n=[n[0]/L2,n[1]/L2,n[2]/L2];
+    var t1=Math.abs(n[0])<0.9?[1,0,0]:[0,1,0]; var b1=[n[1]*t1[2]-n[2]*t1[1],n[2]*t1[0]-n[0]*t1[2],n[0]*t1[1]-n[1]*t1[0]]; var lb=Math.hypot(b1[0],b1[1],b1[2]); b1=[b1[0]/lb,b1[1]/lb,b1[2]/lb];
+    var b2=[n[1]*b1[2]-n[2]*b1[1],n[2]*b1[0]-n[0]*b1[2],n[0]*b1[1]-n[1]*b1[0]];
+    var ring=inc[i].slice().sort(function(p,q){ var dp=[ico[p][0]-v[0],ico[p][1]-v[1],ico[p][2]-v[2]], dq=[ico[q][0]-v[0],ico[q][1]-v[1],ico[q][2]-v[2]];
+      return Math.atan2(dp[0]*b2[0]+dp[1]*b2[1]+dp[2]*b2[2],dp[0]*b1[0]+dp[1]*b1[1]+dp[2]*b1[2])-Math.atan2(dq[0]*b2[0]+dq[1]*b2[1]+dq[2]*b2[2],dq[0]*b1[0]+dq[1]*b1[1]+dq[2]*b1[2]); });
+    pent.push(ring.map(function(u){ return id[i][u]; })); }
+  /* hexagon rings in cyclic order around each icosa face */
+  var hex=faces.map(function(F){ var a=F[0],b=F[1],c=F[2]; return [id[a][b],id[b][a],id[b][c],id[c][b],id[c][a],id[a][c]]; });
+  /* bonds: 60 pentagon edges + 30 truncation edges; hexagon adjacency = faces sharing an icosa edge */
+  var bonds=[], hexAdj=[], bondOf={}; for(i=0;i<20;i++) hexAdj.push([]);
+  pent.forEach(function(r){ for(var e=0;e<5;e++) bonds.push([r[e],r[(e+1)%5],'p']); });
+  var seen={};
+  for(i=0;i<12;i++) inc[i].forEach(function(u){ var key=i<u?i+'_'+u:u+'_'+i; if(seen[key]) return; seen[key]=1;
+    var fa=[]; faces.forEach(function(F,fi){ if(F.indexOf(i)>=0&&F.indexOf(u)>=0) fa.push(fi); });
+    bonds.push([id[i][u],id[u][i],'h',fa[0],fa[1]]); hexAdj[fa[0]].push(fa[1]); hexAdj[fa[1]].push(fa[0]);
+    bondOf[fa[0]+'_'+fa[1]]=bondOf[fa[1]+'_'+fa[0]]=bonds.length-1; });
+  /* every vertex: its pentagon and its two hexagons */
+  var vhex=[]; for(i=0;i<60;i++) vhex.push([]);
+  hex.forEach(function(r,hi){ r.forEach(function(v){ vhex[v].push(hi); }); });
+  /* pentagon -> the five hexagons around it */
+  var pentHex=pent.map(function(r){ var s={}; r.forEach(function(v){ vhex[v].forEach(function(h){ s[h]=1; }); }); return Object.keys(s).map(Number); });
+  /* dodecahedral distances between hexagons (BFS) */
+  var dist=[]; for(i=0;i<20;i++){ var d=new Array(20).fill(-1), q=[i]; d[i]=0; while(q.length){ var x=q.shift(); hexAdj[x].forEach(function(y){ if(d[y]<0){ d[y]=d[x]+1; q.push(y); } }); } dist.push(d); }
+  var cen=function(r){ var c=[0,0,0]; r.forEach(function(v){ c[0]+=pos[v][0]; c[1]+=pos[v][1]; c[2]+=pos[v][2]; }); return [c[0]/r.length,c[1]/r.length,c[2]/r.length]; };
+  return {pos:pos, pent:pent, hex:hex, bonds:bonds, hexAdj:hexAdj, bondOf:bondOf, vpent:vpent, vhex:vhex, pentHex:pentHex, dist:dist,
+          hexC:hex.map(cen), pentC:pent.map(cen)};
+})();
+
+/* ---------- the towers on the shell: 20 of the 24 cards ---------- */
+var ON_SHELL=["I","II","III","IV","V","VI","VII","VIII","IX","X","XI","XII","XIII","XIV","XV","XVI","XVII","XVIII","XIX","XX"];
+var CARD_BY={}; CARDS.forEach(function(c){ CARD_BY[c.n]=c; });
+var TOWERS=ON_SHELL.map(function(n){ return CARD_BY[n]; });
+var IDX={}; TOWERS.forEach(function(c,i){ IDX[c.n]=i; });
+var DEPS=[];   /* [from(foundation), to(stands on it)] as tower indices */
+var FROM_SUN=[];
+TOWERS.forEach(function(c,i){ c.deps.forEach(function(d){ if(d==='\u2600') FROM_SUN.push(i); else if(IDX[d]!==undefined) DEPS.push([IDX[d],i]); }); });
+var DEPENDENTS=TOWERS.map(function(){return [];}); DEPS.forEach(function(e){ DEPENDENTS[e[0]].push(e[1]); });
+/* topological depth: the order the light actually reaches a tower (its rung is a different thing) */
+var DEPTH=TOWERS.map(function(){return -1;});
+(function(){ var changed=true, guard=0; while(changed&&guard++<50){ changed=false; TOWERS.forEach(function(c,i){ var inn=c.deps.filter(function(d){return IDX[d]!==undefined;}).map(function(d){return IDX[d];});
+    if(inn.every(function(j){return DEPTH[j]>=0;})){ var dd=inn.length?1+Math.max.apply(null,inn.map(function(j){return DEPTH[j];})):1; if(dd!==DEPTH[i]){ DEPTH[i]=dd; changed=true; } } }); } })();
+var RUNG_KNOTS=TOWERS.map(function(c,i){ var over=c.deps.filter(function(d){return IDX[d]!==undefined&&CARD_BY[d].lv>c.lv;}); return over; });
+var STATUS_COL={exact:'#38d39f',computed:'#00d4ff',measured:'#b48cff',hyp:'#ffb347',meta:'#ffb347',seal:'#ffd166',birth:'#ffd166'};
+var RUNGS=['primitives','symmetry','dynamics','payout','coarse-graining','the infinities','the boundary'];
+
+/* ---------- placement: anneal the 20 towers onto the 20 hexagons ---------- */
+var PLACE=(function(){
+  var seed=1618033, rnd=function(){ seed=(seed*1664525+1013904223)>>>0; return seed/4294967296; };
+  function cost(perm){ var s=0; for(var k=0;k<DEPS.length;k++) s+=SHELL.dist[perm[DEPS[k][0]]][perm[DEPS[k][1]]]-1; return s; }
+  var best=null, bestC=1e9, restarts=16, r, t0=performance.now();
+  for(r=0;r<restarts;r++){ var perm=[]; for(var i=0;i<20;i++) perm.push(i); for(i=19;i>0;i--){ var j=Math.floor(rnd()*(i+1)); var tmp=perm[i]; perm[i]=perm[j]; perm[j]=tmp; }
+    var c=cost(perm), T=3.0, it, iters=24000;
+    for(it=0;it<iters;it++){ var a=Math.floor(rnd()*20), b=Math.floor(rnd()*20); if(a===b) continue;
+      var t2=perm[a]; perm[a]=perm[b]; perm[b]=t2; var c2=cost(perm);
+      if(c2<=c||rnd()<Math.exp((c-c2)/T)) c=c2; else { perm[b]=perm[a]; perm[a]=t2; }
+      T=3.0*Math.pow(0.02/3.0, it/iters); }
+    if(c<bestC){ bestC=c; best=perm.slice(); } }
+  var flat=DEPS.filter(function(e){ return SHELL.dist[best[e[0]]][best[e[1]]]===1; }).length;
+  return {perm:best, cost:bestC, flat:flat, arcs:DEPS.length-flat, ms:Math.round(performance.now()-t0), restarts:restarts};
+})();
+var HEX_OF=PLACE.perm;                       /* tower i -> hexagon HEX_OF[i] */
+var TOWER_AT=new Array(20); HEX_OF.forEach(function(h,i){ TOWER_AT[h]=i; });
+var DEP_KIND=DEPS.map(function(e){ var d=SHELL.dist[HEX_OF[e[0]]][HEX_OF[e[1]]]; return d===1?'bond':'arc'; });
+var KNOT_AT=TOWERS.map(function(){return 0;}); DEPS.forEach(function(e,k){ if(DEP_KIND[k]==='arc'){ KNOT_AT[e[0]]++; KNOT_AT[e[1]]++; } });
+
+/* ---------- camera + renderer ---------- */
+var cv=document.getElementById('shell'), cx=cv.getContext('2d');
+var CAM={yaw:0.6,pitch:0.28,zoom:1,spin:false,drag:null,dpr:1,W:0,H:0};
+var HOVER=null, SEL=null, TRACE={on:false,t0:0,t:0};
+var BEAT=1.15;  /* seconds per depth */
+function rot(p){ var cy=Math.cos(CAM.yaw), sy=Math.sin(CAM.yaw), cp=Math.cos(CAM.pitch), sp=Math.sin(CAM.pitch);
+  var x=p[0]*cy+p[2]*sy, z=-p[0]*sy+p[2]*cy, y=p[1]*cp-z*sp; z=p[1]*sp+z*cp; return [x,y,z]; }
+function proj(p){ var q=rot(p), d=4.2, s=Math.min(CAM.W,CAM.H)*0.36*CAM.zoom, f=d/(d-q[2]); return [CAM.W/2+q[0]*s*f, CAM.H/2-q[1]*s*f, q[2], f]; }
+function fit(){ CAM.dpr=Math.min(2,window.devicePixelRatio||1); var r=cv.getBoundingClientRect(); CAM.W=r.width; CAM.H=r.height; cv.width=Math.round(r.width*CAM.dpr); cv.height=Math.round(r.height*CAM.dpr); cx.setTransform(CAM.dpr,0,0,CAM.dpr,0,0); }
+function hexColor(i,a){ var c=STATUS_COL[TOWERS[i].status]||'#8a94b0'; return hexA(c,a); }
+function hexA(c,a){ var r=parseInt(c.slice(1,3),16), g=parseInt(c.slice(3,5),16), b=parseInt(c.slice(5,7),16); return 'rgba('+r+','+g+','+b+','+a+')'; }
+function litAt(i){ if(!TRACE.on) return 1; var t=TRACE.t, on=(DEPTH[i]-1)*BEAT; return Math.max(0,Math.min(1,(t-on)/0.5)); }
+function arcPts(a,b){ var A=SHELL.hexC[a], B=SHELL.hexC[b], out=[], k, n=26; var dot=A[0]*B[0]+A[1]*B[1]+A[2]*B[2], la=Math.hypot(A[0],A[1],A[2]), lb=Math.hypot(B[0],B[1],B[2]); dot/= (la*lb); var om=Math.acos(Math.max(-1,Math.min(1,dot)));
+  for(k=0;k<=n;k++){ var t=k/n, w1=Math.sin((1-t)*om)/Math.sin(om), w2=Math.sin(t*om)/Math.sin(om), lift=1+0.42*Math.sin(Math.PI*t)*(om/Math.PI+0.35);
+    var p=[(w1*A[0]+w2*B[0]),(w1*A[1]+w2*B[1]),(w1*A[2]+w2*B[2])], L=Math.hypot(p[0],p[1],p[2]); out.push([p[0]/L*lift,p[1]/L*lift,p[2]/L*lift]); } return out; }
+var ARCS=DEPS.map(function(e,k){ return DEP_KIND[k]==='arc'?arcPts(HEX_OF[e[0]],HEX_OF[e[1]]):null; });
+
+function draw(){
+  var W=CAM.W, H=CAM.H, i, k;
+  cx.clearRect(0,0,W,H);
+  var P=SHELL.pos.map(proj);
+  /* faces sorted back to front */
+  var faces=[];
+  SHELL.pent.forEach(function(r,pi){ faces.push({k:'p',i:pi,r:r,z:r.reduce(function(s,v){return s+P[v][2];},0)/5}); });
+  SHELL.hex.forEach(function(r,hi){ faces.push({k:'h',i:hi,r:r,z:r.reduce(function(s,v){return s+P[v][2];},0)/6}); });
+  faces.sort(function(a,b){return a.z-b.z;});
+  /* the light at the centre */
+  var sun=proj([0,0,0]), sunR=Math.min(W,H)*0.045*CAM.zoom, pulse=TRACE.on?0.6+0.4*Math.sin(TRACE.t*4):0.8;
+  var g=cx.createRadialGradient(sun[0],sun[1],0,sun[0],sun[1],sunR*3.2); g.addColorStop(0,'rgba(255,209,102,'+(0.55*pulse)+')'); g.addColorStop(0.35,'rgba(255,209,102,0.10)'); g.addColorStop(1,'rgba(255,209,102,0)');
+  cx.fillStyle=g; cx.beginPath(); cx.arc(sun[0],sun[1],sunR*3.2,0,Math.PI*2); cx.fill();
+  cx.fillStyle='rgba(255,236,180,'+(0.85*pulse)+')'; cx.beginPath(); cx.arc(sun[0],sun[1],sunR*0.55,0,Math.PI*2); cx.fill();
+  /* rays from the sun to I and VII */
+  FROM_SUN.forEach(function(ti){ var c=proj(SHELL.hexC[HEX_OF[ti]]), lit=TRACE.on?Math.min(1,TRACE.t/BEAT):1;
+    cx.strokeStyle='rgba(255,209,102,'+(0.18+0.5*lit)+')'; cx.lineWidth=1; cx.setLineDash([3,4]); cx.beginPath(); cx.moveTo(sun[0],sun[1]); cx.lineTo(sun[0]+(c[0]-sun[0])*lit,sun[1]+(c[1]-sun[1])*lit); cx.stroke(); cx.setLineDash([]); });
+  faces.forEach(function(f){ var front=f.z>0, a; cx.beginPath(); f.r.forEach(function(v,q){ if(q) cx.lineTo(P[v][0],P[v][1]); else cx.moveTo(P[v][0],P[v][1]); }); cx.closePath();
+    var hov=HOVER&&HOVER.k===f.k&&HOVER.i===f.i, sel=SEL&&SEL.k===f.k&&SEL.i===f.i;
+    if(f.k==='p'){ a=front?0.30:0.025; if(hov||sel) a=0.55; cx.fillStyle='rgba(232,103,83,'+a+')'; cx.fill(); cx.strokeStyle='rgba(232,103,83,'+(front?0.9:0.10)+')'; cx.lineWidth=front?1.4:0.5; cx.stroke(); }
+    else { var ti=TOWER_AT[f.i], lit=litAt(ti); a=(front?0.10+0.22*lit:0.012); if(hov||sel) a=0.5; cx.fillStyle=hexColor(ti,a); cx.fill(); cx.strokeStyle=hexColor(ti,front?0.35+0.55*lit:0.08); cx.lineWidth=front?1.1:0.5; cx.stroke(); }
+    /* related highlight: when a tower is selected, its foundations and dependents glow */
+    if(SEL&&SEL.k==='h'&&f.k==='h'){ var st=TOWER_AT[SEL.i], tt=TOWER_AT[f.i], rel=DEPS.some(function(e){return (e[0]===st&&e[1]===tt)||(e[1]===st&&e[0]===tt);}); if(rel&&front){ cx.strokeStyle='rgba(255,209,102,0.9)'; cx.lineWidth=1.6; cx.stroke(); } }
+  });
+  /* dependency bonds: gold, with direction */
+  DEPS.forEach(function(e,k){ if(DEP_KIND[k]!=='bond') return; var bi=SHELL.bondOf[HEX_OF[e[0]]+'_'+HEX_OF[e[1]]], b=SHELL.bonds[bi];
+    var A=proj(SHELL.hexC[HEX_OF[e[0]]]), B=proj(SHELL.hexC[HEX_OF[e[1]]]), front=(A[2]+B[2])/2>-0.05;
+    var lit=TRACE.on?Math.max(0,Math.min(1,(TRACE.t-(DEPTH[e[0]]-1)*BEAT)/((DEPTH[e[1]]-DEPTH[e[0]])*BEAT))):1;
+    cx.strokeStyle='rgba(255,209,102,'+(front?0.25+0.65*lit:0.08)+')'; cx.lineWidth=front?2.2:0.8; cx.beginPath(); cx.moveTo(A[0],A[1]); cx.lineTo(A[0]+(B[0]-A[0])*lit,A[1]+(B[1]-A[1])*lit); cx.stroke();
+    if(front&&lit>=1) arrow(A,B,'rgba(255,209,102,0.9)'); });
+  /* arcs: the knots -- dependencies the shell cannot hold on a bond */
+  ARCS.forEach(function(pts,k){ if(!pts) return; var e=DEPS[k], pp=pts.map(proj), lit=TRACE.on?Math.max(0,Math.min(1,(TRACE.t-(DEPTH[e[0]]-1)*BEAT)/((DEPTH[e[1]]-DEPTH[e[0]])*BEAT))):1;
+    var n=Math.max(1,Math.floor(lit*(pp.length-1))); cx.lineWidth=1.3; cx.beginPath();
+    for(i=0;i<=n;i++){ if(i) cx.lineTo(pp[i][0],pp[i][1]); else cx.moveTo(pp[i][0],pp[i][1]); }
+    var mz=pp[Math.floor(pp.length/2)][2]; cx.strokeStyle='rgba(255,209,102,'+(mz>0?0.85:0.22)+')'; cx.setLineDash([5,3]); cx.stroke(); cx.setLineDash([]);
+    if(lit>=1&&pp[pp.length-1][2]>-0.1) arrow(pp[pp.length-3],pp[pp.length-1],'rgba(255,209,102,0.9)'); });
+  /* vertices: the sixty correlative nodes */
+  for(i=0;i<60;i++){ var p=P[i], front=p[2]>-0.02, hov=HOVER&&HOVER.k==='v'&&HOVER.i===i, sel=SEL&&SEL.k==='v'&&SEL.i===i;
+    var t1=TOWER_AT[SHELL.vhex[i][0]], t2=TOWER_AT[SHELL.vhex[i][1]], hot=TOWERS[t1].status==='hyp'||TOWERS[t2].status==='hyp'||TOWERS[t1].status==='measured'||TOWERS[t2].status==='measured';
+    cx.fillStyle=hov||sel?'#fff':(hot?'rgba(255,179,71,'+(front?0.9:0.25)+')':'rgba(200,210,240,'+(front?0.75:0.18)+')');
+    cx.beginPath(); cx.arc(p[0],p[1],hov||sel?4.5:(front?2.4:1.4),0,Math.PI*2); cx.fill(); }
+  /* labels on front hexagons and pentagons */
+  cx.textAlign='center'; cx.textBaseline='middle';
+  SHELL.hex.forEach(function(r,hi){ var c=proj(SHELL.hexC[hi]); if(c[2]<0.05) return; var ti=TOWER_AT[hi], lit=litAt(ti);
+    cx.fillStyle='rgba(4,4,12,0.55)'; cx.beginPath(); cx.arc(c[0],c[1]-2,10*c[3],0,Math.PI*2); cx.fill();
+    cx.font=(isHovH(hi)?'600 ':'')+Math.round(13*c[3])+'px "Times New Roman",Georgia,serif'; cx.fillStyle='rgba(240,244,255,'+(0.35+0.65*lit)+')'; cx.fillText(TOWERS[ti].n,c[0],c[1]-2);
+    if(KNOT_AT[ti]){ cx.font=Math.round(9*c[3])+'px ui-monospace,Menlo,monospace'; cx.fillStyle='rgba(255,209,102,0.85)'; cx.fillText(KNOT_AT[ti]+' knot'+(KNOT_AT[ti]>1?'s':''),c[0],c[1]+10*c[3]); } });
+  SHELL.pent.forEach(function(r,pi){ var c=proj(SHELL.pentC[pi]); if(c[2]<0.25) return; cx.font=Math.round(11*c[3])+'px ui-monospace,Menlo,monospace'; cx.fillStyle='rgba(232,103,83,0.95)'; cx.fillText('?'+(pi+1),c[0],c[1]); });
+  function isHovH(hi){ return (HOVER&&HOVER.k==='h'&&HOVER.i===hi)||(SEL&&SEL.k==='h'&&SEL.i===hi); }
+}
+function arrow(A,B,col){ var dx=B[0]-A[0], dy=B[1]-A[1], L=Math.hypot(dx,dy); if(L<1) return; dx/=L; dy/=L; var ex=B[0]-dx*7, ey=B[1]-dy*7;
+  cx.fillStyle=col; cx.beginPath(); cx.moveTo(B[0]-dx*2,B[1]-dy*2); cx.lineTo(ex-dy*3.5,ey+dx*3.5); cx.lineTo(ex+dy*3.5,ey-dx*3.5); cx.closePath(); cx.fill(); }
+
+/* ---------- picking ---------- */
+function pick(x,y){ var P=SHELL.pos.map(proj), i, best=null, bd=81;
+  for(i=0;i<60;i++){ if(P[i][2]<-0.02) continue; var d=(P[i][0]-x)*(P[i][0]-x)+(P[i][1]-y)*(P[i][1]-y); if(d<bd){ bd=d; best={k:'v',i:i}; } }
+  if(best) return best;
+  var inside=function(r){ var c=false, j=r.length-1; for(var q=0;q<r.length;q++){ var a=P[r[q]], b=P[r[j]]; if(((a[1]>y)!==(b[1]>y))&&(x<(b[0]-a[0])*(y-a[1])/(b[1]-a[1])+a[0])) c=!c; j=q; } return c; };
+  var zc=function(r){ return r.reduce(function(s,v){return s+P[v][2];},0)/r.length; };
+  for(i=0;i<20;i++) if(zc(SHELL.hex[i])>0&&inside(SHELL.hex[i])) return {k:'h',i:i};
+  for(i=0;i<12;i++) if(zc(SHELL.pent[i])>0&&inside(SHELL.pent[i])) return {k:'p',i:i};
+  return null; }
+cv.addEventListener('pointerdown',function(e){ CAM.drag={x:e.clientX,y:e.clientY,moved:0}; cv.setPointerCapture(e.pointerId); });
+cv.addEventListener('pointermove',function(e){ var r=cv.getBoundingClientRect();
+  if(CAM.drag){ var dx=e.clientX-CAM.drag.x, dy=e.clientY-CAM.drag.y; CAM.drag.moved+=Math.abs(dx)+Math.abs(dy); CAM.yaw+=dx*0.009; CAM.pitch=Math.max(-1.4,Math.min(1.4,CAM.pitch+dy*0.009)); CAM.drag={x:e.clientX,y:e.clientY,moved:CAM.drag.moved}; }
+  else { var h=pick(e.clientX-r.left,e.clientY-r.top); HOVER=h; cv.style.cursor=h?'pointer':'grab'; tip(h,e.clientX-r.left,e.clientY-r.top); }
+  if(!CAM.spin&&!TRACE.on) draw(); });
+cv.addEventListener('pointerup',function(e){ var moved=CAM.drag?CAM.drag.moved:99; CAM.drag=null; if(moved>6) return; var r=cv.getBoundingClientRect(); var h=pick(e.clientX-r.left,e.clientY-r.top); if(h){ SEL=h; show(h); } draw(); });
+cv.addEventListener('pointerleave',function(){ HOVER=null; tip(null); if(!CAM.spin&&!TRACE.on) draw(); });
+cv.addEventListener('wheel',function(e){ e.preventDefault(); CAM.zoom=Math.max(0.5,Math.min(2.4,CAM.zoom*(e.deltaY<0?1.08:0.925))); draw(); },{passive:false});
+window.addEventListener('resize',function(){ fit(); draw(); });
+var tipEl=document.getElementById('tip');
+function tip(h,x,y){ if(!h){ tipEl.style.display='none'; return; } var s;
+  if(h.k==='h'){ var t=TOWERS[TOWER_AT[h.i]]; s='<b>'+t.n+'</b> \u00b7 '+esc2(t.ttl)+'<br><span class="st '+t.status+'">'+t.status+'</span> \u00b7 rung '+t.lv+' \u00b7 depth '+DEPTH[TOWER_AT[h.i]]; }
+  else if(h.k==='p'){ var q=QUESTIONS[h.i]; s='<b>?'+(h.i+1)+'</b> \u00b7 '+esc2(q.title)+'<br><span class="st knot">open question</span>'; }
+  else { var a=TOWERS[TOWER_AT[SHELL.vhex[h.i][0]]], b=TOWERS[TOWER_AT[SHELL.vhex[h.i][1]]], q2=QUESTIONS[SHELL.vpent[h.i]]; s='<b>node '+h.i+'</b> \u00b7 '+a.n+' \u2227 '+b.n+' \u2227 ?'+(SHELL.vpent[h.i]+1)+'<br>'+esc2(q2.title); }
+  tipEl.innerHTML=s; tipEl.style.display='block'; var r=cv.getBoundingClientRect(); tipEl.style.left=Math.min(CAM.W-260,x+14)+'px'; tipEl.style.top=(y+14)+'px'; }
+
+/* ---------- the reading panel ---------- */
+var panel=document.getElementById('panel');
+function link(n){ return '<a href="#" data-jump="'+esc2(n)+'">'+esc2(n)+'</a>'; }
+function towerHTML(ti){ var t=TOWERS[ti], hi=HEX_OF[ti], h='';
+  h+='<div class="ph"><span class="num">'+esc2(t.n)+'</span><span class="st '+t.status+'">'+t.status+'</span><span class="rung">rung '+t.lv+' \u00b7 '+RUNGS[t.lv]+' \u00b7 depth '+DEPTH[ti]+'</span></div>';
+  h+='<h2>'+esc2(t.ttl)+'</h2>';
+  h+='<p class="claim">'+esc2(t.claim)+'</p>';
+  if(t.tex&&t.tex.length){ h+='<div class="tower">'; t.tex.forEach(function(f,i){ h+='<div class="tex">'+tex(f)+'</div>'+(t.notes&&t.notes[i]?'<div class="note">'+esc2(t.notes[i])+'</div>':''); }); h+='</div>'; }
+  else h+='<p class="dim">This card\u2019s formulas live in its own script on the paper; the shell carries its head and its dependencies.</p>';
+  if(t.assume) h+='<div class="assume"><span>assumes</span> '+esc2(t.assume)+'</div>';
+  var on=t.deps.map(function(d){ return d==='\u2600'?'<span class="sun">\u2600 the light</span>':link(d)+(IDX[d]!==undefined?(DEP_KIND[DEPS.findIndex(function(e){return e[0]===IDX[d]&&e[1]===ti;})]==='bond'?' <i class="flat">flat</i>':' <i class="knot">arc</i>'):''); });
+  var carries=DEPENDENTS[ti].map(function(j){ return link(TOWERS[j].n)+(DEP_KIND[DEPS.findIndex(function(e){return e[0]===ti&&e[1]===j;})]==='bond'?' <i class="flat">flat</i>':' <i class="knot">arc</i>'); });
+  h+='<div class="deps"><div><span>stands on</span> '+(on.length?on.join(', '):'nothing \u2014 a primitive')+'</div><div><span>carries</span> '+(carries.length?carries.join(', '):'nothing above it')+'</div></div>';
+  var nbrs=SHELL.hexAdj[hi].map(function(g){ return link(TOWERS[TOWER_AT[g]].n); }), pents=[]; SHELL.hex[hi].forEach(function(v){ var p=SHELL.vpent[v]; if(pents.indexOf(p)<0) pents.push(p); });
+  h+='<div class="deps"><div><span>bonded to</span> '+nbrs.join(', ')+' <span class="dim">(the three hexagons it touches)</span></div><div><span>touches questions</span> '+pents.map(function(p){ return '<a href="#" data-jumpq="'+p+'">?'+(p+1)+'</a>'; }).join(', ')+'</div></div>';
+  if(RUNG_KNOTS[ti].length) h+='<div class="knotbox">rung knot: this card sits on rung '+t.lv+' but stands on '+RUNG_KNOTS[ti].map(link).join(', ')+' (rung '+RUNG_KNOTS[ti].map(function(d){return CARD_BY[d].lv;}).join(', ')+'). The ladder and the dependency graph disagree here.</div>';
+  if(KNOT_AT[ti]) h+='<div class="knotbox">'+KNOT_AT[ti]+' of its dependencies could not be laid on a bond of the shell and travel as arcs. A hexagon has three neighbours; this card has '+(t.deps.filter(function(d){return IDX[d]!==undefined;}).length+DEPENDENTS[ti].length)+' relations.</div>';
+  h+='<div class="dim small">point of the dodecahedron here: '+esc2(ATOMS[hi])+' \u2014 the placement is the annealer\u2019s; no correspondence is claimed.</div>';
+  return h; }
+function questionHTML(pi){ var q=QUESTIONS[pi], h='';
+  h+='<div class="ph"><span class="num q">?'+(pi+1)+'</span><span class="st knot">open question</span><span class="rung">pentagon \u00b7 curvature \u03c0/3 \u00b7 will not close</span></div>';
+  h+='<h2>'+esc2(q.title)+'</h2><p class="tech">'+esc2(q.technical)+'</p><p class="claim">'+esc2(q.body)+'</p>'+(q.footer?'<p class="dim">'+esc2(q.footer)+'</p>':'');
+  h+='<div class="deps"><div><span>its five towers</span> '+SHELL.pentHex[pi].map(function(g){ return link(TOWERS[TOWER_AT[g]].n); }).join(', ')+'</div></div>';
+  h+='<p class="dim small">Euler forces exactly twelve of these on any closed trivalent sphere (THEA II). The twelve open questions are placed on them because a pentagon is where the flat tiling cannot continue \u2014 the curvature has to live somewhere. That is a metaphor, tagged as one.</p>';
+  return h; }
+function nodeHTML(vi){ var a=TOWER_AT[SHELL.vhex[vi][0]], b=TOWER_AT[SHELL.vhex[vi][1]], p=SHELL.vpent[vi], A=TOWERS[a], B=TOWERS[b], q=QUESTIONS[p], h='';
+  var worst=['exact','computed','measured','hyp'].reduce(function(w,s){ return (A.status===s||B.status===s)?s:w; },'exact');
+  var bonded=SHELL.hexAdj[SHELL.vhex[vi][0]].indexOf(SHELL.vhex[vi][1])>=0, dep=DEPS.some(function(e){return (e[0]===a&&e[1]===b)||(e[0]===b&&e[1]===a);});
+  h+='<div class="ph"><span class="num">node '+vi+'</span><span class="st '+worst+'">'+worst+'</span><span class="rung">two towers, one question</span></div>';
+  h+='<h2>'+esc2(A.n)+' \u2227 '+esc2(B.n)+' \u2227 ?'+(p+1)+'</h2>';
+  h+='<div class="triple"><div>'+link(A.n)+' <span class="st '+A.status+'">'+A.status+'</span><br>'+esc2(A.ttl)+'</div><div>'+link(B.n)+' <span class="st '+B.status+'">'+B.status+'</span><br>'+esc2(B.ttl)+'</div><div><a href="#" data-jumpq="'+p+'">?'+(p+1)+'</a> <span class="st knot">open</span><br>'+esc2(q.title)+'</div></div>';
+  h+='<p class="dim">'+(dep?'The two towers here stand on each other \u2014 a derivation crosses this node.':'The two towers here are neighbours on the shell but not in the derivation graph.')+' The node\u2019s status is the weaker of its two towers: '+worst+'.</p>';
+  return h; }
+function show(h){ var html=h.k==='h'?towerHTML(TOWER_AT[h.i]):h.k==='p'?questionHTML(h.i):nodeHTML(h.i); panel.innerHTML=html; panel.scrollTop=0;
+  panel.querySelectorAll('a[data-jump]').forEach(function(a){ a.addEventListener('click',function(e){ e.preventDefault(); var n=a.dataset.jump; if(IDX[n]!==undefined){ SEL={k:'h',i:HEX_OF[IDX[n]]}; show(SEL); aim(SHELL.hexC[HEX_OF[IDX[n]]]); } }); });
+  panel.querySelectorAll('a[data-jumpq]').forEach(function(a){ a.addEventListener('click',function(e){ e.preventDefault(); var p=+a.dataset.jumpq; SEL={k:'p',i:p}; show(SEL); aim(SHELL.pentC[p]); }); });
+  draw(); }
+function aim(c){ /* turn the shell so the chosen face looks at the camera */
+  var L=Math.hypot(c[0],c[1],c[2]), x=c[0]/L, y=c[1]/L, z=c[2]/L; CAM.yaw=Math.atan2(-x,z); var z1=-x*Math.sin(CAM.yaw)+z*Math.cos(CAM.yaw); CAM.pitch=Math.atan2(y,z1); draw(); }
+
+/* ---------- receipts ---------- */
+(function(){ var SUP={2:'\u00b2',3:'\u00b3',4:'\u2074'}, fmtP=function(cc){ return cc.map(function(x,i){ var pw=cc.length-1-i, v=Math.round(x), a=Math.abs(v), co=(a===1&&pw>0)?'':String(a); return (v<0?'\u2212 ':i?'+ ':'')+co+(pw>1?'\u03bb'+SUP[pw]:pw===1?'\u03bb':''); }).join(' '); };
+  document.getElementById('lm').innerHTML='<div class="tex">'+tex('\\mathcal M=\\begin{pmatrix}1&2&1&0\\\\1&1&0&0\\\\1&0&0&0\\\\0&0&0&1\\end{pmatrix}')+'</div>'+
+    '<div class="rc">charpoly (Faddeev\u2013LeVerrier): '+fmtP(LM.c)+'<br>roots (Durand\u2013Kerner): '+LM.roots.map(function(x){return x.toFixed(9);}).join(', ')+'<br>vs {\u22121, \u03c6\u207b\u00b2, 1, \u03c6\u00b2}: max dev '+LM.dev.toExponential(1)+'</div>';
+  var rk=TOWERS.map(function(t,i){return RUNG_KNOTS[i].length?t.n:null;}).filter(Boolean);
+  var byDeg=TOWERS.map(function(t,i){ return {n:t.n,d:t.deps.filter(function(d){return IDX[d]!==undefined;}).length+DEPENDENTS[i].length}; }).filter(function(x){return x.d>3;}).sort(function(a,b){return b.d-a.d;});
+  document.getElementById('placement').innerHTML=
+    '<b>the shell</b> \u00b7 60 vertices, 90 bonds (60 pentagonal + 30 truncation), 12 pentagons, 20 hexagons \u00b7 built from the icosahedron by edge trisection<br>'+
+    '<b>the towers</b> \u00b7 '+TOWERS.length+' of 24 cards placed \u00b7 \u2600 at the centre \u00b7 off the shell: \u25d0 (no dependencies either way), XXI (a seal), XXII (a foreign sim)<br>'+
+    '<b>the graph</b> \u00b7 '+DEPS.length+' dependencies among them + '+FROM_SUN.length+' rays from \u2600 \u00b7 hexagon adjacency is the dodecahedral graph (3-regular), so any card with more than three relations cannot lie flat: '+byDeg.map(function(x){return x.n+' ('+x.d+')';}).join(', ')+'<br>'+
+    '<b>placement</b> \u00b7 annealed, '+PLACE.restarts+' restarts, seeded \u00b7 <span class="ok">'+PLACE.flat+' flat on bonds</span> / <span class="knot">'+PLACE.arcs+' as arcs</span> \u00b7 excess path length '+PLACE.cost+' \u00b7 '+PLACE.ms+' ms<br>'+
+    '<b>rung knots</b> \u00b7 cards whose rung is below a foundation\u2019s: '+(rk.length?rk.join(', '):'none')+'<br>'+
+    '<b>where the knots are</b> \u00b7 12 pentagons (the open questions, forced by Euler) \u00b7 '+PLACE.arcs+' arcs (dependencies the shell cannot hold locally) \u00b7 '+rk.length+' rung knots (the ladder disagrees with the graph) \u00b7 '+TOWERS.filter(function(t){return t.status==='hyp';}).length+' hypotheses standing on the shell';
+})();
+
+/* ---------- controls ---------- */
+document.getElementById('spin').addEventListener('click',function(){ CAM.spin=!CAM.spin; this.classList.toggle('on',CAM.spin); if(CAM.spin) loop(); });
+document.getElementById('trace').addEventListener('click',function(){ TRACE.on=true; TRACE.t0=performance.now(); TRACE.t=0; this.classList.add('on'); loop(); });
+document.getElementById('reset').addEventListener('click',function(){ TRACE.on=false; SEL=null; CAM.yaw=0.6; CAM.pitch=0.28; CAM.zoom=1; document.getElementById('trace').classList.remove('on'); panel.innerHTML=INTRO; document.getElementById('traceout').textContent=''; draw(); });
+var last=0, MAXD=Math.max.apply(null,DEPTH);
+function loop(now){ now=now||performance.now(); var dt=Math.min(0.1,(now-last)/1000); last=now;
+  if(CAM.spin&&!CAM.drag) CAM.yaw+=0.25*dt;
+  if(TRACE.on){ TRACE.t=(now-TRACE.t0)/1000; var n=Math.min(MAXD,Math.floor(TRACE.t/BEAT)+1);
+    /* the light matrix advanced n times: the shell the light has reached */
+    var s=[1,0,0,12], k; for(k=0;k<n;k++){ s=[s[0]+2*s[1]+s[2], s[0]+s[1], s[0], s[3]]; }
+    var T=s[0]+s[1]+s[2], lit=DEPTH.filter(function(d){return d<=n;}).length;
+    document.getElementById('traceout').innerHTML='trace \u00b7 depth '+n+' of '+MAXD+' \u00b7 <span class="tex">'+tex('\\mathcal M^{'+n+'}s_0=('+s.join(',')+')')+'</span> \u00b7 T = '+T+' \u00b7 C<sub>'+(20*T)+'</sub> \u00b7 '+lit+' of '+TOWERS.length+' towers lit';
+    if(TRACE.t>(MAXD+1)*BEAT){ TRACE.on=false; document.getElementById('trace').classList.remove('on'); } }
+  draw(); if(CAM.spin||TRACE.on) requestAnimationFrame(loop); }
+var INTRO=panel.innerHTML;
+fit(); draw();
+if(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches) BEAT=0.01;
+window.THEA_SHELL={SHELL:SHELL,PLACE:PLACE,DEPS:DEPS,DEP_KIND:DEP_KIND,DEPTH:DEPTH,LM:LM,TOWERS:TOWERS};
+
+</script>
+</body></html>

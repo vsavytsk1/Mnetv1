@@ -394,6 +394,7 @@ Pages serves), by `builder/gen_io_index.py`. Nothing hidden; the door is open.*
 - [shell/thea_light_matrix_v1.3.7.html](https://vsavytsk1.github.io/Mnetv1/shell/thea_light_matrix_v1.3.7.html)
 - [shell/thea_light_matrix_v1.3.8.html](https://vsavytsk1.github.io/Mnetv1/shell/thea_light_matrix_v1.3.8.html)
 - [shell/thea_light_matrix_v1.3.9.html](https://vsavytsk1.github.io/Mnetv1/shell/thea_light_matrix_v1.3.9.html)
+- [shell/thea_shell_of_derivations_v1.0.html](https://vsavytsk1.github.io/Mnetv1/shell/thea_shell_of_derivations_v1.0.html)
 - [shell/thealimitium-v1_0.html](https://vsavytsk1.github.io/Mnetv1/shell/thealimitium-v1_0.html)
 - [shell/theophania.html](https://vsavytsk1.github.io/Mnetv1/shell/theophania.html)
 - [shell/traffic_observatory.html](https://vsavytsk1.github.io/Mnetv1/shell/traffic_observatory.html)
