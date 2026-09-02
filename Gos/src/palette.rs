@@ -48,6 +48,26 @@ pub struct Palette {
 /// `builder/build_eng_v2.py` `:root{}` -- the ENG v2.0 master control dashboard.
 /// This is the artifact the renderer is trying to reproduce, so it is the
 /// default ground truth.
+/// The browser's GENESIS face fills, lifted verbatim from
+/// `shell/genesis_v8.5.2.html` around line 3808:
+///
+/// ```text
+///   pent  fill rgba(193, 74, 59, alpha*0.4)   stroke rgba(255,105,180, alpha)
+///   hex   fill rgba(  0, 40, 60, alpha*0.3)   stroke rgba(  0,180,255, alpha*0.6)
+/// ```
+///
+/// These are NOT palette fields, on purpose. A `Palette` varies by theme; the
+/// browser has exactly one fill colour per face type, and the port's job is to
+/// reproduce THAT picture. Themed fills would be a different render that
+/// happened to look similar.
+///
+/// The strokes already matched before the fills existed: `pink` is
+/// `(255,105,180)` and the GENESIS palette's `cyan` is `(0,180,255)` -- the
+/// same two numbers the browser strokes with.
+pub const GEN_FILL_PENT: Rgb = [193, 74, 59];
+/// See [`GEN_FILL_PENT`]. The hexagon fill, `rgba(0,40,60,...)`.
+pub const GEN_FILL_HEX: Rgb = [0, 40, 60];
+
 pub const DASHBOARD: Palette = Palette {
     name: "dashboard",
     source: "builder/build_eng_v2.py :root",

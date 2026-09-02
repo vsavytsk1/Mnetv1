@@ -28,6 +28,7 @@ use goldberg_kernel::dashboard;
 use goldberg_kernel::font;
 use goldberg_kernel::genesis;
 use goldberg_kernel::layout::Rect;
+use goldberg_kernel::palette;
 use goldberg_kernel::palette::{Palette, ALL};
 use goldberg_kernel::raster::{project, project_rpy, Canvas};
 use goldberg_kernel::rng::Rng;
@@ -564,6 +565,8 @@ struct App {
     /// and nothing that could disagree with the painter's order -- it reuses
     /// the very depth that order is computed from.
     gen_cull: bool,
+    /// Fill the faces as the browser does, not merely outline them.
+    gen_fill: bool,
     /// Project refined points onto the sphere instead of leaving them planar.
     ///
     /// **Ported because a test found `sphere` was dead without it.**
@@ -1178,6 +1181,7 @@ impl App {
             gen_speed_p: 0.0,
             gen_speed_r: 0.0,
             gen_cull: false,
+            gen_fill: true,
             gen_spherical: false,
             paint_clock: true,
         };
@@ -1506,6 +1510,7 @@ impl App {
             (18, "ZOOM +"),
             (19, "CULL"),
             (20, "SPHERICAL"),
+            (21, "FILL"),
         ] {
             let w = font::width(label, 1) + 16;
             self.gen_buttons.push(Button {
@@ -1607,6 +1612,14 @@ impl App {
                     String::from(
                         "CULL OFF - SEE-THROUGH. FRONT AND BACK SUPERIMPOSE, WHICH IS THE MOIRE.",
                     )
+                }
+            }
+            21 => {
+                self.gen_fill = !self.gen_fill;
+                if self.gen_fill {
+                    String::from("FILL ON - FACES PAINTED AS THE BROWSER DOES: PENT rgba(193,74,59,a*0.4), HEX rgba(0,40,60,a*0.3).")
+                } else {
+                    String::from("FILL OFF - WIREFRAME. THE MESH IS THE SAME; ONLY THE PAINT IS GONE.")
                 }
             }
             20 => {
@@ -1728,6 +1741,13 @@ impl App {
                         pal.green
                     } else {
                         pal.border
+                    }
+                }
+                21 => {
+                    if self.gen_fill {
+                        pal.green
+                    } else {
+                        pal.text
                     }
                 }
                 20 => {
@@ -2121,6 +2141,18 @@ impl App {
                 .any(|p| p.0 >= 0 && p.0 < W() as i32 && p.1 >= 0 && p.1 < H() as i32)
             {
                 visible += 1;
+            }
+            // FILL FIRST, then stroke -- the browser's order (`cx.fill()`
+            // then `cx.stroke()`). Reversing it would let a translucent fill
+            // wash over the outline it is supposed to sit inside.
+            if self.gen_fill {
+                let flat: Vec<(i32, i32)> = pts.iter().map(|p| (p.0, p.1)).collect();
+                let (fc, fa) = if f.kind == genesis::Kind::Pent {
+                    (palette::GEN_FILL_PENT, alpha * 0.4)
+                } else {
+                    (palette::GEN_FILL_HEX, alpha * 0.3)
+                };
+                self.cv.fill_poly(&flat, fc, (fa * 255.0) as u8);
             }
             for i in 0..pts.len() {
                 let j = (i + 1) % pts.len();

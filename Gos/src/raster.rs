@@ -77,6 +77,84 @@ impl Canvas {
     /// CERTIFIED. `a` is 0..=255. Integer blend with rounding -- no float, so
     /// the result is reproducible on any machine.
     #[inline]
+    /// Alpha-fills a polygon by scanline, even-odd rule.
+    ///
+    /// DISPLAY LANE. This is the browser's `cx.fill()` after `beginPath` /
+    /// `lineTo` / `closePath`, and canvas fills with the **non-zero** winding
+    /// rule by default. Even-odd and non-zero differ only for
+    /// **self-intersecting** polygons; a Goldberg face is convex, so on this
+    /// mesh the two rules agree exactly. Written down because the day someone
+    /// fills a non-convex face here, this comment is the bug report.
+    ///
+    /// Half-open rows (`y0 <= y < y1`) so shared horizontal edges between
+    /// neighbouring faces are painted once, not twice -- face soup means every
+    /// interior edge is drawn by both of its owners, and double-blending a
+    /// translucent fill would draw a visible seam along every shared edge.
+    pub fn fill_poly(&mut self, pts: &[(i32, i32)], c: Rgb, a: u8) {
+        if pts.len() < 3 || a == 0 {
+            return;
+        }
+        let mut ymin = i32::MAX;
+        let mut ymax = i32::MIN;
+        for &(_, y) in pts {
+            ymin = ymin.min(y);
+            ymax = ymax.max(y);
+        }
+        // clip to the canvas before looping: a face can project far off-screen
+        // at high zoom, and scanning its full height would cost the same as
+        // drawing it
+        ymin = ymin.max(0);
+        ymax = ymax.min(self.h as i32 - 1);
+        if ymin > ymax {
+            return;
+        }
+
+        let n = pts.len();
+        let mut xs: Vec<i32> = Vec::with_capacity(8);
+        for y in ymin..=ymax {
+            xs.clear();
+            for i in 0..n {
+                let (x0, y0) = pts[i];
+                let (x1, y1) = pts[(i + 1) % n];
+                if y0 == y1 {
+                    continue; // horizontal edges contribute no crossing
+                }
+                let (lo, hi) = if y0 < y1 { (y0, y1) } else { (y1, y0) };
+                // half-open: the top row counts, the bottom row does not
+                if y < lo || y >= hi {
+                    continue;
+                }
+                // integer-safe crossing: i64 because (dx * dy) overflows i32
+                // at the zoom levels this viewer actually reaches
+                let dx = (x1 - x0) as i64;
+                let dy = (y1 - y0) as i64;
+                let t = (y - y0) as i64;
+                xs.push(x0 + (dx * t / dy) as i32);
+            }
+            if xs.len() < 2 {
+                continue;
+            }
+            xs.sort_unstable();
+            let mut i = 0;
+            while i + 1 < xs.len() {
+                let (mut xa, xb) = (xs[i], xs[i + 1]);
+                // HALF-OPEN IN X TOO, for the same reason as the rows: a
+                // span [xa, xb) means two faces sharing a vertical edge blend
+                // it once between them. Inclusive here painted one column too
+                // many -- an 8-wide square came out 9 -- and every vertical
+                // interior edge would have carried a double-blended seam.
+                if xb > 0 && xa < self.w as i32 {
+                    xa = xa.max(0);
+                    let xe = xb.min(self.w as i32);
+                    for x in xa..xe {
+                        self.blend(x, y, c, a);
+                    }
+                }
+                i += 2;
+            }
+        }
+    }
+
     pub fn blend(&mut self, x: i32, y: i32, c: Rgb, a: u8) {
         if x < 0 || y < 0 || x as usize >= self.w || y as usize >= self.h {
             return;

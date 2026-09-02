@@ -7,6 +7,7 @@
 use goldberg_kernel::complex::{c_to_s2, C};
 use goldberg_kernel::ladder;
 use goldberg_kernel::ledger::{Lane, Ledger};
+use goldberg_kernel::raster::Canvas;
 use goldberg_kernel::rng::Rng;
 use goldberg_kernel::*;
 
@@ -1363,4 +1364,85 @@ fn an_enormous_off_screen_line_costs_nothing() {
         "1000 rejected lines took {us} us. Unclipped they would each have walked \
          a million pixels -- this test is the difference between a fence and a hang."
     );
+}
+
+// ---------------------------------------------------------------------------
+//  fill_poly -- the face fill, added 2026-09-02 to match the browser's cx.fill()
+// ---------------------------------------------------------------------------
+
+/// A filled square must cover exactly its own area -- no more, no less.
+/// Counts pixels rather than eyeballing a picture, because "looks filled" is
+/// the claim this whole crate exists to avoid making.
+#[test]
+fn fill_poly_covers_exactly_the_polygon_area() {
+    let mut cv = Canvas::new(32, 32, [0, 0, 0]);
+    // half-open rows: y in [4, 12) -> 8 rows; x likewise -> 8 columns
+    cv.fill_poly(&[(4, 4), (12, 4), (12, 12), (4, 12)], [255, 255, 255], 255);
+    let mut lit = 0usize;
+    for y in 0..32 {
+        for x in 0..32 {
+            if cv.get(x, y) != [0, 0, 0] {
+                lit += 1;
+            }
+        }
+    }
+    assert_eq!(lit, 64, "an 8x8 half-open square is 64 pixels, got {lit}");
+}
+
+/// The seam test, and the reason the rows are half-open. Face soup means two
+/// neighbours each draw their own copy of a shared edge. If the fill covered
+/// both its top and bottom row, a translucent fill would blend TWICE along
+/// every interior edge and the mesh would grow a bright seam on every join.
+#[test]
+fn abutting_polygons_do_not_double_blend_the_shared_edge() {
+    let mut cv = Canvas::new(16, 16, [0, 0, 0]);
+    // two rectangles meeting exactly at y = 8
+    cv.fill_poly(&[(2, 2), (10, 2), (10, 8), (2, 8)], [100, 100, 100], 128);
+    let once = cv.get(4, 5);
+    cv.fill_poly(&[(2, 8), (10, 8), (10, 14), (2, 14)], [100, 100, 100], 128);
+    assert_eq!(
+        cv.get(4, 5),
+        once,
+        "the first rectangle's interior must not be touched by the second"
+    );
+    // the shared row belongs to the SECOND rectangle only -- blended once
+    assert_eq!(
+        cv.get(4, 8),
+        once,
+        "row 8 must be blended exactly once, not twice"
+    );
+}
+
+/// Alpha must actually blend, and blending twice must differ from once --
+/// otherwise the seam test above would pass for the wrong reason.
+#[test]
+fn fill_poly_alpha_blends_and_is_not_idempotent() {
+    let mut cv = Canvas::new(8, 8, [0, 0, 0]);
+    let sq = [(1, 1), (7, 1), (7, 7), (1, 7)];
+    cv.fill_poly(&sq, [200, 200, 200], 128);
+    let after_one = cv.get(3, 3);
+    assert_ne!(after_one, [0, 0, 0], "half alpha must change the pixel");
+    assert_ne!(after_one, [200, 200, 200], "half alpha must not be opaque");
+    cv.fill_poly(&sq, [200, 200, 200], 128);
+    assert_ne!(
+        cv.get(3, 3),
+        after_one,
+        "a second blend must move the pixel; if not, the seam test is vacuous"
+    );
+}
+
+/// A face at high zoom projects far off-canvas. The fill must clip, not panic,
+/// and must not spend time scanning rows that cannot be seen.
+#[test]
+fn fill_poly_clips_instead_of_panicking() {
+    let mut cv = Canvas::new(16, 16, [0, 0, 0]);
+    cv.fill_poly(
+        &[(-9000, -9000), (9000, -9000), (9000, 9000), (-9000, 9000)],
+        [255, 0, 0],
+        255,
+    );
+    assert_eq!(cv.get(8, 8), [255, 0, 0], "the canvas interior is covered");
+    // degenerate inputs are no-ops, never panics
+    cv.fill_poly(&[(0, 0), (5, 5)], [0, 255, 0], 255);
+    cv.fill_poly(&[(0, 0), (5, 0), (5, 5)], [0, 255, 0], 0);
 }
