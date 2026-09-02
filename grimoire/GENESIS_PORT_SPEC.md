@@ -366,7 +366,7 @@ table had said "step 2 is next" while steps 2–5 were already shipped.*
 | 4 | `refine_all` / `refine_hexes` / `refine_pents` + undo | ✅ | `Op::{All,Hex,Pent}`, `refine`, `refine_one`, `undo` |
 | 5 | `invariants()` — trivalence only, never Euler; anchors as 2nd witness | ✅ | `arity_sum/2` and `/3`; χ is **derived so it is allowed to fail** |
 | 6 | **weld + judge**, compare against the census (the headline) | ⬜ **NEXT** | `judge.rs` exists (4 public fns) but **nothing calls it against a welded genesis mesh**. No `weld` in the crate. |
-| 7 | render via `raster.rs`, match the browser's image | 🟡 partial | it renders — but there is **no test comparing a frame to the browser's**, so "match" is unmeasured |
+| 7 | render via `raster.rs`, match the browser's image | 🟡 partial | **fills now match the browser exactly** (2026-09-02): pent `rgba(193,74,59,α*0.4)`, hex `rgba(0,40,60,α*0.3)`, strokes already did. Still **no frame-vs-browser test**, so "match" is argued from the constants, not measured |
 | 8 | dashboard card + the byte-topology checker beside it | ✅ | GENESIS card ships in `gos_viewer`, FRAME BITS beside it |
 
 ### Step 6 is the headline, and it is next for a reason

@@ -68,6 +68,7 @@ different objects even when they share the same glyph.
 | R14 | The Kept Far Half (sortTakeWrongEnd) | `take(n)` on a list sorted ASCENDING by depth keeps the FARTHEST faces, so the moment a draw cap bites the render shows the back of the shell through the missing front. Every invariant held; the count was honest; only the selection was reversed. | **FIXED** |
 | R15 | The Resampled Receipt (dpiResample) | a DPI-unaware process had its framebuffer resampled 1.5x by the OS before the glass, so "every pixel computed by the kernel" was true of the buffer and false of the screen -- and the seal, which hashes the buffer, could not see it. | **FIXED** |
 | R16 | The Points Do Not Dominate (costModelDrift) | `snapshot_bytes` counted only points because a comment said they dominate. Measured: 45% at depth 3, 32% at depth 7, and the error GROWS with depth. Plus `refine` holds BOTH generations, so the peak is ~8x the mesh, not the result. | **FIXED** |
+| R17 | The Inclusive Span (spanOffByOneSeam) | `fill_poly` half-open on rows, INCLUSIVE on columns: an 8-wide square painted nine. In face soup every interior edge is drawn by both owners, so an inclusive span double-blends a translucent fill and grows a bright seam along every vertical join. Caught by a test that counted an AREA (`lit == 64`), which a wireframe cannot fake and an eye cannot check. | **FIXED** |
 
 **Numbering (DESIGN CHOICE).** RUSTIUM curses run in their own `R` lane so this
 volume can grow without fighting KERNELIC_MAGIC's global counter (at 38). When a
@@ -1408,8 +1409,56 @@ Curse count: R16. `snapshot_bytes` counted only the points because a comment sai
 
 ---
 
+## CURSE R17 -- The Inclusive Span (spanOffByOneSeam)
+
+**Found 2026-09-02, by a test, before a single pixel reached a screen.**
+
+`fill_poly` scanlines a polygon and blends each span. The rows were half-open
+by design -- `y0 <= y < y1` -- so that two faces meeting at a horizontal edge
+paint it once between them. The horizontal span was written inclusive:
+
+```rust
+    for x in xa..=xe { self.blend(x, y, c, a); }   // WRONG
+```
+
+An 8-wide square came out **nine columns**. The test that caught it counted
+pixels rather than looking at the picture:
+
+```text
+    assert_eq!(lit, 64);     // an 8x8 half-open square
+    left: 72, right: 64
+```
+
+**Why it is a curse and not a typo.** This mesh is *face soup*: neighbours each
+hold their own copy of a shared corner, so **every interior edge is drawn twice,
+once by each owner**. With a translucent fill, an inclusive span blends that
+shared column twice -- and the shell grows a brighter seam along every vertical
+join. On a C60 that is 90 edges of moire; at depth it is the picture.
+
+The rows already knew this. The columns had not been told.
+
+> **THE RULE:** when a fill is translucent and the mesh is soup, **every span
+> must be half-open on every axis.** Inclusive on one axis and half-open on the
+> other is not asymmetric -- it is a seam generator that only shows up in the
+> direction you forgot.
+
+**What made it findable:** the test asserted an *area*, not an appearance.
+`lit == 64` is a number a wireframe cannot fake and an eye cannot check. The
+companion test then proves a second blend genuinely *differs* from one --
+without it, the seam test would pass on a fill that never blended at all.
+
+*Related: R14 kept the wrong half of a sorted list; this kept one column too
+many of a span. Both are an off-by-one at a boundary that only becomes visible
+when something else is drawn next to it.*
+
+---
+
 ## THE PATTERN UNDER R13, R14, R15 AND R16
 ### *coverage is not correspondence*
+
+*(R17 is a different animal -- an off-by-one, not a blind instrument. It is
+filed above rather than here because a test DID catch it, which is the whole
+difference.)*
 
 Four curses in one session, and they are one curse wearing four coats. In every
 case **the check that existed was passing, and was correct**:
