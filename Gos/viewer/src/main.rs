@@ -156,8 +156,24 @@ const VIEW_MID: f64 = 0.1;
 /// wall at depth 7 -- 24.7 million faces, 10.49 GB -- with depth 8 aborting
 /// (`0xC0000409`) while asking for 6.1 GB on top of the 10.5 it already held.
 ///
-/// 2 GB leaves the window responsive and the machine usable, which is the
+/// 6 GB leaves the window responsive and the machine usable, which is the
 /// point of a viewer as opposed to a batch job.
+///
+/// MEASURED 2026-09-02, `examples/level_six` -- and the peak is `old + new`,
+/// which is ~8x the mesh you HAVE, not 8x the one you are about to build. Get
+/// that backwards and every projection is off by the growth factor:
+///
+/// ```text
+///   level 5    504,212 faces   0.18 GB mesh   peak 0.19 GB   allowed
+///   level 6  3,529,472 faces   1.35 GB mesh   peak 1.42 GB   ALLOWED, measured
+///   level 7 24,705,884 faces  ~9.7  GB mesh   peak ~11 GB    refused here, and
+///                                                            the machine's own
+///                                                            wall is 10.49 GB
+/// ```
+///
+/// So level 6 already fits and level 7 is the one that needs a cheaper face --
+/// bought by welding, not by widening this gate. See `GENESIS_PORT_SPEC.md`
+/// step 6.
 const GEN_PEAK_BYTES: u64 = 6 * 1024 * 1024 * 1024;
 
 /// The most faces the viewer will DRAW in one frame. Distinct from the build
