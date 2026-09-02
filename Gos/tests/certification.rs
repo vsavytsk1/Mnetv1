@@ -1715,3 +1715,49 @@ fn the_lerp_reaches_both_ends_exactly() {
         assert!((m[k] - (a[k] + b[k]) / 2.0).abs() < 1e-12);
     }
 }
+
+/// The twist must change the SHAPE without changing the SIZE. With the
+/// browser's raw constants a 1.6-radius sphere becomes a 3.247 band -- the
+/// picture doubles, walks off the view, and reads as "the mobius is linked to
+/// the zoom", which is what it was.
+#[test]
+fn a_fitted_band_holds_the_spheres_size() {
+    let p = Params {
+        surface: Surface::Spherical,
+        ..Params::default()
+    };
+    let mut rng = Rng::new(0xC60);
+    let st = State::seed_c60().refine(Op::All, &p, &mut rng);
+    let far = |b: mobius::Band| {
+        st.faces
+            .iter()
+            .flat_map(|f| f.pts.iter())
+            .map(|&v| {
+                let q = mobius::sphere_to_mobius(v, b);
+                (q[0] * q[0] + q[1] * q[1] + q[2] * q[2]).sqrt()
+            })
+            .fold(0.0f64, f64::max)
+    };
+
+    let raw = far(mobius::Band::default());
+    assert!(
+        raw > 1.9 * p.sphere_r,
+        "the browser constants must still double it: {raw} vs r={}",
+        p.sphere_r
+    );
+
+    let fitted = far(mobius::Band::fit(p.sphere_r));
+    assert!(
+        (fitted / p.sphere_r - 1.0).abs() < 0.05,
+        "a fitted band must hold the size: {fitted} vs r={}",
+        p.sphere_r
+    );
+    assert!(
+        fitted <= mobius::Band::fit(p.sphere_r).reach(),
+        "and never exceed its own stated reach"
+    );
+
+    // degenerate inputs fall back rather than producing a zero-size band
+    assert_eq!(mobius::Band::fit(0.0), mobius::Band::default());
+    assert_eq!(mobius::Band::fit(-1.0), mobius::Band::default());
+}

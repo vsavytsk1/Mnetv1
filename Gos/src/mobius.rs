@@ -52,8 +52,51 @@ pub struct Band {
 }
 
 impl Default for Band {
+    /// The browser's constants, kept verbatim so a picture can be compared
+    /// against `genesis_v8.5.2.html` without a scale factor in the way.
     fn default() -> Self {
         Band { r: 2.5, w: 0.8 }
+    }
+}
+
+impl Band {
+    /// A band whose reach matches a sphere of `radius`, keeping the browser's
+    /// 2.5 : 0.8 proportions.
+    ///
+    /// **Why this exists.** The browser hardcodes `R = 2.5` because its sphere
+    /// is one fixed size. Ours has `sphere_r` as a live control, default 1.6 --
+    /// and measured, the default band reaches `|p| = 3.247` against the
+    /// sphere's `1.600`. **The twist doubles the picture**, so the shell walks
+    /// off the edge of the view and the operator has to zoom out to follow it.
+    ///
+    /// Reported from the render as *"the mobius is linked to the zoom"*, which
+    /// is exactly what it looked like and exactly what it was.
+    ///
+    /// `reach = r + w`, so scaling both by `radius / (r + w)` puts the band's
+    /// outermost point where the sphere's was. The twist then changes the
+    /// SHAPE without changing the SIZE, which is the only way to see what the
+    /// twist itself did.
+    ///
+    /// Note the band stays **flat**: its z extent is `w` while x and y reach
+    /// `r + w`, about 4 : 1 at these proportions. A sphere looks identical from
+    /// every angle and a flat ring does not, so `pitch` becomes far more
+    /// visible during a twist. That is the geometry, not a bug.
+    pub fn fit(radius: f64) -> Band {
+        let d = Band::default();
+        let reach = d.r + d.w;
+        if reach <= 0.0 || radius <= 0.0 {
+            return d;
+        }
+        let k = radius / reach;
+        Band {
+            r: d.r * k,
+            w: d.w * k,
+        }
+    }
+
+    /// The furthest a point can land: `r + w`.
+    pub fn reach(&self) -> f64 {
+        self.r + self.w
     }
 }
 

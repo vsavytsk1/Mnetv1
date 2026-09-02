@@ -2146,7 +2146,12 @@ impl App {
         // rather than a re-derivation -- the browser instead mutates the face
         // points and keeps a saved copy to restore from, which is a second
         // source of truth for the same geometry.
-        let band = mobius::Band::default();
+        // Fit the band to the sphere the mesh was built on, so the twist changes
+        // the SHAPE without changing the SIZE. With the browser's raw constants
+        // the band reaches 3.247 against the sphere's 1.600 -- the picture
+        // doubles and walks off the view, which read as "the mobius is linked
+        // to the zoom".
+        let band = mobius::Band::fit(self.gen_params.sphere_r);
         let t = if self.gen_mobius { self.gen_twist } else { 0.0 };
         let bend = |v: [f64; 3]| -> [f64; 3] {
             if t <= 0.0 {
