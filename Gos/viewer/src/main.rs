@@ -1070,9 +1070,9 @@ unsafe extern "system" fn wndproc(hwnd: HWND, msg: UINT, wp: WPARAM, lp: LPARAM)
             APP.with(|a| {
                 if let Some(app) = a.borrow_mut().as_mut() {
                     if app.view() == View::Genesis && app.genesis_spin {
-                        app.genesis_yaw += app.gen_speed;
-                        app.gen_pitch += app.gen_speed_p;
-                        app.gen_roll += app.gen_speed_r;
+                        app.genesis_yaw = wrap_turn(app.genesis_yaw + app.gen_speed);
+                        app.gen_pitch = wrap_turn(app.gen_pitch + app.gen_speed_p);
+                        app.gen_roll = wrap_turn(app.gen_roll + app.gen_speed_r);
                         go = true;
                     }
                 }
@@ -2792,9 +2792,9 @@ impl App {
     fn advance(&mut self, frames: u32) {
         for _ in 0..frames {
             if self.view() == View::Genesis && self.genesis_spin {
-                self.genesis_yaw += self.gen_speed;
-                self.gen_pitch += self.gen_speed_p;
-                self.gen_roll += self.gen_speed_r;
+                self.genesis_yaw = wrap_turn(self.genesis_yaw + self.gen_speed);
+                self.gen_pitch = wrap_turn(self.gen_pitch + self.gen_speed_p);
+                self.gen_roll = wrap_turn(self.gen_roll + self.gen_speed_r);
             }
         }
     }
@@ -3674,6 +3674,35 @@ fn zero_rep(_: std::io::Error) -> bits::DumpReport {
     }
 }
 
+/// Keep an angle inside one turn, `[0, TAU)`.
+///
+/// The three angles were advanced with a bare `+=` and never wrapped, so they
+/// walked straight out of their own declared range -- `yaw`, `pitch` and `roll`
+/// all say `lo: 0.0, hi: TAU`, and `ctl_set` clamps to it, but nothing brought
+/// the SPIN back. Left running they climb without bound, which is exactly what
+/// it looked like: **"yaw, pitch and roll are acting as a counter, they don't
+/// go back."**
+///
+/// Two consequences, and the second is the one that bites later:
+///
+/// * the box displays a number outside the range the control advertises, and
+///   typing that number back in gets it clamped to something else;
+/// * `sin` and `cos` reduce their argument modulo TAU, and the bits available
+///   for that reduction are the bits left over after storing the integer part.
+///   At `theta = 1e15` an f64 cannot resolve one radian, so a long enough spin
+///   does not merely look wrong, it stops turning smoothly.
+///
+/// `rem_euclid` rather than `%`: the remainder operator keeps the sign of the
+/// dividend, so a negative speed would produce a negative angle and the value
+/// would sit below `lo` instead of above `hi`. Same bug, other end.
+fn wrap_turn(a: f64) -> f64 {
+    if a.is_finite() {
+        a.rem_euclid(std::f64::consts::TAU)
+    } else {
+        0.0
+    }
+}
+
 fn runs_dir() -> PathBuf {
     // UNDER TEST, RUNS GO TO A SCRATCH DIRECTORY.
     //
@@ -3973,6 +4002,44 @@ mod control_tests {
             );
         }
         assert!(App::ctl_index("shoe").is_none());
+    }
+
+    /// No control may leave its own declared range, however long it runs.
+    ///
+    /// `yaw`, `pitch` and `roll` declare `lo: 0.0, hi: TAU` and `ctl_set`
+    /// clamps to it -- but the SPIN advanced them with a bare `+=` and nothing
+    /// wrapped, so they climbed forever. Reported as "yaw, pitch and roll are
+    /// acting as a counter, they don't go back", which is precisely what an
+    /// unwrapped accumulator is.
+    ///
+    /// A range in the table that the value can escape is not a range, it is a
+    /// suggestion -- so this spins hard enough to escape and checks.
+    #[test]
+    fn no_control_escapes_its_declared_range() {
+        let mut a = app_at(1);
+        a.genesis_spin = true;
+        // Set the speeds THROUGH ctl_set, at the top of each declared range.
+        // Writing the fields directly put 0.5 into `speedp`, whose range is
+        // [0, 0.25] -- the test then failed on its own setup rather than on the
+        // code, which is the test breaking the contract it exists to check.
+        for name in ["speed", "speedp", "speedr"] {
+            let i = App::ctl_index(name).expect("speed control exists");
+            a.ctl_set(i, CONTROLS[i].hi);
+        }
+        // 200 frames at these speeds is >20 full turns on every axis.
+        // `advance` is the deterministic tick the drivers use -- the same one
+        // that replaced sleeping on a wall clock.
+        a.advance(200);
+        for (i, c) in CONTROLS.iter().enumerate() {
+            let v = a.ctl_get(i);
+            assert!(
+                v >= c.lo && v <= c.hi,
+                "control '{}' left its range after spinning: {v} is not in [{}, {}]",
+                c.name,
+                c.lo,
+                c.hi
+            );
+        }
     }
 
     /// Every control must READ BACK what was written to it.
