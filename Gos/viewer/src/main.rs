@@ -28,6 +28,7 @@ use goldberg_kernel::dashboard;
 use goldberg_kernel::font;
 use goldberg_kernel::genesis;
 use goldberg_kernel::layout::Rect;
+use goldberg_kernel::mobius;
 use goldberg_kernel::palette;
 use goldberg_kernel::palette::{Palette, ALL};
 use goldberg_kernel::raster::{project, project_rpy, Canvas};
@@ -241,7 +242,7 @@ struct Control {
 }
 
 /// Every animatable control the GENESIS view has.
-const CONTROLS: [Control; 11] = [
+const CONTROLS: [Control; 12] = [
     Control {
         name: "inner",
         label: "INNER",
@@ -249,6 +250,14 @@ const CONTROLS: [Control; 11] = [
         hi: 0.95,
         unit: "where the inner ring sits, 0..1",
         when: When::Build,
+    },
+    Control {
+        name: "twist",
+        label: "TWIST",
+        lo: 0.0,
+        hi: 1.0,
+        unit: "sphere -> Mobius band, 0..1 -- DISPLAY LANE, moves points only",
+        when: When::Render,
     },
     Control {
         name: "mid",
@@ -583,6 +592,11 @@ struct App {
     gen_cull: bool,
     /// Fill the faces as the browser does, not merely outline them.
     gen_fill: bool,
+    /// Mobius blend, 0 = sphere, 1 = band. Applied at DRAW time, so the stored
+    /// mesh is never bent -- toggling back is exact, not a re-derivation.
+    gen_twist: f64,
+    /// whether the twist is armed at all; the box is live only when it is
+    gen_mobius: bool,
     /// Project refined points onto the sphere instead of leaving them planar.
     ///
     /// **Ported because a test found `sphere` was dead without it.**
@@ -1198,6 +1212,8 @@ impl App {
             gen_speed_r: 0.0,
             gen_cull: false,
             gen_fill: true,
+            gen_twist: 0.0,
+            gen_mobius: false,
             gen_spherical: false,
             paint_clock: true,
         };
@@ -1390,6 +1406,14 @@ impl App {
         let c = &CONTROLS[i];
         let v = v.clamp(c.lo, c.hi);
         match c.name {
+            // Setting a twist ARMS the Mobius. `every_control_changes_something`
+            // caught the alternative: with arming required first, `twist` was a
+            // Render control that moved nothing, which is R13 exactly -- a box
+            // that exists and is read by nobody. Typing `twist 0.6` means it.
+            "twist" => {
+                self.gen_twist = v;
+                self.gen_mobius = v > 0.0;
+            }
             "inner" => self.gen_params.inner_scale = v,
             "mid" => self.gen_params.mid_scale = v,
             "jitter" => self.gen_params.jitter = v,
@@ -1527,6 +1551,7 @@ impl App {
             (19, "CULL"),
             (20, "SPHERICAL"),
             (21, "FILL"),
+            (22, "MOBIUS"),
         ] {
             let w = font::width(label, 1) + 16;
             self.gen_buttons.push(Button {
@@ -1628,6 +1653,17 @@ impl App {
                     String::from(
                         "CULL OFF - SEE-THROUGH. FRONT AND BACK SUPERIMPOSE, WHICH IS THE MOIRE.",
                     )
+                }
+            }
+            22 => {
+                self.gen_mobius = !self.gen_mobius;
+                if self.gen_mobius {
+                    String::from(
+                        "MOBIUS ARMED - SET twist 0..1. THE BROWSER LOGS chi 2->0 AND NEVER COMPUTES IT; THIS PANEL DOES.",
+                    )
+                } else {
+                    self.gen_twist = 0.0;
+                    String::from("MOBIUS OFF - twist 0. THE MESH WAS NEVER BENT, ONLY THE DRAW WAS.")
                 }
             }
             21 => {
@@ -1757,6 +1793,13 @@ impl App {
                         pal.green
                     } else {
                         pal.border
+                    }
+                }
+                22 => {
+                    if self.gen_mobius {
+                        pal.pink
+                    } else {
+                        pal.text
                     }
                 }
                 21 => {
@@ -2098,6 +2141,21 @@ impl App {
         );
         let sh = H() as i32 - BAR_H - GEN_BAR_H - 60;
 
+        // The twist is applied HERE, between the mesh and the projection, so
+        // `self.gen` is never bent. Toggling back to 0 is therefore exact
+        // rather than a re-derivation -- the browser instead mutates the face
+        // points and keeps a saved copy to restore from, which is a second
+        // source of truth for the same geometry.
+        let band = mobius::Band::default();
+        let t = if self.gen_mobius { self.gen_twist } else { 0.0 };
+        let bend = |v: [f64; 3]| -> [f64; 3] {
+            if t <= 0.0 {
+                v
+            } else {
+                mobius::lerp(v, mobius::sphere_to_mobius(v, band), t)
+            }
+        };
+
         let depths: Vec<f64> = self
             .gen
             .faces
@@ -2106,7 +2164,7 @@ impl App {
                 let n = f.pts.len() as f64;
                 f.pts
                     .iter()
-                    .map(|&v| project_rpy(v, rx, ry, rz, zoom, W(), sh as usize).2)
+                    .map(|&v| project_rpy(bend(v), rx, ry, rz, zoom, W(), sh as usize).2)
                     .sum::<f64>()
                     / n
             })
@@ -2148,7 +2206,7 @@ impl App {
             let pts: Vec<(i32, i32, f64)> = f
                 .pts
                 .iter()
-                .map(|&v| project_rpy(v, rx, ry, rz, zoom, W(), sh as usize))
+                .map(|&v| project_rpy(bend(v), rx, ry, rz, zoom, W(), sh as usize))
                 .collect();
             // Did any corner of this face land on the canvas? Cheap, and it is
             // the difference between what we DRAW and what anyone SEES.
@@ -2185,6 +2243,25 @@ impl App {
             Ok(i) => {
                 lines.push(format!("MEASURED  {i}"));
                 lines.push(format!("CENSUS    {census}"));
+                // THE MOBIUS CHECK. The browser logs `chi:'2->0'` as a string
+                // literal and never calls invariants() in its Mobius engine.
+                // Bending points cannot change connectivity, so chi is whatever
+                // it was -- and this line says the measured number out loud
+                // rather than inheriting the claim. A real Mobius needs
+                // F = E - V faces; the gap is how many would have to die.
+                if self.gen_mobius {
+                    let need = mobius::faces_for_chi_zero(i.vertices, i.edges);
+                    lines.push(format!(
+                        "MOBIUS    twist {:.2} - chi STILL {} (bending moves points, not connectivity)",
+                        self.gen_twist, i.chi
+                    ));
+                    if let Some(n) = need {
+                        lines.push(format!(
+                            "          chi=0 would force F={n}, so {} face(s) must die. NONE HAVE.",
+                            i.faces as i64 - n as i64
+                        ));
+                    }
+                }
                 let agree = i.faces == census.f && i.pents == census.p;
                 lines.push(format!(
                     "LANES     {}",

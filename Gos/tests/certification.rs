@@ -9,6 +9,7 @@ use goldberg_kernel::complex::{c_to_s2, C};
 use goldberg_kernel::genesis::{Op, Params, State, Surface};
 use goldberg_kernel::ladder;
 use goldberg_kernel::ledger::{Lane, Ledger};
+use goldberg_kernel::mobius;
 use goldberg_kernel::netfile;
 use goldberg_kernel::raster::Canvas;
 use goldberg_kernel::rng::Rng;
@@ -1632,4 +1633,85 @@ fn density_is_measured_against_the_mantissa_only() {
         p.density()
     );
     assert_eq!(bits::float_profile([] as [f64; 0]).density(), 0.0);
+}
+
+// ---------------------------------------------------------------------------
+//  mobius -- the twist, and the claim it does NOT support
+// ---------------------------------------------------------------------------
+
+/// THE ONE THAT MATTERS. The browser logs `chi:'2->0'` and never computes it.
+/// Bending points cannot change connectivity, so chi is untouched -- and this
+/// port must say so out loud rather than inherit the claim.
+#[test]
+fn the_twist_moves_points_and_does_not_change_chi() {
+    let p = Params::default();
+    let mut rng = Rng::new(0xC60);
+    let mut st = State::seed_c60().refine(Op::All, &p, &mut rng);
+
+    let before = st.invariants().expect("measures before");
+    let band = mobius::Band::default();
+    let mut moved = 0usize;
+    for f in st.faces.iter_mut() {
+        for v in f.pts.iter_mut() {
+            let m = mobius::sphere_to_mobius(*v, band);
+            if m != *v {
+                moved += 1;
+            }
+            *v = m;
+        }
+    }
+    let after = st.invariants().expect("measures after");
+
+    assert!(moved > 0, "the twist must actually move something");
+    assert_eq!(
+        before.chi, after.chi,
+        "chi changed by bending points -- that is impossible, so something          else is wrong"
+    );
+    assert_eq!(after.chi, 2, "a bent sphere is still a sphere");
+    assert_eq!(before.faces, after.faces, "no face may vanish by bending");
+    assert_eq!(after.pents, 12, "and P=12 survives the twist");
+}
+
+/// What a genuine Mobius WOULD cost, in faces. chi=0 forces F = E - V, and the
+/// gap against the faces you have is how many must die.
+#[test]
+fn a_real_mobius_would_cost_exactly_two_faces_on_the_c60() {
+    // C60: V=60, E=90, F=32, chi=2
+    let need = mobius::faces_for_chi_zero(60, 90).expect("E > V");
+    assert_eq!(need, 30, "chi=0 forces F = 90 - 60 = 30");
+    assert_eq!(32 - need, 2, "two faces must die -- the cost of the twist");
+    assert_eq!(
+        mobius::faces_for_chi_zero(90, 60),
+        None,
+        "V > E cannot close"
+    );
+}
+
+/// The map must be well behaved where it is easy to be wrong: the origin has
+/// no direction, and the poles sit at the clamp.
+#[test]
+fn the_map_survives_the_origin_and_the_poles() {
+    let b = mobius::Band::default();
+    assert_eq!(
+        mobius::sphere_to_mobius([0.0, 0.0, 0.0], b),
+        [b.r, 0.0, 0.0],
+        "the origin goes to the reference point, never to NaN"
+    );
+    for p in [[0.0, 0.0, 1.0], [0.0, 0.0, -1.0], [0.0, 0.0, 1e-11]] {
+        let q = mobius::sphere_to_mobius(p, b);
+        assert!(q.iter().all(|c| c.is_finite()), "pole {p:?} produced {q:?}");
+    }
+}
+
+/// The lerp must hit both ends exactly, or "t=0 is the sphere" is a lie.
+#[test]
+fn the_lerp_reaches_both_ends_exactly() {
+    let a = [1.0, 2.0, 3.0];
+    let b = [-4.0, 5.0, 0.5];
+    assert_eq!(mobius::lerp(a, b, 0.0), a, "t=0 must BE the sphere");
+    assert_eq!(mobius::lerp(a, b, 1.0), b, "t=1 must BE the band");
+    let m = mobius::lerp(a, b, 0.5);
+    for k in 0..3 {
+        assert!((m[k] - (a[k] + b[k]) / 2.0).abs() < 1e-12);
+    }
 }
