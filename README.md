@@ -68,6 +68,21 @@ Google Colab receipt (L6, Tesla T4, 2026-05-28):
 
 **P=12. chi=2. V-E+F=2. Always.**
 
+And one result we are just as proud of, because it went the other way
+(2026-09-01, `tower/ladder_limit_receipt.json`):
+
+```
+T*lambda_2 was DERIVED to converge to 2*pi/(5*sqrt3) = 0.7255197, and two
+measured rungs agreed. Twenty-five rungs do not: the sequence CROSSES the
+derived value at T~7, bottoms out near T~30, and settles around 0.7248 —
+0.1% short, three orders of magnitude beyond the fit residual. The meshes
+are perfect (chi=2, P=12, all 25). The derivation is what cracked: it
+assumed twelve pentagons are measure zero, and Euler keeps them at twelve
+forever. Full story: grimoire/SHADE_MAGIC.md.
+```
+
+Two points agree with any curve drawn between them. Now we know.
+
 ---
 
 ## The live modules -- a few highlights (all free, all browser)
@@ -810,6 +825,73 @@ From HTML circles to Navier-Stokes.
 *Divine shit. Fun stuff. Let's continue and push."*
 
 *— Vlad, 6 AM, Buenos Aires, May 25 2026*
+
+That was the first four days. The block above is kept exactly as written,
+because Path X says the journey stays published. It kept going:
+
+```
+May 27, 2026  —  THE VR PORT, first try: C60 on a Quest 3, gaze refinement,
+                 no loading screen. 651 gate events over 7h15m, Pents=12 in
+                 every single one. Eight APKs in four days. (sister repo: Mnet)
+May 28, 2026  —  L001. The builder is born; the shell becomes BUILT, not
+                 hand-written. Colab Tesla T4: 1,176,492 faces, 500,000 steps,
+                 diss/enst = 2*nu EXACT every step.
+Jun 04, 2026  —  THE LOOP LAW + the grimoire reorg. The scrolls get a home.
+Jul 08, 2026  —  HELENA: the real builder + runtime. The heavy build data
+                 never enters git — "pay thea Heleni in compute."
+Jul 30, 2026  —  AEQUALIUM: the Standard Modelium tower, Fable's weld,
+                 the certificate.
+Jul 31, 2026  —  THEA v3.0: the MATH CORE scroll lands, verified. The light
+                 matrix living-paper v1.1 begins — a Nature-style page you
+                 click through, computed live.
+Aug 01, 2026  —  kibotos welded. The full Sol+Fable collaboration saved.
+Aug 10, 2026  —  light matrix v1.3.7 ships; the SolFable grimoire is filed.
+Aug 17, 2026  —  RUSTIUM. The compiled tongue opens: the .exe paints without
+                 Chromium, the judge counts chi on a refined mesh, gos_orb
+                 reaches the icosphere lane. L188–L194 in one day.
+Aug 21, 2026  —  R12–R16: five curses, four of them the same curse. Movies
+                 priced in GB AND wall-clock before the first frame. kaboom
+                 walks into the wall on purpose: depth 7 survives at 24.7M
+                 faces / 10.49 GB, depth 8 dies 0xC0000409.
+Sep 01, 2026  —  CLEANING DAY. Ten repos, one folder each, everything in
+                 sync. The 96-day Mnet split merged — the doctrine and the
+                 engine finally in one history. SHADE_MAGIC.md opens, states
+                 its own failure conditions first — and the same afternoon,
+                 25 rungs of the spectral ladder kill the derived constant
+                 the cave had believed for two weeks. See below.
+
+Total so far: 101 days. 1 kernel, 4 languages (JS, Python, C#, Rust),
+390 sims, 20 scrolls, 194 ledger entries, 137 Rust tests green.
+From a dodecahedron to a VR headset to a disconfirmation we are proud of.
+```
+
+---
+
+## Open, honestly -- as of 2026-09-01
+
+The Sacred Math Tree list above is kept as written (May 2026). This is the
+live one, ranked, each item with its receipt:
+
+1. **The pentagon test.** 25 rungs showed `T*lambda_2` settling ~0.1% below
+   the derived `2*pi/(5*sqrt3)`, and the prime suspect is the assumption that
+   twelve pentagons are "measure zero". The clean experiment: a matched-N
+   sphere graph with NO pentagons. If it hits the derived constant while the
+   fullerene sits at 0.7248, the pentagons ARE the physics of this mesh.
+   (`grimoire/SHADE_MAGIC.md`, `tower/ladder_limit_receipt.json`)
+2. **The same ladder on the certified path.** Today's spectra came from
+   LAPACK -- the DISPLAY lane. `Gos` exists so this can be redone in
+   `+ - * / sqrt` only. If the 0.1% gap moves, that is its own finding.
+3. **Section XVIII's crack, reproduced in Rust.** THEA v1.3.9 reports that
+   `chi = 2` fails BEFORE the floats it is built from, at a depth `Gos` has
+   never been pushed to. `kaboom` found the memory wall; this one is the
+   arithmetic wall.
+4. **The ENG builder policy.** The live dashboard carries hand-added cards
+   the builder would delete. Three options are written in
+   `builder/eng/README.md`; none is chosen. Until then the page is the
+   artifact of record and the builder is not.
+5. **The v8.1 -> Gos port, remaining steps.** `buildDodecahedron` + the seven
+   Platonic seeds, serialize/deserialize (the 60-vertex browser/Rust hex
+   diff), `faceLocalFrame`, the Mobius twist. (`grimoire/GENESIS_PORT_SPEC.md`)
 
 ---
 
