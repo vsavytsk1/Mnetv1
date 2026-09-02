@@ -1730,3 +1730,109 @@ moved 388 -> 390 only after `git add`.
 *twice, and the scroll learned its own dependency graph.*
 
 *P=12. chi=2. T*lambda_2 -> 2*pi/(5*sqrt3). Two points are a trend.*
+
+---
+---
+
+# PART XII -- THE DB PARADIGM, AND WHAT THE BITS SAID
+### *added 2026-09-02, from `Gos/examples/net_db.rs` and `Gos/src/bits.rs`*
+
+This scroll opens on points and lines with a value at each point. From
+2026-09-02 that is not only the mathematics -- it is how the work is stored.
+
+## THE PARADIGM
+
+A net is no longer a thing you build and look at. It is a **row**:
+
+```text
+  inner, mid, zoom, rx, ry, rz, level          the permutation
+  faces, pents, chi, coords                    the mesh          EXACT
+  mantissa_ones, density, powers_of_two, ...   the bits          EXACT
+  ink, l_entropy, distinct                     the picture       DISPLAY
+  net_digest, image, netfile                   where to find it
+```
+
+Fixed width, so nets are comparable **without being looked at**: nearest
+neighbours, clustering, *"every net whose density is under 0.1"*. The three
+kinds of number are kept apart on purpose, and the lane is part of the schema
+rather than a footnote about it.
+
+**Two rules, both already load-bearing elsewhere in this cave:**
+
+1. **The row is written only after the net certifies.** `P = 12` and
+   `LANES AGREE` are asserted before a single field is emitted. A row
+   describing a broken net poisons every query made against the table
+   afterwards, and does it silently.
+2. **The table travels; the payload does not.** One 5x5 sweep is 213 MB of
+   renders and `.gosnet` files, all regenerable. `NETS.csv` is 76 KB and is the
+   only part a query needs. Same rule as `helena_net/builds`, `Gos/runs`, and
+   the `_private` hatch -- *keep the mirror, not the payload*.
+
+## WHAT THE BITS SAID -- and it is a NO
+
+The question was whether some choice of `(inner, mid)` lands the geometry
+closer to ones and zeros than another. `bits::float_profile` answers it exactly,
+by counting set mantissa bits: an f64 the machine holds *exactly* has a mantissa
+of mostly zeros; one that had to be **rounded to fit** has a full one, because
+the tail is where the error went.
+
+100 rows, 5x5 parameters x 4 views, level 3:
+
+```text
+  mantissa density   min 0.4865   max 0.4957   spread 0.0092
+  a random f64 sits at 0.5000 -- every net is within 2.7% of random
+  exact powers of two: 2,140 of 185,220 coordinates = 1.16%
+```
+
+**The geometry cannot be made binary by choosing parameters.** Not at
+`inner = 0.5`, not anywhere. The 1.16% that *are* exact are the seed's own
+coordinates surviving, and refinement dilutes them: every refined point passes
+through an average and a `project_to_sphere`, and the square root of anything
+that is not a perfect square fills the mantissa.
+
+### Why the no is worth more than a yes
+
+It settles where a storage win can possibly come from. **You cannot make the
+numbers cheaper -- they are already incompressible in this representation. You
+can only store fewer of them.** Which is precisely the 5.27x that welding the
+face soup into an indexed mesh offers, by removing *duplication* rather than
+*entropy*.
+
+Two independent measurements -- `memory_ladder` counting bytes, `net_db`
+counting bits -- arriving at the same instruction. That agreement is the
+finding; either alone would have been a number.
+
+## THE PICTURE IS A DIFFERENT ANIMAL
+
+```text
+  L entropy   0.704 ................ 5.467      7.8x
+
+  quietest  inner=0.95  mid=0.95  zoom=760   0.704 bits, ink 0.068
+  busiest   inner=0.95  mid=0.05  zoom=260   5.467 bits, ink 0.681
+```
+
+Same `inner` in both -- only `mid` and the viewpoint differ. **What the eye
+receives is enormously compressible; what the mesh IS is not.** That gap is now
+a number instead of an intuition, and it is the reason the render and the mesh
+are separate lanes in the schema.
+
+## WHAT THIS OWES
+
+* **The weld.** Both measurements now point at it and it is still step 6 of
+  `GENESIS_PORT_SPEC.md`. The 5.27x is arithmetic from trivalence, not yet a
+  built mesh.
+* **A second sweep at another level.** Everything above is level 3. The
+  dilution of exact coordinates with depth is stated from one ladder; a level-5
+  sweep would either confirm the trend or break it.
+* **The query side.** The table exists and nothing reads it yet. A row nobody
+  queries is a row that could be wrong for months -- which is R13's whole
+  lesson wearing a schema.
+
+---
+
+*Added 2026-09-02. Points and lines, and at each point a value: the value being*
+*what it costs to write the point down. The answer to "how close to 1 and 0" is*
+*0.4865, and 0.5 is a coin.*
+
+**P=12 . chi=2 . the table travels, the payload stays home.**
+
