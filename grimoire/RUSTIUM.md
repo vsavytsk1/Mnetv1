@@ -69,6 +69,8 @@ different objects even when they share the same glyph.
 | R15 | The Resampled Receipt (dpiResample) | a DPI-unaware process had its framebuffer resampled 1.5x by the OS before the glass, so "every pixel computed by the kernel" was true of the buffer and false of the screen -- and the seal, which hashes the buffer, could not see it. | **FIXED** |
 | R16 | The Points Do Not Dominate (costModelDrift) | `snapshot_bytes` counted only points because a comment said they dominate. Measured: 45% at depth 3, 32% at depth 7, and the error GROWS with depth. Plus `refine` holds BOTH generations, so the peak is ~8x the mesh, not the result. | **FIXED** |
 | R17 | The Inclusive Span (spanOffByOneSeam) | `fill_poly` half-open on rows, INCLUSIVE on columns: an 8-wide square painted nine. In face soup every interior edge is drawn by both owners, so an inclusive span double-blends a translucent fill and grows a bright seam along every vertical join. Caught by a test that counted an AREA (`lit == 64`), which a wireframe cannot fake and an eye cannot check. | **FIXED** |
+| R18 | The Plausible Fallback (matchArmCatchAll) | a `match` from NAME to FIELD ended in `_ => self.gen_zoom`, so a new control's box displayed ANOTHER control's value. The setter worked; only the readout lied, and a catch-all answers with a plausible number rather than failing. Two green tests could not see it: one checked the table, one checked the frame, neither checked the round trip. | **FIXED** |
+| R19 | The Per-Run Ledger (sessionPerTest) | the viewer records its gate before the first pixel -- correct for a run, automatic under `cargo test`. 579 directories, 128 holding a SESSION.json and nothing else, recording 20 distinct commits. Flagged as a slope at 297; a problem at 579. A cost that grows per test run grows fastest when the suite is healthiest. | **FIXED** |
 
 **Numbering (DESIGN CHOICE).** RUSTIUM curses run in their own `R` lane so this
 volume can grow without fighting KERNELIC_MAGIC's global counter (at 38). When a
@@ -1450,6 +1452,118 @@ without it, the seam test would pass on a fill that never blended at all.
 *Related: R14 kept the wrong half of a sorted list; this kept one column too
 many of a span. Both are an off-by-one at a boundary that only becomes visible
 when something else is drawn next to it.*
+
+---
+
+## CURSE R18 -- The Plausible Fallback (matchArmCatchAll)
+
+**Found 2026-09-02, by a human looking at two boxes side by side.**
+
+A control was added to the viewer: `twist`, for the Möbius bend. It was wired
+into `ctl_set` and, by omission, not into `ctl_get`, which ended:
+
+```rust
+    "speedr" => self.gen_speed_r,
+    _ => self.gen_zoom,          // <- the trap
+```
+
+So the twist box displayed the **zoom** value. Reported exactly, and exactly
+right: *"the twist box is showing the same as the zoom box, the twist works."*
+The control did work. Only its readout lied.
+
+### Why two green tests could not see it
+
+```text
+  every_control_is_reachable_by_name   proved the TABLE can be looked up
+  every_control_changes_something      proved the FRAME moved when twist changed
+```
+
+Both true. Both useless here -- the frame moved because the **setter** worked,
+and the readout was never part of either claim. This is R13's family again, and
+the twist is that the failure needed a **human eye reading two numbers**, which
+is the second consequence of the R13-R16 section arriving to collect.
+
+### What makes it a curse rather than a typo
+
+A catch-all `_ =>` in a getter does not fail. It answers, with a **plausible
+number from the wrong field**. That is strictly worse than a panic, a blank, or
+a zero, because nothing about `1.00` in a box looks broken. The same arm in a
+setter writes the wrong field just as happily.
+
+> **THE RULE:** in a `match` that maps a NAME to a FIELD, never end in `_ =>`
+> with a real value. Name every arm, and let the fallback be something that
+> **cannot be mistaken for an answer** -- `NaN` for a getter, a
+> `debug_assert!(false)` for a setter. A box showing `NaN` is obviously broken.
+> A box showing `1.00` is obviously fine, and wrong.
+
+### The check that closes it
+
+```rust
+    // every control must READ BACK what was written to it
+    a.ctl_set(i, want);
+    assert!((a.ctl_get(i) - want).abs() < 1e-12);
+```
+
+**Proved it catches the bug rather than assuming so.** The original was
+reinstated -- twist arm removed, plausible fallback restored -- and the test
+was run:
+
+```text
+  control 'twist' wrote 0.317 and read back 1
+  -- the setter and the getter are not talking about the same field
+```
+
+That `1` is the zoom default. It is the number that was on the screen.
+
+*A test written after a fix should be proved against the bug it claims to
+catch. Otherwise you have a test that passes, which is not the same thing.*
+
+---
+
+## CURSE R19 -- The Per-Run Ledger (sessionPerTest)
+
+**Found 2026-09-02, from a screenshot of a file tree.**
+
+`gos_viewer` mints `runs/v0_1_0_sNNNN/` and writes `SESSION.json` **before the
+first pixel** -- the AXIOM 01 gate recorded before any work, which is correct
+and deliberate. Under `cargo test` it is also automatic, and a test binary
+launches several `App`s.
+
+```text
+  579 directories, 1,069 tracked mirror files
+  128 of them held a SESSION.json and NOTHING ELSE
+  -- a recorded gate for a run that never drew anything
+  and those 128 recorded 20 distinct commits: 108 exact duplicates of one fact
+```
+
+**This was flagged as a slope at 297 and became a problem at 579**, which is
+the useful shape of it: *a cost that grows per test run grows fastest exactly
+when the suite is healthiest.* Every curse fixed added tests; every test run
+added folders.
+
+### The fix is at the generator, never the ledger
+
+```rust
+    fn runs_dir() -> PathBuf {
+        if cfg!(test) {
+            return std::env::temp_dir().join("gos_test_runs");
+        }
+        ...
+    }
+```
+
+Verified: `runs/` held 579 before a full viewer suite and 579 after. Production
+behaviour is untouched -- a real run still records its gate before it draws.
+
+The backlog was pruned by **information content, not by age**: one folder kept
+per distinct `git_head`, because *"the gate passed at commit X"* is worth
+recording once and not eighteen times. Any folder with a shot, an export, a
+drive log or a layout is a real run and was never touched, and any folder whose
+gate did **not** pass would have been kept regardless -- that one is evidence.
+
+> **THE RULE:** when an artefact is written per RUN, ask what happens when the
+> runs are automatic. Then delete by what a record SAYS, never by when it was
+> made.
 
 ---
 

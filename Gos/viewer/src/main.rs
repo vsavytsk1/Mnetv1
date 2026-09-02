@@ -3675,6 +3675,21 @@ fn zero_rep(_: std::io::Error) -> bits::DumpReport {
 }
 
 fn runs_dir() -> PathBuf {
+    // UNDER TEST, RUNS GO TO A SCRATCH DIRECTORY.
+    //
+    // `open_session` mints a numbered folder and writes SESSION.json before the
+    // first pixel, which is the right behaviour for a real run and the wrong
+    // one for a test binary: every `cargo test` launched several App instances
+    // and each left a folder behind. The count reached 579 directories and
+    // 1,069 tracked mirror files, of which 128 held a SESSION.json and nothing
+    // else -- a recorded gate for a run that never drew anything.
+    //
+    // This was flagged as a slope when it was 297 and it became a problem at
+    // 579, which is the useful shape of that lesson: a cost that grows per test
+    // run grows fastest exactly when the suite is healthiest.
+    if cfg!(test) {
+        return std::env::temp_dir().join("gos_test_runs");
+    }
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .parent()
         .map(|p| p.join("runs"))
