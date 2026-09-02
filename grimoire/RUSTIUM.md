@@ -71,6 +71,7 @@ different objects even when they share the same glyph.
 | R17 | The Inclusive Span (spanOffByOneSeam) | `fill_poly` half-open on rows, INCLUSIVE on columns: an 8-wide square painted nine. In face soup every interior edge is drawn by both owners, so an inclusive span double-blends a translucent fill and grows a bright seam along every vertical join. Caught by a test that counted an AREA (`lit == 64`), which a wireframe cannot fake and an eye cannot check. | **FIXED** |
 | R18 | The Plausible Fallback (matchArmCatchAll) | a `match` from NAME to FIELD ended in `_ => self.gen_zoom`, so a new control's box displayed ANOTHER control's value. The setter worked; only the readout lied, and a catch-all answers with a plausible number rather than failing. Two green tests could not see it: one checked the table, one checked the frame, neither checked the round trip. | **FIXED** |
 | R19 | The Per-Run Ledger (sessionPerTest) | the viewer records its gate before the first pixel -- correct for a run, automatic under `cargo test`. 579 directories, 128 holding a SESSION.json and nothing else, recording 20 distinct commits. Flagged as a slope at 297; a problem at 579. A cost that grows per test run grows fastest when the suite is healthiest. | **FIXED** |
+| R20 | The Unwrapped Turn (accumulatorNoWrap) | `yaw`, `pitch` and `roll` declare `lo: 0.0, hi: TAU` and `ctl_set` clamps -- but the SPIN advanced them with a bare `+=` and nothing wrapped, so they climbed forever. 200 frames put yaw at 50.55, eight turns past its own maximum. Beyond the wrong readout: `sin`/`cos` argument reduction runs out of bits, so a long enough spin stops turning smoothly. `rem_euclid`, never `%` -- the remainder keeps the sign of the dividend and a negative speed would break the other end. | **FIXED** |
 
 **Numbering (DESIGN CHOICE).** RUSTIUM curses run in their own `R` lane so this
 volume can grow without fighting KERNELIC_MAGIC's global counter (at 38). When a
@@ -1564,6 +1565,112 @@ gate did **not** pass would have been kept regardless -- that one is evidence.
 > **THE RULE:** when an artefact is written per RUN, ask what happens when the
 > runs are automatic. Then delete by what a record SAYS, never by when it was
 > made.
+
+---
+
+## CURSE R20 -- The Unwrapped Turn (accumulatorNoWrap)
+
+**Found 2026-09-02, by watching three boxes climb.**
+
+`yaw`, `pitch` and `roll` each declare their range in the control table:
+
+```rust
+    Control { name: "yaw", lo: 0.0, hi: std::f64::consts::TAU, ... }
+```
+
+`ctl_set` clamps to it. The **spin** did not:
+
+```rust
+    self.genesis_yaw += self.gen_speed;      // and pitch, and roll
+```
+
+A bare accumulator, in two places -- the live timer and `advance()`, the
+deterministic tick the drivers use -- so the values walked straight out of the
+range their own table advertises and never came back. Reported as **"yaw, pitch
+and roll are acting as a counter, they don't go back"**, which is what an
+unwrapped accumulator *is*.
+
+Measured: 200 frames at the declared top speed put `yaw` at **50.55**, eight
+full turns past its stated maximum.
+
+### Two costs, and the second is the one that waits
+
+1. **The display contradicts the contract.** The box shows a number outside the
+   advertised range, and typing that number back in gets it clamped to
+   something else. The operator is shown a value the control will not accept.
+2. **Argument reduction runs out of bits.** `sin` and `cos` reduce modulo TAU
+   using whatever precision is left after the integer part. At `theta = 1e15`
+   an f64 cannot resolve one radian -- so a long enough spin does not merely
+   *look* wrong, **it stops turning smoothly**. Nothing warns; the motion just
+   coarsens.
+
+### `rem_euclid`, never `%`
+
+The remainder operator keeps the sign of the **dividend**, so a negative speed
+would drive the angle below `lo` instead of above `hi`. Same curse, other end,
+and a `%` fix would have looked correct while leaving half the bug in place.
+
+> **THE RULE:** a value that ACCUMULATES must be wrapped or clamped at the
+> point of accumulation, not only where a human types it. If a table declares a
+> range, something must enforce it on **every** path that writes -- and the
+> path that writes most often is the one nobody typed.
+
+### The guard generalises past angles
+
+```rust
+    a.advance(200);                       // spin hard enough to escape
+    for (i, c) in CONTROLS.iter().enumerate() {
+        let v = a.ctl_get(i);
+        assert!(v >= c.lo && v <= c.hi);  // EVERY control, not just the angles
+    }
+```
+
+Because *"the value stays inside its own declared range"* is every control's
+contract, and **a range the value can leave is not a range, it is a
+suggestion**.
+
+Proved against the bug rather than assumed: the bare `+=` was reinstated and
+the test said `control 'yaw' left its range after spinning: 50.55 is not in
+[0, 6.283185307179586]`.
+
+### The test caught itself first, which is worth recording
+
+Its first version wrote `0.5` straight into `gen_speed_p`, whose range is
+`[0, 0.25]`, and failed on its own setup -- **the test breaking the exact
+contract it exists to check**. It now drives the speeds through `ctl_set` at
+the top of each declared range, which is both correct and the more honest
+setup: a test that reaches around the API it is testing is testing something
+else.
+
+---
+
+## THE CONTROL CONTRACT -- what R18 and R20 are both about
+### *three bugs in one session, one shape*
+
+`twist` shipped with no getter arm (R18). `yaw`, `pitch` and `roll` shipped with
+no wrap (R20). And before either, `twist` shipped requiring a button-arm, so the
+box moved nothing at all -- caught by `every_control_changes_something`.
+
+**Every one of them: the table stated a fact and nothing enforced it.**
+
+A `Control` row is a set of promises. Written out, they are:
+
+| the row says | the promise | the test |
+|---|---|---|
+| `name` | it can be found | `every_control_is_reachable_by_name` |
+| the field it maps to | write then read gives the same value | `controls_round_trip` |
+| `when: Render` | changing it changes the next frame | `every_control_changes_something` |
+| `lo`, `hi` | the value is always inside them | `no_control_escapes_its_declared_range` |
+
+Three of those four were written **after** a human noticed something on screen.
+That ratio is the honest measure of how much a table can be trusted to enforce
+itself, which is none: **a declaration is a claim, and a claim without a test
+is a comment.**
+
+The generalisation for the other sims: wherever a table maps a NAME to
+BEHAVIOUR -- controls, cards, palettes, routes -- write the contract down as
+rows, then write one test per column. The columns are cheap. Finding out which
+one is missing by looking at the screen is not.
 
 ---
 
