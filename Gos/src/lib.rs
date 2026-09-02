@@ -57,6 +57,7 @@ pub mod judge;
 pub mod ladder;
 pub mod layout;
 pub mod ledger;
+pub mod netfile;
 pub mod oklab;
 pub mod palette;
 pub mod raster;

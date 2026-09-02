@@ -5,8 +5,10 @@
 //! which is exactly what we want to hear about.
 
 use goldberg_kernel::complex::{c_to_s2, C};
+use goldberg_kernel::genesis::{Op, Params, State, Surface};
 use goldberg_kernel::ladder;
 use goldberg_kernel::ledger::{Lane, Ledger};
+use goldberg_kernel::netfile;
 use goldberg_kernel::raster::Canvas;
 use goldberg_kernel::rng::Rng;
 use goldberg_kernel::*;
@@ -1445,4 +1447,134 @@ fn fill_poly_clips_instead_of_panicking() {
     // degenerate inputs are no-ops, never panics
     cv.fill_poly(&[(0, 0), (5, 5)], [0, 255, 0], 255);
     cv.fill_poly(&[(0, 0), (5, 0), (5, 5)], [0, 255, 0], 0);
+}
+
+// ---------------------------------------------------------------------------
+//  netfile -- storing a net and reading it back, added 2026-09-02
+// ---------------------------------------------------------------------------
+
+/// The round trip must return the geometry BIT FOR BIT, not merely close.
+/// f64s go to disk as `to_bits()` precisely so this assertion can be about
+/// bits; a decimal round trip is the one thing that could quietly alter the
+/// value this file exists to preserve.
+#[test]
+fn netfile_round_trip_is_bit_identical() {
+    let p = Params::default();
+    let mut rng = Rng::new(0xC60);
+    let st = State::seed_c60()
+        .refine(Op::All, &p, &mut rng)
+        .refine(Op::All, &p, &mut rng);
+
+    let bytes = netfile::to_bytes(&st, Surface::Spherical);
+    let (back, surf) = netfile::from_bytes(&bytes).expect("reads back");
+
+    assert_eq!(surf, Surface::Spherical, "the surface mode survives");
+    assert_eq!(back.faces.len(), st.faces.len(), "face count survives");
+    for (a, b) in st.faces.iter().zip(back.faces.iter()) {
+        assert_eq!(a.kind, b.kind);
+        assert_eq!(a.level, b.level);
+        assert_eq!(a.pts.len(), b.pts.len());
+        for (va, vb) in a.pts.iter().zip(b.pts.iter()) {
+            for k in 0..3 {
+                assert_eq!(
+                    va[k].to_bits(),
+                    vb[k].to_bits(),
+                    "coordinate {k} moved: {} -> {}",
+                    va[k],
+                    vb[k]
+                );
+            }
+        }
+    }
+}
+
+/// The invariants must hold on a LOADED net exactly as on a built one --
+/// otherwise the file format has quietly changed the mesh while preserving
+/// the numbers that describe it.
+#[test]
+fn a_loaded_net_measures_the_same_as_the_built_one() {
+    let p = Params::default();
+    let mut rng = Rng::new(7);
+    let st = State::seed_c60()
+        .refine(Op::All, &p, &mut rng)
+        .refine(Op::All, &p, &mut rng);
+
+    let (back, _) = netfile::from_bytes(&netfile::to_bytes(&st, Surface::Planar)).unwrap();
+    let a = st.invariants().expect("built measures");
+    let b = back.invariants().expect("loaded measures");
+    assert_eq!(a.faces, b.faces);
+    assert_eq!(a.pents, b.pents, "P=12 must survive the disk");
+    assert_eq!(a.chi, b.chi, "chi must survive the disk");
+    assert_eq!(st.census(), back.census(), "the census must agree");
+}
+
+/// The anchor is the SECOND WITNESS to P=12 -- independent of the `kind`
+/// label -- so it has to survive the trip, and it is stored as one byte
+/// rather than a String.
+#[test]
+fn the_anchor_witness_survives_as_one_byte() {
+    let p = Params::default();
+    let mut rng = Rng::new(1);
+    let st = State::seed_c60().refine(Op::All, &p, &mut rng);
+    let (back, _) = netfile::from_bytes(&netfile::to_bytes(&st, Surface::Planar)).unwrap();
+
+    let count = |s: &State| {
+        let mut v: Vec<&str> = s.faces.iter().filter_map(|f| f.anchor.as_deref()).collect();
+        v.sort_unstable();
+        v.dedup();
+        v.len()
+    };
+    assert_eq!(count(&st), 12, "the built net has twelve anchors");
+    assert_eq!(count(&back), 12, "and so does the loaded one");
+}
+
+/// `bytes_for` must predict the file size EXACTLY, so a save can be priced
+/// before it is made -- the same rule the movie writer follows.
+#[test]
+fn bytes_for_predicts_the_file_size_exactly() {
+    let p = Params::default();
+    let mut rng = Rng::new(3);
+    let st = State::seed_c60().refine(Op::All, &p, &mut rng);
+    let c = st.census();
+    let predicted = netfile::bytes_for(c.p, c.f - c.p);
+    let actual = netfile::to_bytes(&st, Surface::Planar).len() as u64;
+    assert_eq!(predicted, actual, "the price quoted must be the price paid");
+}
+
+/// Corruption must be REPORTED, never silently tolerated. A reader that
+/// shrugs at a bad file is how a wrong mesh gets believed.
+#[test]
+fn a_damaged_net_is_refused_not_guessed() {
+    let p = Params::default();
+    let mut rng = Rng::new(5);
+    let st = State::seed_c60().refine(Op::All, &p, &mut rng);
+    let good = netfile::to_bytes(&st, Surface::Planar);
+
+    let mut bad = good.clone();
+    bad[0] = b'X';
+    assert!(matches!(
+        netfile::from_bytes(&bad),
+        Err(netfile::NetError::BadMagic)
+    ));
+
+    let cut = &good[..good.len() - 40];
+    assert!(
+        matches!(
+            netfile::from_bytes(cut),
+            Err(netfile::NetError::Truncated { .. })
+        ),
+        "a truncated file must say so"
+    );
+
+    let mut arity = good.clone();
+    arity[netfile::HEADER + 5] = 9; // no Goldberg face has nine sides
+    assert!(matches!(
+        netfile::from_bytes(&arity),
+        Err(netfile::NetError::BadArity { .. })
+    ));
+
+    assert!(matches!(
+        netfile::from_bytes(&[]),
+        Err(netfile::NetError::Truncated { .. })
+    ));
 }
