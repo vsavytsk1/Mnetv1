@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>FRACTAL DIM v0.1 -- the song's box-counting dimension in time</title>
+<style>
+  :root{
+    --bg:#050510; --gold:#ffd700; --cyan:#00d4ff; --pink:#ff69b4; --green:#00ffd5;
+    --dim:#6a6a82; --txt:#e8e0d0; --panel:rgba(10,10,20,.74); --edge:#20202e;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--txt);font-family:var(--mono);overflow:hidden}
+  #stage{position:absolute;inset:0;display:block}
+  .panel{position:absolute;background:var(--panel);border:1px solid var(--edge);border-radius:10px;backdrop-filter:blur(3px)}
+  #hud{top:14px;left:14px;width:320px;padding:11px 13px;line-height:1.5}
+  #hud .ttl{color:var(--gold);font-size:15px;letter-spacing:.06em}
+  #hud .sub{color:var(--dim);font-size:11px;margin-top:1px;margin-bottom:9px}
+  #dv{font-size:42px;color:var(--gold);font-weight:500;line-height:1;margin-top:4px}
+  #regime{font-size:13px;color:var(--cyan);margin-top:4px;font-weight:500}
+  #math{font-size:10px;color:#9a93a8;margin-top:8px;line-height:1.4}
+  #math b{color:var(--gold);font-weight:500}
+  #math code{color:var(--green);font-family:var(--mono)}
+  #stats{font-size:11px;color:#9a93a8;margin-top:6px}
+  #stats b{color:var(--gold);font-weight:500}
+  #bar{left:50%;transform:translateX(-50%);bottom:14px;padding:10px 12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  button{background:#14141f;border:1px solid #2a2a3a;border-radius:8px;color:var(--gold);font-family:var(--mono);font-size:12px;padding:6px 11px;cursor:pointer;transition:border-color .12s,transform .06s}
+  button:hover{border-color:var(--gold)} button:active{transform:scale(.97)}
+  button.cyan{color:var(--cyan)} button.cyan:hover{border-color:var(--cyan)}
+  .ctl{display:flex;align-items:center;gap:7px;color:var(--dim);font-size:11px}
+  input[type=range]{-webkit-appearance:none;appearance:none;width:88px;height:4px;background:#2a2a3a;border-radius:3px;outline:none}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--gold);cursor:pointer}
+  #hint{position:absolute;left:50%;top:46%;transform:translate(-50%,-50%);text-align:center;color:var(--dim);font-size:14px;line-height:1.7;pointer-events:none}
+  #hint b{color:var(--gold)}
+  #legend{position:absolute;right:14px;top:14px;padding:9px 11px;font-size:10px;line-height:1.6}
+  #legend .lh{color:var(--dim);font-size:10px;letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px}
+  #legend .row{display:flex;align-items:center;gap:6px;color:#9a93a8}
+  #legend .sw{width:18px;height:8px;border-radius:2px;display:inline-block}
+  .credit{position:absolute;right:16px;bottom:64px;color:#33333f;font-size:10px;letter-spacing:.05em}
+</style>
+</head>
+<body>
+<canvas id="stage"></canvas>
+
+<div id="hud" class="panel">
+  <div class="ttl">FRACTAL DIM v0.1</div>
+  <div class="sub">the song's box-counting dimension D(t)</div>
+  <div id="dv">D = —</div>
+  <div id="regime">drop a file</div>
+  <div id="math">
+    <b>D</b> = slope of <code>log N(&epsilon;) / log(1/&epsilon;)</code><br>
+    N(&epsilon;) = occupied boxes at scale &epsilon;<br>
+    over the last <b>1.5s</b> &times; 8 octaves of peaks
+  </div>
+  <div id="stats">peaks: <b id="np">0</b> &middot; window: <b id="nw">0</b>f &middot; fft <b>8192</b></div>
+</div>
+
+<div id="legend" class="panel">
+  <div class="lh">regime</div>
+  <div class="row"><span class="sw" style="background:#3a4a6a"></span>D &lt; 0.4 silence / pure tone</div>
+  <div class="row"><span class="sw" style="background:#c7894a"></span>0.4 - 0.9 drone / single line</div>
+  <div class="row"><span class="sw" style="background:#ffd700"></span>0.9 - 1.3 voice + harmonics</div>
+  <div class="row"><span class="sw" style="background:#ff69b4"></span>1.3 - 1.7 chord / choir</div>
+  <div class="row"><span class="sw" style="background:#ff5533"></span>D &gt; 1.7 chaos / percussion</div>
+</div>
+
+<div id="hint">
+  <b>drop an audio file</b><br>
+  watch the song's fractal dimension dance
+</div>
+
+<div id="bar" class="panel">
+  <button id="bfile">&#9660; load file</button>
+  <button id="bplay">&#9208; pause</button>
+  <button id="bspec" class="cyan">&#9776; spectrogram</button>
+  <div class="ctl"><span>thresh</span><input id="thr" type="range" min="20" max="80" value="50" step="1"></div>
+  <div class="ctl"><span>window</span><input id="winsz" type="range" min="20" max="180" value="90" step="5"></div>
+  <input id="filein" type="file" accept="audio/*" style="display:none" />
+</div>
+
+<div class="credit">box-count the spectrogram &middot; one number for the music &middot; 🦊</div>
+
+<script>
+"use strict";
+
+/* ============================================================
+   THE MATH
+   ----------------------------------------------------------
+   At every frame:
+     1. STFT -> magnitude in dB
+     2. Pick peaks above floor + 0.X * dynamic range
+     3. Store (time_idx, freq_bin) into a 2D rolling buffer
+        of size W frames x B bins (B = ~256 log-bins covering 40 Hz - 12 kHz)
+     4. Box-counting at sizes eps in {1, 2, 4, 8, 16, 32}:
+          N(eps) = number of cells of size eps x eps containing >=1 peak
+     5. D = -slope of log(N(eps)) vs log(eps)
+          (equivalently +slope vs log(1/eps))
+        computed by ordinary least squares over the eps ladder
+   Properties:
+     - D in [0, 2] for 2D peak set, [0, 1] when only one row used
+     - D = 0 for an empty / single-peak window (set by hand)
+     - D = 1 for a horizontal line of peaks (one harmonic ladder)
+     - D = 2 for full coverage (every box hit at every scale)
+   ============================================================ */
+
+const F_LO = 40, F_HI = 12000, N_LOG_BINS = 256;
+const EPS_LADDER = [1, 2, 4, 8, 16, 32];
+
+/* ---------- audio ---------- */
+let actx=null, analyser=null, master=null, srcNode=null, audioBuf=null;
+let sampleRate=44100, fftSize=8192, freqData=null;
+let playing=false, masterVol=0.8;
+let threshAdj=50, winSize=90, showSpec=true;
+
+function ensureCtx(){
+  if(actx) return;
+  actx = new (window.AudioContext||window.webkitAudioContext)();
+  sampleRate = actx.sampleRate;
+  master = actx.createGain(); master.gain.value = masterVol; master.connect(actx.destination);
+  analyser = actx.createAnalyser();
+  analyser.fftSize = fftSize;
+  analyser.smoothingTimeConstant = 0.55;
+  analyser.minDecibels = -100;
+  analyser.maxDecibels = -18;
+  freqData = new Float32Array(analyser.frequencyBinCount);
+}
+function loadFile(file){
+  ensureCtx();
+  const fr = new FileReader();
+  fr.onload = () => actx.decodeAudioData(fr.result.slice(0)).then(buf => {
+    audioBuf = buf; playBuffer();
+    document.getElementById('hint').style.display = 'none';
+  }).catch(()=>{});
+  fr.readAsArrayBuffer(file);
+}
+function playBuffer(){
+  if(!audioBuf) return;
+  try{ srcNode.disconnect(); srcNode.stop(); }catch(e){}
+  srcNode = actx.createBufferSource();
+  srcNode.buffer = audioBuf;
+  srcNode.loop = true;
+  srcNode.connect(analyser);
+  analyser.connect(master);
+  srcNode.start(0);
+  if(actx.state==='suspended') actx.resume();
+  playing = true;
+  document.getElementById('bplay').textContent = '\u23f8 pause';
+}
+function togglePlay(){
+  if(!actx) return;
+  if(playing){ actx.suspend(); playing = false; document.getElementById('bplay').textContent = '\u25b6 play'; }
+  else { actx.resume(); playing = true; document.getElementById('bplay').textContent = '\u23f8 pause'; }
+}
+
+/* ---------- log-frequency binning ---------- */
+let logBinMap = null;
+function buildLogBinMap(){
+  // Map each log-bin index -> [linear_bin_start, linear_bin_end] in freqData
+  const nb = freqData ? freqData.length : 4096;
+  const binHz = sampleRate / fftSize;
+  const logLo = Math.log(F_LO), logHi = Math.log(F_HI);
+  logBinMap = new Array(N_LOG_BINS);
+  for(let i = 0; i < N_LOG_BINS; i++){
+    const t0 = i / N_LOG_BINS, t1 = (i+1) / N_LOG_BINS;
+    const f0 = Math.exp(logLo + t0*(logHi - logLo));
+    const f1 = Math.exp(logLo + t1*(logHi - logLo));
+    logBinMap[i] = [
+      Math.max(1, Math.floor(f0 / binHz)),
+      Math.min(nb-1, Math.ceil(f1 / binHz))
+    ];
+  }
+}
+
+/* ---------- rolling peak buffer ---------- */
+const MAX_W = 200;  // history depth
+let pkBuf = [];     // ring of Uint8Array(N_LOG_BINS), 1=peak, 0=no
+let curMags = new Float32Array(N_LOG_BINS);  // current frame for spectrogram
+
+function pushFrame(){
+  if(!analyser) return;
+  if(!logBinMap) buildLogBinMap();
+  analyser.getFloatFrequencyData(freqData);
+  // dynamic range
+  let lo = 0, hi = -200;
+  for(let i = 1; i < freqData.length; i++){
+    if(freqData[i] > hi) hi = freqData[i];
+    if(freqData[i] < lo) lo = freqData[i];
+  }
+  const floor = lo;
+  const range = Math.max(10, hi - floor);
+  const threshDb = floor + (threshAdj / 100) * range;
+
+  // Log-bin: max magnitude in each log bin
+  const frame = new Uint8Array(N_LOG_BINS);
+  for(let i = 0; i < N_LOG_BINS; i++){
+    const [a, b] = logBinMap[i];
+    let m = -300;
+    for(let k = a; k <= b; k++) if(freqData[k] > m) m = freqData[k];
+    curMags[i] = m;
+  }
+  // Peak picking: local max + above threshold
+  for(let i = 1; i < N_LOG_BINS - 1; i++){
+    const m = curMags[i];
+    if(m > threshDb && m >= curMags[i-1] && m > curMags[i+1]){
+      frame[i] = 1;
+    }
+  }
+  pkBuf.push(frame);
+  while(pkBuf.length > MAX_W) pkBuf.shift();
+}
+
+/* ---------- box-counting D ---------- */
+function boxCountD(){
+  const W = Math.min(winSize, pkBuf.length);
+  if(W < 8) return {D: 0, np: 0};
+
+  // Take last W frames
+  const start = pkBuf.length - W;
+  let np = 0;
+  for(let t = 0; t < W; t++){
+    const fr = pkBuf[start + t];
+    for(let i = 0; i < N_LOG_BINS; i++) if(fr[i]) np++;
+  }
+  if(np < 4) return {D: 0, np};
+
+  // Box-count at each epsilon
+  const logEps = [], logN = [];
+  for(const eps of EPS_LADDER){
+    const NT = Math.ceil(W / eps);
+    const NF = Math.ceil(N_LOG_BINS / eps);
+    if(NT < 1 || NF < 1) continue;
+    // Use a flat array: cell index = ti*NF + fi
+    const cells = new Uint8Array(NT * NF);
+    for(let t = 0; t < W; t++){
+      const ti = (t / eps) | 0;
+      const fr = pkBuf[start + t];
+      for(let i = 0; i < N_LOG_BINS; i++){
+        if(fr[i]){
+          const fi = (i / eps) | 0;
+          cells[ti * NF + fi] = 1;
+        }
+      }
+    }
+    let N = 0;
+    for(let k = 0; k < cells.length; k++) N += cells[k];
+    if(N > 0){
+      logEps.push(Math.log(eps));
+      logN.push(Math.log(N));
+    }
+  }
+  if(logEps.length < 2) return {D: 0, np};
+
+  // Linear regression: log N = -D * log eps + c
+  let sx=0, sy=0, sxx=0, sxy=0, n=logEps.length;
+  for(let k = 0; k < n; k++){ sx += logEps[k]; sy += logN[k]; sxx += logEps[k]*logEps[k]; sxy += logEps[k]*logN[k]; }
+  const denom = n * sxx - sx * sx;
+  if(Math.abs(denom) < 1e-9) return {D: 0, np};
+  const slope = (n * sxy - sx * sy) / denom;
+  // slope is dlog(N)/dlog(eps); D = -slope
+  let D = -slope;
+  if(D < 0) D = 0;
+  if(D > 2.2) D = 2.2;
+  return {D, np};
+}
+
+/* ---------- regime label ---------- */
+const REGIMES = [
+  {hi: 0.4, name: 'silence / pure tone',  color: '#3a4a6a'},
+  {hi: 0.9, name: 'drone / single line',  color: '#c7894a'},
+  {hi: 1.3, name: 'voice + harmonics',    color: '#ffd700'},
+  {hi: 1.7, name: 'chord / choir',        color: '#ff69b4'},
+  {hi: 9.9, name: 'chaos / percussion',   color: '#ff5533'}
+];
+function regimeOf(D){ for(const r of REGIMES) if(D < r.hi) return r; return REGIMES[REGIMES.length-1]; }
+
+/* ---------- D(t) history ---------- */
+const dHist = [];
+const D_HIST_MAX = 1200;
+
+/* ---------- canvas ---------- */
+const cv = document.getElementById('stage'), ctx = cv.getContext('2d');
+let W = 0, H = 0, DPR = 1;
+function resize(){
+  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  W = window.innerWidth; H = window.innerHeight;
+  cv.width = W * DPR; cv.height = H * DPR;
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+}
+window.addEventListener('resize', resize); resize();
+
+let last = performance.now(), acc = 0; const DT = 1/60;
+function frame(now){
+  let dt = (now - last) / 1000; last = now; if(dt > 0.25) dt = 0.25; acc += dt;
+  while(acc >= DT){ if(playing) pushFrame(); acc -= DT; }
+  step(); draw();
+  requestAnimationFrame(frame);
+}
+
+let curD = 0, curNp = 0;
+function step(){
+  if(!playing || pkBuf.length < 8) return;
+  const r = boxCountD();
+  curD = r.D; curNp = r.np;
+  dHist.push(curD);
+  while(dHist.length > D_HIST_MAX) dHist.shift();
+}
+
+function draw(){
+  ctx.clearRect(0, 0, W, H);
+
+  // -- main D(t) curve panel
+  const px0 = 360, px1 = W - 240, py0 = 110, py1 = H - 70;
+  const pw = px1 - px0, ph = py1 - py0;
+
+  // background grid + regime bands
+  for(const r of REGIMES){
+    const yTop = py1 - (Math.min(r.hi, 2) / 2) * ph;
+    const lo = r === REGIMES[0] ? 0 : REGIMES[REGIMES.indexOf(r) - 1].hi;
+    const yBot = py1 - (Math.min(lo, 2) / 2) * ph;
+    ctx.fillStyle = r.color + '14';  // ~8% alpha
+    ctx.fillRect(px0, yTop, pw, yBot - yTop);
+  }
+
+  // border
+  ctx.strokeStyle = '#20202e';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(px0 - 0.5, py0 - 0.5, pw + 1, ph + 1);
+
+  // y-axis ticks (D values)
+  ctx.fillStyle = '#55556a';
+  ctx.font = '10px ui-monospace,monospace';
+  ctx.textAlign = 'right';
+  for(let d = 0; d <= 2; d += 0.5){
+    const y = py1 - (d / 2) * ph;
+    ctx.fillText('D=' + d.toFixed(1), px0 - 6, y + 3);
+    ctx.strokeStyle = '#1a1a26';
+    ctx.beginPath(); ctx.moveTo(px0, y); ctx.lineTo(px1, y); ctx.stroke();
+  }
+  // x-axis label
+  ctx.textAlign = 'center';
+  ctx.fillText('time  \u27f6  now', (px0 + px1) / 2, py1 + 18);
+
+  // D(t) curve
+  if(dHist.length > 1){
+    const n = dHist.length;
+    const xStep = pw / Math.min(D_HIST_MAX, n);
+    ctx.lineWidth = 1.8;
+    ctx.beginPath();
+    for(let i = 0; i < n; i++){
+      const x = px1 - (n - 1 - i) * xStep;
+      const y = py1 - (Math.min(dHist[i], 2) / 2) * ph;
+      if(i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.strokeStyle = regimeOf(curD).color;
+    ctx.stroke();
+
+    // fill under curve
+    ctx.lineTo(px1, py1);
+    ctx.lineTo(px1 - (n - 1) * xStep, py1);
+    ctx.closePath();
+    ctx.fillStyle = regimeOf(curD).color + '22';
+    ctx.fill();
+
+    // current point
+    const last = dHist[dHist.length - 1];
+    const lx = px1, ly = py1 - (Math.min(last, 2) / 2) * ph;
+    const pulse = 0.7 + 0.3 * Math.sin(performance.now() * 0.006);
+    ctx.fillStyle = regimeOf(curD).color + 'cc';
+    ctx.beginPath(); ctx.arc(lx, ly, 8 * pulse, 0, 6.283); ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.arc(lx, ly, 3.5, 0, 6.283); ctx.fill();
+  }
+
+  // -- spectrogram strip under the curve (optional, contextual)
+  if(showSpec && pkBuf.length > 0){
+    const sy0 = py1 + 28, sy1 = sy0 + 38;
+    if(sy1 < H - 90){
+      ctx.strokeStyle = '#20202e';
+      ctx.strokeRect(px0 - 0.5, sy0 - 0.5, pw + 1, sy1 - sy0 + 1);
+      const W_show = Math.min(pkBuf.length, 200);
+      const xStep = pw / W_show;
+      const yStep = (sy1 - sy0) / N_LOG_BINS;
+      for(let t = 0; t < W_show; t++){
+        const fr = pkBuf[pkBuf.length - W_show + t];
+        for(let i = 0; i < N_LOG_BINS; i++){
+          if(fr[i]){
+            ctx.fillStyle = 'rgba(255,215,0,0.55)';
+            ctx.fillRect(px0 + t * xStep, sy1 - (i + 1) * yStep, Math.max(1, xStep), Math.max(1, yStep));
+          }
+        }
+      }
+      ctx.fillStyle = '#46465a';
+      ctx.font = '10px ui-monospace,monospace';
+      ctx.textAlign = 'left';
+      ctx.fillText('peaks (log-freq up, time \u2192)', px0, sy0 - 6);
+    }
+  }
+
+  // HUD update
+  const reg = regimeOf(curD);
+  document.getElementById('dv').textContent = 'D = ' + (curD > 0 ? curD.toFixed(3) : '\u2014');
+  document.getElementById('dv').style.color = reg.color;
+  document.getElementById('regime').textContent = reg.name;
+  document.getElementById('regime').style.color = reg.color;
+  document.getElementById('np').textContent = curNp;
+  document.getElementById('nw').textContent = Math.min(winSize, pkBuf.length);
+}
+requestAnimationFrame(frame);
+
+/* ---------- controls ---------- */
+document.getElementById('bfile').onclick = () => document.getElementById('filein').click();
+document.getElementById('filein').addEventListener('change', e => { if(e.target.files[0]) loadFile(e.target.files[0]); });
+document.getElementById('bplay').onclick = togglePlay;
+document.getElementById('bspec').onclick = function(){
+  showSpec = !showSpec;
+  this.style.background = showSpec ? '#1d1a0a' : '#14141f';
+  this.style.borderColor = showSpec ? '#ffd700' : '#2a2a3a';
+};
+document.getElementById('thr').addEventListener('input', e => threshAdj = parseInt(e.target.value));
+document.getElementById('winsz').addEventListener('input', e => winSize = parseInt(e.target.value));
+
+// drag-drop
+window.addEventListener('dragover', e => e.preventDefault());
+window.addEventListener('drop', e => { e.preventDefault(); if(e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]); });
+</script>
+</body>
+</html>

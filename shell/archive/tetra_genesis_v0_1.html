@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+<title>TETRA GENESIS v0.1 -- volumetric 3D, cave kernel</title>
+<style>
+  :root{
+    --bg:#050508; --gold:#ffd700; --cyan:#00d4ff; --pink:#ff69b4; --green:#00ffd5;
+    --espresso:#c7894a; --dim:#6a6a82; --txt:#e8e0d0;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;background:var(--bg);color:var(--txt);font-family:var(--mono);overflow:hidden}
+  #cv{position:fixed;inset:0;display:block;cursor:grab;touch-action:none}
+  #cv:active{cursor:grabbing}
+  /* HUD overlays at top -- pointer-events:none means clicks pass through to canvas */
+  #hud{position:fixed;top:0;left:0;right:0;padding:10px 14px;display:flex;gap:14px;align-items:flex-start;
+    pointer-events:none;font-size:11px;z-index:10}
+  #hud > div{pointer-events:auto;background:rgba(8,8,16,0.72);border:1px solid #20202e;border-radius:8px;padding:8px 11px;backdrop-filter:blur(3px)}
+  #ttl{color:var(--gold);font-size:14px;letter-spacing:0.06em}
+  #sub{color:var(--dim);font-size:10px;margin-top:1px}
+  #euler{color:#9a93a8;margin-top:6px;font-size:10px}
+  #euler b{color:var(--gold)}
+  #euler .ok{color:var(--green)}
+  #bands{min-width:220px}
+  .meter{display:flex;align-items:center;gap:6px;margin:2px 0}
+  .meter .nm{width:38px;font-weight:500}
+  .meter .bar{flex:1;height:6px;background:#15151f;border-radius:3px;overflow:hidden}
+  .meter .fill{height:100%;width:0%;border-radius:3px;transition:width .08s linear}
+  .meter .pct{width:32px;text-align:right;color:#9a93a8}
+  #side{margin-left:auto;color:var(--dim);font-size:10px;text-align:right;line-height:1.5}
+  #side b{color:var(--cyan)}
+  /* control bar at bottom */
+  #bar{position:fixed;left:50%;transform:translateX(-50%);bottom:12px;display:flex;flex-wrap:wrap;gap:8px;
+    align-items:center;background:rgba(8,8,16,0.85);border:1px solid #20202e;border-radius:10px;padding:8px 12px;z-index:10}
+  button{background:#14141f;border:1px solid #2a2a3a;border-radius:6px;color:var(--gold);
+    font:12px var(--mono);padding:6px 11px;cursor:pointer;transition:all .12s}
+  button:hover{border-color:var(--gold)}
+  button.cyan{color:var(--cyan)}
+  button.cyan:hover{border-color:var(--cyan)}
+  button.on{background:#1d1a0a;border-color:var(--gold)}
+  .ctl{display:flex;align-items:center;gap:6px;color:var(--dim);font-size:11px}
+  input[type=range]{appearance:none;width:80px;height:4px;background:#2a2a3a;border-radius:3px;outline:none}
+  input[type=range]::-webkit-slider-thumb{appearance:none;width:13px;height:13px;border-radius:50%;background:var(--gold);cursor:pointer}
+  .sep{width:1px;height:22px;background:#2a2a3a;margin:0 3px}
+  #hint{position:fixed;left:50%;top:48%;transform:translate(-50%,-50%);text-align:center;color:var(--dim);
+    pointer-events:none;font-size:14px;line-height:1.7;z-index:5}
+  #hint b{color:var(--gold)}
+  #hint .sub{font-size:11px;color:#55556a;margin-top:6px}
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+
+<div id="hud">
+  <div>
+    <div id="ttl">TETRA GENESIS v0.1</div>
+    <div id="sub">P(t) = Σ pᵢVᵢ · barycentric · χ=2</div>
+    <div id="euler">V−E+F = 4−6+4 = <b class="ok">2 ✓</b> · src <b id="src">none</b></div>
+  </div>
+  <div id="bands"></div>
+  <div id="side">
+    <b>drag</b> to orbit · <b>scroll</b> to zoom<br>
+    drop audio or click <b>file</b><br>
+    point in shape · song stitches center
+  </div>
+</div>
+
+<div id="hint">
+  <b>drop an audio file</b>
+  <div class="sub">or use the mic · the song threads the pyramid</div>
+</div>
+
+<div id="bar">
+  <button id="bfile">▼ file</button>
+  <button id="bmic" class="cyan">◉ mic</button>
+  <button id="bplay">⏸ pause</button>
+  <div class="sep"></div>
+  <button id="bspin" class="on">↻ spin</button>
+  <button id="bfill" class="on">▲ solid</button>
+  <div class="ctl"><span>zoom</span><input id="zoom" type="range" min="60" max="320" value="160" step="2"></div>
+  <div class="ctl"><span>trail</span><input id="trail" type="range" min="40" max="800" value="320" step="10"></div>
+  <input id="filein" type="file" accept="audio/*" style="display:none" />
+</div>
+
+<script>
+"use strict";
+
+/* ========================================================
+   THE MATH -- 4 log-frequency bands -> tetrahedron vertices
+   --------------------------------------------------------
+   BASS  : 40-200 Hz      (ison)
+   LOW   : 200-800 Hz     (voice fundamentals)
+   HIGH  : 800-3200 Hz    (formants)
+   AIR   : 3200-12800 Hz  (breath, sibilants)
+   
+   p_i = E_i / sum(E)            (probability simplex)
+   P(t) = sum_i p_i * V_i         (point in R^3)
+   
+   Regular tetrahedron:
+     V_1 = ( 1, 1, 1)  BASS  (cyan)
+     V_2 = ( 1,-1,-1)  LOW   (gold)
+     V_3 = (-1, 1,-1)  HIGH  (pink)
+     V_4 = (-1,-1, 1)  AIR   (green)
+   centroid = (0,0,0), edge = 2√2
+   V - E + F = 4 - 6 + 4 = chi = 2 (sphere)
+   ======================================================== */
+
+const BANDS = [[40,200],[200,800],[800,3200],[3200,12800]];
+const V_TET = [[1,1,1],[1,-1,-1],[-1,1,-1],[-1,-1,1]];
+const F_TET = [[0,1,2],[0,1,3],[0,2,3],[1,2,3]];   // 4 triangular faces
+const E_TET = [[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]];
+const META = [
+  {n:'BASS', col:[0,212,255]},      // cyan
+  {n:'LOW',  col:[255,215,0]},      // gold
+  {n:'HIGH', col:[255,105,180]},    // pink
+  {n:'AIR',  col:[0,255,213]}       // green
+];
+
+/* ========================================================
+   GENESIS RESIZE -- the cave kernel.
+   No DPR, no setTransform, no getBoundingClientRect.
+   Canvas pixel buffer == CSS viewport. Always centered at W/2,H/2.
+   Works at any browser zoom, any DPR, any OS.
+   ======================================================== */
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+let W = 0, H = 0;
+function resize(){ W = cv.width = innerWidth; H = cv.height = innerHeight; }
+resize();
+addEventListener('resize', resize);
+
+/* ========================================================
+   AUDIO PIPELINE (proven, same as FURIERIUM)
+   ======================================================== */
+let actx=null, analyser=null, master=null, srcNode=null, micStream=null, audioBuf=null;
+let sampleRate=44100, fftSize=8192, freqData=null;
+let sourceKind='none', playing=false;
+function ensureCtx(){ if(actx) return;
+  actx = new (window.AudioContext||window.webkitAudioContext)();
+  sampleRate = actx.sampleRate;
+  master = actx.createGain(); master.gain.value = 0.8; master.connect(actx.destination);
+  analyser = actx.createAnalyser(); analyser.fftSize = fftSize;
+  analyser.smoothingTimeConstant = 0.6;
+  analyser.minDecibels = -100; analyser.maxDecibels = -18;
+  freqData = new Float32Array(analyser.frequencyBinCount);
+}
+function disconnectSource(){ try{ if(srcNode){srcNode.disconnect(); if(srcNode.stop) srcNode.stop();} }catch(e){} srcNode=null;
+  if(micStream){ micStream.getTracks().forEach(t=>t.stop()); micStream=null; } }
+function playBuffer(){ if(!audioBuf) return; disconnectSource();
+  srcNode = actx.createBufferSource(); srcNode.buffer = audioBuf; srcNode.loop = true;
+  srcNode.connect(analyser); analyser.connect(master); srcNode.start(0);
+  sourceKind = 'file'; playing = true;
+  if(actx.state === 'suspended') actx.resume();
+  document.getElementById('bplay').textContent = '⏸ pause';
+  document.getElementById('src').textContent = 'file';
+  hideHint();
+}
+function loadFile(file){ ensureCtx();
+  const fr = new FileReader();
+  fr.onload = () => actx.decodeAudioData(fr.result.slice(0)).then(buf => { audioBuf = buf; playBuffer(); }).catch(()=>{});
+  fr.readAsArrayBuffer(file);
+}
+function useMic(){ ensureCtx();
+  navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}})
+    .then(stream => { disconnectSource(); micStream = stream;
+      srcNode = actx.createMediaStreamSource(stream); srcNode.connect(analyser);
+      sourceKind = 'mic'; playing = true;
+      if(actx.state === 'suspended') actx.resume();
+      document.getElementById('bplay').textContent = '⏸ live';
+      document.getElementById('src').textContent = 'mic';
+      hideHint();
+    }).catch(()=>{});
+}
+function togglePlay(){ if(!actx || sourceKind === 'mic') return;
+  if(playing){ actx.suspend(); playing = false; document.getElementById('bplay').textContent = '▶ play'; }
+  else { actx.resume(); playing = true; document.getElementById('bplay').textContent = '⏸ pause'; }
+}
+
+/* ========================================================
+   BARYCENTRIC P(t) FROM SPECTRUM
+   ======================================================== */
+function bandEnergies(){
+  if(!analyser) return [0.25,0.25,0.25,0.25];
+  analyser.getFloatFrequencyData(freqData);
+  const binHz = sampleRate / fftSize;
+  const E = [0,0,0,0];
+  for(let b=0; b<4; b++){
+    const lo = Math.max(1, Math.floor(BANDS[b][0]/binHz));
+    const hi = Math.min(freqData.length-1, Math.ceil(BANDS[b][1]/binHz));
+    for(let i=lo; i<=hi; i++){
+      const a = Math.pow(10, freqData[i]/20);
+      E[b] += a*a;
+    }
+  }
+  const tot = E[0]+E[1]+E[2]+E[3];
+  if(tot < 1e-18) return [0.25,0.25,0.25,0.25];
+  return [E[0]/tot, E[1]/tot, E[2]/tot, E[3]/tot];
+}
+function baryPoint(p){
+  let x=0,y=0,z=0;
+  for(let i=0;i<4;i++){ x+=p[i]*V_TET[i][0]; y+=p[i]*V_TET[i][1]; z+=p[i]*V_TET[i][2]; }
+  return [x,y,z];
+}
+function baryColor(p){
+  let r=0,g=0,b=0;
+  for(let i=0;i<4;i++){ r+=p[i]*META[i].col[0]; g+=p[i]*META[i].col[1]; b+=p[i]*META[i].col[2]; }
+  return [r|0, g|0, b|0];
+}
+
+/* ========================================================
+   GENESIS 3D PROJECTION
+   Pure addition to W/2, H/2 -- always center, all zoom levels.
+   ======================================================== */
+const cam = { ry: 0.6, rx: 0.42, zoom: 160 };
+let spinOn = true, drawSolid = true, trailMax = 320;
+
+function project(p){
+  const x = p[0], y = p[1], z = p[2];
+  const cyA = Math.cos(cam.ry), syA = Math.sin(cam.ry);
+  const x1 = x*cyA - z*syA, z1 = x*syA + z*cyA;
+  const crx = Math.cos(cam.rx), srx = Math.sin(cam.rx);
+  const y1 = y*crx - z1*srx, z2 = y*srx + z1*crx;
+  // perspective: closer points = larger; CAMZ=4 to keep the shape comfortably visible
+  const persp = 4 / (4 - z2);
+  return {
+    x: W*0.5 + x1 * cam.zoom * persp,
+    y: H*0.5 - y1 * cam.zoom * persp,
+    z: z2
+  };
+}
+
+/* ========================================================
+   DRAW (painter's algorithm, backface cull, solid faces)
+   ======================================================== */
+let trail = [];
+let curP = [0,0,0], curp = [0.25,0.25,0.25,0.25];
+
+function drawFrame(){
+  // step
+  if(playing){
+    curp = bandEnergies();
+    curP = baryPoint(curp);
+    trail.push({P: curP.slice(), c: baryColor(curp)});
+    while(trail.length > trailMax) trail.shift();
+  }
+  if(spinOn) cam.ry += 0.006;
+
+  // clear
+  ctx.fillStyle = '#050508';
+  ctx.fillRect(0, 0, W, H);
+
+  // project all vertices
+  const PV = V_TET.map(project);
+
+  // ----- solid faces (painter's) -----
+  if(drawSolid){
+    const fdata = F_TET.map(f => {
+      const a = PV[f[0]], b = PV[f[1]], c = PV[f[2]];
+      const depth = (a.z + b.z + c.z) / 3;
+      // backface cull via screen-space winding
+      const cross = (b.x-a.x)*(c.y-a.y) - (b.y-a.y)*(c.x-a.x);
+      return { f, a, b, c, depth, frontFacing: cross > 0 };
+    }).filter(d => d.frontFacing)
+      .sort((u,v) => u.depth - v.depth);   // far first
+    for(const d of fdata){
+      // face color = average of its 3 vertex band colors at low alpha
+      const c0=META[d.f[0]].col, c1=META[d.f[1]].col, c2=META[d.f[2]].col;
+      const fr = Math.round((c0[0]+c1[0]+c2[0])/3);
+      const fg = Math.round((c0[1]+c1[1]+c2[1])/3);
+      const fb = Math.round((c0[2]+c1[2]+c2[2])/3);
+      // depth shade: closer = brighter
+      const shade = 0.28 + 0.42 * ((d.depth + 1.5) / 3);
+      ctx.fillStyle = 'rgba('+fr+','+fg+','+fb+','+shade.toFixed(3)+')';
+      ctx.beginPath();
+      ctx.moveTo(d.a.x, d.a.y);
+      ctx.lineTo(d.b.x, d.b.y);
+      ctx.lineTo(d.c.x, d.c.y);
+      ctx.closePath();
+      ctx.fill();
+    }
+  }
+
+  // ----- wireframe edges (always on top) -----
+  for(const e of E_TET){
+    const a = PV[e[0]], b = PV[e[1]];
+    const zm = (a.z + b.z) / 2;
+    const alpha = (0.35 + 0.5 * ((zm + 1.5) / 3)).toFixed(3);
+    ctx.strokeStyle = 'rgba(255,215,0,'+alpha+')';
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.moveTo(a.x, a.y);
+    ctx.lineTo(b.x, b.y);
+    ctx.stroke();
+  }
+
+  // ----- vertex glow + label -----
+  PV.forEach((v, i) => {
+    const m = META[i];
+    const glowR = 4 + curp[i] * 18;
+    ctx.fillStyle = 'rgba('+m.col[0]+','+m.col[1]+','+m.col[2]+',0.18)';
+    ctx.beginPath(); ctx.arc(v.x, v.y, glowR, 0, 6.283); ctx.fill();
+    ctx.fillStyle = 'rgb('+m.col[0]+','+m.col[1]+','+m.col[2]+')';
+    ctx.beginPath(); ctx.arc(v.x, v.y, 3.4, 0, 6.283); ctx.fill();
+    ctx.font = '11px ui-monospace,monospace';
+    ctx.textAlign = 'center';
+    const ox = v.x + (v.x - W*0.5) * 0.08;
+    const oy = v.y + (v.y > H*0.5 ? 16 : -10);
+    ctx.fillText(m.n, ox, oy);
+  });
+
+  // ----- trail curve (colored by band-blend) -----
+  if(trail.length > 1){
+    let prev = project(trail[0].P);
+    for(let k=1; k<trail.length; k++){
+      const cur = project(trail[k].P);
+      const c = trail[k].c;
+      const al = k / trail.length;
+      ctx.strokeStyle = 'rgba('+c[0]+','+c[1]+','+c[2]+','+(0.08 + 0.85*al*al).toFixed(3)+')';
+      ctx.lineWidth = 0.7 + 2.0 * al;
+      ctx.beginPath();
+      ctx.moveTo(prev.x, prev.y);
+      ctx.lineTo(cur.x, cur.y);
+      ctx.stroke();
+      prev = cur;
+    }
+  }
+
+  // ----- current point P(t) -----
+  const P = project(curP);
+  const c = trail.length ? trail[trail.length-1].c : [255,255,255];
+  const pulse = 0.65 + 0.35 * Math.sin(performance.now() * 0.006);
+  ctx.fillStyle = 'rgba('+c[0]+','+c[1]+','+c[2]+',0.22)';
+  ctx.beginPath(); ctx.arc(P.x, P.y, 14*pulse, 0, 6.283); ctx.fill();
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.arc(P.x, P.y, 4.2, 0, 6.283); ctx.fill();
+  ctx.strokeStyle = 'rgba('+c[0]+','+c[1]+','+c[2]+',0.9)';
+  ctx.lineWidth = 1.4;
+  ctx.beginPath(); ctx.arc(P.x, P.y, 8, 0, 6.283); ctx.stroke();
+
+  // ----- origin tick (centroid marker, very faint) -----
+  const O = project([0,0,0]);
+  ctx.strokeStyle = 'rgba(120,120,140,0.22)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(O.x - 5, O.y); ctx.lineTo(O.x + 5, O.y);
+  ctx.moveTo(O.x, O.y - 5); ctx.lineTo(O.x, O.y + 5);
+  ctx.stroke();
+
+  // update meters
+  updateMeters();
+  requestAnimationFrame(drawFrame);
+}
+
+/* HUD meters DOM (built once) */
+const bandsEl = document.getElementById('bands');
+META.forEach((m, i) => {
+  const d = document.createElement('div');
+  d.className = 'meter';
+  d.innerHTML = '<span class="nm" style="color:rgb('+m.col.join(',')+')">'+m.n+'</span>'+
+    '<span class="bar"><span class="fill" id="f'+i+'" style="background:rgb('+m.col.join(',')+')"></span></span>'+
+    '<span class="pct" id="p'+i+'">0</span>';
+  bandsEl.appendChild(d);
+});
+let mtick = 0;
+function updateMeters(){
+  if((mtick++ % 5) !== 0) return;
+  for(let i=0; i<4; i++){
+    document.getElementById('f'+i).style.width = (curp[i]*100).toFixed(0) + '%';
+    document.getElementById('p'+i).textContent = (curp[i]*100).toFixed(0);
+  }
+}
+
+function hideHint(){ document.getElementById('hint').style.display = 'none'; }
+
+/* ========================================================
+   INPUT
+   ======================================================== */
+document.getElementById('bfile').onclick = () => document.getElementById('filein').click();
+document.getElementById('filein').addEventListener('change', e => { if(e.target.files[0]) loadFile(e.target.files[0]); });
+document.getElementById('bmic').onclick = useMic;
+document.getElementById('bplay').onclick = togglePlay;
+document.getElementById('bspin').onclick = function(){ spinOn = !spinOn; this.classList.toggle('on', spinOn); };
+document.getElementById('bfill').onclick = function(){ drawSolid = !drawSolid; this.classList.toggle('on', drawSolid); };
+document.getElementById('zoom').addEventListener('input', e => cam.zoom = parseInt(e.target.value));
+document.getElementById('trail').addEventListener('input', e => trailMax = parseInt(e.target.value));
+
+// drag to orbit
+let drag = false, lx = 0, ly = 0;
+cv.addEventListener('mousedown', e => { drag = true; lx = e.clientX; ly = e.clientY; spinOn = false;
+  document.getElementById('bspin').classList.remove('on'); });
+window.addEventListener('mouseup', () => drag = false);
+window.addEventListener('mousemove', e => {
+  if(!drag) return;
+  cam.ry += (e.clientX - lx) * 0.01;
+  cam.rx += (e.clientY - ly) * 0.01;
+  cam.rx = Math.max(-1.4, Math.min(1.4, cam.rx));
+  lx = e.clientX; ly = e.clientY;
+});
+cv.addEventListener('wheel', e => {
+  e.preventDefault();
+  cam.zoom *= e.deltaY > 0 ? 0.92 : 1.08;
+  cam.zoom = Math.max(40, Math.min(400, cam.zoom));
+  document.getElementById('zoom').value = cam.zoom;
+}, { passive: false });
+
+// drag-drop audio
+window.addEventListener('dragover', e => e.preventDefault());
+window.addEventListener('drop', e => { e.preventDefault(); if(e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]); });
+
+/* boot */
+requestAnimationFrame(drawFrame);
+</script>
+</body>
+</html>

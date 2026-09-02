@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>tetra_spectra · v0.1</title>
+<style>
+  :root{
+    --bg:#050510; --gold:#ffd700; --cyan:#00d4ff; --pink:#ff69b4; --green:#00ffd5;
+    --dim:#6a6a82; --txt:#e8e0d0; --panel:rgba(10,10,20,.74); --edge:#20202e;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--txt);font-family:var(--mono);overflow:hidden}
+  #stage{position:absolute;inset:0;display:block;cursor:grab}
+  #stage:active{cursor:grabbing}
+  .panel{position:absolute;background:var(--panel);border:1px solid var(--edge);border-radius:10px;backdrop-filter:blur(3px)}
+  #hud{top:14px;left:14px;width:248px;padding:11px 13px;line-height:1.5}
+  #hud .ttl{color:var(--gold);font-size:15px;letter-spacing:.06em}
+  #hud .sub{color:var(--dim);font-size:11px;margin-top:1px;margin-bottom:9px}
+  .meter{display:flex;align-items:center;gap:8px;margin:5px 0;font-size:11px}
+  .meter .nm{width:38px;font-weight:500}
+  .meter .track{flex:1;height:8px;background:#15151f;border-radius:4px;overflow:hidden}
+  .meter .fill{height:100%;width:0%;border-radius:4px;transition:width .05s linear}
+  .meter .pct{width:30px;text-align:right;color:#9a93a8}
+  #feat{margin-top:9px;font-size:11px;color:#9a93a8}
+  #feat b{color:var(--gold);font-weight:500}
+  #log{top:14px;right:14px;width:210px;max-height:40vh;padding:9px 11px;overflow-y:auto;font-size:11px;line-height:1.5}
+  #log .lh{color:var(--dim);font-size:10px;letter-spacing:.08em;text-transform:uppercase;margin-bottom:5px}
+  #log .e{margin:2px 0;color:#bbb;border-left:2px solid #2a2a3a;padding-left:7px}
+  #log .e .t{color:#55556a;font-size:10px}
+  #bar{left:50%;transform:translateX(-50%);bottom:14px;width:min(940px,calc(100% - 28px));padding:10px 12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  button{background:#14141f;border:1px solid #2a2a3a;border-radius:8px;color:var(--gold);font-family:var(--mono);font-size:12px;padding:6px 11px;cursor:pointer;transition:border-color .12s,transform .06s}
+  button:hover{border-color:var(--gold)} button:active{transform:scale(.97)}
+  button.cyan{color:var(--cyan)} button.cyan:hover{border-color:var(--cyan)}
+  button.on{border-color:var(--gold);background:#1d1a0a}
+  .sep{width:1px;height:22px;background:#2a2a3a;margin:0 2px}
+  .ctl{display:flex;align-items:center;gap:7px;color:var(--dim);font-size:11px}
+  input[type=range]{-webkit-appearance:none;appearance:none;width:78px;height:4px;background:#2a2a3a;border-radius:3px;outline:none}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--gold);cursor:pointer}
+  input[type=range]::-moz-range-thumb{width:14px;height:14px;border:none;border-radius:50%;background:var(--gold);cursor:pointer}
+  #hint{position:absolute;left:50%;top:48%;transform:translate(-50%,-50%);text-align:center;color:var(--dim);font-size:14px;line-height:1.7;pointer-events:none}
+  #hint b{color:var(--gold)} #hint .k{color:var(--cyan)}
+  .credit{position:absolute;right:16px;bottom:64px;color:#33333f;font-size:10px;letter-spacing:.05em}
+  #drop{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(255,215,0,.06);border:2px dashed var(--gold);z-index:5;color:var(--gold);font-size:18px}
+  @media (max-width:760px){ #log{display:none} }
+</style>
+</head>
+<body>
+<canvas id="stage"></canvas>
+
+<div id="hud" class="panel">
+  <div class="ttl">tetra_spectra · v0.1</div>
+  <div class="sub">barycentric spectral threading · private</div>
+  <div id="meters"></div>
+  <div id="feat">at: <b>—</b></div>
+</div>
+
+<div id="log" class="panel">
+  <div class="lh">phrase log</div>
+  <div id="logbody"></div>
+</div>
+
+<div id="hint">
+  <b>drop an audio file</b> &nbsp;—&nbsp; or &nbsp;<span class="k">use mic</span><br>
+  watch the song thread through the tetrahedron<br>
+  <span style="font-size:12px;color:#55556a">drag to orbit · all on your machine</span>
+</div>
+
+<div id="bar" class="panel">
+  <button id="bfile">▼ load file</button>
+  <button id="bmic" class="cyan">◉ use mic</button>
+  <button id="bplay">⏸ pause</button>
+  <div class="sep"></div>
+  <button id="bspin" class="on">↻ spin</button>
+  <div class="ctl"><span>trail</span><input id="trail" type="range" min="40" max="800" value="350" step="10"></div>
+  <div class="ctl"><span>gain</span><input id="sens" type="range" min="0" max="100" value="55" step="1"></div>
+  <div class="ctl"><span>vol</span><input id="vol" type="range" min="0" max="100" value="80" step="1"></div>
+  <input id="filein" type="file" accept="audio/*" style="display:none" />
+</div>
+
+<div class="credit">P = Σ pᵢVᵢ · always inside · χ=2 · 🦊</div>
+<div id="drop">drop to thread</div>
+
+<script>
+"use strict";
+/* ---------- verified kernel (tetra_core.js: ALL PASS) ---------- */
+const TV=[[1,1,1],[1,-1,-1],[-1,1,-1],[-1,-1,1]];
+const BANDS=[[40,200],[200,800],[800,3200],[3200,12800]];
+function baryPoint(E){
+  const s=E[0]+E[1]+E[2]+E[3];
+  if(!(s>0)) return {p:[.25,.25,.25,.25], P:[0,0,0]};
+  const p=[E[0]/s,E[1]/s,E[2]/s,E[3]/s], P=[0,0,0];
+  for(let i=0;i<4;i++){ P[0]+=p[i]*TV[i][0]; P[1]+=p[i]*TV[i][1]; P[2]+=p[i]*TV[i][2]; }
+  return {p,P};
+}
+function bandPower(mags, binHz){
+  const E=[0,0,0,0];
+  for(let b=0;b<4;b++){ const lo=Math.max(1,Math.floor(BANDS[b][0]/binHz)), hi=Math.ceil(BANDS[b][1]/binHz);
+    for(let i=lo;i<=hi && i<mags.length;i++){ E[b]+=mags[i]*mags[i]; } }
+  return E;
+}
+const META=[{n:'BASS',c:[0,212,255],r:'40–200'},{n:'LOW',c:[255,215,0],r:'200–800'},
+            {n:'HIGH',c:[255,105,180],r:'800–3200'},{n:'AIR',c:[0,255,213],r:'3200–12800'}];
+
+/* ---------- audio (same proven pipeline as FURIERIUM) ---------- */
+let actx=null, analyser=null, master=null, srcNode=null, micStream=null, audioBuf=null;
+let sampleRate=44100, fftSize=8192, freqData=null, ampData=null;
+let sourceKind='none', playing=false, masterVol=0.8, sensFloorAdj=55;
+function ensureCtx(){ if(actx) return; actx=new (window.AudioContext||window.webkitAudioContext)();
+  sampleRate=actx.sampleRate; master=actx.createGain(); master.gain.value=masterVol; master.connect(actx.destination);
+  analyser=actx.createAnalyser(); setFFT(fftSize); }
+function setFFT(n){ fftSize=n; if(analyser){ analyser.fftSize=n; analyser.minDecibels=-100; analyser.maxDecibels=-18; analyser.smoothingTimeConstant=0.6;
+  freqData=new Float32Array(analyser.frequencyBinCount); ampData=new Float32Array(analyser.frequencyBinCount); } }
+function disconnectSource(){ try{ if(srcNode){ srcNode.disconnect(); if(srcNode.stop) srcNode.stop(); } }catch(e){} srcNode=null;
+  if(micStream){ micStream.getTracks().forEach(t=>t.stop()); micStream=null; } }
+function playBuffer(){ if(!audioBuf) return; disconnectSource();
+  srcNode=actx.createBufferSource(); srcNode.buffer=audioBuf; srcNode.loop=true;
+  srcNode.connect(analyser); analyser.connect(master); srcNode.start(0); sourceKind='file'; playing=true;
+  if(actx.state==='suspended') actx.resume(); document.getElementById('bplay').textContent='⏸ pause'; hideHint(); }
+function loadFile(file){ ensureCtx(); const fr=new FileReader();
+  fr.onload=()=>{ actx.decodeAudioData(fr.result.slice(0)).then(buf=>{ audioBuf=buf; playBuffer(); logRaw('♪ '+(file.name||'audio').slice(0,20)); })
+    .catch(()=>setHint('could not decode that file')); }; fr.readAsArrayBuffer(file); }
+function useMic(){ ensureCtx();
+  navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}})
+    .then(stream=>{ disconnectSource(); micStream=stream; srcNode=actx.createMediaStreamSource(stream); srcNode.connect(analyser);
+      sourceKind='mic'; playing=true; if(actx.state==='suspended') actx.resume(); document.getElementById('bplay').textContent='⏸ live'; hideHint(); logRaw('◉ microphone live'); })
+    .catch(()=>setHint('mic blocked — run a local server (python -m http.server) or drop a file')); }
+function togglePlay(){ if(!actx||sourceKind==='mic') return;
+  if(playing){ actx.suspend(); playing=false; document.getElementById('bplay').textContent='▶ play'; }
+  else { actx.resume(); playing=true; document.getElementById('bplay').textContent='⏸ pause'; } }
+
+/* ---------- meters DOM ---------- */
+const metersEl=document.getElementById('meters');
+META.forEach((m,i)=>{ const d=document.createElement('div'); d.className='meter';
+  d.innerHTML='<span class="nm" style="color:rgb('+m.c.join(',')+')">'+m.n+'</span>'+
+    '<span class="track"><span class="fill" id="fill'+i+'" style="background:rgb('+m.c.join(',')+')"></span></span>'+
+    '<span class="pct" id="pct'+i+'">0</span>'; metersEl.appendChild(d); });
+
+/* ---------- canvas ---------- */
+const cv=document.getElementById('stage'), ctx=cv.getContext('2d');
+let W=0,H=0,DPR=1,cx=0,cy=0,scale=1;
+function resize(){ DPR=Math.min(window.devicePixelRatio||1,2); W=window.innerWidth; H=window.innerHeight;
+  cv.width=W*DPR; cv.height=H*DPR; ctx.setTransform(DPR,0,0,DPR,0,0);
+  cx=W*0.5; cy=H*0.46; scale=Math.max(70,Math.min(W,H)*0.23); }
+window.addEventListener('resize',resize); resize();
+
+let rotY=0.6, rotX=0.45, spinOn=true, spinSpd=0.35;
+function rot(p){ const cyA=Math.cos(rotY), syA=Math.sin(rotY);
+  let x=p[0]*cyA - p[2]*syA, z=p[0]*syA + p[2]*cyA, y=p[1];
+  const cxA=Math.cos(rotX), sxA=Math.sin(rotX);
+  return [x, y*cxA - z*sxA, y*sxA + z*cxA]; }
+function proj(p){ const r=rot(p); return {x:cx+r[0]*scale, y:cy-r[1]*scale, z:r[2]}; }
+
+const EDGES=[[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]];
+let trail=[], trailMax=350;
+let curP=[0,0,0], curp=[.25,.25,.25,.25];
+let domIdx=-1, domHold=0, lastDom=-1, hudTick=0;
+
+/* LOOP LAW — fixed dt */
+let last=performance.now(), acc=0, simT=0; const DT=1/120;
+function frame(now){ let dt=(now-last)/1000; last=now; if(dt>0.25)dt=0.25; acc+=dt;
+  while(acc>=DT){ if(spinOn) rotY+=spinSpd*DT; simT+=DT; acc-=DT; }
+  step(); draw(); requestAnimationFrame(frame); }
+
+function step(){
+  if(!analyser) return;
+  analyser.getFloatFrequencyData(freqData);
+  const binHz=sampleRate/fftSize, nb=freqData.length;
+  const floorDb=-100 + (sensFloorAdj/100)*70;
+  for(let i=0;i<nb;i++){ const a=Math.pow(10, freqData[i]/20) - Math.pow(10, floorDb/20); ampData[i]=a>0?a:0; }
+  const E=bandPower(ampData, binHz);
+  const r=baryPoint(E); curP=r.P; curp=r.p;
+  // trail in solid-space
+  trail.push({P:curP.slice(), c:[ (curp[0]*META[0].c[0]+curp[1]*META[1].c[0]+curp[2]*META[2].c[0]+curp[3]*META[3].c[0]),
+                                   (curp[0]*META[0].c[1]+curp[1]*META[1].c[1]+curp[2]*META[2].c[1]+curp[3]*META[3].c[1]),
+                                   (curp[0]*META[0].c[2]+curp[1]*META[1].c[2]+curp[2]*META[2].c[2]+curp[3]*META[3].c[2]) ]});
+  while(trail.length>trailMax) trail.shift();
+  // dominant band + transition log
+  let di=0; for(let i=1;i<4;i++) if(curp[i]>curp[di]) di=i;
+  if(di===domIdx) domHold++; else { domIdx=di; domHold=1; }
+  if(domHold===8 && di!==lastDom){ lastDom=di; logDom(di); }
+}
+
+function draw(){
+  ctx.clearRect(0,0,W,H);
+
+  // project vertices
+  const PV=TV.map(proj);
+  // edges (depth-sorted-ish via alpha)
+  for(const e of EDGES){ const a=PV[e[0]], b=PV[e[1]], zz=(a.z+b.z)/2, al=0.22+0.5*((zz+1.8)/3.6);
+    ctx.strokeStyle='rgba(255,215,0,'+Math.max(0.12,Math.min(0.85,al)).toFixed(3)+')'; ctx.lineWidth=1.1;
+    ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke(); }
+
+  // trail (older = dim), colored by barycentric blend
+  if(trail.length>1){
+    let prev=proj(trail[0].P);
+    for(let k=1;k<trail.length;k++){ const cur=proj(trail[k].P); const al=(k/trail.length);
+      const c=trail[k].c; ctx.strokeStyle='rgba('+(c[0]|0)+','+(c[1]|0)+','+(c[2]|0)+','+(0.05+0.85*al).toFixed(3)+')';
+      ctx.lineWidth=0.6+2.2*al; ctx.beginPath(); ctx.moveTo(prev.x,prev.y); ctx.lineTo(cur.x,cur.y); ctx.stroke(); prev=cur; }
+  }
+
+  // vertices + labels
+  PV.forEach((v,i)=>{ const m=META[i]; const fr=0.45+0.55*((v.z+1.8)/3.6);
+    ctx.fillStyle='rgba('+m.c.join(',')+','+Math.max(0.4,Math.min(1,fr)).toFixed(2)+')';
+    ctx.beginPath(); ctx.arc(v.x,v.y,4.5,0,6.283); ctx.fill();
+    ctx.fillStyle='rgb('+m.c.join(',')+')'; ctx.font='11px ui-monospace,monospace'; ctx.textAlign='center';
+    const ox=v.x+(v.x-cx)*0.12, oy=v.y+(v.y-cy)*0.12+ (v.y<cy?-7:13);
+    ctx.fillText(m.n, ox, oy); });
+
+  // current point P (bright)
+  const P=proj(curP); const cc=trail.length?trail[trail.length-1].c:[255,255,255];
+  ctx.fillStyle='rgba('+(cc[0]|0)+','+(cc[1]|0)+','+(cc[2]|0)+',0.30)'; ctx.beginPath(); ctx.arc(P.x,P.y,11,0,6.283); ctx.fill();
+  ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(P.x,P.y,4.2,0,6.283); ctx.fill();
+  ctx.strokeStyle='rgba('+(cc[0]|0)+','+(cc[1]|0)+','+(cc[2]|0)+',0.9)'; ctx.lineWidth=1.4; ctx.beginPath(); ctx.arc(P.x,P.y,7,0,6.283); ctx.stroke();
+
+  // center tick
+  const O=proj([0,0,0]); ctx.strokeStyle='rgba(120,120,140,0.35)'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(O.x-4,O.y); ctx.lineTo(O.x+4,O.y); ctx.moveTo(O.x,O.y-4); ctx.lineTo(O.x,O.y+4); ctx.stroke();
+
+  if((hudTick++ %5)===0) updateHUD();
+}
+
+function updateHUD(){
+  for(let i=0;i<4;i++){ document.getElementById('fill'+i).style.width=(curp[i]*100).toFixed(0)+'%';
+    document.getElementById('pct'+i).textContent=(curp[i]*100).toFixed(0); }
+  // nearest feature
+  const idx=[0,1,2,3].sort((a,b)=>curp[b]-curp[a]);
+  let txt;
+  if(curp[idx[0]]>0.6) txt='vertex <b>'+META[idx[0]].n+'</b>';
+  else if(curp[idx[0]]+curp[idx[1]]>0.85) txt='edge <b>'+META[idx[0]].n+'–'+META[idx[1]].n+'</b>';
+  else if(curp[idx[0]]+curp[idx[1]]+curp[idx[2]]>0.92) txt='face <b>'+META[idx[0]].n+'·'+META[idx[1]].n+'·'+META[idx[2]].n+'</b>';
+  else txt='<b>interior</b> (balanced)';
+  document.getElementById('feat').innerHTML='at: '+txt+' &nbsp;·&nbsp; <span style="color:#55556a">src '+sourceKind+'</span>';
+}
+
+/* ---------- log ---------- */
+const logbody=document.getElementById('logbody');
+function logRaw(t){ const d=document.createElement('div'); d.className='e';
+  d.innerHTML='<span class="t">'+new Date().toLocaleTimeString([], {hour12:false})+'</span> '+t;
+  logbody.insertBefore(d,logbody.firstChild); while(logbody.children.length>50) logbody.removeChild(logbody.lastChild); }
+function logDom(i){ const m=META[i]; const tag={0:'ison / bass',1:'voice',2:'formants',3:'air / breath'}[i];
+  logRaw('→ <span style="color:rgb('+m.c.join(',')+');font-weight:500">'+m.n+'</span> <span style="color:#55556a">'+tag+'</span>'); }
+function setHint(t){ const h=document.getElementById('hint'); h.style.display='block'; h.innerHTML='<span style="color:#ff69b4">'+t+'</span>'; }
+function hideHint(){ document.getElementById('hint').style.display='none'; }
+
+/* ---------- controls ---------- */
+document.getElementById('bfile').onclick=()=>document.getElementById('filein').click();
+document.getElementById('filein').addEventListener('change',e=>{ if(e.target.files[0]) loadFile(e.target.files[0]); });
+document.getElementById('bmic').onclick=useMic;
+document.getElementById('bplay').onclick=togglePlay;
+document.getElementById('bspin').onclick=function(){ spinOn=!spinOn; this.classList.toggle('on',spinOn); };
+document.getElementById('trail').addEventListener('input',e=>trailMax=parseInt(e.target.value));
+document.getElementById('sens').addEventListener('input',e=>sensFloorAdj=parseInt(e.target.value));
+document.getElementById('vol').addEventListener('input',e=>{ masterVol=e.target.value/100; if(master) master.gain.value=masterVol; });
+
+/* drag to orbit */
+let drag=false, lx=0, ly=0;
+cv.addEventListener('mousedown',e=>{ drag=true; lx=e.clientX; ly=e.clientY; });
+window.addEventListener('mouseup',()=>drag=false);
+window.addEventListener('mousemove',e=>{ if(!drag) return; rotY+=(e.clientX-lx)*0.01; rotX+=(e.clientY-ly)*0.01;
+  rotX=Math.max(-1.4,Math.min(1.4,rotX)); lx=e.clientX; ly=e.clientY; });
+
+/* drag-drop file */
+const drop=document.getElementById('drop');
+window.addEventListener('dragover',e=>{ e.preventDefault(); drop.style.display='flex'; });
+window.addEventListener('dragleave',e=>{ if(e.relatedTarget===null) drop.style.display='none'; });
+window.addEventListener('drop',e=>{ e.preventDefault(); drop.style.display='none'; const f=e.dataTransfer.files[0]; if(f) loadFile(f); });
+
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

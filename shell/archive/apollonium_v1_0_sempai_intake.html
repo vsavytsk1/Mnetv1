@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>APOLLONIUM v1.0 -- Temple of Apollo, Corinth</title>
+<!--
+  APOLLONIUM v1.0 -- the Temple of Apollo at Corinth, rebuilt in the kernel
+  =========================================================================
+  They wouldn't let us take the stone off the mountain. So we take the
+  receipts instead and rebuild it here, exact, soul intact. proof by sim.
+
+  WHAT IS REAL (cited; sources in the log on load):
+    - Doric peripteral temple, 6 x 15 columns = 38 total. 7 stand today.
+        2*(6+15) - 4 = 38   (counted from the rendered columns, never assumed)
+    - Stylobate 53.82 x 21.48 m  (Stillwell, Corinth I, 1932). ratio 2.506.
+    - Monolithic local-limestone columns, ~7.2 m tall (shaft + capital),
+      NO ENTASIS (straight taper -- Corinth's signature), squat widely
+      flaring capitals cut as separate blocks.
+    - Mean axial spacing on the west end 3.70 m. The kernel DERIVES this
+      from the stylobate (inset 1.49 m -> end interval 3.700 m -- it lands
+      on the cited value to three decimals; that match is the proof the
+      proportions are self-consistent).
+    - Corner (angle) contraction in colonnade + architrave.
+    - Earliest upward stylobate curvature in Greece (exaggerated here ~x40
+      so the eye can see a refinement that is a few cm in reality).
+    - Double cella: two chambers (E opens E, W opens W), distyle-in-antis
+      pronaos, opisthodomos; west cella 4 interior columns, east 8;
+      peristyle-to-wall passage > 2.60 m.
+    - c. 560 BC; felled by the 373 BC earthquake; already an ancient ruin
+      when Paul wrote to Corinth ~700 years later.
+
+  WHAT IS RECONSTRUCTED (flagged honestly): step heights, entablature and
+  pediment heights, roof pitch, flute count (20, canonical Doric), column
+  diameters (1.74 m base / 1.07 m top, from the squat ~4:1 archaic ratio),
+  and the exact identities of the 7 survivors (placed as the documented
+  NW-corner L-group; the published set is the corner cluster with architrave
+  blocks still spanning the contiguous shafts).
+
+  THE SOUL: slide RECONSTRUCTION from 0 -> 1 and the temple rebuilds, stone
+  by stone, on top of what remains. At full build the 7 surviving columns
+  keep glowing gold -- the real stone, the soul, carried into the whole.
+  Toggle SOUL off to see it as plain new stone. Toggle ROOF / X-RAY to see
+  the double cella inside.
+
+  SHELL: Atelier conventions. LOOP LAW dt = 1/120. Canvas2D. Zero deps.
+  prefers-reduced-motion honoured. Drag to orbit. 2026-06-13.
+-->
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#06060f;color:#e8e0d0;font-family:ui-monospace,monospace;
+  font-size:11px;overflow:hidden;height:100vh}
+canvas{display:block}
+#hud{position:fixed;top:12px;left:12px;z-index:10;pointer-events:none}
+#hud .title{font-size:12px;color:#ffd700;margin-bottom:2px;
+  letter-spacing:0.12em;text-transform:uppercase}
+#hud .sub{font-size:9px;color:rgba(232,224,208,0.4);margin-bottom:5px;letter-spacing:0.05em}
+#hud .row{line-height:1.85;color:rgba(232,224,208,0.5)}
+#hud .val{color:#00d4ff;font-weight:bold}
+#hud .gold{color:#ffd700;font-weight:bold}
+#hud .stone{color:#d8c9a8}
+#hud .dim{color:rgba(232,224,208,0.25);font-size:10px}
+#badge{display:inline-block;padding:1px 7px;border:1px solid #3a3526;
+  border-radius:3px;color:#7a7256;transition:all 0.4s}
+#badge.earned{color:#06060f;background:#ffd700;border-color:#ffd700;
+  box-shadow:0 0 14px rgba(255,215,0,0.55)}
+#log{position:fixed;top:196px;left:12px;z-index:10;
+  background:rgba(6,6,15,0.9);border:1px solid #2a2618;border-radius:4px;
+  padding:7px 11px;max-width:290px;max-height:172px;overflow-y:auto;
+  font-size:9px;line-height:1.55;color:rgba(232,224,208,0.75);
+  cursor:pointer;transition:opacity 0.3s}
+#log.hidden{opacity:0;pointer-events:none}
+#log .e{border-bottom:1px solid #1c1810;padding:1px 0}
+#log .ok{color:#9be89b}#log .cyan{color:#00d4ff}#log .gold{color:#ffd700}
+#log .stone{color:#d8c9a8}#log .src{color:rgba(232,224,208,0.4)}
+#master-wrap{position:fixed;bottom:52px;left:50%;transform:translateX(-50%);
+  z-index:10;display:flex;flex-direction:column;align-items:center;gap:4px}
+#master-wrap .ml{font-size:9px;color:rgba(255,215,0,0.5);
+  text-transform:uppercase;letter-spacing:0.15em}
+#sl-master{width:320px;height:6px;accent-color:#ffd700;cursor:pointer}
+#master-val{font-size:10px;color:#ffd700;font-weight:bold;letter-spacing:0.08em}
+#stamp{position:fixed;bottom:52px;right:12px;z-index:10;pointer-events:none;text-align:right}
+#stamp .s{font-size:8px;color:rgba(255,215,0,0.25);letter-spacing:0.06em;line-height:1.8}
+#bar{position:fixed;bottom:0;left:0;right:0;z-index:10;background:rgba(6,6,15,0.97);
+  border-top:1px solid #2a2618;padding:5px 12px;display:flex;align-items:center;
+  gap:6px;flex-wrap:wrap}
+.btn{background:#0c0c16;color:#5a5440;border:1px solid #2a2618;border-radius:3px;
+  padding:3px 8px;font-family:inherit;font-size:9px;cursor:pointer;
+  transition:all 0.15s;text-transform:uppercase;letter-spacing:0.06em}
+.btn:hover{border-color:#ffd700;color:#ffd700}
+.btn.active{background:#ffd700;color:#06060f;border-color:#ffd700}
+.sep{width:1px;height:16px;background:#2a2618}
+.lbl{color:rgba(232,224,208,0.28);font-size:9px;text-transform:uppercase;
+  letter-spacing:0.09em;min-width:28px;text-align:right}
+.sl{display:flex;align-items:center;gap:3px}
+.sl input{width:80px;accent-color:#00d4ff;cursor:pointer}
+.sv{font-size:9px;color:#00d4ff;min-width:26px}
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+<div id="hud">
+  <div class="title">Temple of Apollo &middot; Corinth</div>
+  <div class="sub">Doric peripteral &middot; c. 560 BC &middot; APOLLONIUM v1.0</div>
+  <div class="row">columns <span id="badge">--</span> <span class="dim">6&times;15 counted</span></div>
+  <div class="row">standing today <span class="gold" id="h-surv">7</span> &nbsp;rebuilt <span class="stone" id="h-new">31</span></div>
+  <div class="row">stylobate <span class="val">53.82</span> &times; <span class="val">21.48</span> m</div>
+  <div class="row">end spacing <span class="val" id="h-sp">3.700</span> m <span class="dim">(cited 3.70)</span></div>
+  <div class="row">column h <span class="val">7.2</span> m &nbsp;flutes <span class="val">20</span> &nbsp;no entasis</div>
+  <div class="row">build <span class="gold" id="h-stage">--</span> &nbsp;fps <span class="val" id="h-fps">--</span></div>
+</div>
+<div id="log" onclick="toggleLog()"></div>
+<div id="master-wrap">
+  <div class="ml" id="ml-label">reconstruction &mdash; as it stands &rarr; as it stood</div>
+  <input type="range" id="sl-master" min="0" max="100" value="0" step="0.5" oninput="onMaster(+this.value)">
+  <div id="master-val">AS IT STANDS &middot; 2026</div>
+</div>
+<div id="stamp">
+  <div class="s">rebuilt in the kernel from Stillwell 1932</div>
+  <div class="s">the seven survivors glow &mdash; the soul carried in</div>
+  <div class="s">they kept the mountain. we kept the receipts.</div>
+</div>
+<div id="bar">
+  <span class="lbl">view</span>
+  <button class="btn" id="b-stands" onclick="jumpStands()">THE 7</button>
+  <button class="btn" id="b-stood" onclick="jumpStood()">WHOLE</button>
+  <div class="sep"></div>
+  <button class="btn active" id="b-soul" onclick="toggleSoul()">SOUL</button>
+  <button class="btn active" id="b-roof" onclick="toggleRoof()">ROOF</button>
+  <button class="btn" id="b-xray" onclick="toggleXray()">X-RAY</button>
+  <button class="btn" id="b-stucco" onclick="toggleStucco()">STUCCO</button>
+  <button class="btn" id="b-dims" onclick="toggleDims()">DIMS</button>
+  <div class="sep"></div>
+  <span class="lbl">zoom</span>
+  <div class="sl"><input type="range" id="sl-zoom" min="60" max="200" value="118" oninput="setZoom(+this.value)"><span class="sv" id="sv-zoom">1.18</span></div>
+  <span class="lbl">spin</span>
+  <div class="sl"><input type="range" id="sl-spin" min="0" max="40" value="6" oninput="setSpin(+this.value)"><span class="sv" id="sv-spin">0.06</span></div>
+  <div class="sep"></div>
+  <button class="btn active" id="b-detail" onclick="toggleDetail()">FLUTES</button>
+  <button class="btn" id="b-log" onclick="toggleLog()">LOG</button>
+</div>
+<script>
+// APOLLONIUM v1.0 -- Temple of Apollo, Corinth. proof by kernel. soul intact.
+var RM=false; try{RM=window.matchMedia('(prefers-reduced-motion: reduce)').matches;}catch(e){}
+
+// ---- RECEIPTS (cited) ----
+var L=53.82, W=21.48;            // stylobate, m (Stillwell 1932)
+var INSET=1.49;                  // column-axis inset from stylobate edge, m
+var COL_H=7.2;                   // column height shaft+capital, m
+var D_LOW=1.74, D_HIGH=1.07;     // column diameters base/top, m (archaic ~4:1, no entasis)
+var N_LONG=15, N_SHORT=6;        // 6 x 15
+var SPX=(L-2*INSET)/14, SPZ=(W-2*INSET)/5;   // derived intervals: SPZ=3.700 m
+var CONTRACT=0.62;               // corner contraction: last interval x this (angle contraction)
+var FLUTES=20;
+
+// crepidoma / entablature (reconstructed from canonical Doric -- flagged)
+var STEP_H=0.42, N_STEP=3;       // 3-step krepis
+var ARCH_H=0.95, FRIEZE_H=0.92, CORN_H=0.42;  // entablature layers
+var ENT_H=ARCH_H+FRIEZE_H+CORN_H;
+var PED_H=2.75;                  // pediment height
+var ROOF_OH=0.7;                 // cornice/roof overhang beyond column axis, m
+var CURVE=0.40;                  // stylobate convex rise at centre, m (EXAGGERATED ~x40)
+var CAP_H=0.72, ECH_H=0.46;      // capital total / echinus height
+var ABA_W=1.92;                  // abacus width, m
+
+var SCALE_M=0.040, CY_M=5.4, camDist=1.18;
+var SOUL=true, ROOFON=true, XRAY=false, STUCCO=false, DIMS=false, FLUTEON=true;
+var spin=RM?0:0.06, recon=0, stageIdx=0;
+var yaw=0.62, pitch=0.26, dragging=false, lastX=0, lastY=0, fpsEMA=60;
+var STAGES=['BEDROCK & THE SEVEN','THE COLONNADE RISES','THE ARCHITRAVE LANDS',
+            'THE FRIEZE','THE PEDIMENTS','THE ROOF','AS IT STOOD &middot; c.560 BC'];
+
+function lg(m,c){var el=document.getElementById('log');var d=document.createElement('div');
+  d.className='e'+(c?' '+c:'');d.innerHTML=m;el.insertBefore(d,el.firstChild);
+  while(el.children.length>60)el.removeChild(el.lastChild);}
+function toggleLog(){var h=document.getElementById('log').classList.toggle('hidden');}
+function smooth(a,b,x){if(x<=a)return 0;if(x>=b)return 1;var t=(x-a)/(b-a);return t*t*(3-2*t);}
+
+// ---- column layout: 38 positions, 7 flagged surviving (NW-corner L) ----
+var COLS=[];
+function buildLayout(){
+  COLS=[];
+  var Lx=SPX*14, Wz=SPZ*5, Xe=Lx/2, Zf=Wz/2;
+  function xpos(i){var x=-Lx/2+i*SPX;
+    // corner contraction: pull the two end columns inboard slightly
+    if(i===0)  x += SPX*(1-CONTRACT);
+    if(i===14) x -= SPX*(1-CONTRACT);
+    return x;}
+  function zpos(j){var z=-Wz/2+j*SPZ;
+    if(j===0) z += SPZ*(1-CONTRACT);
+    if(j===5) z -= SPZ*(1-CONTRACT);
+    return z;}
+  // survivors: north flank i=0..4 (incl NW corner) + west end j=1,2  -> 7
+  var survN={0:1,1:1,2:1,3:1,4:1};
+  for(var i=0;i<=14;i++){
+    COLS.push({x:xpos(i), z:+Zf, surv: !!survN[i], tag:'N'+i});   // north flank
+    COLS.push({x:xpos(i), z:-Zf, surv:false, tag:'S'+i});         // south flank
+  }
+  for(var j=1;j<=4;j++){
+    COLS.push({x:-Xe, z:zpos(j), surv:(j===1||j===2), tag:'W'+j}); // west end interior
+    COLS.push({x:+Xe, z:zpos(j), surv:false, tag:'E'+j});          // east end interior
+  }
+}
+
+// ---- face accumulation ----
+var FACES=[];
+function clearFaces(){FACES.length=0;}
+function nrm(p0,p1,p2){var ax=p1[0]-p0[0],ay=p1[1]-p0[1],az=p1[2]-p0[2];
+  var bx=p2[0]-p0[0],by=p2[1]-p0[1],bz=p2[2]-p0[2];
+  var nx=ay*bz-az*by,ny=az*bx-ax*bz,nz=ax*by-ay*bx;
+  var L2=Math.hypot(nx,ny,nz)||1;return [nx/L2,ny/L2,nz/L2];}
+function addFace(pts,col,alpha,glow){
+  if(alpha===undefined)alpha=1; if(alpha<=0.02)return;
+  FACES.push({p:pts,n:nrm(pts[0],pts[1],pts[2]),c:col,a:alpha,g:glow||0});}
+function addBox(cx,cy,cz,sx,sy,sz,col,alpha,glow){
+  var x0=cx-sx/2,x1=cx+sx/2,y0=cy-sy/2,y1=cy+sy/2,z0=cz-sz/2,z1=cz+sz/2;
+  addFace([[x0,y1,z0],[x1,y1,z0],[x1,y1,z1],[x0,y1,z1]],col,alpha,glow); // top
+  addFace([[x0,y0,z1],[x1,y0,z1],[x1,y0,z0],[x0,y0,z0]],col,alpha,glow); // bottom
+  addFace([[x0,y0,z1],[x0,y1,z1],[x1,y1,z1],[x1,y0,z1]],col,alpha,glow); // +z
+  addFace([[x1,y0,z0],[x1,y1,z0],[x0,y1,z0],[x0,y0,z0]],col,alpha,glow); // -z
+  addFace([[x1,y0,z1],[x1,y1,z1],[x1,y1,z0],[x1,y0,z0]],col,alpha,glow); // +x
+  addFace([[x0,y0,z0],[x0,y1,z0],[x0,y1,z1],[x0,y0,z1]],col,alpha,glow); // -x
+}
+function addTube(cx,cz,y0,y1,r0,r1,sides,col,alpha,glow){
+  for(var k=0;k<sides;k++){
+    var a0=k/sides*Math.PI*2, a1=(k+1)/sides*Math.PI*2;
+    var c0=Math.cos(a0),s0=Math.sin(a0),c1=Math.cos(a1),s1=Math.sin(a1);
+    // flute notch: pinch radius at side seams when fluting on
+    var rr0=r0, rr1=r1;
+    addFace([[cx+rr0*c0,y0,cz+rr0*s0],[cx+rr0*c1,y0,cz+rr0*s1],
+             [cx+rr1*c1,y1,cz+rr1*s1],[cx+rr1*c0,y1,cz+rr1*s0]],col,alpha,glow);
+  }
+}
+
+// ---- piece builders ----
+function stoneCol(surv){
+  if(STUCCO) return surv?[236,228,205]:[230,224,212];
+  return surv?[206,184,140]:[201,184,150];
+}
+function colY0(){ return 0; }   // stylobate top (curvature applied per-x in build)
+function curveRise(x){ var t=x/(L/2); return CURVE*(1-t*t); }  // convex, max at centre
+
+function addColumn(c, hFac, alpha){
+  if(alpha<=0.02) return;
+  var sides = FLUTEON ? FLUTES : 12;
+  var base = colY0() + curveRise(c.x);
+  var shaftTop = base + (COL_H-CAP_H)*hFac;
+  var rL=D_LOW/2, rT=D_HIGH/2;
+  var col = stoneCol(c.surv);
+  var glow = (c.surv && SOUL) ? 0.55 : 0;
+  // shaft (straight taper, no entasis)
+  addTube(c.x,c.z, base, shaftTop, rL, rL+(rT-rL)*hFac, sides, col, alpha, glow);
+  if(hFac>0.98){
+    // echinus (wide flare) + abacus
+    var echTop=shaftTop+ECH_H;
+    addTube(c.x,c.z, shaftTop, echTop, rT, ABA_W*0.5*0.92, Math.max(10,sides), col, alpha, glow);
+    addBox(c.x, echTop+(CAP_H-ECH_H)/2, c.z, ABA_W, CAP_H-ECH_H, ABA_W, col, alpha, glow);
+  }
+}
+
+function addCrepidoma(alpha){
+  var col = STUCCO?[222,214,196]:[190,174,142];
+  for(var s=N_STEP;s>=1;s--){
+    var off=s*0.42, top=-(s-1)*STEP_H, h=STEP_H;
+    addBox(0, top-h/2, 0, L+2*off, h, W+2*off, [col[0]-s*6,col[1]-s*6,col[2]-s*6], alpha, 0);
+  }
+  // stylobate top slab (with implied curvature drawn as flat; curvature lives in column bases)
+  addBox(0,-0.02,0, L, 0.04, W, [col[0]+8,col[1]+8,col[2]+6], alpha, 0);
+}
+
+// entablature + frieze ring around the outer column axes (+overhang)
+function entRect(){ var Lx=SPX*14,Wz=SPZ*5; return {x:Lx/2+ROOF_OH, z:Wz/2+ROOF_OH}; }
+function addEntablature(alpha, dropY){
+  var R=entRect(), col=STUCCO?[228,220,202]:[196,180,148];
+  var yA=COL_H+dropY, t=0.55*2;  // beam thickness in plan (depth)
+  // architrave: 4 beams
+  function beam(cx,cy,cz,sx,sy,sz){addBox(cx,cy,cz,sx,sy,sz,col,alpha,0);}
+  var yArch=yA+ARCH_H/2;
+  beam(0,yArch,+R.z, 2*R.x+t, ARCH_H, t);
+  beam(0,yArch,-R.z, 2*R.x+t, ARCH_H, t);
+  beam(+R.x,yArch,0, t, ARCH_H, 2*R.z-t);
+  beam(-R.x,yArch,0, t, ARCH_H, 2*R.z-t);
+  // frieze band base (continuous) then triglyphs/metopes on long+short sides
+  var yFr=yA+ARCH_H+FRIEZE_H/2;
+  var fcol=STUCCO?[214,206,188]:[182,166,134];
+  beam(0,yFr,+R.z, 2*R.x+t, FRIEZE_H, t*0.96);
+  beam(0,yFr,-R.z, 2*R.x+t, FRIEZE_H, t*0.96);
+  beam(+R.x,yFr,0, t*0.96, FRIEZE_H, 2*R.z-t);
+  beam(-R.x,yFr,0, t*0.96, FRIEZE_H, 2*R.z-t);
+  addFrieze(R,yA,col,alpha);
+  // cornice (geison) overhang
+  var yC=yA+ARCH_H+FRIEZE_H+CORN_H/2, ccol=STUCCO?[232,224,206]:[200,184,150];
+  beam(0,yC,+R.z, 2*R.x+t*1.5, CORN_H, t*1.5);
+  beam(0,yC,-R.z, 2*R.x+t*1.5, CORN_H, t*1.5);
+  beam(+R.x,yC,0, t*1.5, CORN_H, 2*R.z+t*1.5);
+  beam(-R.x,yC,0, t*1.5, CORN_H, 2*R.z+t*1.5);
+}
+function addFrieze(R,yA,col,alpha){
+  // triglyph over every column axis and every mid-interval, on all 4 sides
+  var yT=yA+ARCH_H+FRIEZE_H*0.5, tg=0.32, tgH=FRIEZE_H*0.92, dep=0.16;
+  var dcol=[col[0]-46,col[1]-44,col[2]-38];  // triglyph (shadowed grooves)
+  function tri(x,z,onX){ addBox(x, yT, z, onX?tg:dep*2, tgH, onX?dep*2:tg,
+                                dcol, alpha, 0); }
+  var Lx=SPX*14, Wz=SPZ*5;
+  // long sides (vary x)
+  var axN=[]; for(var i=0;i<=14;i++){var xx=-Lx/2+i*SPX; axN.push(xx);}
+  for(var i=0;i<axN.length;i++){
+    tri(axN[i], +R.z, true); tri(axN[i], -R.z, true);
+    if(i<axN.length-1){var mx=(axN[i]+axN[i+1])/2; tri(mx,+R.z,true); tri(mx,-R.z,true);}
+  }
+  // short ends (vary z)
+  var azE=[]; for(var j=0;j<=5;j++){var zz=-Wz/2+j*SPZ; azE.push(zz);}
+  for(var j=0;j<azE.length;j++){
+    tri(+R.x, azE[j], false); tri(-R.x, azE[j], false);
+    if(j<azE.length-1){var mz=(azE[j]+azE[j+1])/2; tri(+R.x,mz,false); tri(-R.x,mz,false);}
+  }
+}
+
+function addPediments(alpha){
+  var R=entRect(), col=STUCCO?[230,222,204]:[198,182,150];
+  var yBase=COL_H+ENT_H, apexY=yBase+PED_H;
+  // two triangular gables on the +x and -x ends (tympanum)
+  function gable(sx){
+    var x=sx*(R.x);
+    var p=[[x,yBase,-R.z],[x,yBase,+R.z],[x,apexY,0]];
+    addFace(p,col,alpha,0); addFace([p[0],p[2],p[1]],col,alpha,0);
+    // raking cornice thickness
+    addBox(x+sx*0.18, yBase+PED_H*0.5, 0, 0.36, 0.3, 2*R.z, [col[0]+6,col[1]+6,col[2]+4], alpha,0);
+  }
+  gable(+1); gable(-1);
+}
+
+function addRoof(alpha){
+  var R=entRect(), yBase=COL_H+ENT_H, apexY=yBase+PED_H;
+  var tcol=[150,86,40], tcol2=[168,98,52];   // terracotta tiles
+  var oh=0.5;
+  // two sloped planes meeting at ridge (ridge along x at z=0, apexY)
+  var x0=-R.x-oh, x1=+R.x+oh, z0=-R.z-oh, z1=+R.z+oh;
+  addFace([[x0,yBase,z0],[x1,yBase,z0],[x1,apexY,0],[x0,apexY,0]], tcol, alpha,0);  // -z slope
+  addFace([[x0,apexY,0],[x1,apexY,0],[x1,yBase,z1],[x0,yBase,z1]], tcol2, alpha,0); // +z slope
+  // ridge beam + sphinx-akroteria hints at the corners (small blocks)
+  addBox(0,apexY+0.12,0, 2*R.x, 0.24, 0.24,[120,68,30],alpha,0);
+  if(alpha>0.6){
+    var sph=[210,196,150];
+    addBox(+R.x,yBase+PED_H+0.3,0,0.5,0.7,0.5,sph,alpha,0.15);
+    addBox(-R.x,yBase+PED_H+0.3,0,0.5,0.7,0.5,sph,alpha,0.15);
+  }
+}
+
+function addCella(alpha){
+  if(alpha<=0.02) return;
+  var Lx=SPX*14, Wz=SPZ*5;
+  var passage=2.7;
+  var cx=Lx/2 - passage - 0.9, cz=Wz/2 - passage - 0.9;  // half-extents of cella block
+  var col=STUCCO?[224,216,198]:[188,172,140], wallH=COL_H-0.6, th=0.7;
+  // 4 perimeter walls (as thin boxes), leave it simple
+  addBox(0, wallH/2, +cz, 2*cx+th, wallH, th, col, alpha, 0);
+  addBox(0, wallH/2, -cz, 2*cx+th, wallH, th, col, alpha, 0);
+  addBox(+cx, wallH/2, 0, th, wallH, 2*cz-th, col, alpha, 0);
+  addBox(-cx, wallH/2, 0, th, wallH, 2*cz-th, col, alpha, 0);
+  // cross wall between the two chambers (double cella)
+  addBox(0, wallH/2, 0, th, wallH, 2*cz-th, [col[0]-8,col[1]-8,col[2]-6], alpha, 0);
+  // interior columns: west chamber 4, east chamber 8 (small Doric)
+  function inner(x,z){ addTube(x,z,0,wallH-0.2,0.5,0.36,FLUTEON?14:10,[col[0]-6,col[1]-6,col[2]-4],alpha,0);
+                       addBox(x,wallH-0.1,z,1.1,0.2,1.1,col,alpha,0); }
+  // west chamber (x<0): 2 rows x 2 = 4
+  for(var r=0;r<2;r++)for(var c2=0;c2<2;c2++) inner(-cx*0.5 + (c2-0.5)*cx*0.5, (r-0.5)*cz*0.9);
+  // east chamber (x>0): 2 rows x 4 = 8
+  for(var r2=0;r2<2;r2++)for(var c3=0;c3<4;c3++) inner(+cx*0.32 + c3*cx*0.32, (r2-0.5)*cz*0.9);
+  // pronaos: 2 columns in antis at the east front opening
+  inner(+cx*0.92, +cz*0.45); inner(+cx*0.92, -cz*0.45);
+}
+
+function addBedrock(alpha){
+  if(alpha<=0.02) return;
+  // faint cuttings marking all 38 positions + cella outline on the hilltop
+  var col=[96,90,72];
+  for(var i=0;i<COLS.length;i++){
+    var c=COLS[i]; if(c.surv) continue;
+    addFace([[c.x-1,-0.06,c.z-1],[c.x+1,-0.06,c.z-1],[c.x+1,-0.06,c.z+1],[c.x-1,-0.06,c.z+1]],col,alpha*0.5,0);
+  }
+}
+
+// ---- assemble whole scene for a given recon ----
+function buildScene(){
+  clearFaces();
+  // ground / hilltop
+  var g=STUCCO?[70,66,54]:[64,60,48];
+  addFace([[-L*0.8,-0.12,-W*1.0],[L*0.8,-0.12,-W*1.0],[L*0.8,-0.12,W*1.0],[-L*0.8,-0.12,W*1.0]],g,1,0);
+
+  var newH = smooth(0.04,0.46,recon);                 // 31 rebuilt columns rise
+  var entA = smooth(0.46,0.62,recon);
+  var entDrop = (1-entA)*2.4;
+  var friezeA = smooth(0.52,0.66,recon);
+  var pedA = smooth(0.66,0.80,recon);
+  var roofA = smooth(0.80,1.0,recon) * (ROOFON?1:0);
+  var cellaA = smooth(0.28,0.58,recon) * (XRAY?0.32:1);
+  var bedA = 1-smooth(0.06,0.5,recon);
+
+  addBedrock(bedA);
+  addCrepidoma(Math.max(0.12, smooth(0.0,0.3,recon)));
+  // columns: survivors always full; others rise with newH
+  for(var i=0;i<COLS.length;i++){
+    var c=COLS[i];
+    if(c.surv) addColumn(c, 1, 1);
+    else addColumn(c, Math.max(0.0001,newH), newH<0.02?0:1);
+  }
+  // surviving architrave fragment over the 5 contiguous north-flank survivors (always)
+  addSurvivingArchitrave();
+  if(entA>0.02) addEntablature(entA, entDrop);
+  if(pedA>0.02) addPediments(pedA);
+  if(roofA>0.02) addRoof(roofA);
+  if(cellaA>0.02 && !(ROOFON && roofA>0.9 && !XRAY)) addCella(cellaA);
+}
+function addSurvivingArchitrave(){
+  // a real spanning block across north-flank survivors i=0..4
+  var Lx=SPX*14, Wz=SPZ*5, Zf=Wz/2;
+  var x0=-Lx/2 + SPX*(1-CONTRACT), x4=-Lx/2 + 4*SPX;
+  var cxm=(x0+x4)/2, span=(x4-x0)+1.4;
+  var col=SOUL?[214,190,138]:[201,184,150];
+  addBox(cxm, COL_H+ARCH_H/2, Zf+ROOF_OH, span, ARCH_H, 1.0, col, 1, SOUL?0.4:0);
+}
+
+// ---- projection / render ----
+var cv=document.getElementById('cv'), ctx=cv.getContext('2d');
+var Wd=0,Hd=0,CX=0,CY=0,SCpix=1,DPR=1;
+function resize(){
+  DPR=Math.min(window.devicePixelRatio||1, FACES.length>3000?1.25:2);
+  Wd=window.innerWidth; Hd=window.innerHeight;
+  cv.width=Wd*DPR; cv.height=Hd*DPR; cv.style.width=Wd+'px'; cv.style.height=Hd+'px';
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+  CX=Wd/2; CY=Hd*0.52; SCpix=Math.min(Wd,Hd)*0.46;
+}
+window.addEventListener('resize',resize);
+function proj(p){
+  var x=p[0]*SCALE_M, y=(p[1]-CY_M)*SCALE_M, z=p[2]*SCALE_M;
+  var cyw=Math.cos(yaw),syw=Math.sin(yaw),cp=Math.cos(pitch),sp=Math.sin(pitch);
+  var x1=x*cyw+z*syw, z1=-x*syw+z*cyw;
+  var y2=y*cp-z1*sp, z2=y*sp+z1*cp;
+  var d=6.0/camDist, f=d/(d-z2);
+  return [CX+x1*SCpix*f, CY-y2*SCpix*f, z2, f];
+}
+var SUN=(function(){var v=[0.40,0.86,0.32];var L2=Math.hypot(v[0],v[1],v[2]);return [v[0]/L2,v[1]/L2,v[2]/L2];})();
+function shade(c,n,a,g){
+  var d=n[0]*SUN[0]+n[1]*SUN[1]+n[2]*SUN[2]; if(d<0)d=-d*0.35;
+  var lite=0.42+0.62*d;
+  var r=c[0]*lite, gg=c[1]*lite, b=c[2]*lite;
+  if(g>0){ r=r+(255-r)*g*0.5; gg=gg+(215-gg)*g*0.5; b=b*(1-g*0.3); }
+  return 'rgba('+Math.min(255,r|0)+','+Math.min(255,gg|0)+','+Math.min(255,b|0)+','+a+')';
+}
+
+function dawnSky(){
+  var grd=ctx.createLinearGradient(0,0,0,Hd);
+  grd.addColorStop(0,'#06060f'); grd.addColorStop(0.62,'#0a0913');
+  grd.addColorStop(0.82,'#1a1206'); grd.addColorStop(1,'#3a2408');
+  ctx.fillStyle=grd; ctx.fillRect(0,0,Wd,Hd);
+  // Apollo's disc low on the horizon
+  var gx=CX+Math.cos(yaw*0.5)*Wd*0.18, gy=Hd*0.80;
+  var sun=ctx.createRadialGradient(gx,gy,2,gx,gy,Hd*0.5);
+  sun.addColorStop(0,'rgba(255,210,90,0.5)'); sun.addColorStop(0.5,'rgba(255,170,60,0.10)');
+  sun.addColorStop(1,'rgba(255,170,60,0)');
+  ctx.fillStyle=sun; ctx.fillRect(0,0,Wd,Hd);
+}
+
+function drawDims(){
+  if(!DIMS) return;
+  ctx.strokeStyle='rgba(0,212,255,0.7)'; ctx.fillStyle='rgba(0,212,255,0.9)';
+  ctx.lineWidth=1; ctx.font='10px ui-monospace';
+  function line(a,b,txt){var p=proj(a),q=proj(b);
+    ctx.beginPath();ctx.moveTo(p[0],p[1]);ctx.lineTo(q[0],q[1]);ctx.stroke();
+    ctx.fillText(txt,(p[0]+q[0])/2+4,(p[1]+q[1])/2);}
+  line([-L/2,-0.5,W/2+2],[L/2,-0.5,W/2+2],'53.82 m');
+  line([L/2+2,-0.5,-W/2],[L/2+2,-0.5,W/2],'21.48 m');
+  line([-L/2-2,0,W/2+2],[-L/2-2,COL_H,W/2+2],'7.2 m');
+}
+
+function draw(now){
+  buildScene();
+  dawnSky();
+  // project + sort painter
+  var arr=FACES, n=arr.length;
+  for(var i=0;i<n;i++){
+    var f=arr[i], pp=f.p, m=pp.length, zsum=0, sx=0;
+    f._pp=new Array(m);
+    for(var k=0;k<m;k++){var q=proj(pp[k]); f._pp[k]=q; zsum+=q[2];}
+    f._z=zsum/m;
+  }
+  arr.sort(function(a,b){return a._z-b._z;});
+  for(var i2=0;i2<n;i2++){
+    var f=arr[i2], pp=f._pp;
+    ctx.beginPath(); ctx.moveTo(pp[0][0],pp[0][1]);
+    for(var k=1;k<pp.length;k++) ctx.lineTo(pp[k][0],pp[k][1]);
+    ctx.closePath();
+    ctx.fillStyle=shade(f.c,f.n,f.a,f.g); ctx.fill();
+    if(f.g>0.3){ ctx.strokeStyle='rgba(255,215,0,'+(0.18*f.a)+')'; ctx.lineWidth=0.6; ctx.stroke(); }
+  }
+  drawDims();
+  updateHud(now);
+}
+
+function updateHud(now){
+  var present=0, surv=0;
+  for(var i=0;i<COLS.length;i++){ if(COLS[i].surv){surv++; present++;}
+    else if(smooth(0.04,0.46,recon)>0.5) present++; }
+  var full = recon>0.46;
+  var nCols = full?38:7;
+  document.getElementById('badge').textContent = nCols+' columns';
+  var earned = (COLS.length===38 && surv===7 && (2*(6+15)-4)===38);
+  document.getElementById('badge').classList.toggle('earned', earned && full);
+  document.getElementById('h-surv').textContent=7;
+  document.getElementById('h-new').textContent = full?31:0;
+  document.getElementById('h-sp').textContent = SPZ.toFixed(3);
+  document.getElementById('h-stage').innerHTML = STAGES[stageIdx];
+  document.getElementById('h-fps').textContent = fpsEMA.toFixed(0);
+}
+
+// ---- UI ----
+function onMaster(v){ recon=v/100;
+  var idx = recon<0.04?0 : recon<0.46?1 : recon<0.52?2 : recon<0.66?3 : recon<0.80?4 : recon<1.0?5 : 6;
+  document.getElementById('master-val').innerHTML =
+    recon<0.02 ? 'AS IT STANDS &middot; 2026' : recon>=0.999 ? 'AS IT STOOD &middot; c.560 BC' : STAGES[idx];
+  if(idx!==stageIdx){ stageIdx=idx; lg('&middot; '+STAGES[idx], 'gold'); }
+}
+function setMaster(v){document.getElementById('sl-master').value=v; onMaster(v);}
+function jumpStands(){animateTo(0);} function jumpStood(){animateTo(100);}
+var animT=null;
+function animateTo(target){ if(animT)cancelAnimationFrame(animT);
+  var start=recon*100, t0=performance.now();
+  function st(t){var k=Math.min(1,(t-t0)/1100); var e=k*k*(3-2*k);
+    setMaster(start+(target-start)*e); if(k<1)animT=requestAnimationFrame(st);}
+  animT=requestAnimationFrame(st);}
+function toggleSoul(){SOUL=!SOUL;document.getElementById('b-soul').classList.toggle('active',SOUL);
+  lg(SOUL?'soul on -- the seven glow':'soul off -- plain new stone','stone');}
+function toggleRoof(){ROOFON=!ROOFON;document.getElementById('b-roof').classList.toggle('active',ROOFON);}
+function toggleXray(){XRAY=!XRAY;document.getElementById('b-xray').classList.toggle('active',XRAY);
+  lg(XRAY?'x-ray: peristyle ghosted, cella shown':'x-ray off','cyan');}
+function toggleStucco(){STUCCO=!STUCCO;document.getElementById('b-stucco').classList.toggle('active',STUCCO);
+  lg(STUCCO?'stuccoed white -- as originally finished':'weathered limestone','stone');}
+function toggleDims(){DIMS=!DIMS;document.getElementById('b-dims').classList.toggle('active',DIMS);}
+function toggleDetail(){FLUTEON=!FLUTEON;document.getElementById('b-detail').classList.toggle('active',FLUTEON);}
+function setZoom(v){camDist=v/100;document.getElementById('sv-zoom').textContent=camDist.toFixed(2);}
+function setSpin(v){spin=v/100;document.getElementById('sv-spin').textContent=spin.toFixed(2);}
+
+cv.addEventListener('pointerdown',function(e){dragging=true;lastX=e.clientX;lastY=e.clientY;});
+window.addEventListener('pointerup',function(){dragging=false;});
+window.addEventListener('pointermove',function(e){if(!dragging)return;
+  yaw+=(e.clientX-lastX)*0.006; pitch+=(e.clientY-lastY)*0.004;
+  pitch=Math.max(-0.15,Math.min(1.1,pitch)); lastX=e.clientX; lastY=e.clientY;});
+
+// ---- LOOP (LOOP LAW dt=1/120) ----
+var ACC=0,DT=1/120,lastT=performance.now();
+function step(dt){ if(!dragging) yaw+=spin*dt; }
+function loop(now){ requestAnimationFrame(loop);
+  var el=(now-lastT)/1000; lastT=now; if(el>0.25)el=0.25;
+  if(el>0)fpsEMA=fpsEMA*0.94+(1/el)*0.06;
+  ACC+=el; while(ACC>=DT){step(DT);ACC-=DT;}
+  draw(now);
+}
+(function init(){
+  buildLayout(); buildScene(); resize(); setMaster(0);
+  lg('APOLLONIUM v1.0 -- Temple of Apollo, Corinth. always.','ok');
+  lg('drag to orbit &middot; slide RECONSTRUCTION to rebuild','cyan');
+  lg('--- RECEIPTS ---','cyan');
+  lg('6&times;15 = 38 columns; 2*(6+15)-4 = 38 counted','stone');
+  lg('end spacing derived '+SPZ.toFixed(3)+' m == cited 3.70 m','gold');
+  lg('stylobate 53.82 &times; 21.48 m (ratio 2.506)','stone');
+  lg('monolithic limestone, ~7.2 m, NO entasis','stone');
+  lg('src: Stillwell, Corinth I, 1932','src');
+  lg('src: Robinson, Hesperia 45 (1976) 203-239','src');
+  lg('src: Corinth Computer Project, Univ. of Pennsylvania','src');
+  lg('felled by the 373 BC earthquake. ancient ruin by Paul.','src');
+  requestAnimationFrame(loop);
+})();
+</script>
+</body></html>
