@@ -207,6 +207,17 @@ enum When {
     Build,
     /// Read only when the turn advances. A single frame cannot show it.
     Motion,
+    /// Read only when a `+` / `-` button is pressed. It moves nothing by
+    /// itself and no single frame can show it -- what it promises is that ONE
+    /// press moves its target by exactly this much.
+    ///
+    /// The three existing categories could not hold this. `Render` would fail
+    /// (the frame does not change when the grain changes), `Build` would fail
+    /// (no geometry is rebuilt) and `Motion` would fail (nothing advances).
+    /// Filing it under any of them to keep the suite green would be an honest
+    /// instrument answering a question nobody asked -- R13's family. A new
+    /// promise needs a new column, and a new column needs its own test.
+    Nudge,
 }
 
 impl When {
@@ -215,6 +226,7 @@ impl When {
             When::Render => "takes effect now",
             When::Build => "applies to the NEXT refine -- it does not move built faces",
             When::Motion => "only visible while it turns",
+            When::Nudge => "the grain of one + / - press",
         }
     }
 }
@@ -241,8 +253,17 @@ struct Control {
     when: When,
 }
 
+/// The four grains the flight explorer moves in.
+///
+/// Discrete DECADES rather than a multiply, because `0.001 * 10.0` is
+/// `0.010000000000000002` and three presses walk off the decade for good.
+/// **A level of detail that cannot be returned to exactly is not a level** --
+/// and the whole point of the explorer is that two runs at the same grain are
+/// comparable, which needs the grain to be the same number both times.
+const STEP_DECADES: [f64; 4] = [0.001, 0.01, 0.1, 1.0];
+
 /// Every animatable control the GENESIS view has.
-const CONTROLS: [Control; 12] = [
+const CONTROLS: [Control; 13] = [
     Control {
         name: "inner",
         label: "INNER",
@@ -355,6 +376,17 @@ const CONTROLS: [Control; 12] = [
         // turn every 524 frames, and both statements are the same statement.
         unit: "turn per frame, radians -- 0 holds it still",
         when: When::Motion,
+    },
+    // THE FLIGHT EXPLORER'S GRAIN. Not a speed -- a speed is per frame and
+    // this is per PRESS, which is why it is a fourth category rather than a
+    // fourth Motion row.
+    Control {
+        name: "step",
+        label: "STEP",
+        lo: 0.001,
+        hi: 1.0,
+        unit: "radians per + / - press -- the grain the explorer flies at",
+        when: When::Nudge,
     },
 ];
 
@@ -595,6 +627,8 @@ struct App {
     /// Mobius blend, 0 = sphere, 1 = band. Applied at DRAW time, so the stored
     /// mesh is never bent -- toggling back is exact, not a re-derivation.
     gen_twist: f64,
+    /// Radians moved by one flight-explorer press. See [`STEP_DECADES`].
+    gen_step: f64,
     /// whether the twist is armed at all; the box is live only when it is
     gen_mobius: bool,
     /// Project refined points onto the sphere instead of leaving them planar.
@@ -1213,6 +1247,9 @@ impl App {
             gen_cull: false,
             gen_fill: true,
             gen_twist: 0.0,
+            // the middle of the four decades: fine enough to creep up on a
+            // symmetry, coarse enough that finding one does not take an hour
+            gen_step: 0.01,
             gen_mobius: false,
             gen_spherical: false,
             paint_clock: true,
@@ -1394,6 +1431,7 @@ impl App {
             "speedp" => self.gen_speed_p,
             "speedr" => self.gen_speed_r,
             "twist" => self.gen_twist,
+            "step" => self.gen_step,
             "zoom" => self.gen_zoom,
             // NOT `_ => self.gen_zoom`. That catch-all is how `twist` shipped
             // showing the ZOOM value: the writer had an arm, the reader did
@@ -1435,6 +1473,7 @@ impl App {
             "roll" => self.gen_roll = v,
             "speedp" => self.gen_speed_p = v,
             "speedr" => self.gen_speed_r = v,
+            "step" => self.gen_step = v,
             "zoom" => self.gen_zoom = v,
             // named explicitly for the same reason the getter is -- a silent
             // catch-all writes the wrong field just as happily as it reads one
@@ -1532,6 +1571,24 @@ impl Estimate {
 /// Past this a movie is refused, with the number, and told to go elsewhere.
 const RENDER_SECONDS_BUDGET: f64 = 20.0 * 60.0;
 
+/// THE FLIGHT EXPLORER, top-left, above the census.
+///
+/// Six nudges and a grain. The spin animates a symmetry you already know
+/// about; this walks up to one you do not, a decade at a time, and stops on
+/// it. A symmetry found by hand at a known `step` is reproducible -- type the
+/// three angles back in and the same picture returns -- which is the whole
+/// reason the grain is a named control with a range rather than a constant.
+const FLIGHT_X: i32 = 16;
+const FLIGHT_Y: i32 = 56;
+const FLIGHT_BH: i32 = 20;
+/// yaw, pitch, roll, step
+const FLIGHT_ROWS: i32 = 4;
+/// Where the census text starts, now that the cluster sits above it.
+///
+/// Derived from the cluster rather than typed, so moving the cluster moves the
+/// census with it and the two cannot overlap by arithmetic drift.
+const CENSUS_Y: i32 = FLIGHT_Y + 18 + FLIGHT_ROWS * (FLIGHT_BH + 4) + 12;
+
 impl App {
     /// The GENESIS control bar: the browser's own row, ported.
     ///
@@ -1577,6 +1634,47 @@ impl App {
                 id,
             });
             x += w + 8;
+        }
+
+        // THE FLIGHT EXPLORER lives in the SAME list, so it is hit-tested,
+        // dumped to LAYOUT.json and clickable by name from a script without a
+        // second code path. Only its coordinates differ -- and coordinates are
+        // data, which is the point of the list.
+        //
+        // Each label is UNIQUE. Eight buttons labelled `-` and `+` would be
+        // ambiguous to `button <LABEL>` and to the layout dump, and a script
+        // that cannot name a control cannot drive it.
+        const FLIGHT: [(u8, u8, &str, &str); FLIGHT_ROWS as usize] = [
+            (23, 24, "YAW -", "YAW +"),
+            (25, 26, "PITCH -", "PITCH +"),
+            (27, 28, "ROLL -", "ROLL +"),
+            (29, 30, "STEP -", "STEP +"),
+        ];
+        // one width for all eight, so the grid is a grid
+        let fw = FLIGHT
+            .iter()
+            .flat_map(|(_, _, a, b)| [font::width(a, 1), font::width(b, 1)])
+            .max()
+            .unwrap_or(48)
+            + 14;
+        for (row, (minus, plus, lm, lp)) in FLIGHT.iter().enumerate() {
+            let ry = FLIGHT_Y + 18 + row as i32 * (FLIGHT_BH + 4);
+            self.gen_buttons.push(Button {
+                x: FLIGHT_X,
+                y: ry,
+                w: fw,
+                h: FLIGHT_BH,
+                label: lm,
+                id: *minus,
+            });
+            self.gen_buttons.push(Button {
+                x: FLIGHT_X + fw + 4,
+                y: ry,
+                w: fw,
+                h: FLIGHT_BH,
+                label: lp,
+                id: *plus,
+            });
         }
 
         // one numeric BOX per control, laid out from the table. Add a row to
@@ -1655,6 +1753,67 @@ impl App {
                         if id == 18 { "TOP" } else { "BOTTOM" })
                 } else {
                     msg
+                }
+            }
+            // THE FLIGHT EXPLORER. Six nudges, one per direction per sign.
+            //
+            // WRAP first, then set. `wrap_turn` is the angle's real semantics
+            // -- stepping down from 0.000 must arrive at TAU - step, not stop
+            // dead at the bottom of the range -- and `ctl_set`'s clamp is the
+            // last line of defence behind it, which after the wrap is a no-op.
+            // Done the other way round the explorer would jam at both ends and
+            // could never cross the seam, which is exactly where a symmetry is
+            // most likely to be hiding.
+            23..=28 => {
+                let (name, sign) = match id {
+                    23 => ("yaw", -1.0),
+                    24 => ("yaw", 1.0),
+                    25 => ("pitch", -1.0),
+                    26 => ("pitch", 1.0),
+                    27 => ("roll", -1.0),
+                    _ => ("roll", 1.0),
+                };
+                let i = Self::ctl_index(name).expect("the three angles are in the table");
+                let next = wrap_turn(self.ctl_get(i) + sign * self.gen_step);
+                self.ctl_set(i, next);
+                format!(
+                    "{:<5} {:.4} RAD   STEP {:.3}   ({:.3} TURNS)",
+                    name.to_uppercase(),
+                    self.ctl_get(i),
+                    self.gen_step,
+                    self.ctl_get(i) / std::f64::consts::TAU
+                )
+            }
+            // THE LEVEL OF DETAIL, in decades. Snapping to a table rather than
+            // multiplying by ten keeps 0.001 exactly 0.001 after any number of
+            // presses in either direction (see STEP_DECADES).
+            29 | 30 => {
+                let i = Self::ctl_index("step").expect("step is in the table");
+                let now = self.ctl_get(i);
+                let cur = STEP_DECADES
+                    .iter()
+                    .enumerate()
+                    .min_by(|a, b| (a.1 - now).abs().total_cmp(&(b.1 - now).abs()))
+                    .map(|(k, _)| k)
+                    .unwrap_or(1);
+                let next = if id == 30 {
+                    (cur + 1).min(STEP_DECADES.len() - 1)
+                } else {
+                    cur.saturating_sub(1)
+                };
+                if next == cur {
+                    format!(
+                        "STEP {:.3} - THE {} GRAIN ALREADY",
+                        now,
+                        if id == 30 { "COARSEST" } else { "FINEST" }
+                    )
+                } else {
+                    self.ctl_set(i, STEP_DECADES[next]);
+                    format!(
+                        "STEP {:.3} RAD PER PRESS - {:.0} PRESSES TO A FULL TURN",
+                        self.gen_step,
+                        (std::f64::consts::TAU / self.gen_step).round()
+                    )
                 }
             }
             19 => {
@@ -1830,6 +1989,11 @@ impl App {
                         pal.border
                     }
                 }
+                // the flight cluster reads as one instrument, not eight
+                // buttons: the three axes gold, the grain that scales them
+                // green, so the thing that changes the OTHERS is distinct
+                23..=28 => pal.gold,
+                29 | 30 => pal.green,
                 _ => pal.cyan,
             };
             self.cv.rect(x, y, w, h, accent);
@@ -1839,6 +2003,54 @@ impl App {
                 y + (h - font::GH) / 2,
                 label,
                 accent,
+                1,
+            );
+        }
+
+        // THE FLIGHT READOUT, beside its own buttons.
+        //
+        // The bar already carries a box per control, and this repeats three of
+        // them on purpose: an explorer watches ONE number while pressing one
+        // button, and a value ten inches away across the screen is a value
+        // nobody reads. The box remains the way to type an exact angle; this
+        // is the way to watch one move.
+        let fw = self
+            .gen_buttons
+            .iter()
+            .find(|b| b.id == 24)
+            .map(|b| b.w)
+            .unwrap_or(60);
+        let vx = FLIGHT_X + 2 * (fw + 4) + 10;
+        let tau = std::f64::consts::TAU;
+        font::text(
+            &mut self.cv,
+            FLIGHT_X,
+            FLIGHT_Y,
+            "FLIGHT EXPLORER",
+            pal.gold,
+            1,
+        );
+        let rows: [(&str, f64, u8); FLIGHT_ROWS as usize] = [
+            ("yaw", self.genesis_yaw, 0),
+            ("pitch", self.gen_pitch, 0),
+            ("roll", self.gen_roll, 0),
+            ("step", self.gen_step, 1),
+        ];
+        for (row, (_, v, kind)) in rows.iter().enumerate() {
+            let ry = FLIGHT_Y + 18 + row as i32 * (FLIGHT_BH + 4);
+            let txt = if *kind == 0 {
+                // radians AND turns, because a symmetry is a fraction of a
+                // turn and nobody reads that out of 4.1888 at a glance
+                format!("{:.4}  {:.3}t", v, v / tau)
+            } else {
+                format!("{:.3}  {:.0}/turn", v, (tau / v).round())
+            };
+            font::text(
+                &mut self.cv,
+                vx,
+                ry + (FLIGHT_BH - font::GH) / 2,
+                &txt,
+                if *kind == 0 { pal.gold } else { pal.green },
                 1,
             );
         }
@@ -2382,7 +2594,7 @@ impl App {
         }
 
         for (i, l) in lines.iter().enumerate() {
-            font::text(&mut self.cv, 16, 60 + i as i32 * 14, l, pal.text, 1);
+            font::text(&mut self.cv, FLIGHT_X, CENSUS_Y + i as i32 * 14, l, pal.text, 1);
         }
     }
 
@@ -2820,16 +3032,34 @@ impl App {
     }
 
     /// Click the centre of a named button, by reading the rect it painted.
+    ///
+    /// **The GENESIS bar is searched too, and FIRST while that view is open**,
+    /// which is the order `click` itself resolves them -- so a name here lands
+    /// on the same button a mouse would.
+    ///
+    /// It did not used to be. This method saw only `self.buttons`, so every
+    /// control on the GENESIS bar -- the seeds, the refines, CULL, FILL,
+    /// MOBIUS, the zoom steps -- was clickable by a human and invisible to a
+    /// script. R13 in its plainest form: painted, hit-tested, and unreachable
+    /// by the only caller that could have graded it. Found by writing a script
+    /// for the flight explorer and being told the buttons did not exist.
     fn click_button(&mut self, label: &str) -> Result<String, String> {
-        let b = self
-            .buttons
+        // collected as plain data so the immutable borrow ends before `click`
+        let mut pool: Vec<(&'static str, i32, i32, i32, i32)> = Vec::new();
+        if self.view() == View::Genesis {
+            pool.extend(self.gen_buttons.iter().map(|b| (b.label, b.x, b.y, b.w, b.h)));
+        }
+        pool.extend(self.buttons.iter().map(|b| (b.label, b.x, b.y, b.w, b.h)));
+
+        let (_, bx, by, bw, bh) = pool
             .iter()
-            .find(|b| b.label.eq_ignore_ascii_case(label))
+            .copied()
+            .find(|(l, ..)| l.eq_ignore_ascii_case(label))
             .ok_or_else(|| {
-                let have: Vec<&str> = self.buttons.iter().map(|b| b.label).collect();
+                let have: Vec<&str> = pool.iter().map(|(l, ..)| *l).collect();
                 format!("no button '{label}'. have: {}", have.join(", "))
             })?;
-        let (x, y) = (b.x + b.w / 2, b.y + b.h / 2);
+        let (x, y) = (bx + bw / 2, by + bh / 2);
         self.click(x, y);
         Ok(format!("button {label:<27} at {x},{y}"))
     }
@@ -3949,7 +4179,204 @@ mod control_tests {
                         c.hi
                     );
                 }
+                // A Nudge control moves nothing by itself and no single frame
+                // can show it. What it promises is that ONE press moves its
+                // target by exactly this much -- so that is what is graded.
+                //
+                // Yaw is parked mid-range first: a nudge at 0.000 would wrap
+                // to near TAU and the difference would read as a huge move
+                // rather than a small one. That is correct behaviour and the
+                // wrong place to measure it, so it has its own test below.
+                When::Nudge => {
+                    for want in [c.lo, c.hi] {
+                        let mut a = app_at(0);
+                        let yi = App::ctl_index("yaw").expect("yaw is in the table");
+                        a.ctl_set(yi, 3.0);
+                        a.ctl_set(i, want);
+                        let before = a.ctl_get(yi);
+                        a.gen_action(24); // YAW +
+                        let moved = a.ctl_get(yi) - before;
+                        assert!(
+                            (moved - want).abs() < 1e-12,
+                            "control '{}' is Nudge but one press moved yaw by {moved}, \
+                             not the {want} it declares",
+                            c.name
+                        );
+                    }
+                }
             }
+        }
+    }
+
+    /// Each of the six nudges must move ITS OWN axis and no other.
+    ///
+    /// This is the copy-paste test. Six near-identical match arms differing by
+    /// one string and one sign is precisely the shape that ships with `pitch -`
+    /// wired to roll, and the render gives no clue -- a shell that tips when
+    /// you asked it to barrel still looks like a shell tipping.
+    #[test]
+    fn each_flight_button_moves_only_its_own_axis() {
+        const AXES: [&str; 3] = ["yaw", "pitch", "roll"];
+        for (id, axis, sign) in [
+            (23u8, "yaw", -1.0),
+            (24, "yaw", 1.0),
+            (25, "pitch", -1.0),
+            (26, "pitch", 1.0),
+            (27, "roll", -1.0),
+            (28, "roll", 1.0),
+        ] {
+            let mut a = app_at(0);
+            // park all three mid-range so no press can wrap or clip
+            for n in AXES {
+                let i = App::ctl_index(n).expect("axis is in the table");
+                a.ctl_set(i, 3.0);
+            }
+            let step = a.gen_step;
+            let before: Vec<f64> = AXES
+                .iter()
+                .map(|n| a.ctl_get(App::ctl_index(n).expect("axis is in the table")))
+                .collect();
+
+            a.gen_action(id);
+
+            for (k, n) in AXES.iter().enumerate() {
+                let now = a.ctl_get(App::ctl_index(n).expect("axis is in the table"));
+                let delta = now - before[k];
+                if *n == axis {
+                    assert!(
+                        (delta - sign * step).abs() < 1e-12,
+                        "button {id} should move '{n}' by {}, moved it by {delta}",
+                        sign * step
+                    );
+                } else {
+                    assert!(
+                        delta.abs() < 1e-12,
+                        "button {id} was aimed at '{axis}' and moved '{n}' by {delta}"
+                    );
+                }
+            }
+        }
+    }
+
+    /// The seam. Stepping down from 0.000 must arrive near TAU, not stop.
+    ///
+    /// `ctl_set` clamps to `[0, TAU]`, so a nudge that set before it wrapped
+    /// would jam at both ends -- and the explorer could never cross the seam,
+    /// which is exactly where a symmetry is most likely to sit.
+    #[test]
+    fn flight_crosses_the_seam_both_ways() {
+        let tau = std::f64::consts::TAU;
+        let yi = App::ctl_index("yaw").expect("yaw is in the table");
+
+        let mut a = app_at(0);
+        a.ctl_set(yi, 0.0);
+        a.gen_action(23); // YAW -
+        let down = a.ctl_get(yi);
+        assert!(
+            (down - (tau - a.gen_step)).abs() < 1e-12,
+            "stepping down from 0.000 landed at {down}, not just under TAU -- \
+             the explorer is jammed at the bottom of the seam"
+        );
+
+        let mut b = app_at(0);
+        b.ctl_set(yi, tau - b.gen_step / 2.0);
+        b.gen_action(24); // YAW +
+        let up = b.ctl_get(yi);
+        assert!(
+            up < b.gen_step,
+            "stepping up through TAU landed at {up}, not just over 0 -- \
+             the explorer is jammed at the top of the seam"
+        );
+    }
+
+    /// The grain walks the decades exactly, and stops at both ends.
+    #[test]
+    fn step_decades_are_exact_and_bounded() {
+        let mut a = app_at(0);
+        let i = App::ctl_index("step").expect("step is in the table");
+
+        // down to the floor, then one more press than there are decades
+        for _ in 0..STEP_DECADES.len() + 2 {
+            a.gen_action(29);
+        }
+        assert_eq!(
+            a.ctl_get(i),
+            STEP_DECADES[0],
+            "the finest grain must be exactly {} and must stay there",
+            STEP_DECADES[0]
+        );
+
+        // and back up, landing on each decade EXACTLY -- not 0.010000000000002
+        for (k, want) in STEP_DECADES.iter().enumerate().skip(1) {
+            a.gen_action(30);
+            assert_eq!(
+                a.ctl_get(i),
+                *want,
+                "decade {k} came back as {} rather than {want}",
+                a.ctl_get(i)
+            );
+        }
+        a.gen_action(30);
+        assert_eq!(
+            a.ctl_get(i),
+            STEP_DECADES[STEP_DECADES.len() - 1],
+            "the coarsest grain must stay at the top"
+        );
+    }
+
+    /// The cluster must not be painted over the census it sits above.
+    #[test]
+    fn the_flight_cluster_clears_the_census() {
+        let a = app_at(0);
+        let lowest = a
+            .gen_buttons
+            .iter()
+            .filter(|b| (23..=30).contains(&b.id))
+            .map(|b| b.y + b.h)
+            .max()
+            .expect("the flight cluster is in the button list");
+        assert!(
+            lowest < CENSUS_Y,
+            "the flight cluster reaches y={lowest} and the census starts at \
+             y={CENSUS_Y} -- they overlap"
+        );
+    }
+
+    /// Every button the GENESIS bar paints must be clickable BY NAME.
+    ///
+    /// A button reachable only by pixel is one no script can press, and a
+    /// control no script can press is one no test can grade. The whole bar
+    /// shipped that way -- the seeds, the refines, CULL, FILL, MOBIUS -- and
+    /// it was found only because the flight explorer needed a driver.
+    #[test]
+    fn every_genesis_button_is_clickable_by_name() {
+        let mut a = app_at(0);
+        let labels: Vec<&'static str> = a.gen_buttons.iter().map(|b| b.label).collect();
+        assert!(!labels.is_empty(), "the GENESIS bar painted no buttons");
+        for l in labels {
+            if let Err(e) = a.click_button(l) {
+                panic!("{e}");
+            }
+        }
+    }
+
+    /// ...and no two may share a name, or `button <LABEL>` cannot say which.
+    ///
+    /// This is why the flight cluster is labelled `YAW -` and not `-`. Eight
+    /// buttons reading `-` and `+` would be unambiguous to a mouse and
+    /// meaningless to a script, and the layout dump would record eight
+    /// identical rows.
+    #[test]
+    fn genesis_button_labels_are_unique() {
+        let a = app_at(0);
+        let mut seen = std::collections::BTreeSet::new();
+        for b in a.gen_buttons.iter() {
+            assert!(
+                seen.insert(b.label.to_ascii_uppercase()),
+                "two GENESIS buttons are labelled '{}' -- `button {}` cannot say which",
+                b.label,
+                b.label
+            );
         }
     }
 
