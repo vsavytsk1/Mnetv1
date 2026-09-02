@@ -53,6 +53,76 @@ impl DumpReport {
     }
 }
 
+/// How close a set of f64s is to being made of ones and zeros.
+///
+/// Every f64 is 64 bits: 1 sign, 11 exponent, 52 mantissa. A number the machine
+/// can hold *exactly* -- `0.5`, `0.25`, `1.5` -- has a mantissa that is mostly
+/// zeros. A number that had to be rounded to fit -- `0.37`, `1.0/3.0` -- has a
+/// mantissa full of set bits, because the tail is where the error went.
+///
+/// So `mantissa_ones` is a direct, exact measure of how much the geometry is
+/// *paying* to be stored. It is not a proxy and not a heuristic: it counts the
+/// bits that are actually there.
+///
+/// LANE: EXACT. `count_ones` on a bit pattern is integer work; no float
+/// arithmetic happens here at all.
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
+pub struct FloatProfile {
+    /// how many values were examined
+    pub n: u64,
+    /// set bits across every mantissa, out of `52 * n`
+    pub mantissa_ones: u64,
+    /// values whose mantissa is entirely zero -- exact powers of two, the
+    /// cheapest numbers a binary machine can hold
+    pub powers_of_two: u64,
+    /// values needing at most 8 mantissa bits: dyadic rationals with a short
+    /// tail, still cheap and still exact
+    pub short_tail: u64,
+    /// values that are exactly zero, which cost nothing at all
+    pub zeros: u64,
+    /// the most set bits any single value carried
+    pub worst: u32,
+}
+
+impl FloatProfile {
+    /// Mean set mantissa bits per value, out of 52. Lower is closer to the
+    /// machine's own vocabulary.
+    pub fn density(&self) -> f64 {
+        if self.n == 0 {
+            return 0.0;
+        }
+        self.mantissa_ones as f64 / (52.0 * self.n as f64)
+    }
+}
+
+/// Profiles a slice of f64s by their bit patterns.
+///
+/// Sub-normals and NaN are counted like any other pattern: this asks what the
+/// bits ARE, not what they mean.
+pub fn float_profile(vals: impl IntoIterator<Item = f64>) -> FloatProfile {
+    const MANTISSA: u64 = (1u64 << 52) - 1;
+    let mut p = FloatProfile::default();
+    for v in vals {
+        let bits = v.to_bits();
+        let m = bits & MANTISSA;
+        let ones = m.count_ones();
+        p.n += 1;
+        p.mantissa_ones += ones as u64;
+        if v == 0.0 {
+            p.zeros += 1;
+        }
+        if m == 0 {
+            p.powers_of_two += 1;
+        }
+        // a short tail means every set bit sits in the high 8 of the mantissa
+        if m != 0 && m.trailing_zeros() >= 44 {
+            p.short_tail += 1;
+        }
+        p.worst = p.worst.max(ones);
+    }
+    p
+}
+
 /// FNV-1a, 64-bit. A change detector, not a cryptographic hash.
 pub fn digest(bytes: &[u8]) -> u64 {
     let mut h: u64 = 0xcbf2_9ce4_8422_2325;

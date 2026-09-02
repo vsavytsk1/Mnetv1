@@ -4,6 +4,7 @@
 //! Rust was written. If a test fails, the port changed the mathematics --
 //! which is exactly what we want to hear about.
 
+use goldberg_kernel::bits;
 use goldberg_kernel::complex::{c_to_s2, C};
 use goldberg_kernel::genesis::{Op, Params, State, Surface};
 use goldberg_kernel::ladder;
@@ -1577,4 +1578,58 @@ fn a_damaged_net_is_refused_not_guessed() {
         netfile::from_bytes(&[]),
         Err(netfile::NetError::Truncated { .. })
     ));
+}
+
+// ---------------------------------------------------------------------------
+//  float_profile -- how close a number is to being made of ones and zeros
+// ---------------------------------------------------------------------------
+
+/// The numbers a binary machine holds for free must profile as free.
+#[test]
+fn powers_of_two_carry_no_mantissa_bits() {
+    let p = bits::float_profile([1.0, 0.5, 0.25, 2.0, 4.0, -8.0]);
+    assert_eq!(p.n, 6);
+    assert_eq!(p.mantissa_ones, 0, "a power of two has an empty mantissa");
+    assert_eq!(p.powers_of_two, 6);
+    assert_eq!(p.worst, 0);
+    assert_eq!(p.density(), 0.0, "the cheapest possible geometry");
+}
+
+/// And the ones it cannot hold exactly must cost, measurably.
+#[test]
+fn a_rounded_third_is_expensive_and_a_half_is_not() {
+    let cheap = bits::float_profile([0.5]);
+    let dear = bits::float_profile([1.0 / 3.0]);
+    assert_eq!(cheap.mantissa_ones, 0);
+    assert!(
+        dear.mantissa_ones > 20,
+        "1/3 needed a long tail, got {} bits",
+        dear.mantissa_ones
+    );
+    assert!(dear.density() > cheap.density());
+}
+
+/// Zero is the one value that costs nothing anywhere, and it must not be
+/// confused with a power of two even though its mantissa is also empty.
+#[test]
+fn zero_is_counted_as_zero_and_also_as_empty_mantissa() {
+    let p = bits::float_profile([0.0, -0.0, 1.0]);
+    assert_eq!(p.zeros, 2, "both signed zeros count");
+    assert_eq!(p.powers_of_two, 3, "all three have an empty mantissa");
+    assert_eq!(p.mantissa_ones, 0);
+}
+
+/// `density` must be a fraction of 52 bits, not of 64: the sign and exponent
+/// are not part of what a value pays to be stored precisely.
+#[test]
+fn density_is_measured_against_the_mantissa_only() {
+    // 1.5 = 0x3FF8000000000000 -- exactly one set mantissa bit
+    let p = bits::float_profile([1.5]);
+    assert_eq!(p.mantissa_ones, 1);
+    assert!(
+        (p.density() - 1.0 / 52.0).abs() < 1e-12,
+        "density {} should be 1/52",
+        p.density()
+    );
+    assert_eq!(bits::float_profile([] as [f64; 0]).density(), 0.0);
 }
