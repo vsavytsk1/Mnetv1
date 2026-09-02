@@ -1393,7 +1393,18 @@ impl App {
             "roll" => self.gen_roll,
             "speedp" => self.gen_speed_p,
             "speedr" => self.gen_speed_r,
-            _ => self.gen_zoom,
+            "twist" => self.gen_twist,
+            "zoom" => self.gen_zoom,
+            // NOT `_ => self.gen_zoom`. That catch-all is how `twist` shipped
+            // showing the ZOOM value: the writer had an arm, the reader did
+            // not, and the fallback answered with a plausible number instead
+            // of an obviously wrong one. Reported as "the twist box is showing
+            // the same as the zoom box, the twist works" -- which is exactly
+            // right, the control worked and only its readout lied.
+            //
+            // NaN cannot round-trip, so `controls_round_trip` fails instantly
+            // and the box would show `NaN` rather than a believable lie.
+            _ => f64::NAN,
         }
     }
 
@@ -1424,7 +1435,10 @@ impl App {
             "roll" => self.gen_roll = v,
             "speedp" => self.gen_speed_p = v,
             "speedr" => self.gen_speed_r = v,
-            _ => self.gen_zoom = v,
+            "zoom" => self.gen_zoom = v,
+            // named explicitly for the same reason the getter is -- a silent
+            // catch-all writes the wrong field just as happily as it reads one
+            _ => debug_assert!(false, "no ctl_set arm for '{}'", c.name),
         }
         // the crescent is the fact worth repeating, so the two that decide it
         // say which side they are on every time either moves
@@ -3944,5 +3958,30 @@ mod control_tests {
             );
         }
         assert!(App::ctl_index("shoe").is_none());
+    }
+
+    /// Every control must READ BACK what was written to it.
+    ///
+    /// `every_control_is_reachable_by_name` only proved the table could be
+    /// looked up; `every_control_changes_something` only proved the frame
+    /// moved. Neither could see that `twist` was WRITTEN to `gen_twist` and
+    /// READ from `gen_zoom`, because a catch-all arm answered with a plausible
+    /// number. Two green tests, one control displaying another's value.
+    ///
+    /// A set/get round trip is the one check that closes it.
+    #[test]
+    fn controls_round_trip() {
+        let mut a = app_at(1);
+        for (i, c) in CONTROLS.iter().enumerate() {
+            // a value inside the range and unlike any default
+            let want = c.lo + (c.hi - c.lo) * 0.317;
+            a.ctl_set(i, want);
+            let got = a.ctl_get(i);
+            assert!(
+                (got - want).abs() < 1e-12,
+                "control '{}' wrote {want} and read back {got} -- the setter and                  the getter are not talking about the same field",
+                c.name
+            );
+        }
     }
 }
