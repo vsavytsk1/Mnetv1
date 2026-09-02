@@ -381,6 +381,8 @@ Pages serves), by `builder/gen_io_index.py`. Nothing hidden; the door is open.*
 - [shell/squeezium-v1_0.html](https://vsavytsk1.github.io/Mnetv1/shell/squeezium-v1_0.html)
 - [shell/step_builder.html](https://vsavytsk1.github.io/Mnetv1/shell/step_builder.html)
 - [shell/stitchium_v0.1.html](https://vsavytsk1.github.io/Mnetv1/shell/stitchium_v0.1.html)
+- [shell/spini_panelladikes_2026.html](https://vsavytsk1.github.io/Mnetv1/shell/spini_panelladikes_2026.html)
+- [shell/stitch_principia_malgebra.html](https://vsavytsk1.github.io/Mnetv1/shell/stitch_principia_malgebra.html)
 - [shell/tavlium.html](https://vsavytsk1.github.io/Mnetv1/shell/tavlium.html)
 - [shell/tavlium_v1.1.html](https://vsavytsk1.github.io/Mnetv1/shell/tavlium_v1.1.html)
 - [shell/tektonium.html](https://vsavytsk1.github.io/Mnetv1/shell/tektonium.html)

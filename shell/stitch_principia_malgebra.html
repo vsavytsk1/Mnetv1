@@ -1,0 +1,362 @@
+<!DOCTYPE html><html lang="el"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>STITCH v1.0 · principia malgebra · η γλώσσα ράβεται</title>
+<!--
+  ATELIER -- STITCH v1.0  "the language is being stitched"   (principia malgebra)
+  ==============================================================================
+  Corpus: the two passages of the 3 June 2026 Ancient Greek paper.
+      Ἀριστοτέλης, Ἠθικὰ Νικομάχεια Β 1.5-8      Λυσίας, Περὶ τοῦ Σηκοῦ Ἀπολογία 7.27-29
+  Aristotle's thesis in that passage -- ἐκ τῶν ὁμοίων ἐνεργειῶν αἱ ἕξεις γίνονται,
+  habits come out of repeated acts -- is also the thesis of this page: the graph
+  is the ἕξις, the reading is the ἐνέργεια.
+
+  THE LOOM.  24 capitals on an upright ellipse (the sketch). Reading advances one
+  character at a time. Every within-word pair [m][n] adds one stitch m -> n. The
+  arc bulges to one side for m -> n and the other for n -> m, so direction is
+  visible without arrowheads. Doubles (λλ, σσ, ττ) are loops. Below the loom, the
+  time tape: one tick per letter, newest at the right.
+
+  THE MINIMA.  Bits per letter the reader needs, plug-in estimates, live:
+      no model        log2(24) = 4.585
+      unigram graph   H1 = -sum p(x) log2 p(x)
+      bigram graph    H2 = -sum p(m,n) log2 p(n|m)     <- "the previous graph space compression minima"
+
+  SYMMETRY, MEASURED NOT ASSERTED.  Each capital is rasterised in your system
+  sans-serif, then compared with its own mirror (vertical axis, horizontal axis)
+  and its 180-degree rotation; the score is intersection-over-union of the two
+  masks. Greek and Latin are measured with the same code so the "most symmetric
+  alphabet" claim gets a number instead of a vibe.
+
+  VERIFIED BEFORE BUILDING (node, same normaliser):
+      passage      letters  stitches  distinct/576   H1     H2
+      Aristotle      1050      822       157         3.936  2.580
+      Lysias          835      672       181         4.059  2.768
+      both           1885     1494       214         4.019  2.826
+      unmapped letters: 0 (NFD, strip U+0300..036F, ς -> σ, lowercase)
+  Zero dependencies. Zero fonts fetched. Nothing here is typed in except the two texts.
+-->
+<style>
+:root{
+  --ink:#050510;--panel:#0a0e18;--line:#1a1f2e;
+  --cyan:#00d4ff;--mint:#00ffd5;--gold:#ffd700;--pink:#ff69b4;--green:#7fff7f;--violet:#cc44ff;--salmon:#ff8a80;
+  --text:#e0e0e0;--dim:#8899bb;--mute:#4a6a8a;
+  --mono:ui-monospace,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+  --serif:"Times New Roman",Georgia,"Noto Serif","DejaVu Serif",serif;
+}
+*{box-sizing:border-box}
+html{background:var(--ink)}
+body{margin:0;background:var(--ink);color:var(--text);font-family:var(--serif);padding-bottom:86px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1180px;margin:0 auto;padding:0 20px}
+
+.hero{padding:30px 0 18px;border-bottom:1px solid var(--line)}
+.eyebrow{font:11px/1.6 var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--mute)}
+.eyebrow b{color:var(--cyan);font-weight:400}
+h1{font-family:var(--serif);font-weight:400;font-size:clamp(28px,4.6vw,50px);line-height:1.05;letter-spacing:.14em;text-transform:uppercase;margin:10px 0 6px;color:#fff}
+h1 span{color:var(--gold)}
+.sub{font-size:clamp(15px,2vw,19px);color:var(--text);margin:0 0 4px}
+.sub-en{font-size:14.5px;color:var(--dim);margin:0 0 14px}
+.hud{font:12px/1.9 var(--mono);color:var(--cyan);letter-spacing:.06em}
+.hud b{color:var(--gold);font-weight:400}.hud i{color:var(--pink);font-style:normal}.hud s{color:var(--mute);text-decoration:none}
+
+.stage{display:grid;grid-template-columns:minmax(260px,1fr) minmax(320px,520px) minmax(220px,300px);gap:22px;padding:22px 0;align-items:start}
+.reader{border:1px solid var(--line);background:var(--panel);height:520px;overflow:auto;padding:16px 18px;scroll-behavior:smooth}
+.reader h3{font:11px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--mute);margin:0 0 10px}
+.reader h3 span{color:var(--pink)}
+.txt{font-size:19px;line-height:1.75;color:var(--mute);word-break:normal}
+.txt .c{transition:color .25s}
+.txt .read{color:var(--text)}
+.txt .cur{color:var(--gold);text-shadow:0 0 10px rgba(255,215,0,.75)}
+.txt .gap{display:block;height:14px}
+.txt .ttl{display:block;font:11px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--mute);margin:16px 0 10px}
+
+.loomwrap{position:relative;border:1px solid var(--line);background:radial-gradient(ellipse at 50% 46%,#0d1626 0%,#070b16 60%,var(--ink) 100%)}
+.loomwrap canvas{display:block;width:100%;aspect-ratio:1/1.08}
+.cap{font:11px/1.7 var(--mono);color:var(--mute);letter-spacing:.06em;margin-top:8px}
+.cap b{color:var(--mint);font-weight:400}
+
+.side{display:flex;flex-direction:column;gap:14px}
+.card{border:1px solid var(--line);background:var(--panel);padding:12px 14px}
+.card h4{font:11px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--mute);margin:0 0 10px;font-weight:400}
+.pair{display:flex;align-items:center;justify-content:center;gap:12px;font-family:var(--serif)}
+.pair .box{width:58px;height:58px;border:1px solid var(--cyan);display:grid;place-items:center;font-size:34px;color:#fff;position:relative}
+.pair .box small{position:absolute;left:5px;top:3px;font:10px var(--mono);color:var(--violet);letter-spacing:.1em}
+.pair .arrow{font:16px var(--mono);color:var(--cyan);letter-spacing:-.1em}
+.pair .box.gold{border-color:var(--gold);color:var(--gold)}
+.pairnote{font:11px/1.6 var(--mono);color:var(--mute);text-align:center;margin-top:8px;min-height:2.6em}
+.pairnote b{color:var(--gold);font-weight:400}
+.bars{display:grid;grid-template-columns:auto 1fr auto;gap:6px 10px;align-items:center;font:11px var(--mono);color:var(--dim);letter-spacing:.04em}
+.bars .bar{height:8px;background:var(--line);position:relative}
+.bars .bar i{position:absolute;left:0;top:0;bottom:0;background:var(--cyan)}
+.bars .bar i.g{background:var(--gold)}.bars .bar i.m{background:var(--mute)}
+.bars .v{color:var(--mint);text-align:right;min-width:5ch}
+.tops{font:12px/1.9 var(--mono);color:var(--dim);letter-spacing:.06em;columns:2}
+.tops b{color:var(--text);font-weight:400}
+
+.lower{display:grid;grid-template-columns:minmax(260px,380px) 1fr;gap:22px;padding:6px 0 20px;align-items:start}
+.gridwrap canvas{display:block;width:100%;aspect-ratio:1/1;border:1px solid var(--line);background:var(--panel)}
+.tiles{display:grid;grid-template-columns:repeat(12,1fr);gap:6px}
+.tile{border:1px solid var(--line);background:var(--panel);padding:6px 4px 5px;text-align:center;position:relative}
+.tile .L{font-family:var(--serif);font-size:24px;line-height:1;color:var(--text)}
+.tile .n{font:10px var(--mono);color:var(--mute);margin-top:4px}
+.tile .b{height:3px;background:var(--line);margin:5px 2px 4px;position:relative}
+.tile .b i{position:absolute;left:0;top:0;bottom:0;background:var(--cyan)}
+.tile .sy{display:flex;justify-content:center;gap:3px}
+.tile .sy span{font:9px var(--mono);width:14px;height:14px;line-height:14px;border:1px solid var(--line);color:var(--mute);border-radius:2px}
+.tile .sy span.on{border-color:var(--gold);color:var(--gold)}
+.tile.cur{border-color:var(--gold)}
+.symline{font:11px/1.8 var(--mono);color:var(--mute);letter-spacing:.06em;margin-top:10px}
+.symline b{color:var(--gold);font-weight:400}.symline i{color:var(--cyan);font-style:normal}
+h2{font-family:var(--serif);font-weight:400;font-size:20px;letter-spacing:.2em;text-transform:uppercase;color:#fff;margin:26px 0 10px}
+h2 b{color:var(--gold);font-weight:400}
+.foot{font:11px/1.8 var(--mono);color:var(--mute);letter-spacing:.06em;padding:26px 0 10px;border-top:1px solid var(--line);margin-top:10px}
+.foot span{color:var(--cyan)}
+
+.bar-ui{position:fixed;left:0;right:0;bottom:0;z-index:5;background:rgba(5,5,16,.88);backdrop-filter:blur(8px);border-top:1px solid var(--line);padding:10px 14px;display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;justify-content:center}
+.btn{font:11px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--cyan);background:transparent;border:1px solid var(--cyan);padding:6px 10px;border-radius:3px;cursor:pointer}
+.btn.on{background:var(--cyan);color:var(--ink)}
+.btn.gold{color:var(--gold);border-color:var(--gold)}.btn.gold.on{background:var(--gold);color:var(--ink)}
+.btn.pink{color:var(--pink);border-color:var(--pink)}
+.btn:focus-visible{outline:2px solid #fff;outline-offset:2px}
+.grp{display:flex;gap:6px;align-items:center}
+.lbl{font:10px var(--mono);letter-spacing:.14em;color:var(--mute);text-transform:uppercase;margin-right:2px}
+input[type=range]{width:130px;accent-color:var(--cyan)}
+.val{font:11px var(--mono);color:var(--cyan);min-width:6ch}
+
+@media(max-width:980px){
+  .stage{grid-template-columns:1fr 1fr}
+  .stage>.loomcol{grid-column:1/-1;order:-1;max-width:560px;margin:0 auto;width:100%}
+  .tiles{grid-template-columns:repeat(8,1fr)}
+}
+@media(max-width:640px){
+  .stage{grid-template-columns:1fr}
+  .reader{height:360px}
+  .lower{grid-template-columns:1fr}
+  .tiles{grid-template-columns:repeat(6,1fr)}
+  .txt{font-size:17.5px}
+  input[type=range]{width:90px}
+}
+</style></head>
+<body>
+<div class="wrap">
+<header class="hero">
+  <div class="eyebrow">Atelier · <b>Stitch v1.0</b> · principia malgebra · pure canvas · 0 dependencies</div>
+  <h1>Η γλώσσα <span>ράβεται</span></h1>
+  <p class="sub">Ἀριστοτέλης, Ἠθικὰ Νικομάχεια Β 1.5-8 · Λυσίας, Περὶ τοῦ Σηκοῦ Ἀπολογία 7.27-29 · Πανελλαδικές, 3 Ιουνίου 2026</p>
+  <p class="sub-en">The language is being stitched. Twenty-four capitals on a loom; every pair of letters you read adds one thread. ἐκ τῶν ὁμοίων ἐνεργειῶν αἱ ἕξεις γίνονται — from repeated acts, the habit; from repeated pairs, the graph.</p>
+  <div class="hud" id="hud">letters <b>0</b> <s>·</s> stitches <b>0</b> <s>·</s> distinct pairs <b>0</b><s>/576</s> <s>·</s> bits per letter: no model <s>4.585</s> → unigram <i>–</i> → bigram <i>–</i></div>
+</header>
+
+<section class="stage">
+  <div>
+    <div class="reader" id="reader"><h3 id="reader-title">κείμενο · text</h3><div class="txt" id="txt"></div></div>
+    <div class="cap">read: <b id="cap-read">0</b> of <b id="cap-total">0</b> characters · words break the thread, punctuation too</div>
+  </div>
+  <div class="loomcol">
+    <div class="loomwrap"><canvas id="loom" aria-label="Loom: 24 Greek capitals on an ellipse, stitched by letter pairs as the text is read"></canvas></div>
+    <div class="cap">arc bulges one way for m → n, the other for n → m · loops are doubled letters · ticks under the loom are the time tape</div>
+  </div>
+  <aside class="side">
+    <div class="card"><h4>[m] → [n] · the interaction in time</h4>
+      <div class="pair"><div class="box" id="box-m"><small>m</small>·</div><div class="arrow">&gt;&gt;&gt;&gt;</div><div class="box gold" id="box-n"><small>n</small>·</div></div>
+      <div class="pairnote" id="pairnote">press play</div></div>
+    <div class="card"><h4>bits per letter · the minima the graph keeps</h4>
+      <div class="bars">
+        <span>no model</span><div class="bar"><i class="m" style="width:100%"></i></div><span class="v">4.585</span>
+        <span>unigram</span><div class="bar"><i id="b1" style="width:0%"></i></div><span class="v" id="v1">–</span>
+        <span>bigram m→n</span><div class="bar"><i class="g" id="b2" style="width:0%"></i></div><span class="v" id="v2">–</span>
+      </div></div>
+    <div class="card"><h4>strongest stitches</h4><div class="tops" id="tops">–</div></div>
+  </aside>
+</section>
+
+<h2>Οι <b>576</b> μεταθέσεις · the permutation grid</h2>
+<section class="lower">
+  <div class="gridwrap"><canvas id="grid" aria-label="24 by 24 grid of letter pairs, row m to column n, filled as the text is read"></canvas><div class="cap">row m, column n · brightness = how often m is followed by n · gold = the pair being stitched now</div></div>
+  <div>
+    <div class="tiles" id="tiles"></div>
+    <div class="symline" id="symline">measuring glyph symmetry…</div>
+  </div>
+</section>
+
+<div class="foot">STITCH v1.0 · <span>counts come out, not in</span> · NFD → strip diacritics → ς→σ → 24 letters → pairs → H₁, H₂ → loom · symmetry scored by pixel overlap in your own font<br>ΣΑΣ ΕΥΧΟΜΑΣΤΕ ΚΑΛΗ ΕΠΙΤΥΧΙΑ · we wish you good luck</div>
+</div>
+
+<div class="bar-ui" role="toolbar" aria-label="Playback controls">
+  <div class="grp"><button class="btn gold" id="play" aria-pressed="false">play</button><button class="btn" id="reset">reset</button><button class="btn" id="finish">stitch all</button></div>
+  <div class="grp"><span class="lbl">speed</span><input type="range" id="speed" min="1" max="40" step="1" value="6" aria-label="Letters per second"><span class="val" id="speed-val">6 /s</span></div>
+  <div class="grp"><span class="lbl">κείμενο</span><button class="btn on" data-text="arist">Ἀριστοτέλης</button><button class="btn" data-text="lys">Λυσίας</button><button class="btn" data-text="both">both</button></div>
+</div>
+
+<script>
+(() => {
+'use strict';
+/* ===== corpus ===== */
+const TEXTS={
+ arist:{title:'Ἀριστοτέλης · Ἠθικὰ Νικομάχεια Β 1.5-8',body:`Μαρτυρεῖ δὲ καὶ τὸ γινόμενον ἐν ταῖς πόλεσιν· οἱ γὰρ νομοθέται τοὺς πολίτας ἐθίζοντες ποιοῦσιν ἀγαθούς, καὶ τὸ μὲν βούλημα παντὸς νομοθέτου τοῦτ’ ἐστίν, ὅσοι δὲ μὴ εὖ αὐτὸ ποιοῦσιν ἁμαρτάνουσιν, καὶ διαφέρει τούτῳ πολιτεία πολιτείας ἀγαθὴ φαύλης. Ἔτι ἐκ τῶν αὐτῶν καὶ διὰ τῶν αὐτῶν καὶ γίνεται πᾶσα ἀρετὴ καὶ φθείρεται, ὁμοίως δὲ καὶ τέχνη· ἐκ γὰρ τοῦ κιθαρίζειν καὶ οἱ ἀγαθοὶ καὶ κακοὶ γίνονται κιθαρισταί. Ἀνάλογον δὲ καὶ οἰκοδόμοι καὶ οἱ λοιποὶ πάντες· ἐκ μὲν γὰρ τοῦ εὖ οἰκοδομεῖν ἀγαθοὶ οἰκοδόμοι ἔσονται, ἐκ δὲ τοῦ κακῶς κακοί. Εἰ γὰρ μὴ οὕτως εἶχεν, οὐδὲν ἂν ἔδει τοῦ διδάξοντος, ἀλλὰ πάντες ἂν ἐγίνοντο ἀγαθοὶ ἢ κακοί.
+Οὕτω δὴ καὶ ἐπί τῶν ἀρετῶν ἔχει· πράττοντες γὰρ τὰ ἐν τοῖς συναλλάγμασι τοῖς πρὸς τοὺς ἀνθρώπους γινόμεθα οἳ μὲν δίκαιοι οἳ δὲ ἄδικοι, πράττοντες δὲ τὰ ἐν τοῖς δεινοῖς καὶ ἐθιζόμενοι φοβεῖσθαι ἢ θαρρεῖν οἳ μὲν ἀνδρεῖοι οἳ δὲ δειλοί. Ὁμοίως δὲ καὶ τὰ περὶ τὰς ἐπιθυμίας ἔχει καὶ τὰ περὶ τὰς ὀργάς· οἳ μὲν γὰρ σώφρονες καὶ πρᾶοι γίνονται, οἳ δ’ ἀκόλαστοι καὶ ὀργίλοι, οἳ μὲν ἐκ τοῦ οὑτωσὶ ἐν αὐτοῖς ἀναστρέφεσθαι, οἳ δὲ ἐκ τοῦ οὑτωσί. Καὶ ἑνὶ δὴ λόγῳ ἐκ τῶν ὁμοίων ἐνεργειῶν αἱ ἕξεις γίνονται. Διὸ δεῖ τὰς ἐνεργείας ποιὰς ἀποδιδόναι· κατὰ γὰρ τὰς τούτων διαφορὰς ἀκολουθοῦσιν αἱ ἕξεις. Οὐ μικρὸν οὖν διαφέρει τὸ οὕτως ἢ οὕτως εὐθὺς ἐκ νέων ἐθίζεσθαι, ἀλλὰ πάμπολυ, μᾶλλον δὲ τὸ πᾶν.`},
+ lys:{title:'Λυσίας · Περὶ τοῦ Σηκοῦ Ἀπολογία 7.27-29',body:`Πότερον δέ μοι κρεῖττον ἦν, ὦ βουλή, δημοκρατίας οὔσης παρανομεῖν ἢ ἐπὶ τῶν τριάκοντα; καὶ οὐ λέγω ὡς τότε δυνάμενος ἢ ὡς νῦν διαβεβλημένος, ἀλλὰ τῷ βουλομένῳ τότε μᾶλλον ἐξῆν ἀδικεῖν ἢ νυνί. ἐγὼ τοίνυν οὐδ’ ἐν ἐκείνῳ τῷ χρόνῳ οὔτε τοιοῦτον οὔτε ἄλλο οὐδὲν κακὸν ποιήσας φανήσομαι. Πῶς δ’ ἄν, εἰ μὴ πάντων ἀνθρώπων ἐμαυτῷ κακονούστατος ἦν, ὑμῶν οὕτως ἐπιμελουμένων ἐκ τούτου τὴν μορίαν ἀφανίζειν ἐπεχείρησα τοῦ χωρίου, ἐν ᾧ δένδρον μὲν οὐδὲ ἕν ἐστι, μιᾶς δὲ ἐλάας σηκός, ὡς οὗτός φησιν, ἦν, κυκλόθεν δὲ ὁδὸς περιέχει, ἀμφοτέρωθεν δὲ γείτονες περιοικοῦσιν, ἄερκτον δὲ καὶ πανταχόθεν κάτοπτόν ἐστιν; ὥστε τίς ἂν ἀπετόλμησε, τούτων οὕτως ἐχόντων, ἐπιχειρῆσαι τοιούτῳ πράγματι; Δεινὸν δέ μοι δοκεῖ εἶναι ὑμᾶς μέν, οἷς ὑπὸ τῆς πόλεως τὸν ἅπαντα χρόνον προστέτακται τῶν μορίων ἐλαῶν ἐπιμελεῖσθαι, μήθ’ ὡς ἐπεργαζόμενον πώποτε ζημιῶσαί με μήθ’ ὡς ἀφανίσαντα εἰς κίνδυνον καταστῆσαι, τοῦτον δ’ ὃς οὔτε γεωργῶν ἐγγὺς τυγχάνει οὔτ’ ἐπιμελητὴς ᾑρημένος οὔθ’ ἡλικίαν ἔχων εἰδέναι περὶ τῶν τοιούτων, ἀπογράψαι με ἐκ τῆς γῆς μορίαν ἀφανίζειν.`}
+};
+/* ===== model (DOM-free) ===== */
+const ABC='αβγδεζηθικλμνξοπρστυφχψω', UP='ΑΒΓΔΕΖΗΘΙΚΛΜΝΞΟΠΡΣΤΥΦΧΨΩ', LOG24=Math.log2(24);
+const base=ch=>{const s=ch.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace('ς','σ');return s.length===1?ABC.indexOf(s):-1;};
+function newModel(){return{counts:new Array(24).fill(0),big:Array.from({length:24},()=>new Array(24).fill(0)),N:0,pairs:0,distinct:0,prev:-1,last:null,tape:[],maxC:1,maxB:1};}
+function feed(M,idx,now){
+  if(idx<0){M.prev=-1;M.tape.push(-1);if(M.tape.length>110)M.tape.shift();return null;}
+  M.counts[idx]++;M.N++;if(M.counts[idx]>M.maxC)M.maxC=M.counts[idx];
+  let st=null;
+  if(M.prev>=0){const w=++M.big[M.prev][idx];M.pairs++;if(w===1)M.distinct++;if(w>M.maxB)M.maxB=w;st={a:M.prev,b:idx,w,t:now};M.last=st;}
+  M.tape.push(idx);if(M.tape.length>110)M.tape.shift();
+  M.prev=idx;return st;
+}
+function entropies(M){
+  const {counts,big,N,pairs}=M;if(!N)return{H1:0,H2:0};
+  let H1=0;for(const c of counts)if(c)H1-=(c/N)*Math.log2(c/N);
+  let H2=0;if(pairs)for(let a=0;a<24;a++){let ra=0;for(let x=0;x<24;x++)ra+=big[a][x];if(!ra)continue;for(let x=0;x<24;x++){const q=big[a][x];if(q)H2-=(q/pairs)*Math.log2(q/ra);}}
+  return{H1,H2};
+}
+/* ===== loom drawing (DOM-free: needs ctx, size, model, time) ===== */
+const MONO=getComputedStyle(document.documentElement).getPropertyValue('--mono').trim()||'monospace';
+const SERIF=getComputedStyle(document.documentElement).getPropertyValue('--serif').trim()||'serif';
+function loomPoints(W,H,dpr){const cx=W/2,cy=H*.485,rx=W*.34,ry=H*.33;const P=[];for(let k=0;k<24;k++){const th=-Math.PI/2+2*Math.PI*k/24;P.push([cx+rx*Math.cos(th),cy+ry*Math.sin(th),th]);}return{cx,cy,rx,ry,P};}
+function arcPath(ctx,P,a,b,cx,cy,side){
+  const [x1,y1]=P[a],[x2,y2]=P[b];const mx=(x1+x2)/2,my=(y1+y2)/2;
+  let px=-(y2-y1),py=(x2-x1);const pl=Math.hypot(px,py)||1;px/=pl;py/=pl;
+  const cxp=cx+(mx-cx)*.30+px*side,cyp=cy+(my-cy)*.30+py*side;
+  ctx.moveTo(x1,y1);ctx.quadraticCurveTo(cxp,cyp,x2,y2);return[cxp,cyp];
+}
+function drawLoom(ctx,W,H,dpr,M,now,reduced){
+  ctx.clearRect(0,0,W,H);
+  const {cx,cy,rx,ry,P}=loomPoints(W,H,dpr);
+  /* time tape */
+  const ty=H-16*dpr,step=5.2*dpr,x0=W-26*dpr;
+  ctx.strokeStyle='rgba(0,212,255,.35)';ctx.lineWidth=1*dpr;ctx.beginPath();ctx.moveTo(14*dpr,ty);ctx.lineTo(x0+8*dpr,ty);ctx.stroke();
+  ctx.font=`italic ${10*dpr}px ${MONO}`;ctx.fillStyle='rgba(0,212,255,.8)';ctx.textAlign='right';ctx.textBaseline='bottom';ctx.fillText('time',W-8*dpr,ty-4*dpr);
+  const n=M.tape.length;
+  for(let k=0;k<n;k++){const idx=M.tape[k],x=x0-(n-1-k)*step;if(x<14*dpr)continue;const isLast=k===n-1;
+    if(idx<0){ctx.fillStyle='rgba(136,153,187,.35)';ctx.fillRect(x-.5*dpr,ty-1.5*dpr,1*dpr,3*dpr);continue;}
+    const h=(3+9*idx/23)*dpr;ctx.fillStyle=isLast?'rgba(255,215,0,.95)':`rgba(0,212,255,${(.35+.55*(k/n)).toFixed(2)})`;ctx.fillRect(x-.7*dpr,ty-h,1.4*dpr,h);}
+  /* stitches */
+  const mB=M.maxB;
+  for(let a=0;a<24;a++)for(let b=0;b<24;b++){const w=M.big[a][b];if(!w)continue;const t=Math.pow(w/mB,.55);
+    ctx.lineWidth=(.5+2.3*Math.sqrt(w/mB))*dpr;ctx.strokeStyle=t>.72?`rgba(0,255,213,${(.25+.7*t).toFixed(3)})`:`rgba(0,212,255,${(.10+.75*t).toFixed(3)})`;
+    ctx.beginPath();
+    if(a===b){const [x,y,th]=P[a];const ox=Math.cos(th),oy=Math.sin(th);ctx.arc(x+ox*9*dpr,y+oy*9*dpr,6*dpr,0,6.2832);}
+    else arcPath(ctx,P,a,b,cx,cy,7*dpr);
+    ctx.stroke();}
+  /* the live stitch */
+  if(M.last){const age=(now-M.last.t)/1000,life=reduced?1.2:.75;if(age<life){const f=1-age/life;
+    ctx.save();ctx.shadowColor='rgba(255,215,0,.9)';ctx.shadowBlur=12*dpr;ctx.strokeStyle=`rgba(255,215,0,${(.35+.65*f).toFixed(3)})`;ctx.lineWidth=(1.4+1.6*f)*dpr;ctx.beginPath();
+    const {a,b}=M.last;let cp=null;
+    if(a===b){const [x,y,th]=P[a];ctx.arc(x+Math.cos(th)*9*dpr,y+Math.sin(th)*9*dpr,6*dpr,0,6.2832);}else cp=arcPath(ctx,P,a,b,cx,cy,7*dpr);
+    ctx.stroke();
+    if(cp&&age<.28){const u=age/.28,[x1,y1]=P[a],[x2,y2]=P[b];const qx=(1-u)*(1-u)*x1+2*(1-u)*u*cp[0]+u*u*x2,qy=(1-u)*(1-u)*y1+2*(1-u)*u*cp[1]+u*u*y2;ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(qx,qy,2.6*dpr,0,6.2832);ctx.fill();}
+    ctx.restore();}}
+  /* ellipse + hooks + letters */
+  ctx.strokeStyle='rgba(136,153,187,.28)';ctx.lineWidth=1*dpr;ctx.beginPath();ctx.ellipse(cx,cy,rx,ry,0,0,6.2832);ctx.stroke();
+  ctx.strokeStyle='rgba(136,153,187,.16)';ctx.setLineDash([3*dpr,5*dpr]);ctx.beginPath();ctx.moveTo(cx,cy-ry);ctx.lineTo(cx,cy+ry);ctx.stroke();ctx.setLineDash([]);
+  const cur=M.prev,mC=M.maxC;
+  for(let k=0;k<24;k++){const [x,y,th]=P[k],ox=Math.cos(th),oy=Math.sin(th);const c=M.counts[k],t=c/mC;
+    ctx.strokeStyle='rgba(255,138,128,.7)';ctx.lineWidth=1.2*dpr;ctx.beginPath();ctx.moveTo(x+ox*3*dpr,y+oy*3*dpr);ctx.lineTo(x+ox*8*dpr,y+oy*8*dpr);ctx.stroke();
+    const r=(1.8+6.5*Math.sqrt(t))*dpr;
+    ctx.fillStyle=c?`rgba(0,212,255,${(.45+.55*t).toFixed(3)})`:'rgba(74,106,138,.6)';ctx.beginPath();ctx.arc(x,y,r,0,6.2832);ctx.fill();
+    if(k===cur){ctx.strokeStyle='rgba(255,215,0,.95)';ctx.lineWidth=1.6*dpr;ctx.beginPath();ctx.arc(x,y,r+4*dpr,0,6.2832);ctx.stroke();}
+    ctx.font=`${(k===cur?17:14)*dpr}px ${SERIF}`;ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillStyle=k===cur?'#ffd700':(c?`rgba(224,224,224,${(.55+.45*t).toFixed(2)})`:'rgba(136,153,187,.6)');
+    ctx.fillText(UP[k],x+ox*22*dpr,y+oy*22*dpr);}
+  /* HUD */
+  ctx.font=`${10*dpr}px ${MONO}`;ctx.textAlign='left';ctx.textBaseline='top';ctx.fillStyle='rgba(0,212,255,.9)';ctx.fillText(`N ${M.N}  stitches ${M.pairs}  distinct ${M.distinct}/576`,9*dpr,8*dpr);
+  ctx.textAlign='right';ctx.fillStyle='rgba(255,215,0,.9)';ctx.fillText(M.last?`[${UP[M.last.a]}] → [${UP[M.last.b]}]  ×${M.last.w}`:'[m] → [n]',W-9*dpr,22*dpr);
+}
+function drawGrid(ctx,W,dpr,M){
+  ctx.clearRect(0,0,W,W);const cell=W/25.5,off=cell*1.5;
+  ctx.font=`${Math.max(8,cell*.55)}px ${MONO}`;ctx.textAlign='center';ctx.textBaseline='middle';
+  for(let k=0;k<24;k++){ctx.fillStyle='rgba(136,153,187,.8)';ctx.fillText(UP[k],off+k*cell+cell/2,off/2);ctx.fillText(UP[k],off/2,off+k*cell+cell/2);}
+  ctx.font=`italic ${Math.max(8,cell*.5)}px ${MONO}`;ctx.fillStyle='rgba(204,68,255,.9)';ctx.fillText('n →',off+24*cell-cell*1.5,off/2-cell*.75);ctx.save();ctx.translate(off/2-cell*.7,off+cell*1.5);ctx.rotate(-Math.PI/2);ctx.fillText('m ↓',0,0);ctx.restore();
+  for(let a=0;a<24;a++)for(let b=0;b<24;b++){const w=M.big[a][b];const x=off+b*cell,y=off+a*cell;
+    ctx.fillStyle=w?`rgba(0,212,255,${(.12+.88*Math.pow(w/M.maxB,.6)).toFixed(3)})`:'rgba(26,31,46,.6)';ctx.fillRect(x+.5,y+.5,cell-1,cell-1);}
+  if(M.last){ctx.strokeStyle='rgba(255,215,0,.95)';ctx.lineWidth=1.5*dpr;ctx.strokeRect(off+M.last.b*cell+.5,off+M.last.a*cell+.5,cell-1,cell-1);}
+}
+/* ===== glyph symmetry, measured ===== */
+function glyphMask(ch,font,size){const c=document.createElement('canvas');const S=Math.round(size*1.5);c.width=c.height=S;const x=c.getContext('2d');x.font=`${size}px ${font}`;x.textAlign='center';x.textBaseline='middle';x.fillStyle='#fff';x.fillText(ch,S/2,S/2);
+  const d=x.getImageData(0,0,S,S).data;const m=new Uint8Array(S*S);let minx=S,maxx=-1,miny=S,maxy=-1;
+  for(let y=0;y<S;y++)for(let xx=0;xx<S;xx++){if(d[(y*S+xx)*4+3]>127){m[y*S+xx]=1;if(xx<minx)minx=xx;if(xx>maxx)maxx=xx;if(y<miny)miny=y;if(y>maxy)maxy=y;}}
+  return{m,S,minx,maxx,miny,maxy,ok:maxx>=0};}
+function symScore(g,mode){if(!g.ok)return 0;const {m,S,minx,maxx,miny,maxy}=g;let inter=0,uni=0;
+  for(let y=miny;y<=maxy;y++)for(let x=minx;x<=maxx;x++){const a=m[y*S+x];let x2=x,y2=y;if(mode!=='H')x2=minx+maxx-x;if(mode!=='V')y2=miny+maxy-y;const b=m[y2*S+x2];if(a&&b)inter++;if(a||b)uni++;}
+  return uni?inter/uni:0;}
+function measure(letters,font){return[...letters].map(ch=>{const g=glyphMask(ch,font,96);return{ch,V:symScore(g,'V'),H:symScore(g,'H'),R:symScore(g,'R')};});}
+
+/* ===== DOM ===== */
+const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const $=id=>document.getElementById(id);
+const loom=$('loom'),lctx=loom.getContext('2d'),grid=$('grid'),gctx=grid.getContext('2d');
+const txt=$('txt'),reader=$('reader');
+let M=newModel(),tokens=[],pos=0,playing=false,lps=6,acc=0,mode='arist',dpr=1;
+
+function buildText(){
+  txt.innerHTML='';tokens=[];const parts=mode==='both'?['arist','lys']:[mode];
+  parts.forEach((key,pi)=>{const T=TEXTS[key];if(parts.length>1){const t=document.createElement('span');t.className='ttl';t.textContent=T.title;txt.appendChild(t);}
+    for(const ch of T.body){if(ch==='\n'){const g=document.createElement('span');g.className='gap';txt.appendChild(g);tokens.push({idx:-1,el:null});continue;}
+      const s=document.createElement('span');s.className='c';s.textContent=ch;txt.appendChild(s);tokens.push({idx:base(ch),el:s});}
+    if(pi<parts.length-1)tokens.push({idx:-1,el:null});});
+  $('reader-title').innerHTML=parts.map(k=>TEXTS[k].title).join(' <span>+</span> ');
+  $('cap-total').textContent=tokens.length;
+}
+function reset(){M=newModel();pos=0;acc=0;playing=false;buildText();syncUI();updatePanels();$('play').textContent='play';$('play').classList.remove('on');$('play').setAttribute('aria-pressed','false');reader.scrollTop=0;}
+function step(now){
+  if(pos>=tokens.length)return false;
+  const tk=tokens[pos];if(pos>0&&tokens[pos-1].el)tokens[pos-1].el.classList.replace('cur','read');
+  if(tk.el){tk.el.classList.add('cur');const top=tk.el.offsetTop-reader.offsetTop,vis=reader.scrollTop,h=reader.clientHeight;if(top<vis+20||top>vis+h-60)reader.scrollTop=Math.max(0,top-h*.45);}
+  feed(M,tk.idx,now);pos++;
+  if(pos>=tokens.length){playing=false;$('play').textContent='replay';$('play').classList.remove('on');$('play').setAttribute('aria-pressed','false');}
+  return true;
+}
+function stitchAll(){const now=performance.now();while(pos<tokens.length){const tk=tokens[pos];if(tk.el){tk.el.classList.add('read');}feed(M,tk.idx,now);pos++;}
+  if(tokens.length&&tokens[tokens.length-1].el)tokens[tokens.length-1].el.classList.add('cur');playing=false;$('play').textContent='replay';$('play').classList.remove('on');updatePanels();}
+function updatePanels(){
+  const {H1,H2}=entropies(M);
+  $('hud').innerHTML=`letters <b>${M.N}</b> <s>·</s> stitches <b>${M.pairs}</b> <s>·</s> distinct pairs <b>${M.distinct}</b><s>/576</s> <s>·</s> bits per letter: no model <s>4.585</s> → unigram <i>${M.N?H1.toFixed(3):'–'}</i> → bigram <i>${M.pairs?H2.toFixed(3):'–'}</i>`;
+  $('cap-read').textContent=pos;
+  $('b1').style.width=(M.N?100*H1/LOG24:0)+'%';$('v1').textContent=M.N?H1.toFixed(3):'–';
+  $('b2').style.width=(M.pairs?100*H2/LOG24:0)+'%';$('v2').textContent=M.pairs?H2.toFixed(3):'–';
+  const bm=$('box-m'),bn=$('box-n');
+  if(M.last){bm.lastChild.textContent=UP[M.last.a];bn.lastChild.textContent=UP[M.last.b];
+    $('pairnote').innerHTML=`<b>${UP[M.last.a]}${UP[M.last.b]}</b> seen ${M.last.w}× · ${M.last.w===1?'a new thread':'the graph already knew this one'}<br>p(n|m) = ${(M.last.w/M.big[M.last.a].reduce((s,x)=>s+x,0)).toFixed(2)}`;}
+  else{bm.lastChild.textContent='·';bn.lastChild.textContent='·';$('pairnote').textContent=pos>=tokens.length&&tokens.length?'done':'press play';}
+  const list=[];for(let a=0;a<24;a++)for(let b=0;b<24;b++)if(M.big[a][b])list.push([a,b,M.big[a][b]]);
+  list.sort((p,q)=>q[2]-p[2]);$('tops').innerHTML=list.length?list.slice(0,10).map(([a,b,w])=>`<b>${UP[a]}${UP[b]}</b> ${w}`).join('<br>'):'–';
+  tiles.forEach((t,k)=>{t.n.textContent=M.counts[k];t.b.style.width=(100*M.counts[k]/M.maxC)+'%';t.el.classList.toggle('cur',k===M.prev);});
+}
+function fit(){dpr=Math.min(2,window.devicePixelRatio||1);const r=loom.getBoundingClientRect();loom.width=Math.round(r.width*dpr);loom.height=Math.round(r.height*dpr);const g=grid.getBoundingClientRect();grid.width=grid.height=Math.round(g.width*dpr);}
+let last=performance.now(),uiAcc=0;
+function loop(now){const dt=Math.min(.1,(now-last)/1000);last=now;
+  if(playing){acc+=dt*lps;let n=0;while(acc>=1&&n<200){acc-=1;if(!step(now))break;n++;}if(n)uiAcc+=n;}
+  if(uiAcc>0||!playing){if(uiAcc>0){updatePanels();uiAcc=0;}}
+  drawLoom(lctx,loom.width,loom.height,dpr,M,now,reduced);drawGrid(gctx,grid.width,dpr,M);
+  requestAnimationFrame(loop);}
+
+/* tiles + symmetry */
+const tiles=[];const tilesEl=$('tiles');
+for(let k=0;k<24;k++){const el=document.createElement('div');el.className='tile';el.innerHTML=`<div class="L">${UP[k]}</div><div class="n">0</div><div class="b"><i style="width:0%"></i></div><div class="sy"><span title="vertical mirror">V</span><span title="horizontal mirror">H</span><span title="180° rotation">R</span></div>`;tilesEl.appendChild(el);tiles.push({el,n:el.querySelector('.n'),b:el.querySelector('.b i'),sy:el.querySelectorAll('.sy span')});}
+function runSymmetry(){const FONT='Arial, Helvetica, "Liberation Sans", sans-serif',TH=.9;
+  const gk=measure(UP,FONT),la=measure('ABCDEFGHIJKLMNOPQRSTUVWXYZ',FONT);
+  gk.forEach((g,k)=>{['V','H','R'].forEach((m,i)=>{const on=g[m]>=TH;tiles[k].sy[i].classList.toggle('on',on);tiles[k].sy[i].title=`${m==='V'?'vertical mirror':m==='H'?'horizontal mirror':'180° rotation'} · overlap ${g[m].toFixed(2)}`;});});
+  const cnt=(arr,m)=>arr.filter(g=>g[m]>=TH).length,any=arr=>arr.filter(g=>g.V>=TH||g.H>=TH||g.R>=TH).length;
+  $('symline').innerHTML=`symmetry measured by pixel overlap ≥ ${TH} in your sans-serif · <i>Greek 24</i>: vertical <b>${cnt(gk,'V')}</b> · horizontal <b>${cnt(gk,'H')}</b> · rotation <b>${cnt(gk,'R')}</b> · any <b>${any(gk)}</b>/24 &nbsp;|&nbsp; <i>Latin 26</i>: vertical <b>${cnt(la,'V')}</b> · horizontal <b>${cnt(la,'H')}</b> · rotation <b>${cnt(la,'R')}</b> · any <b>${any(la)}</b>/26`;
+}
+try{runSymmetry();}catch(e){$('symline').textContent='glyph symmetry could not be measured in this browser';}
+
+/* controls */
+function syncUI(){document.querySelectorAll('.btn[data-text]').forEach(b=>b.classList.toggle('on',b.dataset.text===mode));}
+$('play').addEventListener('click',()=>{if(pos>=tokens.length){reset();}playing=!playing;$('play').textContent=playing?'pause':'play';$('play').classList.toggle('on',playing);$('play').setAttribute('aria-pressed',String(playing));});
+$('reset').addEventListener('click',reset);
+$('finish').addEventListener('click',stitchAll);
+const sp=$('speed'),spv=$('speed-val');sp.addEventListener('input',()=>{lps=parseInt(sp.value,10);spv.textContent=lps+' /s';});
+document.querySelectorAll('.btn[data-text]').forEach(b=>b.addEventListener('click',()=>{mode=b.dataset.text;reset();}));
+addEventListener('resize',fit);
+addEventListener('keydown',e=>{if(e.code==='Space'&&!/INPUT|BUTTON/.test(document.activeElement.tagName)){e.preventDefault();$('play').click();}});
+
+fit();reset();requestAnimationFrame(loop);
+})();
+</script>
+</body></html>

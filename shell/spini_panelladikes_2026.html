@@ -1,0 +1,515 @@
+<!DOCTYPE html><html lang="el"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SPINI v1.0 · Πανελλαδικές 2026 · κάθε ερώτημα, ένα πολύεδρο</title>
+<!--
+  ATELIER -- SPINI v1.0  "every question is a polyhedron"
+  =======================================================
+  The 3 June 2026 Panhellenic paper (Μαθηματικά Προσανατολισμού), Greek + English,
+  one spinning polyhedral graph per question. Pure graph theory, pure canvas 2D,
+  zero dependencies, zero fonts fetched.
+
+  COUNTS COME OUT, NOT IN.
+  Every solid is generated from a seed vector and a permutation rule, nothing else.
+  Edges  = pairs at the minimum inter-vertex distance (all fourteen are uniform).
+  Faces  = traced from the rotation system at each vertex (neighbours sorted CCW
+           around the outward normal; at v, coming from u, turn to the neighbour
+           just before u). Each directed edge belongs to exactly one face.
+  chi    = V - E + F, computed live, printed under every spini.
+
+  VERIFIED BEFORE BUILDING (node, this exact code):
+      solid                  V   E   F  chi  deg  faces
+      tetrahedron            4   6   4    2   3   4x3
+      octahedron             6  12   8    2   4   8x3
+      cube                   8  12   6    2   3   6x4
+      pentagonal prism      10  15   7    2   3   5x4 + 2x5
+      icosahedron           12  30  20    2   5   20x3
+      dodecahedron          20  30  12    2   3   12x5
+      cuboctahedron         12  24  14    2   4   8x3 + 6x4
+      truncated tetrahedron 12  18   8    2   3   4x3 + 4x6
+      truncated octahedron  24  36  14    2   3   6x4 + 8x6
+      rhombicuboctahedron   24  48  26    2   4   8x3 + 18x4
+      icosidodecahedron     30  60  32    2   4   20x3 + 12x5
+      triangular prism       6   9   5    2   3   2x3 + 3x4
+      truncated icosahedron 60  90  32    2   3   12x5 + 20x6      (C60)
+      truncated dodecahedron60  90  32    2   3   20x3 + 12x10     (C60's twin)
+  Traced F == 2 - V + E on all fourteen. The paper's own scoreboard:
+      4 themata . 14 questions . 100 monades . V - E + F = 2, always.
+-->
+<style>
+:root{
+  --ink:#050510;--panel:#0a0e18;--line:#1a1f2e;
+  --cyan:#00d4ff;--mint:#00ffd5;--gold:#ffd700;--pink:#ff69b4;--green:#7fff7f;--violet:#cc44ff;
+  --text:#e0e0e0;--dim:#8899bb;--mute:#4a6a8a;
+  --mono:ui-monospace,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+  --serif:Georgia,"Times New Roman","Noto Serif","DejaVu Serif",serif;
+}
+*{box-sizing:border-box}
+html{background:var(--ink)}
+body{margin:0;color:var(--text);font-family:var(--serif);background:var(--ink);padding-bottom:84px;-webkit-font-smoothing:antialiased}
+a{color:var(--cyan)}
+.wrap{max-width:1120px;margin:0 auto;padding:0 20px}
+
+/* ---------- hero ---------- */
+.hero{display:grid;grid-template-columns:minmax(240px,420px) 1fr;gap:32px;align-items:center;padding:36px 0 28px;border-bottom:1px solid var(--line)}
+.eyebrow{font:11px/1.6 var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--mute)}
+.eyebrow b{color:var(--cyan);font-weight:400}
+h1{font-family:var(--serif);font-weight:400;font-size:clamp(30px,5vw,54px);line-height:1.05;letter-spacing:.14em;text-transform:uppercase;margin:12px 0 6px;color:#fff}
+h1 span{color:var(--gold)}
+.sub{font-size:clamp(16px,2.2vw,21px);color:var(--text);letter-spacing:.02em;margin:0 0 4px}
+.sub-en{font-size:15px;color:var(--dim);margin:0 0 18px}
+.hud{font:12px/1.9 var(--mono);color:var(--cyan);letter-spacing:.06em}
+.hud .g{color:var(--gold)}.hud .p{color:var(--pink)}.hud .m{color:var(--mute)}
+.legend{font:11px/1.8 var(--mono);color:var(--mute);letter-spacing:.06em;margin-top:10px}
+.legend i{display:inline-block;width:9px;height:9px;margin:0 4px 0 10px;vertical-align:-1px;border-radius:1px}
+.legend i.t{background:var(--green)}.legend i.s{background:var(--pink)}.legend i.p{background:var(--gold)}.legend i.h{background:var(--cyan)}.legend i.d{background:var(--violet)}
+
+/* ---------- spini ---------- */
+.spini{position:relative;aspect-ratio:1/1;border:1px solid var(--line);background:radial-gradient(circle at 50% 46%,#0d1626 0%,#070b16 55%,var(--ink) 100%);overflow:hidden}
+.spini canvas{display:block;width:100%;height:100%;touch-action:none;cursor:grab}
+.spini canvas:active{cursor:grabbing}
+.spini canvas:focus-visible{outline:2px solid var(--gold);outline-offset:-2px}
+.receipt{font:11px/1.7 var(--mono);color:var(--mute);letter-spacing:.05em;margin-top:8px}
+.receipt b{color:var(--mint);font-weight:400}
+.receipt .chi{color:var(--gold)}
+.why{font-size:13.5px;line-height:1.5;color:var(--dim);margin-top:6px;font-style:italic}
+
+/* ---------- themata ---------- */
+.thema{padding:34px 0 8px}
+.thema-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 18px;margin-bottom:6px}
+h2{font-family:var(--serif);font-weight:400;font-size:26px;letter-spacing:.2em;text-transform:uppercase;color:#fff;margin:0}
+h2 b{color:var(--gold);font-weight:400}
+.thema-sub{font:12px var(--mono);color:var(--mute);letter-spacing:.1em;text-transform:uppercase}
+.thema-sub em{color:var(--pink);font-style:normal}
+.given{padding:14px 18px;margin:12px 0 4px;border-left:2px solid var(--cyan);background:linear-gradient(90deg,rgba(0,212,255,.06),transparent 70%)}
+.given .el{font-size:16.5px;line-height:1.6;margin:0 0 6px}
+.given .en{font-size:14.5px;line-height:1.55;color:var(--dim);margin:0;border-top:0;padding-top:0}
+.given ul{margin:2px 0 8px;padding-left:1.2em}
+
+.q{display:grid;grid-template-columns:minmax(220px,296px) 1fr;gap:22px 28px;padding:24px 0;border-top:1px solid var(--line)}
+.q:first-of-type{border-top:0}
+.qhead{display:flex;align-items:baseline;gap:14px;margin-bottom:10px}
+.qid{font:20px var(--mono);color:var(--gold);letter-spacing:.06em}
+.marks{font:11px var(--mono);color:var(--mute);letter-spacing:.1em;text-transform:uppercase}
+.marks b{color:var(--pink);font-weight:400}
+.el{font-size:17px;line-height:1.6;color:var(--text)}
+.en{font-size:15px;line-height:1.55;color:var(--dim);margin-top:10px;padding-top:10px;border-top:1px dashed var(--line)}
+.el p,.en p{margin:0 0 8px}
+.el ul,.en ul{margin:4px 0 8px;padding-left:1.2em}
+.el li,.en li{margin:3px 0}
+.pts{font:11px var(--mono);color:var(--mute);letter-spacing:.08em;white-space:nowrap}
+body[data-lang="el"] .en{display:none}
+body[data-lang="en"] .el{display:none}
+body[data-lang="en"] .en{border-top:0;padding-top:0;margin-top:0;color:var(--text);font-size:17px;line-height:1.6}
+
+/* math bits: no library, just the DOM */
+.fr{display:inline-flex;flex-direction:column;align-items:center;vertical-align:-.55em;line-height:1.15;margin:0 .18em;font-size:.92em}
+.fr>span:first-child{border-bottom:1px solid currentColor;padding:0 .22em .04em}
+.fr>span:last-child{padding:.06em .22em 0}
+sup,sub{font-size:.72em;line-height:0}
+.cases{display:inline-grid;grid-template-columns:auto auto;gap:.3em 1.1em;border-left:2px solid var(--cyan);padding:.15em 0 .15em .7em;margin:.35em 0 .35em .2em;vertical-align:middle}
+.disp{display:block;text-align:center;margin:.55em 0}
+.nw{white-space:nowrap}
+
+/* answers */
+details{margin-top:12px;border:1px solid var(--line);border-radius:3px;background:rgba(10,14,24,.7)}
+summary{cursor:pointer;list-style:none;padding:8px 12px;font:11px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+summary::-webkit-details-marker{display:none}
+summary::before{content:"+ ";color:var(--mute)}
+details[open] summary::before{content:"– "}
+summary:focus-visible{outline:2px solid var(--gold);outline-offset:-2px}
+.ans{padding:2px 14px 12px;font-size:15px;line-height:1.6;color:var(--text)}
+.ans b{color:var(--green);font-weight:400}
+
+/* bottom bar */
+.bar{position:fixed;left:0;right:0;bottom:0;z-index:5;background:rgba(5,5,16,.86);backdrop-filter:blur(8px);border-top:1px solid var(--line);padding:10px 14px;display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;justify-content:center}
+.btn{font:11px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--cyan);background:transparent;border:1px solid var(--cyan);padding:6px 10px;border-radius:3px;cursor:pointer}
+.btn.on{background:var(--cyan);color:var(--ink)}
+.btn.gold{color:var(--gold);border-color:var(--gold)}.btn.gold.on{background:var(--gold);color:var(--ink)}
+.btn.pink{color:var(--pink);border-color:var(--pink)}.btn.pink.on{background:var(--pink);color:var(--ink)}
+.btn:focus-visible{outline:2px solid #fff;outline-offset:2px}
+.grp{display:flex;gap:6px;align-items:center}
+.lbl{font:10px var(--mono);letter-spacing:.14em;color:var(--mute);text-transform:uppercase;margin-right:2px}
+input[type=range]{width:120px;accent-color:var(--cyan)}
+.val{font:11px var(--mono);color:var(--cyan);min-width:3ch}
+.foot{font:11px/1.8 var(--mono);color:var(--mute);letter-spacing:.06em;padding:34px 0 10px;border-top:1px solid var(--line);margin-top:30px}
+.foot span{color:var(--cyan)}
+
+@media(max-width:720px){
+  .hero{grid-template-columns:1fr;gap:20px;padding-top:24px}
+  .q{grid-template-columns:1fr;gap:14px}
+  .spini{max-width:340px}
+  .el{font-size:16.5px}
+  input[type=range]{width:90px}
+}
+@media(prefers-reduced-motion:reduce){.spini canvas{cursor:grab}}
+</style></head>
+<body data-lang="both">
+
+<div class="wrap">
+<header class="hero">
+  <div>
+    <div class="spini"><canvas id="hero-spini" data-solid="c60" data-name="C60 · ΚΟΛΟΥΡΟ ΕΙΚΟΣΑΕΔΡΟ" data-big="1" tabindex="0" aria-label="Spinning truncated icosahedron, drag to rotate"></canvas></div>
+    <div class="receipt" data-receipt-for="hero-spini"></div>
+  </div>
+  <div>
+    <div class="eyebrow">Atelier · <b>Spini v1.0</b> · pure graph theory · html + js · 0 dependencies</div>
+    <h1>Πανελλαδικές <span>2026</span></h1>
+    <p class="sub">Μαθηματικά Προσανατολισμού · Τετάρτη 3 Ιουνίου 2026</p>
+    <p class="sub-en">Panhellenic exams 2026 · Mathematics, orientation track · every question is a polyhedron</p>
+    <div class="hud">V − E + F = 2 <span class="m">·</span> <span class="g">4</span> θέματα <span class="m">·</span> <span class="g">14</span> ερωτήματα <span class="m">·</span> <span class="g">100</span> μονάδες <span class="m">·</span> <span class="p">14</span> solids, counted live<br><span class="m">σύρε για περιστροφή · drag to rotate · every face traced from the graph, not typed in</span></div>
+    <div class="legend">faces<i class="t"></i>triangle<i class="s"></i>square<i class="p"></i>pentagon<i class="h"></i>hexagon<i class="d"></i>decagon</div>
+  </div>
+</header>
+
+<!-- ======================= ΘΕΜΑ Α ======================= -->
+<section class="thema" id="thema-a">
+  <div class="thema-head"><h2>Θέμα <b>Α</b></h2><span class="thema-sub">Θεωρία · theory · <em>25 μονάδες</em></span></div>
+
+  <article class="q">
+    <div><div class="spini"><canvas data-solid="tetrahedron" data-name="ΤΕΤΡΑΕΔΡΟ · tetrahedron" tabindex="0" aria-label="Spinning tetrahedron"></canvas></div><div class="receipt"></div><div class="why">The smallest polyhedral graph, and self-dual. The paper opens with the smallest theorem it owns.</div></div>
+    <div>
+      <div class="qhead"><span class="qid">Α1</span><span class="marks">Μονάδες <b>6</b> · 6 marks</span></div>
+      <div class="el"><p>Έστω μια συνάρτηση f ορισμένη σε ένα διάστημα Δ. Αν</p><ul><li>η f είναι συνεχής στο Δ και</li><li>f′(x) = 0 για κάθε εσωτερικό σημείο x του Δ,</li></ul><p>να αποδείξετε ότι η f είναι σταθερή σε όλο το διάστημα Δ.</p></div>
+      <div class="en"><p>Let f be a function defined on an interval Δ. If</p><ul><li>f is continuous on Δ, and</li><li>f′(x) = 0 for every interior point x of Δ,</li></ul><p>prove that f is constant on the whole interval Δ.</p></div>
+      <details><summary>λύση · answer</summary><div class="ans">Take any x<sub>1</sub> &lt; x<sub>2</sub> in Δ. f is continuous on [x<sub>1</sub>, x<sub>2</sub>] and differentiable on (x<sub>1</sub>, x<sub>2</sub>), so the Mean Value Theorem gives a ξ with f(x<sub>2</sub>) − f(x<sub>1</sub>) = f′(ξ)(x<sub>2</sub> − x<sub>1</sub>) = 0. Hence f(x<sub>1</sub>) = f(x<sub>2</sub>): <b>f is constant on Δ</b>.</div></details>
+    </div>
+  </article>
+
+  <article class="q">
+    <div><div class="spini"><canvas data-solid="octahedron" data-name="ΟΚΤΑΕΔΡΟ · octahedron" tabindex="0" aria-label="Spinning octahedron"></canvas></div><div class="receipt"></div><div class="why">Two pyramids pressed base to base. A squeeze.</div></div>
+    <div>
+      <div class="qhead"><span class="qid">Α2</span><span class="marks">Μονάδες <b>5</b> · 5 marks</span></div>
+      <div class="el"><p>Να διατυπώσετε το κριτήριο παρεμβολής.</p></div>
+      <div class="en"><p>State the squeeze theorem.</p></div>
+      <details><summary>λύση · answer</summary><div class="ans">If h(x) ≤ f(x) ≤ g(x) for all x near x<sub>0</sub> (x ≠ x<sub>0</sub>) and lim<sub>x→x₀</sub> h(x) = lim<sub>x→x₀</sub> g(x) = ℓ, then <b>lim<sub>x→x₀</sub> f(x) = ℓ</b>.</div></details>
+    </div>
+  </article>
+
+  <article class="q">
+    <div><div class="spini"><canvas data-solid="cube" data-name="ΚΥΒΟΣ · cube" tabindex="0" aria-label="Spinning cube"></canvas></div><div class="receipt"></div><div class="why">Dual of the octahedron: swap vertices and faces. An antiderivative undoes a derivative the same way.</div></div>
+    <div>
+      <div class="qhead"><span class="qid">Α3</span><span class="marks">Μονάδες <b>4</b> · 4 marks</span></div>
+      <div class="el"><p>Έστω f μια συνάρτηση ορισμένη σε ένα διάστημα Δ. Τι ονομάζεται αρχική συνάρτηση ή παράγουσα της f στο Δ;</p></div>
+      <div class="en"><p>Let f be a function defined on an interval Δ. What is called an antiderivative (primitive) of f on Δ?</p></div>
+      <details><summary>λύση · answer</summary><div class="ans">Any function F that is differentiable on Δ with <b>F′(x) = f(x) for every x ∈ Δ</b>.</div></details>
+    </div>
+  </article>
+
+  <article class="q">
+    <div><div class="spini"><canvas data-solid="pentprism" data-name="ΠΕΝΤΑΓΩΝΙΚΟ ΠΡΙΣΜΑ · pentagonal prism" tabindex="0" aria-label="Spinning pentagonal prism"></canvas></div><div class="receipt"></div><div class="why">Five statements, one five-fold axis. Σωστό on top, Λάθος underneath.</div></div>
+    <div>
+      <div class="qhead"><span class="qid">Α4</span><span class="marks">Μονάδες <b>10</b> · 10 marks</span></div>
+      <div class="el"><p>Να χαρακτηρίσετε τις προτάσεις που ακολουθούν γράφοντας στο τετράδιό σας, δίπλα στο γράμμα που αντιστοιχεί σε κάθε πρόταση, τη λέξη <b>Σωστό</b>, αν η πρόταση είναι σωστή, ή <b>Λάθος</b>, αν η πρόταση είναι λανθασμένη.</p>
+      <ul><li><b>α)</b> Μια συνάρτηση f : ℝ → ℝ είναι “1-1”, αν και μόνο αν υπάρχουν διαφορετικά σημεία της γραφικής της παράστασης με την ίδια τεταγμένη.</li>
+      <li><b>β)</b> Αν μια συνάρτηση f είναι παραγωγίσιμη σε ένα σημείο x<sub>0</sub> του πεδίου ορισμού της, τότε είναι και συνεχής στο σημείο αυτό.</li>
+      <li><b>γ)</b> Έστω μια συνάρτηση f συνεχής σε ένα διάστημα Δ και δύο φορές παραγωγίσιμη στο εσωτερικό του Δ. Αν f″(x) &gt; 0 για κάθε εσωτερικό σημείο x του Δ, τότε η f είναι κυρτή στο Δ.</li>
+      <li><b>δ)</b> Αν η συνάρτηση g είναι παραγωγίσιμη στο x<sub>0</sub> και η συνάρτηση f είναι παραγωγίσιμη στο g(x<sub>0</sub>), τότε η συνάρτηση f∘g είναι παραγωγίσιμη στο x<sub>0</sub> και ισχύει <span class="nw">(f∘g)′(x<sub>0</sub>) = f′(g(x<sub>0</sub>)) · g′(x<sub>0</sub>).</span></li>
+      <li><b>ε)</b> Η συνάρτηση f(x) = σφx είναι παραγωγίσιμη στο ℝ − {x | ημx = 0} και ισχύει (σφx)′ = <span class="fr"><span>1</span><span>ημ²x</span></span>.</li></ul></div>
+      <div class="en"><p>Mark each of the following statements as <b>True</b> (Σωστό) or <b>False</b> (Λάθος).</p>
+      <ul><li><b>a)</b> A function f : ℝ → ℝ is “1-1” if and only if there exist distinct points of its graph with the same y-coordinate.</li>
+      <li><b>b)</b> If a function f is differentiable at a point x<sub>0</sub> of its domain, then it is also continuous at that point.</li>
+      <li><b>c)</b> Let f be continuous on an interval Δ and twice differentiable in the interior of Δ. If f″(x) &gt; 0 for every interior point x of Δ, then f is convex on Δ.</li>
+      <li><b>d)</b> If g is differentiable at x<sub>0</sub> and f is differentiable at g(x<sub>0</sub>), then f∘g is differentiable at x<sub>0</sub> and <span class="nw">(f∘g)′(x<sub>0</sub>) = f′(g(x<sub>0</sub>)) · g′(x<sub>0</sub>).</span></li>
+      <li><b>e)</b> The function f(x) = cot x is differentiable on ℝ − {x | sin x = 0} and (cot x)′ = <span class="fr"><span>1</span><span>sin²x</span></span>.</li></ul></div>
+      <details><summary>λύση · answer</summary><div class="ans"><b>α Λάθος · β Σωστό · γ Σωστό · δ Σωστό · ε Λάθος.</b> (a) is the definition turned inside out; (e) is missing a sign — (σφx)′ = −1/ημ²x.</div></details>
+    </div>
+  </article>
+</section>
+
+<!-- ======================= ΘΕΜΑ Β ======================= -->
+<section class="thema" id="thema-b">
+  <div class="thema-head"><h2>Θέμα <b>Β</b></h2><span class="thema-sub">Σύνθεση · αντίστροφη · όριο · composition, inverse, limit · <em>25 μονάδες</em></span></div>
+  <div class="given">
+    <p class="el">Δίνονται οι συναρτήσεις f : (1, +∞) → ℝ, με τύπο f(x) = 2 ln(x − 1) και g : [2, +∞) → ℝ, με τύπο g(x) = √(x − 2) + 1.</p>
+    <p class="en">Given the functions f : (1, +∞) → ℝ with f(x) = 2 ln(x − 1), and g : [2, +∞) → ℝ with g(x) = √(x − 2) + 1.</p>
+  </div>
+
+  <article class="q">
+    <div><div class="spini"><canvas data-solid="icosahedron" data-name="ΕΙΚΟΣΑΕΔΡΟ · icosahedron" tabindex="0" aria-label="Spinning icosahedron"></canvas></div><div class="receipt"></div><div class="why">Twenty faces from twelve vertices. Composition builds a lot out of little.</div></div>
+    <div>
+      <div class="qhead"><span class="qid">Β1</span><span class="marks">Μονάδες <b>8</b> · 8 marks</span></div>
+      <div class="el"><p>Να προσδιορίσετε τη συνάρτηση h = f∘g.</p></div>
+      <div class="en"><p>Determine the function h = f∘g.</p></div>
+      <details><summary>λύση · answer</summary><div class="ans">Domain: x ≥ 2 and g(x) &gt; 1 ⇔ √(x − 2) &gt; 0 ⇔ x &gt; 2. There h(x) = 2 ln(√(x − 2)) = ln(x − 2). <b>h(x) = ln(x − 2), x ∈ (2, +∞).</b></div></details>
+    </div>
+  </article>
+
+  <div class="given">
+    <p class="el">Στα επόμενα ερωτήματα να θεωρήσετε ότι h(x) = ln(x − 2), x ∈ (2, +∞).</p>
+    <p class="en">In the following questions take h(x) = ln(x − 2), x ∈ (2, +∞).</p>
+  </div>
+
+  <article class="q">
+    <div><div class="spini"><canvas data-solid="dodecahedron" data-name="ΔΩΔΕΚΑΕΔΡΟ · dodecahedron" tabindex="0" aria-label="Spinning dodecahedron"></canvas></div><div class="receipt"></div><div class="why">The icosahedron’s dual — V and F trade places, E stays. h⁻¹ trades x and y the same way.</div></div>
+    <div>
+      <div class="qhead"><span class="qid">Β2</span><span class="marks">Μονάδες <b>9</b> · 9 marks</span></div>
+      <div class="el"><p>Να αποδείξετε ότι η συνάρτηση h αντιστρέφεται <span class="pts">(μονάδες 3)</span> και να προσδιορίσετε τη συνάρτηση h<sup>−1</sup> <span class="pts">(μονάδες 6)</span>.</p></div>
+      <div class="en"><p>Prove that h is invertible <span class="pts">(3 marks)</span> and determine the function h<sup>−1</sup> <span class="pts">(6 marks)</span>.</p></div>
+      <details><summary>λύση · answer</summary><div class="ans">ln is 1-1, so h(x<sub>1</sub>) = h(x<sub>2</sub>) ⇒ x<sub>1</sub> = x<sub>2</sub>: h is invertible. It is continuous and strictly increasing with limits −∞ (at 2⁺) and +∞, so its range is ℝ. y = ln(x − 2) ⇔ x = e<sup>y</sup> + 2. <b>h<sup>−1</sup>(x) = e<sup>x</sup> + 2, x ∈ ℝ.</b></div></details>
+    </div>
+  </article>
+
+  <article class="q">
+    <div><div class="spini"><canvas data-solid="cuboctahedron" data-name="ΚΥΒΟΚΤΑΕΔΡΟ · cuboctahedron" tabindex="0" aria-label="Spinning cuboctahedron"></canvas></div><div class="receipt"></div><div class="why">Triangles meet squares at every vertex. Two factors meet in a product, and −∞ wins.</div></div>
+    <div>
+      <div class="qhead"><span class="qid">Β3</span><span class="marks">Μονάδες <b>8</b> · 8 marks</span></div>
+      <div class="el"><p>Να υπολογίσετε το όριο <span class="nw">lim<sub>x→2</sub> ( h(x) · <span class="fr"><span>f(x)</span><span>x − 2</span></span> )</span>.</p></div>
+      <div class="en"><p>Evaluate the limit <span class="nw">lim<sub>x→2</sub> ( h(x) · <span class="fr"><span>f(x)</span><span>x − 2</span></span> )</span>.</p></div>
+      <details><summary>λύση · answer</summary><div class="ans">The expression only exists for x &gt; 2. f(2) = 0, so f(x)/(x − 2) = (f(x) − f(2))/(x − 2) → f′(2) = 2, while h(x) = ln(x − 2) → −∞. Product: <b>−∞</b>. (Derivative definition, not L’Hôpital — that rule is outside the syllabus.)</div></details>
+    </div>
+  </article>
+</section>
+
+<!-- ======================= ΘΕΜΑ Γ ======================= -->
+<section class="thema" id="thema-c">
+  <div class="thema-head"><h2>Θέμα <b>Γ</b></h2><span class="thema-sub">Μονοτονία · σύνολο τιμών · ολοκληρώματα · monotonicity, range, integrals · <em>25 μονάδες</em></span></div>
+  <div class="given">
+    <p class="el">Δίνεται η συνάρτηση f : ℝ → ℝ με τύπο <span class="nw">f(x) = <span class="fr"><span>κx³ + μx</span><span>x² + 1</span></span></span> με κ, μ ∈ ℝ, για την οποία ισχύουν τα ακόλουθα:</p>
+    <ul class="el"><li>Η f έχει οριζόντια ασύμπτωτη στο +∞.</li><li>Η ευθεία y = x εφάπτεται στη γραφική παράσταση της f στην αρχή των αξόνων.</li></ul>
+    <p class="en">Given the function f : ℝ → ℝ with <span class="nw">f(x) = <span class="fr"><span>κx³ + μx</span><span>x² + 1</span></span></span>, κ, μ ∈ ℝ, such that:</p>
+    <ul class="en"><li>f has a horizontal asymptote at +∞;</li><li>the line y = x is tangent to the graph of f at the origin.</li></ul>
+  </div>
+
+  <article class="q">
+    <div><div class="spini"><canvas data-solid="trtetrahedron" data-name="ΚΟΛΟΥΡΟ ΤΕΤΡΑΕΔΡΟ · truncated tetrahedron" tabindex="0" aria-label="Spinning truncated tetrahedron"></canvas></div><div class="receipt"></div><div class="why">Truncation cuts the corners and keeps the shape. Two conditions cut two parameters: κ = 0, μ = 1.</div></div>
+    <div>
+      <div class="qhead"><span class="qid">Γ1</span><span class="marks">Μονάδες <b>8</b> · 8 marks</span></div>
+      <div class="el"><p>Να αποδείξετε ότι: <b>i)</b> κ = 0 και <b>ii)</b> μ = 1.</p></div>
+      <div class="en"><p>Prove that: <b>i)</b> κ = 0 and <b>ii)</b> μ = 1.</p></div>
+      <details><summary>λύση · answer</summary><div class="ans">If κ ≠ 0 then f(x) behaves like κx at +∞ and runs off to ±∞ — no horizontal asymptote — so <b>κ = 0</b>. Then f(x) = μx/(x² + 1), f(0) = 0 and f′(0) = μ; the tangent at the origin is y = μx, which must be y = x, so <b>μ = 1</b>. Hence f(x) = x/(x² + 1).</div></details>
+    </div>
+  </article>
+
+  <article class="q">
+    <div><div class="spini"><canvas data-solid="troctahedron" data-name="ΚΟΛΟΥΡΟ ΟΚΤΑΕΔΡΟ · truncated octahedron" tabindex="0" aria-label="Spinning truncated octahedron"></canvas></div><div class="receipt"></div><div class="why">Monotone in three pieces, no gaps in the range. This solid tiles all of space with no gaps either.</div></div>
+    <div>
+      <div class="qhead"><span class="qid">Γ2</span><span class="marks">Μονάδες <b>11</b> · 11 marks</span></div>
+      <div class="el"><p><b>i)</b> Να μελετήσετε τη συνάρτηση f ως προς τη μονοτονία και τα ακρότατα <span class="pts">(μονάδες 6)</span>.</p><p><b>ii)</b> Να αποδείξετε ότι το σύνολο τιμών της f είναι το <span class="nw">[ −<span class="fr"><span>1</span><span>2</span></span>, <span class="fr"><span>1</span><span>2</span></span> ]</span> <span class="pts">(μονάδες 3)</span> και να βρείτε το πλήθος των ριζών της εξίσωσης <span class="nw">f(x) = <span class="fr"><span>1</span><span>2</span></span> + α²</span>, για κάθε τιμή της παραμέτρου α ∈ ℝ <span class="pts">(μονάδες 2)</span>.</p></div>
+      <div class="en"><p><b>i)</b> Study f for monotonicity and extrema <span class="pts">(6 marks)</span>.</p><p><b>ii)</b> Prove that the range of f is <span class="nw">[ −<span class="fr"><span>1</span><span>2</span></span>, <span class="fr"><span>1</span><span>2</span></span> ]</span> <span class="pts">(3 marks)</span> and find the number of roots of the equation <span class="nw">f(x) = <span class="fr"><span>1</span><span>2</span></span> + α²</span> for every value of the parameter α ∈ ℝ <span class="pts">(2 marks)</span>.</p></div>
+      <details><summary>λύση · answer</summary><div class="ans">f′(x) = (1 − x²)/(x² + 1)²: decreasing on (−∞, −1], increasing on [−1, 1], decreasing on [1, +∞); min f(−1) = −½, max f(1) = ½. With f → 0 at ±∞ the range is <b>[−½, ½]</b>. The right-hand side ½ + α² is ≥ ½ = max f: <b>α = 0 → exactly one root, x = 1; α ≠ 0 → no roots.</b></div></details>
+    </div>
+  </article>
+
+  <article class="q">
+    <div><div class="spini"><canvas data-solid="rhombicubocta" data-name="ΡΟΜΒΙΚΥΒΟΚΤΑΕΔΡΟ · rhombicuboctahedron" tabindex="0" aria-label="Spinning rhombicuboctahedron"></canvas></div><div class="receipt"></div><div class="why">Eight triangles, eighteen squares, and one clean relation between neighbours — like I<sub>ν</sub> and I<sub>ν+1</sub>.</div></div>
+    <div>
+      <div class="qhead"><span class="qid">Γ3</span><span class="marks">Μονάδες <b>6</b> · 6 marks</span></div>
+      <div class="el"><p>Για ν ∈ ℕ ορίζουμε <span class="nw">I<sub>ν</sub> = ∫<sub>0</sub><sup>1</sup> <span class="fr"><span>x<sup>2ν+1</sup></span><span>x² + 1</span></span> dx</span>.</p><p><b>i)</b> Να αποδείξετε ότι <span class="nw">I<sub>ν</sub> + I<sub>ν+1</sub> = <span class="fr"><span>1</span><span>2ν + 2</span></span></span>, ν ∈ ℕ.</p><p><b>ii)</b> Να υπολογίσετε τα I<sub>0</sub>, I<sub>1</sub> και I<sub>2</sub>.</p></div>
+      <div class="en"><p>For ν ∈ ℕ define <span class="nw">I<sub>ν</sub> = ∫<sub>0</sub><sup>1</sup> <span class="fr"><span>x<sup>2ν+1</sup></span><span>x² + 1</span></span> dx</span>.</p><p><b>i)</b> Prove that <span class="nw">I<sub>ν</sub> + I<sub>ν+1</sub> = <span class="fr"><span>1</span><span>2ν + 2</span></span></span>, ν ∈ ℕ.</p><p><b>ii)</b> Compute I<sub>0</sub>, I<sub>1</sub> and I<sub>2</sub>.</p></div>
+      <details><summary>λύση · answer</summary><div class="ans">I<sub>ν</sub> + I<sub>ν+1</sub> = ∫₀¹ x<sup>2ν+1</sup>(1 + x²)/(x² + 1) dx = ∫₀¹ x<sup>2ν+1</sup> dx = <b>1/(2ν + 2)</b>. Then I<sub>0</sub> = ½ ln(x² + 1)|₀¹ = <b>½ ln 2</b>, I<sub>1</sub> = ½ − I<sub>0</sub> = <b>(1 − ln 2)/2</b>, I<sub>2</sub> = ¼ − I<sub>1</sub> = <b>(2 ln 2 − 1)/4</b>.</div></details>
+    </div>
+  </article>
+</section>
+
+<!-- ======================= ΘΕΜΑ Δ ======================= -->
+<section class="thema" id="thema-d">
+  <div class="thema-head"><h2>Θέμα <b>Δ</b></h2><span class="thema-sub">the famous one · <em>25 μονάδες</em></span></div>
+  <div class="given">
+    <p class="el">Έστω συνάρτηση g : ℝ → ℝ παραγωγίσιμη, με συνεχή παράγωγο, για την οποία ισχύουν:</p>
+    <ul class="el"><li>0 &lt; g(x) &lt; 1, για κάθε x ∈ ℝ,</li><li>g′(x) ≠ −1, για κάθε x ∈ ℝ.</li></ul>
+    <p class="en">Let g : ℝ → ℝ be differentiable with continuous derivative, such that:</p>
+    <ul class="en"><li>0 &lt; g(x) &lt; 1 for every x ∈ ℝ,</li><li>g′(x) ≠ −1 for every x ∈ ℝ.</li></ul>
+  </div>
+
+  <article class="q">
+    <div><div class="spini"><canvas data-solid="icosidodeca" data-name="ΕΙΚΟΣΙΔΩΔΕΚΑΕΔΡΟ · icosidodecahedron" tabindex="0" aria-label="Spinning icosidodecahedron"></canvas></div><div class="receipt"></div><div class="why">Thirty vertices, each the midpoint of an icosahedron edge — a point sitting exactly between two ends, which is where Bolzano finds a root.</div></div>
+    <div>
+      <div class="qhead"><span class="qid">Δ1</span><span class="marks">Μονάδες <b>6</b> · 6 marks</span></div>
+      <div class="el"><p>Να αποδείξετε ότι υπάρχει μοναδικό x<sub>1</sub> ∈ (−1, 0) ώστε: <span class="nw">g(x<sub>1</sub>) + x<sub>1</sub> = 0</span>.</p></div>
+      <div class="en"><p>Prove that there exists a unique x<sub>1</sub> ∈ (−1, 0) such that <span class="nw">g(x<sub>1</sub>) + x<sub>1</sub> = 0</span>.</p></div>
+      <details><summary>λύση · answer</summary><div class="ans">φ(x) = g(x) + x is continuous with φ(−1) = g(−1) − 1 &lt; 0 and φ(0) = g(0) &gt; 0, so Bolzano gives x<sub>1</sub> ∈ (−1, 0). φ′ = g′ + 1 is continuous and never zero, so it keeps one sign on ℝ: φ is strictly monotone, hence 1-1, and <b>the root is unique</b>. (That “continuous derivative” clause in the setup exists for exactly this line.)</div></details>
+    </div>
+  </article>
+
+  <div class="given">
+    <p class="el">Δίνεται επιπλέον η παραγωγίσιμη συνάρτηση <span class="nw">f(x) =</span> <span class="cases"><span>x²(g(x) + x),</span><span>x ∈ (−∞, 0)</span><span>2ημx + εφx − κx,</span><span>x ∈ [0, <span class="fr"><span>π</span><span>2</span></span>)</span></span> με κ ∈ ℝ.</p>
+    <p class="en">Also given is the differentiable function <span class="nw">f(x) =</span> <span class="cases"><span>x²(g(x) + x),</span><span>x ∈ (−∞, 0)</span><span>2 sin x + tan x − κx,</span><span>x ∈ [0, <span class="fr"><span>π</span><span>2</span></span>)</span></span> with κ ∈ ℝ.</p>
+  </div>
+
+  <article class="q">
+    <div><div class="spini"><canvas data-solid="triprism" data-name="ΤΡΙΓΩΝΙΚΟ ΠΡΙΣΜΑ · triangular prism" tabindex="0" aria-label="Spinning triangular prism"></canvas></div><div class="receipt"></div><div class="why">κ = 3, so a three-fold axis; two marks, so the smallest spini on the page.</div></div>
+    <div>
+      <div class="qhead"><span class="qid">Δ2</span><span class="marks">Μονάδες <b>2</b> · 2 marks</span></div>
+      <div class="el"><p>Να αποδείξετε ότι κ = 3.</p></div>
+      <div class="en"><p>Prove that κ = 3.</p></div>
+      <details><summary>λύση · answer</summary><div class="ans">f is differentiable at 0 and f(0) = 0. Left: (f(x) − f(0))/x = x(g(x) + x) → 0. Right: (2ημx + εφx − κx)/x → 2 + 1 − κ (since ημx/x → 1 and εφx/x → 1). Equal one-sided derivatives ⇒ 3 − κ = 0 ⇒ <b>κ = 3</b>.</div></details>
+    </div>
+  </article>
+
+  <article class="q">
+    <div><div class="spini"><canvas data-solid="c60" data-name="C60 · ΚΟΛΟΥΡΟ ΕΙΚΟΣΑΕΔΡΟ" tabindex="0" aria-label="Spinning truncated icosahedron"></canvas></div><div class="receipt"></div><div class="why">The famous graph for the famous question.</div></div>
+    <div>
+      <div class="qhead"><span class="qid">Δ3</span><span class="marks">Μονάδες <b>7</b> · 7 marks</span></div>
+      <div class="el"><p>Να αποδείξετε ότι στο διάστημα <span class="nw">[0, <span class="fr"><span>π</span><span>2</span></span>)</span> ισχύουν:</p><p><b>i)</b> f(x) ≥ 0 και <span class="pts">(μονάδες 4)</span></p><p><b>ii)</b> η εξίσωση 3f(x) = π έχει ακριβώς μια ρίζα, x<sub>2</sub>. <span class="pts">(μονάδες 3)</span></p></div>
+      <div class="en"><p>Prove that on the interval <span class="nw">[0, <span class="fr"><span>π</span><span>2</span></span>)</span>:</p><p><b>i)</b> f(x) ≥ 0, and <span class="pts">(4 marks)</span></p><p><b>ii)</b> the equation 3f(x) = π has exactly one root, x<sub>2</sub>. <span class="pts">(3 marks)</span></p></div>
+      <details><summary>λύση · answer</summary><div class="ans">With t = συνx ∈ (0, 1]: f′(x) = 2t + 1/t² − 3 = (t − 1)²(2t + 1)/t² ≥ 0, zero only at x = 0, so f is strictly increasing and <b>f(x) ≥ f(0) = 0</b>. Since f(0) = 0 and f → +∞ as x → π/2⁻ (εφx blows up), f([0, π/2)) = [0, +∞) ∋ π/3; strict monotonicity makes <b>x<sub>2</sub> unique</b>.</div></details>
+    </div>
+  </article>
+
+  <article class="q">
+    <div><div class="spini"><canvas data-solid="trdodeca" data-name="ΚΟΛΟΥΡΟ ΔΩΔΕΚΑΕΔΡΟ · truncated dodecahedron" tabindex="0" aria-label="Spinning truncated dodecahedron"></canvas></div><div class="receipt"></div><div class="why">C60’s twin: identical V, E, F — a different solid with the very same count. Two regions, equal areas.</div></div>
+    <div>
+      <div class="qhead"><span class="qid">Δ4</span><span class="marks">Μονάδες <b>10</b> · 10 marks</span></div>
+      <div class="el"><p><b>i)</b> Να αποδείξετε ότι f(x) ≥ 0 στο διάστημα [x<sub>1</sub>, 0]. <span class="pts">(μονάδες 3)</span></p><p><b>ii)</b> Έστω Ω το χωρίο που περικλείεται από τη γραφική παράσταση της συνάρτησης f, τον άξονα x′x και τις ευθείες x = x<sub>1</sub> και x = f(x<sub>2</sub>), όπου x<sub>1</sub> είναι ο αριθμός από το ερώτημα Δ1 και x<sub>2</sub> είναι η ρίζα από το ερώτημα Δ3ii. Αν ο άξονας y′y χωρίζει το Ω σε δύο ισεμβαδικά χωρία, να αποδείξετε ότι:</p><p class="disp"><span class="nw">∫<sub>x₁</sub><sup>0</sup> x³ g′(x) dx = <span class="fr"><span>x<sub>1</sub>⁴</span><span>4</span></span> + <span class="fr"><span>π²</span><span>2</span></span> − 3 ln2 − 3.</span> <span class="pts">(μονάδες 7)</span></p></div>
+      <div class="en"><p><b>i)</b> Prove that f(x) ≥ 0 on the interval [x<sub>1</sub>, 0]. <span class="pts">(3 marks)</span></p><p><b>ii)</b> Let Ω be the region enclosed by the graph of f, the x-axis and the lines x = x<sub>1</sub> and x = f(x<sub>2</sub>), where x<sub>1</sub> is the number from Δ1 and x<sub>2</sub> the root from Δ3ii. If the y-axis divides Ω into two regions of equal area, prove that:</p><p class="disp"><span class="nw">∫<sub>x₁</sub><sup>0</sup> x³ g′(x) dx = <span class="fr"><span>x<sub>1</sub>⁴</span><span>4</span></span> + <span class="fr"><span>π²</span><span>2</span></span> − 3 ln2 − 3.</span> <span class="pts">(7 marks)</span></p></div>
+      <details><summary>λύση · answer</summary><div class="ans">On [x<sub>1</sub>, 0]: f = x²·φ(x) with φ increasing and φ(x<sub>1</sub>) = 0, so <b>f ≥ 0</b>. f(x<sub>2</sub>) = π/3. Right area: E<sub>2</sub> = ∫₀<sup>π/3</sup>(2ημx + εφx − 3x) dx = <b>1 + ln2 − π²/6</b>. Left area, integrating x²g(x) by parts and using g(x<sub>1</sub>) = −x<sub>1</sub>: E<sub>1</sub> = x<sub>1</sub>⁴/12 − J/3, where J = ∫<sub>x₁</sub><sup>0</sup> x³g′(x) dx. Setting E<sub>1</sub> = E<sub>2</sub> and solving: <b>J = x<sub>1</sub>⁴/4 + π²/2 − 3 ln2 − 3</b>.</div></details>
+    </div>
+  </article>
+</section>
+
+<div class="foot">SPINI v1.0 · <span>counts come out, not in</span> · seeds → permutations → min-distance edges → traced faces → χ · nothing on this page is typed in except the questions<br>ΣΑΣ ΕΥΧΟΜΑΣΤΕ ΚΑΛΗ ΕΠΙΤΥΧΙΑ · we wish you good luck</div>
+</div>
+
+<div class="bar" role="toolbar" aria-label="Display controls">
+  <div class="grp"><span class="lbl">γλώσσα</span><button class="btn" data-lang="el">ΕΛ</button><button class="btn" data-lang="en">EN</button><button class="btn on" data-lang="both">ΕΛ + EN</button></div>
+  <div class="grp"><button class="btn gold" id="ans-btn" aria-pressed="false">λύσεις · answers</button></div>
+  <div class="grp"><span class="lbl">spin</span><input type="range" id="spin" min="0" max="3" step="0.05" value="1" aria-label="Spin speed"><span class="val" id="spin-val">1.00</span><button class="btn pink" id="pause-btn" aria-pressed="false">pause</button></div>
+</div>
+
+<script>
+(() => {
+'use strict';
+/* ================= geometry core (identical to the verified node script) ================= */
+const PHI=(1+Math.sqrt(5))/2, R2=Math.SQRT2;
+const perms=v=>{const[a,b,c]=v;return[[a,b,c],[a,c,b],[b,a,c],[b,c,a],[c,a,b],[c,b,a]];};
+const even=v=>{const[a,b,c]=v;return[[a,b,c],[b,c,a],[c,a,b]];};
+const signs=(v,evenOnly)=>{const o=[];for(let s=0;s<8;s++){let neg=0;const w=v.map((x,i)=>{if((s>>i)&1){neg++;return -x;}return x;});if(evenOnly&&neg%2)continue;o.push(w);}return o;};
+const dedup=pts=>{const m=new Map();for(const p of pts){const k=p.map(x=>(Math.abs(x)<1e-9?0:x).toFixed(6)).join(',');if(!m.has(k))m.set(k,p);}return[...m.values()];};
+const gen=(seeds,pf,evenOnly)=>{const pts=[];for(const s of seeds)for(const w of signs(s,evenOnly))pts.push(...pf(w));return dedup(pts);};
+const prism=n=>{const pts=[],e=2*Math.sin(Math.PI/n);for(let k=0;k<n;k++){const a=2*Math.PI*k/n;pts.push([Math.cos(a),Math.sin(a),e/2],[Math.cos(a),Math.sin(a),-e/2]);}return pts;};
+const SOLIDS={
+  tetrahedron:()=>gen([[1,1,1]],v=>[v],true),
+  octahedron:()=>gen([[1,0,0]],perms),
+  cube:()=>gen([[1,1,1]],v=>[v]),
+  pentprism:()=>prism(5),
+  icosahedron:()=>gen([[0,1,PHI]],even),
+  dodecahedron:()=>dedup([...gen([[1,1,1]],v=>[v]),...gen([[0,1/PHI,PHI]],even)]),
+  cuboctahedron:()=>gen([[0,1,1]],perms),
+  trtetrahedron:()=>gen([[3,1,1]],perms,true),
+  troctahedron:()=>gen([[0,1,2]],perms),
+  rhombicubocta:()=>gen([[1,1,1+R2]],perms),
+  icosidodeca:()=>dedup([...gen([[0,0,PHI]],even),...gen([[.5,PHI/2,PHI*PHI/2]],even)]),
+  triprism:()=>prism(3),
+  c60:()=>gen([[0,1,3*PHI],[1,2+PHI,2*PHI],[PHI,2,2*PHI+1]],even),
+  trdodeca:()=>gen([[0,1/PHI,2+PHI],[1/PHI,PHI,2*PHI],[PHI,2,PHI+1]],even),
+};
+const d2=(p,q)=>{const a=p[0]-q[0],b=p[1]-q[1],c=p[2]-q[2];return a*a+b*b+c*c;};
+const edges=pts=>{let dmin=Infinity;const n=pts.length;for(let i=0;i<n;i++)for(let j=i+1;j<n;j++){const d=d2(pts[i],pts[j]);if(d<dmin)dmin=d;}const E=[];for(let i=0;i<n;i++)for(let j=i+1;j<n;j++)if(Math.abs(d2(pts[i],pts[j])-dmin)<1e-6*dmin+1e-9)E.push([i,j]);return E;};
+const norm=v=>{const l=Math.hypot(v[0],v[1],v[2])||1;return[v[0]/l,v[1]/l,v[2]/l];};
+const cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
+const dot=(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
+const sub=(a,b)=>[a[0]-b[0],a[1]-b[1],a[2]-b[2]];
+function faces(pts,E){
+  const n=pts.length,adj=Array.from({length:n},()=>[]);
+  for(const[i,j]of E){adj[i].push(j);adj[j].push(i);}
+  const order=adj.map((nb,i)=>{const p=pts[i],nn=norm(p);const t=Math.abs(nn[0])<.9?[1,0,0]:[0,1,0];const u=norm(cross(nn,t)),v=cross(nn,u);
+    const ang=a=>{const d=sub(pts[a],p);return Math.atan2(dot(d,v),dot(d,u));};
+    return nb.slice().sort((a,b)=>ang(a)-ang(b));});
+  const seen=new Set(),F=[];
+  for(const[a,b]of E)for(const[u,v]of[[a,b],[b,a]]){
+    if(seen.has(u*n+v))continue;const face=[];let cu=u,cv=v;
+    do{seen.add(cu*n+cv);face.push(cu);const nb=order[cv],k=nb.indexOf(cu);const w=nb[(k-1+nb.length)%nb.length];cu=cv;cv=w;}while(!(cu===u&&cv===v)&&face.length<64);
+    F.push(face);}
+  return F;
+}
+const SIZE_NAME={3:'triangle',4:'square',5:'pentagon',6:'hexagon',8:'octagon',10:'decagon'};
+const SIZE_RGB={3:'127,255,127',4:'255,105,180',5:'255,215,0',6:'0,212,255',8:'204,68,255',10:'204,68,255'};
+
+/* ================= build every spini on the page ================= */
+const MONO=getComputedStyle(document.documentElement).getPropertyValue('--mono').trim()||'monospace';
+const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const state={speed:1,paused:false};
+const cache={};
+const SP=[];
+
+function build(canvas){
+  const key=canvas.dataset.solid;
+  if(!cache[key]){
+    const P=SOLIDS[key](),E=edges(P),F=faces(P,E);
+    const rmax=Math.max(...P.map(p=>Math.hypot(p[0],p[1],p[2])));
+    const pts=P.map(p=>[p[0]/rmax,p[1]/rmax,p[2]/rmax]);
+    const deg=new Set();const cnt=new Map();E.forEach(([i,j])=>{cnt.set(i,(cnt.get(i)||0)+1);cnt.set(j,(cnt.get(j)||0)+1);});cnt.forEach(d=>deg.add(d));
+    const bySize={};F.forEach(f=>{bySize[f.length]=(bySize[f.length]||0)+1;});
+    cache[key]={pts,E,F,deg:[...deg].join('/'),bySize,chi:pts.length-E.length+F.length};
+  }
+  const g=cache[key];
+  const sp={canvas,ctx:canvas.getContext('2d'),g,name:canvas.dataset.name,big:!!canvas.dataset.big,
+    yaw:Math.random()*6.283,pitch:.45+Math.random()*.25,tilt:(Math.random()-.5)*.7,
+    dir:Math.random()<.5?1:-1,base:canvas.dataset.big?.22:.38,visible:true,drag:null,dpr:1};
+  sp.hud=`V ${g.pts.length}  E ${g.E.length}  F ${g.F.length}  χ ${g.chi}`;
+  // receipt in HTML, computed from the graph
+  const host=canvas.dataset.big?document.querySelector('[data-receipt-for="'+canvas.id+'"]'):canvas.parentElement.nextElementSibling;
+  if(host&&host.classList.contains('receipt')){
+    const ft=Object.keys(g.bySize).sort((a,b)=>a-b).map(s=>`${g.bySize[s]}×${SIZE_NAME[s]||s+'-gon'}`).join(' + ');
+    host.innerHTML=`V <b>${g.pts.length}</b> · E <b>${g.E.length}</b> · F <b>${g.F.length}</b> (${ft}) · <span class="chi">χ = V − E + F = ${g.chi}</span> · deg ${g.deg}`;
+  }
+  // sizing
+  const fit=()=>{const r=canvas.getBoundingClientRect();const dpr=Math.min(2,window.devicePixelRatio||1);sp.dpr=dpr;const w=Math.max(1,Math.round(r.width*dpr)),h=Math.max(1,Math.round(r.height*dpr));if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;}};
+  fit();sp.fit=fit;
+  // drag / touch / keyboard
+  canvas.addEventListener('pointerdown',e=>{sp.drag={x:e.clientX,y:e.clientY};canvas.setPointerCapture(e.pointerId);});
+  canvas.addEventListener('pointermove',e=>{if(!sp.drag)return;const dx=e.clientX-sp.drag.x,dy=e.clientY-sp.drag.y;sp.drag={x:e.clientX,y:e.clientY};sp.yaw+=dx*.011;sp.pitch=Math.max(-1.45,Math.min(1.45,sp.pitch+dy*.011));draw(sp,0);});
+  const end=()=>{sp.drag=null;};
+  canvas.addEventListener('pointerup',end);canvas.addEventListener('pointercancel',end);
+  canvas.addEventListener('keydown',e=>{const k=e.key;let h=false;if(k==='ArrowLeft'){sp.yaw-=.15;h=true;}if(k==='ArrowRight'){sp.yaw+=.15;h=true;}if(k==='ArrowUp'){sp.pitch-=.15;h=true;}if(k==='ArrowDown'){sp.pitch+=.15;h=true;}if(h){e.preventDefault();draw(sp,0);}});
+  SP.push(sp);
+  return sp;
+}
+
+/* ================= render ================= */
+function rotator(sp){
+  const cy=Math.cos(sp.yaw),sy=Math.sin(sp.yaw),cp=Math.cos(sp.pitch),spp=Math.sin(sp.pitch),ct=Math.cos(sp.tilt),st=Math.sin(sp.tilt);
+  return p=>{const x1=p[0]*ct-p[1]*st,y1=p[0]*st+p[1]*ct,z1=p[2];
+    const x2=x1*cy+z1*sy,y2=y1,z2=-x1*sy+z1*cy;
+    return[x2,y2*cp-z2*spp,y2*spp+z2*cp];};
+}
+function draw(sp,dt){
+  const {ctx,canvas,g,dpr}=sp;const W=canvas.width,H=canvas.height;
+  ctx.clearRect(0,0,W,H);
+  if(dt&&!sp.drag&&!state.paused&&!reduced)sp.yaw+=sp.dir*sp.base*state.speed*dt;
+  const R=rotator(sp);const Q=g.pts.map(R);
+  const cx=W/2,cy=H/2,s=Math.min(W,H)*.40,persp=3.6;
+  const S=Q.map(q=>{const k=persp/(persp-q[2]);return[cx+q[0]*s*k,cy-q[1]*s*k,q[2]];});
+  // faces: only those whose outward normal points at the camera (convex ⇒ no sorting needed)
+  const fa=sp.big?.11:.085;
+  for(const f of g.F){const a=Q[f[0]],b=Q[f[1]],c=Q[f[2]];const n=cross(sub(b,a),sub(c,a));if(n[2]<=0)continue;
+    const nz=n[2]/(Math.hypot(n[0],n[1],n[2])||1);
+    ctx.beginPath();for(let i=0;i<f.length;i++){const p=S[f[i]];i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]);}ctx.closePath();
+    ctx.fillStyle=`rgba(${SIZE_RGB[f.length]||'0,212,255'},${(fa*(.35+.65*nz)).toFixed(3)})`;ctx.fill();}
+  // edges, back to front
+  const ed=g.E.map(([i,j])=>[i,j,(Q[i][2]+Q[j][2])/2]).sort((a,b)=>a[2]-b[2]);
+  for(const[i,j,z]of ed){const t=(z+1)/2;ctx.strokeStyle=`rgba(0,212,255,${(.10+.80*t).toFixed(3)})`;ctx.lineWidth=(.55+1.25*t)*dpr;ctx.beginPath();ctx.moveTo(S[i][0],S[i][1]);ctx.lineTo(S[j][0],S[j][1]);ctx.stroke();}
+  // vertices, back to front
+  const vs=S.slice().sort((a,b)=>a[2]-b[2]);
+  for(const p of vs){const t=(p[2]+1)/2,r=(1.1+2.1*t)*dpr;
+    if(t>.72){ctx.fillStyle=`rgba(0,255,213,${(.14*(t-.72)/.28).toFixed(3)})`;ctx.beginPath();ctx.arc(p[0],p[1],r*3.4,0,6.2832);ctx.fill();}
+    ctx.fillStyle=`rgba(${Math.round(130+125*t)},${Math.round(232+23*t)},255,${(.35+.65*t).toFixed(3)})`;ctx.beginPath();ctx.arc(p[0],p[1],r,0,6.2832);ctx.fill();}
+  // canvas HUD
+  const fs=Math.round((sp.big?11:10)*dpr);ctx.font=`${fs}px ${MONO}`;
+  ctx.fillStyle='rgba(0,212,255,.92)';ctx.textBaseline='top';ctx.fillText(sp.name,9*dpr,8*dpr);
+  ctx.fillStyle='rgba(255,215,0,.9)';ctx.textBaseline='bottom';ctx.fillText(sp.hud,9*dpr,H-8*dpr);
+}
+
+/* ================= boot ================= */
+document.querySelectorAll('canvas[data-solid]').forEach(build);
+const io=('IntersectionObserver' in window)?new IntersectionObserver(es=>{for(const e of es){const sp=SP.find(s=>s.canvas===e.target);if(sp)sp.visible=e.isIntersecting;}},{rootMargin:'80px'}):null;
+if(io)SP.forEach(sp=>io.observe(sp.canvas));
+let last=performance.now();
+function loop(now){const dt=Math.min(.05,(now-last)/1000);last=now;for(const sp of SP)if(sp.visible)draw(sp,dt);requestAnimationFrame(loop);}
+SP.forEach(sp=>draw(sp,0));
+requestAnimationFrame(loop);
+addEventListener('resize',()=>{SP.forEach(sp=>{sp.fit();draw(sp,0);});});
+
+/* ================= controls ================= */
+const body=document.body;
+document.querySelectorAll('.btn[data-lang]').forEach(b=>b.addEventListener('click',()=>{body.dataset.lang=b.dataset.lang;document.querySelectorAll('.btn[data-lang]').forEach(x=>x.classList.toggle('on',x===b));}));
+const ansBtn=document.getElementById('ans-btn');let ansOpen=false;
+ansBtn.addEventListener('click',()=>{ansOpen=!ansOpen;document.querySelectorAll('details').forEach(d=>{d.open=ansOpen;});ansBtn.classList.toggle('on',ansOpen);ansBtn.setAttribute('aria-pressed',String(ansOpen));});
+const spin=document.getElementById('spin'),spinVal=document.getElementById('spin-val');
+spin.addEventListener('input',()=>{state.speed=parseFloat(spin.value);spinVal.textContent=state.speed.toFixed(2);});
+const pauseBtn=document.getElementById('pause-btn');
+pauseBtn.addEventListener('click',()=>{state.paused=!state.paused;pauseBtn.classList.toggle('on',state.paused);pauseBtn.textContent=state.paused?'play':'pause';pauseBtn.setAttribute('aria-pressed',String(state.paused));});
+if(reduced){spin.value='0';spinVal.textContent='0.00 (reduced motion)';}
+})();
+</script>
+</body></html>
