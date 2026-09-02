@@ -465,7 +465,7 @@ unsafe extern "system" fn wndproc(hwnd: HWND, msg: UINT, wp: WPARAM, lp: LPARAM)
             APP.with(|a| {
                 if let Some(app) = a.borrow_mut().as_mut() {
                     if app.spin {
-                        app.yaw += app.speed;
+                        app.yaw = wrap_turn(app.yaw + app.speed);
                         go = true;
                     }
                 }
@@ -853,7 +853,7 @@ impl App {
     fn advance(&mut self, frames: u32) {
         for _ in 0..frames {
             if self.spin {
-                self.yaw += self.speed;
+                self.yaw = wrap_turn(self.yaw + self.speed);
             }
         }
     }
@@ -955,6 +955,79 @@ impl std::fmt::Display for BadValue {
 
 /// Parse a human's typing. `"nan".parse::<f64>()` SUCCEEDS, which is why the
 /// finite test is a separate fence and not folded into the parse.
+/// Wrap an angle into `[0, TAU)`.
+///
+/// **RUSTIUM R20 -- The Unwrapped Turn.** `yaw` declares `lo: 0.0, hi: TAU` in
+/// [`CONTROLS`] and `ctl_set` clamps to it -- but the SPIN advanced it with a
+/// bare `+=` in two places, the window timer and `advance()`, so the value
+/// walked out of the range its own table advertises and never came back.
+///
+/// Found in the viewer first, reported as *"yaw, pitch and roll are acting as
+/// a counter, they don't go back"*. The orb had the identical curse and was
+/// missed, because the fix was applied to the FILE the bug was seen in rather
+/// than swept across the workspace. One binary fixed, one still counting, and
+/// both launched by the same command.
+///
+/// `rem_euclid`, never `%`: the remainder operator keeps the sign of the
+/// DIVIDEND, so a negative speed would drive the angle below `lo` instead of
+/// above `hi` -- the same curse at the other end, and a `%` fix would look
+/// correct while leaving half the bug in place.
+///
+/// The second cost is the one that waits: `sin` and `cos` reduce their
+/// argument modulo TAU using whatever precision is left after the integer
+/// part, so a long enough spin does not merely READ wrong, it stops turning
+/// smoothly. Nothing warns; the motion just coarsens.
+fn wrap_turn(a: f64) -> f64 {
+    if a.is_finite() {
+        a.rem_euclid(std::f64::consts::TAU)
+    } else {
+        0.0
+    }
+}
+
+/// THE CONTROL CONTRACT, given to the orb.
+impl App {
+    /// Find a control by name, case-insensitively.
+    fn ctl_index(name: &str) -> Option<usize> {
+        CONTROLS
+            .iter()
+            .position(|c| c.name.eq_ignore_ascii_case(name))
+    }
+
+    /// Read a control by index. One arm per row of [`CONTROLS`].
+    ///
+    /// NOT a plausible catch-all. R18: a `_ =>` in a getter does not fail, it
+    /// answers with a believable number from the wrong field, which is
+    /// strictly worse than a panic because nothing about it looks broken.
+    /// `NaN` cannot round-trip, so the contract test fails instantly.
+    fn ctl_get(&self, i: usize) -> f64 {
+        match CONTROLS[i].name {
+            "yaw" => self.yaw,
+            "speed" => self.speed,
+            "level" => self.shell.level as f64,
+            _ => f64::NAN,
+        }
+    }
+
+    /// Write a control by index, clamped to its own declared range.
+    ///
+    /// Clamping is right HERE because the value has already been validated by
+    /// [`parse_control`] or produced by a movie's interpolation; this is the
+    /// last line of defence, not the first.
+    fn ctl_set(&mut self, i: usize, v: f64) {
+        let c = &CONTROLS[i];
+        let v = v.clamp(c.lo, c.hi);
+        match c.name {
+            "yaw" => self.yaw = v,
+            "speed" => self.speed = v,
+            "level" => self.goto_level(v.round().clamp(0.0, MAX_LEVEL as f64) as u32),
+            // named explicitly for the same reason the getter is -- a silent
+            // catch-all writes the wrong field just as happily as it reads one
+            _ => debug_assert!(false, "no ctl_set arm for '{}'", c.name),
+        }
+    }
+}
+
 fn parse_control(c: &Control, text: &str) -> Result<f64, BadValue> {
     let t = text.trim();
     let v: f64 = t.parse().map_err(|_| BadValue::NotANumber(t.to_string()))?;
@@ -1148,11 +1221,7 @@ fn run_movie(
             f as f64 / (frames - 1) as f64
         };
         let v = lo + t * (hi - lo);
-        match CONTROLS[ctl].name {
-            "yaw" => app.yaw = v,
-            "speed" => app.speed = v,
-            _ => app.goto_level(v.round().clamp(0.0, MAX_LEVEL as f64) as u32),
-        }
+        app.ctl_set(ctl, v);
         app.render();
 
         if let Some(c) = child.as_mut() {
@@ -1418,12 +1487,8 @@ fn run_script(src: &str, target: Option<String>) -> i32 {
             }
             "controls" => {
                 let mut out = vec![String::from("controls")];
-                for c in CONTROLS.iter() {
-                    let v = match c.name {
-                        "yaw" => app.yaw,
-                        "speed" => app.speed,
-                        _ => app.shell.level as f64,
-                    };
+                for (i, c) in CONTROLS.iter().enumerate() {
+                    let v = app.ctl_get(i);
                     out.push(format!(
                         "  {:<7} {:>10.4}   {}..{}   {}",
                         c.name, v, c.lo, c.hi, c.unit
@@ -1438,19 +1503,12 @@ fn run_script(src: &str, target: Option<String>) -> i32 {
             // `controls` and could not be set. That is a card that looks
             // clickable and is not, one layer down. A table only pays for
             // itself if the lookup goes THROUGH it, so it now does.
-            v if CONTROLS.iter().any(|c| c.name.eq_ignore_ascii_case(v)) => {
-                let i = CONTROLS
-                    .iter()
-                    .position(|c| c.name.eq_ignore_ascii_case(v))
-                    .unwrap();
+            v if App::ctl_index(v).is_some() => {
+                let i = App::ctl_index(v).expect("the guard on this arm just found it");
                 let c = &CONTROLS[i];
                 match parse_control(c, arg) {
                     Ok(x) => {
-                        match c.name {
-                            "yaw" => app.yaw = x,
-                            "speed" => app.speed = x,
-                            _ => app.goto_level(x.round().clamp(0.0, MAX_LEVEL as f64) as u32),
-                        }
+                        app.ctl_set(i, x);
                         format!("{:<7}{x:.4}   ({})", c.name, c.unit)
                     }
                     Err(e) => {
@@ -1699,6 +1757,17 @@ fn append(p: &std::path::Path, s: &str) {
 }
 
 fn open_session() -> PathBuf {
+    // RUSTIUM R19 -- The Per-Run Ledger. A run folder per `App` is correct
+    // for a run and automatic under `cargo test`, where one test binary
+    // builds several. The viewer's `runs/` reached 579 directories that way
+    // before the guard went in; the orb mints from the same shape and would
+    // do it again the moment this file grew its first test -- which is the
+    // commit that added this line.
+    if cfg!(test) {
+        let d = std::env::temp_dir().join("gos_orb_test_runs");
+        let _ = fs::create_dir_all(&d);
+        return d;
+    }
     let base = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .parent()
         .map(|p| p.join("runs"))
@@ -1722,4 +1791,107 @@ fn open_session() -> PathBuf {
     let d = base.join(format!("{pre}{n:04}"));
     let _ = fs::create_dir_all(&d);
     d
+}
+
+/// THE CONTROL CONTRACT -- one test per column.
+///
+/// A `Control` row makes four promises. Before this module the orb enforced
+/// none of them, and it shipped the R20 counter in plain sight for weeks.
+///
+/// ```text
+///   the row says    the promise                    the test
+///   name            it can be found                every_control_is_reachable_by_name
+///   the field       write then read agree          controls_round_trip
+///   lo, hi          the value stays inside them    no_control_escapes_its_declared_range
+/// ```
+///
+/// A declaration is a claim, and a claim without a test is a comment.
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// `None` reads the test binary as its own payload, which is a real file
+    /// of real bytes and exactly what the orb is for.
+    fn app() -> App {
+        App::new(None)
+    }
+
+    #[test]
+    fn every_control_is_reachable_by_name() {
+        for c in CONTROLS.iter() {
+            assert!(
+                App::ctl_index(c.name).is_some(),
+                "control '{}' is in the table but cannot be looked up by name",
+                c.name
+            );
+        }
+    }
+
+    #[test]
+    fn controls_round_trip() {
+        let mut a = app();
+        for (i, c) in CONTROLS.iter().enumerate() {
+            // 0.37 of the way up, so a control that ignores its argument and
+            // parks on a default or an endpoint is caught rather than matched
+            let mut want = c.lo + (c.hi - c.lo) * 0.37;
+            if c.name == "level" {
+                want = want.round();
+            }
+            a.ctl_set(i, want);
+            let got = a.ctl_get(i);
+            assert!(
+                (got - want).abs() < 1e-9,
+                "control '{}' wrote {want} and read back {got} \
+                 -- the setter and the getter are not talking about the same field",
+                c.name
+            );
+        }
+    }
+
+    /// R20. This is the test the counter earned.
+    #[test]
+    fn no_control_escapes_its_declared_range() {
+        let mut a = app();
+        a.spin = true;
+
+        // Drive the speed THROUGH the API at the top of its declared range.
+        // The viewer's first version of this test wrote a raw value straight
+        // into the speed field and broke the very contract it exists to check;
+        // a test that reaches around the API is testing something else.
+        let sp = App::ctl_index("speed").expect("speed is in the table");
+        a.ctl_set(sp, CONTROLS[sp].hi);
+
+        a.advance(200);
+
+        for (i, c) in CONTROLS.iter().enumerate() {
+            let v = a.ctl_get(i);
+            assert!(
+                v >= c.lo && v <= c.hi,
+                "control '{}' left its range after spinning: {v} is not in [{}, {}]",
+                c.name,
+                c.lo,
+                c.hi
+            );
+        }
+    }
+
+    /// The wrap itself, at the two ends that differ.
+    #[test]
+    fn wrap_turn_is_euclidean() {
+        let tau = std::f64::consts::TAU;
+        assert!((wrap_turn(0.5) - 0.5).abs() < 1e-12);
+        assert!(wrap_turn(tau) < 1e-12);
+        assert!((wrap_turn(tau + 0.25) - 0.25).abs() < 1e-12);
+        // the half a `%` fix would have left behind: a NEGATIVE angle must
+        // come back at the TOP of the range, not below the bottom of it
+        let below = wrap_turn(-0.25);
+        assert!(
+            below > 0.0 && below < tau,
+            "a negative turn wrapped to {below}, which is outside [0, TAU)"
+        );
+        assert!((below - (tau - 0.25)).abs() < 1e-12);
+        // and nothing infinite may escape into sin/cos
+        assert_eq!(wrap_turn(f64::NAN), 0.0);
+        assert_eq!(wrap_turn(f64::INFINITY), 0.0);
+    }
 }

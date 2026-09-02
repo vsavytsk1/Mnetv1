@@ -71,7 +71,7 @@ different objects even when they share the same glyph.
 | R17 | The Inclusive Span (spanOffByOneSeam) | `fill_poly` half-open on rows, INCLUSIVE on columns: an 8-wide square painted nine. In face soup every interior edge is drawn by both owners, so an inclusive span double-blends a translucent fill and grows a bright seam along every vertical join. Caught by a test that counted an AREA (`lit == 64`), which a wireframe cannot fake and an eye cannot check. | **FIXED** |
 | R18 | The Plausible Fallback (matchArmCatchAll) | a `match` from NAME to FIELD ended in `_ => self.gen_zoom`, so a new control's box displayed ANOTHER control's value. The setter worked; only the readout lied, and a catch-all answers with a plausible number rather than failing. Two green tests could not see it: one checked the table, one checked the frame, neither checked the round trip. | **FIXED** |
 | R19 | The Per-Run Ledger (sessionPerTest) | the viewer records its gate before the first pixel -- correct for a run, automatic under `cargo test`. 579 directories, 128 holding a SESSION.json and nothing else, recording 20 distinct commits. Flagged as a slope at 297; a problem at 579. A cost that grows per test run grows fastest when the suite is healthiest. | **FIXED** |
-| R20 | The Unwrapped Turn (accumulatorNoWrap) | `yaw`, `pitch` and `roll` declare `lo: 0.0, hi: TAU` and `ctl_set` clamps -- but the SPIN advanced them with a bare `+=` and nothing wrapped, so they climbed forever. 200 frames put yaw at 50.55, eight turns past its own maximum. Beyond the wrong readout: `sin`/`cos` argument reduction runs out of bits, so a long enough spin stops turning smoothly. `rem_euclid`, never `%` -- the remainder keeps the sign of the dividend and a negative speed would break the other end. | **FIXED** |
+| R20 | The Unwrapped Turn (accumulatorNoWrap) | `yaw`, `pitch` and `roll` declare `lo: 0.0, hi: TAU` and `ctl_set` clamps -- but the SPIN advanced them with a bare `+=` and nothing wrapped, so they climbed forever. 200 frames put yaw at 50.55, eight turns past its own maximum. Beyond the wrong readout: `sin`/`cos` argument reduction runs out of bits, so a long enough spin stops turning smoothly. `rem_euclid`, never `%` -- the remainder keeps the sign of the dividend and a negative speed would break the other end. Found AGAIN the same day in `gos_orb`, two sites, because the first fix was scoped to the file rather than swept across the workspace -- and both binaries launch from one command. | **FIXED x2** |
 
 **Numbering (DESIGN CHOICE).** RUSTIUM curses run in their own `R` lane so this
 volume can grow without fighting KERNELIC_MAGIC's global counter (at 38). When a
@@ -1632,6 +1632,99 @@ suggestion**.
 Proved against the bug rather than assumed: the bare `+=` was reinstated and
 the test said `control 'yaw' left its range after spinning: 50.55 is not in
 [0, 6.283185307179586]`.
+
+### THE SECOND BINARY -- fixed the file, not the codebase
+
+**The same day, reported again: "the counter is still going up."**
+
+It was, and the fix was real. `gos_viewer` was clean -- every write path wrapped,
+`ctl_set` clamping, driven 300 frames at full speed on all three axes and every
+angle inside `[0, TAU]`. The timestamps said the screenshots came from the FIXED
+binary. All of that was true and none of it was the answer.
+
+`gos_orb` had the identical curse, at two sites, untouched:
+
+```rust
+    app.yaw += app.speed;      // the window timer
+    self.yaw += self.speed;    // advance()
+```
+
+Same declared range, `lo: 0.0, hi: TAU`. Same two-site shape -- timer and
+`advance` -- because the orb is where that shape was written first and the
+viewer inherited it. **And both binaries are launched by the same command**, so
+the two windows sit side by side on one screen and "the counter" names whichever
+one the eye landed on.
+
+The report was accurate. The diagnosis was scoped to the file the bug was first
+seen in.
+
+> **THE RULE:** when a curse is found, grep for its SHAPE across the whole
+> workspace before calling it fixed. Not the symptom, the shape -- here
+> `\b(yaw|pitch|roll|theta|angle)\b\s*\+=`, which takes one command and finds
+> every instance including the ones nobody has looked at yet.
+
+The sweep that should have run the first time:
+
+```text
+  win32        --
+  viewer       --                          (already fixed)
+  orb          orb/src/main.rs:468  yaw += speed
+  orb          orb/src/main.rs:856  yaw += speed
+  experiments  --
+```
+
+Five seconds, and it is the difference between one fix and two.
+
+### What the second binary cost, in full
+
+The orb was the codebase **before** R18, R19 and R20 -- so the sweep found more
+than the angle:
+
+| found | curse |
+|---|---|
+| `yaw += speed`, two sites, no wrap | R20 |
+| THREE copies of the same name-to-field match, each ending `_ =>` | R18 |
+| `open_session()` mints a folder per `App`, no test guard | R19 |
+| **zero tests**, in 1,725 lines | the reason the other three survived |
+
+The three copies deserve their own note. The orb mapped a control NAME to a
+FIELD in three places -- the movie interpolator, the `controls` listing, and the
+typed-value path -- and each ended in a plausible catch-all. With three controls
+the catch-all happened to be correct; the fourth control would have silently
+displayed the third one's value, which is R18 arriving on schedule. They are now
+one `ctl_get` / `ctl_set` pair with named arms, `NaN` for an unknown read and a
+`debug_assert!` for an unknown write.
+
+**The last row is the load-bearing one.** A file with no tests does not hold one
+bug, it holds however many the shape allows, and they are found by a human
+noticing rather than a suite failing. Four contract tests went in with the fix
+and the range test was proved against the reinstated bug:
+
+```text
+  control 'yaw' left its range after spinning: 50.6 is not in [0, 6.283185307179586]
+```
+
+**50.6, against the viewer's 50.55** -- the same curse and the same arithmetic,
+in the binary next to it.
+
+### One more, free, and it belongs here
+
+Restoring the good source with `Copy-Item` **preserved the source file's
+timestamp**, so cargo's fingerprint saw an mtime older than the binary, skipped
+the rebuild -- `Finished in 0.02s` -- and re-ran the OLD test binary, which
+failed. For about a minute the evidence said a fix that was sitting correctly on
+disk did not work.
+
+That is this whole session's shape one more time: **the artefact under test was
+not the source being read.** A stale binary and a fixed-file-not-codebase are
+the same mistake wearing different clothes -- believing you tested the thing you
+were looking at.
+
+Which is also why the launch command now prints when each running binary was
+BUILT, and refuses to launch anything at all if the build failed. The old one
+piped `cargo` into `Select-Object` and threw the exit code away, so a broken
+build launched the previous binary with no warning -- **a stale-artefact
+generator wired directly to the monkey brain.**
 
 ### The test caught itself first, which is worth recording
 
