@@ -286,6 +286,73 @@ say so.
 
 ---
 
+## 8b. SURFACE COVERAGE — scored against the code, 2026-09-02
+
+Section 1 lists nine entry points. Six are ported; three are not, and the
+missing three are not decoration.
+
+```text
+  GK.buildC60          ok   seed_c60 / Census::C60
+  GK.refineFace        ok   refine_face
+  GK.refineAll         ok   refine(Op::All)
+  GK.refineOne         ok   refine_one
+  GK.refineAllPents    ok   Op::Pent / Op::Hex
+  GK.invariants        ok   invariants() -- trivalence, R-INV honoured
+
+  GK.serialize         --   MISSING, nowhere in the crate
+  GK.deserialize       --   MISSING, nowhere in the crate
+  GK.zoomInto          --   MISSING as a STATE operation
+```
+
+**On `zoomInto`, a distinction worth writing down before someone ticks the box
+by accident.** `gos_viewer` matches `zoom` 33 times — every one of them the
+**camera control**, a float that scales the projection. `GK.zoomInto(state,
+faceIdx)` is a different animal: it descends into one face and returns
+`{childState, transform}`, a *state* operation producing a new mesh. Having a
+zoom slider is not having `zoomInto`. The names collide and the meanings do
+not.
+
+**On `serialize`/`deserialize`:** these are the round trip, and the port spec
+already owes a 60-vertex browser/Rust hex diff that cannot be done without
+them. They are also the cheapest possible carrier for step 9's bit vector —
+serialise a state in both languages, compare the bits. **Two owed items share
+one implementation.**
+
+## 8c. R-INV — honoured, and the second witness is not
+
+`certify()` derives `chi` from trivalence and returns `None` when the census is
+not trivalent-closed, so the check can fail. Verified: the dodecahedron case
+has its own test, `the_dodecahedron_earns_chi_two_instead_of_assuming_it`, and
+`Census::DODECAHEDRON` is a real seed in the census lane.
+
+**But `SEED 12` is not built.** `gos_viewer` line 1549 says so in its own
+words: *"SEED 12 NOT BUILT YET — buildDodecahedron IS STEP 1 OF THE PORT."*
+The census knows the dodecahedron; the geometry does not.
+
+**Two gaps in the invariants, both measured:**
+
+```text
+  refine_one in tests/certification.rs     0 occurrences
+  anchor assertions in tests               0 occurrences
+```
+
+Section 5 asks for two things this port does not yet do:
+
+* **The second witness is unported.** `anchorCount == 12`, independent of the
+  type count, is described as "free" — and there is not one assertion about
+  anchors in 1,366 lines of certification. `Face` carries `anchors` and
+  `anchor_count`; nothing checks them.
+* **The HYPOTHESIS is still a hypothesis.** Section 5 asks whether mixed local
+  refines can push `pents` above 12, and says *verify against the code, not the
+  comment*. `refine_one` appears **zero** times in the test suite. The one
+  operation most likely to break the pentagon count is the one never tested.
+
+Neither is hard. Both are exactly the "mirror" the step table now demands: a
+claim in this spec with no test behind it is the same shape as a card with no
+URL.
+
+---
+
 ## 9. THE STEPS — one at a time, each shippable
 
 *Status re-scored against the code on 2026-09-02, not against memory. The
