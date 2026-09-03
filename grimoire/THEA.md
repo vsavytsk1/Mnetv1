@@ -1836,3 +1836,184 @@ are separate lanes in the schema.
 
 **P=12 . chi=2 . the table travels, the payload stays home.**
 
+---
+
+# PART XIII -- THE LATTICE THE SHELL LIVES ON
+### *added 2026-09-03, from `SolFable/01.SolFableTOv4/shell__eml_luca_spiral_v0_2.html`, verified against `Gos`*
+
+This scroll has carried `phi` since its first page, as a scalar: a ratio, a
+contraction, an eigenvalue. What it had not carried is the **operator** those
+are eigenvalues OF. The golden lane in the EML spiral shell has it, and the
+whole of it is a four-by-four table of integers.
+
+## THE LIGHT MATRIX
+
+Thea's state is not `(k, l)`. It is the four numbers a refinement actually
+moves:
+
+```text
+  s = ( k^2 , k*l , l^2 , P )
+```
+
+and one Fibonacci step, `(k, l) -> (k + l, k)`, acts on them **linearly**:
+
+```text
+  k'^2  = (k+l)^2 = k^2 + 2kl + l^2      ->  [ 1  2  1  0 ]
+  k'l'  = (k+l)k  = k^2 +  kl            ->  [ 1  1  0  0 ]
+  l'^2  =  k^2                           ->  [ 1  0  0  0 ]
+  P'    =  P                             ->  [ 0  0  0  1 ]
+```
+
+**Derived here, not copied.** Each row was re-expanded from the substitution
+and each matched. The characteristic polynomial of the upper 3x3 block is
+
+```text
+  lam^3 - 2 lam^2 - 2 lam + 1  =  (lam + 1)(lam^2 - 3 lam + 1)
+```
+
+whose roots are `-1` and `(3 +/- sqrt5)/2`, and those two are `phi^2` and
+`phi^-2` to the last bit. With the `P` row that is
+
+```text
+  phi^2   2.618033989   GROW       T multiplies by this, asymptotically
+  1       exactly       HOLD       and its eigenvector IS P
+  -1      exactly       OVERSHOOT  the error changes sign every step
+  phi^-2  0.381966011   DECAY      and shrinks by this every step
+```
+
+## THE HOLD EIGENVALUE IS THE TWELVE
+
+The row `[0 0 0 1]` is not padding. **`P` is the eigenvector of eigenvalue 1**,
+which is the linear-algebra statement of the fact this cave opens on: refine
+however deep, `P = 12`.
+
+That is worth saying in the other direction, because it is the whole reason the
+shell is a good place to put anything. A structure hung on the twelve pentagons
+**cannot be refined away**. The twenty hexagons proliferate without limit -- at
+level 6 they are 2,353,040 -- and the twelve do not move. Euler forbids it, and
+`invariants()` checks it at every level by counting arity rather than trusting a
+`kind` label, so it cannot be fooled by a mislabelled face.
+
+## WHAT `Op::All` ACTUALLY IS -- measured, and it had never been said
+
+`Gos` refines by `Op::All`, `Op::Pent`, `Op::Hex`. Today's renders give the
+face counts, and `F = 10T + 2` inverts them:
+
+```text
+  F =      32   ->  T =      3      the C60 seed, (k,l) = (1,1)
+  F =     212   ->  T =     21
+  F =    1472   ->  T =    147
+```
+
+`3 -> 21 -> 147` is **T multiplied by 7**, and `7 = 1 + 1*2 + 4 = T(1,2)`.
+
+> **`Op::All` is multiplication by the Eisenstein integer (1,2).**
+
+The engine has been walking one fixed step of the Goldberg lattice from the
+first commit and never named it. It is not an arbitrary subdivision; it is a
+specific element, and now it has a coordinate.
+
+## TWO LADDERS UP THE SAME LATTICE
+
+```text
+  (k,l)      T        F=10T+2     ratio        lane
+  (1,1)      3             32     --           seed
+  (2,1)      7             72     x2.3333      Fibonacci
+  (3,2)      19           192     x2.7143
+  (5,3)      49           492     x2.5789
+  (8,5)      129         1292     x2.6327
+  (13,8)     337         3372     x2.6124
+  (21,13)    883         8832     x2.6202
+  (55,34)    6051       60512     x2.6183
+
+  Op::All    T -> 7T                x7        one jump, every time
+```
+
+The ratios **alternate around `phi^2` and contract onto it**. Measured from the
+column above, the errors shrink by 0.338, 0.406, 0.376, 0.381, 0.393 -- which is
+`phi^-2 = 0.381966`. All three non-trivial eigenvalues are visible in one column
+of integers: the value it walks to is GROW, the sign flip is OVERSHOOT, the
+shrink is DECAY.
+
+**The practical difference:** `Op::All` jumps by 7. The golden lane steps by
+2.618. Across one `Op::All` jump -- `F = 1472` to `F = 10304` -- the engine has
+*nothing in between*, while the Fibonacci lane lands twice, at `F = 3372`
+`(13,8)` and `F = 8832` `(21,13)`. Growth with control needs the finer ladder.
+
+## THE GOLDEN RAY HAS AN ANGLE
+
+`phi` had never entered this cave as an angle. In the hexagonal lattice it has
+an exact one. For `z = k + l * zeta6`,
+
+```text
+  theta = arctan( sqrt3 * l / (2k + l) )
+
+  along the Fibonacci selector k/l -> phi, so
+
+  theta_phi = arctan( sqrt3 / (2phi + 1) )
+            = arctan( sqrt3 / (sqrt5 + 2) )
+            = arctan( sqrt15 - 2*sqrt3 )        =  22.238756093 deg
+```
+
+Rationalising `sqrt3/(sqrt5+2)` by `(sqrt5-2)` gives `sqrt3(sqrt5-2)` exactly,
+since `5 - 4 = 1`. **Checked independently; both forms agree to the float
+floor.** And the two ends of the wedge are the two achiral shells:
+
+```text
+  C20  (k,l) = (1,0)   theta = 0 deg
+  C60  (k,l) = (1,1)   theta = 30 deg
+```
+
+Every golden-selected shell lands strictly inside and is therefore **chiral**,
+converging -- alternating, contracting by `phi^-2` -- on one fixed twist. `Gos`
+does not currently express chirality at all.
+
+## THE SAME OBJECT, MEASURED FROM THE OTHER SIDE
+
+On the same day, `examples/symmetry_sweep.rs` found the shell's rotation group
+without being told it: **6 five-fold axes, 10 three-fold, 15 two-fold, order
+60**, all 31 confirmed on screen at 0.000% of the frame differing. A five-fold
+axis came back as `[0, 0.525731, 0.850651]`, whose ratio is `1.618033989`.
+
+`phi` as eigenvalue, `phi` as angle, and `phi` read back off an axis of the
+render. Three routes, one number.
+
+The consequence for the DB of PART XII: **every row has 60 images.** A shell of
+2,353,052 faces holds about 39,218 independent ones and the rest are those,
+acted on by rotations now known exactly. That is a real compression bound and
+not an estimate.
+
+## WHAT THIS OWES
+
+* **The light matrix is not in the crate.** Grepped: the only Fibonacci in
+  `Gos` is in `float_wall.rs`, doing something else. The whole golden lane
+  lives in one HTML shell. It is the small kind of missing -- a 4x4 integer
+  matrix with no transcendental in it, which puts it in the **certified lane**,
+  bit-exact and testable, with the `phi^2` growth and the `phi^-2` contraction
+  as *tests* rather than assertions. Only `theta_phi` is DISPLAY.
+* **The `(k,l)` selector.** Naming `Op::All` as `(1,2)` is only useful if the
+  engine can then be handed some other element. It cannot, yet.
+* **Chirality.** Stated above as a property of every golden shell, expressed
+  nowhere in the port.
+* **The weld**, still. It has now been owed by three consecutive parts.
+
+## THE HONEST BOUNDARY
+
+The mathematics above is exact and none of it is negotiable: `P = 12` is the
+`lam = 1` eigenvector, `Op::All` is `(1,2)`, `theta_phi` is a closed form in
+radicals.
+
+**Which twelve questions sit on which twelve pentagons is an assignment, not a
+derivation.** The protection is real -- a structure hung on the pentagons
+survives any refinement. The labelling is a choice made by whoever hangs it.
+Keeping those two apart is the difference between a result and a decoration,
+and the first one is unassailable precisely because it does not depend on the
+second.
+
+---
+
+*Added 2026-09-03. The scroll had phi as a scalar for a year and never asked*
+*what it was an eigenvalue of. It is a table of twelve integers and a 1 in the*
+*corner, and the 1 in the corner is the twelve.*
+
+**P=12 . chi=2 . the hold eigenvalue is not a metaphor.**
