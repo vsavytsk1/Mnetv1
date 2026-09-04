@@ -365,7 +365,7 @@ table had said "step 2 is next" while steps 2–5 were already shipped.*
 | 3 | `refine_face` geometry, f64, planar + spherical | ✅ | `Surface::{Planar,Spherical}`, `project_to_sphere` on the certified lane |
 | 4 | `refine_all` / `refine_hexes` / `refine_pents` + undo | ✅ | `Op::{All,Hex,Pent}`, `refine`, `refine_one`, `undo` |
 | 5 | `invariants()` — trivalence only, never Euler; anchors as 2nd witness | ✅ | `arity_sum/2` and `/3`; χ is **derived so it is allowed to fail** |
-| 6 | **weld + judge**, compare against the census (the headline) | ⬜ **NEXT** | `judge.rs` exists (4 public fns) but **nothing calls it against a welded genesis mesh**. No `weld` in the crate — `sphere.rs` welds its own lane by index pair and does reach `judge`; genesis is face soup and kept no indices. Plan in **THE NEXT TWO**: key the weld on `to_bits()`, not on a distance. |
+| 6 | **weld + judge**, compare against the census (the headline) | ✅ **DONE 2026-09-04** | `src/weld.rs` keys on `to_bits()`. **The seed closes and the judge confirms it: V=60 E=90 F=32 χ=2 from orbits.** Every refined level does not, and the measurement says why — see **WHAT STEP 6 FOUND**. |
 | 7 | render via `raster.rs`, match the browser's image | 🟡 partial | **fills now match the browser exactly** (2026-09-02): pent `rgba(193,74,59,α*0.4)`, hex `rgba(0,40,60,α*0.3)`, strokes already did. Still **no frame-vs-browser test**, so "match" is argued from the constants, not measured |
 | 8 | dashboard card + the byte-topology checker beside it | ✅ | GENESIS card ships in `gos_viewer`, FRAME BITS beside it |
 
@@ -517,4 +517,90 @@ debt yesterday and it is real, but it is a *new* lane. These two are the ones
 that would let the port say something it currently cannot: that its mesh closes,
 and that its numbers are the browser's numbers. Everything else in the port is
 already true or already honest about not being.
+
+---
+
+## WHAT STEP 6 FOUND -- 2026-09-04
+
+`src/weld.rs`, `examples/weld_check.rs`, six tests. The weld keys on
+`( x.to_bits(), y.to_bits(), z.to_bits() )` -- no tolerance, because R7
+measured the float-threshold lane dying at C380 and there is nothing here for
+depth to erode.
+
+### The seed closes, and that sentence is new
+
+```text
+  lvl   faces   V welded   V = as/3   surplus    judge V   judge E   chi
+    0      32         60         60         0         60        90     2
+```
+
+Three routes to one integer, sharing no code: the **bits** count distinct
+points, the **arity sum** divides by three, and the **judge** counts orbits of
+a permutation. Before today the port had all three and had never put two of
+them side by side.
+
+### And every refined rung does NOT close
+
+```text
+    1     212        510        420        90      REFUSED
+    2    1472       3930       2940       990      REFUSED
+    3   10292      28410      20580      7830      REFUSED
+```
+
+**Both candidate causes were measured, because they want opposite fixes.**
+
+*Was it two expressions for one point?* That is the R7-adjacent bug -- `vlerp`
+is `a(1-t) + bt`, so the face seeing an edge as `(p,q)` and the one seeing it
+as `(q,p)` could round differently. **No.** Of 510 points at level 1, the
+closest pair is **0.1334** apart. Not one pair is within `1e-15`. There is no
+float defect here.
+
+*Was it structure?* Yes, and the degree histogram says so exactly:
+
+```text
+  degree 1   180 points    mid_ring[i] -- pulled toward its OWN face's centroid
+  degree 2    90 points    em, the raw edge midpoint -- genuinely shared
+  degree 3   180 points    inner[i] -- the inner face and two cells
+  degree 6    60 points    the original C60 corners
+             ----------
+             1260 incidences == the arity sum, exactly
+```
+
+`refine_face` builds every new point relative to **its own face's centroid**,
+and two faces sharing an edge have different centroids. So 180 mid-ring points
+sit on exactly one face each, leaving a directed edge with no twin -- and
+`judge` is right to refuse.
+
+The one point that *is* shared works for the reason worth knowing: `em` is
+`vlerp(pts[i], pts[j], 0.5)`, which is `p*0.5 + q*0.5`, and **floating-point
+addition is commutative**, so both faces get the identical 64 bits and it welds
+at degree 2 without being asked to.
+
+### What this settles, and what it does not
+
+It does **not** say the crescent is a bug. `README.md` says the gap between the
+inner and mid rings *"is not a bug to fix, it is the picture"*, and the whole
+INNER/MID aesthetic lives in it.
+
+It settles that **the picture and a closed surface are different objects.**
+`invariants()` reports `V = arity_sum / 3` because a Goldberg polyhedron is
+trivalent. Above level 0 this mesh is not -- its degrees are 1, 2, 3 and 6 --
+so that division is a **prediction the geometry does not satisfy**, and `chi`
+derived from it is arithmetic on counts rather than a measurement of the built
+shell.
+
+Nothing had ever caught it, and the reason is exact: **a census counts faces,
+and all 510 of those points are on a face.** That is R13's pattern one more
+time -- an honest instrument, answering a question nobody had asked it.
+
+### What it costs and what it buys
+
+The weld is one hash pass: 4.4 ms at level 3, 10,292 faces. Cheap enough to run
+on every rung.
+
+What it buys is a question the port can now ask that it could not before: *is
+this mesh a surface?* And the honest answer at every level above the seed is
+no, which is worth far more than the silence it replaces. A future `Op` that
+shares the mid ring between neighbours -- or a `weld` mode that averages the
+two -- would close it, and `weld_check` is now the instrument that would say so.
 

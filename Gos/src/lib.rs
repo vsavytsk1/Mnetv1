@@ -64,6 +64,7 @@ pub mod palette;
 pub mod raster;
 pub mod rng;
 pub mod sphere;
+pub mod weld;
 
 use std::collections::HashSet;
 use std::fmt;
