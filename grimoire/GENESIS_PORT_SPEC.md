@@ -505,6 +505,38 @@ HUD prints `chi:2` from a formula that returns 2 whether or not a mesh was
 ever built. **Genesis's panel has the same shape**, and now there is an
 instrument that can tell the two apart.
 
+### STEP 11 -- THE CANVAS IS NOW WHATEVER MONITOR RAN IT   *(new 2026-09-04)*
+
+`gos_viewer` and `gos_orb` now open full screen with no flags. That is better
+for a person and it makes one thing worse, so it is written here rather than
+enjoyed quietly.
+
+**The window's canvas is now hardware-dependent by default.** It was already
+possible with `--max`; it is now what happens if you do nothing. The headless
+lanes were deliberately excluded -- `--run` and `--script` stay at 1920x1080
+unless asked otherwise, so every receipt in `runs/` is still machine-
+independent -- but the split now exists and has to be *maintained*:
+
+```text
+  window        full screen        varies by monitor      fine, nobody diffs a window
+  --run/--script 1920 x 1080       identical everywhere   the receipts live here
+```
+
+The risk is that a later convenience quietly moves the second row. Anything
+that makes a script inherit the window's canvas would make two machines
+disagree about a PNG that is supposed to be a receipt, and the failure would
+look like a rendering difference rather than a policy change.
+
+**What would close it:** a test that asserts a headless run's canvas is
+`DEFAULT_W x DEFAULT_H` regardless of the screen, so the split is enforced by
+the suite rather than by whoever last read the argument parser. Three lines,
+and it is the difference between a decision and a convention.
+
+Also unchanged and worth restating next to it: **live drag-resize is still not
+built** (`Gos/README.md`). The canvas is fixed once at startup, so a
+full-screen window on a display that changes resolution mid-run keeps the
+canvas it opened with.
+
 ### NOT NEXT, and each for a stated reason
 
 * **The light matrix** (THEA PART XIII). Real, small, pure `i64`, belongs in
