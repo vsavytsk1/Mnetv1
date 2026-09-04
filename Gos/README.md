@@ -10,7 +10,7 @@ holds across the kernel, so it can never own a window — that is why the
 `unsafe` lives in one small FFI crate and nowhere else.
 
 ```
-17 modules · 11 examples · 137 tests · clippy zero · fmt clean
+19 modules · 20 examples · 173 tests · clippy zero · fmt clean
 ```
 
 ---
@@ -22,7 +22,7 @@ holds across the kernel, so it can never own a window — that is why the
 rustup toolchain install stable-x86_64-pc-windows-gnu
 
 cd Gos
-cargo +stable-x86_64-pc-windows-gnu test --workspace     # 137, must be green
+cargo +stable-x86_64-pc-windows-gnu test --workspace     # 173, must be green
 cargo +stable-x86_64-pc-windows-gnu build --release --workspace
 
 # then look at something
@@ -451,11 +451,20 @@ done, stated plainly:
   the comparison exists — but nothing has ever put those bits next to the
   browser's. Correct by standard; **never measured**. This is step 9.
 - `faceLocalFrame` / `facePatch2D`, and the inside view that needs them.
-- **The weld.** `src/sphere.rs` welds by sorted index pair, exactly and with no
-  tolerance, and hands the result to `judge` — so the icosphere lane closes its
-  own loop. `genesis.rs` is face soup and kept no indices, so it cannot do the
-  same, and `judge.rs` has still never been shown a genesis mesh. This is step
-  6, and it is the headline.
+- **A closed surface above level 0.** `src/weld.rs` landed 2026-09-04 and step
+  6 is done — but what it *measured* belongs here rather than in the list of
+  things that landed. The seed welds and the judge confirms it (V=60, E=90,
+  χ=2, from orbits). **Every refined level fails to close, and not by a
+  rounding**: the closest pair of points at level 1 is 0.1334 apart, and the
+  degree histogram is 1, 2, 3 and 6 rather than 3 everywhere. `refine_face`
+  builds each new point relative to its own face's centroid, so 180 mid-ring
+  points sit on exactly one face.
+  That gap is **the crescent, and the crescent is the picture** — see INNER and
+  MID above. So this is not a defect to repair. It is a fact the panel does not
+  yet show: `invariants()` divides the arity sum by three because a Goldberg
+  polyhedron is trivalent, and above level 0 this mesh is not, so the `χ = 2`
+  on screen is arithmetic on counts rather than a measurement of the built
+  shell. Run `cargo run --release --example weld_check` to see both numbers.
 - `GK.zoomInto` is in the spec's public surface, quoted from the header
   comment. It is **never defined**, in v8.1 or v8.5.2. Porting it would mean
   inventing it.
@@ -481,6 +490,10 @@ done, stated plainly:
 - **The flight explorer** — six nudges and a grain, and with it a fourth
   `When` category, `Nudge`, because the existing three would each have graded
   it wrong.
+- **`src/weld.rs`** and `examples/weld_check.rs` — step 6. The soup keyed
+  on `to_bits()`, no tolerance to outgrow. The seed closes; what that found
+  above level 0 is in **Status**, because it is a fact about the mesh rather
+  than a feature.
 - **`examples/symmetry_sweep.rs`** — the shell's rotation group found from the
   mesh and confirmed on screen: 6 five-fold axes, 10 three-fold, 15 two-fold,
   order 60, all 31 at 0.000% of the frame differing.

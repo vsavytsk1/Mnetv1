@@ -435,90 +435,81 @@ thing that never moves.*
 
 ---
 
-## THE NEXT TWO -- logged 2026-09-04
+## THE BOARD -- logged 2026-09-04, rewritten the same day
 
-Both are **closure**, and that is the joke worth writing down. This port has a
-Mobius twist, a fill that matches the browser, a flight explorer, a vector
-database, and as of yesterday the shell's entire rotation group measured from
-its own pixels. What it does not have is **either of the two things that would
-close a loop.** Everything built is a new instrument; neither open step is.
+The previous version of this section logged **step 6 and step 9** as the next
+two, and observed that both were *closure* while everything recently built was
+a new instrument. Step 6 landed within the day, so the board is rewritten
+rather than left to rot -- and it is worth recording that **step 6 did not
+close what it was expected to close.** It measured, and the measurement moved
+two items onto this list that were not on it that morning.
 
-That is R13 pointed at the project instead of at a function.
+### STEP 9 -- THE BIT-IDENTITY VECTOR   *(the headline now)*
 
-### STEP 6 -- THE WELD, and it is cheaper than it looked
+Open since v0.1. The **last unmeasured claim in the port**, and RUSTIUM still
+calls it *"highest value, lowest cost in this scroll"*.
 
-`judge.rs` has four public functions and has never been shown a genesis mesh.
-The reason is structural: `judge::check` wants a **rotation system**, which is a
-permutation over *indexed* vertices, and `genesis::State` is **face soup** --
-every face owns its own copy of each shared corner and no index survives.
-
-`sphere.rs` already solves this for its own lane:
-
-```rust
-    // the midpoint of edge (a,b), keyed by the SORTED INDEX PAIR, so both
-    // triangles sharing that edge get the identical vertex
-    let k = if a < b { (a, b) } else { (b, a) };
-```
-
-exact, no tolerance, and its result **is** handed to `judge`. So the icosphere
-lane closes its loop and genesis does not. Genesis cannot copy that key,
-because it never kept the indices to sort.
-
-**But it has a better key than a distance.** A shared corner is computed
-independently by each neighbouring face -- and if both compute it with the
-*same expression on the same inputs*, IEEE-754 requires the same 64 bits. So:
-
-```text
-  key = ( x.to_bits(), y.to_bits(), z.to_bits() )
-```
-
-No tolerance to outgrow, no quantisation to drift -- R7 killed the
-float-threshold lane at C380 and there is nothing here for depth to erode.
-**The weld is a hash on the bits**, which is the plainest possible statement of
-what this whole cave is for.
-
-And the failure mode is the reason to do it rather than a risk in doing it:
-
-```text
-  V_welded == arity_sum / 3     the soup is consistent; hand it to judge
-  V_welded >  arity_sum / 3     some shared corner is reached by two different
-                                EXPRESSIONS, and the bits found it
-```
-
-Either outcome is worth more than the current silence. The first closes the
-port's headline; the second is a real bug in `refine_face` that no census could
-ever see, because a census counts faces and both copies are faces.
-
-**Sequence:** weld by bits -> compare `V` against `arity_sum/3` -> build the
-rotation system from the welded faces -> `judge::check` -> the census and the
-graph are finally introduced.
-
-### STEP 9 -- THE BIT-IDENTITY VECTOR
-
-Open since v0.1, and RUSTIUM still calls it *"highest value, lowest cost in this
-scroll"*. Section 8 asserts the geometry is bit-identical to the browser's.
-**Nobody has ever looked.**
-
-Half of it now exists: `netfile.rs` stores every coordinate as `to_bits()` and
-never as decimal, so our side is already in the only form the comparison can
-use. What is missing is the other side and the diff:
+Section 8 asserts the geometry is bit-identical to the browser's. Nobody has
+ever looked. Half of it exists: `netfile.rs` stores every coordinate as
+`to_bits()` and never as decimal, so our side is already in the only form the
+comparison can use.
 
 ```text
   1. emit the 60 C60 vertices as 180 hex u64 from Rust
   2. emit the same 180 from the browser's GK.buildC60()
-  3. diff, and report the FIRST index that differs, not a count
+  3. diff, and report the FIRST INDEX that differs, not a count
 ```
 
-Decimal anywhere in that chain voids it -- `0.1` prints the same and is not the
-same, which is the whole reason `netfile` was written the way it was.
+**Decimal anywhere in that chain voids it.** `0.1` prints the same and is not
+the same, which is exactly why `netfile` was written the way it was.
 
-**Why these two and not the light matrix.** PART XIII of THEA opened a third
-debt yesterday and it is real, but it is a *new* lane. These two are the ones
-that would let the port say something it currently cannot: that its mesh closes,
-and that its numbers are the browser's numbers. Everything else in the port is
-already true or already honest about not being.
+There is now a second reason to do this that did not exist yesterday. Step 6
+proved the seed **closes** -- V=60, E=90, χ=2, from orbits of a permutation.
+So if the 180 bit patterns also match the browser's, the claim is no longer
+*"our C60 is correct by standard"* but *"our C60 is the same 180 numbers as the
+browser's, and that object is a verified closed surface."* Two independent
+statements about one seed, and neither needs the other.
 
----
+### STEP 10 -- SURFACE THE WELD   *(new, and step 6 put it here)*
+
+`weld_check` found that above level 0 the mesh is **not trivalent** -- degrees
+1, 2, 3 and 6 -- so `invariants()`'s `V = arity_sum / 3` is a prediction the
+geometry does not satisfy, and the χ derived from it is arithmetic on counts
+rather than a measurement of the built shell.
+
+**That number is on the viewer's panel right now, and it reads χ = 2.**
+
+This is not a request to change the geometry. The crescent is the picture (§3),
+and closing it would produce different images and fail the port. It is a
+request that **the screen stop implying something the screen cannot support**:
+
+* the panel should distinguish the **counted** census from the **measured**
+  weld, because they are different claims and one of them is new;
+* `weld` is one hash pass -- 4.4 ms at level 3, 10,292 faces -- so it is
+  affordable per frame at the levels a human drives, and must be **priced
+  before it is paid** at the levels they do not (Curse 35);
+* `invariants()`'s own doc should say that it measures COUNTS. It has never
+  claimed otherwise, and it has never had a peer that measures geometry to be
+  distinguished from either.
+
+The precedent is already in the cave. `sphere.rs` warns that `byte_sphere`'s
+HUD prints `chi:2` from a formula that returns 2 whether or not a mesh was
+ever built. **Genesis's panel has the same shape**, and now there is an
+instrument that can tell the two apart.
+
+### NOT NEXT, and each for a stated reason
+
+* **The light matrix** (THEA PART XIII). Real, small, pure `i64`, belongs in
+  the certified lane -- and it is a **new lane**, not a closure. It opens the
+  `(k,l)` selector and chirality, neither of which the port expresses. Worth
+  doing; not worth doing before the port can say its own numbers are the
+  browser's.
+* **A closed-surface `Op`.** Sharing the mid ring between neighbours would make
+  every level weld and judge. It would also **change every picture the engine
+  has ever made.** That is a design decision for a human, not a task, and
+  `weld_check` is now the instrument that would grade it either way.
+* **`anchor` and `refine_one`.** Still zero occurrences in `certification.rs`.
+  Two claims with no test behind them, carried since the surface audit.
 
 ## WHAT STEP 6 FOUND -- 2026-09-04
 
