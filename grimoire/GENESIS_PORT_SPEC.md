@@ -338,10 +338,14 @@ The census knows the dodecahedron; the geometry does not.
 
 Section 5 asks for two things this port does not yet do:
 
-* **The second witness is unported.** `anchorCount == 12`, independent of the
-  type count, is described as "free" — and there is not one assertion about
-  anchors in 1,366 lines of certification. `Face` carries `anchors` and
-  `anchor_count`; nothing checks them.
+* **The second witness is half-ported.** *(re-measured 2026-09-04 — the
+  original text said "not one assertion about anchors in 1,366 lines" and both
+  numbers have moved.)* `certification.rs` is now 1,763 lines and does carry
+  `the_anchor_witness_survives_as_one_byte`, which asserts twelve distinct
+  anchors and that a `netfile` round trip keeps them. **But it checks one
+  level, reached by one `Op::All`.** Section 5's claim is that `anchorCount`
+  stays 12 *forever*, and forever is not tested at a single rung — least of all
+  the rung reached by the safest operator.
 * **The HYPOTHESIS is still a hypothesis.** Section 5 asks whether mixed local
   refines can push `pents` above 12, and says *verify against the code, not the
   comment*. `refine_one` appears **zero** times in the test suite. The one
@@ -369,14 +373,18 @@ table had said "step 2 is next" while steps 2–5 were already shipped.*
 | 7 | render via `raster.rs`, match the browser's image | 🟡 partial | **fills now match the browser exactly** (2026-09-02): pent `rgba(193,74,59,α*0.4)`, hex `rgba(0,40,60,α*0.3)`, strokes already did. Still **no frame-vs-browser test**, so "match" is argued from the constants, not measured |
 | 8 | dashboard card + the byte-topology checker beside it | ✅ | GENESIS card ships in `gos_viewer`, FRAME BITS beside it |
 
-### Step 6 is the headline, and it is next for a reason
+### Step 6 was the headline, and this is why — *closed 2026-09-04*
 
-Steps 1–5 built the mesh and 8 draws it. **Nothing yet closes the loop**: the
-census in `genesis.rs` counts faces, `judge.rs` computes closure in pure graph
-space, and the two have never been introduced. Until they are, the port has an
-honest builder and an honest judge and **no proof they agree** — which is
-precisely the R13–R16 pattern: two correct instruments, no correspondence
-between them.
+Steps 1–5 built the mesh and 8 draws it. **Nothing closed the loop**: the
+census in `genesis.rs` counted faces, `judge.rs` computed closure in pure graph
+space, and the two had never been introduced. The port had an honest builder
+and an honest judge and **no proof they agreed** — precisely the R13–R16
+pattern: two correct instruments, no correspondence between them.
+
+`src/weld.rs` introduced them. **The seed closes and they agree exactly**
+(V=60, E=90, χ=2, from orbits of a permutation). Above the seed they do not,
+and the measurement of *why* is in **WHAT STEP 6 FOUND** below — it is not a
+rounding, and it is not a defect to repair.
 
 ### Step 9 — MEASURE THE BIT-IDENTITY CLAIM
 
@@ -508,8 +516,11 @@ instrument that can tell the two apart.
   every level weld and judge. It would also **change every picture the engine
   has ever made.** That is a design decision for a human, not a task, and
   `weld_check` is now the instrument that would grade it either way.
-* **`anchor` and `refine_one`.** Still zero occurrences in `certification.rs`.
-  Two claims with no test behind them, carried since the surface audit.
+* **`refine_one`, and the rest of the anchor witness.** `refine_one` is still
+  **zero occurrences** in `certification.rs` — the operation most likely to
+  break the pentagon count is the one never tested. `anchor` is now partly
+  covered (§5), at one level reached by one `Op::All`, which is not the same as
+  the *forever* the spec claims.
 
 ## WHAT STEP 6 FOUND -- 2026-09-04
 
