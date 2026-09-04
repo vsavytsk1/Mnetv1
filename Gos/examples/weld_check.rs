@@ -61,7 +61,11 @@ fn main() {
             Ok(v) => (v.v.to_string(), v.e.to_string(), v.chi.to_string()),
             Err(e) => {
                 all_ok = false;
-                (String::from("--"), String::from("--"), format!("REFUSED: {e}"))
+                (
+                    String::from("--"),
+                    String::from("--"),
+                    format!("REFUSED: {e}"),
+                )
             }
         };
 
@@ -117,8 +121,8 @@ fn main() {
         for i in 0..n {
             for j in (i + 1)..n {
                 let (a, b) = (w.verts[i], w.verts[j]);
-                let d = ((a[0] - b[0]).powi(2) + (a[1] - b[1]).powi(2) + (a[2] - b[2]).powi(2))
-                    .sqrt();
+                let d =
+                    ((a[0] - b[0]).powi(2) + (a[1] - b[1]).powi(2) + (a[2] - b[2]).powi(2)).sqrt();
                 if d < nearest[i] {
                     nearest[i] = d;
                 }
@@ -171,12 +175,8 @@ fn main() {
             ulp.min(2 * (w.surplus().max(0) as usize)),
             w.surplus()
         );
-        println!(
-            "    The rest are separated by real distance: refine_face pulls every new"
-        );
-        println!(
-            "    point toward its OWN face's centroid, and neighbours have different ones."
-        );
+        println!("    The rest are separated by real distance: refine_face pulls every new");
+        println!("    point toward its OWN face's centroid, and neighbours have different ones.");
     }
 
     println!();

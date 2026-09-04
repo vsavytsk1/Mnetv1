@@ -2594,7 +2594,14 @@ impl App {
         }
 
         for (i, l) in lines.iter().enumerate() {
-            font::text(&mut self.cv, FLIGHT_X, CENSUS_Y + i as i32 * 14, l, pal.text, 1);
+            font::text(
+                &mut self.cv,
+                FLIGHT_X,
+                CENSUS_Y + i as i32 * 14,
+                l,
+                pal.text,
+                1,
+            );
         }
     }
 
@@ -3047,7 +3054,11 @@ impl App {
         // collected as plain data so the immutable borrow ends before `click`
         let mut pool: Vec<(&'static str, i32, i32, i32, i32)> = Vec::new();
         if self.view() == View::Genesis {
-            pool.extend(self.gen_buttons.iter().map(|b| (b.label, b.x, b.y, b.w, b.h)));
+            pool.extend(
+                self.gen_buttons
+                    .iter()
+                    .map(|b| (b.label, b.x, b.y, b.w, b.h)),
+            );
         }
         pool.extend(self.buttons.iter().map(|b| (b.label, b.x, b.y, b.w, b.h)));
 

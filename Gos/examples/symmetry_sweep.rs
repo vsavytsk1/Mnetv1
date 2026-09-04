@@ -4,9 +4,16 @@
 //!
 //! The C60 is built from the golden ratio, so its rotation group is
 //! icosahedral: order 60, with 15 two-fold axes, 10 three-fold and 6 five-fold.
-//! That is a fact about the coordinates. This program does not assume it -- it
-//! **measures** it, from the rendered image alone, and the count it finds is
-//! either 15 / 10 / 6 or the claim is wrong.
+//! That is a fact about the coordinates. This program does not assume it: it
+//! **finds the axes in the mesh and then confirms every one of them on
+//! screen**, and the count is either 15 / 10 / 6 or the claim is wrong.
+//!
+//! *(This sentence used to read "measures it, from the rendered image alone".
+//! That was true of the first version and stopped being true when the search
+//! moved -- see WHERE THE SEARCH HAPPENS -- and the header was not moved with
+//! it. A file that contradicts itself four screens apart is the exact shape
+//! this crate spends its tests catching, so the correction is recorded rather
+//! than quietly applied.)*
 //!
 //! # THE INSTRUMENT, AND WHY THE OBVIOUS TWO DO NOT WORK
 //!
@@ -116,10 +123,7 @@ fn phi() -> f64 {
 /// the question the seal and the OKLab stats both decline to.
 fn frame_diff(a: &Canvas, b: &Canvas) -> usize {
     debug_assert_eq!(a.px.len(), b.px.len(), "frames must be the same size");
-    a.px.iter()
-        .zip(b.px.iter())
-        .filter(|(x, y)| x != y)
-        .count()
+    a.px.iter().zip(b.px.iter()).filter(|(x, y)| x != y).count()
 }
 
 /// Paint the shell at one orientation, at the search size.
@@ -369,7 +373,8 @@ fn main() -> std::io::Result<()> {
     println!(
         "\n  ON the axis the frame differs by {at_zero:.3}%, and {:.4} rad off it by\n  \
          more than {THRESHOLD_PCT}%. The basin is under {:.4} rad wide.",
-        half_width, half_width * 2.0
+        half_width,
+        half_width * 2.0
     );
     println!(
         "  A blind grid over the sphere would need about {:.0e} samples to land in\n  \
@@ -470,7 +475,11 @@ fn main() -> std::io::Result<()> {
         "n", "pitch", "yaw", "view axis", "diff %"
     );
     for h in &found {
-        let mark = if h.pct < THRESHOLD_PCT { "" } else { "   <-- MESH SAID YES, SCREEN SAYS NO" };
+        let mark = if h.pct < THRESHOLD_PCT {
+            ""
+        } else {
+            "   <-- MESH SAID YES, SCREEN SAYS NO"
+        };
         println!(
             "  {:>3}  {:>9.5} {:>9.5}  [{:>7.4} {:>7.4} {:>7.4}]  {:>7.3}%{}",
             h.order, h.rx, h.ry, h.axis[0], h.axis[1], h.axis[2], h.pct, mark
@@ -523,10 +532,12 @@ fn main() -> std::io::Result<()> {
             five.axis[2],
             (five.axis[2] / five.axis[1]).abs()
         );
-        println!("  PHI is                                          {:.9}", phi());
+        println!(
+            "  PHI is                                          {:.9}",
+            phi()
+        );
         println!("  -- the golden ratio, recovered from a symmetry of the render.");
     }
-
 
     // ---- THE PICTURES ------------------------------------------------
     //
@@ -580,7 +591,6 @@ fn main() -> std::io::Result<()> {
     );
     println!("              6 rosettes, 10 triskelions, 15 mirror pairs, one shell");
 
-
     // ---- THE FLOW ----------------------------------------------------
     //
     // The pictures above are the shell standing still at each of its axes.
@@ -596,11 +606,18 @@ fn main() -> std::io::Result<()> {
     // some point in that one triangle. **Walking its three edges is a tour of
     // the entire orientation space, at 1/60 the length.** That is the same
     // compression the table above prints, taken for a walk.
-    let a5 = found.iter().find(|h| h.order == 5).expect("a five-fold axis");
+    let a5 = found
+        .iter()
+        .find(|h| h.order == 5)
+        .expect("a five-fold axis");
     let a3 = found
         .iter()
         .filter(|h| h.order == 3)
-        .max_by(|p, q| dot(p.axis, a5.axis).abs().total_cmp(&dot(q.axis, a5.axis).abs()))
+        .max_by(|p, q| {
+            dot(p.axis, a5.axis)
+                .abs()
+                .total_cmp(&dot(q.axis, a5.axis).abs())
+        })
         .expect("a three-fold axis");
     let a2 = found
         .iter()

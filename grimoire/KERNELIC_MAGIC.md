@@ -8054,7 +8054,6 @@ FAMILY:
   Curse 15 (sortGhost: the tool reports a state that is not the real state). The counter to
   all three is the same: distrust the convenient report; query the ground truth directly.
 
-```
 
 Curse count: 32. .gitignore is an entry filter, not an eviction tool; check-ignore lies per-path. git rm --cached, then let `git add` be the only oracle. Store the mirror, regenerate the render, keep the push snappy. Always.
 
@@ -8117,7 +8116,6 @@ FAMILY:
   not the convenient report): here the oracle is `ast.parse` + `import` + the run, never the
   eye on the echoed diff. Compile after every structural edit. Always.
 
-```
 
 Curse count: 33. A botched multi-edit can silently drop a def or a return; the file parses and reads fine, then throws NameError at runtime far away. Compile and import after every structural edit; distrust the echo; assume a failed multi-edit landed partial. Always.
 
@@ -8184,7 +8182,6 @@ FAMILY:
   lock-out -- a loader you cannot escape). Sibling of K4: blank/wait is honest only
   if the user can still get through; arm a fallback so the wait always ends.
 
-```
 
 Curse count: 34. requestIdleCallback starves under a requestAnimationFrame loop -- the spinner you add to entertain the wait is what stops the idle callback ever firing, so the loader freezes while still moving. Sequence real work with setTimeout; keep rIC for droppable filler; arm a fallback dismiss. Motion is not progress. Always.
 
@@ -8242,7 +8239,6 @@ FAMILY:
   The counter-hex is K5 (put the fence where nature put it) plus K4 (blank/halt honestly,
   never a silent trap). Predict before you allocate. The guillotine is built in. Always.
 
-```
 
 Curse count: 35. A correct recursive kernel with no ceiling OOM-kills the tab: exponential growth crosses from instant to fatal in one click, during an allocation no handler can catch. Predict the next step's cost from the recurrence BEFORE allocating; refuse loudly with the number when it exceeds a memory-tied budget. The guillotine is built in. Always.
 
@@ -8299,7 +8295,6 @@ FAMILY:
   is the kernel here) and Path V (guard the seam between two worlds). Read the console
   first. Declare every var. The silent thing is usually a thrown thing. Always.
 
-```
 
 Curse count: 36. Under "use strict", assigning an undeclared variable throws a ReferenceError that aborts the whole function -- so a wave-panel edit's stray `freqData=...` silently killed the VOICE, and the error surfaced far from the silence. When a working feature dies after an unrelated edit, read the console FIRST; declare every var. The silent thing is usually a thrown thing. Always.
 ---

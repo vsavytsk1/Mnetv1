@@ -234,7 +234,11 @@ mod tests {
 
         assert_eq!(w.v(), 60, "the C60 has 60 distinct corners");
         assert_eq!(w.surplus(), 0, "no corner is reached by two expressions");
-        assert_eq!(w.v() as u64, inv.vertices, "the bits and the arity sum agree");
+        assert_eq!(
+            w.v() as u64,
+            inv.vertices,
+            "the bits and the arity sum agree"
+        );
 
         let v = w.judge().expect("the seed is a closed orientable surface");
         assert_eq!((v.v, v.e, v.f, v.chi), (60, 90, 32, 2));
@@ -283,7 +287,11 @@ mod tests {
         }
         let count = |d: usize| deg.iter().filter(|&&x| x == d).count();
         assert_eq!((count(1), count(2), count(3), count(6)), (180, 90, 180, 60));
-        assert_eq!(deg.iter().sum::<usize>(), w.corners, "incidences are the arity sum");
+        assert_eq!(
+            deg.iter().sum::<usize>(),
+            w.corners,
+            "incidences are the arity sum"
+        );
 
         // and therefore the judge must refuse -- a degree-one point leaves a
         // directed edge with no twin
