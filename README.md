@@ -237,8 +237,8 @@ cd Gos
 cargo +stable-x86_64-pc-windows-gnu test --workspace
 cargo +stable-x86_64-pc-windows-gnu build --release --workspace
 
-.\target\release\gos_viewer.exe --max --open "yaw=1;zoom=4;steps=3"
-.\target\release\gos_orb.exe --max
+.\target\release\gos_viewer.exe --open "yaw=1;zoom=4;steps=3"
+.\target\release\gos_orb.exe
 ```
 
 **The toolchain line is the first curse in `RUSTIUM.md` for a reason.**

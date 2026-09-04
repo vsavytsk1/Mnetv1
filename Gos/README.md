@@ -26,8 +26,8 @@ cargo +stable-x86_64-pc-windows-gnu test --workspace     # 173, must be green
 cargo +stable-x86_64-pc-windows-gnu build --release --workspace
 
 # then look at something
-.\target\release\gos_viewer.exe --max
-.\target\release\gos_orb.exe --max
+.\target\release\gos_viewer.exe
+.\target\release\gos_orb.exe
 ```
 
 ### THE LINKER TRAP
@@ -68,12 +68,22 @@ parallel copy of it.
 ### Common flags
 
 ```
---max                  canvas = the client area of a full-screen window
+(no flags)             FULL SCREEN -- the default for a window
+--windowed             a 1920x1080 window instead
 --size 3840x2160       any canvas, no recompile. Both axes forced EVEN.
 --run "<steps>"        run steps headless, write files, exit
 --script <file>        the same, from a file
+--max                  fill the screen. Already the default for a window;
+                       this is how a HEADLESS run asks for it.
 --help
 ```
+
+**A headless run does NOT follow the full-screen default.** `--run` and
+`--script` stay at 1920x1080 unless `--max` or `--size` says otherwise,
+because those runs exist to write byte-identical PNGs on any machine — and a
+receipt whose size depends on the attached monitor is a screenshot again
+(R10). An explicit flag wins in both directions; only its absence consults
+the default.
 
 Exit code is the number of failures, so it composes with `&&`.
 
