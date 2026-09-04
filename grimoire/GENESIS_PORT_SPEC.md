@@ -365,7 +365,7 @@ table had said "step 2 is next" while steps 2–5 were already shipped.*
 | 3 | `refine_face` geometry, f64, planar + spherical | ✅ | `Surface::{Planar,Spherical}`, `project_to_sphere` on the certified lane |
 | 4 | `refine_all` / `refine_hexes` / `refine_pents` + undo | ✅ | `Op::{All,Hex,Pent}`, `refine`, `refine_one`, `undo` |
 | 5 | `invariants()` — trivalence only, never Euler; anchors as 2nd witness | ✅ | `arity_sum/2` and `/3`; χ is **derived so it is allowed to fail** |
-| 6 | **weld + judge**, compare against the census (the headline) | ⬜ **NEXT** | `judge.rs` exists (4 public fns) but **nothing calls it against a welded genesis mesh**. No `weld` in the crate. |
+| 6 | **weld + judge**, compare against the census (the headline) | ⬜ **NEXT** | `judge.rs` exists (4 public fns) but **nothing calls it against a welded genesis mesh**. No `weld` in the crate — `sphere.rs` welds its own lane by index pair and does reach `judge`; genesis is face soup and kept no indices. Plan in **THE NEXT TWO**: key the weld on `to_bits()`, not on a distance. |
 | 7 | render via `raster.rs`, match the browser's image | 🟡 partial | **fills now match the browser exactly** (2026-09-02): pent `rgba(193,74,59,α*0.4)`, hex `rgba(0,40,60,α*0.3)`, strokes already did. Still **no frame-vs-browser test**, so "match" is argued from the constants, not measured |
 | 8 | dashboard card + the byte-topology checker beside it | ✅ | GENESIS card ships in `gos_viewer`, FRAME BITS beside it |
 
@@ -432,3 +432,89 @@ step 7 *assumes* the answer this step would measure.
 thing that never moves.*
 
 **P=12 · χ=2 · E/V=3/2 · counting is not closing.**
+
+---
+
+## THE NEXT TWO -- logged 2026-09-04
+
+Both are **closure**, and that is the joke worth writing down. This port has a
+Mobius twist, a fill that matches the browser, a flight explorer, a vector
+database, and as of yesterday the shell's entire rotation group measured from
+its own pixels. What it does not have is **either of the two things that would
+close a loop.** Everything built is a new instrument; neither open step is.
+
+That is R13 pointed at the project instead of at a function.
+
+### STEP 6 -- THE WELD, and it is cheaper than it looked
+
+`judge.rs` has four public functions and has never been shown a genesis mesh.
+The reason is structural: `judge::check` wants a **rotation system**, which is a
+permutation over *indexed* vertices, and `genesis::State` is **face soup** --
+every face owns its own copy of each shared corner and no index survives.
+
+`sphere.rs` already solves this for its own lane:
+
+```rust
+    // the midpoint of edge (a,b), keyed by the SORTED INDEX PAIR, so both
+    // triangles sharing that edge get the identical vertex
+    let k = if a < b { (a, b) } else { (b, a) };
+```
+
+exact, no tolerance, and its result **is** handed to `judge`. So the icosphere
+lane closes its loop and genesis does not. Genesis cannot copy that key,
+because it never kept the indices to sort.
+
+**But it has a better key than a distance.** A shared corner is computed
+independently by each neighbouring face -- and if both compute it with the
+*same expression on the same inputs*, IEEE-754 requires the same 64 bits. So:
+
+```text
+  key = ( x.to_bits(), y.to_bits(), z.to_bits() )
+```
+
+No tolerance to outgrow, no quantisation to drift -- R7 killed the
+float-threshold lane at C380 and there is nothing here for depth to erode.
+**The weld is a hash on the bits**, which is the plainest possible statement of
+what this whole cave is for.
+
+And the failure mode is the reason to do it rather than a risk in doing it:
+
+```text
+  V_welded == arity_sum / 3     the soup is consistent; hand it to judge
+  V_welded >  arity_sum / 3     some shared corner is reached by two different
+                                EXPRESSIONS, and the bits found it
+```
+
+Either outcome is worth more than the current silence. The first closes the
+port's headline; the second is a real bug in `refine_face` that no census could
+ever see, because a census counts faces and both copies are faces.
+
+**Sequence:** weld by bits -> compare `V` against `arity_sum/3` -> build the
+rotation system from the welded faces -> `judge::check` -> the census and the
+graph are finally introduced.
+
+### STEP 9 -- THE BIT-IDENTITY VECTOR
+
+Open since v0.1, and RUSTIUM still calls it *"highest value, lowest cost in this
+scroll"*. Section 8 asserts the geometry is bit-identical to the browser's.
+**Nobody has ever looked.**
+
+Half of it now exists: `netfile.rs` stores every coordinate as `to_bits()` and
+never as decimal, so our side is already in the only form the comparison can
+use. What is missing is the other side and the diff:
+
+```text
+  1. emit the 60 C60 vertices as 180 hex u64 from Rust
+  2. emit the same 180 from the browser's GK.buildC60()
+  3. diff, and report the FIRST index that differs, not a count
+```
+
+Decimal anywhere in that chain voids it -- `0.1` prints the same and is not the
+same, which is the whole reason `netfile` was written the way it was.
+
+**Why these two and not the light matrix.** PART XIII of THEA opened a third
+debt yesterday and it is real, but it is a *new* lane. These two are the ones
+that would let the port say something it currently cannot: that its mesh closes,
+and that its numbers are the browser's numbers. Everything else in the port is
+already true or already honest about not being.
+

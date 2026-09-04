@@ -445,20 +445,45 @@ done, stated plainly:
 
 - `buildDodecahedron` and the seven Platonic seeds. `SEED 12` exists on the
   panel, is drawn dim, and says *NOT WIRED, NOT PRETENDING* when clicked.
-- `serialize` / `deserialize`, and with them the browser↔Rust hex diff of all
-  180 C60 coordinates. Correct by standard; **never measured**.
+- The browser↔Rust **hex diff of all 180 C60 coordinates**. Still the oldest
+  open item in the port. `src/netfile.rs` now gives the mesh a binary form
+  whose floats are stored as `to_bits()` and never as decimal, so *our* side of
+  the comparison exists — but nothing has ever put those bits next to the
+  browser's. Correct by standard; **never measured**. This is step 9.
 - `faceLocalFrame` / `facePatch2D`, and the inside view that needs them.
-- The Möbius twist. Note for whoever ports it: the browser logs
-  `MOBIUS ON: chi=2->0` while its own invariants panel keeps printing `chi 2`
-  on the same screen. `applyMobiusLerp` moves **positions only** — the face
-  list, arities and adjacency are untouched — so χ really is still 2 and the
-  panel is right. It is a deformation, not a topology change.
+- **The weld.** `src/sphere.rs` welds by sorted index pair, exactly and with no
+  tolerance, and hands the result to `judge` — so the icosphere lane closes its
+  own loop. `genesis.rs` is face soup and kept no indices, so it cannot do the
+  same, and `judge.rs` has still never been shown a genesis mesh. This is step
+  6, and it is the headline.
 - `GK.zoomInto` is in the spec's public surface, quoted from the header
   comment. It is **never defined**, in v8.1 or v8.5.2. Porting it would mean
   inventing it.
 - Live drag-resize. The canvas is set once at startup on purpose; a mid-run
   change would have to reallocate the framebuffer, the DIB and every cached
   rect while a paint might be in flight.
+
+### Landed since this section was written
+
+- **The Möbius twist**, as `src/mobius.rs` — DISPLAY lane, stated in the module
+  header because the map is four transcendentals deep and can carry no
+  bit-identity claim. It reports the χ it actually has rather than the one the
+  browser logs: `chi:'2->0'` is a **string literal** in a log call there, and
+  `applyMobiusLerp` moves positions only, so χ really is still 2.
+  **Confirmed from a live browser screenshot on 2026-09-03**: MOBIUS ON, twist
+  0.39, and the panel reads `chi 2` with `V−E+F = 4706100 − 7059150 + 2353052
+  = 2`. The port was right and the page disagrees with itself.
+- `Band::fit`, because the browser's constants are sized for its one fixed
+  sphere and ours has `sphere_r` live — the raw band reached 3.247 against the
+  sphere's 1.600, which read on screen as *"the mobius is linked to the zoom"*.
+- **`fill_poly`** and the FILL button: the browser's own fills, matched.
+- **`src/netfile.rs`** — the mesh as flat bytes, floats by `to_bits()`.
+- **The flight explorer** — six nudges and a grain, and with it a fourth
+  `When` category, `Nudge`, because the existing three would each have graded
+  it wrong.
+- **`examples/symmetry_sweep.rs`** — the shell's rotation group found from the
+  mesh and confirmed on screen: 6 five-fold axes, 10 three-fold, 15 two-fold,
+  order 60, all 31 at 0.000% of the frame differing.
 
 *Incomplete is fine. Fake is not.*
 
