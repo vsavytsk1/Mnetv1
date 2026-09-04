@@ -740,7 +740,21 @@ fn main() {
     let mut script: Option<String> = None;
     let mut open: Option<String> = None;
     let mut size: Option<String> = None;
-    let mut want_max = false;
+    // FULL SCREEN IS THE DEFAULT -- but only for a WINDOW.
+    //
+    // `--max` still works and still means the same thing; it is now the
+    // default rather than a request. `--windowed` is its opposite and exists
+    // because removing the ability to get a small window would be a feature
+    // deleted rather than a default changed.
+    //
+    // **A HEADLESS RUN KEEPS THE FIXED CANVAS.** `resolve_canvas` is called
+    // before the script/window dispatch, so defaulting this to `true`
+    // unconditionally would make every `--run` and `--script` render at
+    // whatever monitor happens to be attached -- and those runs exist to
+    // produce byte-identical PNGs on any machine. A receipt that changes with
+    // the hardware is a screenshot again (R10).
+    let mut explicit_max = false;
+    let mut explicit_windowed = false;
 
     while i < args.len() {
         match args[i].as_str() {
@@ -788,7 +802,8 @@ fn main() {
                     }
                 }
             }
-            "--max" => want_max = true,
+            "--max" => explicit_max = true,
+            "--windowed" | "-w" => explicit_windowed = true,
             "--help" | "-h" => {
                 println!("{HELP}");
                 return;
@@ -807,6 +822,15 @@ fn main() {
 
     // THE CANVAS IS FIXED HERE, before a window, a script or a buffer exists.
     let asked = size.clone();
+    // an explicit flag always wins over the default, in both directions
+    let want_max = if explicit_max {
+        true
+    } else if explicit_windowed {
+        false
+    } else {
+        script.is_none()
+    };
+
     match resolve_canvas(size, want_max) {
         Ok((w, h)) => {
             // If a request was rounded, SAY SO. `--size 1921x1081` quietly
@@ -845,13 +869,16 @@ fn main() {
 
 const HELP: &str = "GOS VIEWER -- a window, painted by the kernel.
 
-  gos_viewer                       open the window
+  gos_viewer                       open the window, FULL SCREEN
+  gos_viewer --windowed            open it at 1920x1080 instead
   gos_viewer --run \"<steps>\"       run steps headless, write PNGs, exit
   gos_viewer --script <file>       the same, from a file
   gos_viewer --open \"<steps>\"      run steps, THEN open the window with them
-  gos_viewer --max                 canvas = a full-screen client area
   gos_viewer --size 3840x2160      any canvas, no recompile
-  gos_viewer --max                 fill the screen
+  gos_viewer --max                 fill the screen -- the default for a WINDOW,
+                                   and the way to ask for it in a HEADLESS run,
+                                   which otherwise stays at 1920x1080 so its
+                                   PNGs do not depend on the monitor
 
 STEPS -- ';' or newline separated, '#' comments
 

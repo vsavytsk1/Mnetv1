@@ -260,7 +260,21 @@ fn main() {
     let mut i = 0;
     let mut script: Option<String> = None;
     let mut size: Option<String> = None;
-    let mut want_max = false;
+    // FULL SCREEN IS THE DEFAULT -- but only for a WINDOW.
+    //
+    // `--max` still works and still means the same thing; it is now the
+    // default rather than a request. `--windowed` is its opposite and exists
+    // because removing the ability to get a small window would be a feature
+    // deleted rather than a default changed.
+    //
+    // **A HEADLESS RUN KEEPS THE FIXED CANVAS.** `resolve_canvas` is called
+    // before the script/window dispatch, so defaulting this to `true`
+    // unconditionally would make every `--run` and `--script` render at
+    // whatever monitor happens to be attached -- and those runs exist to
+    // produce byte-identical PNGs on any machine. A receipt that changes with
+    // the hardware is a screenshot again (R10).
+    let mut explicit_max = false;
+    let mut explicit_windowed = false;
     let mut target: Option<String> = None;
 
     while i < args.len() {
@@ -299,7 +313,8 @@ fn main() {
                     }
                 }
             }
-            "--max" => want_max = true,
+            "--max" => explicit_max = true,
+            "--windowed" | "-w" => explicit_windowed = true,
             "--help" | "-h" => {
                 println!("{HELP}");
                 return;
@@ -319,6 +334,15 @@ fn main() {
 
     // THE CANVAS IS FIXED HERE, before a window, a script or a buffer exists.
     let asked = size.clone();
+    // an explicit flag always wins over the default, in both directions
+    let want_max = if explicit_max {
+        true
+    } else if explicit_windowed {
+        false
+    } else {
+        script.is_none()
+    };
+
     match resolve_canvas(size, want_max) {
         Ok((w, h)) => {
             // If a request was rounded, SAY SO. `--size 1921x1081` quietly
@@ -1620,12 +1644,17 @@ fn run_script(src: &str, target: Option<String>) -> i32 {
 const HELP: &str = "\
 GOS ORB v0.2 -- the byte topology, icosphere lane.
 
-  gos_orb                      open the window, streaming its own machine code
+  gos_orb                      open the window FULL SCREEN, streaming its own
+                               machine code
+  gos_orb --windowed           open it at 1920x1080 instead
   gos_orb <file>               stream that file instead
   gos_orb --run \"<steps>\"      run steps headless, write PNGs, exit
   gos_orb --script <file>      the same, from a file
   gos_orb --size 3840x2160     any canvas, no recompile
-  gos_orb --max                fill the screen
+  gos_orb --max                fill the screen -- the default for a WINDOW, and
+                               the way to ask for it in a HEADLESS run, which
+                               otherwise stays at 1920x1080 so its PNGs do not
+                               depend on the monitor
 
 STEPS -- ';' or newline separated, '#' comments
 
