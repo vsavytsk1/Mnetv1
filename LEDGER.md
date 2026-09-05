@@ -10197,3 +10197,70 @@ with the list rather than continuing past it. Regenerated: 509 -> 524 pages, 8 r
 because nothing is missing.
 
 P=12 . chi=2 . one operator, one constant, and every leaf is a 1 . always
+
+### L196 -- FULL PARANOIA GIT TREE: 1.01 GiB reclaimed, and L193f blamed the wrong branch (2026-09-05)
+Vlad: "now lets do the full paranoia tree run on the Mnetv1 git".
+
+RECLAIMED, SAFELY, FIRST: `git count-objects -vH` reported 1.01 GiB loose against 695.50 MiB of pack --
+and prune-packable 5747 of 5784. Ninety-nine percent of the loose store was objects ALREADY IN A PACK.
+`git prune-packed` took it from 1.01 GiB to 673.13 KiB with nothing lost and nothing rewritten, because
+a packed duplicate is not history, it is litter. That should have been run months ago and nobody looked.
+
+AND L193f'S DIAGNOSIS WAS WRONG, which is the finding that matters. It wrote: ".git is 1,037 MB against
+a 453 MB working tree ... mostly the 279 Gos/target blobs committed in L188 and evicted in L189 ... The
+fix is a history rewrite, which is destructive and must be Vlad's call." Measured today:
+
+  rescue/pre-100mb-fix   113 blobs   1,186.5 MB   4 of them OVER the 100 MB wall
+  main                  3103 blobs   1,052.6 MB
+
+ONE LOCAL BRANCH, NEVER PUSHED, PINS MORE UNCOMPRESSED BLOB THAN ALL OF MAIN. It holds two commits and
+its unique payload is the helena_net L9 vault -- join_L9_dot.f32.csv at 188.7 MB, genesis_L9_xyz at
+146.7, join_L9.i32.csv at 135.4, genesis_L9_edges at 113.6. Those are the exact files of
+GIT_INCIDENT_001. So the fix is not a history rewrite of main; it is deleting one unpushed local branch,
+which is a different order of risk entirely.
+
+CHECKED BEFORE RECOMMENDING IT, because "rescue" is in the name: the branch tip adds
+shell/smithium_v1.2.html, and main carries shell/smithium-v1_2.html -- DIFFERENT FILENAME, IDENTICAL
+BLOB, fd9219e6768e4c8016488dbbb01c3705b5275dd2, 40,148 bytes, zero diff lines. The only source on that
+branch is already on main under another name. Everything else unique to it is regenerable build payload
+that GitHub would refuse to accept anyway.
+
+AND THE INSTRUMENT LIED TO ME ONCE, mid-sweep, exactly as L193f's did. My first total for that branch
+printed "blobs: 0, total: 0.0 MB" seconds after another command had listed eight blobs over 20 MB from
+the same revision range. Cause: `git cat-file --batch-check` splits its input at whitespace ONLY when
+the format contains %(rest); without it, "sha path" is read as one object name and nothing matches. A
+measurement of zero from a command that cannot see. Caught because it contradicted a measurement taken
+ninety seconds earlier -- which is the only reason to keep the earlier one on screen.
+
+THE STICKY TRACK, TWICE, AND IT IS 88 PERCENT OF THE REPO:
+  tracked in HEAD           455.9 MB   1,915 files
+  ignored BUT tracked       401.3 MB   38 files
+  everything else            54.6 MB
+Caught by .gitignore:49 `logs/v6.5/` and .gitignore:35 `builder/_pyibuild/` -- Curse 32 both times,
+ignore rules written after the files were already tracked, and ignore never applies retroactively. The
+eight largest blobs in the whole repo are all 28 MB mnet_v6 logs that .gitignore says do not belong.
+Evicting them takes the repo from 44.6 PCT of the 1 GB Pages ceiling to 5.3 PCT.
+
+PAID SINCE L193f: .gitattributes now exists, 63 lines, and it opens by explaining the "STALE by 11 B"
+false alarm that produced it. core.autocrlf is still true but the convention is now stated, so a byte
+comparison means something again.
+
+STILL OWED SINCE L193f, AND NOW OWED TWICE: gh is STILL NOT INSTALLED. The build log still cannot be
+read. What was built instead is a checker with a DELIBERATE 404 CONTROL, because L193f's own checker
+printed ERR for eight URLs that were all serving 200 -- an instrument that cannot fail is not evidence:
+  200 /   200 index.html   200 shell/eng_v2.0.html   200 shell/eml_luca_spiral_v0.2.html
+  200 IO_PAGES.md   200 LEDGER.md   200 grimoire/RUSTIUM.md   200 grimoire/THEA.md
+  200 Gos/README.md   404 this_page_must_not_exist_404_control.html
+Nine live, and the control correctly refuses. The EML card's target was serving within minutes of the
+push.
+
+CLEAN: zero files over the 100 MB wall in HEAD. _private ignored and zero of its files tracked. No
+.env, key, pem or token tracked. No stashes, no tags, two branches, main in sync with origin at a666c89.
+
+TWO ACTIONS LEFT FOR VLAD, both reversible in judgement and neither taken here:
+  1. `git branch -D rescue/pre-100mb-fix` then `git gc --prune=now` -- frees ~1.19 GB of pinned blob.
+     Evidence above says nothing unique is lost. Deleting a branch named "rescue" is still your call.
+  2. `git rm -r --cached logs/v6.3 logs/v6.5 builder/_pyibuild` -- evicts 401 MB the ignore rules
+     already disown. Files stay on disk. This is Curse 32's stated remedy and the only thing that
+     actually removes them from the tree.
+P=12 . chi=2 . a measurement of zero from a blind command is not a zero . always
