@@ -10175,4 +10175,25 @@ at least the second time it has been brought forward by hand. It will drift agai
 entry. STILL OWED: a builder that regenerates the panel from LEDGER.md, the way gen_io_index.py already
 regenerates IO_PAGES.md from what git tracks. One of those two indexes cannot go stale and the other just
 did, and the difference between them is a script.
+THEN VLAD: "lets just make a copy in sheel as all from eng dashboard run from the shell". Correct, and
+it exposed a contract I had broken without noticing. The LINKS keys are PREFIXED, and the prefix declares
+the path: shell_* points into /shell/, pack_* into /pack/, ext_* off-repo. My key was shell_eml_... and
+pointed into /grimoire/. The dashboard has 186 live cards and mine was the only one whose prefix
+disagreed with its path; audited after the move, that is now zero. The copy is BYTE-IDENTICAL to the
+grimoire original (sha256 3853ecbc...), so the twinning is checkable rather than hoped at.
+
+AND REGENERATING IO_PAGES.md WOULD HAVE DELETED TWO REPOS IN SILENCE. gen_io_index.py still named
+C:\PythonDevs\VALE-git and C:\PythonDevs\Mnet_standalone -- both renamed when the repos were
+consolidated one-folder-each. It skipped a missing folder with a bare `continue`, so VALE and Mnet would
+have vanished from the public index without a word. And the header could not have caught it:
+
+  lines.insert(6, f"**TOTAL: {grand} public pages across {len(REPOS)} repos.**")
+
+len(REPOS) is the DECLARED count. It would have printed "across 8 repos" having written six. A count
+taken from a declaration instead of from the work cannot fail, which is Curse 26 and the CONTROL
+CONTRACT and the four category counts on the dashboard, all in one line. Fixed three ways: the paths
+corrected, the counter changed to what was actually indexed, and a missing folder now REFUSES the run
+with the list rather than continuing past it. Regenerated: 509 -> 524 pages, 8 repos, guard silent
+because nothing is missing.
+
 P=12 . chi=2 . one operator, one constant, and every leaf is a 1 . always

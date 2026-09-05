@@ -3,6 +3,7 @@
 No matter how small, every deployed page gets a link. Truth = git-tracked on origin
 (what GitHub Pages serves). One file, all links. P=12. chi=2. Always."""
 import subprocess
+import sys
 from pathlib import Path
 
 # repo folder -> (github user/repo for the io URL)
@@ -13,8 +14,8 @@ REPOS = {
     r"C:\PythonDevs\RestoAerospaceEngineering":  "RestoAerospaceEngineering",
     r"C:\PythonDevs\SpookyPrimes":               "SpookyPrimes",
     r"C:\PythonDevs\EldenGirl\concept":          "EldenGirl",
-    r"C:\PythonDevs\VALE-git":                   "VALE",
-    r"C:\PythonDevs\Mnet_standalone":            "Mnet",
+    r"C:\PythonDevs\VALE":                       "VALE",
+    r"C:\PythonDevs\Mnet":                       "Mnet",
 }
 # Repos whose GitHub Pages is configured to serve a SUBFOLDER as the site root.
 # For these, a file git-tracked at "docs/x.html" is served at "<repo>/x.html" --
@@ -45,6 +46,19 @@ lines = [
     "",
 ]
 grand = 0
+# A repo that cannot be found is REPORTED, never skipped in silence. Two of these
+# paths went stale when the repos were consolidated into one folder each, and the
+# silent `continue` below would have dropped VALE and Mnet out of the public index
+# without a word -- while the TOTAL line went on claiming eight repos, because it
+# counted len(REPOS) rather than what was actually written.
+missing = [f for f in REPOS if not Path(f).exists()]
+if missing:
+    print("MISSING REPO FOLDERS -- these would NOT be indexed:")
+    for f in missing:
+        print("   " + f)
+    sys.exit("refusing to write a partial index. Fix REPOS, or delete the row.")
+
+indexed = 0
 for folder, ghrepo in REPOS.items():
     if not Path(folder).exists():
         continue
@@ -52,6 +66,7 @@ for folder, ghrepo in REPOS.items():
     if not files:
         continue
     grand += len(files)
+    indexed += 1
     lines.append(f"---\n\n## {ghrepo}  ({len(files)} pages)\n")
     root = PAGES_ROOT.get(ghrepo, "")   # subfolder served as Pages root, if any
     for rel in files:
@@ -61,7 +76,7 @@ for folder, ghrepo in REPOS.items():
         lines.append(f"- [{rel}]({url})")
     lines.append("")
 
-lines.insert(6, f"**TOTAL: {grand} public pages across {len(REPOS)} repos.**\n")
+lines.insert(6, f"**TOTAL: {grand} public pages across {indexed} repos.**\n")
 
 out = Path(r"C:\PythonDevs\MNetv1\IO_PAGES.md")
 body = "\n".join(lines).replace("\r\n", "\n").rstrip() + "\n"

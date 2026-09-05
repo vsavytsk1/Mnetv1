@@ -4,13 +4,13 @@
 repos. Generated from what git actually tracks on each repo (the truth of what
 Pages serves), by `builder/gen_io_index.py`. Nothing hidden; the door is open.*
 
-**TOTAL: 509 public pages across 8 repos.**
+**TOTAL: 524 public pages across 8 repos.**
 
 *P=12 . chi=2 . the receipts are public . always.*
 
 ---
 
-## Mnetv1  (434 pages)
+## Mnetv1  (448 pages)
 
 - [Gos/experiments/witnesses/chi.html](https://vsavytsk1.github.io/Mnetv1/Gos/experiments/witnesses/chi.html)
 - [Gos/ponderTheOrb/machinenet_eng_v2_0_master_control.html](https://vsavytsk1.github.io/Mnetv1/Gos/ponderTheOrb/machinenet_eng_v2_0_master_control.html)
@@ -50,6 +50,9 @@ Pages serves), by `builder/gen_io_index.py`. Nothing hidden; the door is open.*
 - [kibotos/kibotos_100_scroll_v1_0.html](https://vsavytsk1.github.io/Mnetv1/kibotos/kibotos_100_scroll_v1_0.html)
 - [kibotos/solv1/metalatexium_v0_1.html](https://vsavytsk1.github.io/Mnetv1/kibotos/solv1/metalatexium_v0_1.html)
 - [kibotos/v1_2/kibotos_metalatexium_v1_2_scroll.html](https://vsavytsk1.github.io/Mnetv1/kibotos/v1_2/kibotos_metalatexium_v1_2_scroll.html)
+- [lens/alien_tk/v1_0_alien_tk_info_graph.html](https://vsavytsk1.github.io/Mnetv1/lens/alien_tk/v1_0_alien_tk_info_graph.html)
+- [lens/alien_tk/v1_0_alien_tk_matter_cube.html](https://vsavytsk1.github.io/Mnetv1/lens/alien_tk/v1_0_alien_tk_matter_cube.html)
+- [lens/alien_tk/v1_2_alien_tk_matter_cube.html](https://vsavytsk1.github.io/Mnetv1/lens/alien_tk/v1_2_alien_tk_matter_cube.html)
 - [logs/v6_dashboard.html](https://vsavytsk1.github.io/Mnetv1/logs/v6_dashboard.html)
 - [pack/GENESIS.html](https://vsavytsk1.github.io/Mnetv1/pack/GENESIS.html)
 - [pack/GKernV2.0.html](https://vsavytsk1.github.io/Mnetv1/pack/GKernV2.0.html)
@@ -162,6 +165,7 @@ Pages serves), by `builder/gen_io_index.py`. Nothing hidden; the door is open.*
 - [shell/cryostasium_v1.1.html](https://vsavytsk1.github.io/Mnetv1/shell/cryostasium_v1.1.html)
 - [shell/dfwcatium_v1.1.html](https://vsavytsk1.github.io/Mnetv1/shell/dfwcatium_v1.1.html)
 - [shell/diffusium_bench_v1_0.html](https://vsavytsk1.github.io/Mnetv1/shell/diffusium_bench_v1_0.html)
+- [shell/eml_luca_spiral_v0.2.html](https://vsavytsk1.github.io/Mnetv1/shell/eml_luca_spiral_v0.2.html)
 - [shell/emporium_3d_v2.0.html](https://vsavytsk1.github.io/Mnetv1/shell/emporium_3d_v2.0.html)
 - [shell/emporium_v1.1.html](https://vsavytsk1.github.io/Mnetv1/shell/emporium_v1.1.html)
 - [shell/eng_v2.0.html](https://vsavytsk1.github.io/Mnetv1/shell/eng_v2.0.html)
@@ -373,6 +377,7 @@ Pages serves), by `builder/gen_io_index.py`. Nothing hidden; the door is open.*
 - [shell/smithium-v1_2M-mobile.v1.2.html](https://vsavytsk1.github.io/Mnetv1/shell/smithium-v1_2M-mobile.v1.2.html)
 - [shell/smithium-v1_3-mobile.html](https://vsavytsk1.github.io/Mnetv1/shell/smithium-v1_3-mobile.html)
 - [shell/spectrium_v1.0.html](https://vsavytsk1.github.io/Mnetv1/shell/spectrium_v1.0.html)
+- [shell/spini_panelladikes_2026.html](https://vsavytsk1.github.io/Mnetv1/shell/spini_panelladikes_2026.html)
 - [shell/spooky_warning/index.html](https://vsavytsk1.github.io/Mnetv1/shell/spooky_warning/index.html)
 - [shell/spooky_warning/warning_v1.2.html](https://vsavytsk1.github.io/Mnetv1/shell/spooky_warning/warning_v1.2.html)
 - [shell/spooky_warning/warning_v1.3.html](https://vsavytsk1.github.io/Mnetv1/shell/spooky_warning/warning_v1.3.html)
@@ -380,9 +385,8 @@ Pages serves), by `builder/gen_io_index.py`. Nothing hidden; the door is open.*
 - [shell/squeezium-v1.1.html](https://vsavytsk1.github.io/Mnetv1/shell/squeezium-v1.1.html)
 - [shell/squeezium-v1_0.html](https://vsavytsk1.github.io/Mnetv1/shell/squeezium-v1_0.html)
 - [shell/step_builder.html](https://vsavytsk1.github.io/Mnetv1/shell/step_builder.html)
-- [shell/stitchium_v0.1.html](https://vsavytsk1.github.io/Mnetv1/shell/stitchium_v0.1.html)
-- [shell/spini_panelladikes_2026.html](https://vsavytsk1.github.io/Mnetv1/shell/spini_panelladikes_2026.html)
 - [shell/stitch_principia_malgebra.html](https://vsavytsk1.github.io/Mnetv1/shell/stitch_principia_malgebra.html)
+- [shell/stitchium_v0.1.html](https://vsavytsk1.github.io/Mnetv1/shell/stitchium_v0.1.html)
 - [shell/tavlium.html](https://vsavytsk1.github.io/Mnetv1/shell/tavlium.html)
 - [shell/tavlium_v1.1.html](https://vsavytsk1.github.io/Mnetv1/shell/tavlium_v1.1.html)
 - [shell/tektonium.html](https://vsavytsk1.github.io/Mnetv1/shell/tektonium.html)
@@ -563,6 +567,7 @@ Pages serves), by `builder/gen_io_index.py`. Nothing hidden; the door is open.*
 
 ---
 
-## Mnet  (1 pages)
+## Mnet  (2 pages)
 
+- [Docs/archive/2026-05_precursor/machinenet_shell_v3_mobius.html](https://vsavytsk1.github.io/Mnet/Docs/archive/2026-05_precursor/machinenet_shell_v3_mobius.html)
 - [index.html](https://vsavytsk1.github.io/Mnet/index.html)
