@@ -32,7 +32,19 @@ __pycache__/
 *.pyo
 
 # -- Builder artifacts (local only, never commit) ----------
-builder/_pyibuild/
+# The directory itself cannot be excluded if anything inside is to be re-included
+# -- git never descends into an excluded directory, so a `!` below it can never
+# match. Exclude the CONTENTS and re-include the directories, which is the same
+# shape helena_net/builds uses a few lines up.
+builder/_pyibuild/**
+!builder/_pyibuild/**/
+# ...except the xref PAGE. PyInstaller's build cache is regenerable junk --
+# .toc, .pkg, .pyz, base_library.zip -- but xref-HOLLY7.html is a PUBLISHED
+# page, listed in IO_PAGES.md and serving on Pages. It was swept out with the
+# cache on 2026-09-05 because the directory was evicted wholesale while only
+# the two SMALL ignored-but-tracked files were checked for references. The
+# careful check was applied selectively, which is worse than not applying it.
+!builder/_pyibuild/HOLLY7/xref-HOLLY7.html
 builder/dist/
 builder/HOLLY7.spec
 builder/hexCompTest/
