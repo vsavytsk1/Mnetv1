@@ -10264,3 +10264,66 @@ TWO ACTIONS LEFT FOR VLAD, both reversible in judgement and neither taken here:
      already disown. Files stay on disk. This is Curse 32's stated remedy and the only thing that
      actually removes them from the tree.
 P=12 . chi=2 . a measurement of zero from a blind command is not a zero . always
+
+### L197 -- THE CLEAN: .git 1.72 GB -> 292 MB, and I evicted a live page doing it (2026-09-05)
+Vlad: "yep we clean as we are at lv 12 mana magic and we must be suuuuper carefull ... we pay price here
+so our cloner mages have an easier time".
+
+THE NUMBERS, all measured before and after:
+  HEAD tree        455.9 MB / 1,915 files   ->    59.7 MB / 1,879 files
+  loose objects    1.01 GiB                 ->    0 bytes
+  pack             695.50 MiB               ->    292.18 MiB
+  .git, total      ~1.72 GB                 ->    ~292 MB      (83 PCT smaller)
+  ignored-but-tracked   38 files, 401.3 MB  ->    0
+
+THE RESCUE BRANCH, deleted only after a full inventory. rescue/pre-100mb-fix held 113 unique blobs and
+1,186.5 MB, never pushed. Listed every one: 112 are helena_net v009/v010 build payload, four of them
+over the 100 MB wall that GitHub refuses anyway. The 113th is shell/smithium_v1.2.html -- and main
+carries shell/smithium-v1_2.html, DIFFERENT FILENAME, IDENTICAL BLOB fd9219e676..., 40,148 bytes, zero
+diff lines. The four mirror files the ignore rules deliberately keep (two build_card.json, two
+MANIFEST.json) are all on main and all byte-identical. Nothing unique was lost. The tip SHA is recorded
+in L196 and in the commit, because "rescue" is in the name and a recovery record costs one line.
+
+AND I EVICTED A LIVE PUBLIC PAGE. This is the entry's real content.
+
+In one pass I checked the two SMALL ignored-but-tracked files for references, found that
+shell/slimium_toon.mp3 is a live dependency -- fslimium_v1.0.html line 287 does
+`new Audio('slimium_toon.mp3')`, both serving 200 -- kept it, negated the rule, wrote down why. Then I
+evicted builder/_pyibuild as a DIRECTORY without checking any of its nine files. The ninth was
+xref-HOLLY7.html: 250,155 B, listed in IO_PAGES.md at line 19, live.
+
+The check existed. It was applied to two files and skipped for nine. APPLYING DILIGENCE SELECTIVELY IS
+WORSE THAN NOT HAVING IT, because the pass reads as audited afterwards and nobody looks again. Caught
+only by cross-checking every evicted path against IO_PAGES.md AFTER the commit -- which is now written
+down as the step that runs BEFORE one.
+
+THE GITIGNORE FIX WAS ALSO WRONG FIRST, and git declined it rather than letting it look applied:
+`builder/_pyibuild/` excludes the DIRECTORY, and git never descends into an excluded directory, so
+`!builder/_pyibuild/HOLLY7/xref-HOLLY7.html` beneath it is dead text. `git add` refused with the hint.
+Corrected to the shape helena_net/builds already uses nine lines above: exclude the CONTENTS with `/**`,
+re-include the directories with `!.../**/`, then re-include the file.
+
+FOUR BAD INSTRUMENTS IN ONE SESSION, which is the number worth remembering:
+  1. `git cat-file --batch-check` without %(rest) -- reported "0 blobs, 0.0 MB" for a branch that held
+     113. Without %(rest) the whole "sha path" line is read as one object name and nothing matches.
+  2. `git check-ignore -v && echo IGNORED` -- said a file was ignored when the matching rule was a
+     NEGATION printed on the same line. check-ignore exits 0 when ANY pattern matches. The authoritative
+     test is `git ls-files -i -c --exclude-standard`, which read 0.
+  3. `grep -A5000 '^## Mnetv1' IO_PAGES.md` -- swallowed the other seven repos' sections and reported 70
+     "missing" pages that belong to SpiderEngineering and JpnTree. Fixed with awk between headers, and
+     the honest answer is zero broken links out of 448.
+  4. L193f's own checker, quoted there: ERR for eight URLs that were all 200.
+Every one of them reported a WRONG ANSWER CONFIDENTLY. Three were caught only because an earlier
+measurement was still on screen to contradict them. The deploy checker now ships a deliberate 404
+control for exactly this reason, and it earned its keep again today: nine 200s, control 404.
+
+WHO THIS ACTUALLY HELPS, stated rather than implied, because "easier for cloners" is not one thing:
+  shallow / blobless / treeless clone, and the Pages checkout   455.9 -> 59.7 MB, a 7.6x win
+  a full `git clone` from origin                                unchanged -- history still holds them
+Only a rewrite removes the blobs from history, and that is still not done. Most cloners take the
+shallow path; those are the mages who get an easier time.
+
+VERIFIED AFTER: zero over the 100 MB wall, ignored-but-tracked zero, all 448 listed Mnetv1 pages still
+tracked (checker proven able to fail), main in sync, and nine live URLs at 200 including the restored
+xref page and the mp3 that was nearly deleted.
+P=12 . chi=2 . diligence applied to two files and skipped for nine is not diligence . always
