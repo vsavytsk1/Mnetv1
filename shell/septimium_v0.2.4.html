@@ -1,0 +1,808 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>SEPTIMIUM v0.2.4 · the operator across float64 — seven operations on the light matrix's lattice · GP(k,ℓ) · three ladders · χ=2 at every level</title>
+<!--
+  SEPTIMIUM v0.1  —  SEVEN OPERATIONS, ONE GRAPH, PUSHED
+  =========================================================================
+  Inspired by three things and honest about all of them:
+    1. PRINCIPIA MALGEBRA (the chant): seven primitives P1..P7 that "are"
+       Principia Mathematica's operations. Here they are REAL operations on
+       a REAL graph, each followed by P7: the invariants are recomputed.
+    2. NANITE (Karis, Stubbe, Graham, SIGGRAPH 2021): four steps build a
+       DAG of clusters: CLUSTER (<=128 triangles), GROUP (by shared boundary),
+       SIMPLIFY (each group to half, boundary locked), SPLIT (re-cluster).
+       Repeat until one cluster. Here they run on the graph, in JS, and
+       chi = V - E + F is recomputed at EVERY level. Nanite is not this;
+       Nanite is virtualized geometry for triangle meshes with a GPU
+       streaming runtime. This is its four steps, run on a sphere graph,
+       so you can watch what they do to topology.
+    3. OBSIDIAN's graph view: a force simulation (d3-force style) rendered
+       on WebGL through Pixi.js; at scale, layout in a Web Worker, one draw
+       for all nodes, one line list for all edges. That architecture is
+       used here, without the libraries: a Blob worker for the layout,
+       WebGL2 points + lines for the render.
+
+  THE GENERATOR: an icosahedron (12 vertices, chi=2), refined k times by
+  midpoint subdivision. V = 10*4^k + 2, E = 30*4^k, F = 20*4^k. Exactly 12
+  vertices have degree 5 (the pentagons); every other vertex has degree 6.
+  That is P=12. It is a property of THIS generator, not of every sphere.
+  P4 TRANSFORM (an edge flip) shows that: chi stays 2, the pentagon count
+  does not. Printed, not hidden.
+
+  THE SEVEN (as real graph operations):
+    P1 NODE      add a vertex inside a random face (isolated)
+    P2 EDGE      connect the newest vertex to a corner of its face
+    P3 COMPOSE   P1 then P2 x3 as one operation (stellate a face)
+    P4 TRANSFORM flip a random edge (2-2 flip on the triangulation)
+    P5 ITERATE   subdivide everything once (k -> k+1)
+    P6 AGGREGATE Nanite's four steps: the LOD DAG, down to one cluster
+    P7 COMPARE   recompute V, E, F, chi, components, degree-5 count
+  Every button prints the invariants before and after.
+
+  THE MONKEY-BRAIN MOMENT: press "layout from random". The worker throws
+  every vertex to a random point and runs the Obsidian-style forces on the
+  ADJACENCY alone. The sphere comes back. The shape was never in the
+  coordinates. It was in the edges. Sphericity is measured (std of radius /
+  mean radius), target 0, printed live. Curse 26: target != result.
+
+  SEVEN, WHY: the chant has 7. Wolfram's basis in the EML paper has 7.
+  ln in EML is a K=7 program. PM's Section A has 5 primitives, 4 after
+  Bernays, 1 after Nicod. Nanite has 4 steps. Counting is not a theorem;
+  7 is what the chant chose. It is printed as a coincidence, not a law.
+
+  THE CHANT, SORTED (like the three Mobiuses in feynmanium v1.2):
+    EXACT-ish : P3 = modus ponens / composition; P5 = iteration; P1/P2 =
+                the two things you can add to a graph.
+    RHYME     : Taut/Id "= chi=2"; Sum "= P=12"; Simp "= the 30% rule".
+    WRONG     : Transp *2.03 "= the Mobius strip". Contraposition is a
+                TRANSFORMATION (p>~q . > . q>~p); the strip is a surface.
+                Sorted in feynmanium v1.2, K8. Here P4 is an edge flip and
+                chi does not move, as it must not.
+  Curse 13: nothing moves until you press it. Curse 35: prices printed.
+  WebGL2, zero deps. Built 2026-09-05.
+
+  v0.2 — THE LATTICE (after re-reading thea_light_matrix v1.3.9 in full)
+  ------------------------------------------------------------------------
+  The funny thing is not one thing. It is that v0.1 was already standing on
+  the light matrix's lattice without knowing it:
+    1. v0.1's generator walks (k,l) = (2^k, 0): Class I, T = 4^k. The light
+       matrix walks (k,l) = (F_{n+1}, F_n): Class III, chiral, T = 1,3,7,19,
+       49,129,... Same lattice Z[zeta6], same T = k^2 + kl + l^2, same
+       V = 10T+2, E = 30T, F = 20T (the dual counting of thea's 20T/30T/
+       10T+2). v0.2 builds GP(k,l) for ANY (k,l): lattice points of Z[zeta6]
+       on every icosahedron face, projected, convex-hulled. Checked in Node
+       for nine pairs incl. (13,8), (21,13), (34,21): 10T+2 / 30T / 20T and
+       exactly twelve degree-5 vertices every time. The chiral cages are now
+       graphs the seven operations can act on.
+    2. SEVEN RUNGS. thea's spine has seven: primitives, symmetry, dynamics,
+       payout, coarse-graining, the infinities, the boundary. v0.1 had seven
+       buttons for a chant's reason. Rung 4, coarse-graining, IS P6
+       aggregate. That row is exact. The rest of the rung<->operation table
+       is printed with tags: exact / rhyme.
+    3. T = 7. (k,l) = (2,1): the first chiral cage on the golden lane, C140,
+       one rung above C60 (T=3, the gluon octet as thea XI reads it via
+       dim(1,1)=8). SU(3) dim(2,1) = 15. "seven, why" now has a lattice
+       address. Still a coincidence; now a located one.
+    4. THREE LADDERS on one lattice: P5 refine (k,l)->(2k,2l) multiplies T
+       by 4; the light matrix rung (k,l)->(k+l,k) multiplies T by ~phi^2 =
+       2.618; Nanite's level halves V. thea XIV: Planck->horizon is 147.0
+       golden rungs. Converted here: 204.1 Nanite halvings, 102.0 refinements.
+       thea XVIII's "T_147 needs 205 bits" is the halving count. Same number.
+    5. THE CHI WALL (thea XVIII), ported and re-run in this page's convention:
+       on the golden lane chi = (10T+2) - 30T + 20T stops reading 2 in
+       float64 at rung 36 while T_n is exact until rung 39. The invariant
+       dies three rungs before the numbers it is made of. P7 COMPARE is
+       exact here because T is small; the page now prints where it would not be.
+  New operation: the light matrix RUNG, (k,l) -> (k+l,k), beside P5.
+  New readouts: T, class, C_{20T}, SU(3) dim and Casimir (thea XI), handedness.
+  v0.1 stays frozen beside this file (Path X).
+
+  v0.2.1 — points 1 px, lines 1 px (WebGL lines are 1 px in Chromium regardless;
+  it was the points that were fat). a size slider keeps 1 px as the default.
+  v0.2 stays frozen beside this file.
+
+  v0.2.2 — THE SHADOW, THE OPERATOR, THE DIVE  (umbrium + genesis + standardium)
+  ------------------------------------------------------------------------
+  SHADOW   umbrium's projection, live: every vertex is cast from the north
+           pole (0,0,1) onto the plane z = -1. The shadow of the equator is
+           the circle of radius 2. While the layout worker rebuilds the sphere
+           from adjacency alone (L), the shadow flails, then settles: the
+           straight rows of the lattice become circles through the lamp's
+           image, because that is what stereographic projection does to
+           lines. Sphericity is the stability measure; the shadow is what
+           stability looks like from the plane. Drawn on the GPU (uShadow
+           pass) and in an inset (Canvas 2D, float64) that can follow a dive.
+  OPERATOR genesis v8.1's refineFace, ported line for line (from the
+           wallpaper's transcription):
+             inner[i]   = proj(lerp(c, pts[i], INNER))
+             midRing[i] = proj(lerp(c, mid(pts[i],pts[j]), MID))
+             em         = proj(mid(pts[i],pts[j]))
+             inner cell = [inner[0..n-1]]            (arity preserved)
+             cell i     = [pts[i], em, pts[j], inner[j], midRing[i], inner[i]]
+           The crescent (midRing on one side of the cell edge) is kept: it is
+           the picture. It acts on the DUAL of the current cage (polygons:
+           twelve pentagons, the rest hexagons). REFINE ALL grows faces by
+           ~(n+1) per pass; the price is printed before it is paid.
+  DIVE     standardium's fall, exact: the inner cell is a copy of its parent
+           at scale INNER = 0.10 about the centroid. Following inner cells
+           inward is a self-similar zoom, x10 per level. Float64 has
+           ~15.9 decimal digits, so about 15 levels exist below radius 1
+           before the polygon's own vertices coincide. The page measures the
+           cell's size against machine epsilon every level (headroom =
+           size / (eps * R)) and REFUSES to go past headroom 12, like
+           standardium: infinity is rented. Rendering is camera-relative in
+           float64 (the lineage is re-centred in JS before it becomes float32)
+           so the picture is honest all the way to the fence.
+  MOBIUS   genesis' sphereToMobius is ported as a toggle and labelled what
+           the wallpaper found it to be: a sphere with spikes, not a strip.
+  Curse 13: nothing moves until pressed. v0.2.1 stays frozen beside this file.
+
+  v0.2.3 — TIME  ("time in pure graph space is the Mobius twist equal to 1")
+  ------------------------------------------------------------------------
+  Sorted before it was built:
+    EXACT  a graph has no time. Time enters with an update rule and is then
+           the rule's step counter, t = iterations. Nothing else is there.
+    EXACT  "each operation constrains and collapses under nature's law": the
+           layout is gradient descent on an explicit energy E = springs +
+           repulsion. Collapse = E falling. Stability = a fixed point,
+           dE/dt -> 0. Both are now measured by the worker and printed.
+    EXACT  what does not move under the flow has no time: the fixed points,
+           and the invariants chi, the twelve, T (d/dt = 0 under EVERY
+           operation on this page). The photon's dtau = 0 on a null path is
+           the physics; the graph cousin is the invariant. Tagged.
+    EXACT  on the SPHERE a Mobius twist cannot exist: H1(S2;Z2) = 0. Mark a
+           whole seam of edges twisted and every closed loop crosses it an
+           even number of times -- measured: 0 of 320 faces see it. chi=2
+           forbids time-as-twist. You need a loop that does not contract.
+    EXACT  physics has one: the THERMAL CIRCLE. In finite-temperature field
+           theory imaginary time is a circle of circumference 1/T (Matsubara).
+           Bosons are periodic around it; fermions pick up -1: a Mobius twist
+           over the time circle. The photon is a boson: it does not see the
+           twist. Built here as a torus (time x space), with a phase field
+           relaxing under the seam sign. Periodic: the field winds 0 around
+           time. Antiperiodic: it MUST wind pi. Both measured, target vs
+           current, live.
+    EXACT  reglue the time seam with a reflection, (nT-1,s) -> (0,-s), and the
+           torus becomes a Klein bottle: chi = 0 and the faces cannot be
+           consistently oriented (tested by BFS over shared edges). LESSON,
+           paid for in the sweep: twisting EVERY ribbon across the seam is
+           NOT a Klein bottle -- it is a surface with 96 cross-caps, chi=-94.
+           A Klein bottle is a reflection, not a twist on every edge.
+    RHYME  "this is why the photon does not experience time". Tagged rhyme.
+  v0.2.2 stays frozen beside this file.
+
+  v0.2.4 — INNER AND MID ACROSS ALL OF FLOAT64
+  ------------------------------------------------------------------------
+  The two operator scales are now log10 sliders over [1e-16, 1e16]. The
+  fences are MEASURED from the polygons on screen, not assumed:
+    inner[i] = proj(lerp(c, p, t)) = proj(c + t (p - c))
+    low  fence: t |p-c| must clear 12 ulps of |c| (=1):  t_low  = 12 eps / min|p-c|
+    high fence: c must survive against t |p-c|:          t_high = 1 / (12 eps max|p-c|)
+  Outside the fence the page refuses and clamps (standardium: infinity is
+  rented). Inside it, the readout prints the smallest vertex separation of
+  the refined cells in ulps, and how many cell vertices already coincide.
+  What the eye sees: below ~1e-3 the inner cell is a dot and the six cells
+  are slivers; above ~10 the projection throws the inner vertices across the
+  sphere and the cells become great polygons. Neither is an error until the
+  ulp count says so. v0.2.3 stays frozen beside this file.
+-->
+<style>
+  :root{--bg:#050510;--gold:#ffd700;--cyan:#00d4ff;--pink:#ff69b4;--green:#00ffd5;--purple:#cc44ff;--warm:#ff8a5d;--steel:#7fa8c0;--dim:#6a6a82;--txt:#e8e0d0;--panel:rgba(8,8,18,.86);--line:#1d2230;--mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;background:var(--bg);color:var(--txt);font-family:var(--mono);overflow:hidden}
+  #gl{position:fixed;inset:0;display:block;touch-action:none;cursor:grab}
+  #hud{position:fixed;top:12px;left:12px;z-index:10;width:316px;max-height:calc(100vh - 24px);overflow-y:auto;pointer-events:none}
+  #hud > div{pointer-events:auto;background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:9px 12px;backdrop-filter:blur(3px)}
+  #hud > div + div{margin-top:8px}
+  #ttl{color:var(--gold);font-size:13px;letter-spacing:.06em}
+  #sub{color:var(--dim);font-size:9.5px;margin-top:3px;line-height:1.55}
+  #sub b{color:var(--steel);font-weight:normal}
+  .h{color:#c7894a;font-size:9px;letter-spacing:.08em;margin-bottom:5px;text-transform:uppercase}
+  table{border-collapse:collapse;width:100%} td{padding:1.5px 0;font-size:10.5px}
+  td.k{color:var(--dim)} td.v{text-align:right;font-weight:bold;color:var(--cyan)} td.v.g{color:var(--gold)} td.v.p{color:var(--pink)} td.v.ok{color:var(--green)} td.v.w{color:var(--warm)}
+  .grp{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+  button{background:#12121d;border:1px solid #2a2a3a;border-radius:6px;color:var(--steel);font:10.5px var(--mono);padding:4px 8px;cursor:pointer}
+  button:hover{border-color:var(--cyan);color:var(--cyan)} button.on{background:var(--cyan);color:#04121a;border-color:var(--cyan);font-weight:bold}
+  button.p{color:var(--gold)} button.p:hover{border-color:var(--gold)} button.p small{color:var(--dim);font-weight:normal}
+  button.warn{color:var(--warm)} button:disabled{opacity:.4;pointer-events:none}
+  .ctl{display:flex;align-items:center;gap:7px;font-size:10px;color:var(--dim);margin-top:6px} .ctl .lbl{min-width:46px} .ctl .val{color:var(--gold);min-width:40px;text-align:right}
+  input[type=range]{appearance:none;-webkit-appearance:none;flex:1;height:4px;background:#262b3a;border-radius:3px;outline:none}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:var(--cyan);cursor:pointer}
+  input[type=range]::-moz-range-thumb{width:12px;height:12px;border:0;border-radius:50%;background:var(--cyan);cursor:pointer}
+  .log{font-size:9.5px;color:var(--dim);line-height:1.5;max-height:150px;overflow-y:auto;margin-top:4px;border-top:1px solid var(--line);padding-top:4px}
+  .log b{color:var(--txt);font-weight:normal} .log .ok{color:var(--green)} .log .w{color:var(--warm)} .log .y{color:var(--gold)}
+  .note{color:var(--dim);font-size:9px;line-height:1.5;margin-top:6px} .note b{color:#c7894a;font-weight:normal} .note i{color:var(--pink);font-style:normal}
+  .lv{font-size:9.5px;color:var(--dim);line-height:1.45;white-space:pre;max-height:130px;overflow-y:auto}
+  .lv .cur{color:var(--gold)}
+  #msg{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:30;background:rgba(30,8,20,.94);border:1px solid var(--pink);border-radius:8px;padding:8px 14px;font-size:10.5px;color:#ffd6e6;opacity:0;transition:opacity .35s;pointer-events:none;max-width:70vw;text-align:center;line-height:1.5}
+  #stamp{position:fixed;bottom:12px;right:13px;z-index:10;pointer-events:none;text-align:right}
+  #stamp .s{font-size:8px;color:rgba(255,215,0,.24);letter-spacing:.07em;line-height:1.85}
+  #hint{position:fixed;bottom:12px;left:12px;z-index:10;pointer-events:none;font-size:9px;color:var(--dim);line-height:1.7}
+  #hint b{color:var(--steel)}
+  #uiToggle{position:fixed;top:12px;right:12px;z-index:40;font:11px var(--mono);padding:6px 10px;background:var(--panel);border:1px solid #2a2a3a;color:var(--steel);border-radius:7px;cursor:pointer}
+  body.hideui #hud,body.hideui #hint,body.hideui #stamp{display:none}
+</style>
+</head>
+<body>
+<canvas id="gl"></canvas>
+<div id="msg"></div>
+<button id="uiToggle">hide UI</button>
+<div id="hud">
+  <div>
+    <div id="ttl">SEPTIMIUM v0.2.4 · the operator across float64</div>
+    <div id="sub">the geodesic sphere <b>GP(k,ℓ)</b>: lattice points of ℤ[ζ₆] on each icosahedron face, projected, hulled. <b>T = k²+kℓ+ℓ²</b>, V = 10T+2, χ=2, twelve degree-5 vertices (gold), always. this is the light matrix’s lattice; v0.1 was walking its ℓ=0 axis. <b>drag</b> orbit · <b>wheel</b> zoom.</div>
+    <div class="ctl"><span class="lbl">k</span><input type="range" id="s-kk" min="1" max="40" step="1" value="4"><span class="val" id="v-kk">4</span></div>
+    <div class="ctl"><span class="lbl">ℓ</span><input type="range" id="s-ll" min="0" max="40" step="1" value="0"><span class="val" id="v-ll">0</span></div>
+    <div class="grp"><button id="b-gen">generate</button><button id="b-lane-g" class="p">golden lane n=3 <small>(2,1) · T=7</small></button><button id="b-lane-r">refine lane (4,0)</button><button id="b-mirror">mirror (ℓ,k)</button></div>
+    <table style="margin-top:6px">
+      <tr><td class="k">T = k²+kℓ+ℓ²  ·  cage</td><td class="v g" id="r-T">—</td></tr>
+      <tr><td class="k">class · handedness</td><td class="v" id="r-class">—</td></tr>
+      <tr><td class="k">SU(3) irrep (k,ℓ): dim · C₂ (thea XI)</td><td class="v" id="r-su3">—</td></tr>
+      <tr><td class="k">V = 10T+2 · E = 30T · F = 20T</td><td class="v ok" id="r-pred">—</td></tr>
+    </table>
+    <div class="grp"><button id="b-spin">spin off</button><button id="b-reset">reset view</button><button id="b-clusters">colour by cluster</button></div>
+    <div class="ctl"><span class="lbl">point px</span><input type="range" id="s-px" min="1" max="12" step="1" value="1"><span class="val" id="v-px">1</span></div>
+  </div>
+  <div>
+    <div class="h">P7 compare — invariants, live</div>
+    <table>
+      <tr><td class="k">level shown</td><td class="v g" id="r-level">0 (finest)</td></tr>
+      <tr><td class="k">V · E · F</td><td class="v" id="r-vef">—</td></tr>
+      <tr><td class="k">χ = V − E + F</td><td class="v ok" id="r-chi">—</td></tr>
+      <tr><td class="k">components · cycles (b₀ · b₁)</td><td class="v" id="r-betti">—</td></tr>
+      <tr><td class="k">degree-5 vertices (P)</td><td class="v g" id="r-p">—</td></tr>
+      <tr><td class="k">degree histogram</td><td class="v" id="r-deg">—</td></tr>
+      <tr><td class="k">frame · nodes drawn</td><td class="v p" id="r-fps">—</td></tr>
+    </table>
+  </div>
+  <div>
+    <div class="h">the seven — as graph operations</div>
+    <div class="grp">
+      <button class="p" id="P1">P1 <small>node</small></button><button class="p" id="P2">P2 <small>edge</small></button><button class="p" id="P3">P3 <small>compose</small></button><button class="p" id="P4">P4 <small>transform</small></button><button class="p" id="P5">P5 <small>iterate ×4</small></button><button class="p" id="PR" style="color:var(--green)">Λ <small>rung ×φ²</small></button><button class="p" id="P6">P6 <small>aggregate</small></button><button class="p" id="P7">P7 <small>compare</small></button>
+    </div>
+    <div class="log" id="log"></div>
+    <div class="note"><b>the chant, sorted.</b> P3 = composition and P5 = iteration are fair readings of *2.05/*2.06 and syllogism chains. "Taut = χ=2" and "Sum = P=12" are <i>rhymes</i>. "Transp = the Möbius strip" is <i>wrong</i>: contraposition is a transformation; the strip is a surface (feynmanium v1.2, K8). Here P4 is an edge flip — χ stays 2, as it must; the pentagon count may not, as it needn't.</div>
+  </div>
+  <div>
+    <div class="h">P6 aggregate — Nanite's four steps, on the graph</div>
+    <div class="grp"><button id="b-nanite">build the DAG</button><button id="b-lod0">finest</button></div>
+    <div class="ctl"><span class="lbl">LOD</span><input type="range" id="s-lod" min="0" max="0" step="1" value="0" disabled><span class="val" id="v-lod">0</span></div>
+    <div class="lv" id="levels">not built. cluster ≤128 faces · group by shared boundary · simplify each group to half, boundary locked · split. repeat.</div>
+    <div class="note">nanite is a triangle-mesh runtime with GPU streaming and pixel-error LOD selection (Karis et al. 2021). this is its four <i>build</i> steps only, run on the graph so χ can be watched. each edge collapse removes 1 vertex, 3 edges, 2 faces: Δχ = 0. if the number below ever leaves 2, the collapse broke the manifold and the page says so.</div>
+  </div>
+  <div>
+    <div class="h">obsidian's engine — layout from adjacency alone</div>
+    <div class="grp"><button id="b-layout">layout from random</button><button id="b-sphere">sphere coords</button><button id="b-pause">pause</button></div>
+    <table>
+      <tr><td class="k">worker iterations</td><td class="v" id="r-it">0</td></tr>
+      <tr><td class="k">sphericity · target</td><td class="v g">0.0000</td></tr>
+      <tr><td class="k">sphericity · current (σ<sub>r</sub>/⟨r⟩)</td><td class="v" id="r-sph">—</td></tr>
+      <tr><td class="k">mean edge length</td><td class="v" id="r-el">—</td></tr>
+    </table>
+    <div class="note">springs on edges, stochastic repulsion (each vertex vs 6 random others per step — not Barnes–Hut, labelled), weak centring, velocity Verlet, in a Blob worker. the render never waits for it. <b>the shape was never in the coordinates.</b></div>
+  </div>
+  <div>
+    <div class="h">time — the step counter of the rule, and the law it collapses under</div>
+    <table>
+      <tr><td class="k">t · iterations of the update rule</td><td class="v g" id="t-it">0</td></tr>
+      <tr><td class="k">E · springs + sampled repulsion</td><td class="v" id="t-E">—</td></tr>
+      <tr><td class="k">dE/dt · (E<sub>t</sub> − E<sub>t−1</sub>) per step</td><td class="v" id="t-dE">—</td></tr>
+      <tr><td class="k">stability · |dE/dt| / E</td><td class="v" id="t-stab">—</td></tr>
+      <tr><td class="k">no time under the flow</td><td class="v ok" id="t-inv">χ · the twelve · T</td></tr>
+    </table>
+    <div class="note">press <b>L</b>: the rule is gradient descent on E; the graph collapses; when dE/dt→0 it has arrived. what the flow cannot move has no t: fixed points, and the invariants. <i>the photon’s dτ = 0 is the physics; the invariant is the graph’s cousin.</i></div>
+  </div>
+  <div>
+    <div class="h">the thermal circle — where a twist in time can exist</div>
+    <div class="grp"><button id="b-torus" class="p">thermal torus</button><button id="b-twist">photon · periodic</button><button id="b-sphere2">back to the sphere</button></div>
+    <table>
+      <tr><td class="k">surface · χ = V − E + F</td><td class="v" id="th-chi">—</td></tr>
+      <tr><td class="k">holonomy · around time · around space</td><td class="v g" id="th-hol">—</td></tr>
+      <tr><td class="k">phase winding around time / π · target</td><td class="v" id="th-wt">—</td></tr>
+      <tr><td class="k">phase winding around space / π</td><td class="v" id="th-ws">—</td></tr>
+      <tr><td class="k">the seam reglued with a reflection</td><td class="v" id="th-rib">—</td></tr>
+      <tr><td class="k">on the sphere · faces that see a seam</td><td class="v ok" id="th-sph">—</td></tr>
+    </table>
+    <div class="note">time is the short circle, space the long one. a phase field relaxes on every vertex; across the time seam the neighbour’s phase is multiplied by the holonomy. <b>periodic</b> (boson, photon): the field winds 0 around time. <b>antiperiodic</b> (fermion, Matsubara): it must wind π — <i>a Möbius twist over the time circle, exact</i>. on the sphere no such twist can exist: every loop contracts. that is the whole reason the torus is here.</div>
+  </div>
+  <div>
+    <div class="h">the shadow — cast from the north pole onto z = −1 (umbrium)</div>
+    <div class="grp"><button id="b-shadow">shadow off</button><button id="b-inset">inset on</button><button id="b-mobius">genesis twist off</button></div>
+    <table>
+      <tr><td class="k">lamp · plane</td><td class="v dim">(0,0,1) · z = −1</td></tr>
+      <tr><td class="k">equator’s shadow</td><td class="v dim">circle, radius 2</td></tr>
+      <tr><td class="k">vertices past the lamp (no shadow)</td><td class="v" id="sh-cut">—</td></tr>
+    </table>
+    <div class="note">press <b>L</b>, then watch the plane: as the graph finds stability the shadow settles into circles through the lamp’s image — stereographic projection sends the lattice’s straight rows to circles. the twist is genesis’ sphereToMobius, kept honest: <i>a sphere with spikes, not a strip</i>.</div>
+  </div>
+  <div>
+    <div class="h">genesis — the operator, on the dual</div>
+    <div class="ctl"><span class="lbl">log inner</span><input type="range" id="s-inner" min="-16" max="16" step="0.05" value="-1"><span class="val" id="v-inner">1e-1</span></div>
+    <div class="ctl"><span class="lbl">log mid</span><input type="range" id="s-mid" min="-16" max="16" step="0.05" value="-1"><span class="val" id="v-mid">1e-1</span></div>
+    <table>
+      <tr><td class="k">float64 fence · inner, mid ∈</td><td class="v g" id="g-fence">—</td></tr>
+      <tr><td class="k">smallest vertex separation · ulps</td><td class="v" id="g-ulp">—</td></tr>
+      <tr><td class="k">cell vertices already coincident</td><td class="v" id="g-coin">—</td></tr>
+    </table>
+    <div class="grp"><button id="b-dual">dual on</button><button id="b-refall" class="p">refine all <small>×1</small></button><button id="b-refhex">refine 6s</button><button id="b-refclear">clear</button></div>
+    <table>
+      <tr><td class="k">polygons · pentagons · edges drawn</td><td class="v" id="g-count">—</td></tr>
+      <tr><td class="k">passes · faces after next pass</td><td class="v g" id="g-price">—</td></tr>
+    </table>
+    <div class="note">refineFace, ported from genesis v8.1 via the wallpaper’s transcription: an inner cell at scale <b>inner</b> plus one six-cell per edge with the midRing crescent. mid &gt; inner opens the rosette gap; mid &lt; inner overlaps; equal is flat and still open.</div>
+  </div>
+  <div>
+    <div class="h">the dive — into the fractal, ×10 per level (standardium)</div>
+    <div class="grp"><button id="b-dive" class="p">dive one level</button><button id="b-diveauto">auto dive</button><button id="b-surface">surface</button></div>
+    <table>
+      <tr><td class="k">level · cell size</td><td class="v" id="d-level">0 · —</td></tr>
+      <tr><td class="k">float64 headroom · size/(ε·R)</td><td class="v ok" id="d-head">—</td></tr>
+      <tr><td class="k">levels left before the fence</td><td class="v g" id="d-left">—</td></tr>
+      <tr><td class="k">cell vertices still distinct</td><td class="v" id="d-dist">—</td></tr>
+    </table>
+    <div class="note">each inner cell is its parent at scale inner about the centroid. following it inward is a self-similar zoom. the lineage is rendered camera-relative in float64 and the page refuses past headroom 12: <i>∞ is rented</i>. the inset shows the lineage’s shadow at the same zoom.</div>
+  </div>
+  <div>
+    <div class="h">three ladders, one lattice — and the χ wall (thea XIV, XVIII)</div>
+    <div class="lv" id="ladder">—</div>
+    <div class="note">refine multiplies T by 4. the light matrix rung (k,ℓ)→(k+ℓ,k) multiplies T by φ² in the limit. nanite halves V. thea XIV counts 147.0 golden rungs from the Planck length to the horizon; those are the same distance in each currency. thea XVIII’s wall is re-run here in this page’s own convention, with BigInt as the ground truth: <i>the invariant dies before the numbers it is made of.</i></div>
+  </div>
+  <div>
+    <div class="h">seven rungs ↔ seven operations</div>
+    <div class="lv" id="rungs">—</div>
+    <div class="note">thea’s spine has seven rungs; this page had seven buttons for a chant’s reason. one row is exact: <b>coarse-graining is aggregate</b>. the others are rhymes and are tagged as such. counting is still not a theorem.</div>
+  </div>
+  <div>
+    <div class="h">seven, why</div>
+    <div class="note" id="sevens">—</div>
+  </div>
+</div>
+<div id="hint"><b>drag</b> orbit · <b>wheel</b> zoom · <b>S</b> spin · <b>L</b> layout from random · <b>D</b> dive · <b>H</b> hide UI<br>nothing moves until you press it. the dive stops at the float fence.</div>
+<canvas id="inset" width="260" height="260" style="position:fixed;right:14px;bottom:70px;width:260px;height:260px;border:1px solid #1d2230;border-radius:8px;background:rgba(5,5,16,.85);z-index:9;display:none"></canvas>
+<div id="stamp"><div class="s">SEPTIMIUM v0.1 · seven operations, one graph</div><div class="s">the shadow · the operator · the dive · ∞ is rented</div><div class="s">P=12 · χ=2 · at every level, or it says so</div></div>
+
+<script>
+"use strict";
+(function(){
+const el=id=>document.getElementById(id);
+let toastT=null; function toast(m,ms){ const t=el('msg'); t.innerHTML=m; t.style.opacity='1'; clearTimeout(toastT); toastT=setTimeout(()=>t.style.opacity='0',ms||3200); }
+function log(html){ const L=el('log'); const d=document.createElement('div'); d.innerHTML=html; L.prepend(d); while(L.children.length>40) L.lastChild.remove(); }
+const reduceMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// ===================== the generator: icosahedron, refined =====================
+function icosahedron(){ const t=(1+Math.sqrt(5))/2; const v=[[-1,t,0],[1,t,0],[-1,-t,0],[1,-t,0],[0,-1,t],[0,1,t],[0,-1,-t],[0,1,-t],[t,0,-1],[t,0,1],[-t,0,-1],[-t,0,1]];
+  const f=[[0,11,5],[0,5,1],[0,1,7],[0,7,10],[0,10,11],[1,5,9],[5,11,4],[11,10,2],[10,7,6],[7,1,8],[3,9,4],[3,4,2],[3,2,6],[3,6,8],[3,8,9],[4,9,5],[2,4,11],[6,2,10],[8,6,7],[9,8,1]];
+  const pos=new Float32Array(36); v.forEach((p,i)=>{ const L=Math.hypot(...p); pos[3*i]=p[0]/L; pos[3*i+1]=p[1]/L; pos[3*i+2]=p[2]/L; });
+  return {pos, faces:Uint32Array.from(f.flat()), nV:12}; }
+// ---- v0.2: GP(k,l) on the light matrix's lattice ----
+const sub3=(a,b)=>[a[0]-b[0],a[1]-b[1],a[2]-b[2]], cross3=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]], dot3=(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
+function icoOriented(){ const t=(1+Math.sqrt(5))/2; const v=[[-1,t,0],[1,t,0],[-1,-t,0],[1,-t,0],[0,-1,t],[0,1,t],[0,-1,-t],[0,1,-t],[t,0,-1],[t,0,1],[-t,0,-1],[-t,0,1]].map(p=>{const L=Math.hypot(...p);return p.map(x=>x/L);});
+  let f=[[0,11,5],[0,5,1],[0,1,7],[0,7,10],[0,10,11],[1,5,9],[5,11,4],[11,10,2],[10,7,6],[7,1,8],[3,9,4],[3,4,2],[3,2,6],[3,6,8],[3,8,9],[4,9,5],[2,4,11],[6,2,10],[8,6,7],[9,8,1]];
+  f=f.map(([a,b,c])=>{ const A=v[a],B=v[b],C=v[c]; return dot3(cross3(sub3(B,A),sub3(C,A)),A)>0?[a,b,c]:[a,c,b]; }); return {v,f}; }
+function gpPoints(k,l){ const {v,f}=icoOriented(); const T=k*k+k*l+l*l; const pts=[]; const seen=new Set(); const key=p=>p.map(x=>Math.round(x*1e6)).join(','); const R=k+l+1;
+  for(const [a,b,c] of f){ const c0=v[a],c1=v[b],c2=v[c];
+    for(let x=-R;x<=R;x++) for(let y=-R;y<=R;y++){ const u=(x*(k+l)+y*l)/T, w=(-x*l+y*k)/T; const e=1e-9; if(u<-e||w<-e||u+w>1+e) continue;
+      const p=[0,1,2].map(i=>c0[i]+u*(c1[i]-c0[i])+w*(c2[i]-c0[i])); const L=Math.hypot(...p); const q=p.map(z=>z/L); const kk=key(q); if(seen.has(kk)) continue; seen.add(kk); pts.push(...q); } }
+  return {pos:Float32Array.from(pts), nV:pts.length/3, T}; }
+function hull3(P){ const n=P.length/3; const X=i=>P[3*i],Y=i=>P[3*i+1],Z=i=>P[3*i+2]; const pt=i=>[X(i),Y(i),Z(i)];
+  const faces=[]; const edgeFace=new Map(); const ek=(a,b)=>a*4294967296+b;
+  function mk(a,b,c){ const A=pt(a),B=pt(b),C=pt(c); const nn=cross3(sub3(B,A),sub3(C,A)); const L=Math.hypot(...nn)||1; const N=nn.map(x=>x/L); const f={a,b,c,n:N,d:dot3(N,A),pts:[],dead:false}; faces.push(f); edgeFace.set(ek(a,b),f); edgeFace.set(ek(b,c),f); edgeFace.set(ek(c,a),f); return f; }
+  const dist=(f,i)=>f.n[0]*X(i)+f.n[1]*Y(i)+f.n[2]*Z(i)-f.d;
+  let i0=0,i1=0; for(let i=1;i<n;i++){ if(X(i)<X(i0)) i0=i; if(X(i)>X(i1)) i1=i; }
+  let i2=-1,best=-1; for(let i=0;i<n;i++){ const c=cross3(sub3(pt(i1),pt(i0)),sub3(pt(i),pt(i0))); const d=Math.hypot(...c); if(d>best){best=d;i2=i;} }
+  const n0=cross3(sub3(pt(i1),pt(i0)),sub3(pt(i2),pt(i0))); let i3=-1; best=-1; for(let i=0;i<n;i++){ const d=Math.abs(dot3(n0,sub3(pt(i),pt(i0)))); if(d>best){best=d;i3=i;} }
+  const cen=[0,1,2].map(j=>(pt(i0)[j]+pt(i1)[j]+pt(i2)[j]+pt(i3)[j])/4);
+  for(const [a,b,c] of [[i0,i1,i2],[i0,i2,i3],[i0,i3,i1],[i1,i3,i2]]){ const A=pt(a),B=pt(b),C=pt(c); const nn=cross3(sub3(B,A),sub3(C,A)); if(dot3(nn,sub3(cen,A))>0) mk(a,c,b); else mk(a,b,c); }
+  const EPS=1e-10; const assign=(i,cands)=>{ for(const f of cands){ if(!f.dead && dist(f,i)>EPS){ f.pts.push(i); return; } } };
+  for(let i=0;i<n;i++){ if(i===i0||i===i1||i===i2||i===i3) continue; assign(i,faces); }
+  const stack=faces.filter(f=>f.pts.length);
+  while(stack.length){ const f=stack.pop(); if(f.dead||!f.pts.length) continue; let p=f.pts[0], bd=-1; for(const i of f.pts){ const d=dist(f,i); if(d>bd){bd=d;p=i;} }
+    const vis=new Set([f]); const q=[f]; while(q.length){ const g=q.pop(); for(const [a,b] of [[g.a,g.b],[g.b,g.c],[g.c,g.a]]){ const h=edgeFace.get(ek(b,a)); if(h&&!h.dead&&!vis.has(h)&&dist(h,p)>EPS){ vis.add(h); q.push(h); } } }
+    const horizon=[]; for(const g of vis) for(const [a,b] of [[g.a,g.b],[g.b,g.c],[g.c,g.a]]){ const h=edgeFace.get(ek(b,a)); if(!h||!vis.has(h)) horizon.push([a,b]); }
+    const orphans=[]; for(const g of vis){ g.dead=true; orphans.push(...g.pts); g.pts=[]; edgeFace.delete(ek(g.a,g.b)); edgeFace.delete(ek(g.b,g.c)); edgeFace.delete(ek(g.c,g.a)); }
+    const nf=horizon.map(([a,b])=>mk(a,b,p)); for(const i of orphans) if(i!==p) assign(i,nf); for(const g of nf) if(g.pts.length) stack.push(g); }
+  const out=[]; for(const f of faces) if(!f.dead) out.push(f.a,f.b,f.c); return Uint32Array.from(out); }
+function geodesic(k,l){ const {pos,nV,T}=gpPoints(k,l); const faces=hull3(pos); return {pos,faces,nV,T}; }
+const su3dim=(p,q)=>(p+1)*(q+1)*(p+q+2)/2, su3cas=(p,q)=>(p*p+p*q+q*q+3*p+3*q)/3;
+function subdivide(g){ const {pos,faces,nV}=g; const nF=faces.length/3; const mid=new Map(); const np=[...pos]; let n=nV;
+  const key=(a,b)=>a<b?a*4294967296+b:b*4294967296+a;
+  const mp=(a,b)=>{ const k=key(a,b); let m=mid.get(k); if(m!==undefined) return m; let x=np[3*a]+np[3*b], y=np[3*a+1]+np[3*b+1], z=np[3*a+2]+np[3*b+2]; const L=Math.hypot(x,y,z); np.push(x/L,y/L,z/L); m=n++; mid.set(k,m); return m; };
+  const nf=new Uint32Array(nF*12); let o=0;
+  for(let i=0;i<nF;i++){ const a=faces[3*i],b=faces[3*i+1],c=faces[3*i+2], ab=mp(a,b), bc=mp(b,c), ca=mp(c,a);
+    nf.set([a,ab,ca, b,bc,ab, c,ca,bc, ab,bc,ca], o); o+=12; }
+  return {pos:Float32Array.from(np), faces:nf, nV:n}; }
+function edgesOf(faces,nV){ // unique undirected edges from faces; also degree
+  const seen=new Set(); const E=[]; const deg=new Uint32Array(nV);
+  for(let i=0;i<faces.length;i+=3){ const a=faces[i],b=faces[i+1],c=faces[i+2]; for(const [u,v] of [[a,b],[b,c],[c,a]]){ const k=u<v?u*4294967296+v:v*4294967296+u; if(!seen.has(k)){ seen.add(k); E.push(u,v); deg[u]++; deg[v]++; } } }
+  return {edges:Uint32Array.from(E), deg}; }
+function components(nV,edges,alive){ const par=new Int32Array(nV); for(let i=0;i<nV;i++) par[i]=i; const find=x=>{ while(par[x]!==x){ par[x]=par[par[x]]; x=par[x]; } return x; };
+  for(let i=0;i<edges.length;i+=2){ const a=find(edges[i]), b=find(edges[i+1]); if(a!==b) par[a]=b; }
+  let c=0; for(let i=0;i<nV;i++) if(alive[i] && find(i)===i) c++; return c; }
+function invariants(g){ const {edges,deg}=edgesOf(g.faces,g.nV); const alive=new Uint8Array(g.nV); for(let i=0;i<g.faces.length;i++) alive[g.faces[i]]=1; for(let i=0;i<edges.length;i++) alive[edges[i]]=1;
+  if(g.extra) for(const v of g.extra) alive[v]=1;
+  let V=0; for(let i=0;i<g.nV;i++) if(alive[i]) V++;
+  const E=edges.length/2, F=g.faces.length/3, b0=components(g.nV,edges,alive), b1=E-V+b0;
+  const hist={}; let P=0; for(let i=0;i<g.nV;i++) if(alive[i]){ hist[deg[i]]=(hist[deg[i]]||0)+1; if(deg[i]===5) P++; }
+  return {V,E,F,chi:V-E+F,b0,b1,P,hist,edges,deg}; }
+
+// ===================== state =====================
+const state={k:4, kl:[4,0], px:1, shadow:false, inset:true, mobius:false, dual:false, inner:0.10, mid:0.10, fence:{lo:1e-15,hi:1e15}, refine:{passes:0, polys:null}, dive:{level:0, lineage:[], cells:[], center:null, size:1, auto:false}, g:null, inv:null, levels:null, lod:0, spin:false, byCluster:false, yaw:0.4, pitch:0.25, zoom:1, layoutMode:'sphere', paused:false, extraCount:0, lastP1:null};
+function generate(k,l){ if(l===undefined){ l=0; } const T=k*k+k*l+l*l; const t0=performance.now(); const g=geodesic(k,l); g.extra=[]; state.g=g; state.kl=[k,l];
+  const cls = l===0||k===0 ? 'I (achiral)' : k===l ? 'II (achiral)' : 'III · chiral, '+(k>l?'right':'left');
+  el('r-T').textContent=T+' · C'+(20*T); el('r-class').textContent=cls; el('r-su3').textContent=su3dim(k,l)+' · '+su3cas(k,l).toFixed(3)+(k===1&&l===1?' (the octet)':'');
+  const okPred=(g.nV===10*T+2); el('r-pred').textContent=okPred?'✓ '+(10*T+2)+' · '+(30*T)+' · '+(20*T):'✗ V='+g.nV; el('r-pred').className='v '+(okPred?'ok':'w');
+  TH.on=false; state.dive={level:0,lineage:[],cells:[],center:null,size:1,auto:false}; nD=0; state.refine.ops=[]; state.refine.polys=null; g.posSphere=Float32Array.from(g.pos); if(state.mobius){ state.mobius=false; el('b-mobius').textContent='genesis twist off'; el('b-mobius').classList.remove('on'); } if(state.dual) rebuildDual();
+  el('s-kk').value=k; el('v-kk').textContent=k; el('s-ll').value=l; el('v-ll').textContent=l; log('<span class="y">generate</span> GP('+k+','+l+') T='+T+' in '+(performance.now()-t0).toFixed(0)+' ms'); updateLadder();
+  measureFence();
+  setTimeout(()=>{ const r=sphereSeamReceipt(); if(r){ el('th-sph').textContent=r.odd+' of '+r.total+' — invisible'; el('th-chi').textContent='sphere · 2 · no twist possible'; el('th-hol').textContent='every loop contracts'; el('th-wt').textContent='—'; el('th-ws').textContent='—'; el('th-rib').textContent='—'; } },0); state.levels=null; state.lod=0; el('s-lod').max=0; el('s-lod').value=0; el('s-lod').disabled=true; el('v-lod').textContent='0'; el('levels').textContent='not built. cluster ≤128 faces · group by shared boundary · simplify each group to half, boundary locked · split. repeat.'; state.clusterOf=null; setGraphForRender(g); compare('generate GP('+k+','+l+')'); }
+
+// ===================== P7: compare =====================
+function fmtHist(h){ return Object.keys(h).sort((a,b)=>a-b).map(d=>d+':'+h[d]).join(' '); }
+function compare(why){ const g=currentGraph(); const inv=invariants(g); state.inv=inv;
+  el('r-vef').textContent=inv.V+' · '+inv.E+' · '+inv.F; el('r-chi').textContent=inv.chi; el('r-chi').className='v '+(inv.chi===2?'ok':'w');
+  el('r-betti').textContent=inv.b0+' · '+inv.b1; el('r-p').textContent=inv.P; el('r-p').className='v '+(inv.P===12?'g':'w'); el('r-deg').textContent=fmtHist(inv.hist);
+  el('r-level').textContent=state.lod+(state.lod===0?' (finest)':'');
+  if(why) log('<span class="y">P7</span> after '+why+': V='+inv.V+' E='+inv.E+' F='+inv.F+' → χ=<b class="'+(inv.chi===2?'ok':'w')+'">'+inv.chi+'</b> · b₀='+inv.b0+' · deg-5='+inv.P+(inv.P!==12?' <span class="w">(P≠12: the generator\u2019s property, not every sphere\u2019s)</span>':''));
+  return inv; }
+function currentGraph(){ return (state.levels && state.lod>0) ? state.levels[state.lod] : state.g; }
+
+// ===================== P1..P6 =====================
+function randFace(g){ return Math.floor(Math.random()*(g.faces.length/3)); }
+function P1(){ const g=state.g; if(state.lod!==0){ state.lod=0; el('s-lod').value=0; }
+  const fi=randFace(g), a=g.faces[3*fi],b=g.faces[3*fi+1],c=g.faces[3*fi+2]; const p=g.pos;
+  let x=p[3*a]+p[3*b]+p[3*c], y=p[3*a+1]+p[3*b+1]+p[3*c+1], z=p[3*a+2]+p[3*b+2]+p[3*c+2]; const L=Math.hypot(x,y,z);
+  const np=new Float32Array(p.length+3); np.set(p); np.set([x/L,y/L,z/L],p.length); g.pos=np; const v=g.nV++; g.extra.push(v); state.lastP1={v,face:fi,corners:[a,b,c],done:0};
+  setGraphForRender(g); log('<span class="y">P1 node</span> added vertex '+v+' inside face '+fi+' — isolated. b₀ should read 2.'); compare('P1'); }
+function P2(){ const g=state.g; const s=state.lastP1; if(!s||s.done>=3){ toast('P2 needs a fresh P1 vertex to connect. press P1 first.'); return; }
+  if(state.lod!==0){ state.lod=0; el('s-lod').value=0; }
+  // an edge from v to corner s.done; when all three exist the face is stellated into three faces
+  s.done++; if(s.done<3){ g.loose=(g.loose||[]); g.loose.push([s.v,s.corners[s.done-1]]); setGraphForRender(g); log('<span class="y">P2 edge</span> '+s.v+'–'+s.corners[s.done-1]+' ('+s.done+'/3). not a face yet: F unchanged, E+1.'); compareLoose('P2'); return; }
+  // third edge: replace face by three faces
+  const [a,b,c]=s.corners, v=s.v, fi=s.face; const nf=new Uint32Array(g.faces.length+6); nf.set(g.faces); nf.set([a,b,v],3*fi); nf.set([b,c,v,c,a,v],g.faces.length); g.faces=nf; g.loose=[]; g.extra=g.extra.filter(x=>x!==v);
+  setGraphForRender(g); log('<span class="y">P2 edge</span> '+v+'–'+c+' (3/3): face '+fi+' is now three faces. V+1, E+3, F+2 → Δχ=0.'); compare('P2 ×3'); }
+function compareLoose(why){ // invariants with loose (non-face) edges counted
+  const g=state.g; const inv=invariants(g); const extraE=(g.loose||[]).length; const b0=inv.b0-(extraE>0?1:0); // one loose vertex joins the main component with its first loose edge
+  el('r-vef').textContent=inv.V+' · '+(inv.E+extraE)+' · '+inv.F; const chi=inv.V-(inv.E+extraE)+inv.F; el('r-chi').textContent=chi; el('r-chi').className='v '+(chi===2?'ok':'w'); el('r-betti').textContent=b0+' · '+(inv.E+extraE-inv.V+b0); el('r-p').textContent=inv.P; el('r-deg').textContent=fmtHist(inv.hist)+' +loose';
+  log('<span class="y">P7</span> after '+why+': V='+inv.V+' E='+(inv.E+extraE)+' F='+inv.F+' → χ=<b class="ok">'+chi+'</b> (a pendant edge never moves χ: V+1, E+1 — feynmanium v1.2’s lemma. the surface is not closed yet; F still counts the old face)'); }
+function P3(){ P1(); P2(); P2(); P2(); log('<span class="y">P3 compose</span> = P1 · P2 · P2 · P2 as one operation: a face stellated.'); }
+function P4(){ const g=state.g; if(state.lod!==0){ state.lod=0; el('s-lod').value=0; }
+  // 2-2 edge flip: pick a random face, its first edge, find the other face on that edge
+  const F=g.faces, nF=F.length/3; const edgeFace=new Map(); const key=(u,v)=>u<v?u*4294967296+v:v*4294967296+u;
+  for(let i=0;i<nF;i++) for(let e=0;e<3;e++){ const u=F[3*i+e], v=F[3*i+(e+1)%3]; const k=key(u,v); if(!edgeFace.has(k)) edgeFace.set(k,[]); edgeFace.get(k).push(i); }
+  for(let tries=0;tries<50;tries++){ const fi=randFace(g); const u=F[3*fi],v=F[3*fi+1],w=F[3*fi+2]; const fs=edgeFace.get(key(u,v)); if(!fs||fs.length!==2) continue; const fj=fs[0]===fi?fs[1]:fs[0];
+    const x=[F[3*fj],F[3*fj+1],F[3*fj+2]].find(t=>t!==u&&t!==v); if(x===undefined) continue;
+    // skip if w-x already an edge (would create a double edge)
+    if(edgeFace.has(key(w,x))) continue;
+    const {deg}=edgesOf(F,g.nV); const before=[deg[u],deg[v],deg[w],deg[x]];
+    F.set([u,x,w],3*fi); F.set([v,w,x],3*fj); setGraphForRender(g);
+    log('<span class="y">P4 transform</span> flipped edge '+u+'–'+v+' → '+w+'–'+x+'. degrees '+before.join('/')+' → '+[deg[u]-1,deg[v]-1,deg[w]+1,deg[x]+1].join('/')+'. V, E, F unchanged.'); compare('P4'); return; }
+  toast('no flippable edge found in 50 tries'); }
+function P5(){ const [k,l]=state.kl; const T=4*(k*k+k*l+l*l); if(T>2400){ toast('ceiling: T='+T+' would be '+(10*T+2).toLocaleString()+' vertices. the hull is fine; the layout worker is the floor.'); return; }
+  log('<span class="y">P5 iterate</span> (k,ℓ)→(2k,2ℓ): T ×4. price: '+(10*T+2).toLocaleString()+' vertices. paying.'); generate(2*k,2*l); }
+function PR(){ const [k,l]=state.kl; const nk=k+l, nl=k; const T=nk*nk+nk*nl+nl*nl; if(T>2400){ toast('ceiling: T='+T+' would be '+(10*T+2).toLocaleString()+' vertices.'); return; }
+  const T0=k*k+k*l+l*l; log('<span class="y">Λ rung</span> (k,ℓ)→(k+ℓ,k): the light matrix step. T '+T0+' → '+T+' (×'+(T/T0).toFixed(3)+', → φ² = 2.618). price: '+(10*T+2).toLocaleString()+' vertices. paying.'); generate(nk,nl); }
+function P6(){ buildNanite(); }
+function P7(){ compare('P7 pressed'); }
+
+// ===================== P6: Nanite's four steps =====================
+function clusterFaces(faces, maxF){ // BFS-grow clusters over face adjacency (shared edges)
+  const nF=faces.length/3; const key=(u,v)=>u<v?u*4294967296+v:v*4294967296+u; const ef=new Map();
+  for(let i=0;i<nF;i++) for(let e=0;e<3;e++){ const k=key(faces[3*i+e],faces[3*i+(e+1)%3]); let a=ef.get(k); if(!a){a=[];ef.set(k,a);} a.push(i); }
+  const adj=i=>{ const out=[]; for(let e=0;e<3;e++){ const k=key(faces[3*i+e],faces[3*i+(e+1)%3]); for(const j of ef.get(k)) if(j!==i) out.push(j); } return out; };
+  const cl=new Int32Array(nF).fill(-1); let nc=0;
+  for(let s=0;s<nF;s++){ if(cl[s]>=0) continue; const q=[s]; cl[s]=nc; let cnt=1; let h=0;
+    while(h<q.length && cnt<maxF){ const i=q[h++]; for(const j of adj(i)){ if(cl[j]<0){ cl[j]=nc; cnt++; q.push(j); if(cnt>=maxF) break; } } } nc++; }
+  return {clusterOf:cl, nClusters:nc, edgeFaces:ef, key}; }
+function groupClusters(faces, C, groupSize){ // cluster adjacency weighted by shared edges; greedy grouping
+  const {clusterOf,nClusters,edgeFaces}=C; const w=new Map(); const wk=(a,b)=>a<b?a*1e6+b:b*1e6+a;
+  for(const [k,fs] of edgeFaces){ if(fs.length===2){ const a=clusterOf[fs[0]], b=clusterOf[fs[1]]; if(a!==b){ const kk=wk(a,b); w.set(kk,(w.get(kk)||0)+1); } } }
+  const nb=Array.from({length:nClusters},()=>[]); for(const [kk,c] of w){ const a=Math.floor(kk/1e6), b=kk%1e6; nb[a].push([b,c]); nb[b].push([a,c]); }
+  const grp=new Int32Array(nClusters).fill(-1); let ng=0;
+  for(let s=0;s<nClusters;s++){ if(grp[s]>=0) continue; grp[s]=ng; let members=[s];
+    while(members.length<groupSize){ let best=-1,bw=0; for(const m of members) for(const [b,c] of nb[m]) if(grp[b]<0 && c>bw){ bw=c; best=b; } if(best<0) break; grp[best]=ng; members.push(best); } ng++; }
+  return {groupOf:grp, nGroups:ng}; }
+function globalAdjacency(faces,nV){ const adj=Array.from({length:nV},()=>null); const get=v=>adj[v]||(adj[v]=new Set());
+  for(let i=0;i<faces.length;i+=3){ const a=faces[i],b=faces[i+1],c=faces[i+2]; get(a).add(b).add(c); get(b).add(a).add(c); get(c).add(a).add(b); } return {adj,get}; }
+function simplifyGroup(faces, gFaceIdx, nV, lockedGlobal, ADJ){ // edge collapses inside a group until face count halves; boundary vertices locked
+  // the link condition needs GLOBAL neighbourhoods: a locked v has faces outside this group. ADJ is one adjacency per level, updated on every collapse.
+  const fl=gFaceIdx.map(i=>[faces[3*i],faces[3*i+1],faces[3*i+2]]); const alive=fl.map(()=>true);
+  const vf=new Map(); const addVF=(v,i)=>{ let a=vf.get(v); if(!a){a=new Set();vf.set(v,a);} a.add(i); };
+  fl.forEach((f,i)=>f.forEach(v=>addVF(v,i)));
+  const target=Math.ceil(fl.length/2); let cur=fl.length; let collapses=0, tried=0;
+  const edgeList=[]; fl.forEach((f,i)=>{ for(let e=0;e<3;e++) edgeList.push([f[e],f[(e+1)%3]]); });
+  for(const [u,v] of edgeList){ if(cur<=target) break; tried++;
+    if(lockedGlobal.has(u)) continue; // u is removed; it must not be locked (v may be). an unlocked u has ALL its faces inside this group.
+    const fu=vf.get(u); if(!fu) continue; const shared=[...fu].filter(i=>alive[i] && fl[i].includes(v)); if(shared.length!==2) continue;
+    const nu=ADJ.get(u), nv=ADJ.get(v); if(!nu.has(v)) continue;
+    const apex=shared.map(i=>fl[i].find(t=>t!==u&&t!==v)); let common=0; for(const t of nu) if(nv.has(t)) common++;
+    if(common!==2 || !apex.every(a=>nu.has(a)&&nv.has(a))) continue;   // link condition (global)
+    if(apex.some(a=>ADJ.get(a).size<4)) continue;                        // each apex loses one edge; keep it at degree >= 3
+    // collapse u -> v
+    for(const i of shared){ alive[i]=false; cur--; }
+    for(const i of [...fu]){ if(!alive[i]) continue; const f=fl[i]; const j=f.indexOf(u); f[j]=v; addVF(v,i); }
+    for(const t of nu){ ADJ.get(t).delete(u); if(t!==v){ ADJ.get(t).add(v); nv.add(t); } } nv.delete(u); nu.clear();
+    vf.delete(u); collapses++; }
+  const out=[]; fl.forEach((f,i)=>{ if(alive[i]) out.push(f[0],f[1],f[2]); });
+  return {faces:out, collapses, tried}; }
+function buildNanite(){ const g=state.g; const nF0=g.faces.length/3; if(nF0<256){ toast('too few faces for a DAG: refine first (P5).'); return; }
+  const t0=performance.now(); log('<span class="y">P6 aggregate</span> price: '+nF0.toLocaleString()+' faces, ~'+Math.ceil(Math.log2(nF0/128))+' levels of cluster → group → simplify → split. paying.');
+  const levels=[{faces:g.faces, pos:g.pos, nV:g.nV, extra:[], clusters:0, groups:0, note:'finest'}]; let faces=g.faces; let guard=0; const clusterMaps=[];
+  while(faces.length/3>128 && guard++<20){
+    const C=clusterFaces(faces,128); clusterMaps.push(C.clusterOf);
+    const G=groupClusters(faces,C,4);
+    // faces per group
+    const gf=Array.from({length:G.nGroups},()=>[]); for(let i=0;i<faces.length/3;i++) gf[G.groupOf[C.clusterOf[i]]].push(i);
+    // locked = vertices on edges between different groups
+    const locked=new Set(); for(const [k,fs] of C.edgeFaces){ if(fs.length===2 && G.groupOf[C.clusterOf[fs[0]]]!==G.groupOf[C.clusterOf[fs[1]]]){ const u=Math.floor(k/4294967296), v=k%4294967296; locked.add(u); locked.add(v); } if(fs.length!==2){ const u=Math.floor(k/4294967296), v=k%4294967296; locked.add(u); locked.add(v); } }
+    const ADJ=globalAdjacency(faces,g.nV);
+    const out=[]; let coll=0; for(const fi of gf){ const r=simplifyGroup(faces,fi,g.nV,locked,ADJ); out.push(...r.faces); coll+=r.collapses; }
+    const nf=Uint32Array.from(out); const lv={faces:nf,pos:g.pos,nV:g.nV,extra:[],clusters:C.nClusters,groups:G.nGroups,collapses:coll};
+    const inv=invariants(lv); lv.inv=inv; levels[levels.length-1].clusters=C.nClusters; levels[levels.length-1].groups=G.nGroups; levels.push(lv); faces=nf;
+    if(coll===0){ lv.note='stalled: every remaining collapse would break the manifold'; break; } }
+  levels[0].inv=invariants(levels[0]); const Cf=clusterFaces(levels[levels.length-1].faces,128); levels[levels.length-1].clusters=Cf.nClusters;
+  state.levels=levels; state.clusterOf=clusterMaps[0]||null; el('s-lod').max=levels.length-1; el('s-lod').disabled=false;
+  let txt='lvl  clusters groups    V      E      F   χ\n'; levels.forEach((L,i)=>{ const v=L.inv; txt+=(i===state.lod?'<span class="cur">':'')+String(i).padStart(3)+String(L.clusters).padStart(9)+String(L.groups||'').padStart(7)+String(v.V).padStart(7)+String(v.E).padStart(7)+String(v.F).padStart(7)+'  '+(v.chi===2?'<b style="color:var(--green)">2</b>':'<b style="color:var(--warm)">'+v.chi+'</b>')+(L.note?'  '+L.note:'')+(i===state.lod?'</span>':'')+'\n'; });
+  el('levels').innerHTML=txt; const ms=(performance.now()-t0).toFixed(0); const allChi=levels.every(L=>L.inv.chi===2);
+  log('<span class="y">P6 aggregate</span> built '+levels.length+' levels in '+ms+' ms · χ=2 at every level: '+(allChi?'<b class="ok">yes</b>':'<b class="w">NO — printed above</b>')+' · slide LOD.');
+  compare(); }
+el('s-lod').oninput=e=>{ state.lod=+e.target.value; el('v-lod').textContent=state.lod; setGraphForRender(currentGraph()); compare(); if(state.levels){ const rows=el('levels').innerHTML.split('\n'); el('levels').innerHTML=rows.map((r,i)=>r.replace(/<\/?span[^>]*>/g,'')).map((r,i)=>i===state.lod+1?'<span class="cur">'+r+'</span>':r).join('\n'); } };
+el('b-lod0').onclick=()=>{ state.lod=0; el('s-lod').value=0; el('v-lod').textContent='0'; setGraphForRender(state.g); compare(); };
+el('b-nanite').onclick=buildNanite;
+['P1','P2','P3','P4','P5','P6','P7','PR'].forEach(id=>el(id).onclick=()=>({P1,P2,P3,P4,P5,P6,P7,PR})[id]());
+
+// ===================== v0.2.3: the thermal torus =====================
+const TH={on:false, nT:24, nS:48, twist:false, phase:null, id:null, seamFaces:null};
+function torusGraph(nT,nS){ const V=nT*nS, id=(t,s)=>((t+nT)%nT)*nS+((s+nS)%nS); const faces=[]; for(let t=0;t<nT;t++)for(let s=0;s<nS;s++){ faces.push(id(t,s),id(t+1,s),id(t+1,s+1), id(t,s),id(t+1,s+1),id(t,s+1)); }
+  const pos=new Float32Array(3*V); const R=1.0, r=0.45; for(let t=0;t<nT;t++)for(let s=0;s<nS;s++){ const a=2*Math.PI*t/nT, b=2*Math.PI*s/nS; const i=id(t,s); pos[3*i]=(R+r*Math.cos(a))*Math.cos(b); pos[3*i+1]=r*Math.sin(a); pos[3*i+2]=(R+r*Math.cos(a))*Math.sin(b); }
+  return {pos, faces:Uint32Array.from(faces), nV:V, extra:[], id, torus:true}; }
+function seamSign(ta,tb){ return (TH.twist && ((ta===TH.nT-1&&tb===0)||(ta===0&&tb===TH.nT-1))) ? -1 : 1; }
+function phaseStep(k){ const {nT,nS,id}=TH; const ph=TH.phase; for(let it=0;it<k;it++){ const nx=new Float64Array(ph.length); for(let t=0;t<nT;t++)for(let s=0;s<nS;s++){ const i=id(t,s); let cx=0,cy=0; for(const [tb,sb] of [[t+1,s],[t-1,s],[t,s+1],[t,s-1],[t+1,s+1],[t-1,s-1]]){ const j=id(tb,sb); const sg=seamSign(t,(tb+nT)%nT); cx+=sg*Math.cos(ph[j]); cy+=sg*Math.sin(ph[j]); } nx[i]=Math.atan2(cy,cx); } ph.set(nx); } }
+function windings(){ const {nT,nS,id}=TH, ph=TH.phase; const wrap=d=>Math.atan2(Math.sin(d),Math.cos(d)); let w=0; for(let t=0;t<nT;t++){ let d=ph[id(t+1,0)]-ph[id(t,0)]; if(t===nT-1&&TH.twist) d+=Math.PI; w+=wrap(d); } let ws=0; for(let k=0;k<nS;k++) ws+=wrap(ph[id(0,k+1)]-ph[id(0,k)]); return {wt:w/Math.PI, ws:ws/Math.PI}; }
+// the seam reglued with a reflection: (nT-1, s) -> (0, -s). that IS the Klein bottle. receipt: V-E+F and whether the faces can be consistently oriented.
+function kleinReceipt(){ const {nT,nS}=TH; const id=(t,s)=>((t+nT)%nT)*nS+((s+nS)%nS); const faces=[];
+  for(let t=0;t<nT;t++)for(let s=0;s<nS;s++){ const flip=(t===nT-1); const a=id(t,s), b=flip?id(0,-s):id(t+1,s), c=flip?id(0,-s-1):id(t+1,s+1), dd=id(t,s+1); faces.push([a,b,c],[a,c,dd]); }
+  const ek=(u,v)=>u<v?u+':'+v:v+':'+u; const edgeF=new Map(); faces.forEach((f,i)=>{ for(let e=0;e<3;e++){ const k=ek(f[e],f[(e+1)%3]); if(!edgeF.has(k)) edgeF.set(k,[]); edgeF.get(k).push(i); } });
+  const V=nT*nS, E=edgeF.size, F=faces.length; const sign=new Int8Array(F); let orientable=true; const dirIn=(f,u,v)=>{ for(let e=0;e<3;e++) if(f[e]===u&&f[(e+1)%3]===v) return 1; return -1; };
+  for(let r=0;r<F&&orientable;r++){ if(sign[r]) continue; sign[r]=1; const st=[r]; while(st.length&&orientable){ const i=st.pop(); const f=faces[i]; for(let e=0;e<3;e++){ const u=f[e],v=f[(e+1)%3]; for(const j of edgeF.get(ek(u,v))){ if(j===i) continue; const g=faces[j]; const same=dirIn(g,u,v)===1; const want=same?-sign[i]:sign[i]; if(!sign[j]){ sign[j]=want; st.push(j); } else if(sign[j]!==want){ orientable=false; break; } } if(!orientable) break; } } }
+  return {V,E,F,chi:V-E+F,orientable}; }
+function sphereSeamReceipt(){ const g=state.g; if(!g||g.torus) return null; const F=g.faces, pos=g.pos; const ek=(a,b)=>a<b?a+':'+b:b+':'+a; let odd=0; for(let i=0;i<F.length;i+=3){ const t=[F[i],F[i+1],F[i+2]]; let h=1; for(let e=0;e<3;e++){ const a=t[e],b=t[(e+1)%3]; if((pos[3*a+2]>0)!==(pos[3*b+2]>0)) h=-h; } if(h<0) odd++; } return {odd,total:F.length/3}; }
+function torusStart(){ TH.on=true; TH.id=null; const g=torusGraph(TH.nT,TH.nS); TH.id=g.id; TH.phase=new Float64Array(g.nV); for(let i=0;i<g.nV;i++) TH.phase[i]=Math.random()*2*Math.PI; state.g=g; state.kl=[0,0]; state.levels=null; state.lod=0; state.dive={level:0,lineage:[],cells:[],center:null,size:1,auto:false}; nD=0; state.refine.ops=[]; state.refine.polys=null; state.dual=false; el('b-dual').textContent='dual on'; el('b-dual').classList.remove('on'); nG=0;
+  state.layoutMode='sphere'; if(worker) worker.postMessage({cmd:'pause'}); targetPos=null; setGraphForRender(g); compare('thermal torus '+TH.nT+'×'+TH.nS);
+  const rib=kleinReceipt(); el('th-rib').textContent=(rib.orientable?'orientable?! ':'Klein bottle')+' · χ='+rib.chi+(rib.orientable?'':' · faces cannot be consistently oriented'); el('r-T').textContent='— (torus)'; el('r-class').textContent='time × space'; el('r-su3').textContent='—'; el('r-pred').textContent='V−E+F = '+(g.nV-3*g.nV+2*g.nV); el('r-pred').className='v';
+  log('<span class="y">thermal torus</span> time is the short circle. χ = V−E+F = 0: a loop that does not contract. this is where a twist in time can live.'); torusHUD(); }
+function torusHUD(){ if(!TH.on) return; const inv=state.inv; el('th-chi').textContent='torus · '+(inv?inv.chi:'—'); el('th-hol').textContent=(TH.twist?'−1':'+1')+' · +1'; const w=windings(); const tgt=TH.twist?'odd (1)':'even (0)'; el('th-wt').textContent=w.wt.toFixed(3)+' · '+tgt; const ok=TH.twist?Math.abs(Math.abs(w.wt)-1)<0.02:Math.abs(w.wt)<0.02; el('th-wt').className='v '+(ok?'ok':''); el('th-ws').textContent=w.ws.toFixed(3);
+  el('b-twist').textContent=TH.twist?'fermion · antiperiodic (−1)':'photon · periodic (+1)'; el('b-twist').classList.toggle('on',TH.twist); }
+function torusColors(){ if(!TH.on||!colNode) return; const ph=TH.phase; for(let i=0;i<ph.length;i++){ const h=(ph[i]/(2*Math.PI)+1)%1; const c=hsl(h,0.85,0.55); colNode[3*i]=c[0]; colNode[3*i+1]=c[1]; colNode[3*i+2]=c[2]; colLine[3*i]=c[0]*0.7; colLine[3*i+1]=c[1]*0.7; colLine[3*i+2]=c[2]*0.7; }
+  if(gl){ gl.bindBuffer(gl.ARRAY_BUFFER,bufCol); gl.bufferData(gl.ARRAY_BUFFER,colNode,gl.DYNAMIC_DRAW); gl.bindBuffer(gl.ARRAY_BUFFER,bufColL); gl.bufferData(gl.ARRAY_BUFFER,colLine,gl.DYNAMIC_DRAW); } }
+el('b-torus').onclick=torusStart; el('b-twist').onclick=()=>{ if(!TH.on){ torusStart(); } TH.twist=!TH.twist; log('<span class="y">seam</span> '+(TH.twist?'antiperiodic: fermions pick up −1 around the time circle (Matsubara). the phase must wind π.':'periodic: bosons. the photon sees no twist. the phase winds 0.')); torusHUD(); };
+el('b-sphere2').onclick=()=>{ TH.on=false; generate(4,0); };
+
+// ===================== v0.2.2: the dual, genesis' operator, the dive, the shadow =====================
+const R_SPH=1.0; const EPS64=Number.EPSILON;
+function projn(p,R){ const L=Math.hypot(p[0],p[1],p[2])||1; return [p[0]*R/L,p[1]*R/L,p[2]*R/L]; }
+const lerp3=(a,b,t)=>[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t], mid3=(a,b)=>[(a[0]+b[0])/2,(a[1]+b[1])/2,(a[2]+b[2])/2];
+function dualPolys(g){ // one polygon per vertex: the centroids of its incident faces, sorted around its normal
+  const {faces,nV,pos}=g; const inc=Array.from({length:nV},()=>[]); const cen=[]; for(let i=0;i<faces.length;i+=3){ const a=faces[i],b=faces[i+1],c=faces[i+2]; const q=projn([(pos[3*a]+pos[3*b]+pos[3*c])/3,(pos[3*a+1]+pos[3*b+1]+pos[3*c+1])/3,(pos[3*a+2]+pos[3*b+2]+pos[3*c+2])/3],R_SPH); cen.push(q); inc[a].push(cen.length-1); inc[b].push(cen.length-1); inc[c].push(cen.length-1); }
+  const polys=[]; for(let v=0;v<nV;v++){ const L=inc[v]; if(L.length<3) continue; const n=projn([pos[3*v],pos[3*v+1],pos[3*v+2]],1); let t1=cross3(n,[0,1,0]); if(Math.hypot(...t1)<1e-3) t1=cross3(n,[1,0,0]); t1=projn(t1,1); const t2=cross3(n,t1);
+    const ang=L.map(i=>{ const p=cen[i]; return [Math.atan2(dot3(p,t2),dot3(p,t1)),i]; }).sort((a,b)=>a[0]-b[0]); polys.push({pts:ang.map(a=>cen[a[1]]), pent:L.length===5}); }
+  return polys; }
+function refineFace(f, INNER, MID, R){ // genesis v8.1 refineFace, ported line for line
+  const pts=f.pts, n=pts.length; const c=projn(pts.reduce((a,p)=>[a[0]+p[0]/n,a[1]+p[1]/n,a[2]+p[2]/n],[0,0,0]),R);
+  const inner=pts.map(p=>projn(lerp3(c,p,INNER),R)); const out=[{pts:inner,pent:f.pent,innerOf:f}];
+  for(let i=0;i<n;i++){ const j=(i+1)%n; const em=projn(mid3(pts[i],pts[j]),R); const mr=projn(lerp3(c,mid3(pts[i],pts[j]),MID),R); out.push({pts:[pts[i],em,pts[j],inner[j],mr,inner[i]],pent:false}); }
+  return out; }
+function refineAll(polys, which, INNER, MID, R){ const out=[]; for(const f of polys){ if(which==='hex'&&f.pent){ out.push(f); continue; } out.push(...refineFace(f,INNER,MID,R)); } return out; }
+function polyEdges(polys){ const arr=[]; for(const f of polys){ const n=f.pts.length; for(let i=0;i<n;i++){ const a=f.pts[i], b=f.pts[(i+1)%n]; arr.push(a[0],a[1],a[2],b[0],b[1],b[2]); } } return Float32Array.from(arr); }
+// genesis sphereToMobius, ported exactly (the wallpaper's finding: with projection still on, a sphere with spikes)
+function sphereToMobius(p,R,W){ const r=Math.hypot(p[0],p[1],p[2])||1; const th=Math.atan2(p[1],p[0]), ph=Math.acos(Math.max(-1,Math.min(1,p[2]/r))); const u=th+Math.PI, v=(ph/Math.PI-0.5)*2*W; const q=R+v*Math.cos(u/2); return [q*Math.cos(u), q*Math.sin(u), v*Math.sin(u/2)]; }
+// stereographic shadow from the north pole onto z=-1 (umbrium)
+function shadowOf(p){ const d=1-p[2]; if(d<0.05) return null; return [2*p[0]/d, 2*p[1]/d, -1]; }
+
+const cv=el('gl'); const gl=cv.getContext('webgl2',{antialias:true,alpha:false}); if(!gl){ toast('WebGL2 is required'); }
+let W=1,H=1,DPR=1; function resize(){ DPR=Math.min(devicePixelRatio||1,2); W=cv.width=Math.max(1,(innerWidth||800)*DPR); H=cv.height=Math.max(1,(innerHeight||600)*DPR); cv.style.width=(innerWidth||800)+'px'; cv.style.height=(innerHeight||600)+'px'; gl&&gl.viewport(0,0,W,H); }
+addEventListener('resize',resize); resize(); setTimeout(resize,60); setTimeout(resize,350);
+function sh(type,src){ const s=gl.createShader(type); gl.shaderSource(s,src); gl.compileShader(s); if(!gl.getShaderParameter(s,gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s)); return s; }
+function prog(vs,fs){ const p=gl.createProgram(); gl.attachShader(p,sh(gl.VERTEX_SHADER,vs)); gl.attachShader(p,sh(gl.FRAGMENT_SHADER,fs)); gl.linkProgram(p); if(!gl.getProgramParameter(p,gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p)); return p; }
+const VS=`#version 300 es
+precision highp float; in vec3 aPos; in vec3 aCol; uniform mat4 uMVP; uniform float uPt; uniform float uShadow; uniform vec3 uOff; out vec3 vCol; out float vDepth; out float vA;
+void main(){ vec3 p=aPos+uOff; vA=1.0; if(uShadow>0.5){ float d=1.0-p.z; if(d<0.05){ vA=0.0; d=0.05; } p=vec3(2.0*p.x/d, 2.0*p.y/d, -1.0); if(length(p.xy)>7.0) vA=0.0; }
+  vec4 c=uMVP*vec4(p,1.0); gl_Position=c; float d=c.w; vDepth=d; gl_PointSize=uPt; vCol=aCol; }`;
+const FS_PT=`#version 300 es
+precision highp float; in vec3 vCol; in float vDepth; in float vA; out vec4 o; uniform float uAlpha;
+uniform float uPt2;
+void main(){ if(vA<0.5) discard; if(uPt2>2.5){ vec2 p=gl_PointCoord*2.0-1.0; float r=dot(p,p); if(r>1.0) discard; o=vec4(vCol*1.15,(1.0-r)*uAlpha); } else o=vec4(vCol*1.15, uAlpha); }`;
+const FS_LN=`#version 300 es
+precision highp float; in vec3 vCol; in float vDepth; in float vA; out vec4 o; uniform float uAlpha;
+void main(){ if(vA<0.5) discard; o=vec4(vCol, uAlpha*clamp(1.6/vDepth,0.15,1.0)); }`;
+const PP=gl?prog(VS,FS_PT):null, PL=gl?prog(VS,FS_LN):null;
+const bufPos=gl&&gl.createBuffer(), bufCol=gl&&gl.createBuffer(), bufIdx=gl&&gl.createBuffer(), bufColL=gl&&gl.createBuffer();
+let nNodes=0, nIdx=0, drawPos=null, colNode=null, colLine=null, curEdges=null;
+const bufG=gl&&gl.createBuffer(), bufGc=gl&&gl.createBuffer(), bufD=gl&&gl.createBuffer(), bufDc=gl&&gl.createBuffer(), bufS=gl&&gl.createBuffer(), bufSc=gl&&gl.createBuffer();
+let nG=0, nD=0, nS=0;
+function uploadPolys(polys){ if(!gl) return; const a=polyEdges(polys); nG=a.length/3; const c=new Float32Array(nG*3); let o=0; for(const f of polys){ const n=f.pts.length; const col=f.pent?[1,0.84,0]:[0.85,0.35,0.95]; for(let i=0;i<2*n;i++){ c.set(col,o); o+=3; } }
+  gl.bindBuffer(gl.ARRAY_BUFFER,bufG); gl.bufferData(gl.ARRAY_BUFFER,a,gl.STATIC_DRAW); gl.bindBuffer(gl.ARRAY_BUFFER,bufGc); gl.bufferData(gl.ARRAY_BUFFER,c,gl.STATIC_DRAW); }
+function uploadLineage(){ // camera-relative: subtract the dive centre in float64 BEFORE float32
+  if(!gl) return; const D=state.dive; if(!D.cells.length){ nD=0; return; } const c=D.center||[0,0,0]; const arr=[], col=[];
+  for(const f of D.cells){ const n=f.pts.length; const k=f.pent?[1,0.84,0]:(f.innerOf?[0,1,0.84]:[0.85,0.35,0.95]); for(let i=0;i<n;i++){ const a=f.pts[i], b=f.pts[(i+1)%n]; arr.push(a[0]-c[0],a[1]-c[1],a[2]-c[2],b[0]-c[0],b[1]-c[1],b[2]-c[2]); col.push(...k,...k); } }
+  nD=arr.length/3; gl.bindBuffer(gl.ARRAY_BUFFER,bufD); gl.bufferData(gl.ARRAY_BUFFER,Float32Array.from(arr),gl.DYNAMIC_DRAW); gl.bindBuffer(gl.ARRAY_BUFFER,bufDc); gl.bufferData(gl.ARRAY_BUFFER,Float32Array.from(col),gl.DYNAMIC_DRAW); }
+(function shadowPlane(){ if(!gl) return; const arr=[],col=[]; const seg=96; for(let i=0;i<seg;i++){ const a=i/seg*2*Math.PI,b=(i+1)/seg*2*Math.PI; arr.push(2*Math.cos(a),2*Math.sin(a),-1,2*Math.cos(b),2*Math.sin(b),-1); col.push(0.5,0.66,0.75,0.5,0.66,0.75); }
+  arr.push(-6,0,-1,6,0,-1,0,-6,-1,0,6,-1); col.push(0.12,0.14,0.2,0.12,0.14,0.2,0.12,0.14,0.2,0.12,0.14,0.2); nS=arr.length/3;
+  gl.bindBuffer(gl.ARRAY_BUFFER,bufS); gl.bufferData(gl.ARRAY_BUFFER,Float32Array.from(arr),gl.STATIC_DRAW); gl.bindBuffer(gl.ARRAY_BUFFER,bufSc); gl.bufferData(gl.ARRAY_BUFFER,Float32Array.from(col),gl.STATIC_DRAW); })();
+function setGraphForRender(g){ const inv=invariants(g); curEdges=inv.edges; let edges=inv.edges; if(g.loose&&g.loose.length){ const e2=new Uint32Array(edges.length+2*g.loose.length); e2.set(edges); e2.set(g.loose.flat(),edges.length); edges=e2; }
+  nNodes=g.nV; nIdx=edges.length; drawPos=new Float32Array(g.pos.subarray(0,3*g.nV)); 
+  colNode=new Float32Array(3*g.nV); colLine=new Float32Array(3*g.nV); const alive=new Uint8Array(g.nV); for(let i=0;i<edges.length;i++) alive[edges[i]]=1; for(const v of (g.extra||[])) alive[v]=1;
+  for(let i=0;i<g.nV;i++){ const d=inv.deg[i]; let c; if(!alive[i]) c=[0,0,0]; else if(state.byCluster&&state.clusterOf&&state.lod===0){ const h=((i*0.618033)%1); c=hsl(h,0.7,0.6); } else c = d===5?[1,0.84,0]: d===6?[0,0.83,1]: d===0?[1,0.41,0.71]:[0.8,0.27,1];
+    colNode.set(c,3*i); colLine.set(d===5?[1,0.84,0]:[0.2,0.5,0.75],3*i); }
+  if(state.byCluster&&state.clusterOf&&state.lod===0){ // colour vertices by the cluster of one incident face
+    const F=g.faces; const cl=state.clusterOf; for(let i=0;i<F.length/3;i++){ const h=((cl[i]*0.618033)%1); const c=hsl(h,0.75,0.6); for(let e=0;e<3;e++){ colNode.set(c,3*F[3*i+e]); colLine.set(c.map(x=>x*0.8),3*F[3*i+e]); } } }
+  if(!gl) return; gl.bindBuffer(gl.ARRAY_BUFFER,bufPos); gl.bufferData(gl.ARRAY_BUFFER,drawPos,gl.DYNAMIC_DRAW);
+  gl.bindBuffer(gl.ARRAY_BUFFER,bufCol); gl.bufferData(gl.ARRAY_BUFFER,colNode,gl.STATIC_DRAW); gl.bindBuffer(gl.ARRAY_BUFFER,bufColL); gl.bufferData(gl.ARRAY_BUFFER,colLine,gl.STATIC_DRAW);
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,bufIdx); gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,edges,gl.STATIC_DRAW);
+  if(state.layoutMode==='force' && worker){ startLayout(g,edges,true); } }
+function hsl(h,s,l){ const f=n=>{ const k=(n+h*12)%12; const a=s*Math.min(l,1-l); return l-a*Math.max(-1,Math.min(k-3,9-k,1)); }; return [f(0),f(8),f(4)]; }
+el('b-clusters').onclick=function(){ state.byCluster=!state.byCluster; this.classList.toggle('on',state.byCluster); if(state.byCluster&&!state.clusterOf) toast('build the DAG first (P6) — clusters come from the first Nanite step'); setGraphForRender(currentGraph()); };
+// camera
+function mat(off){ const cy=Math.cos(state.yaw),sy=Math.sin(state.yaw),cp=Math.cos(state.pitch),sp=Math.sin(state.pitch); const dv=state.dive; const scale=dv.level>0?dv.size*2.6:1; const D=3.2/state.zoom*scale, f=1.6, asp=W/H, n=Math.max(1e-6,0.02*scale), fa=60*Math.max(scale,1);
+  const c=off||[0,0,0];
+  // view: translate -centre, rotate yaw about y, pitch about x, translate -D along z ; projection perspective
+  const tx=-c[0],ty=-c[1],tz=-c[2]; const R=[cy,sy*sp,-sy*cp,0, 0,cp,sp,0, sy,-cy*sp,cy*cp,0, tx*cy+tz*sy, tx*sy*sp+ty*cp-tz*cy*sp, -tx*sy*cp+ty*sp+tz*cy*cp-D, 1];
+  const P=[f/asp,0,0,0, 0,f,0,0, 0,0,-(fa+n)/(fa-n),-1, 0,0,-2*fa*n/(fa-n),0];
+  const M=new Float32Array(16); for(let i=0;i<4;i++)for(let j=0;j<4;j++){ let s=0; for(let k=0;k<4;k++) s+=R[i*4+k]*P[k*4+j]; M[i*4+j]=s; } return M; }
+function pass(P,M,posBuf,colBuf,mode,alpha,count,shadow,off,idx){ gl.useProgram(P); gl.uniformMatrix4fv(gl.getUniformLocation(P,'uMVP'),false,M); gl.uniform1f(gl.getUniformLocation(P,'uPt'),state.px); const u2=gl.getUniformLocation(P,'uPt2'); if(u2) gl.uniform1f(u2,state.px); gl.uniform1f(gl.getUniformLocation(P,'uShadow'),shadow?1:0); gl.uniform3f(gl.getUniformLocation(P,'uOff'),off[0],off[1],off[2]); gl.lineWidth(1); gl.uniform1f(gl.getUniformLocation(P,'uAlpha'),alpha);
+  gl.bindBuffer(gl.ARRAY_BUFFER,posBuf); const aP=gl.getAttribLocation(P,'aPos'); gl.enableVertexAttribArray(aP); gl.vertexAttribPointer(aP,3,gl.FLOAT,false,0,0);
+  gl.bindBuffer(gl.ARRAY_BUFFER,colBuf); const aC=gl.getAttribLocation(P,'aCol'); gl.enableVertexAttribArray(aC); gl.vertexAttribPointer(aC,3,gl.FLOAT,false,0,0);
+  if(idx){ gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,bufIdx); gl.drawElements(gl.LINES,count,gl.UNSIGNED_INT,0); } else gl.drawArrays(mode,0,count); }
+function draw(){ if(!gl||!drawPos) return; gl.clearColor(0.02,0.02,0.06,1); gl.clear(gl.COLOR_BUFFER_BIT); gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA,gl.ONE); gl.disable(gl.DEPTH_TEST);
+  const dv=state.dive, diving=dv.level>0; const M=mat(diving?dv.center:null); const Z=[0,0,0];
+  gl.bindBuffer(gl.ARRAY_BUFFER,bufPos); gl.bufferSubData(gl.ARRAY_BUFFER,0,drawPos);
+  const baseA = diving ? (dv.size>2e-3 ? 0.05 : 0) : 1;   // below ~1e-3 a float32 MVP cannot place the base graph: it is not drawn rather than drawn wrong
+  if(state.shadow && !diving){ pass(PL,M,bufS,bufSc,gl.LINES,0.8,nS,false,Z,false); pass(PL,M,bufPos,bufColL,gl.LINES,0.14,nIdx,true,Z,true); if(nG&&state.dual) pass(PL,M,bufG,bufGc,gl.LINES,0.10,nG,true,Z,false); }
+  if(baseA>0){ if(!state.dual || diving){ pass(PL,M,bufPos,bufColL,gl.LINES,0.22*baseA,nIdx,false,Z,true); pass(PP,M,bufPos,bufCol,gl.POINTS,0.9*baseA,nNodes,false,Z,false); }
+    if(nG && state.dual) pass(PL,M,bufG,bufGc,gl.LINES,0.55*baseA,nG,false,Z,false); }
+  if(diving && nD){ // camera-relative lineage: positions were centre-subtracted in float64, so draw them with the camera centred on the origin
+    pass(PL,mat([0,0,0]),bufD,bufDc,gl.LINES,0.95,nD,false,Z,false); } }
+
+// ===================== obsidian's engine: the layout worker =====================
+const WORKER_SRC=`
+let pos,vel,edges,n,it=0,running=false,rest=0.05,alive;
+function step(){ const dt=0.6, damp=0.85; const f=new Float32Array(n*3);
+  // springs
+  for(let i=0;i<edges.length;i+=2){ const a=edges[i],b=edges[i+1]; let dx=pos[3*b]-pos[3*a],dy=pos[3*b+1]-pos[3*a+1],dz=pos[3*b+2]-pos[3*a+2]; const d=Math.hypot(dx,dy,dz)||1e-6; const s=(d-rest)*0.9/d; dx*=s;dy*=s;dz*=s; f[3*a]+=dx;f[3*a+1]+=dy;f[3*a+2]+=dz; f[3*b]-=dx;f[3*b+1]-=dy;f[3*b+2]-=dz; }
+  // stochastic repulsion: 6 random partners per vertex (not Barnes-Hut)
+  const K=6, rep=0.0009*Math.sqrt(n); for(let a=0;a<n;a++){ if(!alive[a]) continue; for(let k=0;k<K;k++){ const b=(Math.random()*n)|0; if(b===a||!alive[b]) continue; let dx=pos[3*a]-pos[3*b],dy=pos[3*a+1]-pos[3*b+1],dz=pos[3*a+2]-pos[3*b+2]; const d2=dx*dx+dy*dy+dz*dz+1e-4; const s=rep/(d2*Math.sqrt(d2)); f[3*a]+=dx*s;f[3*a+1]+=dy*s;f[3*a+2]+=dz*s; } }
+  // weak centring
+  let cx=0,cy=0,cz=0,m=0; for(let a=0;a<n;a++) if(alive[a]){cx+=pos[3*a];cy+=pos[3*a+1];cz+=pos[3*a+2];m++;} cx/=m;cy/=m;cz/=m;
+  for(let a=0;a<n;a++){ if(!alive[a]) continue; f[3*a]-=(pos[3*a]-cx)*0.002; f[3*a+1]-=(pos[3*a+1]-cy)*0.002; f[3*a+2]-=(pos[3*a+2]-cz)*0.002;
+    vel[3*a]=(vel[3*a]+f[3*a]*dt)*damp; vel[3*a+1]=(vel[3*a+1]+f[3*a+1]*dt)*damp; vel[3*a+2]=(vel[3*a+2]+f[3*a+2]*dt)*damp;
+    pos[3*a]+=vel[3*a]*dt; pos[3*a+1]+=vel[3*a+1]*dt; pos[3*a+2]+=vel[3*a+2]*dt; }
+  it++; }
+let lastE=null;
+function energy(){ let E=0; for(let i=0;i<edges.length;i+=2){ const a=edges[i],b=edges[i+1]; const d=Math.hypot(pos[3*b]-pos[3*a],pos[3*b+1]-pos[3*a+1],pos[3*b+2]-pos[3*a+2]); E+=0.45*(d-rest)*(d-rest); }
+  const rep=0.0009*Math.sqrt(n); let Er=0, cnt=0; for(let k=0;k<2000;k++){ const a=(Math.random()*n)|0, b=(Math.random()*n)|0; if(a===b||!alive[a]||!alive[b]) continue; const d=Math.hypot(pos[3*a]-pos[3*b],pos[3*a+1]-pos[3*b+1],pos[3*a+2]-pos[3*b+2]); Er+=rep/(d+1e-3); cnt++; }
+  return E + (cnt? Er/cnt*n*6 : 0); }
+function report(){ // sphericity: std(r)/mean(r) about the centroid; mean edge length
+  let cx=0,cy=0,cz=0,m=0; for(let a=0;a<n;a++) if(alive[a]){cx+=pos[3*a];cy+=pos[3*a+1];cz+=pos[3*a+2];m++;} cx/=m;cy/=m;cz/=m;
+  let s=0,s2=0; for(let a=0;a<n;a++){ if(!alive[a]) continue; const r=Math.hypot(pos[3*a]-cx,pos[3*a+1]-cy,pos[3*a+2]-cz); s+=r; s2+=r*r; } const mean=s/m, sd=Math.sqrt(Math.max(0,s2/m-mean*mean));
+  let L=0; for(let i=0;i<edges.length;i+=2){ const a=edges[i],b=edges[i+1]; L+=Math.hypot(pos[3*b]-pos[3*a],pos[3*b+1]-pos[3*a+1],pos[3*b+2]-pos[3*a+2]); } L/=edges.length/2;
+  // normalise to unit mean radius for the renderer
+  const out=new Float32Array(pos.length); for(let a=0;a<n;a++){ out[3*a]=(pos[3*a]-cx)/mean; out[3*a+1]=(pos[3*a+1]-cy)/mean; out[3*a+2]=(pos[3*a+2]-cz)/mean; }
+  const E=energy(); const dE=lastE===null?0:(E-lastE)/8; lastE=E;
+  postMessage({pos:out,it,sph:sd/mean,el:L/mean,E,dE},[out.buffer]); }
+function loop(){ if(!running) return; const t0=Date.now(); let k=0; while(Date.now()-t0<28 && k<8){ step(); k++; } report(); setTimeout(loop,0); }
+onmessage=e=>{ const d=e.data; if(d.cmd==='start'){ n=d.n; edges=d.edges; alive=d.alive; pos=new Float32Array(n*3); vel=new Float32Array(n*3); it=0;
+    if(d.random){ for(let i=0;i<n*3;i++) pos[i]=(Math.random()-0.5)*2; } else pos.set(d.pos);
+    const nE=edges.length/2; rest=Math.sqrt(4*Math.PI/ (edges.length/2) )*1.55; running=true; loop(); }
+  else if(d.cmd==='pause'){ running=false; } else if(d.cmd==='resume'){ if(!running){ running=true; loop(); } } };
+`;
+let worker=null; try{ worker=new Worker(URL.createObjectURL(new Blob([WORKER_SRC],{type:'text/javascript'}))); }catch(e){ toast('worker unavailable: '+e.message); }
+let targetPos=null;
+if(worker) worker.onmessage=e=>{ const d=e.data; targetPos=d.pos; el('r-it').textContent=d.it; el('r-sph').textContent=d.sph.toFixed(4); el('r-sph').className='v '+(d.sph<0.02?'ok':''); el('r-el').textContent=d.el.toFixed(4);
+  el('t-it').textContent=d.it; el('t-E').textContent=d.E.toFixed(4); el('t-dE').textContent=(d.dE>=0?'+':'')+d.dE.toExponential(2); const st=Math.abs(d.dE)/(d.E||1); el('t-stab').textContent=st.toExponential(2)+(st<1e-4?' · arrived':''); el('t-stab').className='v '+(st<1e-4?'ok':''); };
+function startLayout(g,edges,random){ if(!worker) return; const alive=new Uint8Array(g.nV); for(let i=0;i<edges.length;i++) alive[edges[i]]=1; for(const v of (g.extra||[])) alive[v]=1;
+  worker.postMessage({cmd:'start', n:g.nV, edges:Uint32Array.from(edges), alive, random:!!random, pos:Float32Array.from(g.pos.subarray(0,3*g.nV))}); state.paused=false; el('b-pause').textContent='pause'; }
+el('b-layout').onclick=()=>{ const g=currentGraph(); const n=g.nV; if(n>12000) toast('price: '+n.toLocaleString()+' vertices in a JS worker with stochastic repulsion. expect a few iterations per second. the sphere still returns; slower.',5000);
+  state.layoutMode='force'; el('b-layout').classList.add('on'); el('b-sphere').classList.remove('on'); startLayout(g,curEdges,true); log('<span class="y">layout</span> from random: adjacency only. watch sphericity fall.'); };
+el('b-sphere').onclick=()=>{ state.layoutMode='sphere'; el('b-sphere').classList.add('on'); el('b-layout').classList.remove('on'); if(worker) worker.postMessage({cmd:'pause'}); targetPos=null; const g=currentGraph(); drawPos=new Float32Array(g.pos.subarray(0,3*g.nV)); };
+el('b-pause').onclick=function(){ if(!worker) return; state.paused=!state.paused; worker.postMessage({cmd:state.paused?'pause':'resume'}); this.textContent=state.paused?'resume':'pause'; };
+el('b-sphere').classList.add('on');
+
+// ===================== controls =====================
+el('s-px').oninput=e=>{ state.px=+e.target.value; el('v-px').textContent=state.px; };
+el('b-shadow').onclick=function(){ state.shadow=!state.shadow; this.textContent=state.shadow?'shadow on':'shadow off'; this.classList.toggle('on',state.shadow); if(state.shadow&&state.pitch<0.15){ state.pitch=0.55; } };
+el('b-inset').onclick=function(){ state.inset=!state.inset; this.textContent=state.inset?'inset on':'inset off'; this.classList.toggle('on',state.inset); el('inset').style.display=state.inset?'block':'none'; };
+el('b-inset').classList.add('on'); el('inset').style.display='block';
+el('b-mobius').onclick=function(){ state.mobius=!state.mobius; this.textContent=state.mobius?'genesis twist on':'genesis twist off'; this.classList.toggle('on',state.mobius); applyMobius(); };
+function applyMobius(){ const g=state.g; if(!g) return; if(!g.posSphere) g.posSphere=Float32Array.from(g.pos); if(state.mobius){ const n=g.nV; const out=new Float32Array(3*n); let spiked=0; for(let i=0;i<n;i++){ const p=[g.posSphere[3*i],g.posSphere[3*i+1],g.posSphere[3*i+2]]; const q=sphereToMobius(p,1.0,0.5); out.set(q,3*i); if(Math.hypot(...q)>1.02) spiked++; } g.pos=out; log('<span class="y">genesis twist</span> sphereToMobius on the seed: '+(100*spiked/n).toFixed(1)+'% of vertices leave the sphere — spikes, not a strip (wallpaper v1.5 header). χ unchanged.'); } else g.pos=Float32Array.from(g.posSphere);
+  if(state.layoutMode!=='force'){ drawPos=new Float32Array(g.pos.subarray(0,3*g.nV)); } if(state.refine.polys){ rebuildDual(); } }
+const fmtE=v=>{ const e=Math.floor(Math.log10(v)); const m=v/Math.pow(10,e); return (Math.abs(m-1)<0.02?'':m.toFixed(2)+'×')+'1e'+e; };
+function measureFence(){ const g=state.g; if(!g) return; const polys=dualPolys({faces:g.faces,nV:g.nV,pos:g.pos}); let dmin=1e9,dmax=0; for(const f of polys){ const n=f.pts.length; const c=f.pts.reduce((a,p)=>[a[0]+p[0]/n,a[1]+p[1]/n,a[2]+p[2]/n],[0,0,0]); for(const p of f.pts){ const d=Math.hypot(p[0]-c[0],p[1]-c[1],p[2]-c[2]); if(d<dmin) dmin=d; if(d>dmax) dmax=d; } }
+  state.fence={lo:12*EPS64/dmin, hi:1/(12*EPS64*dmax)}; el('g-fence').textContent='['+fmtE(state.fence.lo)+', '+fmtE(state.fence.hi)+']'; }
+function setScale(which,logv){ let v=Math.pow(10,logv); const F=state.fence; if(v<F.lo||v>F.hi){ toast('float64 fence: '+which+' = '+fmtE(v)+' is outside ['+fmtE(F.lo)+', '+fmtE(F.hi)+'] — past it the cell’s vertices are the same bytes. ∞ is rented.',4200); v=Math.min(F.hi,Math.max(F.lo,v)); el('s-'+which).value=Math.log10(v).toFixed(2); }
+  state[which]=v; el('v-'+which).textContent=fmtE(v); if(state.refine.polys) rebuildDual(); }
+el('s-inner').oninput=e=>setScale('inner',+e.target.value); el('s-mid').oninput=e=>setScale('mid',+e.target.value);
+function ulpReadout(polys){ let sep=1e9, coin=0, n=0; for(const f of polys){ const P=f.pts; for(let i=0;i<P.length;i++){ const a=P[i], b=P[(i+1)%P.length]; const d=Math.hypot(a[0]-b[0],a[1]-b[1],a[2]-b[2]); n++; if(d===0) coin++; else if(d<sep) sep=d; } }
+  el('g-ulp').textContent=isFinite(sep)&&sep<1e9?(sep/EPS64).toExponential(2):'—'; el('g-ulp').className='v '+(sep/EPS64<12?'w':sep/EPS64<1e3?'g':''); el('g-coin').textContent=coin+' / '+n; el('g-coin').className='v '+(coin?'w':'ok'); }
+function rebuildDual(){ const g=state.g; let polys=dualPolys({faces:g.faces,nV:g.nV,pos:g.pos}); for(const w of state.refine.ops||[]) polys=refineAll(polys,w,state.inner,state.mid,R_SPH); state.refine.polys=polys; uploadPolys(polys); ulpReadout(polys); const pent=polys.filter(f=>f.pent).length; el('g-count').textContent=polys.length.toLocaleString()+' · '+pent+' · '+nG/2; const nxt=polys.reduce((a,f)=>a+f.pts.length+1,0); el('g-price').textContent=(state.refine.ops||[]).length+' · '+nxt.toLocaleString(); }
+el('b-dual').onclick=function(){ state.dual=!state.dual; this.textContent=state.dual?'dual on':'dual off'; this.classList.toggle('on',state.dual); if(state.dual){ state.refine.ops=state.refine.ops||[]; rebuildDual(); } };
+function refineOp(which){ if(!state.dual){ el('b-dual').click(); } const polys=state.refine.polys; const price=polys.reduce((a,f)=>a+(which==='hex'&&f.pent?1:f.pts.length+1),0); if(price>600000){ toast('price: '+price.toLocaleString()+' polygons. ceiling 600k here (genesis’ wallpaper goes to 164M on 32 GB; this is a browser tab).',5000); return; }
+  log('<span class="y">genesis refine '+(which==='hex'?'6s':'all')+'</span> price: '+price.toLocaleString()+' polygons, ~'+(price*6).toLocaleString()+' edges. paying.'); state.refine.ops.push(which); rebuildDual(); }
+el('b-refall').onclick=()=>refineOp('all'); el('b-refhex').onclick=()=>refineOp('hex');
+el('b-refclear').onclick=()=>{ state.refine.ops=[]; if(state.dual) rebuildDual(); };
+// ---- the dive ----
+function diveStart(){ const g=state.g; if(!g) return; if(!state.dual){ el('b-dual').click(); } const polys=state.refine.polys; const f0=polys.find(f=>f.pent)||polys[0]; state.dive={level:0,lineage:[f0],cells:[],center:null,size:1,auto:false}; }
+function cellSize(f){ const n=f.pts.length; const c=f.pts.reduce((a,p)=>[a[0]+p[0]/n,a[1]+p[1]/n,a[2]+p[2]/n],[0,0,0]); let r=0; for(const p of f.pts) r=Math.max(r,Math.hypot(p[0]-c[0],p[1]-c[1],p[2]-c[2])); return {c,r}; }
+function diveOne(){ const D=state.dive; if(!D.lineage.length) diveStart(); const cur=state.dive.lineage[state.dive.lineage.length-1]; const {c,r}=cellSize(cur); const head=r/(EPS64*R_SPH); if(head*state.inner<12){ toast('float64 fence: the next cell would have headroom '+(head*state.inner).toFixed(1)+' < 12 — its own vertices start to coincide. ∞ is rented.',5000); state.dive.auto=false; el('b-diveauto').classList.remove('on'); return; }
+  const cells=refineFace(cur,state.inner,state.mid,R_SPH); const inner=cells[0]; state.dive.cells.push(...cells); state.dive.lineage.push(inner); state.dive.level++; const s=cellSize(inner); state.dive.center=s.c; state.dive.size=s.r; uploadLineage(); diveHUD(); }
+function diveHUD(){ const D=state.dive; if(!D.level){ el('d-level').textContent='0 · —'; el('d-head').textContent='—'; el('d-left').textContent='—'; el('d-dist').textContent='—'; return; } const cur=D.lineage[D.lineage.length-1]; const {c,r}=cellSize(cur); const head=r/(EPS64*R_SPH); const left=state.inner<1?Math.max(0,Math.floor(Math.log10(head/12)/Math.log10(1/state.inner))):Infinity;
+  let distinct=0; const seen=new Set(); for(const p of cur.pts){ const k=p.map(x=>x).join(','); if(!seen.has(k)){ seen.add(k); distinct++; } }
+  el('d-level').textContent=D.level+' · '+r.toExponential(3); el('d-head').textContent=head.toExponential(2); el('d-head').className='v '+(head>500?'ok':head>12?'g':'w'); el('d-left').textContent=left; el('d-dist').textContent=distinct+'/'+cur.pts.length; }
+el('b-dive').onclick=()=>diveOne();
+el('b-diveauto').onclick=function(){ state.dive.auto=!state.dive.auto; this.classList.toggle('on',state.dive.auto); if(state.dive.auto&&!state.dive.lineage.length) diveStart(); };
+el('b-surface').onclick=()=>{ state.dive={level:0,lineage:[],cells:[],center:null,size:1,auto:false}; el('b-diveauto').classList.remove('on'); nD=0; diveHUD(); };
+// ---- the inset: the shadow, float64, Canvas 2D; follows the dive ----
+const ins=el('inset'), ictx=ins.getContext('2d'); let insetT=0;
+function drawInset(){ if(!state.inset||!ictx) return; const w=ins.width,h=ins.height; ictx.clearRect(0,0,w,h); ictx.lineWidth=1; const D=state.dive;
+  if(D.level>0&&D.cells.length){ // lineage shadow, centred on the shadow of the dive centre, zoomed to the current cell
+    const sc=shadowOf(D.center); if(!sc){ ictx.fillStyle='#6a6a82'; ictx.fillText('past the lamp: no shadow',10,20); return; } const cur=D.lineage[D.lineage.length-1]; const sh=cur.pts.map(shadowOf).filter(Boolean); let rr=1e-300; for(const p of sh) rr=Math.max(rr,Math.hypot(p[0]-sc[0],p[1]-sc[1])); const S=(w*0.36)/rr;
+    for(const f of D.cells){ const ps=f.pts.map(shadowOf); if(ps.some(p=>!p)) continue; ictx.strokeStyle=f.pent?'rgba(255,215,0,.9)':(f.innerOf?'rgba(0,255,213,.9)':'rgba(217,89,242,.6)'); ictx.beginPath(); ps.forEach((p,i)=>{ const x=w/2+(p[0]-sc[0])*S, y=h/2-(p[1]-sc[1])*S; i?ictx.lineTo(x,y):ictx.moveTo(x,y); }); ictx.closePath(); ictx.stroke(); }
+    ictx.fillStyle='#6a6a82'; ictx.font='10px ui-monospace,monospace'; ictx.fillText('shadow of the lineage · level '+D.level+' · ×'+(1/state.inner).toFixed(0)+' per level',8,h-8); return; }
+  // the whole graph's shadow
+  const S=w/9; ictx.strokeStyle='rgba(127,168,192,.5)'; ictx.beginPath(); ictx.arc(w/2,h/2,2*S,0,7); ictx.stroke();
+  const g=state.g; const pos=drawPos; if(!pos||!curEdges) return; const E=curEdges; const step=Math.max(1,Math.floor(E.length/2/12000)); let cut=0; ictx.strokeStyle='rgba(0,212,255,.35)'; ictx.beginPath();
+  for(let i=0;i<E.length;i+=2*step){ const a=E[i],b=E[i+1]; const pa=shadowOf([pos[3*a],pos[3*a+1],pos[3*a+2]]), pb=shadowOf([pos[3*b],pos[3*b+1],pos[3*b+2]]); if(!pa||!pb){ cut++; continue; } if(Math.hypot(pa[0],pa[1])>4.4||Math.hypot(pb[0],pb[1])>4.4) continue; ictx.moveTo(w/2+pa[0]*S,h/2-pa[1]*S); ictx.lineTo(w/2+pb[0]*S,h/2-pb[1]*S); }
+  ictx.stroke(); el('sh-cut').textContent=cut*step; ictx.fillStyle='#6a6a82'; ictx.font='10px ui-monospace,monospace'; ictx.fillText('the shadow · lamp at (0,0,1) · plane z=−1',8,h-8); }
+el('s-kk').oninput=e=>{ el('v-kk').textContent=e.target.value; }; el('s-ll').oninput=e=>{ el('v-ll').textContent=e.target.value; };
+el('b-gen').onclick=()=>{ const k=+el('s-kk').value, l=+el('s-ll').value; if(k===0&&l===0){ toast('(0,0) is nothing. T=0.'); return; } const T=k*k+k*l+l*l; if(T>2400){ toast('price: T='+T+' → '+(10*T+2).toLocaleString()+' vertices. ceiling here is T ≤ 2400 (GP(34,21) is 23,112).',4500); return; } generate(k,l); };
+let laneN=3; el('b-lane-g').onclick=function(){ let a=1,b=0; for(let i=0;i<laneN;i++){ const t=a+b; b=a; a=t; } generate(a,b); laneN=(laneN%7)+1; let na=1,nb=0; for(let i=0;i<laneN;i++){ const t=na+nb; nb=na; na=t; } this.innerHTML='golden lane n='+laneN+' <small>('+na+','+nb+') · T='+(na*na+na*nb+nb*nb)+'</small>'; };
+el('b-lane-r').onclick=()=>generate(4,0);
+el('b-mirror').onclick=()=>{ const [k,l]=state.kl; if(k===l||l===0){ toast('achiral: its mirror is itself'); return; } generate(l,k); };
+el('b-spin').onclick=function(){ state.spin=!state.spin; this.textContent=state.spin?'spin on':'spin off'; this.classList.toggle('on',state.spin); };
+el('b-reset').onclick=()=>{ state.yaw=0.4; state.pitch=0.25; state.zoom=1; };
+el('uiToggle').onclick=()=>document.body.classList.toggle('hideui');
+let dragging=false,lx=0,ly=0; cv.addEventListener('pointerdown',e=>{ dragging=true; lx=e.clientX; ly=e.clientY; cv.setPointerCapture(e.pointerId); });
+cv.addEventListener('pointermove',e=>{ if(!dragging) return; state.yaw+=(e.clientX-lx)*0.008; state.pitch=Math.max(-1.4,Math.min(1.4,state.pitch+(e.clientY-ly)*0.008)); lx=e.clientX; ly=e.clientY; });
+cv.addEventListener('pointerup',()=>dragging=false); cv.addEventListener('pointercancel',()=>dragging=false);
+cv.addEventListener('wheel',e=>{ e.preventDefault(); state.zoom=Math.max(0.4,Math.min(6,state.zoom*(e.deltaY<0?1.1:0.91))); },{passive:false});
+addEventListener('keydown',e=>{ if(e.key==='h'||e.key==='H') document.body.classList.toggle('hideui'); else if(e.key==='s'||e.key==='S') el('b-spin').click(); else if(e.key==='l'||e.key==='L') el('b-layout').click(); else if(e.key==='d'||e.key==='D') diveOne(); });
+
+// v0.2: three ladders + the chi wall (thea XIV, XVIII), BigInt ground truth
+function updateLadder(){ const PHI=(1+Math.sqrt(5))/2, LNP2=Math.log(PHI*PHI); const [k,l]=state.kl; const T=k*k+k*l+l*l;
+  const N=Math.log(4.4e26/1.616255e-35)/LNP2; let txt='';
+  txt+='currency          step    Planck→horizon\n';
+  txt+='light-matrix rung φ²=2.618  '+N.toFixed(1)+' rungs   (thea XIV: 147.0)\n';
+  txt+='nanite level      ÷2        '+(N*LNP2/Math.LN2).toFixed(1)+' halvings (thea XVIII: 205 bits)\n';
+  txt+='P5 refine         ×4        '+(N*LNP2/Math.log(4)).toFixed(1)+' refinements\n';
+  let wall='';
+  if(typeof BigInt==='function'){ const Tn=n=>{ let a=1n,b=0n; for(let i=0;i<n;i++){ const t=a+b; b=a; a=t; } return a*a+a*b+b*b; }; const exact=x=>BigInt(Number(x))===x; let nT=-1,nChi=-1;
+    for(let n=0;n<90;n++){ const t=Tn(n); if(nT<0&&!exact(t)) nT=n; const tf=Number(t); const chi=(10*tf+2)-30*tf+20*tf; if(nChi<0&&chi!==2) nChi=n; }
+    wall='\nχ wall on the golden lane (float64, this page’s convention):\n  Tₙ leaves float64 at n='+nT+'\n  χ=(10T+2)−30T+20T ≠ 2 first at n='+nChi+'\n  → the invariant dies '+(nT-nChi)+' rungs before T does   (thea XVIII: same)';
+    // where is the current cage on that ladder?
+    let here=0; { let a=1,b=0; while(a*a+a*b+b*b<T && here<90){ const t=a+b; b=a; a=t; here++; } }
+    wall+='\n  this cage: T='+T+' ≈ golden rung '+(Math.log(T)/LNP2).toFixed(2)+' · '+(nChi-Math.log(T)/LNP2).toFixed(1)+' rungs of headroom before χ lies'; }
+  else wall='\nBigInt unavailable: refusing to locate the wall by guessing.';
+  el('ladder').textContent=txt+wall; }
+(function rungTable(){ const rows=[
+  ['0 primitives','P1 node · P2 edge','exact-ish: the two things you can add to a graph'],
+  ['1 symmetry','P4 transform','rhyme: a flip changes degrees, not χ'],
+  ['2 dynamics','P5 iterate · Λ rung','rhyme: the two ladders that grow T'],
+  ['3 payout','P3 compose','rhyme'],
+  ['4 coarse-graining','P6 aggregate','EXACT: nanite’s cluster/group/simplify/split is coarse-graining'],
+  ['5 the infinities','the χ wall (above)','rhyme: where float64 stops'],
+  ['6 the boundary','P7 compare','rhyme: the invariant is the fence']];
+  el('rungs').textContent=rows.map(r=>r[0].padEnd(19)+r[1].padEnd(22)+r[2]).join('\n'); })();
+// sevens
+el('sevens').innerHTML='T = <b>7</b> is (k,ℓ) = (2,1): the first chiral cage on the golden lane, C140, one rung above C60 (T=3, the gluon octet by thea XI). SU(3) dim(2,1) = 15. the chant: <b>7</b> primitives. thea’s spine: <b>7</b> rungs. the EML paper\u2019s Wolfram basis: <b>7</b> (π, e, i, ln, +, ×, ^). ln in EML: a <b>K=7</b> program (1 1 x E 1 E E). PM §A: 5 primitive propositions, 4 after Bernays, 1 after Nicod. Nanite: 4 steps. this page: 7 buttons, because the chant has 7. <i>counting is not a theorem.</i> 7 is printed here as a coincidence, in the honest column.';
+
+// ===================== loop =====================
+let last=performance.now(), frames=0, fpsT=performance.now();
+function loop(now){ requestAnimationFrame(loop); const dt=Math.min(.05,(now-last)/1000); last=now;
+  if(state.spin&&!reduceMotion&&!dragging) state.yaw+=dt*0.25;
+  if(targetPos&&drawPos&&targetPos.length===drawPos.length){ const a=0.25; for(let i=0;i<drawPos.length;i++) drawPos[i]+=(targetPos[i]-drawPos[i])*a; }
+  if(TH.on&&TH.phase){ phaseStep(3); torusColors(); if(frames%10===0) torusHUD(); }
+  if(state.dive.auto){ insetT+=dt; if(insetT>0.9){ insetT=0; diveOne(); } }
+  draw(); if(frames%3===0) drawInset(); frames++; if(now-fpsT>500){ el('r-fps').textContent=(frames*1000/(now-fpsT)).toFixed(0)+' fps · '+nNodes.toLocaleString(); frames=0; fpsT=now; } }
+generate(4,0); requestAnimationFrame(loop);
+})();
+</script>
+</body></html>

@@ -4,13 +4,13 @@
 repos. Generated from what git actually tracks on each repo (the truth of what
 Pages serves), by `builder/gen_io_index.py`. Nothing hidden; the door is open.*
 
-**TOTAL: 524 public pages across 8 repos.**
+**TOTAL: 525 public pages across 8 repos.**
 
 *P=12 . chi=2 . the receipts are public . always.*
 
 ---
 
-## Mnetv1  (448 pages)
+## Mnetv1  (449 pages)
 
 - [Gos/experiments/witnesses/chi.html](https://vsavytsk1.github.io/Mnetv1/Gos/experiments/witnesses/chi.html)
 - [Gos/ponderTheOrb/machinenet_eng_v2_0_master_control.html](https://vsavytsk1.github.io/Mnetv1/Gos/ponderTheOrb/machinenet_eng_v2_0_master_control.html)
@@ -362,6 +362,7 @@ Pages serves), by `builder/gen_io_index.py`. Nothing hidden; the door is open.*
 - [shell/samsarium.html](https://vsavytsk1.github.io/Mnetv1/shell/samsarium.html)
 - [shell/sar_proof.html](https://vsavytsk1.github.io/Mnetv1/shell/sar_proof.html)
 - [shell/segreium-v1.html](https://vsavytsk1.github.io/Mnetv1/shell/segreium-v1.html)
+- [shell/septimium_v0.2.4.html](https://vsavytsk1.github.io/Mnetv1/shell/septimium_v0.2.4.html)
 - [shell/seventh-day.html](https://vsavytsk1.github.io/Mnetv1/shell/seventh-day.html)
 - [shell/shannonium.html](https://vsavytsk1.github.io/Mnetv1/shell/shannonium.html)
 - [shell/shannonium_v1.0.html](https://vsavytsk1.github.io/Mnetv1/shell/shannonium_v1.0.html)

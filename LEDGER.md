@@ -10327,3 +10327,48 @@ VERIFIED AFTER: zero over the 100 MB wall, ignored-but-tracked zero, all 448 lis
 tracked (checker proven able to fail), main in sync, and nine live URLs at 200 including the restored
 xref page and the mp3 that was nearly deleted.
 P=12 . chi=2 . diligence applied to two files and skipped for nine is not diligence . always
+
+### L198 -- SEPTIMIUM v0.2.4: the seven operations land on thea's own lattice (2026-09-06)
+Vlad: "the new graduate from the anthropic tower the fable mage 5.1 is quite good check this out and
+lets copy it into shell and push to the dashboard".
+
+WHAT IT IS: seven operations on a REAL graph -- P1 NODE, P2 EDGE, P3 COMPOSE, P4 TRANSFORM, P5 ITERATE,
+P6 AGGREGATE, P7 COMPARE -- with V, E, F, chi, components and the degree-5 count recomputed after every
+single one. WebGL2, zero dependencies, verified: not one external src or href in 91,305 bytes.
+
+CHECKED BEFORE WIRING, not after, and every headline number held:
+  golden lane T           its claim 1, 3, 7, 19, 49, 129        computed: identical
+  GP(13,8) (21,13) (34,21) it says it verified these in Node     T = 337, 883, 2311, chi = 2 each
+  the ladder conversion   thea XIV's 147 golden rungs           204.11 halvings / 102.05 refinements
+                          its claim: 204.1 and 102.0
+Those T values are the same 337 / 883 / 2311 this cave derived independently in THEA PART XIII two days
+ago, walking the Fibonacci selector by hand. Two routes, one column of integers.
+
+AND IT IS THE DUAL, WHICH IT SAYS ITSELF. Septimium counts V = 10T+2, E = 30T, F = 20T; thea counts
+V = 20T, E = 30T, F = 10T+2. Triangulation against Goldberg, duals of each other, and the header names
+it "the dual counting of thea's 20T/30T/10T+2" rather than letting a reader trip on it.
+
+THREE THINGS IT REFUSES TO HIDE, which is why it is worth linking:
+  1. P4 is an edge flip, so chi stays 2 and THE PENTAGON COUNT DOES NOT. P=12 is a property of the
+     generator, not of every sphere, and the page prints it moving instead of asserting it.
+  2. THE CHI WALL, thea XVIII re-run in this convention: on the golden lane chi stops reading 2 in
+     float64 at rung 36 while T is still exact to 39. The invariant dies THREE RUNGS BEFORE the numbers
+     it is made of.
+  3. THE CHANT IS SORTED -- exact-ish, rhyme, and WRONG, with "Transp = the Mobius strip" filed under
+     wrong because contraposition is a transformation and a strip is a surface.
+The monkey-brain moment is real too: layout-from-random throws every vertex to a random point and runs
+the forces on ADJACENCY ALONE, and the sphere comes back. The shape was never in the coordinates.
+
+WIRED THE WAY YESTERDAY'S MISTAKES TAUGHT:
+  copied BYTE-IDENTICAL to shell/septimium_v0.2.4.html, sha256 9386de5b...
+  checked .gitignore would NOT disown it before adding -- the trap that made
+    shell/slimium_toon.mp3 ignored-but-tracked
+  key shell_septimium_v0_2_4 -> /Mnetv1/shell/ : the prefix contract, audited at 0 violations
+  card at the end of SIM beside GOLDBERG_REFINE, GENESIUM and GRAPH_BUILDER, its actual kin
+  SIM count 53 -> 54, because a count nobody recomputes is a count that lies
+  IO_PAGES regenerated, 524 -> 525, entry at line 365
+  and the FULL audit re-run after: category counts 0 wrong, 0 orphan cards, 0 prefix violations,
+    div/script/style balanced, ignored-but-tracked 0, and all 449 listed Mnetv1 pages still tracked
+The last line is the one that exists because of L197. Cross-checking every page against IO_PAGES used to
+be the step that ran after the damage.
+P=12 . chi=2 . the shape was never in the coordinates . always
