@@ -65,6 +65,8 @@
 | 36 | The Mute Seam (strictThrow)        | under `"use strict"`, assigning an UNDECLARED var (a panel edit's `freqData=...`) THROWS a ReferenceError that kills the whole function -- so a wave-panel change silently murders the VOICE, and the error surfaces far from the silence. Declare every var; read the console FIRST when a feature goes dead.|
 | 37 | The Leaked Glyph (escapeInText)    | a `\uXXXX` written as a glyph shortcut lands in an HTML TEXT node (not JS) -> the browser renders the literal backslash-u text, not the character. Bytes are clean (no U+FFFD), so a byte scan passes while the eye sees `\u2014`. Heal text nodes only (mask `<script>`/`<style>`), or emit HTML entities; verify by scanning the live DOM innerText, not the source.|
 | 38 | The Sandbox Seal (mntClockCert)    | a gifted kernel bakes in the mage's build ENVIRONMENT: a hardcoded `/mnt/user-data/outputs` path (dies on any other machine) and a live `datetime.now()` sealed INSIDE the self-hashed certificate payload -> the "reproducible" cert can NEVER reproduce byte-identical, because its own hash changes every run. Move outputs to a portable dir (argparse/cwd), and keep the timestamp OUTSIDE the hashed region: hash the MATH, not the clock. Verify by regenerating on YOUR machine.|
+| 39 | The Float Ceiling (precisionFloor) | a convergence law prints a wrong-looking ratio and looks BROKEN, but the deviation has fallen to the float64 floor (`eps*scale`) and you are measuring the mantissa, not the mathematics. Accuracy PEAKS mid-run then degrades -- more iterations make it WORSE. Worse still, `err` underflowing to exactly 0.0 earns a "LOCKED" badge the math never earned. Compute `eps*scale` BEFORE the loop, print it in the HUD, suppress below it, never lock on a bare zero, and change instrument (BigInt/exact) rather than iterate harder. Only `+ - * /` and `sqrt` are correctly rounded in JS; `atan/pow/exp/sin` differ by ulps across engines -- 3.86 ulp measured on one machine. Know the ceiling before you read the meter.|
+| 40 | The Selective Sweep (auditedLooking) | you write the careful check, apply it to the TWO items you happened to look at, then process the remaining NINE as a group -- and the pass now reads as audited, so nobody looks again. Evicting `builder/_pyibuild/` wholesale took `xref-HOLLY7.html` with the PyInstaller cache: 250 KB, listed in IO_PAGES.md line 19, live on Pages. In the SAME commit `slimium_toon.mp3` was checked, found to be a live dependency, kept, and documented. Diligence applied to some and skipped for the rest is worse than none, because none leaves the pass visibly unchecked. Run the cross-check against every item BEFORE the destructive step, never after. |
 ---
 
 
@@ -8412,3 +8414,266 @@ Curse count: 38. A gifted self-hashing kernel baked in the mage's sandbox: a har
 payload -- so the "reproducible" certificate re-hashes differently every run, though the math
 is identical. Move outputs to a portable dir; keep the timestamp OUTSIDE the hash; regenerate
 on your own machine to verify. Hash the math, not the moment. Always.
+
+---
+
+## CURSE 39 -- The Float Ceiling (precisionFloor)
+
+WHAT BIT US (EML LUCA SPIRAL v0.2, the golden lane, panel V.c):
+  The panel measures how fast the lattice angle converges onto the golden ray. The law is
+  exact: the deviation alternates and contracts by `-phi^-2 = -0.381966011`. The panel
+  reports `dev / prev_dev` beside that target, live, at whatever n the unwind slider is on.
+  At n = 33 it printed:
+
+      dev / prev dev   -0.356643357
+      target -phi^-2   -0.381966011
+
+  A 7% miss. The law looked BROKEN. It was not. At n = 33 the deviation itself is
+  3.2e-13 degrees -- the numerator and the denominator are each a handful of ulps. The
+  ratio of two dusts is dust. We were not measuring the mathematics any more; we were
+  measuring the last bits of the mantissa.
+
+  Ran the full ladder headless to see the shape of the rot:
+
+      n    dev (rad)      dev/prev        verdict
+      12   -3.5670e-6    -0.381967284     5 good digits
+      16   -7.5929e-8    -0.381966041     7 good digits  <- the peak
+      20   -1.6162e-9    -0.381966111     7 good digits
+      24   -3.4404e-11   -0.381970445     5 good digits
+      28   -7.3258e-13   -0.382167265     3 good digits
+      32   -1.5876e-14   -0.391780822     1 good digit
+      36   -6.6613e-16   -1.090909091     GARBAGE -- off by 3x
+
+  Read that column downward. The accuracy PEAKS at n ~ 16-20 and then DEGRADES. Iterating
+  further made the answer worse. Every instinct says "more terms = more accurate"; past the
+  floor the instinct is exactly inverted.
+
+THE ROOT PROBLEM:
+  Every convergent quantity computed in floating point has a FLOOR, and the floor is not
+  where the mathematics stops -- it is where the instrument stops. float64 carries a 53-bit
+  mantissa, `eps = 2.220446049250313e-16`, about 15.65 decimal digits. For a quantity of
+  scale S, the smallest difference you can honestly resolve is about `eps * S`. Here
+  `S = |theta_phi| = 0.388`, so the floor is `8.62e-17` rad. Below it there is no signal.
+
+  Two ways this bites, and the second is the dangerous one:
+
+    1. FALSE FAILURE. A correct law prints a wrong-looking number and you go hunting a bug
+       that is not there. Cheap: you waste a day, the code was always right.
+    2. FALSE LOCK. The error underflows to exactly 0.0, the HUD prints `err = 0.000000000`
+       and lights `LOCKED`, and you publish "converged to machine precision" when what
+       actually happened is that you ran out of digits. This is Curse 26 (lockLie) arriving
+       through the back door -- not by printing the target as the result, but by the
+       instrument manufacturing a perfect result out of nothing.
+
+  A DIFFERENCE amplifies this and a RATIO OF DIFFERENCES amplifies it twice. Catastrophic
+  cancellation eats the leading digits of `a - b`; then dividing one cancelled quantity by
+  another cancelled quantity divides the surviving noise by more noise. The contraction-rate
+  diagnostic -- the standard way to verify a convergence law -- is the single most
+  floor-sensitive number you can print.
+
+  The same file got this RIGHT in one lane and WRONG in another, which is the whole lesson:
+
+      k, l, T, V, E, F, P, H   ->  BigInt        exact at any n, no floor
+      k/l, theta, dev, ratio   ->  float64       floor at eps*S, rots past it
+
+  The integer lane was chosen deliberately (THEA Pattern A: "do not certify an integer
+  invariant with a float tolerance"). The float lane inherited no such guard, and the guard
+  is exactly as necessary there.
+
+THE x86 / x64 SEAM (the wider ceiling, for the curious reader):
+  - float64: 53-bit mantissa, eps 2.22e-16, ~15.65 digits.
+  - float32: 24-bit, eps 1.19e-7, ~7.2 digits. A GPU shader lane is usually THIS. Any
+    kernel ported from CPU to a fragment shader loses half its digits silently.
+  - x87 80-bit extended: 64-bit mantissa, eps 1.08e-19. The classic x86 trap is that the
+    x87 stack computes at 80 bits and rounds to 64 ON STORE -- so the identical expression
+    yields different results depending on whether the compiler kept it in a register or
+    spilled it to memory. Same source, same machine, two answers.
+  - JS `Number` is always float64, but ECMA-262 requires correct rounding ONLY for
+    `+ - * /` and `Math.sqrt`. `pow, exp, log, sin, cos, tan, asin, acos, atan, atan2,
+    sinh, cbrt, hypot` are implementation-APPROXIMATED. V8, SpiderMonkey and JavaScriptCore
+    are each free to differ in the last ulp, and they do.
+  - MEASURED, this session: three algebraically identical routes to the same angle,
+    one engine, one machine --
+
+        atan(sqrt15 - 2*sqrt3)    0.38813951537018903659
+        atan(sqrt3/(2*phi+1))     0.38813951537018870352
+        atan2(sqrt3, 2*phi+1)     0.38813951537018870352
+
+    spread 3.33e-16 rad = 3.86 ulp.
+
+  So a "computed live in this browser" page that prints 9+ decimals of a transcendental is
+  making a claim about V8, not only about mathematics. A reader on a different engine may
+  see different last digits and correctly conclude the page is unreproducible.
+
+HOW WE FOUND IT (proof by kernel):
+  Ran the golden lane headless with a stubbed DOM before trusting the render, and printed
+  every panel's actual output string. The n = 33 ratio read -0.356643357 against a target of
+  -0.381966011. Instead of assuming the law was wrong OR assuming it was fine, computed the
+  floor -- `eps * |theta_phi| = 8.62e-17` -- and compared it against the measured deviation
+  `3.2e-13 rad`. Ratio ~3700, i.e. roughly 3 significant bits left in the numerator. Verdict:
+  the instrument, not the mathematics. Same run also caught the sibling case in panel V.b.
+
+HOW TO FIX:
+  - DECLARE THE FLOOR BEFORE THE LOOP, not after the surprise. For a difference at scale S
+    in float64 the floor is `eps * S`; write it down as a constant next to the target.
+  - SUPPRESS, DO NOT PRINT, below the floor. Not a silent NaN and not a zero -- a sentence:
+
+        dev / prev dev    at the float floor -- not reported
+        target -phi^-2    -0.381966011
+
+    The reader learns the instrument ran out, which is a true fact, instead of learning a
+    false one. Use a guard an order or two above the raw floor (this shell uses 1e-12 rad
+    against a floor of 8.6e-17) so you cut before the digits are visibly rotten, not after.
+  - NEVER let `err == 0.0` earn a lock badge on its own. Zero error at the floor and zero
+    error from convergence are indistinguishable in the number and opposite in meaning.
+    Require `err <= tol` AND `tol > floor` AND K stable frames, and print the floor in the
+    HUD so a stranger can check your tolerance is even representable.
+  - REPORT ONLY THE DIGITS THE INSTRUMENT RESOLVES. A sweep on a 3000-point grid does not
+    know its argmax to 6 decimals; print 3 and say "+/- the grid".
+  - IF YOU NEED MORE, CHANGE INSTRUMENT, do not iterate harder. BigInt / Fraction /
+    exact rationals / SymPy for the integer and algebraic lanes. Iterating past the floor
+    does not buy digits, it spends them (see the table above -- n = 36 is worse than n = 16).
+  - REARRANGE TO AVOID THE CANCELLATION when you can. `F_{n+1}/F_n - phi = (-phi^-1)^n / F_n`
+    is exact and never cancels; the subtraction form cancels and dies at n ~ 36. The closed
+    form is a different instrument for the same quantity, with no floor at all.
+  - CROSS-ENGINE CHECK before publishing a 9-decimal transcendental. Compute it two
+    algebraically distinct ways in one run and print the spread in ulp. If the spread is
+    3.86 ulp, you have 15 honest digits, not 17.
+
+THE RULE:
+  Every float number has a ceiling and every convergent process has a floor, and the two are
+  the same wall seen from opposite sides. Compute the wall FIRST -- `eps * scale` -- and put
+  it in the HUD beside the target. Past the wall, more iterations make the answer WORSE, a
+  ratio of differences is noise divided by noise, and an error of exactly zero is the
+  instrument lying, not the mathematics arriving. Suppress below the floor and say so.
+  Change instrument, do not iterate harder. Know the ceiling before you read the meter.
+  Always.
+
+FAMILY:
+  Sibling of Curse 26 (lockLie -- there the HUD showed the target as the result; here the
+  MACHINE manufactures a perfect result out of exhausted digits, which is worse because
+  nobody typed it). Cousin of Curse 24 (staleServe -- you debug a bug that is not there) and
+  of Curse 35 (noCeiling -- predict the cost of the next step before allocating; this is the
+  same discipline pointed at PRECISION instead of MEMORY). Counter-hex: Path III (target,
+  current, err side by side -- and now FLOOR as a fourth column) and Path IV (incomplete is
+  fine, fake is not -- "at the float floor" is incomplete and true; "-0.356643357" was
+  complete and false).
+
+Curse count: 39. A contraction law printed -0.3566 against a target of -0.3820 and looked
+broken; it was not, the deviation had fallen to 3.2e-13 against a float64 floor of 8.6e-17
+and the ratio was dust over dust. Accuracy PEAKS mid-run and degrades after -- n=16 gave 7
+good digits, n=36 gave none. Compute `eps * scale` before the loop, print it in the HUD,
+suppress below it, never let err==0.0 earn a lock, and change instrument rather than iterate
+harder. Three algebraically identical routes to one angle differed by 3.86 ulp on one engine.
+Know the ceiling before you read the meter. Always.
+
+---
+
+## CURSE 40 -- The Selective Sweep (auditedLooking)
+
+WHAT BIT US (MNetv1 git paranoia clean, 2026-09-05, L197):
+  38 files were ignored-but-tracked -- 401 MB the .gitignore already disowned, Curse 32 four
+  times over. The job was to evict them. Two were small and unfamiliar, so they got checked
+  for references:
+
+    shell/slimium_toon.mp3                   fslimium_v1.0.html line 287 does
+                                             `new Audio('slimium_toon.mp3')`. BOTH serve 200.
+                                             KEPT -- the ignore rule was negated and the
+                                             reason written beside it.
+    builder/helena_net/neo_console_shot.png  referenced by nothing tracked, and its own rule
+                                             says "screenshots from ad-hoc console runs".
+                                             EVICTED, correctly.
+
+  Then the other 36 were evicted BY DIRECTORY. `git rm -r --cached builder/_pyibuild` took
+  nine files. Eight were PyInstaller cache -- .toc, .pkg, .pyz, base_library.zip -- and the
+  ninth was:
+
+    builder/_pyibuild/HOLLY7/xref-HOLLY7.html     250,155 B
+                                                  IO_PAGES.md line 19
+                                                  serving 200 on Pages
+
+  A published page, deleted from the tree, inside a commit whose own message described
+  checking files for references.
+
+THE ROOT PROBLEM:
+  The check existed. It was correct. It was applied to two items and skipped for nine.
+
+  This is not carelessness, which is visible. It is worse: THE PASS READS AS AUDITED
+  AFTERWARDS. The commit message says references were checked -- and they were, for the two
+  that got attention. A reviewer, or the same mage a week later, sees a diligent message and
+  does not look again. Absent diligence leaves a pass visibly unchecked and someone re-runs
+  it. SELECTIVE diligence closes the question falsely.
+
+  The mechanism is always the same shape: items arrive in two forms, INDIVIDUAL and GROUPED,
+  and attention follows the FORM rather than the RISK. Two loose files look like two
+  decisions. A directory looks like one decision. It was ten.
+
+    what the eye counted     1 directory + 2 files   =  3 decisions
+    what was actually true   11 files                = 11 decisions
+
+  Nothing about `builder/_pyibuild/` announced that a published page was inside it. And the
+  ignore rule that caught it is correct about eight of its nine files -- A RULE THAT IS 89
+  PERCENT RIGHT IS THE HARDEST KIND TO DOUBT.
+
+HOW WE FOUND IT:
+  Not during the pass. AFTER the commit, cross-checking every evicted path against
+  IO_PAGES.md -- the index generated from what git tracks, so it is authoritative about what
+  the public loses:
+
+```bash
+    git show --name-only --format='' HEAD | while read f; do
+      grep -q "\[$f\]" IO_PAGES.md && echo "PUBLIC PAGE EVICTED: $f"
+    done
+```
+
+  One line of output. That command takes nine seconds and it ran after the damage instead of
+  before it.
+
+HOW TO FIX:
+  - THE CHECK RUNS OVER THE SET, NOT OVER THE ITEMS YOU NOTICED. If a rule is worth applying
+    to one member it is worth applying to all of them. Write it as a LOOP the first time; a
+    loop cannot be selectively skipped.
+  - EXPAND EVERY GROUP BEFORE ACTING ON IT. `git rm -r <dir>` is one keystroke and N
+    decisions. Print the N. If you cannot bear to look at the list, you cannot claim you
+    checked it.
+  - CROSS-CHECK AGAINST THE PUBLISHED INDEX BEFORE THE DESTRUCTIVE STEP, never after.
+  - A RULE THAT IS MOSTLY RIGHT IS THE DANGEROUS KIND. Correctness at the DIRECTORY level
+    says nothing about any particular MEMBER.
+  - AND WHEN THE FIX IS A NEGATION, MIND THE DIRECTORY. Git never descends into an excluded
+    directory, so `!dir/sub/file` beneath `dir/` is dead text. Exclude the CONTENTS and
+    re-include:
+
+```gitignore
+    builder/_pyibuild/**
+    !builder/_pyibuild/**/
+    !builder/_pyibuild/HOLLY7/xref-HOLLY7.html
+```
+
+    `git add` refuses the wrong form with a hint, which is the one mercy in this curse.
+
+THE RULE:
+  Diligence applied to the items you happened to look at is not diligence -- it is a
+  DISGUISE, and it is worse than none, because none leaves the pass visibly unchecked while
+  this one certifies it. Attention follows the SHAPE of the input, not its risk: loose files
+  read as decisions, a directory reads as one. Expand every group, run the check as a loop
+  over the whole set, and cross-check against the published index BEFORE the destructive
+  step. If the commit message says you checked, the check must have covered everything the
+  commit touched. Always.
+
+FAMILY:
+  Sibling of Curse 15 (sortGhost -- a FAIL/OK that is not the real state) and Curse 26
+  (lockLie -- the report is better than the reality). Cousin of Curse 32 (the Sticky Track,
+  which created the 401 MB in the first place) and of Curse 29 (deployLag -- both are "the
+  verification ran at the wrong TIME", one too early, this one too late). Counter-hex:
+  Path III (proof by kernel -- the index is the kernel here, not the eye) and Path IV
+  (incomplete is fine, fake is not: an unchecked eviction is incomplete, and a message
+  saying references were checked when nine were not is fake).
+
+Curse count: 40. A careful reference check was applied to two loose files and skipped for
+nine inside a directory, and the wholesale eviction took a published 250 KB page listed in
+IO_PAGES.md and serving on Pages. Attention follows the shape of the input rather than its
+risk -- two files read as two decisions, one directory reads as one, and it was ten. The
+pass then reads as AUDITED, which is why selective diligence is worse than none. Expand
+every group, run the check as a loop over the whole set, cross-check against the published
+index BEFORE the destructive step, and remember a negation beneath an excluded directory is
+dead text. Always.

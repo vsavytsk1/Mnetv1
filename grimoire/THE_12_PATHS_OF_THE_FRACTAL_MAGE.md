@@ -356,7 +356,7 @@ re-suffered, a price re-paid that was already paid once and written down.
 ```
  I    Close every loop.                         (chi=2, Axiom 02)
  II   Honor the center; never render it.        (agapi, Axiom 08)
- III  Proof by kernel; target != result.        (Curses 15/24/26)
+ III  Proof by kernel; target != result != floor. (Curses 15/24/26/39)
  IV   Incomplete is fine; fake is not.           (K1-K4, Axiom 04, Curse 25)
  V    Guard the seam between two worlds.          (Curses 1/4/23)
  VI   One script, one run; restore, don't cry.    (Curses 14/16/17/19)
