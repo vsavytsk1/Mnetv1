@@ -562,3 +562,204 @@ mod dual_tests {
         }
     }
 }
+
+impl Gold {
+    /// Face adjacency: two faces are neighbours when they share an edge.
+    ///
+    /// On a closed orientable surface every undirected edge belongs to exactly
+    /// two faces, so this is a total function and a face with a different
+    /// count is a corrupt mesh rather than a special case. That is asserted,
+    /// not assumed -- the whole point of building on a lane that closes.
+    pub fn adjacency(&self) -> Vec<Vec<usize>> {
+        let mut by_edge: HashMap<(usize, usize), Vec<usize>> = HashMap::new();
+        for (fi, f) in self.faces.iter().enumerate() {
+            for i in 0..f.len() {
+                let (a, b) = (f[i], f[(i + 1) % f.len()]);
+                let key = if a < b { (a, b) } else { (b, a) };
+                by_edge.entry(key).or_default().push(fi);
+            }
+        }
+        let mut adj = vec![Vec::new(); self.faces.len()];
+        for (_, fs) in by_edge {
+            debug_assert_eq!(fs.len(), 2, "an edge of a closed surface has two faces");
+            if fs.len() == 2 {
+                adj[fs[0]].push(fs[1]);
+                adj[fs[1]].push(fs[0]);
+            }
+        }
+        adj
+    }
+
+    /// Hop distance from `src` to every face, on the DUAL adjacency.
+    ///
+    /// Plain BFS: every edge costs one, so the queue is a queue and there is
+    /// no priority to maintain. That is the whole point of a topology-first
+    /// frontier -- the sorting barrier is a cost of ORDERING, and unit weights
+    /// have nothing to order.
+    ///
+    /// `usize::MAX` marks unreachable, which on a connected shell never occurs
+    /// and is therefore worth leaving visible rather than collapsing to 0.
+    pub fn hops(&self, src: usize, adj: &[Vec<usize>]) -> Vec<usize> {
+        let mut d = vec![usize::MAX; self.faces.len()];
+        if src >= d.len() {
+            return d;
+        }
+        d[src] = 0;
+        let mut q = std::collections::VecDeque::new();
+        q.push_back(src);
+        while let Some(u) = q.pop_front() {
+            for &v in &adj[u] {
+                if d[v] == usize::MAX {
+                    d[v] = d[u] + 1;
+                    q.push_back(v);
+                }
+            }
+        }
+        d
+    }
+
+    /// Which faces are pentagons -- by ARITY, never by a label.
+    pub fn pentagons(&self) -> Vec<usize> {
+        self.faces
+            .iter()
+            .enumerate()
+            .filter(|(_, f)| f.len() == 5)
+            .map(|(i, _)| i)
+            .collect()
+    }
+
+    /// The smallest and largest hop distance between two distinct pentagons.
+    ///
+    /// The MINIMUM is the interesting one: it is the "adjacent pentagon
+    /// distance" the pentagon-map hypothesis predicts as
+    /// `max(|k|, |l|, |k+l|)`. The maximum is reported beside it because a
+    /// closed form that happened to match the max instead would be a different
+    /// claim, and printing only the number you predicted is how a hypothesis
+    /// gets confirmed by its own reader.
+    ///
+    /// Returns `None` for a shell with fewer than two pentagons, which cannot
+    /// happen on a fullerene and is therefore reported rather than defaulted.
+    pub fn pentagon_span(&self) -> Option<(usize, usize)> {
+        let pents = self.pentagons();
+        if pents.len() < 2 {
+            return None;
+        }
+        let adj = self.adjacency();
+        let (mut lo, mut hi) = (usize::MAX, 0usize);
+        for (i, &p) in pents.iter().enumerate() {
+            let d = self.hops(p, &adj);
+            for &q in &pents[i + 1..] {
+                let x = d[q];
+                if x == usize::MAX {
+                    continue;
+                }
+                lo = lo.min(x);
+                hi = hi.max(x);
+            }
+        }
+        if lo == usize::MAX {
+            None
+        } else {
+            Some((lo, hi))
+        }
+    }
+}
+
+#[cfg(test)]
+mod hop_tests {
+    use super::*;
+
+    /// Every face has as many neighbours as it has sides.
+    ///
+    /// True only on a closed surface, which is why this lane can carry a hop
+    /// distance and the crescent soup cannot: `examples/whats_open` measures
+    /// 540 unpaired directed edges at genesis level 1, so a BFS there would be
+    /// walking a mesh with 180 holes and calling the result a distance.
+    #[test]
+    fn adjacency_matches_arity_on_a_closed_shell() {
+        for l in 0..=3 {
+            let g = Ico::level(l).expect("level fits").dual();
+            let adj = g.adjacency();
+            for (i, f) in g.faces.iter().enumerate() {
+                assert_eq!(
+                    adj[i].len(),
+                    f.len(),
+                    "L{l} face {i}: {} sides but {} neighbours",
+                    f.len(),
+                    adj[i].len()
+                );
+            }
+        }
+    }
+
+    /// BFS reaches every face, and the shell has a finite diameter.
+    #[test]
+    fn every_face_is_reachable() {
+        for l in 0..=3 {
+            let g = Ico::level(l).expect("level fits").dual();
+            let adj = g.adjacency();
+            let d = g.hops(0, &adj);
+            assert!(
+                d.iter().all(|&x| x != usize::MAX),
+                "L{l}: a face is unreachable, so the shell is not connected"
+            );
+            assert_eq!(d[0], 0, "the source is at distance zero from itself");
+        }
+    }
+
+    /// **The mage's hypothesis, on the doubling lane.**
+    ///
+    /// `tower/pentagon_map_v0_1.py` claims the adjacent pentagon hop distance
+    /// is `max(|k|, |l|, |k+l|)` and its receipt reports 10 of 10 on the golden
+    /// lane. `Ico::dual` gives `GP(2^L, 0)`, where that reduces to `k = 2^L`,
+    /// and the Python's table touches this lane only at `(1,0)`.
+    #[test]
+    fn the_closed_form_predicts_the_adjacent_pentagon_distance() {
+        for l in 0..=4 {
+            let g = Ico::level(l).expect("level fits").dual();
+            let (lo, _hi) = g.pentagon_span().expect("a fullerene has twelve pentagons");
+            let k = 1usize << l;
+            assert_eq!(
+                lo, k,
+                "L{l}: closed form max(|k|,|l|,|k+l|) = {k} but the measured minimum \
+                 pentagon distance is {lo}"
+            );
+        }
+    }
+
+    /// The shared row with the Python lab: `(1,0)` must read min 1, max 3.
+    ///
+    /// One row measured twice, in two languages, on two implementations that
+    /// share no code. If they ever disagree, one of the labs is wrong and this
+    /// says so before either is quoted.
+    #[test]
+    fn the_dodecahedron_row_agrees_with_the_python_receipt() {
+        let g = Ico::level(0).expect("the base fits").dual();
+        assert_eq!(
+            g.pentagon_span(),
+            Some((1, 3)),
+            "tower/pentagon_map_v0_1_receipt.json records min 1 and max 3 for (1,0)"
+        );
+    }
+
+    /// **On the achiral doubling lane the span is exactly three times the
+    /// minimum** -- and that is not true of the chiral lanes.
+    ///
+    /// Measured here: min 1,2,4,8,16 against max 3,6,12,24,48. The Python's
+    /// golden-lane rows give ratios near 2.4 instead -- 5/2, 7/3, 12/5, 19/8,
+    /// 31/13 -- so this clean integer 3 is a property of `l = 0`, not of
+    /// Goldberg shells in general. Recorded because a ratio that holds on one
+    /// lane and not another is a fact about the lanes.
+    #[test]
+    fn the_doubling_lane_span_is_exactly_three_times_the_minimum() {
+        for l in 0..=4 {
+            let g = Ico::level(l).expect("level fits").dual();
+            let (lo, hi) = g.pentagon_span().expect("twelve pentagons");
+            assert_eq!(
+                hi,
+                3 * lo,
+                "L{l}: max {hi} is not three times min {lo} -- the integer relation broke"
+            );
+        }
+    }
+}
