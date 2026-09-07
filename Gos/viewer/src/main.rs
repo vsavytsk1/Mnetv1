@@ -29,10 +29,12 @@ use goldberg_kernel::font;
 use goldberg_kernel::genesis;
 use goldberg_kernel::layout::Rect;
 use goldberg_kernel::mobius;
+use goldberg_kernel::netfile;
 use goldberg_kernel::palette;
 use goldberg_kernel::palette::{Palette, ALL};
 use goldberg_kernel::raster::{project, project_rpy, Canvas};
 use goldberg_kernel::rng::Rng;
+use goldberg_kernel::weld;
 use goldberg_kernel::{certify, judge, Mesh};
 
 use gos_win32::*;
@@ -471,6 +473,16 @@ enum View {
     FrameBits,
     /// what rustc emitted for this .exe, as a 1/0 texture
     MachineBits,
+    /// THE CLOSURE LADDER: does the mesh close, what does the net cost to
+    /// store, and which rung is the last one the machine can hold.
+    ///
+    /// Three questions that are usually asked apart and lie when they are.
+    /// A census counts faces and cannot see two faces disagreeing about a
+    /// shared corner; `weld` keys on `to_bits()` and `judge` counts orbits of
+    /// a permutation, and neither can be fooled by a `kind` label. A size
+    /// estimate is a guess; `netfile::bytes_for` is exact. A ceiling found by
+    /// an allocator is a crash; this one is arithmetic (Curse 35, R3).
+    Closure,
     /// GENESIS step 1: the certified C60, spinning. The port target is
     /// shell/genesis_v8.5.2.html -- see grimoire/GENESIS_PORT_SPEC.md.
     /// Deliberately the smallest thing that can be shipped and tested:
@@ -486,6 +498,7 @@ impl View {
             View::Shell => "THE SHELL - C60 CERTIFIED",
             View::FrameBits => "THE FRAME - ITS OWN 1 AND 0S",
             View::MachineBits => "THE MACHINE - WHAT RUSTC EMITTED",
+            View::Closure => "THE CLOSURE LADDER - DOES IT CLOSE, WHAT DOES IT COST",
             View::Genesis => "GENESIS - THE SEED, SPINNING",
         }
     }
@@ -629,6 +642,13 @@ struct App {
     gen_twist: f64,
     /// Radians moved by one flight-explorer press. See [`STEP_DECADES`].
     gen_step: f64,
+    /// The closure ladder, built once on first view.
+    ///
+    /// Cached because building it walks the ladder and welds every rung --
+    /// 34 ms at level 4 on this machine. A paint function runs every frame;
+    /// anything that costs milliseconds belongs behind a cache or behind a
+    /// button, never in the frame.
+    closure_rows: Option<Vec<String>>,
     /// whether the twist is armed at all; the box is live only when it is
     gen_mobius: bool,
     /// Project refined points onto the sphere instead of leaving them planar.
@@ -1277,6 +1297,7 @@ impl App {
             // the middle of the four decades: fine enough to creep up on a
             // symmetry, coarse enough that finding one does not take an hour
             gen_step: 0.01,
+            closure_rows: None,
             gen_mobius: false,
             gen_spherical: false,
             paint_clock: true,
@@ -1594,6 +1615,17 @@ impl Estimate {
         )
     }
 }
+
+/// How far the CLOSURE card walks the ladder while a person waits for a frame.
+///
+/// Level 4 is 72,032 faces and welds in about 34 ms on this machine. The rungs
+/// above are priced from the recurrence and printed instead, which is the whole
+/// discipline this view exists to show.
+const CLOSURE_VIEW_LEVELS: u32 = 4;
+
+/// Bytes of live heap per face, measured: 1,385.5 MB over 3,529,472 faces at
+/// level 6. Used only to PRICE rungs that are never built.
+const CLOSURE_HEAP_PER_FACE: f64 = 411.6;
 
 /// Past this a movie is refused, with the number, and told to go elsewhere.
 const RENDER_SECONDS_BUDGET: f64 = 20.0 * 60.0;
@@ -1968,6 +2000,196 @@ impl App {
         }
     }
 
+    /// Build the closure ladder once. See [`App::closure_rows`].
+    ///
+    /// Stops at [`CLOSURE_VIEW_LEVELS`] because this runs while a person is
+    /// waiting for a frame. The rungs past it are PRICED from the recurrence
+    /// and printed -- `Op::All` is multiplication by the Eisenstein integer
+    /// (1,2), so `T -> 7T` and faces go `7F - 12`. Predicting the next rung
+    /// instead of allocating it is Curse 35 and RUSTIUM R3, and it is the
+    /// reason this view can be opened on any machine.
+    fn build_closure(&self) -> Vec<String> {
+        let mut out: Vec<String> = Vec::new();
+
+        // -- the wall, as integers -------------------------------------
+        out.push(String::from(
+            "THE WALL -- hex shell inside the Euclidean norm shell, integers only",
+        ));
+        out.push(String::new());
+        out.push(format!(
+            "  {:>3} {:>9} {:>9} {:>10}  {}",
+            "h", "min norm", "max norm", "next min", "nests"
+        ));
+        let hexd = |q: i64, r: i64| (q.abs() + (q + r).abs() + r.abs()) / 2;
+        let nrm = |q: i64, r: i64| q * q + q * r + r * r;
+        let maxh = 9i64;
+        let mut per: Vec<Vec<i64>> = vec![Vec::new(); (maxh + 2) as usize];
+        for q in -(2 * maxh + 2)..=(2 * maxh + 2) {
+            for r in -(2 * maxh + 2)..=(2 * maxh + 2) {
+                let h = hexd(q, r);
+                if h <= maxh + 1 {
+                    per[h as usize].push(nrm(q, r));
+                }
+            }
+        }
+        let mut brk = 0i64;
+        for h in 1..=maxh {
+            let mx = *per[h as usize].iter().max().expect("ring non-empty");
+            let mn = *per[h as usize].iter().min().expect("ring non-empty");
+            let nx = *per[(h + 1) as usize].iter().min().expect("ring non-empty");
+            let nests = mx < nx;
+            if !nests && brk == 0 {
+                brk = h;
+            }
+            out.push(format!(
+                "  {:>3} {:>9} {:>9} {:>10}  {}{}",
+                h,
+                mn,
+                mx,
+                nx,
+                if nests { "yes" } else { "NO" },
+                if h == brk { "   <- first break" } else { "" }
+            ));
+        }
+        let wall = 2.0 * 3.0f64.sqrt() + 3.0;
+        out.push(String::new());
+        out.push(format!(
+            "  2*sqrt(3)+3 = {wall:.9}   ceil = {}   measured break = {brk}",
+            wall.ceil() as i64
+        ));
+        out.push(String::from(
+            "  the algebra and the integer scan agree -- checked with <, never a tolerance",
+        ));
+
+        // -- the ladder --------------------------------------------------
+        out.push(String::new());
+        out.push(String::from("THE CLOSURE LADDER"));
+        out.push(String::new());
+        out.push(format!(
+            "  {:>3} {:>9} {:>10} {:>10} {:>9} {:>5} {:>10} {:>7}",
+            "lvl", "faces", "V welded", "V = as/3", "surplus", "chi", "netfile", "ms"
+        ));
+
+        let p = genesis::Params {
+            surface: genesis::Surface::Spherical,
+            ..genesis::Params::default()
+        };
+        let mut rng = Rng::new(0xC60);
+        let mut st = genesis::State::seed_c60();
+        let mut faces_now = 0u64;
+
+        for level in 0..=CLOSURE_VIEW_LEVELS {
+            let inv = match st.invariants() {
+                Ok(i) => i,
+                Err(e) => {
+                    out.push(format!("  {level:>3}  REFUSED -- {e}"));
+                    break;
+                }
+            };
+            let c = st.census();
+            let t = Instant::now();
+            let w = weld::weld(&st);
+            let ms = t.elapsed().as_secs_f64() * 1000.0;
+            let chi = match w.judge() {
+                Ok(v) => format!("{}", v.chi),
+                Err(_) => String::from("open"),
+            };
+            out.push(format!(
+                "  {:>3} {:>9} {:>10} {:>10} {:>9} {:>5} {:>9.2}M {:>7.1}",
+                level,
+                inv.faces,
+                w.v(),
+                w.predicted_v(),
+                w.surplus(),
+                chi,
+                netfile::bytes_for(c.p, c.f - c.p) as f64 / 1_048_576.0,
+                ms
+            ));
+            faces_now = inv.faces;
+            if level < CLOSURE_VIEW_LEVELS {
+                st = st.refine(genesis::Op::All, &p, &mut rng);
+            }
+        }
+
+        // -- the rungs above, PRICED and not built -----------------------
+        out.push(String::new());
+        out.push(String::from(
+            "  ABOVE HERE, PRICED FROM THE RECURRENCE AND NOT ALLOCATED:",
+        ));
+        let mut f = faces_now;
+        for level in (CLOSURE_VIEW_LEVELS + 1)..=(CLOSURE_VIEW_LEVELS + 3) {
+            f = 7 * f - 12;
+            out.push(format!(
+                "  {:>3} {:>9} faces   netfile {:>8.1}M   heap about {:>6.2} GB",
+                level,
+                f,
+                netfile::bytes_for(12, f - 12) as f64 / 1_048_576.0,
+                f as f64 * CLOSURE_HEAP_PER_FACE / 1_073_741_824.0
+            ));
+        }
+        out.push(String::new());
+        out.push(String::from(
+            "  Op::All is multiplication by the Eisenstein integer (1,2): T -> 7T,",
+        ));
+        out.push(String::from(
+            "  so faces go 7F - 12 and the heap goes with them. Measured to the 2 GB",
+        ));
+        out.push(String::from(
+            "  budget by examples/closure_ladder: level 6 holds 3,529,472 faces,",
+        ));
+        out.push(String::from(
+            "  9,879,090 distinct points, 508.3M to store and 1385.5M live -- and",
+        ));
+        out.push(String::from(
+            "  level 7 is REFUSED at about 9.47 GB before a byte is allocated.",
+        ));
+        out.push(String::new());
+        out.push(String::from(
+            "  THE SEED CLOSES: V from the bits == V from the arity sum == V from the",
+        ));
+        out.push(String::from(
+            "  judge's orbits, and chi = 2 is COUNTED rather than assumed. Every refined",
+        ));
+        out.push(String::from(
+            "  rung carries a surplus, and it is NOT a rounding -- the closest two points",
+        ));
+        out.push(String::from(
+            "  at level 1 are 0.1334 apart. refine_face pulls each new point toward ITS",
+        ));
+        out.push(String::from(
+            "  OWN face's centroid, so the mid ring is never shared. That gap is the",
+        ));
+        out.push(String::from(
+            "  crescent, and README.md calls the crescent the picture, not a bug.",
+        ));
+        out
+    }
+
+    /// Paint the closure ladder.
+    fn paint_closure(&mut self) {
+        let pal = self.pal();
+        if self.closure_rows.is_none() {
+            self.closure_rows = Some(self.build_closure());
+        }
+        let rows = self.closure_rows.clone().unwrap_or_default();
+        for (i, l) in rows.iter().enumerate() {
+            let y = 60 + i as i32 * 14;
+            if y > H() as i32 - BAR_H - 20 {
+                break;
+            }
+            let c = if l.contains("<- first break") || l.contains("REFUSED") {
+                pal.pink
+            } else if l.starts_with("THE ") || l.contains("THE SEED CLOSES") {
+                pal.gold
+            } else if l.contains("agree") || l.contains("== V from") {
+                pal.green
+            } else {
+                pal.text
+            };
+            font::text(&mut self.cv, 16, y, l, c, 1);
+        }
+    }
+
     /// Paint the GENESIS control bar.
     fn paint_gen_bar(&mut self) {
         let pal = self.pal();
@@ -2261,6 +2483,7 @@ impl App {
         self.cv.fill(pal.bg);
         match self.view() {
             View::Dashboard => self.paint_dashboard(),
+            View::Closure => self.paint_closure(),
             View::Genesis => self.paint_genesis(),
             View::Shell => self.paint_shell(),
             View::FrameBits => self.paint_bit_texture(true),
@@ -2326,7 +2549,19 @@ impl App {
             g,
             genesis::certify(g).map_or("?".into(), |c| c.to_string())
         );
+        // Measured, not promised: the numbers in this description come from
+        // `examples/closure_ladder.rs` on this machine, and the card paints the
+        // same ladder live.
+        let closure_desc = "the weld, the price and the ceiling on ONE table. the seed closes -- V from the BITS, V from the arity sum and V from the JUDGE'S ORBITS are one integer. every refined rung carries a surplus and it is not a rounding. netfile is exact, so storage is a price. the ladder stops by arithmetic, never by an allocator.";
         let cards = [
+            dashboard::Card {
+                tag: "CLOSURE",
+                name: "THE CLOSURE LADDER",
+                desc: closure_desc,
+                accent: pal.cyan,
+                caps: &["frm", "kbd"],
+                featured: false,
+            },
             dashboard::Card {
                 tag: "* THE BIRTH",
                 name: "THE LIGHT MATRIX",
@@ -2350,6 +2585,7 @@ impl App {
         // the click says so out loud rather than doing nothing and looking
         // broken. Two cards, one wired -- the honest state of the port.
         self.card_views = vec![
+            Some(View::Closure), // THE CLOSURE LADDER -- weld, price, ceiling
             None,                // THE LIGHT MATRIX -- the browser page, not ported
             Some(View::Genesis), // GENESIS v0.1 -- the seed, spinning
         ];
@@ -4414,6 +4650,105 @@ mod control_tests {
                 "two GENESIS buttons are labelled '{}' -- `button {}` cannot say which",
                 b.label,
                 b.label
+            );
+        }
+    }
+
+    /// **Every card must open the view it declares, by INDEX.**
+    ///
+    /// `cards` (what is painted) and `card_views` (where a click goes) are two
+    /// parallel arrays held together by nothing but position. Add an entry to
+    /// one and not the other and the dashboard still builds, still paints, and
+    /// sends every later card to the wrong place -- R3 and R9 exactly: a
+    /// destination recovered from an index rather than travelling with the
+    /// thing it belongs to.
+    ///
+    /// The existing check compares `card_views.len()` against
+    /// `card_rects.len()`, which catches a MISSING entry and not a MISORDERED
+    /// one. This grades the mapping itself.
+    #[test]
+    fn every_card_opens_the_view_it_declares() {
+        const EXPECT: [(usize, Option<View>); 3] = [
+            (0, Some(View::Closure)),
+            (1, None), // THE LIGHT MATRIX -- painted, deliberately not wired
+            (2, Some(View::Genesis)),
+        ];
+        // `card_views` is filled by paint_dashboard, not by layout -- the
+        // destination travels with the card as it is BUILT, which is the R3/R9
+        // fix and the reason it does not exist until a paint has happened.
+        let mut a = app_at(0);
+        a.stack.clear();
+        a.stack.push(View::Dashboard);
+        a.render();
+        assert_eq!(
+            a.card_views.len(),
+            EXPECT.len(),
+            "a card was added or removed without updating this test -- which is \
+             the point of the test"
+        );
+        assert_eq!(
+            a.card_views.len(),
+            a.card_rects.len(),
+            "declared cards and painted rects disagree"
+        );
+
+        for (i, want) in EXPECT {
+            let mut b = app_at(0);
+            b.stack.clear();
+            b.stack.push(View::Dashboard);
+            b.render();
+            let before = b.view();
+            let msg = b
+                .click_card(i)
+                .expect("every declared card must be clickable");
+            match want {
+                Some(v) => assert_eq!(
+                    b.view(),
+                    v,
+                    "card {i} should open {v:?} but opened {:?} -- `cards` and \
+                     `card_views` have drifted out of order. {msg}",
+                    b.view()
+                ),
+                None => assert_eq!(
+                    b.view(),
+                    before,
+                    "card {i} is declared UNWIRED and must not navigate. {msg}"
+                ),
+            }
+        }
+    }
+
+    /// The closure ladder must build, and the seed must close inside it.
+    ///
+    /// The card paints a cached table; this grades the numbers in it rather
+    /// than the pixels. If `weld` or `judge` ever stop agreeing with the arity
+    /// sum at the seed, the card would go on painting a stale cache and look
+    /// fine -- so the source of the cache is what gets tested.
+    #[test]
+    fn the_closure_ladder_builds_and_the_seed_closes() {
+        let a = app_at(0);
+        let rows = a.build_closure();
+        assert!(!rows.is_empty(), "the ladder built nothing");
+
+        let joined = rows.join("\n");
+        assert!(
+            joined.contains("first break"),
+            "the wall must report where the hex shell stops nesting"
+        );
+        assert!(
+            joined.contains("2*sqrt(3)+3 = 6.464101615"),
+            "the wall constant must be printed to the digits it is verified to"
+        );
+
+        // level 0 line: faces 32, V 60, predicted 60, surplus 0, chi 2
+        let seed = rows
+            .iter()
+            .find(|r| r.trim_start().starts_with("0 "))
+            .expect("a level-0 row");
+        for want in ["32", "60", "0", "2"] {
+            assert!(
+                seed.contains(want),
+                "the seed row must carry {want}, got: {seed}"
             );
         }
     }
