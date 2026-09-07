@@ -331,3 +331,234 @@ pub fn curve_key(c: Vec3) -> u64 {
     };
     face as u64 * (n as u64 * n as u64) + hilbert_xy(O, g(u), g(w))
 }
+
+/// A Goldberg polyhedron: trivalent, twelve pentagons, closed.
+///
+/// Produced by [`Ico::dual`], never by refinement of a face soup.
+#[derive(Clone, Debug)]
+pub struct Gold {
+    /// one per triangle of the icosphere it came from
+    pub verts: Vec<Vec3>,
+    /// one per VERTEX of that icosphere -- a cycle of triangle indices
+    pub faces: Vec<Vec<usize>>,
+}
+
+impl Gold {
+    /// Pentagons, counted by arity rather than by a label.
+    pub fn pents(&self) -> usize {
+        self.faces.iter().filter(|f| f.len() == 5).count()
+    }
+
+    /// The rotation system, if these faces form a closed orientable surface.
+    pub fn rotation(&self) -> Option<Vec<usize>> {
+        crate::judge::rotation_from_faces(&self.faces)
+    }
+
+    /// Hand it to the judge. `chi` comes from ORBITS, never from a formula.
+    pub fn judge(&self) -> Option<crate::judge::Verdict> {
+        crate::judge::check(&self.rotation()?).ok()
+    }
+}
+
+impl Ico {
+    /// **The dual: a closed Goldberg polyhedron, `GP(2^L, 0)`.**
+    ///
+    /// This is the answer to a question `genesis` cannot answer. Its
+    /// `refine_face` builds FACE SOUP -- every face owning its own corners --
+    /// and `examples/whats_open` measures the consequence exactly: at level 1
+    /// there are 540 unpaired directed edges in three groups of 180,
+    /// `inner -> mid-ring`, `inner -> inner` and `mid-ring -> inner`. That is
+    /// 180 triangular holes, one per face-edge of the seed, and **not one of
+    /// them touches a corner or an edge midpoint**. The hole lies INSIDE a
+    /// face, so no amount of sharing points BETWEEN faces can fill it, and
+    /// filling it with a triangle would change `7F - 12` and break the growth
+    /// law. The crescent is the picture (README) and it stays.
+    ///
+    /// So the closed lane is built somewhere else, and it is nearly free:
+    ///
+    /// ```text
+    ///   icosphere         F = 20*4^L   V = 10*4^L + 2   E = 30*4^L
+    ///   its dual          V = 20*4^L   F = 10*4^L + 2   E = 30*4^L
+    ///                       = 20T          = 10T + 2        = 30T,  T = 4^L
+    /// ```
+    ///
+    /// which is exactly THEA's Goldberg counting. Every dual vertex is a
+    /// triangle centre with three neighbours, so the mesh is **trivalent by
+    /// construction**; every dual face is one icosphere vertex, so the twelve
+    /// defects become the twelve pentagons and `P = 12` is inherited rather
+    /// than asserted.
+    ///
+    /// The subdivision underneath welds by SORTED INDEX PAIR with no tolerance
+    /// (see the module header), so this closes at every depth memory allows --
+    /// R7's float-threshold lane died at C380 and there is nothing here to
+    /// outgrow.
+    ///
+    /// LANE: the connectivity is EXACT integer work. `face_center` normalises,
+    /// which is DISPLAY -- so the positions are display and the topology is not.
+    pub fn dual(&self) -> Gold {
+        // triangle centres become the dual's vertices
+        let verts: Vec<Vec3> = self.faces.iter().map(|f| self.face_center(f)).collect();
+
+        // directed edge -> the triangle that carries it. On a closed oriented
+        // surface each directed edge belongs to exactly one triangle, which is
+        // what makes the walk below deterministic.
+        let mut tri_of: HashMap<(usize, usize), usize> =
+            HashMap::with_capacity(self.faces.len() * 3);
+        for (t, f) in self.faces.iter().enumerate() {
+            for i in 0..3 {
+                tri_of.insert((f[i], f[(i + 1) % 3]), t);
+            }
+        }
+
+        let mut faces: Vec<Vec<usize>> = Vec::with_capacity(self.verts.len());
+        for v in 0..self.verts.len() {
+            // any triangle that has v, to start the fan
+            let Some(start) = self.faces.iter().position(|f| f.contains(&v)) else {
+                continue;
+            };
+            let mut cycle = Vec::with_capacity(6);
+            let mut t = start;
+            loop {
+                cycle.push(t);
+                // the neighbour v points at inside this triangle
+                let f = &self.faces[t];
+                let i = f
+                    .iter()
+                    .position(|&x| x == v)
+                    .expect("v is in this triangle");
+                let n = f[(i + 1) % 3];
+                // cross edge (v,n): the triangle carrying (n,v)
+                let Some(&next) = tri_of.get(&(n, v)) else {
+                    break; // a border -- cannot happen on a closed icosphere
+                };
+                t = next;
+                if t == start {
+                    break;
+                }
+                if cycle.len() > 32 {
+                    break; // a fan that never closes is a corrupt mesh, not a loop to ride
+                }
+            }
+            faces.push(cycle);
+        }
+
+        Gold { verts, faces }
+    }
+}
+
+#[cfg(test)]
+mod dual_tests {
+    use super::*;
+
+    /// **The dual closes, and the judge says so from orbits.**
+    ///
+    /// The sentence `genesis` cannot make. Not "the formula gives 2" -- the
+    /// module header warns that `V - E + F` returns 2 for every L whether or
+    /// not a mesh was ever built -- but "a permutation was walked and its
+    /// orbits were counted".
+    #[test]
+    fn the_dual_closes_at_every_rung() {
+        for l in 0..=4 {
+            let g = Ico::level(l).expect("level fits").dual();
+            let v = g
+                .judge()
+                .unwrap_or_else(|| panic!("level {l}: the dual is not a closed surface"));
+            let t = 4u64.pow(l);
+            assert_eq!(v.v as u64, 20 * t, "L{l}: V must be 20T");
+            assert_eq!(v.e as u64, 30 * t, "L{l}: E must be 30T");
+            assert_eq!(v.f as u64, 10 * t + 2, "L{l}: F must be 10T+2");
+            assert_eq!(v.chi, 2, "L{l}: chi from ORBITS must be 2");
+            assert_eq!(v.components, 1, "L{l}: one piece");
+            assert_eq!(v.genus, Some(0), "L{l}: a sphere");
+        }
+    }
+
+    /// Twelve pentagons, counted by arity, inherited from the icosphere's
+    /// twelve defects rather than asserted.
+    #[test]
+    fn the_dual_has_exactly_twelve_pentagons() {
+        for l in 0..=4 {
+            let ico = Ico::level(l).expect("level fits");
+            let defects = ico.defects().len();
+            let g = ico.dual();
+            assert_eq!(
+                defects, 12,
+                "L{l}: the icosphere has twelve degree-5 vertices"
+            );
+            assert_eq!(g.pents(), 12, "L{l}: and so the dual has twelve pentagons");
+            // every other face is a hexagon -- nothing else may appear
+            for f in &g.faces {
+                assert!(
+                    f.len() == 5 || f.len() == 6,
+                    "L{l}: a face of arity {} appeared; a Goldberg polyhedron has only 5s and 6s",
+                    f.len()
+                );
+            }
+        }
+    }
+
+    /// **Trivalent by construction** -- every dual vertex is a triangle centre
+    /// with exactly three neighbours.
+    ///
+    /// This is the property `genesis`'s soup does not have: its welded degrees
+    /// are 1, 2, 3 and 6 (see `src/weld.rs`), so `arity_sum / 3` is a
+    /// prediction the geometry does not satisfy. Here it is satisfied, so the
+    /// same division is a measurement.
+    #[test]
+    fn the_dual_is_trivalent() {
+        for l in 0..=4 {
+            let g = Ico::level(l).expect("level fits").dual();
+            let mut deg = vec![0usize; g.verts.len()];
+            for f in &g.faces {
+                for &i in f {
+                    deg[i] += 1;
+                }
+            }
+            assert!(
+                deg.iter().all(|&d| d == 3),
+                "L{l}: a dual vertex has degree {:?}, not 3",
+                deg.iter().find(|&&d| d != 3)
+            );
+            let arity: usize = g.faces.iter().map(|f| f.len()).sum();
+            assert_eq!(
+                arity / 3,
+                g.verts.len(),
+                "L{l}: arity_sum/3 must equal V when the mesh really is trivalent"
+            );
+        }
+    }
+
+    /// **`Ico::level(0).dual()` is the DODECAHEDRON.**
+    ///
+    /// Worth its own test because the viewer's `SEED 12` button has said
+    /// *NOT WIRED, NOT PRETENDING* since v0.1, and `GENESIS_PORT_SPEC` lists
+    /// `buildDodecahedron` as unported. It was reachable the whole time from
+    /// the lane next door: the dual of the base icosahedron.
+    #[test]
+    fn level_zero_dual_is_the_dodecahedron() {
+        let g = Ico::level(0).expect("the base fits").dual();
+        assert_eq!(g.verts.len(), 20, "a dodecahedron has 20 vertices");
+        assert_eq!(g.faces.len(), 12, "and 12 faces");
+        assert_eq!(g.pents(), 12, "all of them pentagons");
+        let v = g.judge().expect("it closes");
+        assert_eq!((v.v, v.e, v.f, v.chi), (20, 30, 12, 2));
+    }
+
+    /// The dual is deterministic: two calls give the identical mesh.
+    #[test]
+    fn the_dual_is_deterministic() {
+        let ico = Ico::level(2).expect("level fits");
+        let (a, b) = (ico.dual(), ico.dual());
+        assert_eq!(a.faces, b.faces);
+        assert_eq!(a.verts.len(), b.verts.len());
+        for (u, v) in a.verts.iter().zip(b.verts.iter()) {
+            for k in 0..3 {
+                assert_eq!(
+                    u[k].to_bits(),
+                    v[k].to_bits(),
+                    "a centre moved between calls"
+                );
+            }
+        }
+    }
+}
