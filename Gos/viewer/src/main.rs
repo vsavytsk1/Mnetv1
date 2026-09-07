@@ -2203,6 +2203,34 @@ impl App {
         out
     }
 
+    /// How many `.gosnet` files are beside this build, and how big.
+    ///
+    /// Cheap -- one directory listing -- and it answers a question the card
+    /// would otherwise have to assume. A missing directory is not an error
+    /// here; it is the normal state of a fresh clone.
+    fn nets_on_disk() -> (usize, f64) {
+        let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .map(|p| p.join("nets/curve"));
+        let Some(dir) = dir else {
+            return (0, 0.0);
+        };
+        let Ok(rd) = fs::read_dir(dir) else {
+            return (0, 0.0);
+        };
+        let mut n = 0usize;
+        let mut b = 0u64;
+        for e in rd.flatten() {
+            if e.path().extension().is_some_and(|x| x == "gosnet") {
+                if let Ok(m) = e.metadata() {
+                    n += 1;
+                    b += m.len();
+                }
+            }
+        }
+        (n, b as f64 / 1_048_576.0)
+    }
+
     /// The curve, drawn. Log-log, because five decades of faces and five of
     /// milliseconds do not fit on a linear axis and a plot that clips is a
     /// plot that lies.
@@ -2372,12 +2400,26 @@ impl App {
             pal.green,
             1,
         );
+        // READ the disk rather than assert it. The nets are gitignored --
+        // 593 MB, level 6 alone five times the 100 MB wall -- so a fresh clone
+        // has NONE of them, and a card that stated "593 MB on disk" would be
+        // confidently wrong on every machine but this one. What is true
+        // everywhere is that the CSV travels and the nets regenerate.
+        let (n, mb) = Self::nets_on_disk();
+        let line = if n == 0 {
+            String::from(
+                "no nets on disk -- they are gitignored payload. \
+                 `cargo run --release --example net_curve` writes them in ~6 s.",
+            )
+        } else {
+            format!("{n} nets on disk, {mb:.0} MB, every one round-tripped BIT FOR BIT.",)
+        };
         font::text(
             &mut self.cv,
             x0,
             78 + h + 52,
-            "593 MB of nets on disk, every one round-tripped BIT FOR BIT.",
-            pal.text,
+            &line,
+            if n == 0 { pal.border } else { pal.text },
             1,
         );
     }
@@ -4957,6 +4999,62 @@ mod control_tests {
                 seed.contains(want),
                 "the seed row must carry {want}, got: {seed}"
             );
+        }
+    }
+
+    /// **The baked curve must equal the CSV it was copied from.**
+    ///
+    /// `CURVE` lives in this file so the paint function never opens a file;
+    /// `nets/curve/CURVE.csv` is what `examples/net_curve` actually measured.
+    /// Two sources for one table, and the card prints the baked one as though
+    /// it were the measurement -- so re-running the example on another machine
+    /// would move the CSV and leave the card quietly stale.
+    ///
+    /// This is the only thing standing between those two, and it is skipped
+    /// rather than failed when the CSV is absent, because the CSV is generated
+    /// and a fresh clone has it while a pruned tree may not.
+    #[test]
+    fn the_baked_curve_matches_the_measured_csv() {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .expect("the crate has a parent")
+            .join("nets/curve/CURVE.csv");
+        let Ok(csv) = fs::read_to_string(&path) else {
+            eprintln!("no CURVE.csv beside this build -- nothing to compare against");
+            return;
+        };
+        let rows: Vec<Vec<String>> = csv
+            .lines()
+            .filter(|l| !l.starts_with('#') && !l.starts_with("level") && !l.is_empty())
+            .map(|l| l.split(',').map(|c| c.trim().to_string()).collect())
+            .collect();
+
+        assert_eq!(
+            rows.len(),
+            CURVE.len(),
+            "the CSV has {} rows and the baked CURVE has {} -- the example was \
+             re-run and the constant was not updated",
+            rows.len(),
+            CURVE.len()
+        );
+
+        for (i, (r, b)) in rows.iter().zip(CURVE.iter()).enumerate() {
+            let num = |k: usize| r[k].parse::<f64>().expect("a number");
+            let want = [
+                num(1), // faces
+                num(3), // build_ms
+                num(4), // weld_ms
+                num(5), // save_ms
+                num(6), // load_ms
+                num(7), // file_bytes
+            ];
+            let got = [b.0 as f64, b.1, b.2, b.3, b.4, b.5 as f64];
+            for (k, (w, g)) in want.iter().zip(got.iter()).enumerate() {
+                assert!(
+                    (w - g).abs() < 1e-9,
+                    "level {i}, column {k}: CSV says {w} and the card shows {g}"
+                );
+            }
         }
     }
 
