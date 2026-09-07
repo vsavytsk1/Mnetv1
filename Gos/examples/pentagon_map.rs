@@ -100,6 +100,44 @@ fn main() {
         println!("  Read the measured min; the receipt's own note says exactly this.");
     }
 
+    // ---- EVERY k, not only the powers of two --------------------------
+    println!(
+        "
+  EVERY k, via Ico::geodesic -- the Class I lane in full
+"
+    );
+    println!(
+        "  {:>4} {:>7} {:>9} {:>6} {:>6} {:>11} {:>8} {:>8}",
+        "k", "T", "V", "min", "max", "closed form", "matches", "max/min"
+    );
+    let (mut t2, mut m2) = (0usize, 0usize);
+    for k in 1..=10u32 {
+        let Ok(ico) = Ico::geodesic(k) else { break };
+        let g = ico.dual();
+        let Some((lo, hi)) = g.pentagon_span() else {
+            break;
+        };
+        let closed = closed_form(k as i64, 0) as usize;
+        let ok = closed == lo;
+        t2 += 1;
+        m2 += usize::from(ok);
+        println!(
+            "  {:>4} {:>7} {:>9} {:>6} {:>6} {:>11} {:>8} {:>8}",
+            k,
+            k * k,
+            g.verts.len(),
+            lo,
+            hi,
+            closed,
+            if ok { "yes" } else { "NO" },
+            format!("{:.3}", hi as f64 / lo as f64)
+        );
+    }
+    println!(
+        "
+  {m2} of {t2} on the full Class I lane."
+    );
+
     println!("\n  THE SHARED ROW, against tower/pentagon_map_v0_1_receipt.json:");
     println!("    (1,0)  python: min 1, max 3, closed form 1");
     let g0 = Ico::level(0).expect("the base fits").dual();

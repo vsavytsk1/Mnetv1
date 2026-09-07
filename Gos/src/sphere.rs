@@ -763,3 +763,195 @@ mod hop_tests {
         }
     }
 }
+
+impl Ico {
+    /// **`GD(k, 0)` for ANY k** -- the Class I geodesic, welded on integers.
+    ///
+    /// [`Ico::subdivide`] doubles, so [`Ico::level`] reaches only `k = 2^L`:
+    /// 1, 2, 4, 8, 16. This reaches every k, which is what lets the pentagon
+    /// map be tested at 3, 5, 6, 7 and not only at the powers of two.
+    ///
+    /// # THE WELD IS AN INTEGER KEY, NOT A DISTANCE
+    ///
+    /// A point on face `(a,b,c)` sits at barycentric weights `(i, j, k-i-j)`.
+    /// The key is those weights paired with their VERTEX INDICES, sorted, with
+    /// zero weights dropped:
+    ///
+    /// ```text
+    ///   interior of a face   three pairs   belongs to one face only
+    ///   on a shared edge     two pairs     BOTH faces produce the same key
+    ///   an original corner   one pair      all five faces produce the same key
+    /// ```
+    ///
+    /// Two faces meeting at an edge see that edge's points with the same two
+    /// vertex indices and the same two weights, so the keys collide exactly and
+    /// the seam welds with no tolerance to outgrow. RUSTIUM R7 measured the
+    /// float-threshold lane dying at C380; there is nothing here for depth to
+    /// erode, which is the same guarantee `subdivide` gets from its sorted
+    /// index pair.
+    ///
+    /// # COUNTS, EXACT
+    ///
+    /// ```text
+    ///   T = k^2      F = 20k^2      V = 10k^2 + 2      E = 30k^2
+    /// ```
+    ///
+    /// and its dual is `GP(k, 0)`: `V = 20T`, `F = 10T + 2`, twelve pentagons.
+    ///
+    /// LANE: the connectivity is EXACT integer work. `vnorm` puts the point on
+    /// the sphere, and that is DISPLAY.
+    pub fn geodesic(k: u32) -> Result<Ico, TooBig> {
+        // PRICE IT BEFORE ALLOCATING, the same way `level` does. F = 20k^2 is
+        // exact, so the refusal carries the real number rather than a guess.
+        let faces_wanted = 20usize
+            .saturating_mul(k as usize)
+            .saturating_mul(k as usize);
+        if k == 0 || faces_wanted > FACE_BUDGET {
+            return Err(TooBig {
+                level: k,
+                predicted_faces: faces_wanted,
+                budget: FACE_BUDGET,
+            });
+        }
+
+        let base = Ico::base();
+        let ki = k as i64;
+        let mut index: HashMap<Vec<(usize, i64)>, usize> = HashMap::new();
+        let mut verts: Vec<Vec3> = Vec::new();
+        let mut faces: Vec<[usize; 3]> = Vec::new();
+
+        // the canonical, order-independent name of a lattice point
+        let key = |a: usize, b: usize, c: usize, i: i64, j: i64, m: i64| -> Vec<(usize, i64)> {
+            let mut v: Vec<(usize, i64)> = vec![(a, i), (b, j), (c, m)];
+            v.retain(|&(_, w)| w != 0);
+            v.sort_unstable();
+            v
+        };
+
+        for f in &base.faces {
+            let (a, b, c) = (f[0], f[1], f[2]);
+            let (pa, pb, pc) = (base.verts[a], base.verts[b], base.verts[c]);
+
+            let at = |i: i64,
+                      j: i64,
+                      verts: &mut Vec<Vec3>,
+                      index: &mut HashMap<Vec<(usize, i64)>, usize>|
+             -> usize {
+                let m = ki - i - j;
+                let kk = key(a, b, c, i, j, m);
+                if let Some(&n) = index.get(&kk) {
+                    return n;
+                }
+                let (wi, wj, wm) = (i as f64, j as f64, m as f64);
+                let p = vnorm([
+                    (pa[0] * wi + pb[0] * wj + pc[0] * wm) / ki as f64,
+                    (pa[1] * wi + pb[1] * wj + pc[1] * wm) / ki as f64,
+                    (pa[2] * wi + pb[2] * wj + pc[2] * wm) / ki as f64,
+                ]);
+                verts.push(p);
+                let n = verts.len() - 1;
+                index.insert(kk, n);
+                n
+            };
+
+            for i in 0..ki {
+                for j in 0..(ki - i) {
+                    // the upward triangle
+                    let p0 = at(i, j, &mut verts, &mut index);
+                    let p1 = at(i + 1, j, &mut verts, &mut index);
+                    let p2 = at(i, j + 1, &mut verts, &mut index);
+                    faces.push([p0, p1, p2]);
+                    // and the downward one, where it fits
+                    if i + j + 2 <= ki {
+                        let p3 = at(i + 1, j + 1, &mut verts, &mut index);
+                        faces.push([p1, p3, p2]);
+                    }
+                }
+            }
+        }
+
+        Ok(Ico {
+            verts,
+            faces,
+            level: k,
+        })
+    }
+}
+
+#[cfg(test)]
+mod geodesic_tests {
+    use super::*;
+
+    /// `GD(k,0)` has exactly the counts `T = k^2` predicts, for EVERY k --
+    /// not only the powers of two `subdivide` can reach.
+    #[test]
+    fn geodesic_counts_are_exact_for_every_k() {
+        for k in 1..=8u32 {
+            let ico = Ico::geodesic(k).expect("k fits the budget");
+            let kk = (k * k) as usize;
+            assert_eq!(ico.faces.len(), 20 * kk, "k={k}: F must be 20k^2");
+            assert_eq!(ico.verts.len(), 10 * kk + 2, "k={k}: V must be 10k^2+2");
+            assert_eq!(ico.defects().len(), 12, "k={k}: twelve degree-5 vertices");
+        }
+    }
+
+    /// The integer weld closed the seams: a power of two built two ways gives
+    /// the same counts, so `geodesic` is not quietly leaving duplicates along
+    /// the shared edges that `subdivide` welds by index pair.
+    #[test]
+    fn geodesic_agrees_with_subdivide_on_the_powers_of_two() {
+        for l in 0..=3u32 {
+            let a = Ico::level(l).expect("level fits");
+            let b = Ico::geodesic(1 << l).expect("k fits");
+            assert_eq!(a.verts.len(), b.verts.len(), "L{l}: vertex counts differ");
+            assert_eq!(a.faces.len(), b.faces.len(), "L{l}: face counts differ");
+        }
+    }
+
+    /// Its dual closes and is a Goldberg polyhedron at every k.
+    #[test]
+    fn every_k_duals_to_a_closed_goldberg() {
+        for k in 1..=6u32 {
+            let g = Ico::geodesic(k).expect("k fits").dual();
+            let v = g
+                .judge()
+                .unwrap_or_else(|| panic!("k={k}: the dual is open"));
+            let t = (k * k) as usize;
+            assert_eq!(v.v, 20 * t, "k={k}: V=20T");
+            assert_eq!(v.e, 30 * t, "k={k}: E=30T");
+            assert_eq!(v.f, 10 * t + 2, "k={k}: F=10T+2");
+            assert_eq!(v.chi, 2, "k={k}: chi from orbits");
+            assert_eq!(g.pents(), 12, "k={k}: P=12");
+        }
+    }
+
+    /// **The closed form on the FULL Class I lane, and the exact 3x span.**
+    ///
+    /// The powers-of-two lane already matched; this is every k. Measured:
+    /// min = k and max = 3k for k = 1..8, so the hypothesis
+    /// `max(|k|,|l|,|k+l|)` reduces to `k` here and lands on the nose, and the
+    /// span ratio is a clean integer 3 rather than the ~2.4 the chiral golden
+    /// lane shows in `tower/pentagon_map_v0_1_receipt.json`.
+    #[test]
+    fn class_one_pentagon_span_is_k_and_three_k() {
+        for k in 1..=8u32 {
+            let g = Ico::geodesic(k).expect("k fits").dual();
+            let (lo, hi) = g.pentagon_span().expect("twelve pentagons");
+            assert_eq!(
+                lo, k as usize,
+                "k={k}: the minimum must equal the closed form"
+            );
+            assert_eq!(hi, 3 * k as usize, "k={k}: the span must be exactly 3k");
+        }
+    }
+
+    /// The budget refuses with the real number, priced from `F = 20k^2` before
+    /// anything is allocated.
+    #[test]
+    fn geodesic_refuses_past_the_budget_with_the_number() {
+        let e = Ico::geodesic(1000).expect_err("20 million faces is past the budget");
+        assert_eq!(e.predicted_faces, 20_000_000);
+        assert_eq!(e.budget, FACE_BUDGET);
+        assert!(Ico::geodesic(0).is_err(), "k=0 is not a shell");
+    }
+}

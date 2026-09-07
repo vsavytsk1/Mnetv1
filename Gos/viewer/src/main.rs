@@ -34,6 +34,7 @@ use goldberg_kernel::palette;
 use goldberg_kernel::palette::{Palette, Rgb, ALL};
 use goldberg_kernel::raster::{project, project_rpy, Canvas};
 use goldberg_kernel::rng::Rng;
+use goldberg_kernel::sphere;
 use goldberg_kernel::weld;
 use goldberg_kernel::{certify, judge, Mesh};
 
@@ -642,6 +643,12 @@ struct App {
     gen_twist: f64,
     /// Radians moved by one flight-explorer press. See [`STEP_DECADES`].
     gen_step: f64,
+    /// The Class I frequency the pentagon map is showing, `GP(k, 0)`.
+    ///
+    /// Driven by K and J on the closure card. Bounded at 12 because the panel
+    /// rebuilds the shell on every change and a person is waiting -- k=12 is
+    /// 2,880 faces and about 4 ms, k=40 would be 32,000 and start to be felt.
+    closure_k: u32,
     /// Is the curve animating? **Off, and it stays off until pressed.**
     ///
     /// Curse 13, the Ghost Spinner: motion is never forced. The timer's own
@@ -1314,6 +1321,7 @@ impl App {
             // the middle of the four decades: fine enough to creep up on a
             // symmetry, coarse enough that finding one does not take an hour
             gen_step: 0.01,
+            closure_k: 1,
             closure_anim: false,
             closure_phase: 1.0,
             closure_rows: None,
@@ -1660,6 +1668,9 @@ const CURVE: [(u64, f64, f64, f64, f64, u64); 7] = [
 /// above are priced from the recurrence and printed instead, which is the whole
 /// discipline this view exists to show.
 const CLOSURE_VIEW_LEVELS: u32 = 4;
+
+/// The largest `k` the closure card will build while a person waits.
+const CLOSURE_K_MAX: u32 = 12;
 
 /// Bytes of live heap per face, measured: 1,385.5 MB over 3,529,472 faces at
 /// level 6. Used only to PRICE rungs that are never built.
@@ -2348,6 +2359,81 @@ impl App {
         }
     }
 
+    /// The pentagon map for the current `k`, measured live.
+    ///
+    /// Rebuilt on every keypress rather than cached, because it is cheap at
+    /// this size and a cached table that stops matching its own label is the
+    /// failure this card has already been audited for once.
+    fn paint_pentagon_map(&mut self, x0: i32, y0: i32) {
+        let pal = self.pal();
+        let k = self.closure_k;
+        font::text(
+            &mut self.cv,
+            x0,
+            y0,
+            "THE PENTAGON MAP -- K up, J down, the Class I lane GP(k,0)",
+            pal.gold,
+            1,
+        );
+
+        let Ok(ico) = sphere::Ico::geodesic(k) else {
+            font::text(
+                &mut self.cv,
+                x0,
+                y0 + 18,
+                "k is past the face budget",
+                pal.pink,
+                1,
+            );
+            return;
+        };
+        let g = ico.dual();
+        let closed = k as usize; // max(|k|,|l|,|k+l|) with l = 0
+        let (lo, hi) = g.pentagon_span().unwrap_or((0, 0));
+        let v = g.judge();
+
+        let rows = [
+            format!("k = {k}        T = k^2 = {}", k * k),
+            format!(
+                "V = {}   E = {}   F = {}   P = {}",
+                g.verts.len(),
+                v.map_or(0, |x| x.e),
+                g.faces.len(),
+                g.pents()
+            ),
+            format!(
+                "chi = {}  from ORBITS, not from the formula that made the counts",
+                v.map_or(String::from("open"), |x| x.chi.to_string())
+            ),
+            String::new(),
+            format!("adjacent pentagon distance, MEASURED   {lo}"),
+            format!("max(|k|,|l|,|k+l|),        PREDICTED   {closed}"),
+            format!(
+                "                                          {}",
+                if lo == closed { "MATCH" } else { "MISMATCH" }
+            ),
+            String::new(),
+            format!(
+                "span  min {lo}  max {hi}   ratio {:.3}",
+                hi as f64 / lo.max(1) as f64
+            ),
+            String::from("Class I holds exactly 3. the chiral golden lane sits near 2.4"),
+            String::from("(python: 5/2, 7/3, 12/5, 19/8, 31/13) -- a fact about the LANES."),
+        ];
+        for (i, r) in rows.iter().enumerate() {
+            let c = if r.contains("MATCH") && !r.contains("MISMATCH") {
+                pal.green
+            } else if r.contains("MISMATCH") {
+                pal.pink
+            } else if r.starts_with("adjacent") || r.starts_with("max(") {
+                pal.cyan
+            } else {
+                pal.text
+            };
+            font::text(&mut self.cv, x0, y0 + 18 + i as i32 * 14, r, c, 1);
+        }
+    }
+
     /// Paint the closure ladder.
     fn paint_closure(&mut self) {
         let pal = self.pal();
@@ -2414,6 +2500,7 @@ impl App {
         } else {
             format!("{n} nets on disk, {mb:.0} MB, every one round-tripped BIT FOR BIT.",)
         };
+        self.paint_pentagon_map(x0, 78 + h + 76);
         font::text(
             &mut self.cv,
             x0,
@@ -3484,6 +3571,23 @@ impl App {
         }
 
         match vk {
+            // K / J -- walk the Class I lane. Every k, not the powers of
+            // two `subdivide` reaches: `Ico::geodesic` welds on an integer
+            // barycentric key, so the seams close with no tolerance.
+            0x4B | 0x4A if self.view() == View::Closure => {
+                let up = vk == 0x4B;
+                self.closure_k = if up {
+                    (self.closure_k + 1).min(CLOSURE_K_MAX)
+                } else {
+                    self.closure_k.saturating_sub(1).max(1)
+                };
+                self.status = format!(
+                    "GP({}, 0) - T={} - K UP, J DOWN.",
+                    self.closure_k,
+                    self.closure_k * self.closure_k
+                );
+                return true;
+            }
             // A -- arm the CLOSURE curve, or stop it. Off by default, and
             // pressing it again leaves the plot fully drawn rather than frozen
             // mid-sweep: a stopped animation that hides half its data is a
