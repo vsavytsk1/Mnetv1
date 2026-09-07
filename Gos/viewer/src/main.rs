@@ -31,7 +31,7 @@ use goldberg_kernel::layout::Rect;
 use goldberg_kernel::mobius;
 use goldberg_kernel::netfile;
 use goldberg_kernel::palette;
-use goldberg_kernel::palette::{Palette, ALL};
+use goldberg_kernel::palette::{Palette, Rgb, ALL};
 use goldberg_kernel::raster::{project, project_rpy, Canvas};
 use goldberg_kernel::rng::Rng;
 use goldberg_kernel::weld;
@@ -642,6 +642,15 @@ struct App {
     gen_twist: f64,
     /// Radians moved by one flight-explorer press. See [`STEP_DECADES`].
     gen_step: f64,
+    /// Is the curve animating? **Off, and it stays off until pressed.**
+    ///
+    /// Curse 13, the Ghost Spinner: motion is never forced. The timer's own
+    /// comment says only GENESIS animates "so the dashboard never pulses at a
+    /// reader", and a card that started drawing itself the moment it opened
+    /// would break that rule while looking like a feature.
+    closure_anim: bool,
+    /// 0..1 across the plot while animating; 1.0 means fully drawn.
+    closure_phase: f64,
     /// The closure ladder, built once on first view.
     ///
     /// Cached because building it walks the ladder and welds every rung --
@@ -1156,6 +1165,14 @@ unsafe extern "system" fn wndproc(hwnd: HWND, msg: UINT, wp: WPARAM, lp: LPARAM)
                         app.gen_roll = wrap_turn(app.gen_roll + app.gen_speed_r);
                         go = true;
                     }
+                    // ...and CLOSURE, but only once a human has armed it.
+                    if app.view() == View::Closure && app.closure_anim {
+                        app.closure_phase += 0.012;
+                        if app.closure_phase >= 1.0 {
+                            app.closure_phase = 0.0;
+                        }
+                        go = true;
+                    }
                 }
             });
             if go {
@@ -1297,6 +1314,8 @@ impl App {
             // the middle of the four decades: fine enough to creep up on a
             // symmetry, coarse enough that finding one does not take an hour
             gen_step: 0.01,
+            closure_anim: false,
+            closure_phase: 1.0,
             closure_rows: None,
             gen_mobius: false,
             gen_spherical: false,
@@ -1615,6 +1634,25 @@ impl Estimate {
         )
     }
 }
+
+/// The measured curve, from `nets/curve/CURVE.csv` on this machine.
+///
+/// `(faces, build_ms, weld_ms, save_ms, load_ms, file_bytes)` per level.
+///
+/// **Baked rather than read.** A paint function that opens a file has a second
+/// way to fail and a reason to differ between machines; these are numbers the
+/// example measured and the CSV records, and the card is honest that they are
+/// one machine's clock. Faces and bytes are EXACT; the milliseconds are
+/// COMPUTED, and a wall clock is a measurement of a moment, never a constant.
+const CURVE: [(u64, f64, f64, f64, f64, u64); 7] = [
+    (32, 0.000, 0.016, 0.002, 0.008, 4_568),
+    (212, 0.110, 0.068, 0.007, 0.054, 31_748),
+    (1_472, 0.806, 0.609, 0.076, 0.220, 222_008),
+    (10_292, 4.721, 4.676, 0.486, 1.118, 1_553_828),
+    (72_032, 35.062, 36.727, 4.323, 7.895, 10_876_568),
+    (504_212, 261.419, 336.466, 31.405, 57.268, 76_135_748),
+    (3_529_472, 1875.109, 3156.854, 255.933, 579.457, 532_950_008),
+];
 
 /// How far the CLOSURE card walks the ladder while a person waits for a frame.
 ///
@@ -2165,6 +2203,123 @@ impl App {
         out
     }
 
+    /// The curve, drawn. Log-log, because five decades of faces and five of
+    /// milliseconds do not fit on a linear axis and a plot that clips is a
+    /// plot that lies.
+    ///
+    /// `phase` is 0..1 and reveals the series left to right. At 1.0 everything
+    /// is drawn, which is the state the card opens in -- see [`App::closure_anim`].
+    fn paint_curve(&mut self, x0: i32, y0: i32, w: i32, h: i32, phase: f64) {
+        let pal = self.pal();
+
+        // axes in log10 space, padded to whole decades so the gridlines land
+        // on powers of ten and a reader can count them
+        let fx = |v: f64| (v.max(1.0)).log10();
+        let (xlo, xhi) = (fx(CURVE[0].0 as f64), fx(CURVE[CURVE.len() - 1].0 as f64));
+        let (ylo, yhi) = (-2.0f64, 4.0f64); // 0.01 ms .. 10 s
+
+        let px = |v: f64| x0 + (((fx(v) - xlo) / (xhi - xlo)) * w as f64) as i32;
+        let py = |ms: f64| {
+            let l = ms.max(0.01).log10();
+            y0 + h - (((l - ylo) / (yhi - ylo)) * h as f64) as i32
+        };
+
+        // frame + decade gridlines
+        self.cv.rect(x0, y0, w, h, pal.border);
+        for d in -2..=4 {
+            let y = py(10f64.powi(d));
+            if y > y0 && y < y0 + h {
+                for x in (x0..x0 + w).step_by(6) {
+                    self.cv.set(x, y, pal.border);
+                }
+                let lab = match d {
+                    -2 => "0.01ms",
+                    -1 => "0.1ms",
+                    0 => "1ms",
+                    1 => "10ms",
+                    2 => "100ms",
+                    3 => "1s",
+                    _ => "10s",
+                };
+                font::text(&mut self.cv, x0 - 46, y - 3, lab, pal.border, 1);
+            }
+        }
+        for (i, row) in CURVE.iter().enumerate() {
+            let x = px(row.0 as f64);
+            for y in (y0..y0 + h).step_by(6) {
+                self.cv.set(x, y, pal.border);
+            }
+            font::text(
+                &mut self.cv,
+                x - 4,
+                y0 + h + 4,
+                &format!("L{i}"),
+                pal.border,
+                1,
+            );
+        }
+
+        // the four series. Ordered so the SLOWEST is drawn first and the
+        // fastest last, because the point of the picture is the gap between
+        // them and the eye should land on the winner.
+        let series: [(&str, fn(&(u64, f64, f64, f64, f64, u64)) -> f64, Rgb); 4] = [
+            ("WELD", |r| r.2, pal.pink),
+            ("BUILD", |r| r.1, pal.gold),
+            ("LOAD", |r| r.4, pal.green),
+            ("SAVE", |r| r.3, pal.cyan),
+        ];
+        let reveal = x0 + (phase.clamp(0.0, 1.0) * w as f64) as i32;
+
+        for (name, get, col) in series {
+            let mut prev: Option<(i32, i32)> = None;
+            for row in CURVE.iter() {
+                let v = get(row);
+                if v <= 0.0 {
+                    prev = None;
+                    continue;
+                }
+                let (x, y) = (px(row.0 as f64), py(v));
+                if let Some((ax, ay)) = prev {
+                    // clip the segment at the reveal front
+                    if ax <= reveal {
+                        let (bx, by) = if x <= reveal {
+                            (x, y)
+                        } else {
+                            let t = (reveal - ax) as f64 / (x - ax).max(1) as f64;
+                            (reveal, ay + ((y - ay) as f64 * t) as i32)
+                        };
+                        self.cv.line(ax, ay, bx, by, col);
+                        self.cv.line(ax, ay + 1, bx, by + 1, col);
+                    }
+                }
+                if x <= reveal {
+                    self.cv.disc(x, y, 2, col, 255);
+                }
+                prev = Some((x, y));
+            }
+            // the legend sits at the series' own right-hand end, so no line
+            // has to be traced back to a key in a corner
+            let last = CURVE[CURVE.len() - 1];
+            if reveal >= px(last.0 as f64) {
+                font::text(
+                    &mut self.cv,
+                    px(last.0 as f64) + 8,
+                    py(get(&last)) - 3,
+                    name,
+                    col,
+                    1,
+                );
+            }
+        }
+
+        // the sweep front, while it is moving
+        if phase < 1.0 {
+            for y in (y0..y0 + h).step_by(3) {
+                self.cv.set(reveal, y, pal.gold);
+            }
+        }
+    }
+
     /// Paint the closure ladder.
     fn paint_closure(&mut self) {
         let pal = self.pal();
@@ -2188,6 +2343,43 @@ impl App {
             };
             font::text(&mut self.cv, 16, y, l, c, 1);
         }
+
+        // the picture, to the right of the table
+        let x0 = 700;
+        let w = (W() as i32 - x0 - 90).max(200);
+        let h = 300;
+        font::text(
+            &mut self.cv,
+            x0,
+            56,
+            "BUILD IT, WELD IT, STORE IT, LOAD IT -- log-log, faces against milliseconds",
+            pal.gold,
+            1,
+        );
+        let phase = self.closure_phase;
+        self.paint_curve(x0, 78, w, h, phase);
+        let note = if self.closure_anim {
+            "A  stop the curve"
+        } else {
+            "A  draw the curve -- it does not move until you press it (Curse 13)"
+        };
+        font::text(&mut self.cv, x0, 78 + h + 22, note, pal.cyan, 1);
+        font::text(
+            &mut self.cv,
+            x0,
+            78 + h + 38,
+            "LOAD beats BUILD at every rung: 2.0x, 3.7x, 4.2x, 4.4x, 4.6x, 3.2x.",
+            pal.green,
+            1,
+        );
+        font::text(
+            &mut self.cv,
+            x0,
+            78 + h + 52,
+            "593 MB of nets on disk, every one round-tripped BIT FOR BIT.",
+            pal.text,
+            1,
+        );
     }
 
     /// Paint the GENESIS control bar.
@@ -3250,6 +3442,21 @@ impl App {
         }
 
         match vk {
+            // A -- arm the CLOSURE curve, or stop it. Off by default, and
+            // pressing it again leaves the plot fully drawn rather than frozen
+            // mid-sweep: a stopped animation that hides half its data is a
+            // worse picture than the still one it replaced.
+            0x41 if self.view() == View::Closure => {
+                self.closure_anim = !self.closure_anim;
+                if self.closure_anim {
+                    self.closure_phase = 0.0;
+                    self.status = String::from("CURVE DRAWING - A STOPS IT.");
+                } else {
+                    self.closure_phase = 1.0;
+                    self.status = String::from("CURVE HELD, FULLY DRAWN.");
+                }
+                return true;
+            }
             // S -- hold the GENESIS turn still, or release it again.
             0x53 if self.view() == View::Genesis => {
                 self.genesis_spin = !self.genesis_spin;
